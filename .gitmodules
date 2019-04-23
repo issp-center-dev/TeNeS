@@ -1,0 +1,3 @@
+[submodule "deps/mptensor"]
+	path = deps/mptensor
+	url = https://github.com/smorita/mptensor
