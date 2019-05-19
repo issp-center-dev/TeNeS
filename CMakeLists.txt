@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-project(TNSolve NONE)
+project(TNSolve CXX)
 set(TNSolve_VERSION 0.1-Beta)
 
 message(STATUS "CMake version: " ${CMAKE_VERSION})
@@ -23,3 +23,12 @@ endif()
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/deps/mptensor/Makefile")
     message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
+
+find_package(MPI REQUIRED)
+include_directories(${MPI_CXX_INCLUDE_PATH})
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/deps/mptensor")
+set(MPTENSOR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/deps/mptensor/src/)
+set(MPTENSOR_LIB ${CMAKE_CURRENT_BINARY_DIR}/deps/mptensor/src/libmptensor.a)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/src)
