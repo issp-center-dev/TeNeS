@@ -24,6 +24,9 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/deps/mptensor/Makefile")
     message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
+include(${PROJECT_SOURCE_DIR}/config/cxx11.cmake)
+cxx11()
+
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
