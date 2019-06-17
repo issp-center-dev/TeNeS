@@ -1347,4 +1347,28 @@ void Full_update_bond(
     Tn2_new.transpose(Axes(3, 0, 1, 2, 4));
   }
 }
+
+template <template <typename> class Matrix, typename C>
+void EvolutionaryTensor(Tensor<Matrix, C> &U, const Tensor<Matrix, C> &H, double tau){
+  const Shape shape = H.shape();
+  const size_t N = shape[0];
+
+  Tensor<Matrix, C> V;
+  std::vector<double> s;
+  int info = eigh(H, s, V);
+  for(size_t i=0; i<N; ++i){
+    s[i] = std::exp(-tau * s[i]);
+  }
+  Tensor<Matrix, C> Vd = conj(V);
+  V.multiply_vector(s, 1);
+  U = tensordot(V, Vd, Axes(1), Axes(1));
+}
+
+template <template <typename> class Matrix, typename C>
+Tensor<Matrix, C> EvolutionaryTensor(const Tensor<Matrix, C> &H, double tau){
+  Tensor<Matrix, C> U;
+  EvolutionaryTensor(U, H, tau);
+  return U;
+}
+
 #endif // _PEPS_BASICS_HPP_

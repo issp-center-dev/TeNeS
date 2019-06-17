@@ -368,17 +368,8 @@ int main(int argc, char **argv) {
     double hx = local_parameters.hx_min + int_hx * local_parameters.d_hx;
 
     ptensor Ham = Set_Hamiltonian(hx);
-    ptensor U, Ud;
-    std::vector<double> s;
-    int info = eigh(Ham, s, U);
-    for (int i = 0; i < 4; ++i) {
-      s[i] = exp(-local_parameters.tau * s[i]);
-    }
-    Ud = conj(U);
-    U.multiply_vector(s, 1);
-    ptensor op12 = transpose(
-        reshape(tensordot(U, Ud, Axes(1), Axes(1)), Shape(2, 2, 2, 2)),
-        Axes(2, 3, 0, 1));
+    ptensor U = EvolutionaryTensor(Ham, local_parameters.tau);
+    ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
     std::vector<Edge> simple_edges;
     // x-bond A sub-lattice
@@ -415,64 +406,6 @@ int main(int argc, char **argv) {
         Tn[source] = Tn1_new;
         Tn[target] = Tn2_new;
       }
-
-      /*
-      // x-bond A sub-lattice
-      int num, num_j;
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.A_sub_list[i];
-        num_j = lattice.NN_Tensor[num][2];
-
-        Simple_update_bond(Tn[num], Tn[num_j], lambda_tensor[num],
-                           lambda_tensor[num_j], op12, 2, peps_parameters,
-                           Tn1_new, Tn2_new, lambda_c);
-        lambda_tensor[num][2] = lambda_c;
-        lambda_tensor[num_j][0] = lambda_c;
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-      }
-
-      // x-bond B sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.B_sub_list[i];
-        num_j = lattice.NN_Tensor[num][2];
-
-        Simple_update_bond(Tn[num], Tn[num_j], lambda_tensor[num],
-                           lambda_tensor[num_j], op12, 2, peps_parameters,
-                           Tn1_new, Tn2_new, lambda_c);
-        lambda_tensor[num][2] = lambda_c;
-        lambda_tensor[num_j][0] = lambda_c;
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-      }
-      // y-bond A sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.A_sub_list[i];
-        num_j = lattice.NN_Tensor[num][1];
-
-        Simple_update_bond(Tn[num], Tn[num_j], lambda_tensor[num],
-                           lambda_tensor[num_j], op12, 1, peps_parameters,
-                           Tn1_new, Tn2_new, lambda_c);
-        lambda_tensor[num][1] = lambda_c;
-        lambda_tensor[num_j][3] = lambda_c;
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-      }
-
-      // y-bond B sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.B_sub_list[i];
-        num_j = lattice.NN_Tensor[num][1];
-
-        Simple_update_bond(Tn[num], Tn[num_j], lambda_tensor[num],
-                           lambda_tensor[num_j], op12, 1, peps_parameters,
-                           Tn1_new, Tn2_new, lambda_c);
-        lambda_tensor[num][1] = lambda_c;
-        lambda_tensor[num_j][3] = lambda_c;
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-      }
-      */
     }
     time_simple_update += MPI_Wtime() - start_time;
     // done simple update
@@ -480,16 +413,8 @@ int main(int argc, char **argv) {
     // Start full update
     if (local_parameters.tau_full_step > 0) {
       Ham = Set_Hamiltonian(hx);
-      int info = eigh(reshape(Ham, Shape(4, 4)), s, U);
-
-      for (int i = 0; i < 4; ++i) {
-        s[i] = exp(-local_parameters.tau_full * s[i]);
-      }
-      Ud = conj(U);
-      U.multiply_vector(s, 1);
-      op12 = transpose(
-          reshape(tensordot(U, Ud, Axes(1), Axes(1)), Shape(2, 2, 2, 2)),
-          Axes(2, 3, 0, 1));
+      EvolutionaryTensor(U, Ham, local_parameters.tau);
+      op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
       // Environment
       start_time = MPI_Wtime();
