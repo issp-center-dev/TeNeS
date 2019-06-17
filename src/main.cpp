@@ -20,8 +20,21 @@ typedef Tensor<lapack::Matrix, double> tensor;
 int mpirank;
 int mpisize;
 
+struct Edge{
+  int source_site;
+  int source_leg;
+  int target_site;
+  int target_leg;
+  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1){}
+  Edge(int source_site, int source_leg, int target_site, int target_leg)
+      : source_site(source_site),
+        source_leg(source_leg),
+        target_site(target_site),
+        target_leg(target_leg) {}
+};
+
 class Local_parameters {
-public:
+ public:
   double hx_min;
   double d_hx;
   int hx_step;
@@ -367,13 +380,43 @@ int main(int argc, char **argv) {
         reshape(tensordot(U, Ud, Axes(1), Axes(1)), Shape(2, 2, 2, 2)),
         Axes(2, 3, 0, 1));
 
+    std::vector<Edge> simple_edges;
+    // x-bond A sub-lattice
+    simple_edges.push_back(Edge(0, 2, 1, 0));
+    simple_edges.push_back(Edge(3, 2, 2, 0));
+    // x-bond B sub-lattice
+    simple_edges.push_back(Edge(1, 2, 0, 0));
+    simple_edges.push_back(Edge(2, 2, 3, 0));
+    // y-bond A sub-lattice
+    simple_edges.push_back(Edge(0, 3, 2, 1));
+    simple_edges.push_back(Edge(3, 3, 1, 1));
+    // y-bond B sub-lattice
+    simple_edges.push_back(Edge(1, 3, 3, 1));
+    simple_edges.push_back(Edge(2, 3, 0, 1));
+
     ptensor Tn1_new, Tn2_new;
     std::vector<double> lambda_c;
 
+    // simple update
     start_time = MPI_Wtime();
     for (int int_tau = 0; int_tau < local_parameters.tau_step; ++int_tau) {
-      // simple update
+      for(auto ed: simple_edges){
+        const int source = ed.source_site;
+        const int target = ed.target_site;
+        const int source_leg = ed.source_leg;
+        const int target_leg = ed.target_leg;
+        Simple_update_bond(Tn[source], Tn[target],
+                           lambda_tensor[source], lambda_tensor[target],
+                           op12, source_leg, peps_parameters,
+                           Tn1_new, Tn2_new, lambda_c
+                           );
+        lambda_tensor[source][source_leg] = lambda_c;
+        lambda_tensor[target][target_leg] = lambda_c;
+        Tn[source] = Tn1_new;
+        Tn[target] = Tn2_new;
+      }
 
+      /*
       // x-bond A sub-lattice
       int num, num_j;
       for (int i = 0; i < N_UNIT / 2; ++i) {
@@ -429,6 +472,7 @@ int main(int argc, char **argv) {
         Tn[num] = Tn1_new;
         Tn[num_j] = Tn2_new;
       }
+      */
     }
     time_simple_update += MPI_Wtime() - start_time;
     // done simple update
