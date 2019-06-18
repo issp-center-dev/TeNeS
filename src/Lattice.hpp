@@ -6,6 +6,21 @@
 #include <vector>
 // Lattice setting
 
+/*
+ * axis:
+ *
+ *  y
+ *  ^
+ *  |
+ *  .->x
+ *
+ * edge index:
+ *
+ *   1
+ *  0.2
+ *   3
+ *
+ */
 class Lattice {
 public:
   int LX;
@@ -15,13 +30,41 @@ public:
   std::vector<std::vector<int> > Tensor_list;
   std::vector<std::vector<int> > NN_Tensor;
 
-  Lattice() {
-    LX = 2;
-    LY = 2;
-    N_UNIT = LX * LY;
+  Lattice(int X=2, int Y=2) : LX(X), LY(Y), N_UNIT(LX*LY) {
+    assert(X > 0);
+    assert(Y > 0);
 
-    Tensor_list = std::vector<std::vector<int> >(LX, std::vector<int>(LY));
-    NN_Tensor = std::vector<std::vector<int> >(N_UNIT, std::vector<int>(4));
+    reset();
+  }
+
+  void reset(){
+    N_UNIT = LX * LY;
+    Tensor_list.assign(LX, std::vector<int>(LY));
+    NN_Tensor.assign(N_UNIT, std::vector<int>(4));
+    int i=0;
+    for(int ix=0; ix<LX; ++ix){
+      for(int iy=0; iy<LY; ++iy){
+        Tensor_list[ix][iy] = i;
+        ++i;
+      }
+    }
+    i=0;
+    for(int ix=0; ix<LX; ++ix){
+      for(int iy=0; iy<LY; ++iy){
+        NN_Tensor[i][0] = Tensor_list[(ix-1+LX)%LX][iy];
+        NN_Tensor[i][1] = Tensor_list[ix          ][(iy+1)%LY];
+        NN_Tensor[i][2] = Tensor_list[(ix+1)%LX][iy];
+        NN_Tensor[i][3] = Tensor_list[ix][(iy-1+LY)%LY];
+        ++i;
+      }
+    }
+  }
+  void reset(int X, int Y){
+    assert(X > 0);
+    assert(Y > 0);
+    LX = X;
+    LY = Y;
+    reset();
   }
 
   void read_parameters(const char *filename) {
@@ -52,6 +95,7 @@ public:
         // "<<result[1]<<std::endl;
       }
     }
+    reset();
   }
   void output_parameters(const char *filename, bool append) {
     std::ofstream ofs;
@@ -92,8 +136,11 @@ public:
       LY = params_int[1];
       N_UNIT = params_int[2];
     }
+    reset();
   }
 };
+
+/*
 
 class Lattice_skew : public Lattice {
 public:
@@ -213,5 +260,7 @@ public:
     }
   }
 };
+
+*/
 
 #endif // LATTICE_HPP

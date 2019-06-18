@@ -64,10 +64,8 @@ struct Edge{
    *  s
    */
   Edge(int source_site, int target_site, bool horizontal)
-      : source_site(source_site),
-        source_leg(horizontal?2:1),
-        target_site(target_site),
-        target_leg(horizontal?0:3),
+      : source_site(source_site), source_leg(horizontal?2:1),
+        target_site(target_site), target_leg(horizontal?0:3),
         horizontal(horizontal){}
 };
 
@@ -215,47 +213,6 @@ class Local_parameters {
   };
 };
 
-class Lattice_two_sub : public Lattice {
-public:
-  std::vector<int> A_sub_list, B_sub_list;
-  Lattice_two_sub() : Lattice() {
-    A_sub_list.resize(N_UNIT / 2);
-    B_sub_list.resize(N_UNIT / 2);
-  }
-  void set_lattice_info() {
-    // Lattice setting
-    int a_num = 0;
-    int b_num = 0;
-    A_sub_list.resize(N_UNIT / 2);
-    B_sub_list.resize(N_UNIT / 2);
-    int num;
-    for (int ix = 0; ix < LX; ++ix) {
-      for (int iy = 0; iy < LY; ++iy) {
-        num = iy * LX + ix;
-        Tensor_list[ix][iy] = num;
-        if ((ix + iy) % 2 == 0) {
-          A_sub_list[a_num] = num;
-          a_num += 1;
-        } else {
-          B_sub_list[b_num] = num;
-          b_num += 1;
-        }
-      }
-    };
-
-    int ix, iy;
-    for (int i = 0; i < N_UNIT; ++i) {
-      ix = i % LX;
-      iy = i / LX;
-
-      NN_Tensor[i][0] = Tensor_list[(ix - 1 + LX) % LX][iy];
-      NN_Tensor[i][1] = Tensor_list[ix][(iy + 1) % LY];
-      NN_Tensor[i][2] = Tensor_list[(ix + 1) % LX][iy];
-      NN_Tensor[i][3] = Tensor_list[ix][(iy - 1 + LY) % LY];
-    }
-  }
-};
-
 ptensor Set_Hamiltonian(double hx) {
   ptensor Ham(Shape(4, 4));
   Ham.set_value(Index(0, 0), -0.25);
@@ -335,7 +292,7 @@ int main(int argc, char **argv) {
 
   // Parameters
   PEPS_Parameters peps_parameters;
-  Lattice_two_sub lattice;
+  Lattice lattice(2,2);
   Local_parameters local_parameters;
 
   if (mpirank == 0) {
@@ -347,9 +304,8 @@ int main(int argc, char **argv) {
 
   local_parameters.Bcast_parameters(MPI_COMM_WORLD);
   peps_parameters.Bcast_parameters(MPI_COMM_WORLD);
-  lattice.Bcast_parameters(MPI_COMM_WORLD);
 
-  lattice.set_lattice_info();
+  lattice.Bcast_parameters(MPI_COMM_WORLD);
 
   // output debug or warning info only from process 0
   if (mpirank != 0) {
