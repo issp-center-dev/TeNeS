@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <array>
 // Lattice setting
 
 /*
@@ -28,7 +29,7 @@ public:
   int N_UNIT;
 
   std::vector<std::vector<int> > Tensor_list;
-  std::vector<std::vector<int> > NN_Tensor;
+  std::vector<std::array<int, 4> > NN_Tensor;
 
   Lattice(int X=2, int Y=2) : LX(X), LY(Y), N_UNIT(LX*LY) {
     assert(X > 0);
@@ -40,7 +41,7 @@ public:
   void reset(){
     N_UNIT = LX * LY;
     Tensor_list.assign(LX, std::vector<int>(LY));
-    NN_Tensor.assign(N_UNIT, std::vector<int>(4));
+    NN_Tensor.resize(N_UNIT);
     int i=0;
     for(int ix=0; ix<LX; ++ix){
       for(int iy=0; iy<LY; ++iy){
