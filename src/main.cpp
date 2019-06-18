@@ -16,22 +16,66 @@ using namespace mptensor;
 typedef Tensor<scalapack::Matrix, double> ptensor;
 typedef Tensor<lapack::Matrix, double> tensor;
 
-/* for MPI */
-int mpirank;
-int mpisize;
+/*
+ * axis:
+ *
+ *  y
+ *  ^
+ *  |
+ *  .->x
+ *
+ * edge index:
+ *
+ *   1
+ *  0.2
+ *   3
+ *
+ * corner and edge tensor
+ *
+ * C1 t C2
+ * l  .  r
+ * C4 b C3
+ *
+ */
+
+struct Site{
+  int x; // x coord
+  int y; // y coord
+  int N; // the number of the local degree of freedom
+};
 
 struct Edge{
   int source_site;
   int source_leg;
   int target_site;
   int target_leg;
-  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1){}
-  Edge(int source_site, int source_leg, int target_site, int target_leg)
+  bool horizontal;
+  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1), horizontal(true){}
+
+  /*
+   * horizontal:
+   *
+   *  s-t
+   *
+   * vertical (not horizontal):
+   *
+   *  t
+   *  |
+   *  s
+   */
+  Edge(int source_site, int target_site, bool horizontal)
       : source_site(source_site),
-        source_leg(source_leg),
+        source_leg(horizontal?2:1),
         target_site(target_site),
-        target_leg(target_leg) {}
+        target_leg(horizontal?0:3),
+        horizontal(horizontal){}
 };
+
+
+/* for MPI */
+int mpirank;
+int mpisize;
+
 
 class Local_parameters {
  public:
@@ -373,17 +417,17 @@ int main(int argc, char **argv) {
 
     std::vector<Edge> simple_edges;
     // x-bond A sub-lattice
-    simple_edges.push_back(Edge(0, 2, 1, 0));
-    simple_edges.push_back(Edge(3, 2, 2, 0));
+    simple_edges.push_back(Edge(0, 1, true));
+    simple_edges.push_back(Edge(3, 2, true));
     // x-bond B sub-lattice
-    simple_edges.push_back(Edge(1, 2, 0, 0));
-    simple_edges.push_back(Edge(2, 2, 3, 0));
+    simple_edges.push_back(Edge(1, 0, true));
+    simple_edges.push_back(Edge(2, 3, true));
     // y-bond A sub-lattice
-    simple_edges.push_back(Edge(0, 3, 2, 1));
-    simple_edges.push_back(Edge(3, 3, 1, 1));
+    simple_edges.push_back(Edge(0, 2, false));
+    simple_edges.push_back(Edge(3, 1, false));
     // y-bond B sub-lattice
-    simple_edges.push_back(Edge(1, 3, 3, 1));
-    simple_edges.push_back(Edge(2, 3, 0, 1));
+    simple_edges.push_back(Edge(1, 3, false));
+    simple_edges.push_back(Edge(2, 0, false));
 
     ptensor Tn1_new, Tn2_new;
     std::vector<double> lambda_c;
@@ -422,103 +466,63 @@ int main(int argc, char **argv) {
                            peps_parameters, lattice);
       time_env += MPI_Wtime() - start_time;
     }
+
+    std::vector<Edge> full_edges;
+    // x-bond A sub-lattice
+    full_edges.push_back(Edge(0, 1, true));
+    full_edges.push_back(Edge(3, 2, true));
+    // x-bond B sub-lattice
+    full_edges.push_back(Edge(1, 0, true));
+    full_edges.push_back(Edge(2, 3, true));
+    // y-bond A sub-lattice
+    full_edges.push_back(Edge(0, 2, false));
+    full_edges.push_back(Edge(3, 1, false));
+    // y-bond B sub-lattice
+    full_edges.push_back(Edge(1, 3, false));
+    full_edges.push_back(Edge(2, 0, false));
+
     start_time = MPI_Wtime();
     for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
-      // x-bond A sub-lattice
-      int num, num_j, ix, ix_j;
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.A_sub_list[i];
-        num_j = lattice.NN_Tensor[num][2];
 
-        Full_update_bond(C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
-                         eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
-                         Tn[num], Tn[num_j], op12, 2, peps_parameters, Tn1_new,
-                         Tn2_new);
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
+      for(auto ed: full_edges){
+        const int source = ed.source_site;
+        const int target = ed.target_site;
 
-        if (peps_parameters.Full_Use_FFU) {
-          ix = num % LX;
-          ix_j = num_j % LX;
-          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
-                    lattice);
-          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix_j,
-                     peps_parameters, lattice);
-        } else {
-          Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                               peps_parameters, lattice);
+        if(ed.horizontal){
+          Full_update_bond(C1[source], C2[target], C3[target], C4[source],
+                           eTt[source], eTt[target], eTr[target],
+                           eTb[target], eTb[source], eTl[source],
+                           Tn[source], Tn[target],
+                           op12, ed.source_leg, peps_parameters,
+                           Tn1_new, Tn2_new);
+        }else{
+          Full_update_bond(C4[source], C1[target], C2[target], C3[source],
+                           eTl[source], eTl[target], eTt[target],
+                           eTr[target], eTr[source], eTb[source],
+                           Tn[source], Tn[target],
+                           op12, ed.source_leg, peps_parameters,
+                           Tn1_new, Tn2_new);
         }
-      }
-      // x-bond B sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.B_sub_list[i];
-        num_j = lattice.NN_Tensor[num][2];
+        Tn[source] = Tn1_new;
+        Tn[target] = Tn2_new;
 
-        Full_update_bond(C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
-                         eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
-                         Tn[num], Tn[num_j], op12, 2, peps_parameters, Tn1_new,
-                         Tn2_new);
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-
-        if (peps_parameters.Full_Use_FFU) {
-          ix = num % LX;
-          ix_j = num_j % LX;
-          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
-                    lattice);
-          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix_j,
-                     peps_parameters, lattice);
-        } else {
-          Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                               peps_parameters, lattice);
-        }
-      }
-      int iy, iy_j;
-      // y-bond A sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.A_sub_list[i];
-        num_j = lattice.NN_Tensor[num][1];
-
-        Full_update_bond(C4[num], C1[num_j], C2[num_j], C3[num], eTl[num],
-                         eTl[num_j], eTt[num_j], eTr[num_j], eTr[num], eTb[num],
-                         Tn[num], Tn[num_j], op12, 1, peps_parameters, Tn1_new,
-                         Tn2_new);
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-
-        if (peps_parameters.Full_Use_FFU) {
-          iy = num / LX;
-          iy_j = num_j / LX;
-          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy,
-                      peps_parameters, lattice);
-          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy_j,
-                   peps_parameters, lattice);
-        } else {
-          Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                               peps_parameters, lattice);
-        }
-      }
-
-      // y-bond B sub-lattice
-      for (int i = 0; i < N_UNIT / 2; ++i) {
-        num = lattice.B_sub_list[i];
-        num_j = lattice.NN_Tensor[num][1];
-
-        Full_update_bond(C4[num], C1[num_j], C2[num_j], C3[num], eTl[num],
-                         eTl[num_j], eTt[num_j], eTr[num_j], eTr[num], eTb[num],
-                         Tn[num], Tn[num_j], op12, 1, peps_parameters, Tn1_new,
-                         Tn2_new);
-        Tn[num] = Tn1_new;
-        Tn[num_j] = Tn2_new;
-
-        if (peps_parameters.Full_Use_FFU) {
-          iy = num / LX;
-          iy_j = num_j / LX;
-          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy,
-                      peps_parameters, lattice);
-          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy_j,
-                   peps_parameters, lattice);
-        } else {
+        if(peps_parameters.Full_Use_FFU){
+          if(ed.horizontal){
+            const int source_x = source % LX;
+            const int target_x = target % LX;
+            Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                      source_x, peps_parameters, lattice);
+            Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                       target_x, peps_parameters, lattice);
+          }else{
+            const int source_y = source / LX;
+            const int target_y = target / LX;
+            Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                     source_y, peps_parameters, lattice);
+            Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                        target_y, peps_parameters, lattice);
+          }
+        }else{
           Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
                                peps_parameters, lattice);
         }
@@ -567,11 +571,11 @@ int main(int argc, char **argv) {
       norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
                                eTb[i], eTl[i], Tn[i], op_identity);
       mz[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                eTb[i], eTl[i], Tn[i], op_mz) /
-              norm;
+                                eTb[i], eTl[i], Tn[i], op_mz)
+                / norm;
       mx[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                eTb[i], eTl[i], Tn[i], op_mx) /
-              norm;
+                                eTb[i], eTl[i], Tn[i], op_mx)
+                / norm;
       if (peps_parameters.Debug_flag) {
         std::cout << hx << " " << i << " "
                   << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
