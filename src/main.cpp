@@ -6,9 +6,12 @@
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
 
+#include <toml11/toml.hpp>
+
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
+#include "Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 
 
@@ -73,145 +76,6 @@ struct Edge{
 /* for MPI */
 int mpirank;
 int mpisize;
-
-
-class Local_parameters {
- public:
-  double hx_min;
-  double d_hx;
-  int hx_step;
-
-  double tau;
-  int tau_step;
-
-  double tau_full;
-  int tau_full_step;
-
-  bool Initialize_every;
-
-  Local_parameters() {
-    hx_min = 1.4;
-    d_hx = 0.02;
-    hx_step = 10;
-
-    tau = 0.1;
-    tau_step = 100;
-
-    tau_full = 0.01;
-    tau_full_step = 0;
-
-    Initialize_every = false;
-  }
-
-  void read_parameters(const char *filename) {
-    std::ifstream input_file;
-    input_file.open(filename, std::ios::in);
-    std::string reading_line_buffer;
-
-    while (!input_file.eof()) {
-      std::getline(input_file, reading_line_buffer);
-      std::stringstream buf(reading_line_buffer);
-      std::vector<std::string> result;
-      while (buf >> reading_line_buffer) {
-        result.push_back(reading_line_buffer);
-      }
-
-      if (result.size() > 1) {
-        if (result[0].compare("hx_min") == 0) {
-          std::istringstream is(result[1]);
-          is >> hx_min;
-        } else if (result[0].compare("d_hx") == 0) {
-          std::istringstream is(result[1]);
-          is >> d_hx;
-        } else if (result[0].compare("hx_step") == 0) {
-          std::istringstream is(result[1]);
-          is >> hx_step;
-        } else if (result[0].compare("tau") == 0) {
-          std::istringstream is(result[1]);
-          is >> tau;
-        } else if (result[0].compare("tau_step") == 0) {
-          std::istringstream is(result[1]);
-          is >> tau_step;
-        } else if (result[0].compare("tau_full") == 0) {
-          std::istringstream is(result[1]);
-          is >> tau_full;
-        } else if (result[0].compare("tau_full_step") == 0) {
-          std::istringstream is(result[1]);
-          is >> tau_full_step;
-        } else if (result[0].compare("Initialize_every") == 0) {
-          std::istringstream is(result[1]);
-          is >> Initialize_every;
-        }
-      }
-    }
-    input_file.close();
-  };
-
-  void output_parameters(const char *filename, const bool append) {
-    std::ofstream ofs;
-    if (append) {
-      ofs.open(filename, std::ios::out | std::ios::app);
-    } else {
-      ofs.open(filename, std::ios::out);
-    }
-
-    // Tensor
-    ofs << "hx_min " << hx_min << std::endl;
-    ofs << "d_hx " << d_hx << std::endl;
-    ofs << "hx_step " << hx_step << std::endl;
-
-    ofs << "tau " << tau << std::endl;
-    ofs << "tau_step " << tau_step << std::endl;
-
-    ofs << "tau_full " << tau_full << std::endl;
-    ofs << "tau_full_step " << tau_full_step << std::endl;
-    ofs << "Initialize_every " << Initialize_every << std::endl;
-    ofs.close();
-  };
-
-  void output_parameters(const char *filename) {
-    output_parameters(filename, false);
-  }
-
-  void output_parameters_append(const char *filename) {
-    output_parameters(filename, true);
-  }
-  void Bcast_parameters(MPI_Comm comm) {
-    int irank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank);
-
-    std::vector<double> params_double(4);
-    std::vector<int> params_int(4);
-
-    if (irank == 0) {
-      params_int[0] = hx_step;
-      params_int[1] = tau_step;
-      params_int[2] = tau_full_step;
-      params_int[3] = Initialize_every;
-
-      params_double[0] = hx_min;
-      params_double[1] = d_hx;
-      params_double[2] = tau;
-      params_double[3] = tau_full;
-
-      MPI_Bcast(&params_int.front(), 4, MPI_INT, 0, comm);
-      MPI_Bcast(&params_double.front(), 4, MPI_DOUBLE, 0, comm);
-    } else {
-      MPI_Bcast(&params_int.front(), 4, MPI_INT, 0, comm);
-      MPI_Bcast(&params_double.front(), 4, MPI_DOUBLE, 0, comm);
-
-      hx_step = params_int[0];
-      tau_step = params_int[1];
-      tau_full_step = params_int[2];
-      Initialize_every = params_int[3];
-
-      hx_min = params_double[0];
-      d_hx = params_double[1];
-      tau = params_double[2];
-      tau_full = params_double[3];
-    }
-  };
-};
 
 ptensor Set_Hamiltonian(double hx) {
   ptensor Ham(Shape(4, 4));
@@ -292,14 +156,13 @@ int main(int argc, char **argv) {
 
   // Parameters
   PEPS_Parameters peps_parameters;
+  Parameters local_parameters;
+
   Lattice lattice(2,2);
-  Local_parameters local_parameters;
 
   if (mpirank == 0) {
-    local_parameters.read_parameters("input.dat");
-    peps_parameters.read_parameters("input.dat");
-    lattice.read_parameters("input.dat");
-    lattice.N_UNIT = lattice.LX * lattice.LY;
+    local_parameters.set("input.toml");
+    peps_parameters.set("input.toml");
   }
 
   local_parameters.Bcast_parameters(MPI_COMM_WORLD);
@@ -354,237 +217,233 @@ int main(int argc, char **argv) {
   std::vector<std::vector<std::vector<double> > > lambda_tensor(
       N_UNIT, std::vector<std::vector<double> >(4, std::vector<double>(D)));
 
-  for (int int_hx = 0; int_hx < local_parameters.hx_step; ++int_hx) {
-    if (int_hx == 0 || local_parameters.Initialize_every) {
-      Initialize_Tensors(Tn, lattice);
-      for (int i1 = 0; i1 < N_UNIT; ++i1) {
-        for (int i2 = 0; i2 < 4; ++i2) {
-          for (int i3 = 0; i3 < D; ++i3) {
-            lambda_tensor[i1][i2][i3] = 1.0;
-          }
-        }
+  Initialize_Tensors(Tn, lattice);
+  for (int i1 = 0; i1 < N_UNIT; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      for (int i3 = 0; i3 < D; ++i3) {
+        lambda_tensor[i1][i2][i3] = 1.0;
       }
     }
-    double hx = local_parameters.hx_min + int_hx * local_parameters.d_hx;
+  }
+  const double hx = 1.4;
 
-    ptensor Ham = Set_Hamiltonian(hx);
-    ptensor U = EvolutionaryTensor(Ham, local_parameters.tau);
-    ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+  ptensor Ham = Set_Hamiltonian(hx);
+  ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_simple);
+  ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
-    std::vector<Edge> simple_edges;
-    // x-bond A sub-lattice
-    simple_edges.push_back(Edge(0, 1, true));
-    simple_edges.push_back(Edge(3, 2, true));
-    // x-bond B sub-lattice
-    simple_edges.push_back(Edge(1, 0, true));
-    simple_edges.push_back(Edge(2, 3, true));
-    // y-bond A sub-lattice
-    simple_edges.push_back(Edge(0, 2, false));
-    simple_edges.push_back(Edge(3, 1, false));
-    // y-bond B sub-lattice
-    simple_edges.push_back(Edge(1, 3, false));
-    simple_edges.push_back(Edge(2, 0, false));
+  std::vector<Edge> simple_edges;
+  // x-bond A sub-lattice
+  simple_edges.push_back(Edge(0, 1, true));
+  simple_edges.push_back(Edge(3, 2, true));
+  // x-bond B sub-lattice
+  simple_edges.push_back(Edge(1, 0, true));
+  simple_edges.push_back(Edge(2, 3, true));
+  // y-bond A sub-lattice
+  simple_edges.push_back(Edge(0, 2, false));
+  simple_edges.push_back(Edge(3, 1, false));
+  // y-bond B sub-lattice
+  simple_edges.push_back(Edge(1, 3, false));
+  simple_edges.push_back(Edge(2, 0, false));
 
-    ptensor Tn1_new, Tn2_new;
-    std::vector<double> lambda_c;
+  ptensor Tn1_new, Tn2_new;
+  std::vector<double> lambda_c;
 
-    // simple update
-    start_time = MPI_Wtime();
-    for (int int_tau = 0; int_tau < local_parameters.tau_step; ++int_tau) {
-      for(auto ed: simple_edges){
-        const int source = ed.source_site;
-        const int target = ed.target_site;
-        const int source_leg = ed.source_leg;
-        const int target_leg = ed.target_leg;
-        Simple_update_bond(Tn[source], Tn[target],
-                           lambda_tensor[source], lambda_tensor[target],
-                           op12, source_leg, peps_parameters,
-                           Tn1_new, Tn2_new, lambda_c
-                           );
-        lambda_tensor[source][source_leg] = lambda_c;
-        lambda_tensor[target][target_leg] = lambda_c;
-        Tn[source] = Tn1_new;
-        Tn[target] = Tn2_new;
-      }
+  // simple update
+  start_time = MPI_Wtime();
+  for (int int_tau = 0; int_tau < local_parameters.tau_simple_step; ++int_tau) {
+    for(auto ed: simple_edges){
+      const int source = ed.source_site;
+      const int target = ed.target_site;
+      const int source_leg = ed.source_leg;
+      const int target_leg = ed.target_leg;
+      Simple_update_bond(Tn[source], Tn[target],
+          lambda_tensor[source], lambda_tensor[target],
+          op12, source_leg, peps_parameters,
+          Tn1_new, Tn2_new, lambda_c
+          );
+      lambda_tensor[source][source_leg] = lambda_c;
+      lambda_tensor[target][target_leg] = lambda_c;
+      Tn[source] = Tn1_new;
+      Tn[target] = Tn2_new;
     }
-    time_simple_update += MPI_Wtime() - start_time;
-    // done simple update
+  }
+  time_simple_update += MPI_Wtime() - start_time;
+  // done simple update
 
-    // Start full update
-    if (local_parameters.tau_full_step > 0) {
-      Ham = Set_Hamiltonian(hx);
-      EvolutionaryTensor(U, Ham, local_parameters.tau);
-      op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+  // Start full update
+  if (local_parameters.tau_full_step > 0) {
+    Ham = Set_Hamiltonian(hx);
+    EvolutionaryTensor(U, Ham, local_parameters.tau_full_step);
+    op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
-      // Environment
-      start_time = MPI_Wtime();
-      Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                           peps_parameters, lattice);
-      time_env += MPI_Wtime() - start_time;
-    }
-
-    std::vector<Edge> full_edges;
-    // x-bond A sub-lattice
-    full_edges.push_back(Edge(0, 1, true));
-    full_edges.push_back(Edge(3, 2, true));
-    // x-bond B sub-lattice
-    full_edges.push_back(Edge(1, 0, true));
-    full_edges.push_back(Edge(2, 3, true));
-    // y-bond A sub-lattice
-    full_edges.push_back(Edge(0, 2, false));
-    full_edges.push_back(Edge(3, 1, false));
-    // y-bond B sub-lattice
-    full_edges.push_back(Edge(1, 3, false));
-    full_edges.push_back(Edge(2, 0, false));
-
-    start_time = MPI_Wtime();
-    for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
-
-      for(auto ed: full_edges){
-        const int source = ed.source_site;
-        const int target = ed.target_site;
-
-        if(ed.horizontal){
-          Full_update_bond(C1[source], C2[target], C3[target], C4[source],
-                           eTt[source], eTt[target], eTr[target],
-                           eTb[target], eTb[source], eTl[source],
-                           Tn[source], Tn[target],
-                           op12, ed.source_leg, peps_parameters,
-                           Tn1_new, Tn2_new);
-        }else{
-          Full_update_bond(C4[source], C1[target], C2[target], C3[source],
-                           eTl[source], eTl[target], eTt[target],
-                           eTr[target], eTr[source], eTb[source],
-                           Tn[source], Tn[target],
-                           op12, ed.source_leg, peps_parameters,
-                           Tn1_new, Tn2_new);
-        }
-        Tn[source] = Tn1_new;
-        Tn[target] = Tn2_new;
-
-        if(peps_parameters.Full_Use_FFU){
-          if(ed.horizontal){
-            const int source_x = source % LX;
-            const int target_x = target % LX;
-            Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                      source_x, peps_parameters, lattice);
-            Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                       target_x, peps_parameters, lattice);
-          }else{
-            const int source_y = source / LX;
-            const int target_y = target / LX;
-            Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                     source_y, peps_parameters, lattice);
-            Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                        target_y, peps_parameters, lattice);
-          }
-        }else{
-          Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                               peps_parameters, lattice);
-        }
-      }
-    }
-    time_full_update += MPI_Wtime() - start_time;
-    // done full update
-
-    // Calc physical quantities
-
+    // Environment
     start_time = MPI_Wtime();
     Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                         peps_parameters, lattice);
+        peps_parameters, lattice);
     time_env += MPI_Wtime() - start_time;
+  }
 
-    ptensor op_identity(Shape(2, 2)), op_mz(Shape(2, 2)), op_mx(Shape(2, 2));
+  std::vector<Edge> full_edges;
+  // x-bond A sub-lattice
+  full_edges.push_back(Edge(0, 1, true));
+  full_edges.push_back(Edge(3, 2, true));
+  // x-bond B sub-lattice
+  full_edges.push_back(Edge(1, 0, true));
+  full_edges.push_back(Edge(2, 3, true));
+  // y-bond A sub-lattice
+  full_edges.push_back(Edge(0, 2, false));
+  full_edges.push_back(Edge(3, 1, false));
+  // y-bond B sub-lattice
+  full_edges.push_back(Edge(1, 3, false));
+  full_edges.push_back(Edge(2, 0, false));
 
-    op_identity.set_value(Index(0, 0), 1.0);
-    op_identity.set_value(Index(0, 1), 0.0);
-    op_identity.set_value(Index(1, 0), 0.0);
-    op_identity.set_value(Index(1, 1), 1.0);
+  start_time = MPI_Wtime();
+  for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
 
-    op_mz.set_value(Index(0, 0), 0.5);
-    op_mz.set_value(Index(0, 1), 0.0);
-    op_mz.set_value(Index(1, 0), 0.0);
-    op_mz.set_value(Index(1, 1), -0.5);
+    for(auto ed: full_edges){
+      const int source = ed.source_site;
+      const int target = ed.target_site;
 
-    op_mx.set_value(Index(0, 0), 0.0);
-    op_mx.set_value(Index(0, 1), 0.5);
-    op_mx.set_value(Index(1, 0), 0.5);
-    op_mx.set_value(Index(1, 1), 0.0);
+      if(ed.horizontal){
+        Full_update_bond(C1[source], C2[target], C3[target], C4[source],
+            eTt[source], eTt[target], eTr[target],
+            eTb[target], eTb[source], eTl[source],
+            Tn[source], Tn[target],
+            op12, ed.source_leg, peps_parameters,
+            Tn1_new, Tn2_new);
+      }else{
+        Full_update_bond(C4[source], C1[target], C2[target], C3[source],
+            eTl[source], eTl[target], eTt[target],
+            eTr[target], eTr[source], eTb[source],
+            Tn[source], Tn[target],
+            op12, ed.source_leg, peps_parameters,
+            Tn1_new, Tn2_new);
+      }
+      Tn[source] = Tn1_new;
+      Tn[target] = Tn2_new;
 
-    std::vector<double> mz(N_UNIT), mx(N_UNIT);
-    std::vector<std::vector<double> > zz(N_UNIT, std::vector<double>(2));
-    for (int i = 0; i < N_UNIT; ++i) {
-      mx[i] = 0.0;
-      mz[i] = 0.0;
-      zz[i][0] = 0.0;
-      zz[i][1] = 0.0;
-    }
-
-    double norm;
-    int num_j;
-    start_time = MPI_Wtime();
-    for (int i = 0; i < N_UNIT; ++i) {
-      norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                               eTb[i], eTl[i], Tn[i], op_identity);
-      mz[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                eTb[i], eTl[i], Tn[i], op_mz)
-                / norm;
-      mx[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                eTb[i], eTl[i], Tn[i], op_mx)
-                / norm;
-      if (peps_parameters.Debug_flag) {
-        std::cout << hx << " " << i << " "
-                  << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
+      if(peps_parameters.Full_Use_FFU){
+        if(ed.horizontal){
+          const int source_x = source % LX;
+          const int target_x = target % LX;
+          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+              source_x, peps_parameters, lattice);
+          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+              target_x, peps_parameters, lattice);
+        }else{
+          const int source_y = source / LX;
+          const int target_y = target / LX;
+          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+              source_y, peps_parameters, lattice);
+          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+              target_y, peps_parameters, lattice);
+        }
+      }else{
+        Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+            peps_parameters, lattice);
       }
     }
-    double norm_x, norm_y;
-    for (int num = 0; num < N_UNIT; ++num) {
-      num_j = lattice.NN_Tensor[num][2];
+  }
+  time_full_update += MPI_Wtime() - start_time;
+  // done full update
 
-      // x direction
-      norm_x = Contract_two_sites_holizontal(
-          C1[num], C2[num_j], C3[num_j], C4[num], eTt[num], eTt[num_j],
-          eTr[num_j], eTb[num_j], eTb[num], eTl[num], Tn[num], Tn[num_j],
-          op_identity, op_identity);
-      zz[num][0] = Contract_two_sites_holizontal(
-                       C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
-                       eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
-                       Tn[num], Tn[num_j], op_mz, op_mz) /
-                   norm_x;
+  // Calc physical quantities
 
-      // y direction
-      num_j = lattice.NN_Tensor[num][3];
+  start_time = MPI_Wtime();
+  Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+      peps_parameters, lattice);
+  time_env += MPI_Wtime() - start_time;
 
-      norm_y = Contract_two_sites_vertical(
-          C1[num], C2[num], C3[num_j], C4[num_j], eTt[num], eTr[num],
-          eTr[num_j], eTb[num_j], eTl[num_j], eTl[num], Tn[num], Tn[num_j],
-          op_identity, op_identity);
-      zz[num][1] = Contract_two_sites_vertical(
-                       C1[num], C2[num], C3[num_j], C4[num_j], eTt[num],
-                       eTr[num], eTr[num_j], eTb[num_j], eTl[num_j], eTl[num],
-                       Tn[num], Tn[num_j], op_mz, op_mz) /
-                   norm_y;
+  ptensor op_identity(Shape(2, 2)), op_mz(Shape(2, 2)), op_mx(Shape(2, 2));
 
-      if (peps_parameters.Debug_flag) {
-        std::cout << hx << " " << num << " " << norm_x << " " << norm_y << " "
-                  << zz[num][0] << " " << zz[num][1] << std::endl;
-      }
+  op_identity.set_value(Index(0, 0), 1.0);
+  op_identity.set_value(Index(0, 1), 0.0);
+  op_identity.set_value(Index(1, 0), 0.0);
+  op_identity.set_value(Index(1, 1), 1.0);
+
+  op_mz.set_value(Index(0, 0), 0.5);
+  op_mz.set_value(Index(0, 1), 0.0);
+  op_mz.set_value(Index(1, 0), 0.0);
+  op_mz.set_value(Index(1, 1), -0.5);
+
+  op_mx.set_value(Index(0, 0), 0.0);
+  op_mx.set_value(Index(0, 1), 0.5);
+  op_mx.set_value(Index(1, 0), 0.5);
+  op_mx.set_value(Index(1, 1), 0.0);
+
+  std::vector<double> mz(N_UNIT), mx(N_UNIT);
+  std::vector<std::vector<double> > zz(N_UNIT, std::vector<double>(2));
+  for (int i = 0; i < N_UNIT; ++i) {
+    mx[i] = 0.0;
+    mz[i] = 0.0;
+    zz[i][0] = 0.0;
+    zz[i][1] = 0.0;
+  }
+
+  double norm;
+  int num_j;
+  start_time = MPI_Wtime();
+  for (int i = 0; i < N_UNIT; ++i) {
+    norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+        eTb[i], eTl[i], Tn[i], op_identity);
+    mz[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+        eTb[i], eTl[i], Tn[i], op_mz)
+    / norm;
+    mx[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+        eTb[i], eTl[i], Tn[i], op_mx)
+    / norm;
+    if (peps_parameters.Debug_flag) {
+      std::cout << hx << " " << i << " "
+      << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
     }
-    time_obs += MPI_Wtime() - start_time;
-    double sum_mz, sum_mx, sum_zz;
-    sum_zz = 0.0;
-    sum_mx = 0.0;
-    sum_mz = 0.0;
-    for (int i = 0; i < N_UNIT; ++i) {
-      sum_mx += mx[i];
-      sum_mz += mz[i];
-      sum_zz += zz[i][0] + zz[i][1];
+  }
+  double norm_x, norm_y;
+  for (int num = 0; num < N_UNIT; ++num) {
+    num_j = lattice.NN_Tensor[num][2];
+
+    // x direction
+    norm_x = Contract_two_sites_holizontal(
+        C1[num], C2[num_j], C3[num_j], C4[num], eTt[num], eTt[num_j],
+        eTr[num_j], eTb[num_j], eTb[num], eTl[num], Tn[num], Tn[num_j],
+        op_identity, op_identity);
+    zz[num][0] = Contract_two_sites_holizontal(
+        C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
+        eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
+        Tn[num], Tn[num_j], op_mz, op_mz) /
+    norm_x;
+
+    // y direction
+    num_j = lattice.NN_Tensor[num][3];
+
+    norm_y = Contract_two_sites_vertical(
+        C1[num], C2[num], C3[num_j], C4[num_j], eTt[num], eTr[num],
+        eTr[num_j], eTb[num_j], eTl[num_j], eTl[num], Tn[num], Tn[num_j],
+        op_identity, op_identity);
+    zz[num][1] = Contract_two_sites_vertical(
+        C1[num], C2[num], C3[num_j], C4[num_j], eTt[num],
+        eTr[num], eTr[num_j], eTb[num_j], eTl[num_j], eTl[num],
+        Tn[num], Tn[num_j], op_mz, op_mz) /
+    norm_y;
+
+    if (peps_parameters.Debug_flag) {
+      std::cout << hx << " " << num << " " << norm_x << " " << norm_y << " "
+      << zz[num][0] << " " << zz[num][1] << std::endl;
     }
-    if (mpirank == 0) {
-      std::cout << hx << " " << -sum_zz / N_UNIT - hx * sum_mx / N_UNIT << " "
-                << sum_mz / N_UNIT << " " << sum_mx / N_UNIT << " "
-                << sum_zz / N_UNIT << std::endl;
-    }
+  }
+  time_obs += MPI_Wtime() - start_time;
+  double sum_mz, sum_mx, sum_zz;
+  sum_zz = 0.0;
+  sum_mx = 0.0;
+  sum_mz = 0.0;
+  for (int i = 0; i < N_UNIT; ++i) {
+    sum_mx += mx[i];
+    sum_mz += mz[i];
+    sum_zz += zz[i][0] + zz[i][1];
+  }
+  if (mpirank == 0) {
+    std::cout << hx << " " << -sum_zz / N_UNIT - hx * sum_mx / N_UNIT << " "
+    << sum_mz / N_UNIT << " " << sum_mx / N_UNIT << " "
+    << sum_zz / N_UNIT << std::endl;
   }
 
   if (mpirank == 0) {
