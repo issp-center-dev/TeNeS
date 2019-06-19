@@ -15,6 +15,11 @@
  *  |
  *  .->x
  *
+ *  order:
+ *
+ *  2 3
+ *  0 1
+ *
  * edge index:
  *
  *   1
@@ -42,21 +47,19 @@ public:
     N_UNIT = LX * LY;
     Tensor_list.assign(LX, std::vector<int>(LY));
     NN_Tensor.resize(N_UNIT);
-    int i=0;
     for(int ix=0; ix<LX; ++ix){
       for(int iy=0; iy<LY; ++iy){
+        const int i = ix + iy*LX;
         Tensor_list[ix][iy] = i;
-        ++i;
       }
     }
-    i=0;
     for(int ix=0; ix<LX; ++ix){
       for(int iy=0; iy<LY; ++iy){
+        const int i = ix + iy*LX;
         NN_Tensor[i][0] = Tensor_list[(ix-1+LX)%LX][iy];
         NN_Tensor[i][1] = Tensor_list[ix          ][(iy+1)%LY];
         NN_Tensor[i][2] = Tensor_list[(ix+1)%LX][iy];
         NN_Tensor[i][3] = Tensor_list[ix][(iy-1+LY)%LY];
-        ++i;
       }
     }
   }
