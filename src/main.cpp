@@ -41,35 +41,33 @@ typedef Tensor<lapack::Matrix, double> tensor;
  *
  */
 
-struct Site{
-  int x; // x coord
-  int y; // y coord
-  int N; // the number of the local degree of freedom
-};
-
 struct Edge{
+  enum direction{ horizontal, vertical };
   int source_site;
   int source_leg;
   int target_site;
   int target_leg;
-  bool horizontal;
-  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1), horizontal(true){}
+  direction dir;
+  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1), dir(horizontal){}
 
   /*
    * horizontal:
    *
    *  s-t
    *
-   * vertical (not horizontal):
+   * vertical:
    *
    *  t
    *  |
    *  s
    */
-  Edge(int source_site, int target_site, bool horizontal)
-      : source_site(source_site), source_leg(horizontal?2:1),
-        target_site(target_site), target_leg(horizontal?0:3),
-        horizontal(horizontal){}
+  Edge(int source_site, int target_site, direction dir)
+      : source_site(source_site), source_leg(dir==horizontal?2:1),
+        target_site(target_site), target_leg(dir==horizontal?0:3),
+        dir(dir){}
+
+  bool is_horizontal() const { return dir==horizontal; }
+  bool is_vertical() const { return !is_horizontal(); }
 };
 
 
@@ -146,6 +144,8 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
+
+  // for measure time
   double time_simple_update = 0.0;
   double time_full_update = 0.0;
   double time_env = 0.0;
@@ -158,6 +158,7 @@ int main(int argc, char **argv) {
   PEPS_Parameters peps_parameters;
   Parameters local_parameters;
 
+  constexpr int nleg = 4;
   Lattice lattice(2,2);
 
   if (mpirank == 0) {
@@ -205,21 +206,23 @@ int main(int argc, char **argv) {
 
   // Tensors
   std::vector<ptensor> Tn(N_UNIT, ptensor(Shape(D, D, D, D, 2)));
-  std::vector<ptensor> eTt(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
+  std::vector<ptensor>
+      eTt(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
       eTr(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
       eTb(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
       eTl(N_UNIT, ptensor(Shape(CHI, CHI, D, D)));
-  std::vector<ptensor> C1(N_UNIT, ptensor(Shape(CHI, CHI))),
+  std::vector<ptensor> 
+      C1(N_UNIT, ptensor(Shape(CHI, CHI))),
       C2(N_UNIT, ptensor(Shape(CHI, CHI))),
       C3(N_UNIT, ptensor(Shape(CHI, CHI))),
       C4(N_UNIT, ptensor(Shape(CHI, CHI)));
 
   std::vector<std::vector<std::vector<double> > > lambda_tensor(
-      N_UNIT, std::vector<std::vector<double> >(4, std::vector<double>(D)));
+      N_UNIT, std::vector<std::vector<double> >(nleg, std::vector<double>(D)));
 
   Initialize_Tensors(Tn, lattice);
   for (int i1 = 0; i1 < N_UNIT; ++i1) {
-    for (int i2 = 0; i2 < 4; ++i2) {
+    for (int i2 = 0; i2 < nleg; ++i2) {
       for (int i3 = 0; i3 < D; ++i3) {
         lambda_tensor[i1][i2][i3] = 1.0;
       }
@@ -233,17 +236,17 @@ int main(int argc, char **argv) {
 
   std::vector<Edge> simple_edges;
   // x-bond A sub-lattice
-  simple_edges.push_back(Edge(0, 1, true));
-  simple_edges.push_back(Edge(3, 2, true));
+  simple_edges.push_back(Edge(0, 1, Edge::horizontal));
+  simple_edges.push_back(Edge(3, 2, Edge::horizontal));
   // x-bond B sub-lattice
-  simple_edges.push_back(Edge(1, 0, true));
-  simple_edges.push_back(Edge(2, 3, true));
+  simple_edges.push_back(Edge(1, 0, Edge::horizontal));
+  simple_edges.push_back(Edge(2, 3, Edge::horizontal));
   // y-bond A sub-lattice
-  simple_edges.push_back(Edge(0, 2, false));
-  simple_edges.push_back(Edge(3, 1, false));
+  simple_edges.push_back(Edge(0, 2, Edge::vertical));
+  simple_edges.push_back(Edge(3, 1, Edge::vertical));
   // y-bond B sub-lattice
-  simple_edges.push_back(Edge(1, 3, false));
-  simple_edges.push_back(Edge(2, 0, false));
+  simple_edges.push_back(Edge(1, 3, Edge::vertical));
+  simple_edges.push_back(Edge(2, 0, Edge::vertical));
 
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
@@ -285,17 +288,17 @@ int main(int argc, char **argv) {
 
   std::vector<Edge> full_edges;
   // x-bond A sub-lattice
-  full_edges.push_back(Edge(0, 1, true));
-  full_edges.push_back(Edge(3, 2, true));
+  full_edges.push_back(Edge(0, 1, Edge::horizontal));
+  full_edges.push_back(Edge(3, 2, Edge::horizontal));
   // x-bond B sub-lattice
-  full_edges.push_back(Edge(1, 0, true));
-  full_edges.push_back(Edge(2, 3, true));
+  full_edges.push_back(Edge(1, 0, Edge::horizontal));
+  full_edges.push_back(Edge(2, 3, Edge::horizontal));
   // y-bond A sub-lattice
-  full_edges.push_back(Edge(0, 2, false));
-  full_edges.push_back(Edge(3, 1, false));
+  full_edges.push_back(Edge(0, 2, Edge::vertical));
+  full_edges.push_back(Edge(3, 1, Edge::vertical));
   // y-bond B sub-lattice
-  full_edges.push_back(Edge(1, 3, false));
-  full_edges.push_back(Edge(2, 0, false));
+  full_edges.push_back(Edge(1, 3, Edge::vertical));
+  full_edges.push_back(Edge(2, 0, Edge::vertical));
 
   start_time = MPI_Wtime();
   for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
@@ -304,7 +307,7 @@ int main(int argc, char **argv) {
       const int source = ed.source_site;
       const int target = ed.target_site;
 
-      if(ed.horizontal){
+      if(ed.is_horizontal()){
         Full_update_bond(C1[source], C2[target], C3[target], C4[source],
             eTt[source], eTt[target], eTr[target],
             eTb[target], eTb[source], eTl[source],
@@ -323,7 +326,7 @@ int main(int argc, char **argv) {
       Tn[target] = Tn2_new;
 
       if(peps_parameters.Full_Use_FFU){
-        if(ed.horizontal){
+        if(ed.is_horizontal()){
           const int source_x = source % LX;
           const int target_x = target % LX;
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
