@@ -82,7 +82,7 @@ public:
 
     // Debug
     Debug_flag = util::find_or(param, "Debug", false);
-    Warning_flag = util::find_or(param, "Warning", false);
+    Warning_flag = util::find_or(param, "Warning", true);
 
     // Simple update
     Inverse_lambda_cut = util::find_or(param, "inverse_lambda_cutoff", 1e-12);

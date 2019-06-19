@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
   // Start full update
   if (local_parameters.tau_full_step > 0) {
     Ham = Set_Hamiltonian(hx);
-    EvolutionaryTensor(U, Ham, local_parameters.tau_full_step);
+    EvolutionaryTensor(U, Ham, local_parameters.tau_full);
     op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
     // Environment
@@ -308,16 +308,35 @@ int main(int argc, char **argv) {
       const int target = ed.target_site;
 
       if(ed.is_horizontal()){
+        /*
+         *  C1 t t' C2'
+         *  l  T T' r'
+         *  C4 b b' C3'
+         */
         Full_update_bond(C1[source], C2[target], C3[target], C4[source],
-            eTt[source], eTt[target], eTr[target],
-            eTb[target], eTb[source], eTl[source],
+            eTt[source], eTt[target], eTr[target], // t  t' r'
+            eTb[target], eTb[source], eTl[source], // b' b  l
             Tn[source], Tn[target],
             op12, ed.source_leg, peps_parameters,
             Tn1_new, Tn2_new);
       }else{
+        /*
+         * C1' t' C2'
+         *  l' T' r'
+         *  l  T  r
+         * C4  b  C3
+         *
+         *   |
+         *   | rotate
+         *   V
+         * 
+         *  C4 l l' C1'
+         *  b  T T' t'
+         *  C3 r r' C2'
+         */
         Full_update_bond(C4[source], C1[target], C2[target], C3[source],
-            eTl[source], eTl[target], eTt[target],
-            eTr[target], eTr[source], eTb[source],
+            eTl[source], eTl[target], eTt[target], // l  l' t'
+            eTr[target], eTr[source], eTb[source], // r' r  b
             Tn[source], Tn[target],
             op12, ed.source_leg, peps_parameters,
             Tn1_new, Tn2_new);
