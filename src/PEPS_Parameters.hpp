@@ -14,8 +14,8 @@
 class PEPS_Parameters {
 public:
   // Tensor
-  int D;
-  int CHI;
+  int D;    // Bond dimension for central tensor
+  int CHI;  // Bond dimension for environment tensor
 
   // Debug
   bool Debug_flag;
@@ -38,7 +38,7 @@ public:
   double Full_Convergence_Epsilon;
   int Full_max_iteration;
   bool Full_Gauge_Fix;
-  bool Full_Use_FFU;
+  bool Full_Use_FFU; // Fast Full Update
 
   PEPS_Parameters() {
     // Tensor
@@ -77,7 +77,7 @@ public:
 
     // Tensor
     D = util::find_or(param, "D", 2);
-    CHI = D*D;
+    CHI = util::find_or(param, "CHI", 4);
 
 
     // Debug
