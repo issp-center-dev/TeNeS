@@ -279,11 +279,24 @@ int main(int argc, char **argv) {
     EvolutionaryTensor(U, Ham, local_parameters.tau_full);
     op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
+    // DEBUG
+    std::cout << "op12 for full update" << std::endl;
+    for(int i=0; i<16; ++i){
+      std::cout << op12[i] << " ";
+      if(i%4==3) std::cout << std::endl;
+    }
+
     // Environment
     start_time = MPI_Wtime();
     Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
         peps_parameters, lattice);
     time_env += MPI_Wtime() - start_time;
+
+    // DEBUG 
+    std::cout << "First 6 elements in C1[0]" << std::endl;
+    for(int i=0; i<6; ++i){
+      std::cout << C1[0][i] << std::endl;
+    }
   }
 
   std::vector<Edge> full_edges;
@@ -364,6 +377,11 @@ int main(int argc, char **argv) {
         Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
             peps_parameters, lattice);
       }
+      // DEBUG 
+      std::cout << "First 6 elements in C1[0]" << std::endl;
+      for(int i=0; i<6; ++i){
+        std::cout << C1[0][i] << std::endl;
+      }
     }
   }
   time_full_update += MPI_Wtime() - start_time;
@@ -375,6 +393,12 @@ int main(int argc, char **argv) {
   Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
       peps_parameters, lattice);
   time_env += MPI_Wtime() - start_time;
+
+  // DEBUG 
+  std::cout << "First 6 elements in C1[0]" << std::endl;
+  for(int i=0; i<6; ++i){
+    std::cout << C1[0][i] << std::endl;
+  }
 
   ptensor op_identity(Shape(2, 2)), op_mz(Shape(2, 2)), op_mx(Shape(2, 2));
 
