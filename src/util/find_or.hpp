@@ -1,5 +1,5 @@
-#ifndef UTIL_HPP
-#define UTIL_HPP
+#ifndef UTIL_FIND_OR_HPP
+#define UTIL_FIND_OR_HPP
 
 #include <toml11/toml.hpp>
 
@@ -17,5 +17,4 @@ T find_or(const toml::table& tab, const toml::key key, T opt)
 
 } // end of namespace util
 
-#endif // UTIL_HPP
-
+#endif // UTIL_FIND_OR_HPP
