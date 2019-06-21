@@ -71,36 +71,6 @@ public:
     reset();
   }
 
-  void read_parameters(const char *filename) {
-    std::ifstream input_file;
-    input_file.open(filename, std::ios::in);
-    std::string reading_line_buffer;
-
-    while (!input_file.eof()) {
-      std::getline(input_file, reading_line_buffer);
-      std::stringstream buf(reading_line_buffer);
-      std::vector<std::string> result;
-      while (buf >> reading_line_buffer) {
-        result.push_back(reading_line_buffer);
-      }
-
-      if (result.size() > 1) {
-        if (result[0].compare("LX") == 0) {
-          std::istringstream is(result[1]);
-          is >> LX;
-        } else if (result[0].compare("LY") == 0) {
-          std::istringstream is(result[1]);
-          is >> LY;
-        } else if (result[0].compare("N_UNIT") == 0) {
-          std::istringstream is(result[1]);
-          is >> N_UNIT;
-        }
-        // std::cout<< "## input data: "<<result[0]<<" =
-        // "<<result[1]<<std::endl;
-      }
-    }
-    reset();
-  }
   void output_parameters(const char *filename, bool append) {
     std::ofstream ofs;
     if (append) {
