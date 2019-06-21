@@ -13,63 +13,11 @@
 #include "PEPS_Parameters.hpp"
 #include "Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
-
+#include "edge.hpp"
 
 using namespace mptensor;
 typedef Tensor<scalapack::Matrix, double> ptensor;
 typedef Tensor<lapack::Matrix, double> tensor;
-
-/*
- * axis:
- *
- *  y
- *  ^
- *  |
- *  .->x
- *
- * edge index:
- *
- *   1
- *  0.2
- *   3
- *
- * corner and edge tensor
- *
- * C1 t C2
- * l  .  r
- * C4 b C3
- *
- */
-
-struct Edge{
-  enum direction{ horizontal, vertical };
-  int source_site;
-  int source_leg;
-  int target_site;
-  int target_leg;
-  direction dir;
-  Edge():source_site(-1), source_leg(-1), target_site(-1), target_leg(-1), dir(horizontal){}
-
-  /*
-   * horizontal:
-   *
-   *  s-t
-   *
-   * vertical:
-   *
-   *  t
-   *  |
-   *  s
-   */
-  Edge(int source_site, int target_site, direction dir)
-      : source_site(source_site), source_leg(dir==horizontal?2:1),
-        target_site(target_site), target_leg(dir==horizontal?0:3),
-        dir(dir){}
-
-  bool is_horizontal() const { return dir==horizontal; }
-  bool is_vertical() const { return !is_horizontal(); }
-};
-
 
 /* for MPI */
 int mpirank;
@@ -145,6 +93,8 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
+  std::string inputfile = "input.toml";
+
   // for measure time
   double time_simple_update = 0.0;
   double time_full_update = 0.0;
@@ -162,8 +112,8 @@ int main(int argc, char **argv) {
   Lattice lattice(2,2);
 
   if (mpirank == 0) {
-    local_parameters.set("input.toml");
-    peps_parameters.set("input.toml");
+    local_parameters.set(inputfile.c_str());
+    peps_parameters.set(inputfile.c_str());
   }
 
   local_parameters.Bcast_parameters(MPI_COMM_WORLD);
@@ -234,7 +184,11 @@ int main(int argc, char **argv) {
   ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_simple);
   ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
 
-  std::vector<Edge> simple_edges;
+  std::vector<ptensor> ops{op12};
+
+  auto bonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "bonds");
+  Edges simple_edges = make_edges(bonds_str);
+  /*
   // x-bond A sub-lattice
   simple_edges.push_back(Edge(0, 1, Edge::horizontal));
   simple_edges.push_back(Edge(3, 2, Edge::horizontal));
@@ -247,6 +201,7 @@ int main(int argc, char **argv) {
   // y-bond B sub-lattice
   simple_edges.push_back(Edge(2, 0, Edge::vertical));
   simple_edges.push_back(Edge(1, 3, Edge::vertical));
+  */
 
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
@@ -261,7 +216,7 @@ int main(int argc, char **argv) {
       const int target_leg = ed.target_leg;
       Simple_update_bond(Tn[source], Tn[target],
           lambda_tensor[source], lambda_tensor[target],
-          op12, source_leg, peps_parameters,
+          ops[ed.op_id], source_leg, peps_parameters,
           Tn1_new, Tn2_new, lambda_c
           );
       lambda_tensor[source][source_leg] = lambda_c;
@@ -273,11 +228,15 @@ int main(int argc, char **argv) {
   time_simple_update += MPI_Wtime() - start_time;
   // done simple update
 
+  Edges full_edges = make_edges(bonds_str);
   // Start full update
   if (local_parameters.tau_full_step > 0) {
+    full_edges = make_edges(bonds_str);
+
     Ham = Set_Hamiltonian(hx);
     EvolutionaryTensor(U, Ham, local_parameters.tau_full);
     op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+    ops = {op12};
 
     // Environment
     start_time = MPI_Wtime();
@@ -286,7 +245,7 @@ int main(int argc, char **argv) {
     time_env += MPI_Wtime() - start_time;
   }
 
-  std::vector<Edge> full_edges;
+  /*
   // x-bond A sub-lattice
   full_edges.push_back(Edge(0, 1, Edge::horizontal));
   full_edges.push_back(Edge(3, 2, Edge::horizontal));
@@ -299,6 +258,7 @@ int main(int argc, char **argv) {
   // y-bond B sub-lattice
   full_edges.push_back(Edge(2, 0, Edge::vertical));
   full_edges.push_back(Edge(1, 3, Edge::vertical));
+  */
 
   start_time = MPI_Wtime();
   for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
@@ -317,7 +277,7 @@ int main(int argc, char **argv) {
             eTt[source], eTt[target], eTr[target], // t  t' r'
             eTb[target], eTb[source], eTl[source], // b' b  l
             Tn[source], Tn[target],
-            op12, ed.source_leg, peps_parameters,
+            ops[ed.op_id], ed.source_leg, peps_parameters,
             Tn1_new, Tn2_new);
       }else{
         /*
@@ -338,7 +298,7 @@ int main(int argc, char **argv) {
             eTl[source], eTl[target], eTt[target], // l  l' t'
             eTr[target], eTr[source], eTb[source], // r' r  b
             Tn[source], Tn[target],
-            op12, ed.source_leg, peps_parameters,
+            ops[ed.op_id], ed.source_leg, peps_parameters,
             Tn1_new, Tn2_new);
       }
       Tn[source] = Tn1_new;

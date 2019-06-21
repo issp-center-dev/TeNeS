@@ -17,6 +17,15 @@
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
 
+/*
+ * corner and edge tensor
+ *
+ * C1 t C2
+ * l  .  r
+ * C4 b C3
+ */
+
+
 using namespace mptensor;
 template <template <typename> class Matrix, typename C>
 void Left_move(std::vector<Tensor<Matrix, C> > &C1,
