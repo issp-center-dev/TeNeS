@@ -186,29 +186,15 @@ int main(int argc, char **argv) {
 
   std::vector<ptensor> ops{op12};
 
-  auto bonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "bonds");
+  auto bonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "simple_update");
   Edges simple_edges = make_edges(bonds_str);
-  /*
-  // x-bond A sub-lattice
-  simple_edges.push_back(Edge(0, 1, Edge::horizontal));
-  simple_edges.push_back(Edge(3, 2, Edge::horizontal));
-  // x-bond B sub-lattice
-  simple_edges.push_back(Edge(2, 3, Edge::horizontal));
-  simple_edges.push_back(Edge(1, 0, Edge::horizontal));
-  // y-bond A sub-lattice
-  simple_edges.push_back(Edge(0, 2, Edge::vertical));
-  simple_edges.push_back(Edge(3, 1, Edge::vertical));
-  // y-bond B sub-lattice
-  simple_edges.push_back(Edge(2, 0, Edge::vertical));
-  simple_edges.push_back(Edge(1, 3, Edge::vertical));
-  */
 
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
 
   // simple update
   start_time = MPI_Wtime();
-  for (int int_tau = 0; int_tau < local_parameters.tau_simple_step; ++int_tau) {
+  for (int int_tau = 0; int_tau < local_parameters.num_simple_step; ++int_tau) {
     for(auto ed: simple_edges){
       const int source = ed.source_site;
       const int target = ed.target_site;
@@ -228,10 +214,11 @@ int main(int argc, char **argv) {
   time_simple_update += MPI_Wtime() - start_time;
   // done simple update
 
-  Edges full_edges = make_edges(bonds_str);
   // Start full update
-  if (local_parameters.tau_full_step > 0) {
-    full_edges = make_edges(bonds_str);
+  Edges full_edges;
+  if (local_parameters.num_full_step > 0) {
+    auto fullbonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "full_update");
+    full_edges = make_edges(fullbonds_str);
 
     Ham = Set_Hamiltonian(hx);
     EvolutionaryTensor(U, Ham, local_parameters.tau_full);
@@ -245,23 +232,8 @@ int main(int argc, char **argv) {
     time_env += MPI_Wtime() - start_time;
   }
 
-  /*
-  // x-bond A sub-lattice
-  full_edges.push_back(Edge(0, 1, Edge::horizontal));
-  full_edges.push_back(Edge(3, 2, Edge::horizontal));
-  // x-bond B sub-lattice
-  full_edges.push_back(Edge(2, 3, Edge::horizontal));
-  full_edges.push_back(Edge(1, 0, Edge::horizontal));
-  // y-bond A sub-lattice
-  full_edges.push_back(Edge(0, 2, Edge::vertical));
-  full_edges.push_back(Edge(3, 1, Edge::vertical));
-  // y-bond B sub-lattice
-  full_edges.push_back(Edge(2, 0, Edge::vertical));
-  full_edges.push_back(Edge(1, 3, Edge::vertical));
-  */
-
   start_time = MPI_Wtime();
-  for (int int_tau = 0; int_tau < local_parameters.tau_full_step; ++int_tau) {
+  for (int int_tau = 0; int_tau < local_parameters.num_full_step; ++int_tau) {
 
     for(auto ed: full_edges){
       const int source = ed.source_site;
