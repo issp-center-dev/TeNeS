@@ -5,23 +5,14 @@ CHI  = 16  # env_dim
 tau_simple =  0.01
 num_simple_step = 1000
 tau_full = 0.01
-num_full_step = 1
+num_full_step = 0
 Random_amp = 0.02
 second_ST = true
 Read_Initial = false
-ctm_iteration_max = 2
+ctm_iteration_max = 10
 
 [lattice]
 L = [2,2]
-
-[[hamiltonian]]
-id = 0
-value = """
- -0.25   0.175  0.175   0.0
-  0.175  0.25   0.0     0.175
-  0.175  0.0    0.25    0.175
-  0.0    0.175  0.175  -0.25
-"""
 
 [bond]
 simple_update = """
@@ -45,3 +36,13 @@ full_update = """
 2 0 v 0
 1 3 v 0
 """
+
+hamiltonian = [
+"""
+ -0.25   0.175  0.175   0.0
+  0.175  0.25   0.0     0.175
+  0.175  0.0    0.25    0.175
+  0.0    0.175  0.175  -0.25
+""",
+]
+

@@ -14,6 +14,7 @@
 #include "Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "edge.hpp"
+#include "hamiltonian.hpp"
 
 using namespace mptensor;
 typedef Tensor<scalapack::Matrix, double> ptensor;
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
-  std::string inputfile = "input.toml";
+  toml::table input_toml = toml::parse("input.toml");
 
   // for measure time
   double time_simple_update = 0.0;
@@ -112,8 +113,8 @@ int main(int argc, char **argv) {
   Lattice lattice(2,2);
 
   if (mpirank == 0) {
-    local_parameters.set(inputfile.c_str());
-    peps_parameters.set(inputfile.c_str());
+    local_parameters.set(input_toml);
+    peps_parameters.set(input_toml);
   }
 
   local_parameters.Bcast_parameters(MPI_COMM_WORLD);
@@ -180,13 +181,22 @@ int main(int argc, char **argv) {
   }
   const double hx = 1.4;
 
+  // std::vector<ptensor> hams = load_hamiltonians(input_toml);
+  std::vector<ptensor> hams = {Set_Hamiltonian(hx)};
+
+  /*
   ptensor Ham = Set_Hamiltonian(hx);
-  ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_simple);
-  ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+  */
+  std::vector<ptensor> ops;
 
-  std::vector<ptensor> ops{op12};
+  for(auto Ham: hams){
+    ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_simple);
+    ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+    ops.push_back(op12);
+  }
 
-  auto bonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "simple_update");
+
+  auto bonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "simple_update");
   Edges simple_edges = make_edges(bonds_str);
 
   ptensor Tn1_new, Tn2_new;
@@ -217,13 +227,22 @@ int main(int argc, char **argv) {
   // Start full update
   Edges full_edges;
   if (local_parameters.num_full_step > 0) {
-    auto fullbonds_str = toml::find<std::string>(toml::find(toml::parse(inputfile.c_str()), "bond"), "full_update");
+    auto fullbonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "full_update");
     full_edges = make_edges(fullbonds_str);
 
+    /*
     Ham = Set_Hamiltonian(hx);
     EvolutionaryTensor(U, Ham, local_parameters.tau_full);
     op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
     ops = {op12};
+    */
+
+    ops.clear();
+    for(auto Ham: hams){
+      ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_full);
+      ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+      ops.push_back(op12);
+    }
 
     // Environment
     start_time = MPI_Wtime();

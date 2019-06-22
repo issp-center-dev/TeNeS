@@ -15,7 +15,7 @@ typedef mptensor::Tensor<mptensor::scalapack::Matrix, double> ptensor;
 namespace util{
 ptensor load_tensor(std::string const& str) {
   std::vector<std::vector<double>> A;
-  const static std::string delim = " \t"
+  const static std::string delim = " \t";
   std::string line;
 
   std::stringstream ss(str);
