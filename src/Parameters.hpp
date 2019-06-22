@@ -1,8 +1,10 @@
 #ifndef PARAMETERS_HPP
 
+#include <vector>
+#include <fstream>
 #include <mpi.h>
-#include <toml11/toml.hpp>
-#include "util/find_or.hpp"
+
+#include <toml11/toml/types.hpp>
 
 struct Parameters{
 
@@ -20,21 +22,11 @@ struct Parameters{
     num_full_step = 0;
   }
 
-  explicit Parameters(const char *filename): Parameters(toml::parse(filename)){}
-  Parameters(toml::table data){
-    set(data);
-  }
+  explicit Parameters(const char *filename);
+  Parameters(toml::Table data);
 
-  void set(const char *filename){ set(toml::parse(filename)); }
-  void set(toml::table data){
-    toml::table param = toml::find<toml::table>(data, "parameter");
-
-    tau_simple = toml::find<double>(param, "tau_simple");
-    num_simple_step = toml::find<int>(param, "num_simple_step");
-
-    tau_full = toml::find<double>(param, "tau_full");
-    num_full_step = util::find_or(param, "num_full_step", 0);
-  }
+  void set(const char *filename);
+  void set(toml::Table data);
 
   void output_parameters(const char *filename, const bool append) {
     std::ofstream ofs;
