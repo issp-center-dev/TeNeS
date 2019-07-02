@@ -5,7 +5,7 @@
 #include <mptensor.hpp>
 #include <toml11/toml/types.hpp>
 
-typedef mptensor::Tensor<mptensor::scalapack::Matrix, double> ptensor;
+using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 
 std::vector<ptensor> load_hamiltonians(const char* filename);
 std::vector<ptensor> load_hamiltonians(toml::Table const& table);

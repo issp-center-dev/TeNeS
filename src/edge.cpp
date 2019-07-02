@@ -6,17 +6,6 @@
 #include "util/string.hpp"
 #include "edge.hpp"
 
-/*
- * Input
- * """
- * 0 1 h 0
- * 0 2 v 0
- * """
- *
- * will be {Edge(0, 1, Edge::horizontal, 0),
- *          Edge(0, 2, Edge::vertival, 0)}
- *
- */
 Edges make_edges(std::string const& str){
   constexpr static int NFIELD = 4;
   Edges edges;

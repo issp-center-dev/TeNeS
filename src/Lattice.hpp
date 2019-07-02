@@ -1,10 +1,11 @@
 #ifndef LATTICE_HPP
 #define LATTICE_HPP
 
-#include <string>
-#include <fstream>
 #include <vector>
 #include <array>
+
+#include <mpi.h>
+
 // Lattice setting
 
 /*
@@ -33,85 +34,21 @@ public:
   int LY;
   int N_UNIT;
 
-  std::vector<std::vector<int> > Tensor_list;
-  std::vector<std::array<int, 4> > NN_Tensor;
+  std::vector<std::vector<int>> Tensor_list;
+  std::vector<std::array<int, 4>> NN_Tensor;
 
-  Lattice(int X=2, int Y=2) : LX(X), LY(Y), N_UNIT(LX*LY) {
-    assert(X > 0);
-    assert(Y > 0);
+  Lattice(int X, int Y);
 
-    reset();
+  void reset();
+  void reset(int X, int Y);
+
+  void save(const char *filename, bool append=false);
+
+  void save_append(const char *filename) {
+    save(filename, true);
   }
 
-  void reset(){
-    N_UNIT = LX * LY;
-    Tensor_list.assign(LX, std::vector<int>(LY));
-    NN_Tensor.resize(N_UNIT);
-    for(int ix=0; ix<LX; ++ix){
-      for(int iy=0; iy<LY; ++iy){
-        const int i = ix + iy*LX;
-        Tensor_list[ix][iy] = i;
-      }
-    }
-    for(int ix=0; ix<LX; ++ix){
-      for(int iy=0; iy<LY; ++iy){
-        const int i = ix + iy*LX;
-        NN_Tensor[i][0] = Tensor_list[(ix-1+LX)%LX][iy];
-        NN_Tensor[i][1] = Tensor_list[ix          ][(iy+1)%LY];
-        NN_Tensor[i][2] = Tensor_list[(ix+1)%LX][iy];
-        NN_Tensor[i][3] = Tensor_list[ix][(iy-1+LY)%LY];
-      }
-    }
-  }
-  void reset(int X, int Y){
-    assert(X > 0);
-    assert(Y > 0);
-    LX = X;
-    LY = Y;
-    reset();
-  }
-
-  void output_parameters(const char *filename, bool append) {
-    std::ofstream ofs;
-    if (append) {
-      ofs.open(filename, std::ios::out | std::ios::app);
-    } else {
-      ofs.open(filename, std::ios::out);
-    }
-
-    ofs << "LX " << LX << std::endl;
-    ofs << "LY " << LY << std::endl;
-    ofs << "N_UNIT " << N_UNIT << std::endl;
-  }
-
-  void output_parameters(const char *filename) {
-    output_parameters(filename, false);
-  }
-
-  void output_parameters_append(const char *filename) {
-    output_parameters(filename, true);
-  }
-
-  void Bcast_parameters(MPI_Comm comm) {
-    int irank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank);
-    std::vector<int> params_int(3);
-
-    if (irank == 0) {
-      params_int[0] = LX;
-      params_int[1] = LY;
-      params_int[2] = N_UNIT;
-
-      MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-    } else {
-      MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-
-      LX = params_int[0];
-      LY = params_int[1];
-      N_UNIT = params_int[2];
-    }
-    reset();
-  }
+  void Bcast(MPI_Comm comm, int root=0);
 };
 
 /*

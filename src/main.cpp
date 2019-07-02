@@ -2,23 +2,18 @@
 #include <random>
 #include <sys/stat.h>
 
-#include <mptensor/complex.hpp>
-#include <mptensor/rsvd.hpp>
-#include <mptensor/tensor.hpp>
 #include <toml11/toml.hpp>
 
 #include "Lattice.hpp"
-#include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
 #include "Parameters.hpp"
 #include "edge.hpp"
 #include "hamiltonian.hpp"
 #include "tnsolve.hpp"
 
-using namespace mptensor;
-using ptensor = Tensor<scalapack::Matrix, double>;
 
 int main(int argc, char **argv) {
+  using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
   int mpisize, mpirank;
 
   /* MPI initialization */
@@ -39,15 +34,12 @@ int main(int argc, char **argv) {
     peps_parameters.set(input_toml);
   }
 
-  local_parameters.Bcast_parameters(MPI_COMM_WORLD);
-  peps_parameters.Bcast_parameters(MPI_COMM_WORLD);
+  local_parameters.Bcast(MPI_COMM_WORLD);
+  peps_parameters.Bcast(MPI_COMM_WORLD);
 
-  lattice.Bcast_parameters(MPI_COMM_WORLD);
+  lattice.Bcast(MPI_COMM_WORLD);
 
-  const double hx = 1.4;
-
-  // std::vector<ptensor> hams = load_hamiltonians(input_toml);
-  std::vector<ptensor> hams = {Set_Hamiltonian(hx)};
+  std::vector<ptensor> hams = load_hamiltonians(input_toml);
 
   auto bonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "simple_update");
   auto fullbonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "full_update");
@@ -55,7 +47,6 @@ int main(int argc, char **argv) {
   Edges full_edges = make_edges(fullbonds_str);
 
   tnsolve(MPI_COMM_WORLD, peps_parameters, local_parameters, lattice, simple_edges, full_edges, hams);
-
 
   MPI_Finalize();
   return 0;

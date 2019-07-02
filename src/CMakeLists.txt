@@ -6,6 +6,7 @@ main.cpp
 tnsolve.cpp 
 PEPS_Parameters.cpp
 Parameters.cpp
+Lattice.cpp
 edge.cpp
 hamiltonian.cpp
 util/string.cpp

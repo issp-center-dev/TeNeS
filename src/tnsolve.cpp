@@ -72,9 +72,9 @@ int tnsolve(MPI_Comm comm,
 
   constexpr int nleg = 4;
 
-  local_parameters.Bcast_parameters(comm);
-  peps_parameters.Bcast_parameters(comm);
-  lattice.Bcast_parameters(comm);
+  local_parameters.Bcast(comm);
+  peps_parameters.Bcast(comm);
+  lattice.Bcast(comm);
 
   // output debug or warning info only from process 0
   if (mpirank != 0) {
@@ -89,9 +89,9 @@ int tnsolve(MPI_Comm comm,
       mkdir("output_data", 0755);
     }
 
-    peps_parameters.output_parameters("output_data/output_params.dat");
-    lattice.output_parameters_append("output_data/output_params.dat");
-    local_parameters.output_parameters_append("output_data/output_params.dat");
+    peps_parameters.save("output_data/output_params.dat");
+    lattice.save_append("output_data/output_params.dat");
+    local_parameters.save_append("output_data/output_params.dat");
     std::ofstream ofs;
     ofs.open("output_data/output_params.dat", std::ios::out | std::ios::app);
     ofs << std::endl;
@@ -358,7 +358,6 @@ int tnsolve(MPI_Comm comm,
     std::cout << "##time environmnent= " << time_env << std::endl;
     std::cout << "##time observable= " << time_obs << std::endl;
   }
-  MPI_Finalize();
   return 0;
 }
 
