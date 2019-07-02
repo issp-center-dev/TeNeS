@@ -306,11 +306,11 @@ int tnsolve(MPI_Comm comm,
     num_j = lattice.NN_Tensor[num][2];
 
     // x direction
-    norm_x = Contract_two_sites_holizontal(
+    norm_x = Contract_two_sites_horizontal(
         C1[num], C2[num_j], C3[num_j], C4[num], eTt[num], eTt[num_j],
         eTr[num_j], eTb[num_j], eTb[num], eTl[num], Tn[num], Tn[num_j],
         op_identity, op_identity);
-    zz[num][0] = Contract_two_sites_holizontal(
+    zz[num][0] = Contract_two_sites_horizontal(
         C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
         eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
         Tn[num], Tn[num_j], op_mz, op_mz) /

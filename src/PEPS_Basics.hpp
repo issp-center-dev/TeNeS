@@ -52,7 +52,7 @@ C Contract_one_site(const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
       op1, Axes(0, 1), Axes(1, 0));
 }
 template <template <typename> class Matrix, typename C>
-C Contract_two_sites_holizontal(
+C Contract_two_sites_horizontal(
     const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &C4,
     const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT2,
@@ -153,7 +153,7 @@ C Contract_two_sites_vertical(
       op1, Axes(0, 1), Axes(0, 1));
 }
 template <template <typename> class Matrix, typename C>
-C Contract_two_sites_holizontal_op12(
+C Contract_two_sites_horizontal_op12(
     const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &C4,
     const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT2,
@@ -167,7 +167,7 @@ C Contract_two_sites_holizontal_op12(
     ##   |  |
   */
   ////////////////////////////////////////////////////////////
-  // two_sites_holizontal_op12.dat
+  // two_sites_horizontal_op12.dat
   ////////////////////////////////////////////////////////////
   // (op12*((eT1*(Tn1*(Tn1c*(eT5*(C1*(C4*eT6))))))*(eT2*(Tn2*(Tn2c*(eT4*(C2*(C3*eT3))))))))
   // cpu_cost= 2.20416e+11  memory= 6.0502e+08
