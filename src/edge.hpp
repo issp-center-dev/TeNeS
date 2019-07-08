@@ -36,13 +36,13 @@ struct Edge{
    *
    * vertical:
    *
-   *  t
-   *  |
    *  s
+   *  |
+   *  t
    */
   Edge(int source_site, int target_site, direction dir, int op_id)
-      : source_site(source_site), source_leg(dir==horizontal?2:1),
-        target_site(target_site), target_leg(dir==horizontal?0:3),
+      : source_site(source_site), source_leg(dir==horizontal?2:3),
+        target_site(target_site), target_leg(dir==horizontal?0:1),
         dir(dir), op_id(op_id){}
 
   bool is_horizontal() const { return dir==horizontal; }

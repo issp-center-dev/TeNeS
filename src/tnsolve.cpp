@@ -203,22 +203,22 @@ int tnsolve(MPI_Comm comm,
             Tn1_new, Tn2_new);
       }else{
         /*
-         * C1' t' C2'
-         *  l' T' r'
-         *  l  T  r
-         * C4  b  C3
+         * C1  t C2
+         *  l  T r
+         *  l' T'  r'
+         * C4' b  C3'
          *
          *   |
          *   | rotate
          *   V
          * 
+         *  C2 r r' C3'
+         *  t  T T' b'
          *  C4 l l' C1'
-         *  b  T T' t'
-         *  C3 r r' C2'
          */
-        Full_update_bond(C4[source], C1[target], C2[target], C3[source],
-            eTl[source], eTl[target], eTt[target], // l  l' t'
-            eTr[target], eTr[source], eTb[source], // r' r  b
+        Full_update_bond(C2[source], C3[target], C1[target], C4[source],
+            eTr[source], eTr[target], eTb[target],
+            eTl[target], eTl[source], eTt[source],
             Tn[source], Tn[target],
             ops[ed.op_id], ed.source_leg, peps_parameters,
             Tn1_new, Tn2_new);
