@@ -15,11 +15,10 @@
 #include "edge.hpp"
 #include "hamiltonian.hpp"
 
+
 using namespace mptensor;
-typedef Tensor<scalapack::Matrix, double> ptensor;
 
 void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice) {
-  // ferro
   int D = Tn[0].shape()[0];
 
   std::vector<double> ran(D * D * D * D * 2);
@@ -237,9 +236,9 @@ int tnsolve(MPI_Comm comm,
         }else{
           const int source_y = source / LX;
           const int target_y = target / LX;
-          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-              source_y, peps_parameters, lattice);
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+              source_y, peps_parameters, lattice);
+          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
               target_y, peps_parameters, lattice);
         }
       }else{
@@ -275,6 +274,11 @@ int tnsolve(MPI_Comm comm,
   op_mx.set_value(Index(1, 0), 0.5);
   op_mx.set_value(Index(1, 1), 0.0);
 
+  std::vector<ptensor> hamtensors(hams.size());
+  for(int i=0; i<hams.size(); ++i){
+    hamtensors[i] = transpose(reshape(hams[i], Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+  }
+
   std::vector<double> mz(N_UNIT), mx(N_UNIT);
   std::vector<std::vector<double> > zz(N_UNIT, std::vector<double>(2));
   for (int i = 0; i < N_UNIT; ++i) {
@@ -301,40 +305,43 @@ int tnsolve(MPI_Comm comm,
       << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
     }
   }
-  double norm_x, norm_y;
-  for (int num = 0; num < N_UNIT; ++num) {
-    num_j = lattice.NN_Tensor[num][2];
 
-    // x direction
-    norm_x = Contract_two_sites_horizontal(
-        C1[num], C2[num_j], C3[num_j], C4[num], eTt[num], eTt[num_j],
-        eTr[num_j], eTb[num_j], eTb[num], eTl[num], Tn[num], Tn[num_j],
-        op_identity, op_identity);
-    zz[num][0] = Contract_two_sites_horizontal(
-        C1[num], C2[num_j], C3[num_j], C4[num], eTt[num],
-        eTt[num_j], eTr[num_j], eTb[num_j], eTb[num], eTl[num],
-        Tn[num], Tn[num_j], op_mz, op_mz) /
-    norm_x;
-
-    // y direction
-    num_j = lattice.NN_Tensor[num][3];
-
-    norm_y = Contract_two_sites_vertical(
-        C1[num], C2[num], C3[num_j], C4[num_j], eTt[num], eTr[num],
-        eTr[num_j], eTb[num_j], eTl[num_j], eTl[num], Tn[num], Tn[num_j],
-        op_identity, op_identity);
-    zz[num][1] = Contract_two_sites_vertical(
-        C1[num], C2[num], C3[num_j], C4[num_j], eTt[num],
-        eTr[num], eTr[num_j], eTb[num_j], eTl[num_j], eTl[num],
-        Tn[num], Tn[num_j], op_mz, op_mz) /
-    norm_y;
-
-    if (peps_parameters.Debug_flag) {
-      std::cout <<  num << " " << norm_x << " " << norm_y << " "
-      << zz[num][0] << " " << zz[num][1] << std::endl;
+  double energy=0.0;
+  for(auto ed: simple_edges){
+    // const int source = ed.source_site;
+    // const int target = ed.target_site;
+    const int source = ed.source_site;
+    const int target = ed.target_site;
+    if(ed.is_horizontal()){
+      const double local_norm = Contract_two_sites_horizontal(
+                   C1[source], C2[target], C3[target], C4[source],
+                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                   Tn[source], Tn[target], op_identity, op_identity);
+      energy += Contract_two_sites_horizontal_op12(
+                   C1[source], C2[target], C3[target], C4[source],
+                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                   Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
+      zz[source][0] += Contract_two_sites_horizontal(
+                   C1[source], C2[target], C3[target], C4[source],
+                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                   Tn[source], Tn[target], op_mz, op_mz);
+    }else{
+      const double local_norm = Contract_two_sites_vertical(
+                   C1[source], C2[source], C3[target], C4[target],
+                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
+                   Tn[source], Tn[target], op_identity, op_identity);
+      energy += Contract_two_sites_vertical_op12(
+                   C1[source], C2[source], C3[target], C4[target],
+                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
+                   Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
+      zz[source][1] += Contract_two_sites_vertical(
+                   C1[source], C2[source], C3[target], C4[target],
+                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
+                   Tn[source], Tn[target], op_mz, op_mz);
     }
   }
   time_obs += MPI_Wtime() - start_time;
+
   double sum_mz, sum_mx, sum_zz;
   sum_zz = 0.0;
   sum_mx = 0.0;
@@ -345,25 +352,28 @@ int tnsolve(MPI_Comm comm,
     sum_zz += zz[i][0] + zz[i][1];
   }
   if (mpirank == 0) {
-    // TODO 
-    const double hx = 1.4;
-    std::cout <<  -sum_zz / N_UNIT - hx * sum_mx / N_UNIT << " "
-    << sum_mz / N_UNIT << " " << sum_mx / N_UNIT << " "
-    << sum_zz / N_UNIT << std::endl;
+    // const double hx = 1.4;
+    // std::cout <<  -sum_zz / N_UNIT - hx * sum_mx / N_UNIT << " "
+    // << sum_mz / N_UNIT << " " << sum_mx / N_UNIT << " "
+    // << sum_zz / N_UNIT << std::endl;
+
+    std::cout << "Energy = " << energy / N_UNIT << std::endl;
+    std::cout << "Magnetization z = " << sum_mz / N_UNIT << std::endl;
+    std::cout << "Magnetization x = " << sum_mx / N_UNIT << std::endl;
+    std::cout << "Nearest Neighbor zz = " << sum_zz / N_UNIT << std::endl;
   }
 
   if (mpirank == 0) {
-    std::cout << "##time simple update= " << time_simple_update << std::endl;
-    std::cout << "##time full update= " << time_full_update << std::endl;
-    std::cout << "##time environmnent= " << time_env << std::endl;
-    std::cout << "##time observable= " << time_obs << std::endl;
+    std::cout << "time simple update = " << time_simple_update << std::endl;
+    std::cout << "time full update   = " << time_full_update << std::endl;
+    std::cout << "time environmnent  = " << time_env << std::endl;
+    std::cout << "time observable    = " << time_obs << std::endl;
   }
   return 0;
 }
 
+// template specialization
 using d_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
-
 template
 int tnsolve<d_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
@@ -374,6 +384,7 @@ int tnsolve<d_tensor>(MPI_Comm comm,
                       std::vector<d_tensor> hams
     );
 /*
+using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
 template
 int tnsolve<c_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
