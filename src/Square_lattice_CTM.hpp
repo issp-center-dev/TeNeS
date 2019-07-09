@@ -488,7 +488,7 @@ int Calc_CTM_Environment(
     std::vector<Tensor<Matrix, C> > &eTb, std::vector<Tensor<Matrix, C> > &eTl,
     const std::vector<Tensor<Matrix, C> > &Tn,
     const PEPS_Parameters peps_parameters, const Lattice lattice,
-    bool initialize) {
+    bool initialize = true) {
   /*
     ## Calc environment tensors
     ## C1,C2,C3,C4 and eTt,eTl,eTr,eTb will be modified
@@ -763,17 +763,6 @@ int Calc_CTM_Environment(
     std::cout << "CTM: count to convergence= " << count << std::endl;
   }
   return count;
-};
-template <template <typename> class Matrix, typename C>
-int Calc_CTM_Environment(
-    std::vector<Tensor<Matrix, C> > &C1, std::vector<Tensor<Matrix, C> > &C2,
-    std::vector<Tensor<Matrix, C> > &C3, std::vector<Tensor<Matrix, C> > &C4,
-    std::vector<Tensor<Matrix, C> > &eTt, std::vector<Tensor<Matrix, C> > &eTr,
-    std::vector<Tensor<Matrix, C> > &eTb, std::vector<Tensor<Matrix, C> > &eTl,
-    const std::vector<Tensor<Matrix, C> > &Tn, PEPS_Parameters peps_parameters,
-    Lattice lattice) {
-  return Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                              peps_parameters, lattice, true);
 }
 
 #endif // _SQUARE_LATTICE_HPP_
