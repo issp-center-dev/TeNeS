@@ -5,7 +5,6 @@
 #include <mpi.h>
 
 class Lattice;
-class Parameters;
 class PEPS_Parameters;
 class Edge;
 using Edges = std::vector<Edge>;
@@ -13,7 +12,6 @@ using Edges = std::vector<Edge>;
 template<class tensor>
 int tnsolve(MPI_Comm comm,
             PEPS_Parameters peps_parameters,
-            Parameters local_parameters,
             Lattice lattice,
             Edges simple_edges,
             Edges full_edges,

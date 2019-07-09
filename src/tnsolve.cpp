@@ -10,7 +10,6 @@
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
-#include "Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "edge.hpp"
 #include "hamiltonian.hpp"
@@ -47,7 +46,6 @@ void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice) {
 template <class ptensor>
 int tnsolve(MPI_Comm comm,
             PEPS_Parameters peps_parameters,
-            Parameters local_parameters,
             Lattice lattice,
             Edges simple_edges,
             Edges full_edges,
@@ -71,7 +69,6 @@ int tnsolve(MPI_Comm comm,
 
   constexpr int nleg = 4;
 
-  local_parameters.Bcast(comm);
   peps_parameters.Bcast(comm);
   lattice.Bcast(comm);
 
@@ -90,7 +87,6 @@ int tnsolve(MPI_Comm comm,
 
     peps_parameters.save("output_data/output_params.dat");
     lattice.save_append("output_data/output_params.dat");
-    local_parameters.save_append("output_data/output_params.dat");
     std::ofstream ofs;
     ofs.open("output_data/output_params.dat", std::ios::out | std::ios::app);
     ofs << std::endl;
@@ -139,14 +135,14 @@ int tnsolve(MPI_Comm comm,
 
   std::vector<ptensor> ops;
   for(auto Ham: hams){
-    ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_simple);
+    ptensor U = EvolutionaryTensor(Ham, peps_parameters.tau_simple);
     ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
     ops.push_back(op12);
   }
 
   // simple update
   start_time = MPI_Wtime();
-  for (int int_tau = 0; int_tau < local_parameters.num_simple_step; ++int_tau) {
+  for (int int_tau = 0; int_tau < peps_parameters.num_simple_step; ++int_tau) {
     for(auto ed: simple_edges){
       const int source = ed.source_site;
       const int target = ed.target_site;
@@ -167,10 +163,10 @@ int tnsolve(MPI_Comm comm,
   // done simple update
 
   // Start full update
-  if (local_parameters.num_full_step > 0) {
+  if (peps_parameters.num_full_step > 0) {
     ops.clear();
     for(auto Ham: hams){
-      ptensor U = EvolutionaryTensor(Ham, local_parameters.tau_full);
+      ptensor U = EvolutionaryTensor(Ham, peps_parameters.tau_full);
       ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
       ops.push_back(op12);
     }
@@ -182,7 +178,7 @@ int tnsolve(MPI_Comm comm,
   }
 
   start_time = MPI_Wtime();
-  for (int int_tau = 0; int_tau < local_parameters.num_full_step; ++int_tau) {
+  for (int int_tau = 0; int_tau < peps_parameters.num_full_step; ++int_tau) {
 
     for(auto ed: full_edges){
       const int source = ed.source_site;
@@ -377,7 +373,6 @@ using d_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 template
 int tnsolve<d_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
-                      Parameters local_parameters,
                       Lattice lattice,
                       Edges simple_edges,
                       Edges full_edges,
@@ -388,7 +383,6 @@ using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<doub
 template
 int tnsolve<c_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
-                      Parameters local_parameters,
                       Lattice lattice,
                       Edges simple_edges,
                       Edges full_edges,

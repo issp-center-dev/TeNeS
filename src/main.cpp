@@ -6,7 +6,6 @@
 
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
-#include "Parameters.hpp"
 #include "edge.hpp"
 #include "hamiltonian.hpp"
 #include "tnsolve.hpp"
@@ -25,16 +24,13 @@ int main(int argc, char **argv) {
 
   // Parameters
   PEPS_Parameters peps_parameters;
-  Parameters local_parameters;
 
   Lattice lattice(2,2);
 
   if (mpirank == 0) {
-    local_parameters.set(input_toml);
     peps_parameters.set(input_toml);
   }
 
-  local_parameters.Bcast(MPI_COMM_WORLD);
   peps_parameters.Bcast(MPI_COMM_WORLD);
 
   lattice.Bcast(MPI_COMM_WORLD);
@@ -46,7 +42,7 @@ int main(int argc, char **argv) {
   Edges simple_edges = make_edges(bonds_str);
   Edges full_edges = make_edges(fullbonds_str);
 
-  tnsolve(MPI_COMM_WORLD, peps_parameters, local_parameters, lattice, simple_edges, full_edges, hams);
+  tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, hams);
 
   MPI_Finalize();
   return 0;

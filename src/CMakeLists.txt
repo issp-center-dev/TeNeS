@@ -5,7 +5,6 @@ add_executable(tnsolve
 main.cpp
 tnsolve.cpp 
 PEPS_Parameters.cpp
-Parameters.cpp
 Lattice.cpp
 edge.cpp
 hamiltonian.cpp

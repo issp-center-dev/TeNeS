@@ -20,6 +20,8 @@ PEPS_Parameters::PEPS_Parameters() {
   Warning_flag = true;
 
   // Simple update
+  tau_simple = 0.0;
+  num_simple_step = 0;
   Inverse_lambda_cut = 1e-12;
 
   // Environment
@@ -31,6 +33,8 @@ PEPS_Parameters::PEPS_Parameters() {
   RSVD_Oversampling_factor = 2;
 
   // Full update
+  tau_full = 0.0;
+  num_full_step = 0;
   Inverse_Env_cut = 1e-12;
   Full_Inverse_precision = 1e-12;
   Full_Convergence_Epsilon = 1e-12;
@@ -54,6 +58,8 @@ void PEPS_Parameters::set(toml::Table data){
   Warning_flag = util::find_or(param, "Warning", true);
 
   // Simple update
+  tau_simple = util::find_or(param, "tau_simple", 0.0);
+  num_simple_step = util::find_or(param, "num_simple_step", 0);
   Inverse_lambda_cut = util::find_or(param, "inverse_lambda_cutoff", 1e-12);
 
   // Environment
@@ -65,6 +71,8 @@ void PEPS_Parameters::set(toml::Table data){
   RSVD_Oversampling_factor = util::find_or(param, "rsvd_oversampling_factor", 2);
 
   // Full update
+  tau_full = util::find_or(param, "tau_full", 0.0);
+  num_full_step = util::find_or(param, "num_full_step", 0);
   Inverse_Env_cut = util::find_or(param, "inverse_projector_cutoff", 1e-12);
   Full_Inverse_precision = util::find_or(param, "full_inverse_precision", 1e-12);
   Full_Convergence_Epsilon = util::find_or(param, "full_convergence_epsilon", 1e-12);
@@ -73,74 +81,102 @@ void PEPS_Parameters::set(toml::Table data){
   Full_Use_FFU = util::find_or(param, "full_use_ffu", true);
 }
 
+#define SAVE_PARAM(name, type) params_##type [I_##name] = name
+#define LOAD_PARAM(name, type) name = params_##type [I_##name]
+
 void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
+  enum PARAMS_INT_INDEX{ 
+    I_D,
+    I_CHI,
+    I_Debug_flag,
+    I_Warning_flag,
+    I_num_simple_step,
+    I_Max_CTM_Iteration,
+    I_CTM_Projector_corner,
+    I_Use_RSVD,
+    I_RSVD_Oversampling_factor,
+    I_Full_max_iteration,
+    I_Full_Gauge_Fix,
+    I_Full_Use_FFU,
+
+    N_PARAMS_INT_INDEX,
+  };
+  enum PARAMS_DOUBLE_INDEX{
+    I_tau_simple,
+    I_Inverse_lambda_cut,
+    I_Inverse_projector_cut,
+    I_CTM_Convergence_Epsilon,
+    I_Inverse_Env_cut,
+    I_tau_full,
+    I_Full_Inverse_precision,
+    I_Full_Convergence_Epsilon,
+
+    N_PARAMS_DOUBLE_INDEX,
+  };
+
   int irank;
   MPI_Comm_rank(MPI_COMM_WORLD, &irank);
 
-  std::vector<double> params_double(6);
-  std::vector<int> params_int(11);
+  std::vector<int> params_int(N_PARAMS_INT_INDEX);
+  std::vector<double> params_double(N_PARAMS_DOUBLE_INDEX);
 
   if (irank == root) {
-    // Tensor
-    params_int[0] = D;
-    params_int[1] = CHI;
-    // Debug
-    params_int[2] = Debug_flag;
-    params_int[3] = Warning_flag;
-    // Environment
-    params_int[4] = Max_CTM_Iteration;
-    params_int[5] = CTM_Projector_corner;
-    params_int[6] = Use_RSVD;
-    params_int[7] = RSVD_Oversampling_factor;
-    // Full update
-    params_int[8] = Full_max_iteration;
-    params_int[9] = Full_Gauge_Fix;
-    params_int[10] = Full_Use_FFU;
+    SAVE_PARAM(D, int);
+    SAVE_PARAM(CHI, int);
+    SAVE_PARAM(Debug_flag, int);
+    SAVE_PARAM(Warning_flag, int);
+    SAVE_PARAM(num_simple_step, int);
+    SAVE_PARAM(Max_CTM_Iteration, int);
+    SAVE_PARAM(CTM_Projector_corner, int);
+    SAVE_PARAM(Use_RSVD, int);
+    SAVE_PARAM(RSVD_Oversampling_factor, int);
+    SAVE_PARAM(Full_max_iteration, int);
+    SAVE_PARAM(Full_Gauge_Fix, int);
+    SAVE_PARAM(Full_Use_FFU, int);
 
-    // Simple update
-    params_double[0] = Inverse_lambda_cut;
-    // Environment
-    params_double[1] = Inverse_projector_cut;
-    params_double[2] = CTM_Convergence_Epsilon;
-    // Full update
-    params_double[3] = Inverse_Env_cut;
-    params_double[4] = Full_Inverse_precision;
-    params_double[5] = Full_Convergence_Epsilon;
+    SAVE_PARAM(tau_simple, double);
+    SAVE_PARAM(Inverse_lambda_cut, double);
+    SAVE_PARAM(Inverse_projector_cut, double);
+    SAVE_PARAM(CTM_Convergence_Epsilon, double);
+    SAVE_PARAM(Inverse_Env_cut, double);
+    SAVE_PARAM(tau_full, double);
+    SAVE_PARAM(Full_Inverse_precision, double);
+    SAVE_PARAM(Full_Convergence_Epsilon, double);
 
-    MPI_Bcast(&params_int.front(), 11, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), 6, MPI_DOUBLE, 0, comm);
+
+    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0, comm);
   } else {
-    MPI_Bcast(&params_int.front(), 11, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), 6, MPI_DOUBLE, 0, comm);
+    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0, comm);
 
-    // Tensor
-    D = params_int[0];
-    CHI = params_int[1];
-    // Debug
-    Debug_flag = params_int[2];
-    Warning_flag = params_int[3];
-    // Environment
-    Max_CTM_Iteration = params_int[4];
-    CTM_Projector_corner = params_int[5];
-    Use_RSVD = params_int[6];
-    RSVD_Oversampling_factor = params_int[7];
-    // Full update
-    Full_max_iteration = params_int[8];
-    Full_Gauge_Fix = params_int[9];
-    Full_Use_FFU = params_int[10];
+    LOAD_PARAM(D, int);
+    LOAD_PARAM(CHI, int);
+    LOAD_PARAM(Debug_flag, int);
+    LOAD_PARAM(Warning_flag, int);
+    LOAD_PARAM(num_simple_step, int);
+    LOAD_PARAM(Max_CTM_Iteration, int);
+    LOAD_PARAM(CTM_Projector_corner, int);
+    LOAD_PARAM(Use_RSVD, int);
+    LOAD_PARAM(RSVD_Oversampling_factor, int);
+    LOAD_PARAM(Full_max_iteration, int);
+    LOAD_PARAM(Full_Gauge_Fix, int);
+    LOAD_PARAM(Full_Use_FFU, int);
 
-    // Simple update
-    Inverse_lambda_cut = params_double[0];
-    // Environment
-    Inverse_projector_cut = params_double[1];
-    CTM_Convergence_Epsilon = params_double[2];
-    // Full update
-    Inverse_Env_cut = params_double[3];
-    Full_Inverse_precision = params_double[4];
-    Full_Convergence_Epsilon = params_double[5];
+    LOAD_PARAM(tau_simple, double);
+    LOAD_PARAM(Inverse_lambda_cut, double);
+    LOAD_PARAM(Inverse_projector_cut, double);
+    LOAD_PARAM(CTM_Convergence_Epsilon, double);
+    LOAD_PARAM(Inverse_Env_cut, double);
+    LOAD_PARAM(tau_full, double);
+    LOAD_PARAM(Full_Inverse_precision, double);
+    LOAD_PARAM(Full_Convergence_Epsilon, double);
+
   }
 }
 
+#undef SAVE_PARAM
+#undef LOAD_PARAM
 
 void PEPS_Parameters::save(const char *filename, bool append) {
   std::ofstream ofs;

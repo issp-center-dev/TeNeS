@@ -16,6 +16,8 @@ public:
   bool Warning_flag;
 
   // Simple update
+  double tau_simple;
+  int num_simple_step;
   double Inverse_lambda_cut;
 
   // Environment
@@ -27,6 +29,8 @@ public:
   int RSVD_Oversampling_factor;
 
   // Full update
+  double tau_full;
+  int num_full_step;
   double Inverse_Env_cut;
   double Full_Inverse_precision;
   double Full_Convergence_Epsilon;
@@ -42,7 +46,7 @@ public:
   void set(toml::Table data);
 
   void save(const char *filename, bool append=false);
-  void save_append(const char *filename, bool append){save(filename, true);}
+  void save_append(const char *filename){save(filename, true);}
 
   void Bcast(MPI_Comm comm, int root=0);
 };
