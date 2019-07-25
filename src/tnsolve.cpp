@@ -107,6 +107,8 @@ int tnsolve(MPI_Comm comm,
   double S = peps_parameters.S;
   int ldof = 2*S+1;
 
+  std::clog << "Start initialize tensors" << std::endl;
+
   // Tensors
   std::vector<ptensor> Tn(N_UNIT, ptensor(Shape(D, D, D, D, ldof)));
   std::vector<ptensor>
@@ -142,6 +144,8 @@ int tnsolve(MPI_Comm comm,
     ops.push_back(op12);
   }
 
+  std::clog << "Start simple update" << std::endl;
+
   // simple update
   start_time = MPI_Wtime();
   for (int int_tau = 0; int_tau < peps_parameters.num_simple_step; ++int_tau) {
@@ -163,6 +167,8 @@ int tnsolve(MPI_Comm comm,
   }
   time_simple_update += MPI_Wtime() - start_time;
   // done simple update
+
+  std::clog << "Start full update" << std::endl;
 
   // Start full update
   if (peps_parameters.num_full_step > 0) {
@@ -248,7 +254,7 @@ int tnsolve(MPI_Comm comm,
   time_full_update += MPI_Wtime() - start_time;
   // done full update
 
-  // Calc physical quantities
+  std::clog << "Start calculating observables" << std::endl;
 
   start_time = MPI_Wtime();
   Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
