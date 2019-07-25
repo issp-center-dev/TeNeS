@@ -33,7 +33,7 @@ ptensor load_tensor(std::string const& str) {
     assert(row.size()==N);
   }
 
-  ptensor ret(mptensor::Shape(4,4));
+  ptensor ret(mptensor::Shape(N,N));
   for(int i=0; i<N; ++i){
     for(int j=0; j<N; ++j){
       ret.set_value(mptensor::Index(i,j), A[i][j]);

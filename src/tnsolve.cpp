@@ -24,7 +24,7 @@ void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice, int ldof) {
   std::vector<double> ran(D * D * D * D * ldof);
   std::mt19937 gen(11);
   std::uniform_real_distribution<double> dist(-0.01, 0.01);
-  for (int i = 0; i < D * D * D * D * 2; i++) {
+  for (int i = 0; i < D * D * D * D * ldof; i++) {
     ran[i] = dist(gen);
   }
   int nr;
