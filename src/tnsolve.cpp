@@ -17,10 +17,11 @@
 
 using namespace mptensor;
 
-void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice) {
+template <class ptensor>
+void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice, int ldof) {
   int D = Tn[0].shape()[0];
 
-  std::vector<double> ran(D * D * D * D * 2);
+  std::vector<double> ran(D * D * D * D * ldof);
   std::mt19937 gen(11);
   std::uniform_real_distribution<double> dist(-0.01, 0.01);
   for (int i = 0; i < D * D * D * D * 2; i++) {
@@ -103,9 +104,11 @@ int tnsolve(MPI_Comm comm,
   int LX = lattice.LX;
   int LY = lattice.LY;
   int N_UNIT = lattice.N_UNIT;
+  double S = peps_parameters.S;
+  int ldof = 2*S+1;
 
   // Tensors
-  std::vector<ptensor> Tn(N_UNIT, ptensor(Shape(D, D, D, D, 2)));
+  std::vector<ptensor> Tn(N_UNIT, ptensor(Shape(D, D, D, D, ldof)));
   std::vector<ptensor>
       eTt(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
       eTr(N_UNIT, ptensor(Shape(CHI, CHI, D, D))),
@@ -120,7 +123,7 @@ int tnsolve(MPI_Comm comm,
   std::vector<std::vector<std::vector<double> > > lambda_tensor(
       N_UNIT, std::vector<std::vector<double> >(nleg, std::vector<double>(D)));
 
-  Initialize_Tensors(Tn, lattice);
+  Initialize_Tensors(Tn, lattice, ldof);
   for (int i1 = 0; i1 < N_UNIT; ++i1) {
     for (int i2 = 0; i2 < nleg; ++i2) {
       for (int i3 = 0; i3 < D; ++i3) {
@@ -129,14 +132,13 @@ int tnsolve(MPI_Comm comm,
     }
   }
 
-
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
 
   std::vector<ptensor> ops;
   for(auto Ham: hams){
     ptensor U = EvolutionaryTensor(Ham, peps_parameters.tau_simple);
-    ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+    ptensor op12 = transpose(reshape(U, Shape(ldof, ldof, ldof, ldof)), Axes(2, 3, 0, 1));
     ops.push_back(op12);
   }
 
@@ -167,7 +169,7 @@ int tnsolve(MPI_Comm comm,
     ops.clear();
     for(auto Ham: hams){
       ptensor U = EvolutionaryTensor(Ham, peps_parameters.tau_full);
-      ptensor op12 = transpose(reshape(U, Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+      ptensor op12 = transpose(reshape(U, Shape(ldof, ldof, ldof, ldof)), Axes(2, 3, 0, 1));
       ops.push_back(op12);
     }
     // Environment
@@ -253,26 +255,34 @@ int tnsolve(MPI_Comm comm,
       peps_parameters, lattice);
   time_env += MPI_Wtime() - start_time;
 
-  ptensor op_identity(Shape(2, 2)), op_mz(Shape(2, 2)), op_mx(Shape(2, 2));
+  ptensor op_identity(Shape(ldof, ldof)), op_mz(Shape(ldof, ldof)), op_mx(Shape(ldof, ldof));
+  const int ldof2 = ldof*ldof;
 
-  op_identity.set_value(Index(0, 0), 1.0);
-  op_identity.set_value(Index(0, 1), 0.0);
-  op_identity.set_value(Index(1, 0), 0.0);
-  op_identity.set_value(Index(1, 1), 1.0);
+  // initialize
+  for(int i=0; i<ldof2; ++i){
+    op_identity[i] = 0.0;
+    op_mz[i] = 0.0;
+    op_mx[i] = 0.0;
+  }
+  for(int i=0; i<ldof; ++i){
+    const double m = S-i;
+    op_identity.set_value(Index(i, i), 1.0);
+    op_mz.set_value(Index(i, i), m);
+    if(i<ldof-1){
+      //Splus/2
+      const double val = 0.5*std::sqrt((S-m)*(S+m+1.0));
+      op_mx.set_value(Index(i+1, i), val);
+    }
+    if(i>0){
+      //Sminus/2
+      const double val = 0.5*std::sqrt((S+m)*(S-m+1.0));
+      op_mx.set_value(Index(i-1, i), val);
+    }
+  }
 
-  op_mz.set_value(Index(0, 0), 0.5);
-  op_mz.set_value(Index(0, 1), 0.0);
-  op_mz.set_value(Index(1, 0), 0.0);
-  op_mz.set_value(Index(1, 1), -0.5);
-
-  op_mx.set_value(Index(0, 0), 0.0);
-  op_mx.set_value(Index(0, 1), 0.5);
-  op_mx.set_value(Index(1, 0), 0.5);
-  op_mx.set_value(Index(1, 1), 0.0);
-
-  std::vector<ptensor> hamtensors(hams.size());
+  std::vector<ptensor> hamtensors;
   for(int i=0; i<hams.size(); ++i){
-    hamtensors[i] = transpose(reshape(hams[i], Shape(2, 2, 2, 2)), Axes(2, 3, 0, 1));
+    hamtensors.push_back(transpose(reshape(hams[i], Shape(ldof, ldof, ldof, ldof)), Axes(2, 3, 0, 1)));
   }
 
   std::vector<double> mz(N_UNIT), mx(N_UNIT);
