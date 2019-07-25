@@ -29,6 +29,9 @@ endforeach()
 include(${PROJECT_SOURCE_DIR}/config/cxx11.cmake)
 cxx11()
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/deps/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+find_package(Sanitizers)
+
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 

@@ -4,3 +4,6 @@
 [submodule "deps/toml11"]
 	path = deps/toml11
 	url = https://github.com/ToruNiina/toml11
+[submodule "deps/sanitizers-cmake"]
+	path = deps/sanitizers-cmake
+	url = https://github.com/arsenm/sanitizers-cmake

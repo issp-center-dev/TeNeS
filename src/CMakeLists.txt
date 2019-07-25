@@ -10,6 +10,7 @@ edge.cpp
 hamiltonian.cpp
 util/string.cpp
 )
+add_sanitizers(tnsolve)
 
 target_include_directories(tnsolve PUBLIC ${MPI_CXX_INCLUDE_DIRS})
 target_link_libraries(tnsolve mptensor)
