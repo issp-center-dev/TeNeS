@@ -39,6 +39,10 @@ public:
 
   Lattice(int X, int Y);
 
+  int x(int index) const { return index%LX; }
+  int y(int index) const { return index/LX; }
+  int index(int x, int y) const { return x+y*LX; }
+
   void reset();
   void reset(int X, int Y);
 

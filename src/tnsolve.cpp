@@ -100,13 +100,13 @@ int tnsolve(MPI_Comm comm,
   random_tensor::set_seed(11 + mpirank);
 
   // for convenience//
-  int D = peps_parameters.D;
-  int CHI = peps_parameters.CHI;
+  const int D = peps_parameters.D;
+  const int CHI = peps_parameters.CHI;
 
-  int LX = lattice.LX;
-  int LY = lattice.LY;
-  int N_UNIT = lattice.N_UNIT;
-  int ldof = lops.begin()->shape()[0];
+  const int LX = lattice.LX;
+  const int LY = lattice.LY;
+  const int N_UNIT = lattice.N_UNIT;
+  const int ldof = lops.begin()->shape()[0];
 
   std::clog << "Start initialize tensors" << std::endl;
 
@@ -300,12 +300,6 @@ int tnsolve(MPI_Comm comm,
                                      Tn[i], lops[ilops]) / norm;
       local_obs.set_value(Index(ilops, i), val);
     }
-    /*
-    if (peps_parameters.Debug_flag) {
-      std::cout << i << " "
-      << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
-    }
-    */
   }
 
   double energy=0.0;
@@ -352,6 +346,82 @@ int tnsolve(MPI_Comm comm,
       }
     }
   }
+
+  ptensor correlationT(Shape(CHI, CHI, D, D));
+  ptensor correlation_norm(Shape(CHI, CHI, D, D));
+  std::vector<double> cor_x;
+  const int Lcor = 5;
+  {
+    const int ilops=0;
+    const int startx = 0;
+    const int starty = 0;
+    const int startindex = lattice.index(startx, starty);
+    StartCorrelation(correlationT,
+                     C1[startindex], C4[startindex],
+                     eTt[startindex], eTb[startindex], eTl[startindex],
+                     Tn[startindex],
+                     lops[ilops]);
+    StartCorrelation(correlation_norm,
+                     C1[startindex], C4[startindex],
+                     eTt[startindex], eTb[startindex], eTl[startindex],
+                     Tn[startindex], op_identity);
+
+    for(int r=0; r<Lcor; ++r){
+      const int endx = (r+startx)%LX;
+      const int endy = starty;
+      const int endindex = lattice.index(endx, endy);
+      double numerator = FinishCorrelation(correlationT,
+                                           C2[endindex], C3[endindex],
+                                           eTt[endindex], eTr[endindex], eTb[endindex],
+                                           Tn[endindex], lops[ilops]
+                                           );
+      double norm = FinishCorrelation(correlation_norm,
+                                      C2[endindex], C3[endindex],
+                                      eTt[endindex], eTr[endindex], eTb[endindex],
+                                      Tn[endindex], op_identity
+                                      );
+      cor_x.push_back(numerator/norm);
+
+      Transfer(correlationT, eTt[endindex], eTb[endindex], Tn[endindex]);
+      Transfer(correlation_norm, eTt[endindex], eTb[endindex], Tn[endindex]);
+    }
+  }
+  std::vector<double> cor_y;
+  {
+    const int ilops = 0;
+    const int startx = 0;
+    const int starty = 0;
+    const int startindex = lattice.index(startx, starty);
+    StartCorrelation(correlationT,
+                     C4[startindex], C3[startindex],
+                     eTl[startindex], eTr[startindex], eTb[startindex],
+                     Tn[startindex],
+                     lops[ilops]);
+    StartCorrelation(correlationT,
+                     C4[startindex], C3[startindex],
+                     eTl[startindex], eTr[startindex], eTb[startindex],
+                     Tn[startindex], op_identity);
+    for(int r=0; r<Lcor; ++r){
+      const int endx = startx;
+      const int endy = (r+starty)%LY;
+      const int endindex = lattice.index(endx, endy);
+      double numerator = FinishCorrelation(correlationT,
+                                           C1[endindex], C2[endindex],
+                                           eTl[endindex], eTt[endindex], eTr[endindex],
+                                           Tn[endindex], lops[ilops]
+                                           );
+      double norm = FinishCorrelation(correlation_norm,
+                                      C1[endindex], C2[endindex],
+                                      eTl[endindex], eTt[endindex], eTr[endindex],
+                                      Tn[endindex], op_identity
+                                      );
+      cor_y.push_back(numerator/norm);
+
+      Transfer(correlationT, eTl[endindex], eTr[endindex], Tn[endindex]);
+      Transfer(correlation_norm, eTl[endindex], eTr[endindex], Tn[endindex]);
+    }
+  }
+
   time_obs += MPI_Wtime() - start_time;
 
   if (mpirank == 0) {
@@ -378,6 +448,13 @@ int tnsolve(MPI_Comm comm,
       }
       std::cout << "Nearest Neighbor " << ilops << " = "
                 << 0.5*sum/N_UNIT << std::endl;
+    }
+
+    for(int r=0; r<Lcor; ++r){
+      std::cout << "Correlation in x dir " << r+1 << " = " << cor_x[r] << std::endl;
+    }
+    for(int r=0; r<Lcor; ++r){
+      std::cout << "Correlation in y dir " << r+1 << " = " << cor_y[r] << std::endl;
     }
   }
 
