@@ -3,11 +3,11 @@
 
 #include <vector>
 #include <mptensor.hpp>
-#include <toml11/toml/types.hpp>
+#include <toml11/toml/value.hpp>
 
 using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 
 std::vector<ptensor> load_local_operators(const char* filename);
-std::vector<ptensor> load_local_operators(toml::Table const& table);
+std::vector<ptensor> load_local_operators(toml::value const& table);
 
 #endif // OBSERVABLE_HPP

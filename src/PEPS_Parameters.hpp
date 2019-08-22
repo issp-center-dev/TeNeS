@@ -3,7 +3,8 @@
 
 #include <mpi.h>
 
-#include <toml11/toml/types.hpp>
+#include <toml11/toml/value.hpp>
+
 
 class PEPS_Parameters {
 public:
@@ -41,9 +42,9 @@ public:
   PEPS_Parameters();
 
   explicit PEPS_Parameters(const char *filename): PEPS_Parameters(){ set(filename); }
-  PEPS_Parameters(toml::Table);
+  PEPS_Parameters(toml::value);
   void set(const char *filename);
-  void set(toml::Table data);
+  void set(toml::value data);
 
   void save(const char *filename, bool append=false);
   void save_append(const char *filename){save(filename, true);}

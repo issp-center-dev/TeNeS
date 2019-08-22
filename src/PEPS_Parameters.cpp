@@ -6,8 +6,6 @@
 
 #include <toml11/toml.hpp>
 
-#include "util/find_or.hpp"
-
 #include "PEPS_Parameters.hpp"
 
 PEPS_Parameters::PEPS_Parameters() {
@@ -43,42 +41,44 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FFU = true;
 }
 
-PEPS_Parameters::PEPS_Parameters(toml::Table data): PEPS_Parameters() { set(data); }
+PEPS_Parameters::PEPS_Parameters(toml::value data): PEPS_Parameters() { set(data); }
 void PEPS_Parameters::set(const char *filename){ set(toml::parse(filename)); }
-void PEPS_Parameters::set(toml::Table data){
-  toml::Table param = toml::find<toml::Table>(data, "parameter");
+void PEPS_Parameters::set(toml::value data){
+  using toml::find_or;
+
+  auto param = toml::find<toml::value>(data, "parameter");
 
   // Tensor
-  D = util::find_or(param, "D", 2);
-  CHI = util::find_or(param, "CHI", 4);
+  D = find_or(param, "D", 2);
+  CHI = find_or(param, "CHI", 4);
 
 
   // Debug
-  Debug_flag = util::find_or(param, "Debug", false);
-  Warning_flag = util::find_or(param, "Warning", true);
+  Debug_flag = find_or(param, "Debug", false);
+  Warning_flag = find_or(param, "Warning", true);
 
   // Simple update
-  tau_simple = util::find_or(param, "tau_simple", 0.0);
-  num_simple_step = util::find_or(param, "num_simple_step", 0);
-  Inverse_lambda_cut = util::find_or(param, "inverse_lambda_cutoff", 1e-12);
+  tau_simple = find_or(param, "tau_simple", 0.0);
+  num_simple_step = find_or(param, "num_simple_step", 0);
+  Inverse_lambda_cut = find_or(param, "inverse_lambda_cutoff", 1e-12);
 
   // Environment
-  Inverse_projector_cut = util::find_or(param, "inverse_projector_cutoff", 1e-12);
-  CTM_Convergence_Epsilon = util::find_or(param, "ctm_convergence_epsilon", 1e-10);
-  Max_CTM_Iteration = util::find_or(param, "ctm_iteration_max", 100);
-  CTM_Projector_corner = util::find_or(param, "ctm_projector_corner", false);
-  Use_RSVD = util::find_or(param, "use_rsvd", false);
-  RSVD_Oversampling_factor = util::find_or(param, "rsvd_oversampling_factor", 2);
+  Inverse_projector_cut = find_or(param, "inverse_projector_cutoff", 1e-12);
+  CTM_Convergence_Epsilon = find_or(param, "ctm_convergence_epsilon", 1e-10);
+  Max_CTM_Iteration = find_or(param, "ctm_iteration_max", 100);
+  CTM_Projector_corner = find_or(param, "ctm_projector_corner", false);
+  Use_RSVD = find_or(param, "use_rsvd", false);
+  RSVD_Oversampling_factor = find_or(param, "rsvd_oversampling_factor", 2);
 
   // Full update
-  tau_full = util::find_or(param, "tau_full", 0.0);
-  num_full_step = util::find_or(param, "num_full_step", 0);
-  Inverse_Env_cut = util::find_or(param, "inverse_projector_cutoff", 1e-12);
-  Full_Inverse_precision = util::find_or(param, "full_inverse_precision", 1e-12);
-  Full_Convergence_Epsilon = util::find_or(param, "full_convergence_epsilon", 1e-12);
-  Full_max_iteration = util::find_or(param, "full_max_iteration", 1000);
-  Full_Gauge_Fix = util::find_or(param, "full_gauge_fix", true);
-  Full_Use_FFU = util::find_or(param, "full_use_ffu", true);
+  tau_full = find_or(param, "tau_full", 0.0);
+  num_full_step = find_or(param, "num_full_step", 0);
+  Inverse_Env_cut = find_or(param, "inverse_projector_cutoff", 1e-12);
+  Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
+  Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
+  Full_max_iteration = find_or(param, "full_max_iteration", 1000);
+  Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
+  Full_Use_FFU = find_or(param, "full_use_ffu", true);
 }
 
 #define SAVE_PARAM(name, type) params_##type [I_##name] = name

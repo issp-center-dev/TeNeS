@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
-  toml::table input_toml = toml::parse("input.toml");
+  toml::value input_toml = toml::parse("input.toml");
 
   // Parameters
   PEPS_Parameters peps_parameters;
