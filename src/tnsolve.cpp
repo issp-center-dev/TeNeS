@@ -12,7 +12,8 @@
 #include "PEPS_Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "edge.hpp"
-#include "hamiltonian.hpp"
+
+#include "tnsolve.hpp"
 
 
 using namespace mptensor;
@@ -50,7 +51,8 @@ int tnsolve(MPI_Comm comm,
             Lattice lattice,
             Edges simple_edges,
             Edges full_edges,
-            std::vector<ptensor> hams
+            std::vector<ptensor> hams,
+            std::vector<ptensor> lops
     ){
   int mpisize, mpirank;
 
@@ -104,8 +106,7 @@ int tnsolve(MPI_Comm comm,
   int LX = lattice.LX;
   int LY = lattice.LY;
   int N_UNIT = lattice.N_UNIT;
-  double S = peps_parameters.S;
-  int ldof = 2*S+1;
+  int ldof = lops.begin()->shape()[0];
 
   std::clog << "Start initialize tensors" << std::endl;
 
@@ -261,29 +262,14 @@ int tnsolve(MPI_Comm comm,
       peps_parameters, lattice);
   time_env += MPI_Wtime() - start_time;
 
-  ptensor op_identity(Shape(ldof, ldof)), op_mz(Shape(ldof, ldof)), op_mx(Shape(ldof, ldof));
-  const int ldof2 = ldof*ldof;
-
+  ptensor op_identity(Shape(ldof, ldof));
   // initialize
-  for(int i=0; i<ldof2; ++i){
-    op_identity[i] = 0.0;
-    op_mz[i] = 0.0;
-    op_mx[i] = 0.0;
-  }
   for(int i=0; i<ldof; ++i){
-    const double m = S-i;
+    for(int j=0; j<i; ++j)
+      op_identity.set_value(Index(i, j), 0.0);
     op_identity.set_value(Index(i, i), 1.0);
-    op_mz.set_value(Index(i, i), m);
-    if(i<ldof-1){
-      //Splus/2
-      const double val = 0.5*std::sqrt((S-m)*(S+m+1.0));
-      op_mx.set_value(Index(i+1, i), val);
-    }
-    if(i>0){
-      //Sminus/2
-      const double val = 0.5*std::sqrt((S+m)*(S-m+1.0));
-      op_mx.set_value(Index(i-1, i), val);
-    }
+    for(int j=i+1; j<ldof; ++j)
+      op_identity.set_value(Index(i, j), 0.0);
   }
 
   std::vector<ptensor> hamtensors;
@@ -291,31 +277,35 @@ int tnsolve(MPI_Comm comm,
     hamtensors.push_back(transpose(reshape(hams[i], Shape(ldof, ldof, ldof, ldof)), Axes(2, 3, 0, 1)));
   }
 
-  std::vector<double> mz(N_UNIT), mx(N_UNIT);
-  std::vector<std::vector<double> > zz(N_UNIT, std::vector<double>(2));
-  for (int i = 0; i < N_UNIT; ++i) {
-    mx[i] = 0.0;
-    mz[i] = 0.0;
-    zz[i][0] = 0.0;
-    zz[i][1] = 0.0;
+  const int nlops = lops.size();
+  ptensor local_obs(Shape(nlops, N_UNIT));
+  ptensor neighbor_obs(Shape(nlops, N_UNIT, 2));  // vertical and horizontal
+  
+  for (int ilops=0; ilops<nlops; ++ilops){
+    for (int i = 0; i < N_UNIT; ++i) {
+      local_obs.set_value(Index(ilops, i), 0.0);
+      neighbor_obs.set_value(Index(ilops, i, 0), 0.0);
+      neighbor_obs.set_value(Index(ilops, i, 1), 0.0);
+    }
   }
 
-  double norm;
-  int num_j;
   start_time = MPI_Wtime();
   for (int i = 0; i < N_UNIT; ++i) {
-    norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-        eTb[i], eTl[i], Tn[i], op_identity);
-    mz[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-        eTb[i], eTl[i], Tn[i], op_mz)
-    / norm;
-    mx[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-        eTb[i], eTl[i], Tn[i], op_mx)
-    / norm;
+    double norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i],
+                             eTt[i], eTr[i],
+                             eTb[i], eTl[i], Tn[i], op_identity);
+    for(int ilops=0; ilops<nlops; ++ilops){
+      double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i],
+                                     eTt[i], eTr[i], eTb[i], eTl[i],
+                                     Tn[i], lops[ilops]) / norm;
+      local_obs.set_value(Index(ilops, i), val);
+    }
+    /*
     if (peps_parameters.Debug_flag) {
       std::cout << i << " "
       << " " << norm << " " << mz[i] << " " << mx[i] << std::endl;
     }
+    */
   }
 
   double energy=0.0;
@@ -333,10 +323,15 @@ int tnsolve(MPI_Comm comm,
                    C1[source], C2[target], C3[target], C4[source],
                    eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
                    Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
-      zz[source][0] += Contract_two_sites_horizontal(
-                   C1[source], C2[target], C3[target], C4[source],
-                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                   Tn[source], Tn[target], op_mz, op_mz);
+      for(int ilops=0; ilops<nlops; ++ilops){
+        double val = 0.0;
+        neighbor_obs.get_value(Index(ilops, source, 0), val);
+        val += Contract_two_sites_horizontal(
+                     C1[source], C2[target], C3[target], C4[source],
+                     eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                     Tn[source], Tn[target], lops[ilops], lops[ilops]) / local_norm;
+        neighbor_obs.set_value(Index(ilops, source, 0), val);
+      }
     }else{
       const double local_norm = Contract_two_sites_vertical(
                    C1[source], C2[source], C3[target], C4[target],
@@ -346,33 +341,44 @@ int tnsolve(MPI_Comm comm,
                    C1[source], C2[source], C3[target], C4[target],
                    eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
                    Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
-      zz[source][1] += Contract_two_sites_vertical(
-                   C1[source], C2[source], C3[target], C4[target],
-                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-                   Tn[source], Tn[target], op_mz, op_mz);
+      for(int ilops=0; ilops<nlops; ++ilops){
+        double val = 0.0;
+        neighbor_obs.get_value(Index(ilops, source, 1), val);
+        val += Contract_two_sites_vertical(
+                     C1[source], C2[source], C3[target], C4[target],
+                     eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
+                     Tn[source], Tn[target], lops[ilops], lops[ilops]);
+        neighbor_obs.set_value(Index(ilops, source, 1), val);
+      }
     }
   }
   time_obs += MPI_Wtime() - start_time;
 
-  double sum_mz, sum_mx, sum_zz;
-  sum_zz = 0.0;
-  sum_mx = 0.0;
-  sum_mz = 0.0;
-  for (int i = 0; i < N_UNIT; ++i) {
-    sum_mx += mx[i];
-    sum_mz += mz[i];
-    sum_zz += zz[i][0] + zz[i][1];
-  }
   if (mpirank == 0) {
-    // const double hx = 1.4;
-    // std::cout <<  -sum_zz / N_UNIT - hx * sum_mx / N_UNIT << " "
-    // << sum_mz / N_UNIT << " " << sum_mx / N_UNIT << " "
-    // << sum_zz / N_UNIT << std::endl;
-
     std::cout << "Energy = " << energy / N_UNIT << std::endl;
-    std::cout << "Magnetization z = " << sum_mz / N_UNIT << std::endl;
-    std::cout << "Magnetization x = " << sum_mx / N_UNIT << std::endl;
-    std::cout << "Nearest Neighbor zz = " << sum_zz / N_UNIT << std::endl;
+
+    for(int ilops=0; ilops<nlops; ++ilops){
+      double sum=0.0;
+      for(int i=0; i<N_UNIT; ++i){
+        double val=0.0;
+        local_obs.get_value(Index(ilops, i), val);
+        sum += val;
+      }
+      std::cout << "Local operator " << ilops << " = "
+                << sum/N_UNIT << std::endl;
+    }
+    for(int ilops=0; ilops<nlops; ++ilops){
+      double sum=0.0;
+      for(int i=0; i<N_UNIT; ++i){
+        double val=0.0;
+        neighbor_obs.get_value(Index(ilops, i, 0), val);
+        sum += val;
+        neighbor_obs.get_value(Index(ilops, i, 1), val);
+        sum += val;
+      }
+      std::cout << "Nearest Neighbor " << ilops << " = "
+                << 0.5*sum/N_UNIT << std::endl;
+    }
   }
 
   if (mpirank == 0) {
@@ -392,7 +398,8 @@ int tnsolve<d_tensor>(MPI_Comm comm,
                       Lattice lattice,
                       Edges simple_edges,
                       Edges full_edges,
-                      std::vector<d_tensor> hams
+                      std::vector<d_tensor> hams,
+                      std::vector<d_tensor> lops
     );
 /*
 using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;

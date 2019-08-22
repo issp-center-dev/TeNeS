@@ -8,7 +8,9 @@ PEPS_Parameters.cpp
 Lattice.cpp
 edge.cpp
 hamiltonian.cpp
+observable.cpp
 util/string.cpp
+util/load_tensor.cpp
 )
 add_sanitizers(tnsolve)
 

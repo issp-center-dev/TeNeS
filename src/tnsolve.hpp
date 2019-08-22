@@ -15,7 +15,8 @@ int tnsolve(MPI_Comm comm,
             Lattice lattice,
             Edges simple_edges,
             Edges full_edges,
-            std::vector<tensor> hams
+            std::vector<tensor> hams,
+            std::vector<tensor> lops
             );
 
 #endif // TNSOLVE_HPP

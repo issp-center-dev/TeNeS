@@ -7,8 +7,6 @@
 
 class PEPS_Parameters {
 public:
-  double S; // local spin size
-
   // Tensor
   int D;    // Bond dimension for central tensor
   int CHI;  // Bond dimension for environment tensor

@@ -11,8 +11,6 @@
 #include "PEPS_Parameters.hpp"
 
 PEPS_Parameters::PEPS_Parameters() {
-  S = 0.5;
-
   // Tensor
   D = 2;
   CHI = D * D;
@@ -49,12 +47,6 @@ PEPS_Parameters::PEPS_Parameters(toml::Table data): PEPS_Parameters() { set(data
 void PEPS_Parameters::set(const char *filename){ set(toml::parse(filename)); }
 void PEPS_Parameters::set(toml::Table data){
   toml::Table param = toml::find<toml::Table>(data, "parameter");
-
-  S = util::find_or(param, "S", 0.5);
-  if(2*S!=static_cast<int>(2*S)){
-    std::cerr << "S should be an integer or a half-integer" << std::endl;
-    std::exit(1);
-  }
 
   // Tensor
   D = util::find_or(param, "D", 2);
@@ -110,7 +102,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     N_PARAMS_INT_INDEX,
   };
   enum PARAMS_DOUBLE_INDEX{
-    I_S,
     I_tau_simple,
     I_Inverse_lambda_cut,
     I_Inverse_projector_cut,
@@ -143,7 +134,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FFU, int);
 
-    SAVE_PARAM(S, double);
     SAVE_PARAM(tau_simple, double);
     SAVE_PARAM(Inverse_lambda_cut, double);
     SAVE_PARAM(Inverse_projector_cut, double);
@@ -173,7 +163,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FFU, int);
 
-    LOAD_PARAM(S, double);
     LOAD_PARAM(tau_simple, double);
     LOAD_PARAM(Inverse_lambda_cut, double);
     LOAD_PARAM(Inverse_projector_cut, double);
@@ -196,7 +185,6 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   } else {
     ofs.open(filename, std::ios::out);
   }
-  ofs << "S " << S << std::endl;
   // Tensor
   ofs << "D " << D << std::endl;
   ofs << "CHI " << CHI << std::endl;

@@ -8,6 +8,7 @@
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "hamiltonian.hpp"
+#include "observable.hpp"
 #include "tnsolve.hpp"
 
 
@@ -36,13 +37,14 @@ int main(int argc, char **argv) {
   lattice.Bcast(MPI_COMM_WORLD);
 
   std::vector<ptensor> hams = load_hamiltonians(input_toml);
+  std::vector<ptensor> lops = load_local_operators(input_toml);
 
   auto bonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "simple_update");
   auto fullbonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "full_update");
   Edges simple_edges = make_edges(bonds_str);
   Edges full_edges = make_edges(fullbonds_str);
 
-  tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, hams);
+  tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, hams, lops);
 
   MPI_Finalize();
   return 0;
