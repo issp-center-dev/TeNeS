@@ -26,7 +26,9 @@ int main(int argc, char **argv) {
   // Parameters
   PEPS_Parameters peps_parameters;
 
-  Lattice lattice(2,2);
+  std::vector<int> Lsub = toml::find<std::vector<int>>(toml::find(input_toml, "lattice"), "Lsub");
+
+  Lattice lattice(Lsub[0], Lsub[1]);
 
   if (mpirank == 0) {
     peps_parameters.set(input_toml);
