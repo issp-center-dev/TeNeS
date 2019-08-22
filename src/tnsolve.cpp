@@ -257,11 +257,13 @@ int tnsolve(MPI_Comm comm,
 
   std::clog << "Start calculating observables" << std::endl;
 
+  std::clog << "  Start calculating environment" << std::endl;
   start_time = MPI_Wtime();
   Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
       peps_parameters, lattice);
   time_env += MPI_Wtime() - start_time;
 
+  std::clog << "  Start preparing" << std::endl;
   ptensor op_identity(Shape(ldof, ldof));
   // initialize
   for(int i=0; i<ldof; ++i){
@@ -289,6 +291,7 @@ int tnsolve(MPI_Comm comm,
     }
   }
 
+  std::clog << "  Start calculating site observables" << std::endl;
   start_time = MPI_Wtime();
   for (int i = 0; i < N_UNIT; ++i) {
     double norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i],
@@ -302,6 +305,7 @@ int tnsolve(MPI_Comm comm,
     }
   }
 
+  std::clog << "  Start calculating bond observables" << std::endl;
   double energy=0.0;
   for(auto ed: simple_edges){
     // const int source = ed.source_site;
@@ -347,6 +351,7 @@ int tnsolve(MPI_Comm comm,
     }
   }
 
+  std::clog << "  Start calculating correlation functions" << std::endl;
   ptensor correlationT(Shape(CHI, CHI, D, D));
   ptensor correlation_norm(Shape(CHI, CHI, D, D));
   std::vector<double> cor_x;
@@ -392,37 +397,40 @@ int tnsolve(MPI_Comm comm,
     const int startx = 0;
     const int starty = 0;
     const int startindex = lattice.index(startx, starty);
+    ptensor tn = transpose(Tn[startindex], Axes(3,0,1,2,4));
     StartCorrelation(correlationT,
                      C4[startindex], C3[startindex],
                      eTl[startindex], eTr[startindex], eTb[startindex],
-                     Tn[startindex],
-                     lops[ilops]);
+                     tn, lops[ilops]);
     StartCorrelation(correlationT,
                      C4[startindex], C3[startindex],
                      eTl[startindex], eTr[startindex], eTb[startindex],
-                     Tn[startindex], op_identity);
+                     tn, op_identity);
     for(int r=0; r<Lcor; ++r){
       const int endx = startx;
       const int endy = (r+starty)%LY;
       const int endindex = lattice.index(endx, endy);
+      tn = transpose(Tn[endindex], Axes(3,0,1,2,4));
       double numerator = FinishCorrelation(correlationT,
                                            C1[endindex], C2[endindex],
                                            eTl[endindex], eTt[endindex], eTr[endindex],
-                                           Tn[endindex], lops[ilops]
+                                           tn, lops[ilops]
                                            );
       double norm = FinishCorrelation(correlation_norm,
                                       C1[endindex], C2[endindex],
                                       eTl[endindex], eTt[endindex], eTr[endindex],
-                                      Tn[endindex], op_identity
+                                      tn, op_identity
                                       );
       cor_y.push_back(numerator/norm);
 
-      Transfer(correlationT, eTl[endindex], eTr[endindex], Tn[endindex]);
-      Transfer(correlation_norm, eTl[endindex], eTr[endindex], Tn[endindex]);
+      Transfer(correlationT, eTl[endindex], eTr[endindex], tn);
+      Transfer(correlation_norm, eTl[endindex], eTr[endindex], tn);
     }
   }
 
   time_obs += MPI_Wtime() - start_time;
+
+  std::cout << std::endl;
 
   if (mpirank == 0) {
     std::cout << "Energy = " << energy / N_UNIT << std::endl;
@@ -486,6 +494,7 @@ int tnsolve<c_tensor>(MPI_Comm comm,
                       Lattice lattice,
                       Edges simple_edges,
                       Edges full_edges,
-                      std::vector<c_tensor> hams
+                      std::vector<c_tensor> hams,
+                      std::vector<d_tensor> lops
     );
     */
