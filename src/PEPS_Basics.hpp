@@ -1371,4 +1371,85 @@ Tensor<Matrix, C> EvolutionaryTensor(const Tensor<Matrix, C> &H, double tau){
   return U;
 }
 
+
+template <template <typename> class Matrix, typename C>
+void StartCorrelation(Tensor<Matrix,C> &A,
+                      const Tensor<Matrix,C> &C1, const Tensor<Matrix,C> &C4,
+                      const Tensor<Matrix,C> &eT1, const Tensor<Matrix,C> &eT3, const Tensor<Matrix,C> &eT4,
+                      const Tensor<Matrix,C> &Tn1,
+                      const Tensor<Matrix,C> &op){
+////////////////////////////////////////////////////////////
+// (eT1*(Tn1*((Tn2*op)*(eT3*(C1*(C4*eT4))))))
+// cpu_cost= 7.5525e+06  memory= 192500
+// final_bond_order (e1r, e3r, n1r, n2r)
+////////////////////////////////////////////////////////////
+  A = transpose(
+      tensordot(
+          eT1, tensordot(
+              Tn1, tensordot(
+                  tensordot(
+                      conj(Tn1), op, Axes(4), Axes(1)  // Tn2 = conj(Tn1)
+                  ), tensordot(
+                      eT3, tensordot(
+                          C1, tensordot(
+                              C4, eT4, Axes(1), Axes(0)
+                          ), Axes(0), Axes(1)
+                      ), Axes(1), Axes(1)
+                  ), Axes(0, 3), Axes(5, 2)
+              ), Axes(0, 3, 4), Axes(6, 4, 2)
+          ), Axes(0, 2, 3), Axes(5, 0, 2)
+      ), Axes(0, 3, 1, 2)
+  );
+}
+
+template <template <typename> class Matrix, typename C>
+void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT3, const Tensor<Matrix, C> &Tn1){
+////////////////////////////////////////////////////////////
+// (eT1*(Tn1*(Tn2*(A*eT3))))
+// cpu_cost= 7.5e+06  memory= 192500
+// final_bond_order (e1r, e3r, n1r, n2r)
+////////////////////////////////////////////////////////////
+  A = transpose(
+      tensordot(
+          eT1, tensordot(
+              Tn1, tensordot(
+                  conj(Tn1), tensordot(  // Tn2 = conj(Tn1)
+                      A, eT3, Axes(1), Axes(1)
+                  ), Axes(0, 3), Axes(2, 5)
+              ), Axes(0, 3, 4), Axes(4, 6, 2)
+          ), Axes(0, 2, 3), Axes(4, 0, 2)
+      ), Axes(0, 3, 1, 2)
+  );
+}
+
+template <template <typename> class Matrix, typename C>
+double FinishCorrelation(const Tensor<Matrix, C> &A,
+                         const Tensor<Matrix, C> &C2, const Tensor<Matrix, C> &C3,
+                         const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,
+                         const Tensor<Matrix, C> &Tn1,
+                         const Tensor<Matrix, C> &op){
+////////////////////////////////////////////////////////////
+// (op*(Tn1*((A*eT1)*(Tn2*(eT3*(C2*(C3*eT2)))))))
+// cpu_cost= 7.5525e+06  memory= 252504
+// final_bond_order ()
+////////////////////////////////////////////////////////////
+  return trace(
+      op, tensordot(
+          Tn1, tensordot(
+              tensordot(
+                  A, eT1, Axes(0), Axes(0)
+              ), tensordot(
+                  conj(Tn1), tensordot(  // Tn2 = conj(Tn1)
+                      eT3, tensordot(
+                          C2, tensordot(
+                              C3, eT2, Axes(0), Axes(1)
+                          ), Axes(1), Axes(1)
+                      ), Axes(0), Axes(1)
+                  ), Axes(2, 3), Axes(5, 2)
+              ), Axes(0, 2, 3, 5), Axes(3, 0, 5, 1)
+          ), Axes(0, 1, 2, 3), Axes(0, 1, 4, 3)
+      ), Axes(0, 1), Axes(0, 1)
+  );
+}
+
 #endif // _PEPS_BASICS_HPP_

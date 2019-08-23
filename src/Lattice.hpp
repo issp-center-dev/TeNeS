@@ -39,6 +39,19 @@ public:
 
   Lattice(int X, int Y);
 
+  int x(int index) const { return index%LX; }
+  int y(int index) const { return index/LX; }
+  int index(int x, int y) const {
+    int X = (x<0) ? (x%LX+LX) : x%LX;  // c++11 requires neg%pos is neg
+    int Y = (y<0) ? (y%LY+LY) : y%LY;
+    return X+Y*LX;
+  }
+
+  int left(int index) const { return NN_Tensor[index][0]; }
+  int right(int index) const { return NN_Tensor[index][2]; }
+  int top(int index) const { return NN_Tensor[index][1]; }
+  int bottom(int index) const { return NN_Tensor[index][3]; }
+
   void reset();
   void reset(int X, int Y);
 
