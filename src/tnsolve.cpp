@@ -371,7 +371,11 @@ std::vector<std::vector<double>> TNSolve<ptensor>::measure_local(bool save){
     std::clog << "    Save site observables to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific;
-    ofs << "# op_index  site_index  real  imag" << std::endl;
+    ofs << "# $1: op_index\n";
+    ofs << "# $2: site_index\n";
+    ofs << "# $3: real\n";
+    ofs << "# $4: imag\n";
+    ofs << std::endl;
 
     for(int ilops=0; ilops<nlops; ++ilops){
       double sum=0.0;
@@ -470,7 +474,12 @@ std::vector<std::vector<std::vector<double>>> TNSolve<ptensor>::measure_NN(bool 
     std::clog << "    Save NN correlation to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific;
-    ofs << "# op_index  source_site  target_site  real  imag" << std::endl;
+    ofs << "# $1: op_index\n";
+    ofs << "# $2: source_site\n";
+    ofs << "# $3: target_site\n";
+    ofs << "# $4: real\n";
+    ofs << "# $5: imag\n";
+    ofs << std::endl;
     for(int ilops=0; ilops<nlops; ++ilops){
       for(int source=0; source<N_UNIT; ++source){
         int target = lattice.right(source);
@@ -574,7 +583,15 @@ std::vector<Correlation> TNSolve<ptensor>::measure_correlation(bool save){
     std::clog << "    Save long-range correlations to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific;
-    ofs << "# left_op  left_site  right_op  right_site  offset_x  offset_y  real  imag" << std::endl;
+    ofs << "# $1: left_op\n";
+    ofs << "# $2: left_site\n";
+    ofs << "# $3: right_op\n";
+    ofs << "# $4: right_site\n";
+    ofs << "# $5: offset_x\n";
+    ofs << "# $6: offset_y\n";
+    ofs << "# $7: real\n";
+    ofs << "# $8: imag\n";
+    ofs << std::endl;
     for(auto const& cor: correlations){
       ofs << cor.left_op << " " << cor.left_index << " "
           << cor.right_op << " " << cor.right_index << " "
