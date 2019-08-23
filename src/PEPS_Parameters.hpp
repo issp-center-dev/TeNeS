@@ -37,7 +37,7 @@ public:
   double Full_Convergence_Epsilon;
   int Full_max_iteration;
   bool Full_Gauge_Fix;
-  bool Full_Use_FFU; // Fast Full Update
+  bool Full_Use_FastFullUpdate; // Fast Full Update
 
   // observable
   int Lcor;

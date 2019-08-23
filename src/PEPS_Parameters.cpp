@@ -38,7 +38,7 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Convergence_Epsilon = 1e-12;
   Full_max_iteration = 1000;
   Full_Gauge_Fix = true;
-  Full_Use_FFU = true;
+  Full_Use_FastFullUpdate = true;
 
   Lcor = 0;
 }
@@ -80,7 +80,7 @@ void PEPS_Parameters::set(toml::value data){
   Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
   Full_max_iteration = find_or(param, "full_max_iteration", 1000);
   Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
-  Full_Use_FFU = find_or(param, "full_use_ffu", true);
+  Full_Use_FastFullUpdate = find_or(param, "full_use_ffu", true);
 
   Lcor = find_or(param, "Lcor", 0);
 }
@@ -101,7 +101,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_RSVD_Oversampling_factor,
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
-    I_Full_Use_FFU,
+    I_Full_Use_FastFullUpdate,
     I_Lcor,
 
     N_PARAMS_INT_INDEX,
@@ -137,7 +137,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(RSVD_Oversampling_factor, int);
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
-    SAVE_PARAM(Full_Use_FFU, int);
+    SAVE_PARAM(Full_Use_FastFullUpdate, int);
     SAVE_PARAM(Lcor, int);
 
     SAVE_PARAM(tau_simple, double);
@@ -167,7 +167,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(RSVD_Oversampling_factor, int);
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
-    LOAD_PARAM(Full_Use_FFU, int);
+    LOAD_PARAM(Full_Use_FastFullUpdate, int);
     LOAD_PARAM(Lcor, int);
 
     LOAD_PARAM(tau_simple, double);
@@ -217,7 +217,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "Full_Convergence_Epsilon " << Full_Convergence_Epsilon << std::endl;
   ofs << "Full_max_iteration " << Full_max_iteration << std::endl;
   ofs << "Full_Gauge_Fix " << Full_Gauge_Fix << std::endl;
-  ofs << "Full_Use_FFU " << Full_Use_FFU << std::endl;
+  ofs << "Full_Use_FastFullUpdate " << Full_Use_FastFullUpdate << std::endl;
 
   ofs.close();
 }
