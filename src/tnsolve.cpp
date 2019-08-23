@@ -18,6 +18,13 @@
 
 using namespace mptensor;
 
+struct Correlation{
+  int left_index, right_index;
+  int offset_x, offset_y;
+  int left_op, right_op;
+  double real, imag;
+};
+
 template <class ptensor>
 void Initialize_Tensors(std::vector<ptensor> &Tn, Lattice lattice, int ldof) {
   int D = Tn[0].shape()[0];
@@ -81,19 +88,19 @@ int tnsolve(MPI_Comm comm,
     peps_parameters.Warning_flag = false;
   }
 
+  std::string outdir = "output_data";
+
   if (mpirank == 0) {
     // folder check
     struct stat status;
-    if (stat("output_data", &status) != 0) {
-      mkdir("output_data", 0755);
+    if (stat(outdir.c_str(), &status) != 0) {
+      mkdir(outdir.c_str(), 0755);
     }
 
-    peps_parameters.save("output_data/output_params.dat");
-    lattice.save_append("output_data/output_params.dat");
-    std::ofstream ofs;
-    ofs.open("output_data/output_params.dat", std::ios::out | std::ios::app);
-    ofs << std::endl;
-    ofs.close();
+    std::string param_file = outdir + "/output_params.dat";
+
+    peps_parameters.save(param_file.c_str());
+    lattice.save_append(param_file.c_str());
   }
 
   // set seed for randomized svd
@@ -297,7 +304,7 @@ int tnsolve(MPI_Comm comm,
     }
   }
 
-  std::clog << "  Start calculating bond observables" << std::endl;
+  std::clog << "  Start calculating energy" << std::endl;
   double energy=0.0;
   for(auto ed: simple_edges){
     const int source = ed.source_site;
@@ -311,13 +318,6 @@ int tnsolve(MPI_Comm comm,
                    C1[source], C2[target], C3[target], C4[source],
                    eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
                    Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
-      for(int ilops=0; ilops<nlops; ++ilops){
-        double val = Contract_two_sites_horizontal(
-                     C1[source], C2[target], C3[target], C4[source],
-                     eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                     Tn[source], Tn[target], lops[ilops], lops[ilops]) / local_norm;
-        neighbor_obs[ilops][source][0] += val;
-      }
     }else{
       const double local_norm = Contract_two_sites_vertical(
                    C1[source], C2[source], C3[target], C4[target],
@@ -327,94 +327,119 @@ int tnsolve(MPI_Comm comm,
                    C1[source], C2[source], C3[target], C4[target],
                    eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
                    Tn[source], Tn[target], hamtensors[ed.op_id]) / local_norm;
+    }
+  }
+
+  std::clog << "  Start calculating NN correlation" << std::endl;
+  for(int source=0; source<N_UNIT; ++source){
+    { // horizontal
+      int target = lattice.right(source);
+      const double local_norm = Contract_two_sites_horizontal(
+                   C1[source], C2[target], C3[target], C4[source],
+                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                   Tn[source], Tn[target], op_identity, op_identity);
+      for(int ilops=0; ilops<nlops; ++ilops){
+        double val = Contract_two_sites_horizontal(
+                     C1[source], C2[target], C3[target], C4[source],
+                     eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                     Tn[source], Tn[target], lops[ilops], lops[ilops]) / local_norm;
+        neighbor_obs[ilops][source][0] = val;
+      }
+    }
+    { // vertical
+      int target = lattice.top(source);
+      const double local_norm = Contract_two_sites_vertical(
+                   C1[target], C2[target], C3[source], C4[source],
+                   eTt[target], eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
+                   Tn[target], Tn[source], op_identity, op_identity);
       for(int ilops=0; ilops<nlops; ++ilops){
         double val = Contract_two_sites_vertical(
-                     C1[source], C2[source], C3[target], C4[target],
-                     eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-                     Tn[source], Tn[target], lops[ilops], lops[ilops]) / local_norm;
-        neighbor_obs[ilops][source][1] += val;
+                     C1[target], C2[target], C3[source], C4[source],
+                     eTt[target], eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
+                     Tn[target], Tn[source], lops[ilops], lops[ilops]) / local_norm;
+        neighbor_obs[ilops][source][1] = val;
       }
     }
   }
 
-  std::clog << "  Start calculating correlation functions" << std::endl;
+
+  std::clog << "  Start calculating long range correlation" << std::endl;
   const int Lcor = peps_parameters.Lcor;
   ptensor correlation_T(Shape(CHI, CHI, D, D));
   ptensor correlation_norm(Shape(CHI, CHI, D, D));
-
-  std::vector<std::vector<double>> cor_x(nlops);
-  std::vector<std::vector<double>> cor_y(nlops);
-
+  std::vector<Correlation> correlations;
   if(Lcor>0){
+    for(int left_index=0; left_index<N_UNIT; ++left_index){
     for(int ilops=0; ilops<nlops; ++ilops){
-      const int startx = 0;
-      const int starty = 0;
-      const int startindex = lattice.index(startx, starty);
-      StartCorrelation(correlation_T,
-                       C1[startindex], C4[startindex],
-                       eTt[startindex], eTb[startindex], eTl[startindex],
-                       Tn[startindex], lops[ilops]);
-      StartCorrelation(correlation_norm,
-                       C1[startindex], C4[startindex],
-                       eTt[startindex], eTb[startindex], eTl[startindex],
-                       Tn[startindex], op_identity);
+      const int left_x = lattice.x(left_index);
+      const int left_y = lattice.y(left_index);
+      { // horizontal
+        StartCorrelation(correlation_T,
+                         C1[left_index], C4[left_index],
+                         eTt[left_index], eTb[left_index], eTl[left_index],
+                         Tn[left_index], lops[ilops]);
+        StartCorrelation(correlation_norm,
+                         C1[left_index], C4[left_index],
+                         eTt[left_index], eTb[left_index], eTl[left_index],
+                         Tn[left_index], op_identity);
 
-      for(int r=0; r<Lcor; ++r){
-        const int endx = (startx+r+1)%LX;
-        const int endy = starty;
-        const int endindex = lattice.index(endx, endy);
-        double numerator = FinishCorrelation(correlation_T,
-                                             C2[endindex], C3[endindex],
-                                             eTt[endindex], eTr[endindex], eTb[endindex],
-                                             Tn[endindex], lops[ilops]
-                                             );
-        double norm = FinishCorrelation(correlation_norm,
-                                        C2[endindex], C3[endindex],
-                                        eTt[endindex], eTr[endindex], eTb[endindex],
-                                        Tn[endindex], op_identity
-                                        );
-        cor_x[ilops].push_back(numerator/norm);
+        for(int r=0; r<Lcor; ++r){
+          const int right_x = (left_x+r+1)%LX;
+          const int right_y = left_y;
+          const int offset_x = (left_x+r+1)/LX;
+          const int offset_y = 0;
+          const int right_index = lattice.index(right_x, right_y);
+          double norm = FinishCorrelation(correlation_norm,
+                                          C2[right_index], C3[right_index],
+                                          eTt[right_index], eTr[right_index], eTb[right_index],
+                                          Tn[right_index], op_identity
+                                          );
+          double val = FinishCorrelation(correlation_T,
+                                         C2[right_index], C3[right_index],
+                                         eTt[right_index], eTr[right_index], eTb[right_index],
+                                         Tn[right_index], lops[ilops]
+                                         ) / norm;
+          correlations.push_back(Correlation{left_index, right_index, offset_x, offset_y, ilops, ilops, val, 0.0});
 
-        Transfer(correlation_T, eTt[endindex], eTb[endindex], Tn[endindex]);
-        Transfer(correlation_norm, eTt[endindex], eTb[endindex], Tn[endindex]);
+          Transfer(correlation_T, eTt[right_index], eTb[right_index], Tn[right_index]);
+          Transfer(correlation_norm, eTt[right_index], eTb[right_index], Tn[right_index]);
+        }
       }
-    }
+      { // vertical
+        ptensor tn = transpose(Tn[left_index], Axes(3,0,1,2,4));
+        StartCorrelation(correlation_T,
+                         C4[left_index], C3[left_index],
+                         eTl[left_index], eTr[left_index], eTb[left_index],
+                         tn, lops[ilops]);
+        StartCorrelation(correlation_norm,
+                         C4[left_index], C3[left_index],
+                         eTl[left_index], eTr[left_index], eTb[left_index],
+                         tn, op_identity);
 
-    for(int ilops=0; ilops<nlops; ++ilops){
-      const int startx = 0;
-      const int starty = 0;
-      const int startindex = lattice.index(startx, starty);
-      ptensor tn = transpose(Tn[startindex], Axes(3,0,1,2,4));
-      StartCorrelation(correlation_T,
-                       C4[startindex], C3[startindex],
-                       eTl[startindex], eTr[startindex], eTb[startindex],
-                       tn, lops[ilops]);
-      StartCorrelation(correlation_norm,
-                       C4[startindex], C3[startindex],
-                       eTl[startindex], eTr[startindex], eTb[startindex],
-                       tn, op_identity);
+        for(int r=0; r<Lcor; ++r){
+          const int right_x = left_x;
+          const int right_y = (left_y+r+1)%LY;
+          const int offset_x = 0;
+          const int offset_y = (left_y+r+1)/LY;
+          const int right_index = lattice.index(right_x, right_y);
+          tn = transpose(Tn[right_index], Axes(3,0,1,2,4));
+          double norm = FinishCorrelation(correlation_norm,
+                                          C1[right_index], C2[right_index],
+                                          eTl[right_index], eTt[right_index], eTr[right_index],
+                                          tn, op_identity
+                                          );
+          double val = FinishCorrelation(correlation_T,
+                                         C1[right_index], C2[right_index],
+                                         eTl[right_index], eTt[right_index], eTr[right_index],
+                                         tn, lops[ilops]
+                                         ) / norm;
+          correlations.push_back(Correlation{left_index, right_index, offset_x, offset_y, ilops, ilops, val, 0.0});
 
-      for(int r=0; r<Lcor; ++r){
-        const int endx = startx;
-        const int endy = (starty+r+1)%LY;
-        const int endindex = lattice.index(endx, endy);
-        tn = transpose(Tn[endindex], Axes(3,0,1,2,4));
-        double numerator = FinishCorrelation(correlation_T,
-                                             C1[endindex], C2[endindex],
-                                             eTl[endindex], eTt[endindex], eTr[endindex],
-                                             tn, lops[ilops]
-                                             );
-        double norm = FinishCorrelation(correlation_norm,
-                                        C1[endindex], C2[endindex],
-                                        eTl[endindex], eTt[endindex], eTr[endindex],
-                                        tn, op_identity
-                                        );
-        cor_y[ilops].push_back(numerator/norm);
-
-        Transfer(correlation_T, eTl[endindex], eTr[endindex], tn);
-        Transfer(correlation_norm, eTl[endindex], eTr[endindex], tn);
+          Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
+          Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
+        }
       }
-    }
+    }}
   }
 
   time_obs += MPI_Wtime() - start_time;
@@ -422,51 +447,63 @@ int tnsolve(MPI_Comm comm,
   std::cout << std::endl;
 
   if (mpirank == 0) {
-    std::cout << "Energy              = " << energy / N_UNIT << std::endl;
+    std::cout << "Energy = " << energy / N_UNIT << std::endl;
+
+    std::ofstream ofs((outdir + "/local_obs.dat").c_str());
+    ofs << std::scientific;
 
     for(int ilops=0; ilops<nlops; ++ilops){
       double sum=0.0;
       for(int i=0; i<N_UNIT; ++i){
         sum += local_obs[ilops][i];
+        ofs << ilops << " " << i << " " << local_obs[ilops][i] << std::endl;
       }
-      std::cout << "Local operator " << ilops << " total = "
-                << sum/N_UNIT << std::endl;
-      for(int i=0; i<N_UNIT; ++i){
-      std::cout << "Local operator " << ilops << " at " << i << " = "
-                << local_obs[ilops][i] << std::endl;
-      }
+      std::cout << "Local operator " << ilops << " = " << sum/N_UNIT << std::endl;
     }
+    ofs.close();
 
+
+    ofs.open((outdir + "/neighbor_obs.dat").c_str());
     for(int ilops=0; ilops<nlops; ++ilops){
       double sum_x=0.0;
       double sum_y=0.0;
-      for(int i=0; i<N_UNIT; ++i){
-        sum_x += neighbor_obs[ilops][i][0];
-        sum_y += neighbor_obs[ilops][i][1];
+      for(int source=0; source<N_UNIT; ++source){
+        int target = lattice.right(source);
+        sum_x += neighbor_obs[ilops][source][0];
+        ofs << ilops << " " << source << " " << target << " " << neighbor_obs[ilops][source][0] << std::endl;
+        target = lattice.top(source);
+        sum_y += neighbor_obs[ilops][source][1];
+        ofs << ilops << " " << source << " " << target << " " << neighbor_obs[ilops][source][1] << std::endl;
       }
       std::cout << "Nearest Neighbor " << ilops << " x = "
                 << sum_x/N_UNIT << std::endl;
       std::cout << "Nearest Neighbor " << ilops << " y = "
                 << sum_y/N_UNIT << std::endl;
     }
+    ofs.close();
 
     std::cout << std::endl;
 
-    for(int ilops=0; ilops<nlops; ++ilops){
-      for(int r=0; r<Lcor; ++r){
-        std::cout << "Correlation " << ilops << " (" << r+1 << ", 0) = " << cor_x[ilops][r] << std::endl;
-      }
-      std::cout << std::endl;
-      for(int r=0; r<Lcor; ++r){
-        std::cout << "Correlation " << ilops << " (0, " << r+1 << ") = " << cor_y[ilops][r] << std::endl;
-      }
-      std::cout << std::endl;
+    ofs.open((outdir + "/correlation.dat").c_str());
+    for(auto const& cor: correlations){
+      ofs << cor.left_op << " " << cor.left_index << " "
+          << cor.right_op << " " << cor.right_index << " "
+          << cor.offset_x << " " << cor.offset_y << " "
+          << cor.real << " " << cor.imag << " "
+          << std::endl;
     }
+    ofs.close();
 
+    ofs.open((outdir + "/time.dat").c_str());
     std::cout << "time simple update = " << time_simple_update << std::endl;
+    ofs       << "time simple update = " << time_simple_update << std::endl;
     std::cout << "time full update   = " << time_full_update << std::endl;
+    ofs       << "time full update   = " << time_full_update << std::endl;
     std::cout << "time environmnent  = " << time_env << std::endl;
+    ofs       << "time environmnent  = " << time_env << std::endl;
     std::cout << "time observable    = " << time_obs << std::endl;
+    ofs       << "time observable    = " << time_obs << std::endl;
+    ofs.close();
   }
   return 0;
 }
