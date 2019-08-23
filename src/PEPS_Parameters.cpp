@@ -39,6 +39,8 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_max_iteration = 1000;
   Full_Gauge_Fix = true;
   Full_Use_FFU = true;
+
+  Lcor = 0;
 }
 
 PEPS_Parameters::PEPS_Parameters(toml::value data): PEPS_Parameters() { set(data); }
@@ -79,6 +81,8 @@ void PEPS_Parameters::set(toml::value data){
   Full_max_iteration = find_or(param, "full_max_iteration", 1000);
   Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
   Full_Use_FFU = find_or(param, "full_use_ffu", true);
+
+  Lcor = find_or(param, "Lcor", 0);
 }
 
 #define SAVE_PARAM(name, type) params_##type [I_##name] = name
@@ -98,6 +102,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
     I_Full_Use_FFU,
+    I_Lcor,
 
     N_PARAMS_INT_INDEX,
   };
@@ -133,6 +138,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FFU, int);
+    SAVE_PARAM(Lcor, int);
 
     SAVE_PARAM(tau_simple, double);
     SAVE_PARAM(Inverse_lambda_cut, double);
@@ -162,6 +168,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FFU, int);
+    LOAD_PARAM(Lcor, int);
 
     LOAD_PARAM(tau_simple, double);
     LOAD_PARAM(Inverse_lambda_cut, double);

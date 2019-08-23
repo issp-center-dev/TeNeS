@@ -39,6 +39,9 @@ public:
   bool Full_Gauge_Fix;
   bool Full_Use_FFU; // Fast Full Update
 
+  // observable
+  int Lcor;
+
   PEPS_Parameters();
 
   explicit PEPS_Parameters(const char *filename): PEPS_Parameters(){ set(filename); }
