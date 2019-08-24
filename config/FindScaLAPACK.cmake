@@ -81,7 +81,7 @@ if(SCALAPACK_FOUND)
     # Check whether SGI MPT is used
     try_compile(_SGI_MPT
       ${CMAKE_CURRENT_BINARY_DIR}
-      ${CMAKE_CURRENT_SOURCE_DIR}/config/check_sgimpt.c
+      ${CMAKE_CURRENT_SOURCE_DIR}/config/check_sgimpt.cpp
       OUTPUT_VARIABLE LOG)
     if(_SGI_MPT)
       find_library(_SCALAPACK_BLACS_LIBRARY
@@ -92,7 +92,7 @@ if(SCALAPACK_FOUND)
     else(_SGI_MPT)
       try_compile(_OPENMPI
 	${CMAKE_CURRENT_BINARY_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/config/check_openmpi.c
+	${CMAKE_CURRENT_SOURCE_DIR}/config/check_openmpi.cpp
 	OUTPUT_VARIABLE LOG)
       if(_OPENMPI)
 	find_library(_SCALAPACK_BLACS_LIBRARY
