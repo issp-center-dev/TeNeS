@@ -7,12 +7,12 @@
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
-#include "hamiltonian.hpp"
-#include "observable.hpp"
+#include "util/read_matrix.hpp"
 #include "tnsolve.hpp"
 
 
 int main(int argc, char **argv) {
+  using toml::find;
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
   int mpisize, mpirank;
 
@@ -38,15 +38,28 @@ int main(int argc, char **argv) {
 
   lattice.Bcast(MPI_COMM_WORLD);
 
-  std::vector<ptensor> hams = load_hamiltonians(input_toml);
-  std::vector<ptensor> lops = load_local_operators(input_toml);
+  // time evolution
+  auto str = find<std::string>(find(input_toml, "evolution"), "simple_update");
+  const auto simple_edges = make_edges(str);
 
-  auto bonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "simple_update");
-  auto fullbonds_str = toml::find<std::string>(toml::find(input_toml, "bond"), "full_update");
-  Edges simple_edges = make_edges(bonds_str);
-  Edges full_edges = make_edges(fullbonds_str);
+  str = find<std::string>(find(input_toml, "evolution"), "full_update");
+  const auto full_edges = make_edges(str);
 
-  tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, hams, lops);
+  auto strs = find<std::vector<std::string>>(find(input_toml, "evolution"), "matrix");
+  const std::vector<ptensor> evolutions = util::read_matrix<ptensor>(strs);
+
+  // observables
+  strs = find<std::vector<std::string>>(find(input_toml, "observable"), "local_operator");
+  const std::vector<ptensor> lops = util::read_matrix<ptensor>(strs);
+
+  strs = find<std::vector<std::string>>(find(input_toml, "observable"), "hamiltonian");
+  const std::vector<ptensor> hams = util::read_matrix<ptensor>(strs);
+
+  str = find<std::string>(find(input_toml, "observable"), "hamiltonian_bonds");
+  const auto ham_edges = make_edges(str);
+
+
+  tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
 
   MPI_Finalize();
   return 0;

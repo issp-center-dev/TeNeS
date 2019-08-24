@@ -1,17 +1,18 @@
+#ifndef UTIL_READ_MATRIX_HPP
+#define UTIL_READ_MATRIX_HPP
+
 #include <vector>
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 #include <mptensor.hpp>
-// #include <toml11/toml.hpp>
 
 #include "string.hpp"
 
-#include "load_tensor.hpp"
-
 namespace util{
-using ptensor =  mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-ptensor load_tensor(std::string const& str) {
+template <class ptensor>
+ptensor read_matrix(std::string const& str) {
   std::vector<std::vector<double>> A;
   const static std::string delim = " \t";
   std::string line;
@@ -40,4 +41,13 @@ ptensor load_tensor(std::string const& str) {
   return ret;
 }
 
+template <class ptensor>
+std::vector<ptensor> read_matrix(std::vector<std::string> const& strs) {
+  std::vector<ptensor> ret;
+  std::transform(strs.begin(), strs.end(), std::back_inserter(ret), [](std::string s){return read_matrix<ptensor>(s);});
+  return ret;
+}
+
 } // namespace util
+
+#endif // UTIL_READ_MATRIX_HPP
