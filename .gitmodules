@@ -4,6 +4,6 @@
 [submodule "deps/sanitizers-cmake"]
 	path = deps/sanitizers-cmake
 	url = https://github.com/arsenm/sanitizers-cmake
-[submodule "deps/cppteoml"]
+[submodule "deps/cpptoml"]
 	path = deps/cpptoml
 	url = https://github.com/skystrife/cpptoml
