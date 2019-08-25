@@ -6,7 +6,7 @@
 
 class Lattice;
 class PEPS_Parameters;
-class Edge;
+struct Edge;
 using Edges = std::vector<Edge>;
 
 template<class tensor>

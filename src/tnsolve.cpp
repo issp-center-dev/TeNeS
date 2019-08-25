@@ -331,8 +331,6 @@ void TNSolve<ptensor>::full_update(){
 template <class ptensor>
 void TNSolve<ptensor>::optimize(){
   // for measure time
-  double start_time=0.0;
-
   std::cout << std::setprecision(12);
 
   ptensor Tn1_new, Tn2_new;
