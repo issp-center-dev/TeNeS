@@ -10,6 +10,11 @@ endif()
 
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
+option(Testing "Enable tests" ON)
+
+if(Testing)
+    enable_testing()
+endif()
 
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
@@ -75,3 +80,7 @@ else()
 endif()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
+
+if(Testing)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+endif()
