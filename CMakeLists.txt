@@ -3,6 +3,10 @@ message(STATUS "CMake version: " ${CMAKE_VERSION})
 project(TNSolve CXX)
 set(TNSolve_VERSION 0.1-Beta)
 
+if(${CMAKE_VERSION} VERSION_LESS 3.4)
+    # old FindLAPACK.cmake requires C-lang enabled...
+    enable_language(C)
+endif()
 
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
@@ -31,7 +35,8 @@ endforeach()
 include(${PROJECT_SOURCE_DIR}/config/cxx11.cmake)
 cxx11()
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/deps/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/config" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/deps/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
 find_package(Sanitizers)
 
 set(OMP_FLAG "")
@@ -50,7 +55,6 @@ endif()
 
 find_package(LAPACK REQUIRED)
 find_package(MPI REQUIRED)
-# include_directories(${MPI_CXX_INCLUDE_PATH})
 
 if(NOT MPTENSOR_ROOT)
     add_subdirectory("${PROJECT_SOURCE_DIR}/deps/mptensor")
@@ -69,8 +73,5 @@ else()
         message(FATAL_ERROR "${MPTENSOR_INCLUDE_DIR}/mptensor.hpp is not found.")
     endif()
 endif()
-
-
-# include_directories(${PROJECT_SOURCE_DIR}/deps/)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
