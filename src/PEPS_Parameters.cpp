@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <toml11/toml.hpp>
+#include <cpptoml.h>
 
 #include "PEPS_Parameters.hpp"
 
@@ -43,17 +43,19 @@ PEPS_Parameters::PEPS_Parameters() {
   Lcor = 0;
 }
 
-PEPS_Parameters::PEPS_Parameters(toml::value data): PEPS_Parameters() { set(data); }
-void PEPS_Parameters::set(const char *filename){ set(toml::parse(filename)); }
-void PEPS_Parameters::set(toml::value data){
-  using toml::find_or;
+template <typename T>
+inline T find_or(decltype(cpptoml::parse_file("")) param, const char* key, T value) {
+  return param->get_as<T>(key).value_or(value);
+}
 
-  auto param = toml::find<toml::value>(data, "parameter");
+
+PEPS_Parameters::PEPS_Parameters(decltype(cpptoml::parse_file("")) data): PEPS_Parameters() { set(data); }
+void PEPS_Parameters::set(const char *filename){ set(cpptoml::parse_file(filename)); }
+void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
 
   // Tensor
   D = find_or(param, "D", 2);
   CHI = find_or(param, "CHI", 4);
-
 
   // Debug
   Debug_flag = find_or(param, "Debug", false);

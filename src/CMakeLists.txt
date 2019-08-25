@@ -21,7 +21,7 @@ target_compile_options(tnsolve PRIVATE $<$<CONFIG:Debug>: -Wextra>)
 
 target_include_directories(tnsolve PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tnsolve PRIVATE ${MPI_CXX_INCLUDE_DIRS})
-target_include_directories(tnsolve PRIVATE ${PROJECT_SOURCE_DIR}/deps)
+target_include_directories(tnsolve PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
 
 target_link_libraries(tnsolve mptensor)
 target_link_libraries(tnsolve ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES})

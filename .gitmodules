@@ -1,9 +1,9 @@
 [submodule "deps/mptensor"]
 	path = deps/mptensor
 	url = https://github.com/smorita/mptensor
-[submodule "deps/toml11"]
-	path = deps/toml11
-	url = https://github.com/ToruNiina/toml11
 [submodule "deps/sanitizers-cmake"]
 	path = deps/sanitizers-cmake
 	url = https://github.com/arsenm/sanitizers-cmake
+[submodule "deps/cppteoml"]
+	path = deps/cpptoml
+	url = https://github.com/skystrife/cpptoml
