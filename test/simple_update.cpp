@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include <PEPS_Basics.hpp>
+#include <PEPS_Parameters.cpp>
 
 TEST_CASE("testing simple update"){
   using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
@@ -108,8 +109,7 @@ TEST_CASE("testing simple update"){
     double result, answer;
     new_Tn1.get_value(Index(i,j,k,l,m), result);
     ans_Tn1.get_value(Index(i,j,k,l,m), answer);
-    double diff = result - answer;
-    CHECK(diff < tol);
+    CHECK(result == doctest::Approx(answer).epsilon(tol));
     ofs << result << " ";
   }
   ofs << std::endl;
@@ -123,8 +123,7 @@ TEST_CASE("testing simple update"){
     double result, answer;
     new_Tn2.get_value(Index(i,j,k,l,m), result);
     ans_Tn2.get_value(Index(i,j,k,l,m), answer);
-    double diff = result - answer;
-    CHECK(diff < tol);
+    CHECK(result == doctest::Approx(answer).epsilon(tol));
     ofs << result << " ";
   }
   ofs << std::endl;
@@ -132,8 +131,7 @@ TEST_CASE("testing simple update"){
   for(int i=0; i<D; ++i){
     double result = new_lambda[i];
     double answer = ans_lambda[i];
-    double diff = result - answer;
-    CHECK(diff < tol);
+    CHECK(result == doctest::Approx(answer).epsilon(tol));
     ofs << new_lambda[i] << " ";
   }
   ofs << std::endl;

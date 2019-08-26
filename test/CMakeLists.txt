@@ -1,13 +1,11 @@
 link_directories(${MPTENSOR_LIB_DIR})
 
-foreach(basename simple_update)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+foreach(basename input simple_update)
     set(testname "test_${basename}")
-    add_executable(${testname} "${basename}.cpp" "${PROJECT_SOURCE_DIR}/src/PEPS_Parameters.cpp")
-    configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/data/${basename}.dat
-        ${CMAKE_CURRENT_BINARY_DIR}/data/${basename}.dat
-        COPYONLY
-        )
+    add_executable(${testname} "${basename}.cpp")
 
     target_include_directories(${testname} PRIVATE ${MPTENSOR_INCLUDE_DIR})
     target_include_directories(${testname} PRIVATE ${MPI_CXX_INCLUDE_DIRS})

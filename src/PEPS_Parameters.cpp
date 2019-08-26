@@ -82,7 +82,7 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
   Full_max_iteration = find_or(param, "full_max_iteration", 1000);
   Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
-  Full_Use_FastFullUpdate = find_or(param, "full_use_ffu", true);
+  Full_Use_FastFullUpdate = find_or(param, "full_use_fastfullupdate", true);
 
   Lcor = find_or(param, "Lcor", 0);
 }
