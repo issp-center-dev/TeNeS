@@ -9,7 +9,7 @@
 #include "edge.hpp"
 #include "util/read_matrix.hpp"
 #include "tnsolve.hpp"
-
+#include "load_toml.cpp"
 
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
@@ -22,65 +22,24 @@ int main_impl(int argc, char **argv) {
 
   // Parameters
   PEPS_Parameters peps_parameters;
-  if (mpirank == 0) {
-    peps_parameters.set(input_toml->get_table("parameter"));
-  }
+  peps_parameters.set(input_toml->get_table("parameter"));
   peps_parameters.Bcast(MPI_COMM_WORLD);
 
-  auto lattice_toml = input_toml->get_table("lattice");
-  auto Lsub = lattice_toml->get_array_of<int64_t>("Lsub");
-  if(!Lsub){
-    std::cerr << "cannot find Lsub in the section [lattice]" << std::endl;
-    return 1;
-  }
-  Lattice lattice((*Lsub)[0], (*Lsub)[1]);
+  auto toml_lattice = input_toml->get_table("lattice");
+  Lattice lattice = gen_lattice(toml_lattice);
   lattice.Bcast(MPI_COMM_WORLD);
 
   // time evolution
-  auto evolution_toml = input_toml->get_table("evolution");
-  auto str = evolution_toml->get_as<std::string>("simple_update");
-  if(!str){
-    std::cerr << "cannot find simple_update in the section [evolution]" << std::endl;
-    return 1;
-  }
-  const auto simple_edges = make_edges(*str);
-
-  str = evolution_toml->get_as<std::string>("full_update");
-  if(!str){
-    std::cerr << "cannot find full_update in the section [evolution]" << std::endl;
-    return 1;
-  }
-  const auto full_edges = make_edges(*str);
-
-  auto strs = evolution_toml->get_array_of<std::string>("matrix");
-  if(!strs){
-    std::cerr << "cannot find matrix in the section [evolution]" << std::endl;
-    return 1;
-  }
-  const std::vector<ptensor> evolutions = util::read_matrix<ptensor>(*strs);
+  auto toml_evolution= input_toml->get_table("evolution");
+  const auto simple_edges = gen_edges(toml_evolution, "simple_update", "evolution");
+  const auto full_edges = gen_edges(toml_evolution, "full_update", "evolution");
+  const auto evolutions = gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
 
   // observable
-  auto observable_toml = input_toml->get_table("observable");
-  strs = observable_toml->get_array_of<std::string>("local_operator");
-  if(!strs){
-    std::cerr << "cannot find local_operator in the section [observable]" << std::endl;
-    return 1;
-  }
-  const std::vector<ptensor> lops = util::read_matrix<ptensor>(*strs);
-
-  strs = observable_toml->get_array_of<std::string>("hamiltonian");
-  if(!strs){
-    std::cerr << "cannot find hamiltonian in the section [observable]" << std::endl;
-    return 1;
-  }
-  const std::vector<ptensor> hams = util::read_matrix<ptensor>(*strs);
-
-  str = observable_toml->get_as<std::string>("hamiltonian_bonds");
-  if(!str){
-    std::cerr << "cannot find hamiltonian_bonds in the section [obsevable]" << std::endl;
-    return 1;
-  }
-  const auto ham_edges = make_edges(*str);
+  auto toml_observable = input_toml->get_table("observable");
+  const auto lops = gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
+  const auto hams = gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
+  const auto ham_edges = gen_edges(toml_observable, "hamiltonian_bonds", "observable");
 
   return tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
 }
