@@ -1,4 +1,4 @@
-# TNSolve
+# TeNeS
 
 ## Install
 

@@ -8,7 +8,7 @@
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "util/read_matrix.hpp"
-#include "tnsolve.hpp"
+#include "tenes.hpp"
 
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml, const char *tablename = "lattice"){
   auto Lsub = toml->get_array_of<int64_t>("Lsub");

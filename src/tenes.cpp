@@ -14,7 +14,7 @@
 #include "Square_lattice_CTM.hpp"
 #include "edge.hpp"
 
-#include "tnsolve.hpp"
+#include "tenes.hpp"
 
 
 using namespace mptensor;
@@ -27,9 +27,9 @@ struct Correlation{
 };
 
 template <class ptensor>
-class TNSolve{
+class TeNeS{
 public:
-  TNSolve(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
+  TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
          Edges simple_edges_, Edges full_edges_, Edges ham_edges_, 
          std::vector<ptensor> evolutions_,
          std::vector<ptensor> hams_,
@@ -85,7 +85,7 @@ private:
 };
 
 template <class ptensor>
-TNSolve<ptensor>::TNSolve(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
+TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                  Lattice lattice_, Edges simple_edges_, Edges full_edges_, Edges ham_edges_,
                  std::vector<ptensor> evolutions_,
                  std::vector<ptensor> hams_, std::vector<ptensor> lops_)
@@ -166,7 +166,7 @@ TNSolve<ptensor>::TNSolve(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 }
 
 template <class ptensor>
-void TNSolve<ptensor>::initialize_tensors(){
+void TeNeS<ptensor>::initialize_tensors(){
   Tn.clear();
   eTt.clear();
   eTr.clear();
@@ -220,7 +220,7 @@ void TNSolve<ptensor>::initialize_tensors(){
 }
 
 template <class ptensor>
-inline void TNSolve<ptensor>::update_CTM(){
+inline void TeNeS<ptensor>::update_CTM(){
     double start_time = MPI_Wtime();
     Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
         peps_parameters, lattice);
@@ -228,7 +228,7 @@ inline void TNSolve<ptensor>::update_CTM(){
 }
 
 template <class ptensor>
-void TNSolve<ptensor>::simple_update(){
+void TeNeS<ptensor>::simple_update(){
   double start_time = MPI_Wtime();
   ptensor Tn1_new;
   ptensor Tn2_new;
@@ -254,7 +254,7 @@ void TNSolve<ptensor>::simple_update(){
 }
 
 template <class ptensor>
-void TNSolve<ptensor>::full_update(){
+void TeNeS<ptensor>::full_update(){
   double start_time = 0.0;
   ptensor Tn1_new, Tn2_new;
   if (peps_parameters.num_full_step > 0) {
@@ -329,7 +329,7 @@ void TNSolve<ptensor>::full_update(){
 }
 
 template <class ptensor>
-void TNSolve<ptensor>::optimize(){
+void TeNeS<ptensor>::optimize(){
   // for measure time
   std::cout << std::setprecision(12);
 
@@ -347,7 +347,7 @@ void TNSolve<ptensor>::optimize(){
 
 
 template <class ptensor>
-std::vector<std::vector<double>> TNSolve<ptensor>::measure_local(bool save){
+std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save){
   double start_time = MPI_Wtime();
   const int nlops = lops.size();
   std::vector<std::vector<double>> local_obs(nlops, std::vector<double>(N_UNIT, 0));
@@ -389,7 +389,7 @@ std::vector<std::vector<double>> TNSolve<ptensor>::measure_local(bool save){
 }
 
 template <class ptensor>
-double TNSolve<ptensor>::measure_energy(bool save){
+double TeNeS<ptensor>::measure_energy(bool save){
   double start_time = MPI_Wtime();
   double energy=0.0;
 
@@ -432,7 +432,7 @@ double TNSolve<ptensor>::measure_energy(bool save){
 }
 
 template <class ptensor>
-std::vector<std::vector<std::vector<double>>> TNSolve<ptensor>::measure_NN(bool save){
+std::vector<std::vector<std::vector<double>>> TeNeS<ptensor>::measure_NN(bool save){
   double start_time = MPI_Wtime();
   const int nlops = lops.size();
   std::vector<std::vector<std::vector<double>>> 
@@ -495,7 +495,7 @@ std::vector<std::vector<std::vector<double>>> TNSolve<ptensor>::measure_NN(bool 
 }
 
 template <class ptensor>
-std::vector<Correlation> TNSolve<ptensor>::measure_correlation(bool save){
+std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save){
   double start_time = MPI_Wtime();
 
   const int nlops = lops.size();
@@ -605,7 +605,7 @@ std::vector<Correlation> TNSolve<ptensor>::measure_correlation(bool save){
 }
 
 template <class ptensor>
-void TNSolve<ptensor>::measure(){
+void TeNeS<ptensor>::measure(){
   std::clog << "Start calculating observables" << std::endl;
 
   std::clog << "  Start updating environment" << std::endl;
@@ -655,7 +655,7 @@ void TNSolve<ptensor>::measure(){
 }
 
 template <class ptensor>
-int tnsolve(MPI_Comm comm,
+int tenes(MPI_Comm comm,
             PEPS_Parameters peps_parameters,
             Lattice lattice,
             Edges simple_edges,
@@ -665,7 +665,7 @@ int tnsolve(MPI_Comm comm,
             std::vector<ptensor> hams,
             std::vector<ptensor> lops
     ){
-  TNSolve<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
+  TeNeS<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
   tns.optimize();
   tns.measure();
   return 0;
@@ -674,7 +674,7 @@ int tnsolve(MPI_Comm comm,
 // template specialization
 using d_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 template
-int tnsolve<d_tensor>(MPI_Comm comm,
+int tenes<d_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
                       Lattice lattice,
                       Edges simple_edges,
@@ -687,7 +687,7 @@ int tnsolve<d_tensor>(MPI_Comm comm,
 /*
 using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
 template
-int tnsolve<c_tensor>(MPI_Comm comm,
+int tenes<c_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
                       Lattice lattice,
                       Edges simple_edges,

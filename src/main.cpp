@@ -8,7 +8,7 @@
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "util/read_matrix.hpp"
-#include "tnsolve.hpp"
+#include "tenes.hpp"
 #include "load_toml.cpp"
 
 int main_impl(int argc, char **argv) {
@@ -46,7 +46,7 @@ int main_impl(int argc, char **argv) {
   const auto hams = gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
   const auto ham_edges = gen_edges(toml_observable, "hamiltonian_bonds", "observable");
 
-  return tnsolve(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
+  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
 }
 
 

@@ -1,29 +1,29 @@
 # include_directories(${MPTENSOR_INCLUDE_DIR})
 link_directories(${MPTENSOR_LIB_DIR})
 
-add_executable(tnsolve
+add_executable(tenes
 main.cpp
-tnsolve.cpp 
+tenes.cpp 
 PEPS_Parameters.cpp
 Lattice.cpp
 edge.cpp
 util/string.cpp
 )
-add_sanitizers(tnsolve)
+add_sanitizers(tenes)
 
-# target_include_directories(tnsolve PUBLIC ${MPI_CXX_INCLUDE_DIRS})
-# target_link_libraries(tnsolve mptensor)
-# target_link_libraries(tnsolve ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBS})
+# target_include_directories(tenes PUBLIC ${MPI_CXX_INCLUDE_DIRS})
+# target_link_libraries(tenes mptensor)
+# target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBS})
 
-target_compile_options(tnsolve PRIVATE ${OMP_FLAG})
-target_compile_options(tnsolve PRIVATE -Wall)
-target_compile_options(tnsolve PRIVATE $<$<CONFIG:Debug>: -Wextra>)
+target_compile_options(tenes PRIVATE ${OMP_FLAG})
+target_compile_options(tenes PRIVATE -Wall)
+target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra>)
 
-target_include_directories(tnsolve PRIVATE ${MPTENSOR_INCLUDE_DIR})
-target_include_directories(tnsolve PRIVATE ${MPI_CXX_INCLUDE_DIRS})
-target_include_directories(tnsolve PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
+target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
+target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
+target_include_directories(tenes PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
 
-target_link_libraries(tnsolve mptensor)
-target_link_libraries(tnsolve ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES})
+target_link_libraries(tenes mptensor)
+target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES})
 
-install(TARGETS tnsolve RUNTIME DESTINATION bin)
+install(TARGETS tenes RUNTIME DESTINATION bin)
