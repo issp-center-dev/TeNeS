@@ -52,7 +52,7 @@ C Contract_one_site(const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
       op1, Axes(0, 1), Axes(1, 0));
 }
 template <template <typename> class Matrix, typename C>
-C Contract_two_sites_holizontal(
+C Contract_two_sites_horizontal(
     const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &C4,
     const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT2,
@@ -68,7 +68,8 @@ C Contract_two_sites_holizontal(
     -1, 11, 1, 5, -1, 12, 2, 7, -1, 6, -1, 13, 15, -1, -1, -1, -1, 8, -1, -1,
     -1, -1, 14, -1]
     ##############################
-    # ((Tn1*(((C1*eT1)*(C4*eT6))*(Tn1c*(((C2*eT2)*(Tn2*(((C3*eT4)*eT3)*(Tn2c*op2))))*eT5))))*op1)
+    #
+    ((Tn1*(((C1*eT1)*(C4*eT6))*(Tn1c*(((C2*eT2)*(Tn2*(((C3*eT4)*eT3)*(Tn2c*op2))))*eT5))))*op1)
     # cpu_cost= 1.204e+11  memory= 3.041e+08
     # final_bond_order  ()
     ##############################
@@ -120,7 +121,8 @@ C Contract_two_sites_vertical(
   -1, 11, 2, 6, -1, 12, 3, 8, -1, 7, -1, 13, 15, -1, -1, -1, -1, 9, -1, -1, -1,
   -1, 14, -1]
   ##############################
-  # ((Tn1*(((C2*eT2)*(C1*eT1))*(Tn1c*(((C3*eT3)*(Tn2*(((C4*eT5)*eT4)*(Tn2c*op2))))*eT6))))*op1)
+  #
+  ((Tn1*(((C2*eT2)*(C1*eT1))*(Tn1c*(((C3*eT3)*(Tn2*(((C4*eT5)*eT4)*(Tn2c*op2))))*eT6))))*op1)
   # cpu_cost= 1.204e+11  memory= 3.0411e+08
   # final_bond_order  ()
   ##############################
@@ -153,7 +155,7 @@ C Contract_two_sites_vertical(
       op1, Axes(0, 1), Axes(0, 1));
 }
 template <template <typename> class Matrix, typename C>
-C Contract_two_sites_holizontal_op12(
+C Contract_two_sites_horizontal_op12(
     const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &C4,
     const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT2,
@@ -167,7 +169,7 @@ C Contract_two_sites_holizontal_op12(
     ##   |  |
   */
   ////////////////////////////////////////////////////////////
-  // two_sites_holizontal_op12.dat
+  // two_sites_horizontal_op12.dat
   ////////////////////////////////////////////////////////////
   // (op12*((eT1*(Tn1*(Tn1c*(eT5*(C1*(C4*eT6))))))*(eT2*(Tn2*(Tn2c*(eT4*(C2*(C3*eT3))))))))
   // cpu_cost= 2.20416e+11  memory= 6.0502e+08
@@ -772,8 +774,8 @@ void Calc_Next_eT(const Tensor<Matrix, C> &eT8, const Tensor<Matrix, C> &Tn1,
 template <template <typename> class Matrix, typename C>
 void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
                         const Tensor<Matrix, C> &Tn2,
-                        const std::vector<std::vector<double> > &lambda1,
-                        const std::vector<std::vector<double> > &lambda2,
+                        const std::vector<std::vector<double>> &lambda1,
+                        const std::vector<std::vector<double>> &lambda2,
                         const Tensor<Matrix, C> &op12, const int connect1,
                         const PEPS_Parameters peps_parameters,
                         Tensor<Matrix, C> &Tn1_new, Tensor<Matrix, C> &Tn2_new,
@@ -790,8 +792,8 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     connect2 = 1;
   }
 
-  std::vector<std::vector<double> > lambda1_inv(4);
-  std::vector<std::vector<double> > lambda2_inv(4);
+  std::vector<std::vector<double>> lambda1_inv(4);
+  std::vector<std::vector<double>> lambda2_inv(4);
 
   for (int i = 0; i < 4; i++) {
     lambda1_inv[i] = std::vector<double>(lambda1[i].size());
@@ -1166,16 +1168,17 @@ void Full_update_bond_horizontal(
       ## ((envR1, m1, D_connect,m1)*)
     */
 
-    W_vec = tensordot(
-        tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)), conj(R2),
-        Axes(1, 3), Axes(0, 2)); //transpose(0,2,1)).reshape(envR1*D_connect,m1)
+    W_vec =
+        tensordot(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
+                  conj(R2), Axes(1, 3),
+                  Axes(0, 2)); // transpose(0,2,1)).reshape(envR1*D_connect,m1)
     /*
       ## create N
       ## (envR1, envR1*, D_connect,D_connect*)
     */
     N_mat = tensordot(tensordot(Environment, R2, Axes(1), Axes(0)), conj(R2),
                       Axes(2, 4), Axes(0, 2));
-    //transpose(1,3,0,2).reshape(envR1*D_connect,envR1*D_connect)
+    // transpose(1,3,0,2).reshape(envR1*D_connect,envR1*D_connect)
 
     // Moore-Penrose Psude Inverse (for Hermitian matrix)
     info = svd(N_mat, Axes(1, 3), Axes(0, 2), U, s, VT);
@@ -1347,4 +1350,107 @@ void Full_update_bond(
     Tn2_new.transpose(Axes(3, 0, 1, 2, 4));
   }
 }
+
+template <template <typename> class Matrix, typename C>
+void EvolutionaryTensor(Tensor<Matrix, C> &U, const Tensor<Matrix, C> &H,
+                        double tau) {
+  const Shape shape = H.shape();
+  const size_t N = shape[0];
+
+  Tensor<Matrix, C> V;
+  std::vector<double> s;
+  int info = eigh(H, s, V);
+  for (size_t i = 0; i < N; ++i) {
+    s[i] = std::exp(-tau * s[i]);
+  }
+  Tensor<Matrix, C> Vd = conj(V);
+  V.multiply_vector(s, 1);
+  U = tensordot(V, Vd, Axes(1), Axes(1));
+}
+
+template <template <typename> class Matrix, typename C>
+Tensor<Matrix, C> EvolutionaryTensor(const Tensor<Matrix, C> &H, double tau) {
+  Tensor<Matrix, C> U;
+  EvolutionaryTensor(U, H, tau);
+  return U;
+}
+
+template <template <typename> class Matrix, typename C>
+void StartCorrelation(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C1,
+                      const Tensor<Matrix, C> &C4, const Tensor<Matrix, C> &eT1,
+                      const Tensor<Matrix, C> &eT3,
+                      const Tensor<Matrix, C> &eT4,
+                      const Tensor<Matrix, C> &Tn1,
+                      const Tensor<Matrix, C> &op) {
+  ////////////////////////////////////////////////////////////
+  // (eT1*(Tn1*((Tn2*op)*(eT3*(C1*(C4*eT4))))))
+  // cpu_cost= 7.5525e+06  memory= 192500
+  // final_bond_order (e1r, e3r, n1r, n2r)
+  ////////////////////////////////////////////////////////////
+  A = transpose(
+      tensordot(
+          eT1,
+          tensordot(
+              Tn1,
+              tensordot(
+                  tensordot(conj(Tn1), op, Axes(4), Axes(1) // Tn2 = conj(Tn1)
+                            ),
+                  tensordot(eT3,
+                            tensordot(C1, tensordot(C4, eT4, Axes(1), Axes(0)),
+                                      Axes(0), Axes(1)),
+                            Axes(1), Axes(1)),
+                  Axes(0, 3), Axes(5, 2)),
+              Axes(0, 3, 4), Axes(6, 4, 2)),
+          Axes(0, 2, 3), Axes(5, 0, 2)),
+      Axes(0, 3, 1, 2));
+}
+
+template <template <typename> class Matrix, typename C>
+void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
+              const Tensor<Matrix, C> &eT3, const Tensor<Matrix, C> &Tn1) {
+  ////////////////////////////////////////////////////////////
+  // (eT1*(Tn1*(Tn2*(A*eT3))))
+  // cpu_cost= 7.5e+06  memory= 192500
+  // final_bond_order (e1r, e3r, n1r, n2r)
+  ////////////////////////////////////////////////////////////
+  A = transpose(tensordot(eT1,
+                          tensordot(Tn1,
+                                    tensordot(conj(Tn1),
+                                              tensordot( // Tn2 = conj(Tn1)
+                                                  A, eT3, Axes(1), Axes(1)),
+                                              Axes(0, 3), Axes(2, 5)),
+                                    Axes(0, 3, 4), Axes(4, 6, 2)),
+                          Axes(0, 2, 3), Axes(4, 0, 2)),
+                Axes(0, 3, 1, 2));
+}
+
+template <template <typename> class Matrix, typename C>
+double
+FinishCorrelation(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
+                  const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
+                  const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,
+                  const Tensor<Matrix, C> &Tn1, const Tensor<Matrix, C> &op) {
+  ////////////////////////////////////////////////////////////
+  // (op*(Tn1*((A*eT1)*(Tn2*(eT3*(C2*(C3*eT2)))))))
+  // cpu_cost= 7.5525e+06  memory= 252504
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return trace(
+      op,
+      tensordot(
+          Tn1,
+          tensordot(
+              tensordot(A, eT1, Axes(0), Axes(0)),
+              tensordot(conj(Tn1),
+                        tensordot( // Tn2 = conj(Tn1)
+                            eT3,
+                            tensordot(C2, tensordot(C3, eT2, Axes(0), Axes(1)),
+                                      Axes(1), Axes(1)),
+                            Axes(0), Axes(1)),
+                        Axes(2, 3), Axes(5, 2)),
+              Axes(0, 2, 3, 5), Axes(3, 0, 5, 1)),
+          Axes(0, 1, 2, 3), Axes(0, 1, 4, 3)),
+      Axes(0, 1), Axes(0, 1));
+}
+
 #endif // _PEPS_BASICS_HPP_

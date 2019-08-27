@@ -1,99 +1,68 @@
 #ifndef LATTICE_HPP
 #define LATTICE_HPP
 
-#include <string>
-#include <fstream>
+#include <array>
 #include <vector>
+
+#include <mpi.h>
+
 // Lattice setting
 
+/*
+ * axis:
+ *
+ *  y
+ *  ^
+ *  |
+ *  .->x
+ *
+ *  order:
+ *
+ *  2 3
+ *  0 1
+ *
+ * edge index:
+ *
+ *   1
+ *  0.2
+ *   3
+ *
+ */
 class Lattice {
 public:
   int LX;
   int LY;
   int N_UNIT;
 
-  std::vector<std::vector<int> > Tensor_list;
-  std::vector<std::vector<int> > NN_Tensor;
+  std::vector<std::vector<int>> Tensor_list;
+  std::vector<std::array<int, 4>> NN_Tensor;
 
-  Lattice() {
-    LX = 2;
-    LY = 2;
-    N_UNIT = LX * LY;
+  Lattice(int X, int Y);
 
-    Tensor_list = std::vector<std::vector<int> >(LX, std::vector<int>(LY));
-    NN_Tensor = std::vector<std::vector<int> >(N_UNIT, std::vector<int>(4));
+  int x(int index) const { return index % LX; }
+  int y(int index) const { return index / LX; }
+  int index(int x, int y) const {
+    int X = (x < 0) ? (x % LX + LX) : x % LX; // c++11 requires neg%pos is neg
+    int Y = (y < 0) ? (y % LY + LY) : y % LY;
+    return X + Y * LX;
   }
 
-  void read_parameters(const char *filename) {
-    std::ifstream input_file;
-    input_file.open(filename, std::ios::in);
-    std::string reading_line_buffer;
+  int left(int index) const { return NN_Tensor[index][0]; }
+  int right(int index) const { return NN_Tensor[index][2]; }
+  int top(int index) const { return NN_Tensor[index][1]; }
+  int bottom(int index) const { return NN_Tensor[index][3]; }
 
-    while (!input_file.eof()) {
-      std::getline(input_file, reading_line_buffer);
-      std::stringstream buf(reading_line_buffer);
-      std::vector<std::string> result;
-      while (buf >> reading_line_buffer) {
-        result.push_back(reading_line_buffer);
-      }
+  void reset();
+  void reset(int X, int Y);
 
-      if (result.size() > 1) {
-        if (result[0].compare("LX") == 0) {
-          std::istringstream is(result[1]);
-          is >> LX;
-        } else if (result[0].compare("LY") == 0) {
-          std::istringstream is(result[1]);
-          is >> LY;
-        } else if (result[0].compare("N_UNIT") == 0) {
-          std::istringstream is(result[1]);
-          is >> N_UNIT;
-        }
-        // std::cout<< "## input data: "<<result[0]<<" =
-        // "<<result[1]<<std::endl;
-      }
-    }
-  }
-  void output_parameters(const char *filename, bool append) {
-    std::ofstream ofs;
-    if (append) {
-      ofs.open(filename, std::ios::out | std::ios::app);
-    } else {
-      ofs.open(filename, std::ios::out);
-    }
+  void save(const char *filename, bool append = false);
 
-    ofs << "LX " << LX << std::endl;
-    ofs << "LY " << LY << std::endl;
-    ofs << "N_UNIT " << N_UNIT << std::endl;
-  }
+  void save_append(const char *filename) { save(filename, true); }
 
-  void output_parameters(const char *filename) {
-    output_parameters(filename, false);
-  }
-
-  void output_parameters_append(const char *filename) {
-    output_parameters(filename, true);
-  }
-
-  void Bcast_parameters(MPI_Comm comm) {
-    int irank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank);
-    std::vector<int> params_int(3);
-
-    if (irank == 0) {
-      params_int[0] = LX;
-      params_int[1] = LY;
-      params_int[2] = N_UNIT;
-
-      MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-    } else {
-      MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-
-      LX = params_int[0];
-      LY = params_int[1];
-      N_UNIT = params_int[2];
-    }
-  }
+  void Bcast(MPI_Comm comm, int root = 0);
 };
+
+/*
 
 class Lattice_skew : public Lattice {
 public:
@@ -213,5 +182,7 @@ public:
     }
   }
 };
+
+*/
 
 #endif // LATTICE_HPP

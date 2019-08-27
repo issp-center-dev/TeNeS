@@ -1,0 +1,73 @@
+[parameter]
+D  = 4     # tensor_dim
+CHI  = 16  # env_dim
+
+simple_num_step = 1000
+simple_inverse_lambda_cutoff = 1e-10
+
+full_num_step = 1
+full_inverse_projector_cutoff = 1e-10
+full_inverse_precision = 1e-10
+full_convergence_epsilon = 1e-10
+full_iteration_max = 100
+full_gauge_fix = false
+full_fastfullupdate = false
+
+ctm_iteration_max = 10
+ctm_inverse_projector_cutoff = 1e-10
+ctm_convergence_epsilon = 1e-8
+ctm_projector_corner = true
+use_rsvd = true
+rsvd_oversampling_factor = 10
+
+Lcor = 5
+
+[lattice]
+Lsub = [3,2]
+
+[evolution]
+simple_update = """
+0 1 h 0
+0 1 v 1
+"""
+
+full_update = """
+0 2 h 0
+0 2 v 2
+"""
+
+matrix = [
+"""
+  1.0 0.0 0.0 0.0
+  0.0 1.0 0.0 0.0
+  0.0 0.0 1.0 0.0
+  0.0 0.0 0.0 1.0
+"""
+]
+
+[observable]
+local_operator = [
+"""
+  0.5  0.0
+  0.0 -0.5
+""",
+"""
+  0.0 0.5
+  0.5 0.0
+""",
+]
+
+hamiltonian_bonds = """
+0 1 h 0
+0 1 v 2
+"""
+
+hamiltonian = [
+"""
+  0.25  0.00  0.00 0.00
+  0.00 -0.25  0.50 0.0
+  0.00  0.50 -0.25 0.00
+  0.00  0.00  0.00 0.25
+""",
+]
+
