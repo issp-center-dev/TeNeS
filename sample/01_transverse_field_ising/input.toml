@@ -4,10 +4,6 @@ CHI  = 16  # env_dim
 
 num_simple_step = 1000
 num_full_step = 1
-
-Random_amp = 0.02
-second_ST = true
-Read_Initial = false
 ctm_iteration_max = 5
 
 Lcor = 5

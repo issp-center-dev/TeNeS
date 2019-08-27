@@ -18,7 +18,6 @@ public:
   bool Warning_flag;
 
   // Simple update
-  double tau_simple;
   int num_simple_step;
   double Inverse_lambda_cut;
 
@@ -31,7 +30,6 @@ public:
   int RSVD_Oversampling_factor;
 
   // Full update
-  double tau_full;
   int num_full_step;
   double Inverse_Env_cut;
   double Full_Inverse_precision;

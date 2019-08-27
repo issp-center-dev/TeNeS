@@ -18,7 +18,6 @@ PEPS_Parameters::PEPS_Parameters() {
   Warning_flag = true;
 
   // Simple update
-  tau_simple = 0.0;
   num_simple_step = 0;
   Inverse_lambda_cut = 1e-12;
 
@@ -31,7 +30,6 @@ PEPS_Parameters::PEPS_Parameters() {
   RSVD_Oversampling_factor = 2;
 
   // Full update
-  tau_full = 0.0;
   num_full_step = 0;
   Inverse_Env_cut = 1e-12;
   Full_Inverse_precision = 1e-12;
@@ -62,7 +60,6 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   Warning_flag = find_or(param, "Warning", true);
 
   // Simple update
-  tau_simple = find_or(param, "tau_simple", 0.0);
   num_simple_step = find_or(param, "num_simple_step", 0);
   Inverse_lambda_cut = find_or(param, "inverse_lambda_cutoff", 1e-12);
 
@@ -75,7 +72,6 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   RSVD_Oversampling_factor = find_or(param, "rsvd_oversampling_factor", 2);
 
   // Full update
-  tau_full = find_or(param, "tau_full", 0.0);
   num_full_step = find_or(param, "num_full_step", 0);
   Inverse_Env_cut = find_or(param, "inverse_projector_cutoff", 1e-12);
   Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
@@ -109,12 +105,10 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     N_PARAMS_INT_INDEX,
   };
   enum PARAMS_DOUBLE_INDEX{
-    I_tau_simple,
     I_Inverse_lambda_cut,
     I_Inverse_projector_cut,
     I_CTM_Convergence_Epsilon,
     I_Inverse_Env_cut,
-    I_tau_full,
     I_Full_Inverse_precision,
     I_Full_Convergence_Epsilon,
 
@@ -142,12 +136,10 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
     SAVE_PARAM(Lcor, int);
 
-    SAVE_PARAM(tau_simple, double);
     SAVE_PARAM(Inverse_lambda_cut, double);
     SAVE_PARAM(Inverse_projector_cut, double);
     SAVE_PARAM(CTM_Convergence_Epsilon, double);
     SAVE_PARAM(Inverse_Env_cut, double);
-    SAVE_PARAM(tau_full, double);
     SAVE_PARAM(Full_Inverse_precision, double);
     SAVE_PARAM(Full_Convergence_Epsilon, double);
 
@@ -172,12 +164,10 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
     LOAD_PARAM(Lcor, int);
 
-    LOAD_PARAM(tau_simple, double);
     LOAD_PARAM(Inverse_lambda_cut, double);
     LOAD_PARAM(Inverse_projector_cut, double);
     LOAD_PARAM(CTM_Convergence_Epsilon, double);
     LOAD_PARAM(Inverse_Env_cut, double);
-    LOAD_PARAM(tau_full, double);
     LOAD_PARAM(Full_Inverse_precision, double);
     LOAD_PARAM(Full_Convergence_Epsilon, double);
 
