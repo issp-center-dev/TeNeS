@@ -186,31 +186,34 @@ void PEPS_Parameters::save(const char *filename, bool append) {
     ofs.open(filename, std::ios::out);
   }
   // Tensor
-  ofs << "D " << D << std::endl;
-  ofs << "CHI " << CHI << std::endl;
+  ofs << "D = " << D << std::endl;
+  ofs << "CHI = " << CHI << std::endl;
 
   // Debug
-  ofs << "Debug_flag " << Debug_flag << std::endl;
-  ofs << "Warning_flag " << Warning_flag << std::endl;
+  // ofs << "Debug_flag = " << Debug_flag << std::endl;
+  // ofs << "Warning_flag = " << Warning_flag << std::endl;
 
   // Simple update
-  ofs << "Inverse_lambda_cut " << Inverse_lambda_cut << std::endl;
-
-  // Environment
-  ofs << "Inverse_projector_cut " << Inverse_projector_cut << std::endl;
-  ofs << "CTM_Convergence_Epsilon " << CTM_Convergence_Epsilon << std::endl;
-  ofs << "Max_CTM_Iteration " << Max_CTM_Iteration << std::endl;
-  ofs << "CTM_Projector_corner " << CTM_Projector_corner << std::endl;
-  ofs << "Use_RSVD " << Use_RSVD << std::endl;
-  ofs << "RSVD_Oversampling_factor " << RSVD_Oversampling_factor << std::endl;
+  ofs << "simple_num_step = " << num_simple_step << std::endl;
+  ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
 
   // Full update
-  ofs << "Inverse_Env_cut " << Inverse_Env_cut << std::endl;
-  ofs << "Full_Inverse_precision " << Full_Inverse_precision << std::endl;
-  ofs << "Full_Convergence_Epsilon " << Full_Convergence_Epsilon << std::endl;
-  ofs << "Full_max_iteration " << Full_max_iteration << std::endl;
-  ofs << "Full_Gauge_Fix " << Full_Gauge_Fix << std::endl;
-  ofs << "Full_Use_FastFullUpdate " << Full_Use_FastFullUpdate << std::endl;
+  ofs << "full_num_step = " << num_full_step << std::endl;
+  ofs << "full_inverse_projector_cutoff = " << Inverse_projector_cut << std::endl;
+  ofs << "full_inverse_precision = " << Full_Inverse_precision << std::endl;
+  ofs << "full_convergence_epsilon = " << Full_Convergence_Epsilon << std::endl;
+  ofs << "full_iteration_max = " << Full_max_iteration << std::endl;
+  ofs << "full_gauge_fix = " << (Full_Gauge_Fix?"true":"false") << std::endl;
+  ofs << "full_fastfullupdate = " << (Full_Use_FastFullUpdate?"true":"false") << std::endl;
+
+  // Environment
+  ofs << "ctm_inverse_projector_cutoff = " << Inverse_Env_cut << std::endl;
+  ofs << "ctm_convergence_epsilon = " << CTM_Convergence_Epsilon << std::endl;
+  ofs << "ctm_iteration_max = " << Max_CTM_Iteration << std::endl;
+  ofs << "ctm_projector_corner = " << (CTM_Projector_corner?"true":"false") << std::endl;
+  ofs << "use_rsvd = " << (Use_RSVD?"true":"false") << std::endl;
+  ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
+
 
   ofs.close();
 }

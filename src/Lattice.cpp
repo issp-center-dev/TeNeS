@@ -45,9 +45,7 @@ void Lattice::save(const char *filename, bool append) {
     ofs.open(filename, std::ios::out);
   }
 
-  ofs << "LX " << LX << std::endl;
-  ofs << "LY " << LY << std::endl;
-  ofs << "N_UNIT " << N_UNIT << std::endl;
+  ofs << "Lsub = [ " << LX << " , " << LY << " ]" << std::endl;
 }
 
 void Lattice::Bcast(MPI_Comm comm, int root) {
