@@ -60,25 +60,26 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   Warning_flag = find_or(param, "Warning", true);
 
   // Simple update
-  num_simple_step = find_or(param, "num_simple_step", 0);
-  Inverse_lambda_cut = find_or(param, "inverse_lambda_cutoff", 1e-12);
+  num_simple_step = find_or(param, "simple_num_step", 0);
+  Inverse_lambda_cut = find_or(param, "simple_inverse_lambda_cutoff", 1e-12);
+
+  // Full update
+  num_full_step = find_or(param, "full_num_step", 0);
+  Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
+  Inverse_projector_cut = find_or(param, "full_inverse_projector_cutoff", 1e-12);
+  Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
+  Full_max_iteration = find_or(param, "full_iteration_max", 1000);
+  Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
+  Full_Use_FastFullUpdate = find_or(param, "full_fastfullupdate", true);
 
   // Environment
-  Inverse_projector_cut = find_or(param, "inverse_projector_cutoff", 1e-12);
+  Inverse_Env_cut = find_or(param, "ctm_inverse_projector_cutoff", 1e-12);
   CTM_Convergence_Epsilon = find_or(param, "ctm_convergence_epsilon", 1e-10);
   Max_CTM_Iteration = find_or(param, "ctm_iteration_max", 100);
   CTM_Projector_corner = find_or(param, "ctm_projector_corner", false);
   Use_RSVD = find_or(param, "use_rsvd", false);
   RSVD_Oversampling_factor = find_or(param, "rsvd_oversampling_factor", 2);
 
-  // Full update
-  num_full_step = find_or(param, "num_full_step", 0);
-  Inverse_Env_cut = find_or(param, "inverse_projector_cutoff", 1e-12);
-  Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
-  Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
-  Full_max_iteration = find_or(param, "full_max_iteration", 1000);
-  Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
-  Full_Use_FastFullUpdate = find_or(param, "full_use_fastfullupdate", true);
 
   Lcor = find_or(param, "Lcor", 0);
 }

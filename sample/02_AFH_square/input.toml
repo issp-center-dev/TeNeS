@@ -2,8 +2,8 @@
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
 
-num_simple_step = 1000
-num_full_step = 1
+simple_num_step = 1000
+full_num_step = 1
 
 ctm_iteration_max = 5
 

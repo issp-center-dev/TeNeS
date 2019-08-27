@@ -2,18 +2,19 @@
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
 
-num_simple_step = 1000
-inverse_lambda_cutoff = 1e-10
+simple_num_step = 1000
+simple_inverse_lambda_cutoff = 1e-10
 
-num_full_step = 1
-inverse_projector_cutoff = 1e-10
+full_num_step = 1
+full_inverse_projector_cutoff = 1e-10
 full_inverse_precision = 1e-10
 full_convergence_epsilon = 1e-10
-full_max_iteration = 100
+full_iteration_max = 100
 full_gauge_fix = false
-full_use_fastfullupdate = false
+full_fastfullupdate = false
 
 ctm_iteration_max = 10
+ctm_inverse_projector_cutoff = 1e-10
 ctm_convergence_epsilon = 1e-8
 ctm_projector_corner = true
 use_rsvd = true

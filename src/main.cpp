@@ -18,7 +18,12 @@ int main_impl(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
-  auto input_toml = cpptoml::parse_file("input.toml");
+  if(argc==1){
+    std::cout << "usage: " << argv[0] << " <input.toml> " << std::endl;
+    return 1;
+  }
+
+  auto input_toml = cpptoml::parse_file(argv[1]);
 
   // Parameters
   PEPS_Parameters peps_parameters;
