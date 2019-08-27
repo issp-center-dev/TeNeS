@@ -25,23 +25,22 @@
  * C4 b C3
  */
 
-
 using namespace mptensor;
 template <template <typename> class Matrix, typename C>
-void Left_move(std::vector<Tensor<Matrix, C> > &C1,
-               const std::vector<Tensor<Matrix, C> > &C2,
-               const std::vector<Tensor<Matrix, C> > &C3,
-               std::vector<Tensor<Matrix, C> > &C4,
-               const std::vector<Tensor<Matrix, C> > &eTt,
-               const std::vector<Tensor<Matrix, C> > &eTr,
-               const std::vector<Tensor<Matrix, C> > &eTb,
-               std::vector<Tensor<Matrix, C> > &eTl,
-               const std::vector<Tensor<Matrix, C> > &Tn, const int ix,
+void Left_move(std::vector<Tensor<Matrix, C>> &C1,
+               const std::vector<Tensor<Matrix, C>> &C2,
+               const std::vector<Tensor<Matrix, C>> &C3,
+               std::vector<Tensor<Matrix, C>> &C4,
+               const std::vector<Tensor<Matrix, C>> &eTt,
+               const std::vector<Tensor<Matrix, C>> &eTr,
+               const std::vector<Tensor<Matrix, C>> &eTb,
+               std::vector<Tensor<Matrix, C>> &eTl,
+               const std::vector<Tensor<Matrix, C>> &Tn, const int ix,
                const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /* Do one step left move absoving X=ix column
      part of C1, C4, eTl will be modified */
 
-  std::vector<Tensor<Matrix, C> > PUs, PLs;
+  std::vector<Tensor<Matrix, C>> PUs, PLs;
   PUs.resize(lattice.LY);
   PLs.resize(lattice.LY);
   int i, j, k, l;
@@ -77,8 +76,8 @@ void Left_move(std::vector<Tensor<Matrix, C> > &C1,
     }
   }
   // update
-  std::vector<Tensor<Matrix, C> > C1_bak(lattice.N_UNIT),
-      C4_bak(lattice.N_UNIT), eTl_bak(lattice.N_UNIT);
+  std::vector<Tensor<Matrix, C>> C1_bak(lattice.N_UNIT), C4_bak(lattice.N_UNIT),
+      eTl_bak(lattice.N_UNIT);
   for (int num = 0; num < lattice.N_UNIT; num++) {
     C1_bak[num] = C1[num];
     C4_bak[num] = C4[num];
@@ -102,21 +101,21 @@ void Left_move(std::vector<Tensor<Matrix, C> > &C1,
 }
 
 template <template <typename> class Matrix, typename C>
-void Right_move(const std::vector<Tensor<Matrix, C> > &C1,
-                std::vector<Tensor<Matrix, C> > &C2,
-                std::vector<Tensor<Matrix, C> > &C3,
-                const std::vector<Tensor<Matrix, C> > &C4,
-                const std::vector<Tensor<Matrix, C> > &eTt,
-                std::vector<Tensor<Matrix, C> > &eTr,
-                const std::vector<Tensor<Matrix, C> > &eTb,
-                const std::vector<Tensor<Matrix, C> > &eTl,
-                const std::vector<Tensor<Matrix, C> > &Tn, const int ix,
+void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
+                std::vector<Tensor<Matrix, C>> &C2,
+                std::vector<Tensor<Matrix, C>> &C3,
+                const std::vector<Tensor<Matrix, C>> &C4,
+                const std::vector<Tensor<Matrix, C>> &eTt,
+                std::vector<Tensor<Matrix, C>> &eTr,
+                const std::vector<Tensor<Matrix, C>> &eTb,
+                const std::vector<Tensor<Matrix, C>> &eTl,
+                const std::vector<Tensor<Matrix, C>> &Tn, const int ix,
                 const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
     Do one step right move absobing X=ix column
     part of C2, C3, eTr will be modified
   */
-  std::vector<Tensor<Matrix, C> > PUs, PLs;
+  std::vector<Tensor<Matrix, C>> PUs, PLs;
   PUs.resize(lattice.LY);
   PLs.resize(lattice.LY);
   int i, j, k, l;
@@ -142,8 +141,8 @@ void Right_move(const std::vector<Tensor<Matrix, C> > &C1,
     }
   }
   // update
-  std::vector<Tensor<Matrix, C> > C2_bak(lattice.N_UNIT),
-      C3_bak(lattice.N_UNIT), eTr_bak(lattice.N_UNIT);
+  std::vector<Tensor<Matrix, C>> C2_bak(lattice.N_UNIT), C3_bak(lattice.N_UNIT),
+      eTr_bak(lattice.N_UNIT);
   for (int num = 0; num < lattice.N_UNIT; num++) {
     C2_bak[num] = C2[num];
     C3_bak[num] = C3[num];
@@ -170,21 +169,21 @@ void Right_move(const std::vector<Tensor<Matrix, C> > &C1,
 }
 
 template <template <typename> class Matrix, typename C>
-void Top_move(std::vector<Tensor<Matrix, C> > &C1,
-              std::vector<Tensor<Matrix, C> > &C2,
-              const std::vector<Tensor<Matrix, C> > &C3,
-              const std::vector<Tensor<Matrix, C> > &C4,
-              std::vector<Tensor<Matrix, C> > &eTt,
-              const std::vector<Tensor<Matrix, C> > &eTr,
-              const std::vector<Tensor<Matrix, C> > &eTb,
-              const std::vector<Tensor<Matrix, C> > &eTl,
-              const std::vector<Tensor<Matrix, C> > &Tn, const int iy,
+void Top_move(std::vector<Tensor<Matrix, C>> &C1,
+              std::vector<Tensor<Matrix, C>> &C2,
+              const std::vector<Tensor<Matrix, C>> &C3,
+              const std::vector<Tensor<Matrix, C>> &C4,
+              std::vector<Tensor<Matrix, C>> &eTt,
+              const std::vector<Tensor<Matrix, C>> &eTr,
+              const std::vector<Tensor<Matrix, C>> &eTb,
+              const std::vector<Tensor<Matrix, C>> &eTl,
+              const std::vector<Tensor<Matrix, C>> &Tn, const int iy,
               const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
     ## Do one step top move absobing Y=iy row
     ## part of C1, C2, eTt will be modified
   */
-  std::vector<Tensor<Matrix, C> > PUs, PLs;
+  std::vector<Tensor<Matrix, C>> PUs, PLs;
   PUs.resize(lattice.LX);
   PLs.resize(lattice.LX);
   int i, j, k, l;
@@ -225,8 +224,8 @@ void Top_move(std::vector<Tensor<Matrix, C> > &C1,
     }
   }
   // update
-  std::vector<Tensor<Matrix, C> > C1_bak(lattice.N_UNIT),
-      C2_bak(lattice.N_UNIT), eTt_bak(lattice.N_UNIT);
+  std::vector<Tensor<Matrix, C>> C1_bak(lattice.N_UNIT), C2_bak(lattice.N_UNIT),
+      eTt_bak(lattice.N_UNIT);
   for (int num = 0; num < lattice.N_UNIT; num++) {
     C1_bak[num] = C1[num];
     C2_bak[num] = C2[num];
@@ -252,22 +251,22 @@ void Top_move(std::vector<Tensor<Matrix, C> > &C1,
   }
 }
 template <template <typename> class Matrix, typename C>
-void Bottom_move(const std::vector<Tensor<Matrix, C> > &C1,
-                 const std::vector<Tensor<Matrix, C> > &C2,
-                 std::vector<Tensor<Matrix, C> > &C3,
-                 std::vector<Tensor<Matrix, C> > &C4,
-                 const std::vector<Tensor<Matrix, C> > &eTt,
-                 const std::vector<Tensor<Matrix, C> > &eTr,
-                 std::vector<Tensor<Matrix, C> > &eTb,
-                 const std::vector<Tensor<Matrix, C> > &eTl,
-                 const std::vector<Tensor<Matrix, C> > &Tn, const int iy,
+void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
+                 const std::vector<Tensor<Matrix, C>> &C2,
+                 std::vector<Tensor<Matrix, C>> &C3,
+                 std::vector<Tensor<Matrix, C>> &C4,
+                 const std::vector<Tensor<Matrix, C>> &eTt,
+                 const std::vector<Tensor<Matrix, C>> &eTr,
+                 std::vector<Tensor<Matrix, C>> &eTb,
+                 const std::vector<Tensor<Matrix, C>> &eTl,
+                 const std::vector<Tensor<Matrix, C>> &Tn, const int iy,
                  const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
     ## Do one step bottom move absobing Y=iy row
     ## part of C3, C4, eTb will be modified
   */
 
-  std::vector<Tensor<Matrix, C> > PUs, PLs;
+  std::vector<Tensor<Matrix, C>> PUs, PLs;
   PUs.resize(lattice.LX);
   PLs.resize(lattice.LX);
   int i, j, k, l;
@@ -294,8 +293,8 @@ void Bottom_move(const std::vector<Tensor<Matrix, C> > &C1,
   }
 
   // update
-  std::vector<Tensor<Matrix, C> > C3_bak(lattice.N_UNIT),
-      C4_bak(lattice.N_UNIT), eTb_bak(lattice.N_UNIT);
+  std::vector<Tensor<Matrix, C>> C3_bak(lattice.N_UNIT), C4_bak(lattice.N_UNIT),
+      eTb_bak(lattice.N_UNIT);
   for (int num = 0; num < lattice.N_UNIT; num++) {
     C3_bak[num] = C3[num];
     C4_bak[num] = C4[num];
@@ -322,14 +321,14 @@ void Bottom_move(const std::vector<Tensor<Matrix, C> > &C1,
 }
 
 template <template <typename> class Matrix, typename C>
-bool Check_Convergence_CTM(const std::vector<Tensor<Matrix, C> > &C1,
-                           const std::vector<Tensor<Matrix, C> > &C2,
-                           const std::vector<Tensor<Matrix, C> > &C3,
-                           const std::vector<Tensor<Matrix, C> > &C4,
-                           const std::vector<Tensor<Matrix, C> > &C1_old,
-                           const std::vector<Tensor<Matrix, C> > &C2_old,
-                           const std::vector<Tensor<Matrix, C> > &C3_old,
-                           const std::vector<Tensor<Matrix, C> > &C4_old,
+bool Check_Convergence_CTM(const std::vector<Tensor<Matrix, C>> &C1,
+                           const std::vector<Tensor<Matrix, C>> &C2,
+                           const std::vector<Tensor<Matrix, C>> &C3,
+                           const std::vector<Tensor<Matrix, C>> &C4,
+                           const std::vector<Tensor<Matrix, C>> &C1_old,
+                           const std::vector<Tensor<Matrix, C>> &C2_old,
+                           const std::vector<Tensor<Matrix, C>> &C3_old,
+                           const std::vector<Tensor<Matrix, C>> &C4_old,
                            const PEPS_Parameters peps_parameters,
                            const Lattice lattice, double &sig_max) {
   sig_max = 0.0;
@@ -482,11 +481,11 @@ bool Check_Convergence_CTM(const std::vector<Tensor<Matrix, C> > &C1,
 
 template <template <typename> class Matrix, typename C>
 int Calc_CTM_Environment(
-    std::vector<Tensor<Matrix, C> > &C1, std::vector<Tensor<Matrix, C> > &C2,
-    std::vector<Tensor<Matrix, C> > &C3, std::vector<Tensor<Matrix, C> > &C4,
-    std::vector<Tensor<Matrix, C> > &eTt, std::vector<Tensor<Matrix, C> > &eTr,
-    std::vector<Tensor<Matrix, C> > &eTb, std::vector<Tensor<Matrix, C> > &eTl,
-    const std::vector<Tensor<Matrix, C> > &Tn,
+    std::vector<Tensor<Matrix, C>> &C1, std::vector<Tensor<Matrix, C>> &C2,
+    std::vector<Tensor<Matrix, C>> &C3, std::vector<Tensor<Matrix, C>> &C4,
+    std::vector<Tensor<Matrix, C>> &eTt, std::vector<Tensor<Matrix, C>> &eTr,
+    std::vector<Tensor<Matrix, C>> &eTb, std::vector<Tensor<Matrix, C>> &eTl,
+    const std::vector<Tensor<Matrix, C>> &Tn,
     const PEPS_Parameters peps_parameters, const Lattice lattice,
     bool initialize = true) {
   /*
@@ -708,10 +707,10 @@ int Calc_CTM_Environment(
 
   bool convergence = false;
   int count = 0;
-  std::vector<Tensor<Matrix, C> > C1_old = C1;
-  std::vector<Tensor<Matrix, C> > C2_old = C2;
-  std::vector<Tensor<Matrix, C> > C3_old = C3;
-  std::vector<Tensor<Matrix, C> > C4_old = C4;
+  std::vector<Tensor<Matrix, C>> C1_old = C1;
+  std::vector<Tensor<Matrix, C>> C2_old = C2;
+  std::vector<Tensor<Matrix, C>> C3_old = C3;
+  std::vector<Tensor<Matrix, C>> C4_old = C4;
 
   double sig_max = 0.0;
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {

@@ -6,12 +6,11 @@
 //#include <toml11/toml/value.hpp>
 #include <cpptoml.h>
 
-
 class PEPS_Parameters {
 public:
   // Tensor
-  int D;    // Bond dimension for central tensor
-  int CHI;  // Bond dimension for environment tensor
+  int D;   // Bond dimension for central tensor
+  int CHI; // Bond dimension for environment tensor
 
   // Debug
   bool Debug_flag;
@@ -43,14 +42,16 @@ public:
 
   PEPS_Parameters();
 
-  explicit PEPS_Parameters(const char *filename): PEPS_Parameters(){ set(filename); }
+  explicit PEPS_Parameters(const char *filename) : PEPS_Parameters() {
+    set(filename);
+  }
   PEPS_Parameters(decltype(cpptoml::parse_file("")) toml);
   void set(const char *filename);
   void set(decltype(cpptoml::parse_file("")) toml);
 
-  void save(const char *filename, bool append=false);
-  void save_append(const char *filename){save(filename, true);}
+  void save(const char *filename, bool append = false);
+  void save_append(const char *filename) { save(filename, true); }
 
-  void Bcast(MPI_Comm comm, int root=0);
+  void Bcast(MPI_Comm comm, int root = 0);
 };
 #endif // _PEPS_PARAMETERS_HPP_

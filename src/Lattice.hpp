@@ -1,8 +1,8 @@
 #ifndef LATTICE_HPP
 #define LATTICE_HPP
 
-#include <vector>
 #include <array>
+#include <vector>
 
 #include <mpi.h>
 
@@ -39,12 +39,12 @@ public:
 
   Lattice(int X, int Y);
 
-  int x(int index) const { return index%LX; }
-  int y(int index) const { return index/LX; }
+  int x(int index) const { return index % LX; }
+  int y(int index) const { return index / LX; }
   int index(int x, int y) const {
-    int X = (x<0) ? (x%LX+LX) : x%LX;  // c++11 requires neg%pos is neg
-    int Y = (y<0) ? (y%LY+LY) : y%LY;
-    return X+Y*LX;
+    int X = (x < 0) ? (x % LX + LX) : x % LX; // c++11 requires neg%pos is neg
+    int Y = (y < 0) ? (y % LY + LY) : y % LY;
+    return X + Y * LX;
   }
 
   int left(int index) const { return NN_Tensor[index][0]; }
@@ -55,13 +55,11 @@ public:
   void reset();
   void reset(int X, int Y);
 
-  void save(const char *filename, bool append=false);
+  void save(const char *filename, bool append = false);
 
-  void save_append(const char *filename) {
-    save(filename, true);
-  }
+  void save_append(const char *filename) { save(filename, true); }
 
-  void Bcast(MPI_Comm comm, int root=0);
+  void Bcast(MPI_Comm comm, int root = 0);
 };
 
 /*

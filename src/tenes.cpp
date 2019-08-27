@@ -1,8 +1,8 @@
 #define _USE_MATH_DEFINES
+#include <algorithm>
+#include <complex>
 #include <random>
 #include <sys/stat.h>
-#include <complex>
-#include <algorithm>
 
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
@@ -16,24 +16,21 @@
 
 #include "tenes.hpp"
 
-
 using namespace mptensor;
 
-struct Correlation{
+struct Correlation {
   int left_index, right_index;
   int offset_x, offset_y;
   int left_op, right_op;
   double real, imag;
 };
 
-template <class ptensor>
-class TeNeS{
+template <class ptensor> class TeNeS {
 public:
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
-         Edges simple_edges_, Edges full_edges_, Edges ham_edges_, 
-         std::vector<ptensor> evolutions_,
-         std::vector<ptensor> hams_,
-         std::vector<ptensor> lops_);
+        Edges simple_edges_, Edges full_edges_, Edges ham_edges_,
+        std::vector<ptensor> evolutions_, std::vector<ptensor> hams_,
+        std::vector<ptensor> lops_);
 
   void initialize_tensors();
   void update_CTM();
@@ -86,22 +83,14 @@ private:
 
 template <class ptensor>
 TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                 Lattice lattice_, Edges simple_edges_, Edges full_edges_, Edges ham_edges_,
-                 std::vector<ptensor> evolutions_,
-                 std::vector<ptensor> hams_, std::vector<ptensor> lops_)
-    : comm(comm_),
-      peps_parameters(peps_parameters_),
-      lattice(lattice_),
-      simple_edges(simple_edges_),
-      full_edges(full_edges_),
-      ham_edges(ham_edges_),
-      lops(lops_),
-      outdir("output"),
-      time_simple_update(),
-      time_full_update(),
-      time_environment(),
-      time_observable()
-{
+                      Lattice lattice_, Edges simple_edges_, Edges full_edges_,
+                      Edges ham_edges_, std::vector<ptensor> evolutions_,
+                      std::vector<ptensor> hams_, std::vector<ptensor> lops_)
+    : comm(comm_), peps_parameters(peps_parameters_), lattice(lattice_),
+      simple_edges(simple_edges_), full_edges(full_edges_),
+      ham_edges(ham_edges_), lops(lops_), outdir("output"),
+      time_simple_update(), time_full_update(), time_environment(),
+      time_observable() {
   MPI_Comm_size(comm, &mpisize);
   MPI_Comm_rank(comm, &mpirank);
 
@@ -125,7 +114,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   // set seed for randomized svd
   random_tensor::set_seed(11 + mpirank);
 
-  if(outdir.empty()){
+  if (outdir.empty()) {
     outdir += ".";
   }
 
@@ -143,30 +132,31 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   op_identity = ptensor(Shape(ldof, ldof));
-  for(int i=0; i<ldof; ++i){
-    for(int j=0; j<i; ++j)
+  for (int i = 0; i < ldof; ++i) {
+    for (int j = 0; j < i; ++j)
       op_identity.set_value(Index(i, j), 0.0);
     op_identity.set_value(Index(i, i), 1.0);
-    for(int j=i+1; j<ldof; ++j)
+    for (int j = i + 1; j < ldof; ++j)
       op_identity.set_value(Index(i, j), 0.0);
   }
 
   const int LDOF = ldof;
 
   std::transform(evolutions_.begin(), evolutions_.end(),
-      std::back_inserter(evolutions),
-      [LDOF](ptensor const &A){ return transpose(reshape(A, Shape(LDOF, LDOF, LDOF, LDOF)), Axes(2, 3, 0, 1)); }
-      );
-  std::transform(hams_.begin(), hams_.end(),
-      std::back_inserter(hams),
-      [LDOF](ptensor const &A){ return transpose(reshape(A, Shape(LDOF, LDOF, LDOF, LDOF)), Axes(2, 3, 0, 1)); }
-      );
+                 std::back_inserter(evolutions), [LDOF](ptensor const &A) {
+                   return transpose(reshape(A, Shape(LDOF, LDOF, LDOF, LDOF)),
+                                    Axes(2, 3, 0, 1));
+                 });
+  std::transform(hams_.begin(), hams_.end(), std::back_inserter(hams),
+                 [LDOF](ptensor const &A) {
+                   return transpose(reshape(A, Shape(LDOF, LDOF, LDOF, LDOF)),
+                                    Axes(2, 3, 0, 1));
+                 });
 
   initialize_tensors();
 }
 
-template <class ptensor>
-void TeNeS<ptensor>::initialize_tensors(){
+template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   Tn.clear();
   eTt.clear();
   eTr.clear();
@@ -178,7 +168,7 @@ void TeNeS<ptensor>::initialize_tensors(){
   C4.clear();
   lambda_tensor.clear();
 
-  for(int i=0; i<N_UNIT; ++i){
+  for (int i = 0; i < N_UNIT; ++i) {
     Tn.push_back(ptensor(Shape(D, D, D, D, ldof)));
     eTt.push_back(ptensor(Shape(CHI, CHI, D, D)));
     eTr.push_back(ptensor(Shape(CHI, CHI, D, D)));
@@ -188,7 +178,8 @@ void TeNeS<ptensor>::initialize_tensors(){
     C2.push_back(ptensor(Shape(CHI, CHI)));
     C3.push_back(ptensor(Shape(CHI, CHI)));
     C4.push_back(ptensor(Shape(CHI, CHI)));
-    lambda_tensor.push_back(std::vector<std::vector<double>>(nleg, std::vector<double>(D)));
+    lambda_tensor.push_back(
+        std::vector<std::vector<double>>(nleg, std::vector<double>(D)));
     for (int j = 0; j < nleg; ++j) {
       for (int k = 0; k < D; ++k) {
         lambda_tensor[i][j][k] = 1.0;
@@ -219,31 +210,28 @@ void TeNeS<ptensor>::initialize_tensors(){
   }
 }
 
-template <class ptensor>
-inline void TeNeS<ptensor>::update_CTM(){
-    double start_time = MPI_Wtime();
-    Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-        peps_parameters, lattice);
-    time_environment += MPI_Wtime() - start_time;
+template <class ptensor> inline void TeNeS<ptensor>::update_CTM() {
+  double start_time = MPI_Wtime();
+  Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, peps_parameters,
+                       lattice);
+  time_environment += MPI_Wtime() - start_time;
 }
 
-template <class ptensor>
-void TeNeS<ptensor>::simple_update(){
+template <class ptensor> void TeNeS<ptensor>::simple_update() {
   double start_time = MPI_Wtime();
   ptensor Tn1_new;
   ptensor Tn2_new;
   std::vector<double> lambda_c;
   for (int int_tau = 0; int_tau < peps_parameters.num_simple_step; ++int_tau) {
-    for(auto ed: simple_edges){
+    for (auto ed : simple_edges) {
       const int source = ed.source_site;
       const int target = ed.target_site;
       const int source_leg = ed.source_leg;
       const int target_leg = ed.target_leg;
-      Simple_update_bond(Tn[source], Tn[target],
-          lambda_tensor[source], lambda_tensor[target],
-          evolutions[ed.op_id], source_leg, peps_parameters,
-          Tn1_new, Tn2_new, lambda_c
-          );
+      Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
+                         lambda_tensor[target], evolutions[ed.op_id],
+                         source_leg, peps_parameters, Tn1_new, Tn2_new,
+                         lambda_c);
       lambda_tensor[source][source_leg] = lambda_c;
       lambda_tensor[target][target_leg] = lambda_c;
       Tn[source] = Tn1_new;
@@ -253,8 +241,7 @@ void TeNeS<ptensor>::simple_update(){
   time_simple_update += MPI_Wtime() - start_time;
 }
 
-template <class ptensor>
-void TeNeS<ptensor>::full_update(){
+template <class ptensor> void TeNeS<ptensor>::full_update() {
   double start_time = 0.0;
   ptensor Tn1_new, Tn2_new;
   if (peps_parameters.num_full_step > 0) {
@@ -263,23 +250,22 @@ void TeNeS<ptensor>::full_update(){
 
   start_time = MPI_Wtime();
   for (int int_tau = 0; int_tau < peps_parameters.num_full_step; ++int_tau) {
-    for(auto ed: full_edges){
+    for (auto ed : full_edges) {
       const int source = ed.source_site;
       const int target = ed.target_site;
 
-      if(ed.is_horizontal()){
+      if (ed.is_horizontal()) {
         /*
          *  C1 t t' C2'
          *  l  T T' r'
          *  C4 b b' C3'
          */
         Full_update_bond(C1[source], C2[target], C3[target], C4[source],
-            eTt[source], eTt[target], eTr[target], // t  t' r'
-            eTb[target], eTb[source], eTl[source], // b' b  l
-            Tn[source], Tn[target],
-            evolutions[ed.op_id], ed.source_leg, peps_parameters,
-            Tn1_new, Tn2_new);
-      }else{
+                         eTt[source], eTt[target], eTr[target], // t  t' r'
+                         eTb[target], eTb[source], eTl[source], // b' b  l
+                         Tn[source], Tn[target], evolutions[ed.op_id],
+                         ed.source_leg, peps_parameters, Tn1_new, Tn2_new);
+      } else {
         /*
          * C1  t C2
          *  l  T  r
@@ -289,38 +275,37 @@ void TeNeS<ptensor>::full_update(){
          *   |
          *   | rotate
          *   V
-         * 
+         *
          *  C2 r r' C3'
          *  t  T T' b'
          *  C1 l l' C4'
          */
         Full_update_bond(C2[source], C3[target], C4[target], C1[source],
-            eTr[source], eTr[target], eTb[target],
-            eTl[target], eTl[source], eTt[source],
-            Tn[source], Tn[target],
-            evolutions[ed.op_id], ed.source_leg, peps_parameters,
-            Tn1_new, Tn2_new);
+                         eTr[source], eTr[target], eTb[target], eTl[target],
+                         eTl[source], eTt[source], Tn[source], Tn[target],
+                         evolutions[ed.op_id], ed.source_leg, peps_parameters,
+                         Tn1_new, Tn2_new);
       }
       Tn[source] = Tn1_new;
       Tn[target] = Tn2_new;
 
-      if(peps_parameters.Full_Use_FastFullUpdate){
-        if(ed.is_horizontal()){
+      if (peps_parameters.Full_Use_FastFullUpdate) {
+        if (ed.is_horizontal()) {
           const int source_x = source % LX;
           const int target_x = target % LX;
-          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-              source_x, peps_parameters, lattice);
-          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-              target_x, peps_parameters, lattice);
-        }else{
+          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
+                    peps_parameters, lattice);
+          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
+                     peps_parameters, lattice);
+        } else {
           const int source_y = source / LX;
           const int target_y = target / LX;
-          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-              source_y, peps_parameters, lattice);
-          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-              target_y, peps_parameters, lattice);
+          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
+                   peps_parameters, lattice);
+          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
+                      peps_parameters, lattice);
         }
-      }else{
+      } else {
         update_CTM();
       }
     }
@@ -328,8 +313,7 @@ void TeNeS<ptensor>::full_update(){
   time_full_update += MPI_Wtime() - start_time;
 }
 
-template <class ptensor>
-void TeNeS<ptensor>::optimize(){
+template <class ptensor> void TeNeS<ptensor>::optimize() {
   // for measure time
   std::cout << std::setprecision(12);
 
@@ -339,27 +323,26 @@ void TeNeS<ptensor>::optimize(){
   std::clog << "Start simple update" << std::endl;
   simple_update();
 
-  if(peps_parameters.num_full_step > 0){
+  if (peps_parameters.num_full_step > 0) {
     std::clog << "Start full update" << std::endl;
     full_update();
   }
 }
 
-
 template <class ptensor>
-std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save){
+std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
   double start_time = MPI_Wtime();
   const int nlops = lops.size();
-  std::vector<std::vector<double>> local_obs(nlops, std::vector<double>(N_UNIT, 0));
+  std::vector<std::vector<double>> local_obs(nlops,
+                                             std::vector<double>(N_UNIT, 0));
 
   for (int i = 0; i < N_UNIT; ++i) {
-    double norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i],
-                             eTt[i], eTr[i],
-                             eTb[i], eTl[i], Tn[i], op_identity);
-    for(int ilops=0; ilops<nlops; ++ilops){
-      double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i],
-                                     eTt[i], eTr[i], eTb[i], eTl[i],
-                                     Tn[i], lops[ilops]) / norm;
+    double norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                    eTb[i], eTl[i], Tn[i], op_identity);
+    for (int ilops = 0; ilops < nlops; ++ilops) {
+      double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                     eTb[i], eTl[i], Tn[i], lops[ilops]) /
+                   norm;
       local_obs[ilops][i] = val;
     }
   }
@@ -370,61 +353,65 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save){
     std::string filename = outdir + "/site_obs.dat";
     std::clog << "    Save site observables to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
-    ofs << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10);
+    ofs << std::scientific
+        << std::setprecision(std::numeric_limits<double>::max_digits10);
     ofs << "# $1: op_index\n";
     ofs << "# $2: site_index\n";
     ofs << "# $3: real\n";
     ofs << "# $4: imag\n";
     ofs << std::endl;
 
-    for(int ilops=0; ilops<nlops; ++ilops){
-      double sum=0.0;
-      for(int i=0; i<N_UNIT; ++i){
+    for (int ilops = 0; ilops < nlops; ++ilops) {
+      double sum = 0.0;
+      for (int i = 0; i < N_UNIT; ++i) {
         sum += local_obs[ilops][i];
-        ofs << ilops << " " << i << " " << local_obs[ilops][i] << " " << 0.0 << std::endl;
+        ofs << ilops << " " << i << " " << local_obs[ilops][i] << " " << 0.0
+            << std::endl;
       }
     }
   }
   return local_obs;
 }
 
-template <class ptensor>
-double TeNeS<ptensor>::measure_energy(bool save){
+template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
   double start_time = MPI_Wtime();
-  double energy=0.0;
+  double energy = 0.0;
 
-  for(auto ed: ham_edges){
+  for (auto ed : ham_edges) {
     const int source = ed.source_site;
     const int target = ed.target_site;
-    if(ed.is_horizontal()){
+    if (ed.is_horizontal()) {
       const double local_norm = Contract_two_sites_horizontal(
-                   C1[source], C2[target], C3[target], C4[source],
-                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                   Tn[source], Tn[target], op_identity, op_identity);
+          C1[source], C2[target], C3[target], C4[source], eTt[source],
+          eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+          Tn[source], Tn[target], op_identity, op_identity);
       energy += Contract_two_sites_horizontal_op12(
-                   C1[source], C2[target], C3[target], C4[source],
-                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                   Tn[source], Tn[target], hams[ed.op_id]) / local_norm;
-    }else{
+                    C1[source], C2[target], C3[target], C4[source], eTt[source],
+                    eTt[target], eTr[target], eTb[target], eTb[source],
+                    eTl[source], Tn[source], Tn[target], hams[ed.op_id]) /
+                local_norm;
+    } else {
       const double local_norm = Contract_two_sites_vertical(
-                   C1[source], C2[source], C3[target], C4[target],
-                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-                   Tn[source], Tn[target], op_identity, op_identity);
+          C1[source], C2[source], C3[target], C4[target], eTt[source],
+          eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
+          Tn[source], Tn[target], op_identity, op_identity);
       energy += Contract_two_sites_vertical_op12(
-                   C1[source], C2[source], C3[target], C4[target],
-                   eTt[source], eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-                   Tn[source], Tn[target], hams[ed.op_id]) / local_norm;
+                    C1[source], C2[source], C3[target], C4[target], eTt[source],
+                    eTr[source], eTr[target], eTb[target], eTl[target],
+                    eTl[source], Tn[source], Tn[target], hams[ed.op_id]) /
+                local_norm;
     }
   }
   energy /= N_UNIT;
 
   time_observable += MPI_Wtime() - start_time;
 
-  if(save && mpirank==0){
+  if (save && mpirank == 0) {
     std::string filename = outdir + "/energy.dat";
     std::clog << "    Save energy to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
-    ofs << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10);
+    ofs << std::scientific
+        << std::setprecision(std::numeric_limits<double>::max_digits10);
     ofs << energy << std::endl;
   }
 
@@ -432,61 +419,70 @@ double TeNeS<ptensor>::measure_energy(bool save){
 }
 
 template <class ptensor>
-std::vector<std::vector<std::vector<double>>> TeNeS<ptensor>::measure_NN(bool save){
+std::vector<std::vector<std::vector<double>>>
+TeNeS<ptensor>::measure_NN(bool save) {
   double start_time = MPI_Wtime();
   const int nlops = lops.size();
-  std::vector<std::vector<std::vector<double>>> 
-    neighbor_obs(nlops, std::vector<std::vector<double>>(N_UNIT, std::vector<double>(2, 0.0)));
+  std::vector<std::vector<std::vector<double>>> neighbor_obs(
+      nlops,
+      std::vector<std::vector<double>>(N_UNIT, std::vector<double>(2, 0.0)));
 
-  for(int source=0; source<N_UNIT; ++source){
+  for (int source = 0; source < N_UNIT; ++source) {
     { // horizontal
       int target = lattice.right(source);
       const double local_norm = Contract_two_sites_horizontal(
-                   C1[source], C2[target], C3[target], C4[source],
-                   eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                   Tn[source], Tn[target], op_identity, op_identity);
-      for(int ilops=0; ilops<nlops; ++ilops){
-        double val = Contract_two_sites_horizontal(
-                     C1[source], C2[target], C3[target], C4[source],
-                     eTt[source], eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                     Tn[source], Tn[target], lops[ilops], lops[ilops]) / local_norm;
+          C1[source], C2[target], C3[target], C4[source], eTt[source],
+          eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+          Tn[source], Tn[target], op_identity, op_identity);
+      for (int ilops = 0; ilops < nlops; ++ilops) {
+        double val =
+            Contract_two_sites_horizontal(
+                C1[source], C2[target], C3[target], C4[source], eTt[source],
+                eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
+                Tn[source], Tn[target], lops[ilops], lops[ilops]) /
+            local_norm;
         neighbor_obs[ilops][source][0] = val;
       }
     }
     { // vertical
       int target = lattice.top(source);
       const double local_norm = Contract_two_sites_vertical(
-                   C1[target], C2[target], C3[source], C4[source],
-                   eTt[target], eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
-                   Tn[target], Tn[source], op_identity, op_identity);
-      for(int ilops=0; ilops<nlops; ++ilops){
-        double val = Contract_two_sites_vertical(
-                     C1[target], C2[target], C3[source], C4[source],
-                     eTt[target], eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
-                     Tn[target], Tn[source], lops[ilops], lops[ilops]) / local_norm;
+          C1[target], C2[target], C3[source], C4[source], eTt[target],
+          eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
+          Tn[target], Tn[source], op_identity, op_identity);
+      for (int ilops = 0; ilops < nlops; ++ilops) {
+        double val =
+            Contract_two_sites_vertical(
+                C1[target], C2[target], C3[source], C4[source], eTt[target],
+                eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
+                Tn[target], Tn[source], lops[ilops], lops[ilops]) /
+            local_norm;
         neighbor_obs[ilops][source][1] = val;
       }
     }
   }
   time_observable += MPI_Wtime() - start_time;
 
-  if(save && mpirank == 0){
+  if (save && mpirank == 0) {
     std::string filename = outdir + "/neighbor_obs.dat";
     std::clog << "    Save NN correlation to " << filename << std::endl;
     std::ofstream ofs(filename.c_str());
-    ofs << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10);
+    ofs << std::scientific
+        << std::setprecision(std::numeric_limits<double>::max_digits10);
     ofs << "# $1: op_index\n";
     ofs << "# $2: source_site\n";
     ofs << "# $3: target_site\n";
     ofs << "# $4: real\n";
     ofs << "# $5: imag\n";
     ofs << std::endl;
-    for(int ilops=0; ilops<nlops; ++ilops){
-      for(int source=0; source<N_UNIT; ++source){
+    for (int ilops = 0; ilops < nlops; ++ilops) {
+      for (int source = 0; source < N_UNIT; ++source) {
         int target = lattice.right(source);
-        ofs << ilops << " " << source << " " << target << " " << neighbor_obs[ilops][source][0] << " " << 0.0 << std::endl;
+        ofs << ilops << " " << source << " " << target << " "
+            << neighbor_obs[ilops][source][0] << " " << 0.0 << std::endl;
         target = lattice.top(source);
-        ofs << ilops << " " << source << " " << target << " " << neighbor_obs[ilops][source][1] << " " << 0.0 << std::endl;
+        ofs << ilops << " " << source << " " << target << " "
+            << neighbor_obs[ilops][source][1] << " " << 0.0 << std::endl;
       }
     }
   }
@@ -495,7 +491,7 @@ std::vector<std::vector<std::vector<double>>> TeNeS<ptensor>::measure_NN(bool sa
 }
 
 template <class ptensor>
-std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save){
+std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
   double start_time = MPI_Wtime();
 
   const int nlops = lops.size();
@@ -503,87 +499,90 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save){
   ptensor correlation_T(Shape(CHI, CHI, D, D));
   ptensor correlation_norm(Shape(CHI, CHI, D, D));
   std::vector<Correlation> correlations;
-  if(Lcor>0){
-    for(int left_index=0; left_index<N_UNIT; ++left_index){
-    for(int ilops=0; ilops<nlops; ++ilops){
-      const int left_x = lattice.x(left_index);
-      const int left_y = lattice.y(left_index);
-      { // horizontal
-        StartCorrelation(correlation_T,
-                         C1[left_index], C4[left_index],
-                         eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], lops[ilops]);
-        StartCorrelation(correlation_norm,
-                         C1[left_index], C4[left_index],
-                         eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], op_identity);
+  if (Lcor > 0) {
+    for (int left_index = 0; left_index < N_UNIT; ++left_index) {
+      for (int ilops = 0; ilops < nlops; ++ilops) {
+        const int left_x = lattice.x(left_index);
+        const int left_y = lattice.y(left_index);
+        { // horizontal
+          StartCorrelation(correlation_T, C1[left_index], C4[left_index],
+                           eTt[left_index], eTb[left_index], eTl[left_index],
+                           Tn[left_index], lops[ilops]);
+          StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
+                           eTt[left_index], eTb[left_index], eTl[left_index],
+                           Tn[left_index], op_identity);
 
-        for(int r=0; r<Lcor; ++r){
-          const int right_x = (left_x+r+1)%LX;
-          const int right_y = left_y;
-          const int offset_x = (left_x+r+1)/LX;
-          const int offset_y = 0;
-          const int right_index = lattice.index(right_x, right_y);
-          double norm = FinishCorrelation(correlation_norm,
-                                          C2[right_index], C3[right_index],
-                                          eTt[right_index], eTr[right_index], eTb[right_index],
-                                          Tn[right_index], op_identity
-                                          );
-          double val = FinishCorrelation(correlation_T,
-                                         C2[right_index], C3[right_index],
-                                         eTt[right_index], eTr[right_index], eTb[right_index],
-                                         Tn[right_index], lops[ilops]
-                                         ) / norm;
-          correlations.push_back(Correlation{left_index, right_index, offset_x, offset_y, ilops, ilops, val, 0.0});
+          for (int r = 0; r < Lcor; ++r) {
+            const int right_x = (left_x + r + 1) % LX;
+            const int right_y = left_y;
+            const int offset_x = (left_x + r + 1) / LX;
+            const int offset_y = 0;
+            const int right_index = lattice.index(right_x, right_y);
+            double norm = FinishCorrelation(correlation_norm, C2[right_index],
+                                            C3[right_index], eTt[right_index],
+                                            eTr[right_index], eTb[right_index],
+                                            Tn[right_index], op_identity);
+            double val = FinishCorrelation(correlation_T, C2[right_index],
+                                           C3[right_index], eTt[right_index],
+                                           eTr[right_index], eTb[right_index],
+                                           Tn[right_index], lops[ilops]) /
+                         norm;
+            correlations.push_back(Correlation{left_index, right_index,
+                                               offset_x, offset_y, ilops, ilops,
+                                               val, 0.0});
 
-          Transfer(correlation_T, eTt[right_index], eTb[right_index], Tn[right_index]);
-          Transfer(correlation_norm, eTt[right_index], eTb[right_index], Tn[right_index]);
+            Transfer(correlation_T, eTt[right_index], eTb[right_index],
+                     Tn[right_index]);
+            Transfer(correlation_norm, eTt[right_index], eTb[right_index],
+                     Tn[right_index]);
+          }
+        }
+        { // vertical
+          ptensor tn = transpose(Tn[left_index], Axes(3, 0, 1, 2, 4));
+          StartCorrelation(correlation_T, C4[left_index], C3[left_index],
+                           eTl[left_index], eTr[left_index], eTb[left_index],
+                           tn, lops[ilops]);
+          StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
+                           eTl[left_index], eTr[left_index], eTb[left_index],
+                           tn, op_identity);
+
+          for (int r = 0; r < Lcor; ++r) {
+            const int right_x = left_x;
+            const int right_y = (left_y + r + 1) % LY;
+            const int offset_x = 0;
+            const int offset_y = (left_y + r + 1) / LY;
+            const int right_index = lattice.index(right_x, right_y);
+            tn = transpose(Tn[right_index], Axes(3, 0, 1, 2, 4));
+            double norm = FinishCorrelation(correlation_norm, C1[right_index],
+                                            C2[right_index], eTl[right_index],
+                                            eTt[right_index], eTr[right_index],
+                                            tn, op_identity);
+            double val = FinishCorrelation(correlation_T, C1[right_index],
+                                           C2[right_index], eTl[right_index],
+                                           eTt[right_index], eTr[right_index],
+                                           tn, lops[ilops]) /
+                         norm;
+            correlations.push_back(Correlation{left_index, right_index,
+                                               offset_x, offset_y, ilops, ilops,
+                                               val, 0.0});
+
+            Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
+            Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
+          }
         }
       }
-      { // vertical
-        ptensor tn = transpose(Tn[left_index], Axes(3,0,1,2,4));
-        StartCorrelation(correlation_T,
-                         C4[left_index], C3[left_index],
-                         eTl[left_index], eTr[left_index], eTb[left_index],
-                         tn, lops[ilops]);
-        StartCorrelation(correlation_norm,
-                         C4[left_index], C3[left_index],
-                         eTl[left_index], eTr[left_index], eTb[left_index],
-                         tn, op_identity);
-
-        for(int r=0; r<Lcor; ++r){
-          const int right_x = left_x;
-          const int right_y = (left_y+r+1)%LY;
-          const int offset_x = 0;
-          const int offset_y = (left_y+r+1)/LY;
-          const int right_index = lattice.index(right_x, right_y);
-          tn = transpose(Tn[right_index], Axes(3,0,1,2,4));
-          double norm = FinishCorrelation(correlation_norm,
-                                          C1[right_index], C2[right_index],
-                                          eTl[right_index], eTt[right_index], eTr[right_index],
-                                          tn, op_identity
-                                          );
-          double val = FinishCorrelation(correlation_T,
-                                         C1[right_index], C2[right_index],
-                                         eTl[right_index], eTt[right_index], eTr[right_index],
-                                         tn, lops[ilops]
-                                         ) / norm;
-          correlations.push_back(Correlation{left_index, right_index, offset_x, offset_y, ilops, ilops, val, 0.0});
-
-          Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
-          Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
-        }
-      }
-    }}
+    }
   }
 
   time_observable += MPI_Wtime() - start_time;
 
-  if(save && mpirank == 0){
+  if (save && mpirank == 0) {
     std::string filename = outdir + "/correlation.dat";
-    std::clog << "    Save long-range correlations to " << filename << std::endl;
+    std::clog << "    Save long-range correlations to " << filename
+              << std::endl;
     std::ofstream ofs(filename.c_str());
-    ofs << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10);
+    ofs << std::scientific
+        << std::setprecision(std::numeric_limits<double>::max_digits10);
     ofs << "# $1: left_op\n";
     ofs << "# $2: left_site\n";
     ofs << "# $3: right_op\n";
@@ -593,19 +592,16 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save){
     ofs << "# $7: real\n";
     ofs << "# $8: imag\n";
     ofs << std::endl;
-    for(auto const& cor: correlations){
-      ofs << cor.left_op << " " << cor.left_index << " "
-          << cor.right_op << " " << cor.right_index << " "
-          << cor.offset_x << " " << cor.offset_y << " "
-          << cor.real << " " << cor.imag << " "
-          << std::endl;
+    for (auto const &cor : correlations) {
+      ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
+          << cor.right_index << " " << cor.offset_x << " " << cor.offset_y
+          << " " << cor.real << " " << cor.imag << " " << std::endl;
     }
   }
   return correlations;
 }
 
-template <class ptensor>
-void TeNeS<ptensor>::measure(){
+template <class ptensor> void TeNeS<ptensor>::measure() {
   std::clog << "Start calculating observables" << std::endl;
 
   std::clog << "  Start updating environment" << std::endl;
@@ -628,22 +624,23 @@ void TeNeS<ptensor>::measure(){
   if (mpirank == 0) {
     std::string filename = outdir + "/time.dat";
     std::ofstream ofs(filename.c_str());
-    ofs       << "time simple update = " << time_simple_update << std::endl;
-    ofs       << "time full update   = " << time_full_update << std::endl;
-    ofs       << "time environmnent  = " << time_environment << std::endl;
-    ofs       << "time observable    = " << time_observable << std::endl;
+    ofs << "time simple update = " << time_simple_update << std::endl;
+    ofs << "time full update   = " << time_full_update << std::endl;
+    ofs << "time environmnent  = " << time_environment << std::endl;
+    ofs << "time observable    = " << time_observable << std::endl;
     std::clog << "    Save elapsed times to " << filename << std::endl;
 
     std::cout << std::endl;
 
     std::cout << "Energy = " << energy << std::endl;
 
-    for(int ilops=0; ilops<nlops; ++ilops){
-      double sum=0.0;
-      for(int i=0; i<N_UNIT; ++i){
+    for (int ilops = 0; ilops < nlops; ++ilops) {
+      double sum = 0.0;
+      for (int i = 0; i < N_UNIT; ++i) {
         sum += local_obs[ilops][i];
       }
-      std::cout << "Local operator " << ilops << " = " << sum/N_UNIT << std::endl;
+      std::cout << "Local operator " << ilops << " = " << sum / N_UNIT
+                << std::endl;
     }
     std::cout << std::endl;
 
@@ -655,17 +652,12 @@ void TeNeS<ptensor>::measure(){
 }
 
 template <class ptensor>
-int tenes(MPI_Comm comm,
-            PEPS_Parameters peps_parameters,
-            Lattice lattice,
-            Edges simple_edges,
-            Edges full_edges,
-            Edges ham_edges,
-            std::vector<ptensor> evolutions,
-            std::vector<ptensor> hams,
-            std::vector<ptensor> lops
-    ){
-  TeNeS<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
+int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+          Edges simple_edges, Edges full_edges, Edges ham_edges,
+          std::vector<ptensor> evolutions, std::vector<ptensor> hams,
+          std::vector<ptensor> lops) {
+  TeNeS<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges,
+                     ham_edges, evolutions, hams, lops);
   tns.optimize();
   tns.measure();
   return 0;
@@ -673,21 +665,15 @@ int tenes(MPI_Comm comm,
 
 // template specialization
 using d_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-template
-int tenes<d_tensor>(MPI_Comm comm,
-                      PEPS_Parameters peps_parameters,
-                      Lattice lattice,
-                      Edges simple_edges,
-                      Edges full_edges,
-                      Edges ham_edges,
-                      std::vector<d_tensor> evolutions,
-                      std::vector<d_tensor> hams,
-                      std::vector<d_tensor> lops
-    );
+template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
+                             Lattice lattice, Edges simple_edges,
+                             Edges full_edges, Edges ham_edges,
+                             std::vector<d_tensor> evolutions,
+                             std::vector<d_tensor> hams,
+                             std::vector<d_tensor> lops);
 /*
-using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
-template
-int tenes<c_tensor>(MPI_Comm comm,
+using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix,
+std::complex<double>>; template int tenes<c_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
                       Lattice lattice,
                       Edges simple_edges,

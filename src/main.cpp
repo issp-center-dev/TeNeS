@@ -7,9 +7,9 @@
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
-#include "util/read_matrix.hpp"
-#include "tenes.hpp"
 #include "load_toml.cpp"
+#include "tenes.hpp"
+#include "util/read_matrix.hpp"
 
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
@@ -18,7 +18,7 @@ int main_impl(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
-  if(argc==1){
+  if (argc == 1) {
     std::cout << "usage: " << argv[0] << " <input.toml> " << std::endl;
     return 1;
   }
@@ -35,22 +35,27 @@ int main_impl(int argc, char **argv) {
   lattice.Bcast(MPI_COMM_WORLD);
 
   // time evolution
-  auto toml_evolution= input_toml->get_table("evolution");
-  const auto simple_edges = gen_edges(toml_evolution, "simple_update", "evolution");
+  auto toml_evolution = input_toml->get_table("evolution");
+  const auto simple_edges =
+      gen_edges(toml_evolution, "simple_update", "evolution");
   const auto full_edges = gen_edges(toml_evolution, "full_update", "evolution");
-  const auto evolutions = gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
+  const auto evolutions =
+      gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
 
   // observable
   auto toml_observable = input_toml->get_table("observable");
-  const auto lops = gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
-  const auto hams = gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
-  const auto ham_edges = gen_edges(toml_observable, "hamiltonian_bonds", "observable");
+  const auto lops =
+      gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
+  const auto hams =
+      gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
+  const auto ham_edges =
+      gen_edges(toml_observable, "hamiltonian_bonds", "observable");
 
-  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges, full_edges, ham_edges, evolutions, hams, lops);
+  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges,
+               full_edges, ham_edges, evolutions, hams, lops);
 }
 
-
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int status = main_impl(argc, argv);
   MPI_Finalize();

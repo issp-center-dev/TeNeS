@@ -3,33 +3,33 @@
 
 #include "Lattice.hpp"
 
-Lattice::Lattice(int X, int Y) : LX(X), LY(Y), N_UNIT(LX*LY) {
+Lattice::Lattice(int X, int Y) : LX(X), LY(Y), N_UNIT(LX * LY) {
   assert(X > 0);
   assert(Y > 0);
 
   reset();
 }
-void Lattice::reset(){
+void Lattice::reset() {
   N_UNIT = LX * LY;
   Tensor_list.assign(LX, std::vector<int>(LY));
   NN_Tensor.resize(N_UNIT);
-  for(int ix=0; ix<LX; ++ix){
-    for(int iy=0; iy<LY; ++iy){
-      const int i = ix + iy*LX;
+  for (int ix = 0; ix < LX; ++ix) {
+    for (int iy = 0; iy < LY; ++iy) {
+      const int i = ix + iy * LX;
       Tensor_list[ix][iy] = i;
     }
   }
-  for(int ix=0; ix<LX; ++ix){
-    for(int iy=0; iy<LY; ++iy){
-      const int i = ix + iy*LX;
-      NN_Tensor[i][0] = Tensor_list[(ix-1+LX)%LX][iy];
-      NN_Tensor[i][1] = Tensor_list[ix          ][(iy+1)%LY];
-      NN_Tensor[i][2] = Tensor_list[(ix+1)%LX][iy];
-      NN_Tensor[i][3] = Tensor_list[ix][(iy-1+LY)%LY];
+  for (int ix = 0; ix < LX; ++ix) {
+    for (int iy = 0; iy < LY; ++iy) {
+      const int i = ix + iy * LX;
+      NN_Tensor[i][0] = Tensor_list[(ix - 1 + LX) % LX][iy];
+      NN_Tensor[i][1] = Tensor_list[ix][(iy + 1) % LY];
+      NN_Tensor[i][2] = Tensor_list[(ix + 1) % LX][iy];
+      NN_Tensor[i][3] = Tensor_list[ix][(iy - 1 + LY) % LY];
     }
   }
 }
-void Lattice::reset(int X, int Y){
+void Lattice::reset(int X, int Y) {
   assert(X > 0);
   assert(Y > 0);
   LX = X;

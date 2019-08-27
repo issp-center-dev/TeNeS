@@ -42,14 +42,19 @@ PEPS_Parameters::PEPS_Parameters() {
 }
 
 template <typename T>
-inline T find_or(decltype(cpptoml::parse_file("")) param, const char* key, T value) {
+inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
+                 T value) {
   return param->get_as<T>(key).value_or(value);
 }
 
-
-PEPS_Parameters::PEPS_Parameters(decltype(cpptoml::parse_file("")) data): PEPS_Parameters() { set(data); }
-void PEPS_Parameters::set(const char *filename){ set(cpptoml::parse_file(filename)); }
-void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
+PEPS_Parameters::PEPS_Parameters(decltype(cpptoml::parse_file("")) data)
+    : PEPS_Parameters() {
+  set(data);
+}
+void PEPS_Parameters::set(const char *filename) {
+  set(cpptoml::parse_file(filename));
+}
+void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param) {
 
   // Tensor
   D = find_or(param, "D", 2);
@@ -66,7 +71,8 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   // Full update
   num_full_step = find_or(param, "full_num_step", 0);
   Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
-  Inverse_projector_cut = find_or(param, "full_inverse_projector_cutoff", 1e-12);
+  Inverse_projector_cut =
+      find_or(param, "full_inverse_projector_cutoff", 1e-12);
   Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
   Full_max_iteration = find_or(param, "full_iteration_max", 1000);
   Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
@@ -80,15 +86,14 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param){
   Use_RSVD = find_or(param, "use_rsvd", false);
   RSVD_Oversampling_factor = find_or(param, "rsvd_oversampling_factor", 2);
 
-
   Lcor = find_or(param, "Lcor", 0);
 }
 
-#define SAVE_PARAM(name, type) params_##type [I_##name] = name
-#define LOAD_PARAM(name, type) name = params_##type [I_##name]
+#define SAVE_PARAM(name, type) params_##type[I_##name] = name
+#define LOAD_PARAM(name, type) name = params_##type[I_##name]
 
 void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
-  enum PARAMS_INT_INDEX{ 
+  enum PARAMS_INT_INDEX {
     I_D,
     I_CHI,
     I_Debug_flag,
@@ -105,7 +110,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
 
     N_PARAMS_INT_INDEX,
   };
-  enum PARAMS_DOUBLE_INDEX{
+  enum PARAMS_DOUBLE_INDEX {
     I_Inverse_lambda_cut,
     I_Inverse_projector_cut,
     I_CTM_Convergence_Epsilon,
@@ -144,12 +149,13 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Inverse_precision, double);
     SAVE_PARAM(Full_Convergence_Epsilon, double);
 
-
     MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0, comm);
+    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+              comm);
   } else {
     MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0, comm);
+    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+              comm);
 
     LOAD_PARAM(D, int);
     LOAD_PARAM(CHI, int);
@@ -171,7 +177,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Inverse_Env_cut, double);
     LOAD_PARAM(Full_Inverse_precision, double);
     LOAD_PARAM(Full_Convergence_Epsilon, double);
-
   }
 }
 
@@ -199,21 +204,24 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   // Full update
   ofs << "full_num_step = " << num_full_step << std::endl;
-  ofs << "full_inverse_projector_cutoff = " << Inverse_projector_cut << std::endl;
+  ofs << "full_inverse_projector_cutoff = " << Inverse_projector_cut
+      << std::endl;
   ofs << "full_inverse_precision = " << Full_Inverse_precision << std::endl;
   ofs << "full_convergence_epsilon = " << Full_Convergence_Epsilon << std::endl;
   ofs << "full_iteration_max = " << Full_max_iteration << std::endl;
-  ofs << "full_gauge_fix = " << (Full_Gauge_Fix?"true":"false") << std::endl;
-  ofs << "full_fastfullupdate = " << (Full_Use_FastFullUpdate?"true":"false") << std::endl;
+  ofs << "full_gauge_fix = " << (Full_Gauge_Fix ? "true" : "false")
+      << std::endl;
+  ofs << "full_fastfullupdate = "
+      << (Full_Use_FastFullUpdate ? "true" : "false") << std::endl;
 
   // Environment
   ofs << "ctm_inverse_projector_cutoff = " << Inverse_Env_cut << std::endl;
   ofs << "ctm_convergence_epsilon = " << CTM_Convergence_Epsilon << std::endl;
   ofs << "ctm_iteration_max = " << Max_CTM_Iteration << std::endl;
-  ofs << "ctm_projector_corner = " << (CTM_Projector_corner?"true":"false") << std::endl;
-  ofs << "use_rsvd = " << (Use_RSVD?"true":"false") << std::endl;
+  ofs << "ctm_projector_corner = " << (CTM_Projector_corner ? "true" : "false")
+      << std::endl;
+  ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
-
 
   ofs.close();
 }
