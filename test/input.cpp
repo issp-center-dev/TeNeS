@@ -15,33 +15,6 @@ TEST_CASE("input"){
 
   auto input_toml = cpptoml::parse_file("data/check_input.toml");
 
-  SUBCASE("parameter (default)"){
-    PEPS_Parameters peps_parameters;
-
-    CHECK(peps_parameters.D == 2);
-    CHECK(peps_parameters.CHI == 4);
-    
-    CHECK(peps_parameters.num_simple_step == 0);
-    CHECK(peps_parameters.Inverse_lambda_cut == 1e-12);
-
-    CHECK(peps_parameters.num_full_step == 0);
-    CHECK(peps_parameters.Inverse_Env_cut == 1e-12);
-    CHECK(peps_parameters.Full_Inverse_precision == 1e-12);
-    CHECK(peps_parameters.Full_Convergence_Epsilon == 1e-12);
-    CHECK(peps_parameters.Full_max_iteration == 1000);
-    CHECK(peps_parameters.Full_Gauge_Fix == true);
-    CHECK(peps_parameters.Full_Use_FastFullUpdate == true);
-
-    CHECK(peps_parameters.Inverse_projector_cut == 1e-12);
-    CHECK(peps_parameters.CTM_Convergence_Epsilon == 1e-10);
-    CHECK(peps_parameters.Max_CTM_Iteration == 100);
-    CHECK(peps_parameters.CTM_Projector_corner == false);
-    CHECK(peps_parameters.Use_RSVD == false);
-    CHECK(peps_parameters.RSVD_Oversampling_factor == 2);
-
-    CHECK(peps_parameters.Lcor == 0);
-  }
-
   SUBCASE("parameter"){
     PEPS_Parameters peps_parameters;
     peps_parameters.set(input_toml->get_table("parameter"));
