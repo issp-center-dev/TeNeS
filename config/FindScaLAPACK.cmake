@@ -81,7 +81,10 @@ if(SCALAPACK_FOUND)
     # Check whether SGI MPT is used
     try_compile(_SGI_MPT
       ${CMAKE_CURRENT_BINARY_DIR}
-      ${CMAKE_CURRENT_SOURCE_DIR}/config/check_sgimpt.cpp
+      SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/config/check_sgimpt.cpp
+      CMAKE_FLAGS
+	"-DINCLUDE_DIRECTORIES:STRING=${MPI_CXX_INCLUDE_DIRS}"
+      LINK_LIBRARIES ${MPI_CXX_LIBRARIES}
       OUTPUT_VARIABLE LOG)
     if(_SGI_MPT)
       find_library(_SCALAPACK_BLACS_LIBRARY
@@ -90,10 +93,11 @@ if(SCALAPACK_FOUND)
 	DOC "The BLACS library")
       MESSAGE(STATUS "SGI MPT is used")
     else(_SGI_MPT)
-      try_compile(_OPENMPI
-	${CMAKE_CURRENT_BINARY_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/config/check_openmpi.cpp
-	OUTPUT_VARIABLE LOG)
+       try_compile(_OPENMPI
+	 ${CMAKE_CURRENT_BINARY_DIR}
+	 SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/config/check_openmpi.cpp
+	 CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${MPI_CXX_INCLUDE_DIRS}"
+	 OUTPUT_VARIABLE LOG)
       if(_OPENMPI)
 	find_library(_SCALAPACK_BLACS_LIBRARY
 	  NAMES mkl_blacs_openmpi_lp64
