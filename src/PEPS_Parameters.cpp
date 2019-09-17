@@ -64,27 +64,31 @@ void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param) {
   Debug_flag = find_or(param, "Debug", false);
   Warning_flag = find_or(param, "Warning", true);
 
+
   // Simple update
-  num_simple_step = find_or(param, "simple_num_step", 0);
-  Inverse_lambda_cut = find_or(param, "simple_inverse_lambda_cutoff", 1e-12);
+  auto simple = param->get_table("simple_update");
+  num_simple_step = find_or(simple, "num_step", 0);
+  Inverse_lambda_cut = find_or(simple, "inverse_lambda_cutoff", 1e-12);
 
   // Full update
-  num_full_step = find_or(param, "full_num_step", 0);
-  Full_Inverse_precision = find_or(param, "full_inverse_precision", 1e-12);
+  auto full = param->get_table("full_update");
+  num_full_step = find_or(full, "num_step", 0);
+  Full_Inverse_precision = find_or(full, "inverse_precision", 1e-12);
   Inverse_projector_cut =
-      find_or(param, "full_inverse_projector_cutoff", 1e-12);
-  Full_Convergence_Epsilon = find_or(param, "full_convergence_epsilon", 1e-12);
-  Full_max_iteration = find_or(param, "full_iteration_max", 1000);
-  Full_Gauge_Fix = find_or(param, "full_gauge_fix", true);
-  Full_Use_FastFullUpdate = find_or(param, "full_fastfullupdate", true);
+      find_or(full, "inverse_projector_cutoff", 1e-12);
+  Full_Convergence_Epsilon = find_or(full, "convergence_epsilon", 1e-12);
+  Full_max_iteration = find_or(full, "iteration_max", 1000);
+  Full_Gauge_Fix = find_or(full, "gauge_fix", true);
+  Full_Use_FastFullUpdate = find_or(full, "fastfullupdate", true);
 
   // Environment
-  Inverse_Env_cut = find_or(param, "ctm_inverse_projector_cutoff", 1e-12);
-  CTM_Convergence_Epsilon = find_or(param, "ctm_convergence_epsilon", 1e-10);
-  Max_CTM_Iteration = find_or(param, "ctm_iteration_max", 100);
-  CTM_Projector_corner = find_or(param, "ctm_projector_corner", false);
-  Use_RSVD = find_or(param, "use_rsvd", false);
-  RSVD_Oversampling_factor = find_or(param, "rsvd_oversampling_factor", 2);
+  auto ctm = param->get_table("ctm");
+  Inverse_Env_cut = find_or(ctm, "inverse_projector_cutoff", 1e-12);
+  CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
+  Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
+  CTM_Projector_corner = find_or(ctm, "projector_corner", false);
+  Use_RSVD = find_or(ctm, "use_rsvd", false);
+  RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
 
   Lcor = find_or(param, "Lcor", 0);
 }

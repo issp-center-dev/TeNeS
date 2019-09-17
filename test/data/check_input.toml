@@ -2,28 +2,31 @@
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
 
-simple_num_step = 1000
-simple_inverse_lambda_cutoff = 1e-10
+Lcor = 5
 
-full_num_step = 1
-full_inverse_projector_cutoff = 1e-10
-full_inverse_precision = 1e-10
-full_convergence_epsilon = 1e-10
-full_iteration_max = 100
-full_gauge_fix = false
-full_fastfullupdate = false
+[parameter.simple_update]
+num_step = 1000
+inverse_lambda_cutoff = 1e-10
 
-ctm_iteration_max = 10
-ctm_inverse_projector_cutoff = 1e-10
-ctm_convergence_epsilon = 1e-8
-ctm_projector_corner = true
+[parameter.full_update]
+num_step = 1
+inverse_projector_cutoff = 1e-10
+inverse_precision = 1e-10
+convergence_epsilon = 1e-10
+iteration_max = 100
+gauge_fix = false
+fastfullupdate = false
+
+[parameter.ctm]
+iteration_max = 10
+inverse_projector_cutoff = 1e-10
+convergence_epsilon = 1e-8
+projector_corner = true
 use_rsvd = true
 rsvd_oversampling_factor = 10
 
-Lcor = 5
-
 [lattice]
-Lsub = [3,2]
+L_sub = [3,2]
 
 [evolution]
 simple_update = """

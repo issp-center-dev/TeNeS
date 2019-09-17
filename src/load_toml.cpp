@@ -12,7 +12,7 @@
 
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "lattice") {
-  auto Lsub = toml->get_array_of<int64_t>("Lsub");
+  auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
     std::cerr << "cannot find Lsub in the section [" << tablename << "]"
               << std::endl;
