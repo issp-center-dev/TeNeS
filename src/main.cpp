@@ -51,8 +51,13 @@ int main_impl(int argc, char **argv) {
   const auto ham_edges =
       gen_edges(toml_observable, "hamiltonian_bonds", "observable");
 
+
+  // correlation
+  auto toml_correlation = input_toml->get_table("correlation");
+  const auto corparam = gen_corparam(toml_correlation, "correlation");
+
   return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges,
-               full_edges, ham_edges, evolutions, hams, lops);
+               full_edges, ham_edges, evolutions, hams, lops, corparam);
 }
 
 int main(int argc, char **argv) {

@@ -1,10 +1,13 @@
 #define _USE_MATH_DEFINES
 #include <random>
 #include <sys/stat.h>
+#include <vector>
+#include <utility>
 
 #include <cpptoml.h>
 
 #include "Lattice.hpp"
+#include "correlation.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "tenes.hpp"
@@ -42,4 +45,30 @@ std::vector<tensor> gen_matrices(decltype(cpptoml::parse_file("")) toml,
     // ERROR
   }
   return util::read_matrix<tensor>(*strs);
+}
+
+CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
+    const char *tablename = "correlation") {
+  auto r = toml->get_as<int64_t>("r_max");
+  if (!r){
+    std::cerr << "cannot find r_max in the section [" << tablename
+    << "]" << std::endl;
+    // ERROR
+  }
+  int rmax = static_cast<int>(*r);
+
+  auto oplist = toml->get_array_of<cpptoml::array>("operators");
+  if (!oplist){
+    std::cerr << "cannot find operators in the section [" << tablename
+    << "]" << std::endl;
+    // ERROR
+  }
+
+  std::vector<std::pair<int,int>> ops;
+  for(auto op: *oplist){
+    auto i = op->get_array_of<int64_t>();
+    ops.push_back(std::make_pair(static_cast<int>((*i)[0]), static_cast<int>((*i)[1])));
+  }
+
+  return CorrelationParameter{rmax, ops};
 }

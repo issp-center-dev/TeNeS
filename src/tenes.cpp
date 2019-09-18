@@ -13,24 +13,20 @@
 #include "PEPS_Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "edge.hpp"
+#include "correlation.hpp"
 
 #include "tenes.hpp"
 
 using namespace mptensor;
-
-struct Correlation {
-  int left_index, right_index;
-  int offset_x, offset_y;
-  int left_op, right_op;
-  double real, imag;
-};
 
 template <class ptensor> class TeNeS {
 public:
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         Edges simple_edges_, Edges full_edges_, Edges ham_edges_,
         std::vector<ptensor> evolutions_, std::vector<ptensor> hams_,
-        std::vector<ptensor> lops_);
+        std::vector<ptensor> lops_,
+        CorrelationParameter corparam_
+        );
 
   void initialize_tensors();
   void update_CTM();
@@ -61,6 +57,8 @@ private:
   std::vector<ptensor> lops;
   ptensor op_identity;
 
+  CorrelationParameter corparam;
+
   std::vector<ptensor> Tn;
   std::vector<ptensor> eTt, eTr, eTb, eTl;
   std::vector<ptensor> C1, C2, C3, C4;
@@ -85,10 +83,13 @@ template <class ptensor>
 TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                       Lattice lattice_, Edges simple_edges_, Edges full_edges_,
                       Edges ham_edges_, std::vector<ptensor> evolutions_,
-                      std::vector<ptensor> hams_, std::vector<ptensor> lops_)
+                      std::vector<ptensor> hams_, std::vector<ptensor> lops_,
+                      CorrelationParameter corparam_)
     : comm(comm_), peps_parameters(peps_parameters_), lattice(lattice_),
       simple_edges(simple_edges_), full_edges(full_edges_),
-      ham_edges(ham_edges_), lops(lops_), outdir("output"),
+      ham_edges(ham_edges_), lops(lops_),
+      corparam(corparam_),
+      outdir("output"),
       time_simple_update(), time_full_update(), time_environment(),
       time_observable() {
   MPI_Comm_size(comm, &mpisize);
@@ -495,80 +496,90 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
   double start_time = MPI_Wtime();
 
   const int nlops = lops.size();
-  const int Lcor = peps_parameters.Lcor;
+  const int r_max = corparam.r_max;
+  std::vector<std::vector<int>> r_ops(nlops);
+  for(auto ops: corparam.operators){
+    // TODO: range check
+    r_ops[std::get<0>(ops)].push_back(std::get<1>(ops));
+  }
+
   ptensor correlation_T(Shape(CHI, CHI, D, D));
   ptensor correlation_norm(Shape(CHI, CHI, D, D));
   std::vector<Correlation> correlations;
-  if (Lcor > 0) {
-    for (int left_index = 0; left_index < N_UNIT; ++left_index) {
-      for (int ilops = 0; ilops < nlops; ++ilops) {
-        const int left_x = lattice.x(left_index);
-        const int left_y = lattice.y(left_index);
-        { // horizontal
-          StartCorrelation(correlation_T, C1[left_index], C4[left_index],
-                           eTt[left_index], eTb[left_index], eTl[left_index],
-                           Tn[left_index], lops[ilops]);
-          StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
-                           eTt[left_index], eTb[left_index], eTl[left_index],
-                           Tn[left_index], op_identity);
+  for (int left_index = 0; left_index < N_UNIT; ++left_index) {
+    for (int left_ilop = 0; left_ilop < nlops; ++left_ilop) {
+      if(r_ops[left_ilop].empty()){
+        continue;
+      }
 
-          for (int r = 0; r < Lcor; ++r) {
-            const int right_x = (left_x + r + 1) % LX;
-            const int right_y = left_y;
-            const int offset_x = (left_x + r + 1) / LX;
-            const int offset_y = 0;
-            const int right_index = lattice.index(right_x, right_y);
-            double norm = FinishCorrelation(correlation_norm, C2[right_index],
-                                            C3[right_index], eTt[right_index],
-                                            eTr[right_index], eTb[right_index],
-                                            Tn[right_index], op_identity);
+      const int left_x = lattice.x(left_index);
+      const int left_y = lattice.y(left_index);
+      { // horizontal
+        StartCorrelation(correlation_T, C1[left_index], C4[left_index],
+            eTt[left_index], eTb[left_index], eTl[left_index],
+            Tn[left_index], lops[left_ilop]);
+        StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
+            eTt[left_index], eTb[left_index], eTl[left_index],
+            Tn[left_index], op_identity);
+
+        for (int r = 0; r < r_max; ++r) {
+          const int right_x = (left_x + r + 1) % LX;
+          const int right_y = left_y;
+          const int offset_x = (left_x + r + 1) / LX;
+          const int offset_y = 0;
+          const int right_index = lattice.index(right_x, right_y);
+          double norm = FinishCorrelation(correlation_norm, C2[right_index],
+              C3[right_index], eTt[right_index],
+              eTr[right_index], eTb[right_index],
+              Tn[right_index], op_identity);
+          for(auto right_ilop: r_ops[left_ilop]){
             double val = FinishCorrelation(correlation_T, C2[right_index],
-                                           C3[right_index], eTt[right_index],
-                                           eTr[right_index], eTb[right_index],
-                                           Tn[right_index], lops[ilops]) /
-                         norm;
+                C3[right_index], eTt[right_index],
+                eTr[right_index], eTb[right_index],
+                Tn[right_index], lops[left_ilop]) / norm;
             correlations.push_back(Correlation{left_index, right_index,
-                                               offset_x, offset_y, ilops, ilops,
-                                               val, 0.0});
-
-            Transfer(correlation_T, eTt[right_index], eTb[right_index],
-                     Tn[right_index]);
-            Transfer(correlation_norm, eTt[right_index], eTb[right_index],
-                     Tn[right_index]);
+                offset_x, offset_y, left_ilop, right_ilop,
+                val, 0.0});
           }
+
+          Transfer(correlation_T, eTt[right_index], eTb[right_index],
+              Tn[right_index]);
+          Transfer(correlation_norm, eTt[right_index], eTb[right_index],
+              Tn[right_index]);
         }
-        { // vertical
-          ptensor tn = transpose(Tn[left_index], Axes(3, 0, 1, 2, 4));
-          StartCorrelation(correlation_T, C4[left_index], C3[left_index],
-                           eTl[left_index], eTr[left_index], eTb[left_index],
-                           tn, lops[ilops]);
-          StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
-                           eTl[left_index], eTr[left_index], eTb[left_index],
-                           tn, op_identity);
+      }
+      { // vertical
+        ptensor tn = transpose(Tn[left_index], Axes(3, 0, 1, 2, 4));
+        StartCorrelation(correlation_T, C4[left_index], C3[left_index],
+            eTl[left_index], eTr[left_index], eTb[left_index],
+            tn, lops[left_ilop]);
+        StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
+            eTl[left_index], eTr[left_index], eTb[left_index],
+            tn, op_identity);
 
-          for (int r = 0; r < Lcor; ++r) {
-            const int right_x = left_x;
-            const int right_y = (left_y + r + 1) % LY;
-            const int offset_x = 0;
-            const int offset_y = (left_y + r + 1) / LY;
-            const int right_index = lattice.index(right_x, right_y);
-            tn = transpose(Tn[right_index], Axes(3, 0, 1, 2, 4));
-            double norm = FinishCorrelation(correlation_norm, C1[right_index],
-                                            C2[right_index], eTl[right_index],
-                                            eTt[right_index], eTr[right_index],
-                                            tn, op_identity);
+        for (int r = 0; r < r_max; ++r) {
+          const int right_x = left_x;
+          const int right_y = (left_y + r + 1) % LY;
+          const int offset_x = 0;
+          const int offset_y = (left_y + r + 1) / LY;
+          const int right_index = lattice.index(right_x, right_y);
+          tn = transpose(Tn[right_index], Axes(3, 0, 1, 2, 4));
+          double norm = FinishCorrelation(correlation_norm, C1[right_index],
+              C2[right_index], eTl[right_index],
+              eTt[right_index], eTr[right_index],
+              tn, op_identity);
+          for(auto right_ilop: r_ops[left_ilop]){
             double val = FinishCorrelation(correlation_T, C1[right_index],
-                                           C2[right_index], eTl[right_index],
-                                           eTt[right_index], eTr[right_index],
-                                           tn, lops[ilops]) /
-                         norm;
+                C2[right_index], eTl[right_index],
+                eTt[right_index], eTr[right_index],
+                tn, lops[left_ilop]) / norm;
             correlations.push_back(Correlation{left_index, right_index,
-                                               offset_x, offset_y, ilops, ilops,
-                                               val, 0.0});
-
-            Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
-            Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
+                offset_x, offset_y, left_ilop, right_ilop,
+                val, 0.0});
           }
+
+          Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
+          Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
         }
       }
     }
@@ -618,8 +629,10 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   std::clog << "  Start calculating NN correlation" << std::endl;
   auto NN_obs = measure_NN(true);
 
-  std::clog << "  Start calculating long range correlation" << std::endl;
-  auto correlations = measure_correlation(true);
+  if (corparam.r_max > 0){
+    std::clog << "  Start calculating long range correlation" << std::endl;
+    auto correlations = measure_correlation(true);
+  }
 
   if (mpirank == 0) {
     std::string filename = outdir + "/time.dat";
@@ -655,9 +668,11 @@ template <class ptensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           Edges simple_edges, Edges full_edges, Edges ham_edges,
           std::vector<ptensor> evolutions, std::vector<ptensor> hams,
-          std::vector<ptensor> lops) {
+          std::vector<ptensor> lops,
+          CorrelationParameter corparam
+          ) {
   TeNeS<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges,
-                     ham_edges, evolutions, hams, lops);
+                     ham_edges, evolutions, hams, lops, corparam);
   tns.optimize();
   tns.measure();
   return 0;
@@ -670,7 +685,8 @@ template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              Edges full_edges, Edges ham_edges,
                              std::vector<d_tensor> evolutions,
                              std::vector<d_tensor> hams,
-                             std::vector<d_tensor> lops);
+                             std::vector<d_tensor> lops,
+                             CorrelationParameter corparam);
 /*
 using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix,
 std::complex<double>>; template int tenes<c_tensor>(MPI_Comm comm,
@@ -679,6 +695,7 @@ std::complex<double>>; template int tenes<c_tensor>(MPI_Comm comm,
                       Edges simple_edges,
                       Edges full_edges,
                       std::vector<c_tensor> hams,
-                      std::vector<d_tensor> lops
+                      std::vector<d_tensor> lops,
+                      CorrelationParameter corparam
     );
     */

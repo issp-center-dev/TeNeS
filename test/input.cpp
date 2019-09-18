@@ -39,8 +39,6 @@ TEST_CASE("input"){
     CHECK(peps_parameters.CTM_Projector_corner == true);
     CHECK(peps_parameters.Use_RSVD == true);
     CHECK(peps_parameters.RSVD_Oversampling_factor == 10);
-
-    CHECK(peps_parameters.Lcor == 5);
   }
 
   SUBCASE("lattice"){
@@ -171,6 +169,16 @@ TEST_CASE("input"){
       CHECK(ham_edges[1].op_id == 2);
     }
 
+  }
+
+  SUBCASE("correlation"){
+    auto toml_cor = input_toml->get_table("correlation");
+    CorrelationParameter corparam = gen_corparam(toml_cor, "correlation");
+    CHECK(corparam.r_max == 5);
+    CHECK(std::get<0>(corparam.operators[0]) == 0);
+    CHECK(std::get<1>(corparam.operators[0]) == 0);
+    CHECK(std::get<0>(corparam.operators[1]) == 1);
+    CHECK(std::get<1>(corparam.operators[1]) == 1);
   }
 
 }

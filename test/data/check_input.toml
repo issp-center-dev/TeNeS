@@ -1,8 +1,8 @@
 [parameter]
+
+[parameter.tensor]
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
-
-Lcor = 5
 
 [parameter.simple_update]
 num_step = 1000
@@ -74,3 +74,6 @@ hamiltonian = [
 """,
 ]
 
+[correlation]
+r_max = 5
+operators = [[0,0], [1,1]]

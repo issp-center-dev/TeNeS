@@ -57,13 +57,13 @@ void PEPS_Parameters::set(const char *filename) {
 void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param) {
 
   // Tensor
-  D = find_or(param, "D", 2);
-  CHI = find_or(param, "CHI", 4);
+  auto tensor = param->get_table("tensor");
+  D = find_or(tensor, "D", 2);
+  CHI = find_or(tensor, "CHI", 4);
 
   // Debug
   Debug_flag = find_or(param, "Debug", false);
   Warning_flag = find_or(param, "Warning", true);
-
 
   // Simple update
   auto simple = param->get_table("simple_update");
