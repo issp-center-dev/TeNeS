@@ -3,6 +3,10 @@ link_directories(${MPTENSOR_LIB_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.sh.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fulltest.sh
+               @ONLY)
+
 foreach(basename input simple_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
@@ -19,3 +23,5 @@ foreach(basename input simple_update)
 
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
 endforeach()
+
+add_test(NAME fulltest COMMAND /bin/sh ${CMAKE_CURRENT_BINARY_DIR}/fulltest.sh)
