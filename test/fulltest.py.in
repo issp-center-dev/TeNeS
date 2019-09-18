@@ -35,7 +35,7 @@ def check(filename, resdir, refdir, tol):
             if not nearly_equal(s, f, tol):
                 print("{}: {}-th data do not match:".format(filename, i))
                 print("  result:    ", " ".join(map(str, rs)))
-                print("  reference: ", " ".join(map(str, rs)))
+                print("  reference: ", " ".join(map(str, rf)))
                 return False
     return True
 
