@@ -1,7 +1,0 @@
-@CMAKE_BINARY_DIR@/src/tenes @CMAKE_CURRENT_BINARY_DIR@/data/fulltest.toml
-
-for file in energy.dat site_obs.dat neighbor_obs.dat correlation.dat; do
-  diff \
-    @CMAKE_CURRENT_SOURCE_DIR@/data/full_output/$file  \
-    @CMAKE_CURRENT_BINARY_DIR@/output/$file
-done

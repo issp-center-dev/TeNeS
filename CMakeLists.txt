@@ -70,6 +70,13 @@ if(NOT MPI_CXX_LIBRARIES)
     set(MPI_CXX_LIBRARIES ${MPI_LIBRARIES})
 endif(NOT MPI_CXX_LIBRARIES)
 
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    find_package(PythonInterp REQUIRED)
+else()
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+endif()
+
 if(NOT MPTENSOR_ROOT)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/deps/mptensor/config" ${CMAKE_MODULE_PATH})
     add_subdirectory("${PROJECT_SOURCE_DIR}/deps/mptensor")

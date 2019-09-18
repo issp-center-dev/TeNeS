@@ -1,0 +1,64 @@
+from __future__ import print_function
+from os.path import join
+import subprocess
+import sys
+
+
+def nearly_equal(x, y, tol):
+    return -tol < x - y < tol
+
+
+def check(filename, resdir, refdir, tol):
+    res = []
+    with open(join(resdir, filename)) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if len(line) == 0:
+                continue
+            words = line.split()
+            res.append(list(map(float, words)))
+
+    ref = []
+    with open(join(refdir, filename)) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if len(line) == 0:
+                continue
+            words = line.split()
+            ref.append(list(map(float, words)))
+
+    if len(res) != len(ref):
+        return False
+
+    for i, (rs, rf) in enumerate(zip(res, ref)):
+        for s, f in zip(rs, rf):
+            if not nearly_equal(s, f, tol):
+                print("{}: {}-th data do not match:".format(filename, i))
+                print("  result:    ", " ".join(map(str, rs)))
+                print("  reference: ", " ".join(map(str, rs)))
+                return False
+    return True
+
+
+cmd = [
+    join("@CMAKE_BINARY_DIR@", "src", "tenes"),
+    join("data", "fulltest.toml"),
+]
+subprocess.call(cmd)
+
+
+resdir = "output"
+refdir = join("data", "full_output")
+tol = 1.0e-12
+
+result = True
+
+result = check("energy.dat", resdir, refdir, tol) and result
+result = check("site_obs.dat", resdir, refdir, tol) and result
+result = check("neighbor_obs.dat", resdir, refdir, tol) and result
+result = check("correlation.dat", resdir, refdir, tol) and result
+
+if result:
+    sys.exit(0)
+else:
+    sys.exit(1)
