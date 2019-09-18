@@ -1,16 +1,19 @@
 [parameter]
+[parameter.tensor]
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
 
-simple_num_step= 1000
-full_num_step = 1
+[parameter.simple_update]
+num_step= 1000
 
-ctm_iteration_max = 5
+[parameter.full_update]
+num_step = 1
 
-Lcor = 5
+[parameter.ctm]
+iteration_max = 5
 
 [lattice]
-Lsub = [2,2]
+L_sub = [2,2]
 
 [evolution]
 simple_update = """
@@ -87,4 +90,8 @@ hamiltonian = [
  0.0  0.0   0.0  0.0  0.0  0.0   0.0  0.0  1.0
 """,
 ]
+
+[correlation]
+r_max = 5
+operators = [[0,0], [0,1], [1,1]]
 
