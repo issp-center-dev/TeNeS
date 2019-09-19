@@ -3,6 +3,7 @@ link_directories(${MPTENSOR_LIB_DIR})
 
 add_executable(tenes
 main.cpp
+main_impl.cpp
 tenes.cpp 
 PEPS_Parameters.cpp
 Lattice.cpp
