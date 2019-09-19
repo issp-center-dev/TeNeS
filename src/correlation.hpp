@@ -14,6 +14,8 @@ struct Correlation {
 struct CorrelationParameter{
   int r_max;
   std::vector<std::pair<int,int>> operators;
+  CorrelationParameter():r_max(0){}
+  CorrelationParameter(int r_max, std::vector<std::pair<int,int>> const& ops): r_max(r_max), operators(ops){}
 };
 
 #endif // CORRELATION_HPP
