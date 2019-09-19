@@ -13,6 +13,13 @@
 #include "tenes.hpp"
 #include "util/read_matrix.hpp"
 
+
+template <typename T>
+inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
+                 T value) {
+  return param->get_as<T>(key).value_or(value);
+}
+
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "lattice") {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
@@ -71,4 +78,45 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
   }
 
   return CorrelationParameter{rmax, ops};
+}
+
+
+PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
+  PEPS_Parameters pparam;
+
+  // Tensor
+  auto tensor = param->get_table("tensor");
+  pparam.D = find_or(tensor, "D", 2);
+  pparam.CHI = find_or(tensor, "CHI", 4);
+
+  // Debug
+  pparam.Debug_flag = find_or(param, "Debug", false);
+  pparam.Warning_flag = find_or(param, "Warning", true);
+
+  // Simple update
+  auto simple = param->get_table("simple_update");
+  pparam.num_simple_step = find_or(simple, "num_step", 0);
+  pparam.Inverse_lambda_cut = find_or(simple, "inverse_lambda_cutoff", 1e-12);
+
+  // Full update
+  auto full = param->get_table("full_update");
+  pparam.num_full_step = find_or(full, "num_step", 0);
+  pparam.Full_Inverse_precision = find_or(full, "inverse_precision", 1e-12);
+  pparam.Inverse_projector_cut =
+      find_or(full, "inverse_projector_cutoff", 1e-12);
+  pparam.Full_Convergence_Epsilon = find_or(full, "convergence_epsilon", 1e-12);
+  pparam.Full_max_iteration = find_or(full, "iteration_max", 1000);
+  pparam.Full_Gauge_Fix = find_or(full, "gauge_fix", true);
+  pparam.Full_Use_FastFullUpdate = find_or(full, "fastfullupdate", true);
+
+  // Environment
+  auto ctm = param->get_table("ctm");
+  pparam.Inverse_Env_cut = find_or(ctm, "inverse_projector_cutoff", 1e-12);
+  pparam.CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
+  pparam.Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
+  pparam.CTM_Projector_corner = find_or(ctm, "projector_corner", false);
+  pparam.Use_RSVD = find_or(ctm, "use_rsvd", false);
+  pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
+
+  return pparam;
 }

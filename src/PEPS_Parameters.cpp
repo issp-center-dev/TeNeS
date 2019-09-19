@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <cpptoml.h>
-
 #include "PEPS_Parameters.hpp"
 
 PEPS_Parameters::PEPS_Parameters() {
@@ -39,58 +37,6 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FastFullUpdate = true;
 
   Lcor = 0;
-}
-
-template <typename T>
-inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
-                 T value) {
-  return param->get_as<T>(key).value_or(value);
-}
-
-PEPS_Parameters::PEPS_Parameters(decltype(cpptoml::parse_file("")) data)
-    : PEPS_Parameters() {
-  set(data);
-}
-void PEPS_Parameters::set(const char *filename) {
-  set(cpptoml::parse_file(filename));
-}
-void PEPS_Parameters::set(decltype(cpptoml::parse_file("")) param) {
-
-  // Tensor
-  auto tensor = param->get_table("tensor");
-  D = find_or(tensor, "D", 2);
-  CHI = find_or(tensor, "CHI", 4);
-
-  // Debug
-  Debug_flag = find_or(param, "Debug", false);
-  Warning_flag = find_or(param, "Warning", true);
-
-  // Simple update
-  auto simple = param->get_table("simple_update");
-  num_simple_step = find_or(simple, "num_step", 0);
-  Inverse_lambda_cut = find_or(simple, "inverse_lambda_cutoff", 1e-12);
-
-  // Full update
-  auto full = param->get_table("full_update");
-  num_full_step = find_or(full, "num_step", 0);
-  Full_Inverse_precision = find_or(full, "inverse_precision", 1e-12);
-  Inverse_projector_cut =
-      find_or(full, "inverse_projector_cutoff", 1e-12);
-  Full_Convergence_Epsilon = find_or(full, "convergence_epsilon", 1e-12);
-  Full_max_iteration = find_or(full, "iteration_max", 1000);
-  Full_Gauge_Fix = find_or(full, "gauge_fix", true);
-  Full_Use_FastFullUpdate = find_or(full, "fastfullupdate", true);
-
-  // Environment
-  auto ctm = param->get_table("ctm");
-  Inverse_Env_cut = find_or(ctm, "inverse_projector_cutoff", 1e-12);
-  CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
-  Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
-  CTM_Projector_corner = find_or(ctm, "projector_corner", false);
-  Use_RSVD = find_or(ctm, "use_rsvd", false);
-  RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
-
-  Lcor = find_or(param, "Lcor", 0);
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = name

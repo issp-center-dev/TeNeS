@@ -16,8 +16,7 @@ TEST_CASE("input"){
   auto input_toml = cpptoml::parse_file("data/check_input.toml");
 
   SUBCASE("parameter"){
-    PEPS_Parameters peps_parameters;
-    peps_parameters.set(input_toml->get_table("parameter"));
+    PEPS_Parameters peps_parameters = gen_param(input_toml->get_table("parameter"));
 
     CHECK(peps_parameters.D == 4);
     CHECK(peps_parameters.CHI == 16);

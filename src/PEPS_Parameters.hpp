@@ -3,9 +3,6 @@
 
 #include <mpi.h>
 
-//#include <toml11/toml/value.hpp>
-#include <cpptoml.h>
-
 class PEPS_Parameters {
 public:
   // Tensor
@@ -41,13 +38,6 @@ public:
   int Lcor;
 
   PEPS_Parameters();
-
-  explicit PEPS_Parameters(const char *filename) : PEPS_Parameters() {
-    set(filename);
-  }
-  PEPS_Parameters(decltype(cpptoml::parse_file("")) toml);
-  void set(const char *filename);
-  void set(decltype(cpptoml::parse_file("")) toml);
 
   void save(const char *filename, bool append = false);
   void save_append(const char *filename) { save(filename, true); }

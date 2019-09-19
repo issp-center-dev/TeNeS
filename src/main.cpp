@@ -26,8 +26,7 @@ int main_impl(int argc, char **argv) {
   auto input_toml = cpptoml::parse_file(argv[1]);
 
   // Parameters
-  PEPS_Parameters peps_parameters;
-  peps_parameters.set(input_toml->get_table("parameter"));
+  PEPS_Parameters peps_parameters = gen_param(input_toml->get_table("parameter"));
   peps_parameters.Bcast(MPI_COMM_WORLD);
 
   auto toml_lattice = input_toml->get_table("lattice");
