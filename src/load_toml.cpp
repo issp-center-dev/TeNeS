@@ -91,10 +91,6 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     pparam.CHI = find_or(tensor, "CHI", 4);
   }
 
-  // Debug
-  pparam.Debug_flag = find_or(param, "Debug", false);
-  pparam.Warning_flag = find_or(param, "Warning", true);
-
   // Simple update
   auto simple = param->get_table("simple_update");
   if(simple != nullptr){

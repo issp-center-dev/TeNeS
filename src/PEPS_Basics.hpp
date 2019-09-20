@@ -1259,11 +1259,11 @@ void Full_update_bond_horizontal(
     count += 1;
   }
   // Post processing
-  if (!convergence && peps_parameters.Warning_flag) {
+  if (!convergence && peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
     std::cout << "warning: Full update iteration was not conveged! count= "
               << count << std::endl;
   }
-  if (peps_parameters.Debug_flag) {
+  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
     std::cout << "Full Update: count, delta,original_norm = " << count << " "
               << delta + C_phi << " " << C_phi << std::endl;
   }

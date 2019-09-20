@@ -9,9 +9,15 @@ public:
   int D;   // Bond dimension for central tensor
   int CHI; // Bond dimension for environment tensor
 
-  // Debug
-  bool Debug_flag;
-  bool Warning_flag;
+  enum PrintLevel{
+    none,
+    fatal,
+    error,
+    warn,
+    info,
+    debug,
+  };
+  PrintLevel print_level;
 
   // Simple update
   int num_simple_step;

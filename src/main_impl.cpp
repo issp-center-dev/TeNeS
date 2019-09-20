@@ -1,9 +1,4 @@
-#define _USE_MATH_DEFINES
-#include <sys/stat.h>
-#include <random>
-
 #include <cpptoml.h>
-
 #include "util/file.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
@@ -16,20 +11,27 @@
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 
+  int mpisize=0, mpirank=0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
+
+
   std::string usage = 
   R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
   
   Usage:
-    tenes <input_toml>
-    tenes (-h | --help)
-    tenes (-v | --version)
+    tenes [--quiet] <input_toml>
+    tenes --help
+    tenes --version
 
   Options:
     -h --help       Show this help message.
-    -v --version    Show version.
+    -v --version    Show the version.
+    -q --quiet      Do not print any messages.
   )";
 
   if(argc==1){
+    if(mpirank==0)
       std::cout << usage << std::endl;
     return 0;
   }
@@ -37,7 +39,8 @@ int main_impl(int argc, char **argv) {
   for(int i=1; i<argc; ++i){
     std::string opt = argv[i];
     if(opt == "-h" || opt == "--help"){
-      std::cout << usage << std::endl;
+      if(mpirank==0)
+        std::cout << usage << std::endl;
       return 0;
     }
   }
@@ -45,21 +48,30 @@ int main_impl(int argc, char **argv) {
   for(int i=1; i<argc; ++i){
     std::string opt = argv[i];
     if(opt == "-v" || opt == "--version"){
-      std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+      if(mpirank==0)
+        std::cout << "TeNeS v" << TENES_VERSION << std::endl;
       return 0;
     }
   }
 
-  std::string input_filename = argv[1];
+  using PrintLevel = PEPS_Parameters::PrintLevel;
 
-  if(!file_exists(input_filename)){
-    std::cout << "ERROR: cannot find the input file: "<< input_filename << std::endl;
-    return 1;
+  PrintLevel print_level = PrintLevel::info;
+  std::string input_filename;
+  for(int i=1; i<argc; ++i){
+    std::string opt = argv[i];
+    if(opt == "-q" || opt == "--quiet"){
+      print_level = PrintLevel::none;
+    }else{
+      input_filename = opt;
+    }
   }
 
-  int mpisize, mpirank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
-  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
+  if(!file_exists(input_filename)){
+    if(mpirank==0)
+      std::cout << "ERROR: cannot find the input file: "<< input_filename << std::endl;
+    return 1;
+  }
 
   auto input_toml = cpptoml::parse_file(input_filename);
 
@@ -67,6 +79,7 @@ int main_impl(int argc, char **argv) {
   auto toml_param = input_toml->get_table("parameter");
   PEPS_Parameters peps_parameters =
       (toml_param != nullptr ? gen_param(toml_param) : PEPS_Parameters());
+  peps_parameters.print_level = print_level;
   peps_parameters.Bcast(MPI_COMM_WORLD);
 
   auto toml_lattice = input_toml->get_table("lattice");

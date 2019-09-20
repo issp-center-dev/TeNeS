@@ -98,8 +98,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   peps_parameters.Bcast(comm);
   // output debug or warning info only from process 0
   if (mpirank != 0) {
-    peps_parameters.Debug_flag = false;
-    peps_parameters.Warning_flag = false;
+    peps_parameters.print_level = PEPS_Parameters::PrintLevel::none;
   }
 
   D = peps_parameters.D;
@@ -321,11 +320,15 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
 
-  std::clog << "Start simple update" << std::endl;
+  if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    std::clog << "Start simple update" << std::endl;
+  }
   simple_update();
 
   if (peps_parameters.num_full_step > 0) {
-    std::clog << "Start full update" << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "Start full update" << std::endl;
+    }
     full_update();
   }
 }
@@ -352,7 +355,9 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/site_obs.dat";
-    std::clog << "    Save site observables to " << filename << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "    Save site observables to " << filename << std::endl;
+    }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
@@ -409,7 +414,9 @@ template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/energy.dat";
-    std::clog << "    Save energy to " << filename << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "    Save energy to " << filename << std::endl;
+    }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
@@ -466,7 +473,9 @@ TeNeS<ptensor>::measure_NN(bool save) {
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/neighbor_obs.dat";
-    std::clog << "    Save NN correlation to " << filename << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "    Save NN correlation to " << filename << std::endl;
+    }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
@@ -589,8 +598,10 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/correlation.dat";
-    std::clog << "    Save long-range correlations to " << filename
-              << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "    Save long-range correlations to " << filename
+                << std::endl;
+    }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
@@ -613,24 +624,33 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
 }
 
 template <class ptensor> void TeNeS<ptensor>::measure() {
-  std::clog << "Start calculating observables" << std::endl;
-
-  std::clog << "  Start updating environment" << std::endl;
+  if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    std::clog << "Start calculating observables" << std::endl;
+    std::clog << "  Start updating environment" << std::endl;
+  }
   update_CTM();
 
   const int nlops = lops.size();
 
-  std::clog << "  Start calculating local operators" << std::endl;
+  if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    std::clog << "  Start calculating local operators" << std::endl;
+  }
   auto local_obs = measure_local(true);
 
-  std::clog << "  Start calculating energy" << std::endl;
+  if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    std::clog << "  Start calculating energy" << std::endl;
+  }
   auto energy = measure_energy(true);
 
-  std::clog << "  Start calculating NN correlation" << std::endl;
+  if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    std::clog << "  Start calculating NN correlation" << std::endl;
+  }
   auto NN_obs = measure_NN(true);
 
   if (corparam.r_max > 0){
-    std::clog << "  Start calculating long range correlation" << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "  Start calculating long range correlation" << std::endl;
+    }
     auto correlations = measure_correlation(true);
   }
 
@@ -641,26 +661,30 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     ofs << "time full update   = " << time_full_update << std::endl;
     ofs << "time environmnent  = " << time_environment << std::endl;
     ofs << "time observable    = " << time_observable << std::endl;
-    std::clog << "    Save elapsed times to " << filename << std::endl;
-
-    std::cout << std::endl;
-
-    std::cout << "Energy = " << energy << std::endl;
-
-    for (int ilops = 0; ilops < nlops; ++ilops) {
-      double sum = 0.0;
-      for (int i = 0; i < N_UNIT; ++i) {
-        sum += local_obs[ilops][i];
-      }
-      std::cout << "Local operator " << ilops << " = " << sum / N_UNIT
-                << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::clog << "    Save elapsed times to " << filename << std::endl;
     }
-    std::cout << std::endl;
 
-    std::cout << "time simple update = " << time_simple_update << std::endl;
-    std::cout << "time full update   = " << time_full_update << std::endl;
-    std::cout << "time environmnent  = " << time_environment << std::endl;
-    std::cout << "time observable    = " << time_observable << std::endl;
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      std::cout << std::endl;
+
+      std::cout << "Energy = " << energy << std::endl;
+
+      for (int ilops = 0; ilops < nlops; ++ilops) {
+        double sum = 0.0;
+        for (int i = 0; i < N_UNIT; ++i) {
+          sum += local_obs[ilops][i];
+        }
+        std::cout << "Local operator " << ilops << " = " << sum / N_UNIT
+                  << std::endl;
+      }
+      std::cout << std::endl;
+
+      std::cout << "time simple update = " << time_simple_update << std::endl;
+      std::cout << "time full update   = " << time_full_update << std::endl;
+      std::cout << "time environmnent  = " << time_environment << std::endl;
+      std::cout << "time observable    = " << time_observable << std::endl;
+    }
   }
 }
 

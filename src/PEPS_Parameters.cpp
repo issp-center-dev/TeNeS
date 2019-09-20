@@ -12,8 +12,7 @@ PEPS_Parameters::PEPS_Parameters() {
   CHI = D * D;
 
   // Debug
-  Debug_flag = false;
-  Warning_flag = true;
+  print_level = PrintLevel::info;
 
   // Simple update
   num_simple_step = 0;
@@ -39,15 +38,14 @@ PEPS_Parameters::PEPS_Parameters() {
   Lcor = 0;
 }
 
-#define SAVE_PARAM(name, type) params_##type[I_##name] = name
-#define LOAD_PARAM(name, type) name = params_##type[I_##name]
+#define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
+#define LOAD_PARAM(name, type) name = static_cast<decltype(name)>(params_##type[I_##name])
 
 void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   enum PARAMS_INT_INDEX {
     I_D,
     I_CHI,
-    I_Debug_flag,
-    I_Warning_flag,
+    I_print_level,
     I_num_simple_step,
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
@@ -80,8 +78,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   if (irank == root) {
     SAVE_PARAM(D, int);
     SAVE_PARAM(CHI, int);
-    SAVE_PARAM(Debug_flag, int);
-    SAVE_PARAM(Warning_flag, int);
+    SAVE_PARAM(print_level, int);
     SAVE_PARAM(num_simple_step, int);
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
@@ -109,8 +106,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
 
     LOAD_PARAM(D, int);
     LOAD_PARAM(CHI, int);
-    LOAD_PARAM(Debug_flag, int);
-    LOAD_PARAM(Warning_flag, int);
+    LOAD_PARAM(print_level, int);
     LOAD_PARAM(num_simple_step, int);
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
@@ -143,10 +139,6 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   // Tensor
   ofs << "D = " << D << std::endl;
   ofs << "CHI = " << CHI << std::endl;
-
-  // Debug
-  // ofs << "Debug_flag = " << Debug_flag << std::endl;
-  // ofs << "Warning_flag = " << Warning_flag << std::endl;
 
   // Simple update
   ofs << "simple_num_step = " << num_simple_step << std::endl;
