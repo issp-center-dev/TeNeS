@@ -3,8 +3,8 @@
 #include <random>
 
 #include <cpptoml.h>
-#include <CLI11.hpp>
 
+#include "util/file.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
@@ -15,19 +15,46 @@
 
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-  CLI::App app{"TeNeS: PEPS+CTM method for solving 2D quantum lattice system"};
 
-  bool show_version;
-  app.add_flag("-v,--version", show_version, "Show version information");
+  std::string usage = 
+  R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
+  
+  Usage:
+    tenes <input_toml>
+    tenes (-h | --help)
+    tenes (-v | --version)
 
-  std::string input_filename;
-  app.add_option("input_toml", input_filename, "Input TOML file")->required();
+  Options:
+    -h --help       Show this help message.
+    -v --version    Show version.
+  )";
 
-  CLI11_PARSE(app, argc, argv);
-
-  if (show_version) {
-    std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+  if(argc==1){
+      std::cout << usage << std::endl;
     return 0;
+  }
+
+  for(int i=1; i<argc; ++i){
+    std::string opt = argv[i];
+    if(opt == "-h" || opt == "--help"){
+      std::cout << usage << std::endl;
+      return 0;
+    }
+  }
+
+  for(int i=1; i<argc; ++i){
+    std::string opt = argv[i];
+    if(opt == "-v" || opt == "--version"){
+      std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+      return 0;
+    }
+  }
+
+  std::string input_filename = argv[1];
+
+  if(!file_exists(input_filename)){
+    std::cout << "ERROR: cannot find the input file: "<< input_filename << std::endl;
+    return 1;
   }
 
   int mpisize, mpirank;

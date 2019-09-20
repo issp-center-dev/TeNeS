@@ -13,8 +13,6 @@ TeNeS (**Te**nsol **Ne**twork **S**olver) is a solver for 2D quantum lattice sys
 - [Usage](#usage)
 - [Question or comment](#question-or-comment)
 - [License](#license)
-    - [TeNeS](#tenes)
-    - [bundled libs](#bundled-libs)
 - [Acknowledgement](#acknowledgement)
 
 
@@ -88,11 +86,7 @@ Feel free to ask any question through an issue (public) or an e-mail (private) (
 Pull request is welcome (even for a small typo, of course!).
 
 ## License
-### TeNeS
 TeNeS is available under the GNU GPL v3.
-
-### bundled libs
-[CLI11](https://github.com/CLIUtils/CLI11) is redistributed under the 3-Clause BSD license (see the header part of `deps/CLI11/CLI11.hpp`).
 
 ## Acknowledgement
 TeNeS is developed under the support of "Project for advancement of software usability in materials science" in fiscal year 2019 by The Institute for Solid State Physics, The University of Tokyo.
