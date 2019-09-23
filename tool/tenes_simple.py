@@ -22,13 +22,32 @@ def array_to_str(A):
     return "\n".join(res)
 
 
-def gen_spinhamiltonian(param):
+def gen_spinoperators(param):
+    """
+    Generates spin operators, Sz and Sx
+
+    Parameters
+    ----------
+    param : dict
+        parameter file
+
+    Returns
+    -------
+    Sz : darray
+        Sz operator
+    Sx : darray
+        Sx operator
+    Splus : darray
+        Splus operator
+    Sminus : darray
+        Sminus operator
+
+    """
     S = param["S"]
     if int(2 * S) != 2 * S:
         msg = "S is neighther integer nor half-integer: {}".format(S)
         raise RuntimeError(msg)
     M = int(2 * S) + 1
-    E = np.eye(M)
     Sz = np.zeros((M, M))
     Splus = np.zeros((M, M))
     Sminus = np.zeros((M, M))
@@ -40,25 +59,76 @@ def gen_spinhamiltonian(param):
             Sminus[i - 1, i] = np.sqrt((S + m) * (S - m + 1.0))
     Sx = 0.5 * (Splus + Sminus)
 
+    return Sz, Sx, Splus, Sminus
+
+
+def gen_spinhamiltonian(param):
+    """
+    Geneates bond Hamiltonian for spin system on a square lattice
+
+    Parameters
+    ----------
+    param : dict
+        parameter file
+
+    Returns
+    -------
+    ham_horizontal : ndarray
+        bond Hamiltonian on a horizontal bond
+    ham_vertical : ndarray
+        bond Hamiltonian on a vertical bond
+
+    """
+
+    Sz, Sx, Splus, Sminus = gen_spinoperators(param)
+    E = np.eye(Sz.shape[0])
+
     z = 4.0
     Jz = param.get("Jz", 1.0)
+    if not isinstance(Jz, list):
+        Jz = [Jz, Jz]
     Jxy = param.get("Jxy", Jz)
+    if not isinstance(Jxy, list):
+        Jxy = [Jxy, Jxy]
+    BQ = param.get("BQ", 0.0)
+    if not isinstance(BQ, list):
+        BQ = [BQ, BQ]
     h = param.get("h", 0.0) / z
     G = param.get("Gamma", 0.0) / z
     D = param.get("D", 0.0) / z
 
-    ham = Jz * np.kron(Sz, Sz)
-    ham += 0.5 * Jxy * (np.kron(Splus, Sminus) + np.kron(Sminus, Splus))
-    ham -= h * (np.kron(Sz, E) + np.kron(E, Sz))
-    ham -= G * (np.kron(Sx, E) + np.kron(E, Sx))
-    ham += D * (np.kron(np.dot(Sz, Sz), E) + np.kron(E, np.dot(Sz, Sz)))
+    ham = []  # horizontal, vertical
 
-    return [Sz, Sx], [ham]
+    for i in (0, 1):
+        ham.append(Jz[i] * np.kron(Sz, Sz))
+        ham[i] += 0.5 * Jxy[i] * (np.kron(Splus, Sminus) + np.kron(Sminus, Splus))
+        ham[i] += BQ[i] * (
+            np.kron(Sz, Sz) + 0.5 * np.kron(Splus, Sminus) + np.kron(Sminus, Splus)
+        )
+        ham[i] -= h * (np.kron(Sz, E) + np.kron(E, Sz))
+        ham[i] -= G * (np.kron(Sx, E) + np.kron(E, Sx))
+        ham[i] += D * (np.kron(np.dot(Sz, Sz), E) + np.kron(E, np.dot(Sz, Sz)))
+
+    return ham
 
 
-def tenes_pre(param):
+def tenes_simple(param):
+    """
+    Generates TeNeS input for spin system on a square lattice
+
+    Parameters
+    ----------
+    param : dict
+        parameter
+
+    Returns
+    -------
+    res : dict
+        Dictionary file describing TeNeS input
+    """
     if param["model"]["type"] == "spin":
-        lops, hams = gen_spinhamiltonian(param["model"])
+        lops = gen_spinoperators(param["model"])[0:2]
+        hams = gen_spinhamiltonian(param["model"])
     else:
         msg = "Unknown model type: {}".format(param["model"]["type"])
         raise RuntimeError(msg)
@@ -93,7 +163,7 @@ def tenes_pre(param):
             left = lattice[leftx, lefty]
             right = lattice[rightx, righty]
             simpleupdate_str.append("{} {} h 0".format(left, right))
-            fullupdate_str.append("{} {} h 1".format(left, right))
+            fullupdate_str.append("{} {} h 2".format(left, right))
     for leftx in range(1, X, 2):
         for lefty in range(Y):
             rightx = (leftx + 1) % X
@@ -101,23 +171,23 @@ def tenes_pre(param):
             left = lattice[leftx, lefty]
             right = lattice[rightx, righty]
             simpleupdate_str.append("{} {} h 0".format(left, right))
-            fullupdate_str.append("{} {} h 1".format(left, right))
+            fullupdate_str.append("{} {} h 2".format(left, right))
     for bottomy in range(0, Y, 2):
         for bottomx in range(X):
             topx = bottomx
             topy = (bottomy + 1) % Y
             bottom = lattice[bottomx, bottomy]
             top = lattice[topx, topy]
-            simpleupdate_str.append("{} {} v 0".format(bottom, top))
-            fullupdate_str.append("{} {} v 1".format(bottom, top))
+            simpleupdate_str.append("{} {} v 1".format(bottom, top))
+            fullupdate_str.append("{} {} v 3".format(bottom, top))
     for bottomy in range(1, Y, 2):
         for bottomx in range(X):
             topx = bottomx
             topy = (bottomy + 1) % Y
             bottom = lattice[bottomx, bottomy]
             top = lattice[topx, topy]
-            simpleupdate_str.append("{} {} v 0".format(bottom, top))
-            fullupdate_str.append("{} {} v 1".format(bottom, top))
+            simpleupdate_str.append("{} {} v 1".format(bottom, top))
+            fullupdate_str.append("{} {} v 3".format(bottom, top))
 
     dict_evolution = {
         "simple_update": "\n".join(simpleupdate_str),
@@ -157,13 +227,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Generate input files for TeNeS", add_help=True
+        description="Simple input generator for TeNeS", add_help=True
     )
 
-    parser.add_argument(
-        "input",
-        help="Input TOML file",
-    )
+    parser.add_argument("input", help="Input TOML file")
 
     parser.add_argument(
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
@@ -173,7 +240,7 @@ if __name__ == "__main__":
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
-    res = tenes_pre(toml.load(args.input))
+    res = tenes_simple(toml.load(args.input))
 
-    with open(args.output, 'w') as f:
+    with open(args.output, "w") as f:
         toml.dump(res, f)
