@@ -7,12 +7,15 @@ import numpy.linalg as linalg
 import toml
 
 
+TeNeSInput = namedtuple("TeNeSInput", "param lattice model lop ham")
+
+
 def make_evolution_tensor(Ham, tau):
     eigval, eigvec = linalg.eig(Ham)
     return np.dot(np.dot(eigvec, np.diag(np.exp(-tau * eigval))), eigvec.transpose())
 
 
-def array_to_str(A):
+def array_to_strarr(A):
     res = []
     X, Y = A.shape
     for x in range(X):
@@ -20,7 +23,7 @@ def array_to_str(A):
         for y in range(Y):
             row.append(str(A[x, y]))
         res.append(" ".join(row))
-    return "\n".join(res)
+    return res
 
 
 def index2coord(index, X):
@@ -53,11 +56,26 @@ def make_Lsub(Lsub):
         return Lsub
 
 
-Bond = namedtuple("Bond", "source target type")
+Bond = namedtuple("Bond", "source target dir type")
 
 
-class SquareLattice:
+def dumpbond(bond):
+    return "{} {} {} {}".format(bond.source, bond.target, bond.dir, bond.type)
+
+
+class Lattice(object):
+    def __init__(self):
+        self.type = ""
+        self.Lsub = [0, 0]
+        self.z = 0
+        self.bondtypes = 0
+        self.bonds = []
+
+
+class SquareLattice(Lattice):
     def __init__(self, param=None):
+        super(SquareLattice, self).__init__()
+        self.type = "square lattice"
         self.Lsub = [0, 0]
         self.z = 4
         self.bondtypes = 2
@@ -68,14 +86,14 @@ class SquareLattice:
         self.L_sub = make_Lsub(param["L_sub"])
         X, Y = self.L_sub
 
-        self.horizontal_bonds = []
+        self.bonds = []
         for leftx in range(0, X):
             for lefty in range(0, Y):
                 rightx = (leftx + 1) % X
                 righty = lefty
                 left = coord2index(leftx, lefty, X)
                 right = coord2index(rightx, righty, X)
-                self.horizontal_bonds.append(Bond(left, right, 0))
+                self.bonds.append(Bond(left, right, "h", 0))
 
         self.vertical_bonds = []
         for bottomy in range(0, Y):
@@ -84,11 +102,13 @@ class SquareLattice:
                 topy = (bottomy + 1) % Y
                 bottom = coord2index(bottomx, bottomy, X)
                 top = coord2index(topx, topy, X)
-                self.vertical_bonds.append(Bond(bottom, top, 1))
+                self.bonds.append(Bond(bottom, top, "v", 1))
 
 
-class HoneycombLattice:
+class HoneycombLattice(Lattice):
     def __init__(self, param=None):
+        super(HoneycombLattice, self).__init__()
+        self.type = "honeycomb lattice"
         self.z = 3
         self.bondtypes = 3
         if param is not None:
@@ -110,23 +130,25 @@ class HoneycombLattice:
             else:
                 sublat_b.append(index)
 
-        self.horizontal_bonds = []
-        self.vertical_bonds = []
+        self.bonds = []
 
         for index in sublat_a:
             x, y = index2coord(index, X)
             rightx = (x + 1) % X
-            topy = (y + 1) % Y
             rightindex = coord2index(rightx, y, X)
-            topindex = coord2index(x, topy, X)
-            self.horizontal_bonds.append(Bond(index, rightindex, 0))  # x-bond
-            self.vertical_bonds.append(Bond(index, topindex, 2))  # z-bond
+            self.bonds.append(Bond(index, rightindex, "h", 0))  # x-bond
 
         for index in sublat_b:
             x, y = index2coord(index, X)
             rightx = (x + 1) % X
             rightindex = coord2index(rightx, y, X)
-            self.horizontal_bonds.append(Bond(index, rightindex, 1))  # y-bond
+            self.bonds.append(Bond(index, rightindex, "h", 1))  # y-bond
+
+        for index in sublat_a:
+            x, y = index2coord(index, X)
+            topy = (y + 1) % Y
+            topindex = coord2index(x, topy, X)
+            self.bonds.append(Bond(index, topindex, "v", 2))  # z-bond
 
 
 class SpinModel:
@@ -168,8 +190,9 @@ class SpinModel:
             m = S - i
             Sz[i, i] = m
             if i > 0:
-                Splus[i, i - 1] = np.sqrt((S - m) * (S + m + 1.0))
-                Sminus[i - 1, i] = np.sqrt((S + m) * (S - m + 1.0))
+                Splus[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
+            if i < M - 1:
+                Sminus[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
         Sx = 0.5 * (Splus + Sminus)
 
         return Sz, Sx, Splus, Sminus
@@ -252,50 +275,18 @@ def tenes_simple(param):
         raise RuntimeError(msg)
 
     hams = [
-        model.bondhamiltonian(model_param, bt, lattice.z) for bt in range(lattice.bondtypes)
+        model.bondhamiltonian(model_param, bt, lattice.z)
+        for bt in range(lattice.bondtypes)
     ]
 
-    pparam = param.get("parameter", {})
-    simple_update = pparam.get("simple_update", {})
-    simple_tau = simple_update.get("tau", 0.01)
-    simple_evols = [make_evolution_tensor(H, simple_tau) for H in hams]
-    full_update = pparam.get("full_update", {})
-    full_tau = full_update.get("tau", 0.01)
-    full_evols = [make_evolution_tensor(H, full_tau) for H in hams]
+    dict_observable = {"local_operator": lops, "hamiltonian": hams}
 
-    nsimple_evols = len(simple_evols)
-
-    simpleupdate_str = []
-    fullupdate_str = []
-
-    for bond in lattice.horizontal_bonds:
-        simpleupdate_str.append(
-            "{} {} h {}".format(bond.source, bond.target, bond.type)
-        )
-        fullupdate_str.append(
-            "{} {} h {}".format(bond.source, bond.target, bond.type + nsimple_evols)
-        )
-
-    for bond in lattice.vertical_bonds:
-        simpleupdate_str.append(
-            "{} {} v {}".format(bond.source, bond.target, bond.type)
-        )
-        fullupdate_str.append(
-            "{} {} v {}".format(bond.source, bond.target, bond.type + nsimple_evols)
-        )
-
-    dict_evolution = {
-        "simple_update": "\n".join(simpleupdate_str),
-        "full_update": "\n".join(fullupdate_str),
-        "matrix": list(map(array_to_str, chain(simple_evols, full_evols))),
-    }
-
-    dict_observable = {
-        "local_operator": list(map(array_to_str, lops)),
-        "hamiltonian": list(map(array_to_str, hams)),
-        "hamiltonian_bonds": "\n".join(simpleupdate_str),
-    }
-
+    res = {}
+    if "parameter" in param:
+        res["parameter"] = param["parameter"]
+    res["lattice"] = lattice
+    res["model"] = model
+    res["observable"] = dict_observable
     if "correlation" in param:
         corparam = param["correlation"]
         dict_correlation = {}
@@ -304,17 +295,101 @@ def tenes_simple(param):
             dict_correlation["operators"] = corparam["operators"]
         else:
             dict_correlation["operators"] = [[0, 0], [0, 1], [1, 1]]
-
-    res = {}
-    if "parameter" in param:
-        res["parameter"] = param["parameter"]
-    res["lattice"] = param["lattice"]
-    res["evolution"] = dict_evolution
-    res["observable"] = dict_observable
-    if "correlation" in param:
         res["correlation"] = dict_correlation
 
     return res
+
+
+def dump(param):
+    ret = []
+
+    ret.append("[parameter]")
+    pparam = param["parameter"]
+    for name in ("tensor", "simple_update", "full_update", "ctm"):
+        if name in pparam:
+            ret.append("[parameter.{}]".format(name))
+            for k, v in pparam[name].items():
+                if isinstance(v, str):
+                    ret.append('{} = "{}"'.format(k, v))
+                else:
+                    ret.append("{} = {}".format(k, v))
+
+    ret.append("")
+    ret.append("[lattice]")
+    lattice = param["lattice"]
+    ret.append('type = "{}"'.format(lattice.type))
+    ret.append("L_sub = {}".format(lattice.Lsub))
+
+    ret.append("")
+    ret.append("[observable]")
+    obs = param["observable"]
+    lops = obs["local_operator"]
+    hams = obs["hamiltonian"]
+    ret.append("local_operator = [")
+    for lop in lops:
+        ret.append('"""')
+        for line in array_to_strarr(lop):
+            ret.append(line)
+        ret.append('""",')
+    ret.append("]")
+
+    ret.append("hamiltonian = [")
+    for ham in hams:
+        ret.append('"""')
+        for line in array_to_strarr(ham):
+            ret.append(line)
+        ret.append('""",')
+    ret.append("]")
+
+    ret.append('hamiltonian_bonds = """')
+    for bond in lattice.bonds:
+        ret.append(dumpbond(bond))
+    ret.append('"""')
+
+    ret.append("")
+    ret.append("[evolution]")
+    ret.append('simple_update = """')
+    for bond in lattice.bonds:
+        ret.append(dumpbond(bond))
+    ret.append('"""')
+
+    nsimple = lattice.bondtypes
+    ret.append('full_update = """')
+    for bond in lattice.bonds:
+        ret.append(
+            "{} {} {} {}".format(
+                bond.source, bond.target, bond.dir, bond.type + nsimple
+            )
+        )
+    ret.append('"""')
+
+    ret.append("matrix = [")
+    simple_update = pparam.get("simple_update", {})
+    simple_tau = simple_update.get("tau", 0.01)
+    for ham in hams:
+        ret.append('"""')
+        for line in array_to_strarr(make_evolution_tensor(ham, simple_tau)):
+            ret.append(line)
+        ret.append('""",')
+
+    full_update = pparam.get("full_update", {})
+    full_tau = full_update.get("tau", 0.01)
+    for ham in hams:
+        ret.append('"""')
+        for line in array_to_strarr(make_evolution_tensor(ham, full_tau)):
+            ret.append(line)
+        ret.append('""",')
+
+    ret.append("]")
+
+    if "correlation" in param:
+        corparam = param["correlation"]
+        ret.append("")
+        ret.append("[correlation]")
+        ret.append("r_max = {}".format(corparam["r_max"]))
+        ret.append("operators = {}".format(corparam["operators"]))
+
+    return "\n".join(ret)
 
 
 if __name__ == "__main__":
@@ -338,4 +413,5 @@ if __name__ == "__main__":
     res = tenes_simple(toml.load(args.input))
 
     with open(args.output, "w") as f:
-        toml.dump(res, f)
+        f.write(dump(res))
+        f.write('\n')
