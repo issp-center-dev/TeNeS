@@ -7,6 +7,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py
                @ONLY)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/simple_mode.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/simple_mode.py
+               @ONLY)
+
 foreach(basename input simple_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
@@ -24,4 +28,5 @@ foreach(basename input simple_update)
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
 endforeach()
 
+add_test(NAME simple_mode COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/simple_mode.py)
 add_test(NAME fulltest COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py)
