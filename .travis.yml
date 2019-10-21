@@ -16,6 +16,6 @@ script:
   - cd ${ROOTDIR}
   - mkdir build
   - cd build
-  - cmake -DCMAKE_CXX_COMPILER=`which mpic++` ../
+  - cmake ../
   - VERBOSE=1 make
   - ctest -VV
