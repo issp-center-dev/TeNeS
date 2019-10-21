@@ -1,6 +1,6 @@
 # TeNeS
 
-TeNeS (**Te**nsol **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
+TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
 
 ## Table of Contents
 
