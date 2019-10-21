@@ -11,10 +11,11 @@ install:
   - sudo apt-get install -y libscalapack-mpi-dev
   - pyenv global 3.7
   - python3 -m pip install -U pip
+  - python3 -m pip install numpy scipy toml
 script:
   - cd ${ROOTDIR}
   - mkdir build
   - cd build
-  - cmake  ../
+  - cmake -DCMAKE_CXX_COMPILER=`which mpic++` ../
   - VERBOSE=1 make
   - ctest -VV
