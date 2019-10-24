@@ -100,6 +100,8 @@ TEST_CASE("testing simple update"){
   std::ofstream ofs("res_simple_update.dat");
   ofs << std::setprecision(std::numeric_limits<double>::digits10);
 
+  int sign = 0;
+
   for(int i=0; i<D; ++i)
   for(int j=0; j<D; ++j)
   for(int k=0; k<D; ++k)
@@ -109,10 +111,19 @@ TEST_CASE("testing simple update"){
     double result, answer;
     new_Tn1.get_value(Index(i,j,k,l,m), result);
     ans_Tn1.get_value(Index(i,j,k,l,m), answer);
-    CHECK(result == doctest::Approx(answer).epsilon(tol));
+    if(sign == 0){
+      if(answer * result > 0.0){
+        sign = 1;
+      }else{
+        sign = -1;
+      }
+    }
+    CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
     ofs << result << " ";
   }
   ofs << std::endl;
+
+  sign = 0;
 
   for(int i=0; i<D; ++i)
   for(int j=0; j<D; ++j)
@@ -123,14 +134,30 @@ TEST_CASE("testing simple update"){
     double result, answer;
     new_Tn2.get_value(Index(i,j,k,l,m), result);
     ans_Tn2.get_value(Index(i,j,k,l,m), answer);
-    CHECK(result == doctest::Approx(answer).epsilon(tol));
+    if(sign == 0){
+      if(answer * result > 0.0){
+        sign = 1;
+      }else{
+        sign = -1;
+      }
+    }
+    CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
     ofs << result << " ";
   }
   ofs << std::endl;
 
+  sign = 0;
+
   for(int i=0; i<D; ++i){
     double result = new_lambda[i];
     double answer = ans_lambda[i];
+    if(sign == 0){
+      if(answer * result > 0.0){
+        sign = 1;
+      }else{
+        sign = -1;
+      }
+    }
     CHECK(result == doctest::Approx(answer).epsilon(tol));
     ofs << new_lambda[i] << " ";
   }

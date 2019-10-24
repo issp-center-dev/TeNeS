@@ -8,13 +8,13 @@ install:
   - sudo apt-get update
   - sudo apt-get install -y gcc gfortran cmake liblapack-dev
   - sudo apt-get install -y libopenmpi-dev openmpi-bin
-  - sudo apt-get install -y enchant
-  - pyenv global 3.7
-  - python3 -m pip install -U pip
+  - sudo apt-get install -y libscalapack-mpi-dev
+  - sudo apt-get install -y python3
+  - sudo apt-get install -y python3-numpy python3-scipy python3-toml
 script:
   - cd ${ROOTDIR}
   - mkdir build
   - cd build
-  - cmake  ../
+  - cmake ../
   - VERBOSE=1 make
   - ctest -VV
