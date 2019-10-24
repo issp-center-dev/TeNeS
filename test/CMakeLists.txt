@@ -19,7 +19,7 @@ foreach(basename input simple_update)
     target_include_directories(${testname} PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
 
     target_link_libraries(${testname} mptensor)
-    target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES})
+    target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
 endforeach()

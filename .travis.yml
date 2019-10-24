@@ -9,7 +9,6 @@ install:
   - sudo apt-get install -y gcc gfortran cmake liblapack-dev
   - sudo apt-get install -y libopenmpi-dev openmpi-bin
   - sudo apt-get install -y libscalapack-mpi-dev
-  - pyenv global 3.7
   - python3 -m pip install -U pip
   - python3 -m pip install numpy scipy toml
 script:

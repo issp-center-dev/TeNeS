@@ -119,12 +119,20 @@ if(SCALAPACK_FOUND)
 
   else(DEFINED BLAS_mkl_core_LIBRARY)
     find_library(_BLACS_LIBRARY
-      NAMES blacs-openmpi blacs-mpich
+      NAMES blacs blacs-openmpi blacs-mpich
       PATHS ${_LIBPATHS}
       DOC "The ScaLAPACK BLACS library")
     if(_BLACS_LIBRARY)
       list(APPEND SCALAPACK_LIBRARIES ${_BLACS_LIBRARY})
     endif(_BLACS_LIBRARY)
+
+    find_library(_BLACSCINIT_LIBRARY
+      NAMES blacsCinit blacsCinit-openmpi blacsCinit-mpich
+      PATHS ${_LIBPATHS}
+      DOC "The ScaLAPACK BLACS Cinit library")
+    if(_BLACSCINIT_LIBRARY)
+      list(APPEND SCALAPACK_LIBRARIES ${_BLACSCINIT_LIBRARY})
+    endif(_BLACSCINIT_LIBRARY)
 
   endif(DEFINED BLAS_mkl_core_LIBRARY)
 endif(SCALAPACK_FOUND)
