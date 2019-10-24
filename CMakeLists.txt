@@ -57,6 +57,10 @@ else()
     endif(OPENMP_FOUND)
 endif()
 
+if(NOT DEFINED OpenMP_CXX_LIBRARIES)
+    set(OpenMP_CXX_LIBRARIES "${OMP_FLAG}")
+endif()
+
 find_package(LAPACK REQUIRED)
 find_package(MPI REQUIRED)
 if(NOT MPI_CXX_INCLUDE_DIRS)

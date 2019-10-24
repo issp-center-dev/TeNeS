@@ -25,6 +25,6 @@ target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
 
 target_link_libraries(tenes mptensor)
-target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES})
+target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
 install(TARGETS tenes RUNTIME DESTINATION bin)
