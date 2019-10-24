@@ -9,9 +9,9 @@ install:
   - sudo apt-get install -y gcc gfortran cmake liblapack-dev
   - sudo apt-get install -y libopenmpi-dev openmpi-bin
   - sudo apt-get install -y libscalapack-mpi-dev
-  - python3 -m ensurepip
-  - python3 -m pip install -U pip
-  - python3 -m pip install numpy scipy toml
+  - python -m ensurepip
+  - python -m pip install -U pip
+  - python -m pip install numpy scipy toml
 script:
   - cd ${ROOTDIR}
   - mkdir build
