@@ -102,6 +102,7 @@ else()
 endif()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
+add_subdirectory(${PROJECT_SOURCE_DIR}/tool)
 
 if(Testing)
     add_subdirectory(${PROJECT_SOURCE_DIR}/test)

@@ -1,0 +1,76 @@
+from __future__ import print_function
+from os.path import join
+import subprocess
+import sys
+
+import numpy as np
+import toml
+
+
+def nearly_equal(x, y, tol):
+    return -tol < x - y < tol
+
+
+def load_str_as_array(s):
+    res = []
+    for line in s.split('\n'):
+        row = list(map(float, line.split()))
+        res.append(row)
+    return np.array(res)
+
+
+cmd = [
+    join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple"),
+    '-o',
+    join("output_simple_mode.toml"),
+    join("data", "simple_mode.toml"),
+]
+subprocess.call(cmd)
+
+
+res = toml.load("output_simple_mode.toml")
+ref = toml.load(join("data", "output_simple_mode.toml"))
+tol = 1.0e-12
+
+result = True
+
+if res['parameter'] != ref['parameter']:
+    print('check for the section "parameter" fails')
+    result = False
+
+if res['lattice'] != ref['lattice']:
+    print('check for the section "lattice" fails')
+    result = False
+
+for name in ('local_operator', 'hamiltonian'):
+    for res_A, ref_A in zip(res['observable'][name], ref['observable'][name]):
+        res_A = load_str_as_array(res_A)
+        ref_A = load_str_as_array(ref_A)
+        diff = np.abs(res_A-ref_A)
+        if not (diff < tol).all():
+            print('check for "observable.{}" fails'.format(name))
+            result = False
+
+for name in ('hamiltonian_bonds', ):
+    if res['observable'][name] != ref['observable'][name]:
+        print('check for "observable.{}" fails'.format(name))
+        result = False
+
+for name in ('matrix', ):
+    for res_A, ref_A in zip(res['evolution'][name], ref['evolution'][name]):
+        res_A = load_str_as_array(res_A)
+        ref_A = load_str_as_array(ref_A)
+        diff = np.abs(res_A-ref_A)
+        if not (diff < tol).all():
+            print('check for "evolution.{}" fails'.format(name))
+            result = False
+
+for name in ('simple_update', 'full_update'):
+    if res['evolution'][name] != ref['evolution'][name]:
+        print('check for "evolution.{}" fails'.format(name))
+        result = False
+
+if result:
+    sys.exit(0)
+else:
+    sys.exit(1)

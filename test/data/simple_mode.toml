@@ -1,0 +1,17 @@
+[model]
+type = 'spin'
+S = 0.5
+Jz = 1.0
+Jxy = 1.0
+
+[lattice]
+type = 'square lattice'
+L_sub = [2,2]
+
+[parameter]
+[parameter.simple_update]
+tau = 0.01
+num_step = 100
+[parameter.full_update]
+tau = 0.01
+num_step = 1
