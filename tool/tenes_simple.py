@@ -83,8 +83,8 @@ class SquareLattice(Lattice):
             self.load(param)
 
     def load(self, param):
-        self.L_sub = make_Lsub(param["L_sub"])
-        X, Y = self.L_sub
+        self.Lsub = make_Lsub(param["L_sub"])
+        X, Y = self.Lsub
 
         self.bonds = []
         for leftx in range(0, X):
@@ -115,11 +115,11 @@ class HoneycombLattice(Lattice):
             self.load(param)
 
     def load(self, param):
-        self.L_sub = make_Lsub(param["L_sub"])
-        if not all(map(lambda x: x % 2 == 0, self.L_sub)):
+        self.Lsub = make_Lsub(param["L_sub"])
+        if not all(map(lambda x: x % 2 == 0, self.Lsub)):
             msg = "All elements of Lsub must be even for a honeycomb lattice."
             raise RuntimeError(msg)
-        X, Y = self.L_sub
+        X, Y = self.Lsub
 
         sublat_a = []
         sublat_b = []
