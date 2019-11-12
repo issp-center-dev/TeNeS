@@ -4,12 +4,12 @@ D  = 4     # tensor_dim
 CHI  = 16  # env_dim
 
 [parameter.simple_update]
-num_step = 1000
 tau = 0.01
+num_step= 1000
 
 [parameter.full_update]
-num_step = 1
 tau = 0.01
+num_step = 1
 
 [parameter.ctm]
 iteration_max = 5
@@ -20,7 +20,7 @@ L_sub = [2,2]
 
 [model]
 type = "spin"
-Jz = -1.0
-Jxy = 0.0
-G = 1.4
+S = 1.0
+Jz = 1.0
+Jxy = 1.0
 
