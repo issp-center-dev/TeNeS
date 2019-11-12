@@ -8,7 +8,7 @@ num_step = 1
 
 [lattice]
 type = "square lattice"
-L_sub = [0, 0]
+L_sub = [2, 2]
 
 [observable]
 local_operator = [
