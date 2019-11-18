@@ -1,0 +1,25 @@
+[parameter]
+[parameter.tensor]
+D  = 4     # tensor_dim
+CHI  = 16  # env_dim
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 1000
+
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+
+[parameter.ctm]
+iteration_max = 5
+
+[lattice]
+type = "honeycomb lattice"
+L_sub = [2,2]
+
+[model]
+type = "spin"
+Jx = [1.0, 0.0, 0.0]
+Jy = [0.0, 1.0, 0.0]
+Jz = [0.0, 0.0, 1.0]
