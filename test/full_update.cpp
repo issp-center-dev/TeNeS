@@ -123,16 +123,6 @@ TEST_CASE("testing full update"){
         }
       }
       CHECK(result*sign[m] == doctest::Approx(answer).epsilon(tol));
-      ofs << result << " ";
-      std::cout << a << " "
-                << i << " "
-                << j << " "
-                << k << " "
-                << l << " "
-                << m << " "
-                << result << " "
-                << answer << " "
-                << std::endl;
     }
     ofs << std::endl;
   }
