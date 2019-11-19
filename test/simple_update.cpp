@@ -18,10 +18,14 @@ TEST_CASE("testing simple update"){
 
   // make inputs
 
-  tensor Tn1(Shape(D, D, D, D, ldof));
-  tensor Tn2(Shape(D, D, D, D, ldof));
-  std::vector<std::vector<double>> lambda_1(nleg, std::vector<double>(D, 1.0));
-  std::vector<std::vector<double>> lambda_2(nleg, std::vector<double>(D, 1.0));
+  std::vector<tensor> T(2, tensor(Shape(D, D, D, D, ldof)));
+
+  std::vector<std::vector<std::vector<double>>> lambda;
+  for(int i=0; i<2; ++i){
+    lambda.push_back(std::vector<std::vector<double>>(nleg, std::vector<double>(D, 1.0)));
+  }
+  std::vector<std::vector<double>>& lambda_1 = lambda[0];
+  std::vector<std::vector<double>>& lambda_2 = lambda[1];
 
   for(int i=0; i<D; ++i)
   for(int j=0; j<D; ++j)
@@ -29,8 +33,8 @@ TEST_CASE("testing simple update"){
   for(int l=0; l<D; ++l)
   for(int m=0; m<ldof; ++m)
   {
-    Tn1.set_value(Index(i,j,k,l,m), 1.0);
-    Tn2.set_value(Index(i,j,k,l,m), 1.0);
+    for(int a=0; a<2; ++a)
+      T[a].set_value(Index(i,j,k,l,m), 1.0);
   }
 
   tensor op(Shape(ldof, ldof, ldof, ldof));
@@ -51,10 +55,10 @@ TEST_CASE("testing simple update"){
 
   std::ifstream ifs("data/simple_update.dat");
 
-  tensor ans_Tn1(Shape(D, D, D, D, ldof));
-  tensor ans_Tn2(Shape(D, D, D, D, ldof));
+  std::vector<tensor> ans_T(2, tensor(Shape(D, D, D, D, ldof)));
   std::vector<double> ans_lambda(D, 0.0);
 
+  for(int a=0; a<2; ++a)
   for(int i=0; i<D; ++i)
   for(int j=0; j<D; ++j)
   for(int k=0; k<D; ++k)
@@ -63,17 +67,7 @@ TEST_CASE("testing simple update"){
   {
     double val;
     ifs >> val;
-    ans_Tn1.set_value(Index(i,j,k,l,m), val);
-  }
-  for(int i=0; i<D; ++i)
-  for(int j=0; j<D; ++j)
-  for(int k=0; k<D; ++k)
-  for(int l=0; l<D; ++l)
-  for(int m=0; m<ldof; ++m)
-  {
-    double val;
-    ifs >> val;
-    ans_Tn2.set_value(Index(i,j,k,l,m), val);
+    ans_T[a].set_value(Index(i,j,k,l,m), val);
   }
   for(int i=0; i<D; ++i){
     double val;
@@ -85,13 +79,13 @@ TEST_CASE("testing simple update"){
 
   PEPS_Parameters peps_parameters;
   int connect = 2;
-  tensor new_Tn1, new_Tn2;
+  std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 
-  Simple_update_bond(Tn1, Tn2,
+  Simple_update_bond(T[0], T[1],
       lambda_1, lambda_2,
       op, connect, peps_parameters,
-      new_Tn1, new_Tn2, new_lambda
+      new_T[0], new_T[1], new_lambda
       );
 
 
@@ -101,50 +95,29 @@ TEST_CASE("testing simple update"){
   ofs << std::setprecision(std::numeric_limits<double>::digits10);
 
   int sign = 0;
-
-  for(int i=0; i<D; ++i)
-  for(int j=0; j<D; ++j)
-  for(int k=0; k<D; ++k)
-  for(int l=0; l<D; ++l)
-  for(int m=0; m<ldof; ++m)
-  {
-    double result, answer;
-    new_Tn1.get_value(Index(i,j,k,l,m), result);
-    ans_Tn1.get_value(Index(i,j,k,l,m), answer);
-    if(sign == 0){
-      if(answer * result > 0.0){
-        sign = 1;
-      }else{
-        sign = -1;
+  for(int a=0; a<2; ++a){
+    sign = 0;
+    for(int i=0; i<D; ++i)
+    for(int j=0; j<D; ++j)
+    for(int k=0; k<D; ++k)
+    for(int l=0; l<D; ++l)
+    for(int m=0; m<ldof; ++m)
+    {
+      double result, answer;
+      new_T[a].get_value(Index(i,j,k,l,m), result);
+      ans_T[a].get_value(Index(i,j,k,l,m), answer);
+      if(sign == 0){
+        if(answer * result > 0.0){
+          sign = 1;
+        }else{
+          sign = -1;
+        }
       }
+      CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
+      ofs << result << " ";
     }
-    CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
-    ofs << result << " ";
+    ofs << std::endl;
   }
-  ofs << std::endl;
-
-  sign = 0;
-
-  for(int i=0; i<D; ++i)
-  for(int j=0; j<D; ++j)
-  for(int k=0; k<D; ++k)
-  for(int l=0; l<D; ++l)
-  for(int m=0; m<ldof; ++m)
-  {
-    double result, answer;
-    new_Tn2.get_value(Index(i,j,k,l,m), result);
-    ans_Tn2.get_value(Index(i,j,k,l,m), answer);
-    if(sign == 0){
-      if(answer * result > 0.0){
-        sign = 1;
-      }else{
-        sign = -1;
-      }
-    }
-    CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
-    ofs << result << " ";
-  }
-  ofs << std::endl;
 
   sign = 0;
 
