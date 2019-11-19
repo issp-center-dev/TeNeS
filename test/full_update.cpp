@@ -101,9 +101,9 @@ TEST_CASE("testing full update"){
   std::ofstream ofs("res_full_update.dat");
   ofs << std::setprecision(std::numeric_limits<double>::digits10);
 
-  int sign = 0;
+  std::vector<int> sign(ldof);
   for(int a=0; a<2; ++a){
-    sign = 0;
+    std::fill(sign.begin(), sign.end(), 0.0);
     for(int i=0; i<D; ++i)
     for(int j=0; j<D; ++j)
     for(int k=0; k<D; ++k)
@@ -113,16 +113,16 @@ TEST_CASE("testing full update"){
       double result, answer;
       new_T[a].get_value(Index(i,j,k,l,m), result);
       ans_T[a].get_value(Index(i,j,k,l,m), answer);
-      if(sign == 0){
+      if(sign[m] == 0){
         if(result != 0.0){
           if(answer * result > 0.0){
-            sign = 1;
+            sign[m] = 1;
           }else{
-            sign = -1;
+            sign[m] = -1;
           }
         }
       }
-      CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
+      CHECK(result*sign[m] == doctest::Approx(answer).epsilon(tol));
       ofs << result << " ";
       std::cout << a << " "
                 << i << " "
