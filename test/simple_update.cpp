@@ -107,10 +107,12 @@ TEST_CASE("testing simple update"){
       new_T[a].get_value(Index(i,j,k,l,m), result);
       ans_T[a].get_value(Index(i,j,k,l,m), answer);
       if(sign == 0){
-        if(answer * result > 0.0){
-          sign = 1;
-        }else{
-          sign = -1;
+        if(result == 0.0){
+          if(answer * result > 0.0){
+            sign = 1;
+          }else{
+            sign = -1;
+          }
         }
       }
       CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
