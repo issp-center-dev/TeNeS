@@ -1,7 +1,6 @@
 .. highlight:: none
 
-スタンダードモードの使用方法
+Usage of ``tenes_simple.py``
 --------------------------------
 
-スタンダードモードはver.1.0で実装予定です。
-ver. 1.0は2020年度中の公開を目指し開発中です。
+``tenes_simple.py`` will be released at ver.1.0.
