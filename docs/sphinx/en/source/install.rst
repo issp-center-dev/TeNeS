@@ -2,32 +2,32 @@
 Install
 -------------------
 
-
 Download
 ===================
-TeNeS のソースコードは `GitHub page <https://github.com/issp-center-dev/TeNeS>`_ からダウンロードできます。gitがインストールされている環境で、以下のコマンドを打つとダウンロードが開始されます。
+You can download the source code for``TeNeS``from the `GitHub page <https://github.com/issp-center-dev/TeNeS>`_ . 
+If you have git installed on your machine, type the following command to start download:
 
 ``$ git clone https://github.com/issp-center-dev/TeNeS``
 
 
-必要なライブラリ・環境
+Prerequisites
 ======================
-TeNeSのコンパイルするには以下のライブラリ・環境が必要です。
+The following tools are required for building TeNeS.
 
 1. C++11 compiler
 2. CMake (>=2.8.14)
 3. MPI と ScaLAPACK
 
-TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。
+TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
-インストール
+Install
 ======================
 
-1. 以下の手順に従ってビルドを行います。
+1. Build ``TeNeS`` by typing the following commands:
 
 ::
 
@@ -36,30 +36,30 @@ TeNeSは以下のライブラリに依存していますが、自動でダウン
   $ cmake ..
   $ make
 
-上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tests`` が作成されます。
+The executable file ``tests``  will be generated in  ``build/src`` directory.
   
-2. 次にインストールを実行します。
+2. Install ``TeNeS`` by typing the following commands:
 
 ::
 
   $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
   $ make
   $ make install
- 
-上の例では、実行ファイル ``tenes`` が ``<path to install to>/bin`` にインストールされます。 ``<path to install to>`` のデフォルト値は ``/usr/local`` です。
 
+The above installs ``tenes`` into the ``<path to install to>/bin`` . The default value of the ``<path to install to>`` is ``/usr/local``. 
 
-.. admonition:: コンパイラの指定
+.. admonition:: Specify compiler
 
-   ``CMake`` では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のコマンドを打ってください。
+   ``CMake`` detects your compiler automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,
+
    ::
 
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
-.. admonition:: プリインストールされた ``mptensor`` の利用
+.. admonition:: Use the pre-built mptensor
 
-   ``TeNeS`` でプリインストールされた ``mptensor`` を使用したい場合には、以下のコマンドを打ってください。
+   ``TeNeS`` is based on the parallerized tensor library ``mptensor``. The build system of ``TeNeS`` installs this automatically, but you can use the extra pre-built mptensor by the following way.
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../

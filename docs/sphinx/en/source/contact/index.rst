@@ -1,29 +1,28 @@
-.. pyMC documentation master file, created by
+.. TeNeS documentation master file, created by
    sphinx-quickstart on Wed Jul 31 13:13:22 2019.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-お問い合わせ
+Contacts
 =========================================
 
-``TeNeS`` に関するお問い合わせはこちらにお寄せください。
+- About Bugs
 
-- バグ報告
+  Please report all problems and bugs on the github Issues page
 
-  ``TeNeS`` のバグ関連の報告はGitHubのIssuesで受け付けています。
+  To resolve bugs early, follow these guidelines when reporting:
 
-  バグを早期に解決するため、報告時には次のガイドラインに従ってください。
-     
-     - 使用している ``TeNeS`` のバージョンを指定してください。
+   - Please specify the version of ``TeNeS`` you are using.
+   
+   - If there are problems for installation, please inform us about your operating system and the compiler, and include the input / output and CMakeCache.txt when you run cmake and make.
 
-     - インストールに問題がある場合には、使用しているオペレーティングシステムとコンパイラの情報についてお知らせください.
-       また, cmakeおよびmake実行時の入出力とCMakeCache.txtも一緒に記載してください。
+   - If a problem occurs during execution, enter the input file used for execution and its output.
 
-     - 実行に問題が生じた場合は, 実行に使用した入力ファイルとその出力を記載してください。
-     
-- その他
+  Thank you for your cooperation.
+      
+- Others
 
-  研究に関連するトピックなどGitHubのIssuesで相談しづらいことを問い合わせる際には, 以下の連絡先にコンタクトをしてください。
+  If you have any questions about topics related to your research that are difficult to consult at Issues on GitHub, please contact the following contact information.
 
-  E-mail: ``ptns-dev__at__issp.u-tokyo.ac.jp`` (_at_を@に変更してください)
+  E-mail: ``ptns-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @)
   

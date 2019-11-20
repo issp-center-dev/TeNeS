@@ -1,35 +1,35 @@
-概要
+Overview
 =================
 T.B.A.
 
 
-開発者
+Developers
 ==================
-``TeNeS`` は以下のメンバーで開発しています。
+``TeNeS`` is developed by the following members.
 
 - ver 0.1
 
-  - 大久保 毅 (東京大学大学院 理学系研究科)
-  - 森田 悟史 (東京大学 物性研究所)
-  - 本山 裕一 (東京大学 物性研究所)
-  - 吉見 一慶 (東京大学 物性研究所)
-  - 加藤 岳生 (東京大学 物性研究所)
-  - 川島 直輝 (東京大学 物性研究所)
+  - Tsuyoshi Okubo (Graduate School of Science, Univ. of Tokyo)
+  - Satoshi Morita (Institute for Solid State Physics, Univ. of Tokyo)
+  - Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
+  - Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
+  - Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
+  - Naoki Kawashim (Institute for Solid State Physics, Univ. of Tokyo)
 
-バージョン履歴
+Version information
+======================
+
+- ver. 0.1: 2019/xx/yy.
+
+License
 ==================
 
-- ver. 0.1: 2019/xx/yy にリリース。
+This package is distributed under GNU General Public License version 3 (GPL v3) or later.
 
-ライセンス
-==================
-
-本ソフトウェアのプログラムパッケージおよびソースコード一式はGNU General Public License version 3（GPL v3）に準じて配布されています。
-
-コピーライト
+Copyright
 ==================
 
 © *2019- The University of Tokyo. All rights reserved.*
 
-本ソフトウェアの一部は2019年度 東京大学物性研究所 ソフトウェア高度化プロジェクトの支援を受け開発されており、その著作権は東京大学が所持しています。
+This software was developed with the support of \"*Project for advancement of software usability in materials science*\" of The Institute for Solid State Physics, The University of Tokyo. 
      

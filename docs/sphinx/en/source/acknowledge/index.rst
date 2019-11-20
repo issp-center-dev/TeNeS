@@ -1,5 +1,5 @@
 ***************************
-謝辞
+Acknowledgement
 ***************************
 
-``TeNeS`` は東京大学物性研究所 ソフトウェア高度化プロジェクト (2019 年度) の支援を受け開発されました。この場を借りて感謝します。
+We would also like to express our thanks for the support of the \"*Project for advancement of software usability in materials science*\" of The Institute for Solid State Physics, The University of Tokyo, for the development of ``TeNeS``.

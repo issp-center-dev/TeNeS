@@ -1,9 +1,10 @@
 .. highlight:: none
 
-エキスパートモードの使用方法
+Expert usage
 ------------------------------
 
-エキスパートモードの実行は以下のように行うことができます。
+If you prepare input files of ``tenes`` by yourself,
+You can directry run ``tenes`` as follows:
 
 .. code:: bash
 
@@ -18,8 +19,8 @@
       -h,--help                   Print this help message and exit
       -v,--version                Show version information
 
--  引数として入力ファイル名を取ります。
--  コマンドラインオプションは、以下の通りです。
+-  Take the input file name as an argument.
+-  The command line options are:
 
    -  ``help``
    -  ``version``
