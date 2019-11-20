@@ -1,25 +1,15 @@
 ***************************
-使用方法
+Usage
 ***************************
 
-``TeNeS`` では3つのモードがあります。
+``TeNeS`` needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:
 
-- シンプルモード
+-  ``tenes_simple.py``: A script that generates input files for ``tenes`` by using a simple input file which specifies lattice model predefined.
 
-  あらかじめ定義された格子模型に対して, 簡単な入力ファイルから ``tenes`` を実行するモードです。
-  最初に ``tenes_simple.py`` を用いて, スタンダードおよびエキスパートモード用の入力ファイルを作成後、 ``tenes`` で計算の実行をします。
- 
-
-- スタンダードモード (ver. 1.0 で実装予定)
-
-  所定のフォーマットに従い入力ファイルを作成することで、自分で格子模型などを定義し実行するモードです。 ``tenes_sandard.py`` を用いて, エキスパートモード用の入力ファイルを作成後、 ``tenes`` で計算の実行をします。
-
+- ``tenes_standard.py`` (from ver. 1.0):  A script that generates input files for ``tenes`` by using input files for generating the lattice model.
   
-- エキスパートモード
-
-  所定のフォーマットに従い模型や演算順などを定義し実行するモードです。必要な入力ファイルを自分で作成した後,  ``tense`` で計算の実行をします。
-  
-以下、シンプルモードとスタンダードモードについて、基本使用方法について記載します。
+The following sections describe how to use each script, and finally how to use ``tenes``.
+See the file format for details on the input file of ``tenes``.
   
 .. toctree::
    :maxdepth: 2
