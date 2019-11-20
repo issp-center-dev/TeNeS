@@ -1,35 +1,35 @@
 .. highlight:: none
 
-Output files (ja)
+Output files
 ---------------------------------
 
-
-計算結果は ``output`` ディレクトリ以下に保存されます。
+Output files are generated in the ``output`` directry.
 
 
 ``parameters.dat``
 =====================
 
-``parameter`` と ``lattice`` のパラメータが出力されます。
+Paramters in ``parameter`` and ``lattice`` sections are outputted.
 
 ``energy.dat``
 ==============
-サイトあたりのエネルギーが出力されます。
+
+The energy of each site is output.
 
 ``site_obs.dat``
 =================
 
 
--  サイト演算子の期待値が出力されます。
--  各行4列からなります。
+-  The expected values of the site operator are outputted.
+-  Each row consists of four columns.
 
-   1. 演算子のインデックス
-   2. サイトのインデックス
-   3. 期待値の実部
-   4. 期待値の虚部
+   1. Index of the operator
+   2. Index of the sites
+   3. Real part of the expected value
+   4. Imaginary part of the expected value
 
-例
-~~
+Example
+~~~~~~~
 
 ::
 
@@ -50,14 +50,14 @@ Output files (ja)
 ``neighbor_obs.dat``
 ======================
 
--  サイト演算子の最近接相関が出力されます。
--  各行5列からなります。
+-  Nearest neighbor correlations for site operations are outputted.
+-  Each row consists of four columns.
 
-   1. 演算子のインデックス
-   2. サイトのインデックス
-   3. サイトのインデックス
-   4. 期待値の実部
-   5. 期待値の虚部
+   1. Index of the operator
+   2. Index of the sites
+   3. Index of the sites
+   4. Real part of the expected value
+   5. Imaginary part of the expected value
 
 ::
 
@@ -87,20 +87,59 @@ Output files (ja)
 ``correlation.dat``
 =====================
 
--  相関関数が出力されます。
--  各行8列から構成されます。
+-  Correlation functions are outputted.
+-  Each row consists of eight columns.
 
-   1. 左演算子のインデックス
-   2. 左演算子のサイトインデックス
-   3. 右演算子のインデックス
-   4. 右演算子のサイトインデックス
-   5. 右演算子のユニットセルオフセット (x)
-   6. 右演算子のユニットセルオフセット (y)
-   7. 演算子の実部
-   8. 演算子の虚部
+   1. Index of the left-hand operator
+   2. Site index of the left operator
+   3. Index of the right operator
+   4. Site index of the right operator
+   5. Unit cell offset of the right operator (x)
+   6. Unit cell offset of the right operator (y)
+   7. 
 
-例
-~~
+::
+
+    # $1: op_index
+    # $2: source_site
+    # $3: target_site
+    # $4: real
+    # $5: imag
+
+    0 0 1 -7.05927615064968900e-02 0.00000000000000000e+00
+    0 0 2 -7.27068456430051274e-02 0.00000000000000000e+00
+    0 1 0 -7.13284385957392297e-02 0.00000000000000000e+00
+    0 1 3 -7.19523349256113581e-02 0.00000000000000000e+00
+    0 2 3 -7.12610364895483045e-02 0.00000000000000000e+00
+    0 2 0 -7.19731507561011952e-02 0.00000000000000000e+00
+    0 3 2 -7.05633558230210067e-02 0.00000000000000000e+00
+    0 3 1 -7.26803750807340498e-02 0.00000000000000000e+00
+    1 0 1 -1.85942869237103348e-01 0.00000000000000000e+00
+    1 0 2 -1.87164731677545187e-01 0.00000000000000000e+00
+    1 1 0 -1.86360382550076586e-01 0.00000000000000000e+00
+    1 1 3 -1.86768451086366694e-01 0.00000000000000000e+00
+    1 2 3 -1.86384181909805935e-01 0.00000000000000000e+00
+    1 2 0 -1.86747576732693515e-01 0.00000000000000000e+00
+    1 3 2 -1.85975089525013598e-01 0.00000000000000000e+00
+    1 3 1 -1.87196522916879049e-01 0.00000000000000000e+00
+
+``correlation.dat``
+=====================
+
+-  Correlation functions are outputted.
+-  Each row consists of eight columns.
+
+   1. Index of the left-hand operator
+   2. Site index of the left operator
+   3. Index of the right operator
+   4. Site index of the right operator
+   5. Unit cell offset of the right operator (x)
+   6. Unit cell offset of the right operator (y)
+   7. Real part of the expected value
+   8. Imaginary part of the expected value
+
+Example
+~~~~~~~
 
 ::
 
@@ -124,10 +163,10 @@ Output files (ja)
     0 0 0 0 0 2 7.54607806587391516e-04 0.00000000000000000e+00 
     0 0 0 2 0 2 -4.47734559969679546e-04 0.00000000000000000e+00 
     1 0 1 1 0 0 -1.85942869237103237e-01 0.00000000000000000e+00 
-    （中略）
+    ...
     1 3 1 1 0 3 -1.65874245891461547e-01 0.00000000000000000e+00
 
 ``time.dat``
 =====================
 
-計算時間が出力されます。
+The calculation time is outputted.
