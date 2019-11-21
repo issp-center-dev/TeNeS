@@ -17,6 +17,12 @@ if(Testing)
     enable_testing()
 endif()
 
+
+set(USE_SANITIZER OFF)
+if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
+    set(USE_SANITIZER ON)
+endif ()
+
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
@@ -48,8 +54,10 @@ endif()
 include(${PROJECT_SOURCE_DIR}/config/cxx11.cmake)
 cxx11()
 
-set(CMAKE_MODULE_PATH "${DEPS_DIR}/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
-find_package(Sanitizers)
+if (USE_SANITIZER)
+    set(CMAKE_MODULE_PATH "${DEPS_DIR}/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+    find_package(Sanitizers)
+endif()
 
 set(OMP_FLAG "")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")

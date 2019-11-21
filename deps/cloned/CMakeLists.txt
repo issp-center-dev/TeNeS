@@ -1,7 +1,9 @@
 function(git_clone uri name branch)
-    execute_process(COMMAND ${GIT_EXECUTABLE} clone ${uri} ${name}
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                    RESULT_VARIABLE GIT_SUBMOD_RESULT)
+    if (NOT EXISTS ${name})
+        execute_process(COMMAND ${GIT_EXECUTABLE} clone ${uri} ${name}
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+    endif ()
     execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${branch}
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${name}
                    )
@@ -15,6 +17,6 @@ if (NOT CPPTOML_ROOT)
     git_clone(https://github.com/skystrife/cpptoml cpptoml v0.1.1)
 endif ()
 
-if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
+if (USE_SANITIZER)
     git_clone(https://github.com/arsenm/sanitizers-cmake sanitizers-cmake master)
 endif()

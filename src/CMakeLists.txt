@@ -10,7 +10,10 @@ Lattice.cpp
 edge.cpp
 util/string.cpp
 )
-add_sanitizers(tenes)
+
+if (USE_SANITIZER)
+    add_sanitizers(tenes)
+endif()
 
 # target_include_directories(tenes PUBLIC ${MPI_CXX_INCLUDE_DIRS})
 # target_link_libraries(tenes mptensor)
@@ -22,7 +25,7 @@ target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra>)
 
 target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
-target_include_directories(tenes PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
+target_include_directories(tenes PRIVATE ${DEPS_DIR}/cpptoml/include)
 
 target_link_libraries(tenes mptensor)
 target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
