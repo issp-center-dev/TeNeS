@@ -6,10 +6,6 @@
 Welcome to TeNeS's documentation!
 =========================================
 
-``TeNeS`` は... (簡単な紹介文：MateriAppsに掲載する程度)
-
-
-
 Contents
 --------
 

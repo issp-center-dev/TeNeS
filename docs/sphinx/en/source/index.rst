@@ -6,10 +6,6 @@
 Welcome to TeNeS's documentation!
 =========================================
 
-``TeNeS`` is... 
-
-
-
 Contents
 --------
 

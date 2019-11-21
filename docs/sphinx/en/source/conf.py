@@ -147,18 +147,20 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'TeNeS.tex', u'TeNeS Documentation',
-     u'Institute for Solid State Physics, University of Tokyo', 'manual'),
+     u'Institute for Solid State Physics, University of Tokyo', 'manual', 'True'),
 ]
 
+latex_docclass =  {'manual': 'jsbook'}
 
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'TeNeS', u'TeNeS Documentation',
+    (master_doc, 'TeNeS_en', u'TeNeS Documentation',
      [author], 1)
 ]
+
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -172,5 +174,12 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
+}
