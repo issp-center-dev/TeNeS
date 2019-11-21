@@ -117,6 +117,17 @@ else()
     endif()
 endif()
 
+if(CPPTOML_ROOT)
+    set(CPPTOML_INCLUDE_DIR ${CPPTOML_ROOT}/include)
+else()
+    set(CPPTOML_INCLUDE_DIR ${DEPS_DIR}/cpptoml/include)
+endif()
+
+message(STATUS "MPTENSOR_INCLUDE_DIR: ${MPTENSOR_INCLUDE_DIR}")
+message(STATUS "MPTENSOR_LIB_DIR: ${MPTENSOR_LIB_DIR}")
+message(STATUS "CPPTOML_INCLUDE_DIR: ${CPPTOML_INCLUDE_DIR}")
+
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
 add_subdirectory(${PROJECT_SOURCE_DIR}/tool)
 

@@ -1,9 +1,11 @@
 function(git_clone uri name branch)
-    if (NOT EXISTS ${name})
+    if (NOT IS_DIRECTORY ${name})
+        message(STATUS git clone ${uri})
         execute_process(COMMAND ${GIT_EXECUTABLE} clone ${uri} ${name}
                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                         RESULT_VARIABLE GIT_SUBMOD_RESULT)
     endif ()
+    message(STATUS git checkout ${branch})
     execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${branch}
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${name}
                    )
