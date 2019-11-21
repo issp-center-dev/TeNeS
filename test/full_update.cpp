@@ -7,11 +7,12 @@
 #include <PEPS_Basics.hpp>
 #include <PEPS_Parameters.cpp>
 
-TEST_CASE("testing simple update"){
+TEST_CASE("testing full update"){
   using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 
   const int ldof = 2;
   const int D = 2;
+  const int chi = 4;
   const int nleg = 4;
 
   const double tol = 1.0e-8;
@@ -19,25 +20,35 @@ TEST_CASE("testing simple update"){
   // make inputs
 
   std::vector<tensor> T(2, tensor(Shape(D, D, D, D, ldof)));
+  std::vector<tensor> C(4, tensor(Shape(chi, chi)));
+  std::vector<tensor> E(6, tensor(Shape(chi, chi, D, D)));
+  tensor op(Shape(ldof, ldof, ldof, ldof));
 
-  std::vector<std::vector<std::vector<double>>> lambda;
-  for(int i=0; i<2; ++i){
-    lambda.push_back(std::vector<std::vector<double>>(nleg, std::vector<double>(D, 1.0)));
-  }
-  std::vector<std::vector<double>>& lambda_1 = lambda[0];
-  std::vector<std::vector<double>>& lambda_2 = lambda[1];
-
+  for(int a=0; a<2; ++a)
   for(int i=0; i<D; ++i)
   for(int j=0; j<D; ++j)
   for(int k=0; k<D; ++k)
   for(int l=0; l<D; ++l)
   for(int m=0; m<ldof; ++m)
   {
-    for(int a=0; a<2; ++a)
       T[a].set_value(Index(i,j,k,l,m), 1.0);
   }
 
-  tensor op(Shape(ldof, ldof, ldof, ldof));
+  for(int a=0; a<4; ++a)
+  for(int i=0; i<D; ++i)
+  for(int j=0; j<D; ++j)
+  {
+    C[a].set_value(Index(i,j), 1.0);
+  }
+
+  for(int a=0; a<6; ++a)
+  for(int i=0; i<chi; ++i)
+  for(int j=0; j<chi; ++j)
+  for(int k=0; k<D; ++k)
+  for(int l=0; l<D; ++l)
+  {
+    E[a].set_value(Index(i,j,k,l), 1.0);
+  }
 
   for(int i=0; i<ldof; ++i)
   for(int j=0; j<ldof; ++j)
@@ -51,12 +62,26 @@ TEST_CASE("testing simple update"){
     op.set_value(Index(i,i,i,i), 1.0);
   }
 
+
+  // calculation
+
+  PEPS_Parameters peps_parameters;
+  int connect = 2;
+  std::vector<tensor> new_T(2);
+  std::vector<double> new_lambda;
+
+  Full_update_bond(C[0], C[1], C[2], C[3],
+                   E[0], E[1], E[2],
+                   E[3], E[4], E[5],
+                   T[0], T[1], op,
+                   2, peps_parameters, new_T[0], new_T[1]);
+
+
   // load answer
 
-  std::ifstream ifs("data/simple_update.dat");
+  std::ifstream ifs("data/full_update.dat");
 
   std::vector<tensor> ans_T(2, tensor(Shape(D, D, D, D, ldof)));
-  std::vector<double> ans_lambda(D, 0.0);
 
   for(int a=0; a<2; ++a)
   for(int i=0; i<D; ++i)
@@ -69,34 +94,16 @@ TEST_CASE("testing simple update"){
     ifs >> val;
     ans_T[a].set_value(Index(i,j,k,l,m), val);
   }
-  for(int i=0; i<D; ++i){
-    double val;
-    ifs >> val;
-    ans_lambda[i] = val;
-  }
-
-  // calculation
-
-  PEPS_Parameters peps_parameters;
-  int connect = 2;
-  std::vector<tensor> new_T(2);
-  std::vector<double> new_lambda;
-
-  Simple_update_bond(T[0], T[1],
-      lambda_1, lambda_2,
-      op, connect, peps_parameters,
-      new_T[0], new_T[1], new_lambda
-      );
 
 
   // check results
 
-  std::ofstream ofs("res_simple_update.dat");
+  std::ofstream ofs("res_full_update.dat");
   ofs << std::setprecision(std::numeric_limits<double>::digits10);
 
-  int sign = 0;
+  std::vector<int> sign(ldof);
   for(int a=0; a<2; ++a){
-    sign = 0;
+    std::fill(sign.begin(), sign.end(), 0.0);
     for(int i=0; i<D; ++i)
     for(int j=0; j<D; ++j)
     for(int k=0; k<D; ++k)
@@ -106,38 +113,20 @@ TEST_CASE("testing simple update"){
       double result, answer;
       new_T[a].get_value(Index(i,j,k,l,m), result);
       ans_T[a].get_value(Index(i,j,k,l,m), answer);
-      if(sign == 0){
+      if(sign[m] == 0){
         if(result != 0.0){
           if(answer * result > 0.0){
-            sign = 1;
+            sign[m] = 1;
           }else{
-            sign = -1;
+            sign[m] = -1;
           }
         }
       }
-      CHECK(result*sign == doctest::Approx(answer).epsilon(tol));
-      ofs << result << " ";
+      CHECK(result*sign[m] == doctest::Approx(answer).epsilon(tol));
     }
     ofs << std::endl;
   }
 
-  sign = 0;
-
-  for(int i=0; i<D; ++i){
-    double result = new_lambda[i];
-    double answer = ans_lambda[i];
-    if(sign == 0){
-      if(result != 0.0){
-        if(answer * result > 0.0){
-          sign = 1;
-        }else{
-          sign = -1;
-        }
-      }
-    }
-    CHECK(result == doctest::Approx(answer).epsilon(tol));
-    ofs << new_lambda[i] << " ";
-  }
   ofs << std::endl;
 }
 

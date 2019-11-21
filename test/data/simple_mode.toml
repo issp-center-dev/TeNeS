@@ -1,8 +1,9 @@
 [model]
 type = 'spin'
 S = 0.5
+Jx = 1.0
+Jy = 1.0
 Jz = 1.0
-Jxy = 1.0
 
 [lattice]
 type = 'square lattice'

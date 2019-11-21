@@ -11,7 +11,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/simple_mode.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/simple_mode.py
                @ONLY)
 
-foreach(basename input simple_update)
+foreach(basename input simple_update full_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
 
