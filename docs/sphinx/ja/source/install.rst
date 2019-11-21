@@ -12,7 +12,7 @@ TeNeS のソースコードは `GitHub page <https://github.com/issp-center-dev/
 
 必要なライブラリ・環境
 ======================
-TeNeSのコンパイルするには以下のライブラリ・環境が必要です。
+TeNeSをコンパイルするには以下のライブラリ・環境が必要です。
 
 1. C++11 compiler
 2. CMake (>=2.8.14)

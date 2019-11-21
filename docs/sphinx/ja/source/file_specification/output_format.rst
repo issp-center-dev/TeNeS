@@ -19,13 +19,13 @@
 =================
 
 
--  サイト演算子の期待値が出力されます。
+-  サイト演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle` が出力されます。
 -  各行4列からなります。
 
-   1. 演算子のインデックス
-   2. サイトのインデックス
-   3. 期待値の実部
-   4. 期待値の虚部
+   1. 演算子のインデックス :math:`\alpha`
+   2. サイトのインデックス :math:`i`
+   3. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\rangle`
+   4. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\rangle`
 
 例
 ~~
@@ -49,14 +49,14 @@
 ``neighbor_obs.dat``
 ======================
 
--  サイト演算子の最近接相関が出力されます。
+-  サイト演算子の最近接相関 :math:`\langle\hat{A}^\alpha_i \hat{A}^\alpha_j\rangle` が出力されます。
 -  各行5列からなります。
 
-   1. 演算子のインデックス
-   2. サイトのインデックス
-   3. サイトのインデックス
-   4. 期待値の実部
-   5. 期待値の虚部
+   1. 演算子のインデックス :math:`\alpha`
+   2. サイトのインデックス :math:`i`
+   3. サイトのインデックス :math:`j`
+   4. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle`
+   5. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle`
 
 ::
 
@@ -86,17 +86,17 @@
 ``correlation.dat``
 =====================
 
--  相関関数が出力されます。
+-  相関関数 :math:`C^{\alpha \beta}_{ij}(x,y) \equiv \langle \hat{A}^\alpha_i(0,0) \hat{A}^\beta_j(x,y) \rangle` が出力されます。
 -  各行8列から構成されます。
 
-   1. 左演算子のインデックス
-   2. 左演算子のサイトインデックス
-   3. 右演算子のインデックス
-   4. 右演算子のサイトインデックス
-   5. 右演算子のユニットセルオフセット (x)
-   6. 右演算子のユニットセルオフセット (y)
-   7. 演算子の実部
-   8. 演算子の虚部
+   1. 左演算子のインデックス :math:`\alpha`
+   2. 左演算子のサイトインデックス :math:`i`
+   3. 右演算子のインデックス :math:`\beta`
+   4. 右演算子のサイトインデックス :math:`j`
+   5. 右演算子のユニットセルオフセット (x) :math:`x`
+   6. 右演算子のユニットセルオフセット (y) :math:`y`
+   7. 演算子の実部 :math:`\mathrm{Re}C^{\alpha \beta}_{ij}(x,y)`
+   8. 演算子の虚部 :math:`\mathrm{Im}C^{\alpha \beta}_{ij}(x,y)`
 
 例
 ~~
