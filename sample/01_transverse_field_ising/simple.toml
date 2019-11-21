@@ -21,6 +21,7 @@ L_sub = [2,2]
 [model]
 type = "spin"
 Jz = -1.0
-Jxy = 0.0
+Jx = 0.0
+Jy = 0.0
 G = 1.4
 
