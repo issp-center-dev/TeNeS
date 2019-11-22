@@ -24,6 +24,15 @@ TeNeSは以下のライブラリに依存していますが、自動でダウン
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
+ScaLAPACKについては自身でインストールする必要があります。Macでhomebrewを利用されている方は、
+
+.. code::
+
+   brew install scalapack
+
+でインストールすることが可能です。それ以外の方は、ScaLAPACKのホームページを参照の上、インストールをしてください。
+
+   
 インストール
 ======================
 
