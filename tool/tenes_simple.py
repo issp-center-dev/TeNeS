@@ -9,9 +9,13 @@ import toml
 
 TeNeSInput = namedtuple("TeNeSInput", "param lattice model lop ham")
 
+# https://stackoverflow.com/a/42913743
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
 
 def make_evolution_tensor(Ham, tau):
-    eigval, eigvec = linalg.eig(Ham)
+    eigval, eigvec = linalg.eigh(Ham)
     return np.dot(np.dot(eigvec, np.diag(np.exp(-tau * eigval))), eigvec.transpose())
 
 
@@ -219,10 +223,12 @@ class SpinModel:
 
         S = param.get("S", 0.5)
         Sz, Sx, Splus, Sminus = self.localoperators(param)
+        Sy = 0.5 * (Splus - Sminus)
         E = np.eye(Sz.shape[0])
 
+        Jx = getparam(param, "Jx", bondtype, 1.0)
+        Jy = getparam(param, "Jy", bondtype, 1.0)
         Jz = getparam(param, "Jz", bondtype, 1.0)
-        Jxy = getparam(param, "Jxy", bondtype, 1.0)
         BQ = getparam(param, "BQ", bondtype, 0.0)
 
         h = param.get("h", 0.0)
@@ -230,7 +236,9 @@ class SpinModel:
         D = param.get("D", 0.0)
 
         ham = Jz * np.kron(Sz, Sz)
-        ham += 0.5 * Jxy * (np.kron(Splus, Sminus) + np.kron(Sminus, Splus))
+        ham += Jx * np.kron(Sx, Sx)
+        ham -= Jy * np.kron(Sy, Sy)
+        # ham += 0.5 * Jxy * (np.kron(Splus, Sminus) + np.kron(Sminus, Splus))
         ham += BQ * (
             np.kron(Sz, Sz) + 0.5 * np.kron(Splus, Sminus) + np.kron(Sminus, Splus)
         )
@@ -278,6 +286,11 @@ def tenes_simple(param):
         model.bondhamiltonian(model_param, bt, lattice.z)
         for bt in range(lattice.bondtypes)
     ]
+
+    for bt in range(lattice.bondtypes):
+        if not check_symmetric(hams[bt]):
+            msg = 'Bond Hamiltonian {} is not symmetric'.format(bt)
+            raise RuntimeError(msg)
 
     dict_observable = {"local_operator": lops, "hamiltonian": hams}
 
@@ -414,4 +427,5 @@ if __name__ == "__main__":
 
     with open(args.output, "w") as f:
         f.write(dump(res))
-        f.write('\n')
+        f.write("\n")
+

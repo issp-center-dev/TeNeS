@@ -15,11 +15,11 @@ num_step = 1
 iteration_max = 5
 
 [lattice]
-type = "square lattice"
+type = "honeycomb lattice"
 L_sub = [2,2]
 
 [model]
 type = "spin"
-Jx = 1.0
-Jy = 1.0
-Jz = 1.0
+Jx = [1.0, 0.0, 0.0]
+Jy = [0.0, 1.0, 0.0]
+Jz = [0.0, 0.0, 1.0]
