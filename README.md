@@ -1,3 +1,5 @@
+[![Build status (master)](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS)
+
 # TeNeS
 
 TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
