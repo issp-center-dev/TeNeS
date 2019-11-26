@@ -1,13 +1,15 @@
 from __future__ import print_function
 
-from itertools import chain, product
 from collections import namedtuple
+from itertools import product
+
 import numpy as np
 import numpy.linalg as linalg
+
 import toml
 
-
 TeNeSInput = namedtuple("TeNeSInput", "param lattice model lop ham")
+
 
 # https://stackoverflow.com/a/42913743
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
@@ -221,7 +223,6 @@ class SpinModel:
 
         """
 
-        S = param.get("S", 0.5)
         Sz, Sx, Splus, Sminus = self.localoperators(param)
         Sy = 0.5 * (Splus - Sminus)
         E = np.eye(Sz.shape[0])
@@ -289,7 +290,7 @@ def tenes_simple(param):
 
     for bt in range(lattice.bondtypes):
         if not check_symmetric(hams[bt]):
-            msg = 'Bond Hamiltonian {} is not symmetric'.format(bt)
+            msg = "Bond Hamiltonian {} is not symmetric".format(bt)
             raise RuntimeError(msg)
 
     dict_observable = {"local_operator": lops, "hamiltonian": hams}
@@ -428,4 +429,3 @@ if __name__ == "__main__":
     with open(args.output, "w") as f:
         f.write(dump(res))
         f.write("\n")
-
