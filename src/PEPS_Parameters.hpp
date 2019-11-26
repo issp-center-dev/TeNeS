@@ -44,8 +44,12 @@ public:
   int Lcor;
 
 
-  // misc
+  // random
   int seed;
+
+  // IO
+  std::string tensor_load_dir;
+  std::string tensor_save_dir;
 
   PEPS_Parameters();
 

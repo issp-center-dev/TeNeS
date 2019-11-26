@@ -89,6 +89,8 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   if(tensor != nullptr){
     pparam.D = find_or(tensor, "D", 2);
     pparam.CHI = find_or(tensor, "CHI", 4);
+    pparam.tensor_load_dir = find_or(tensor, "load_dir", std::string(""));
+    pparam.tensor_save_dir = find_or(tensor, "save_dir", std::string(""));
   }
 
   // Simple update
