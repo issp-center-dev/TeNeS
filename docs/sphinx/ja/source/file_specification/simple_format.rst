@@ -1,6 +1,6 @@
 .. highlight:: none
 
-``tense_simple``
+``tense_simple`` の入力ファイル
 ---------------------------------
 
 -  ファイルフォーマットは
@@ -26,6 +26,98 @@
    :widths: 15, 30, 20, 10
 
    ``tau``, 虚時間発展演算子における虚時間の刻み幅, 実数, 0.01
+
+以下は ``tenes`` の入力ファイルと共通のパラメータになります。
+
+``parameter.tensor``
+~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 15, 30, 20, 10
+
+   ``D``,        中心テンソルがもつ virtual ボンドの次元,  整数,   2
+   ``CHI``,      角転送行列の virtual ボンドの次元,        整数,   4
+   ``save_dir``, 最適化後のテンソルを書き込むディレクトリ, 文字列, ""
+   ``load_dir``, 初期テンソルを読み込むディレクトリ,       文字列, ""
+
+
+- ``save_dir``
+  - 最適化後のテンソルをこのディレクトリ以下に保存します
+  - 空文字列の場合は保存しません
+- ``load_dir``
+  - 各種テンソルをこのディレクトリ以下から読み込みます
+  - 保存したときと同じ並列度である必要があります
+  - 空文字列の場合は読み込みません
+
+``parameter.simple_update``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 15, 30, 20, 10
+
+   ``num_step``,              simple update の回数,                       整数, 0
+   ``inverse_lambda_cutoff``, simple update でゼロとみなす平均場のcutoff, 実数, 1e-12
+
+``parameter.full_update``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 15, 30, 20, 10
+
+   ``num_step``,                 full update の回数,                                               整数,   0
+   ``inverse_projector_cutoff``, 使っていない気がする（オリジナルのinverse\_env\_cut?）,           実数,   1e-12
+   ``inverse_precision``,        full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff, 実数,   1e-12
+   ``convergence_epsilon``,      full update でtruncationの最適化を行う際の収束判定値,             実数,   1e-12
+   ``iteration_max``,            full update でtruncationの最適化を行う際のiterationの最大回数,    整数,   1000
+   ``gauge_fix``,                テンソルのゲージを固定するかどうか,                               真偽値, true
+   ``fastfullupdate``,           Fast full update にするかどうか,                                  真偽値, true
+
+``parameter.ctm``
+~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 15, 30, 20, 10
+
+   ``inverse_projector_cutoff``, CTMのprojectorを計算する際にゼロとみなす特異値のcutoff, 実数,   1e-12
+   ``convergence_epsilon``,      CTMの収束判定値,                                        実数,   1e-10
+   ``iteration_max``,            CTMの収束iterationの最大回数,                           整数,   100
+   ``projector_corner``,         CTMのprojector計算で1/4角のテンソルのみを使う,          真偽値, true
+   ``use_rsvd``,                 SVD を 乱択SVD で置き換えるかどうか,                    真偽値, false
+   ``rsvd_oversampling_factor``, ,                                                       整数,   2
+
+
+``parameter.random``
+~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 15, 30, 20, 10
+
+   ``seed``, テンソルの初期化に用いる疑似乱数生成器のシード, 整数, 11
+
+例
+~~
+
+::
+
+    [parameter]
+    [parameter.tensor]
+    D  = 4     # tensor_dim
+    CHI  = 16  # env_dim
+
+    [parameter.simple_update]
+    num_step = 1000
+
+    [parameter.full_update]
+    num_step = 1
+
+    [parameter.ctm]
+    iteration_max = 5
+
 
 ``lattice`` セクション
 ==========================
@@ -71,6 +163,16 @@
  0 - 1 ~ 0
 
 
+以下は、 ``tenes`` と共通のパラメータになります。
+
+.. csv-table::
+   :header: "名前", "説明", "型"
+   :widths: 15, 30, 20
+
+   ``L_sub``, ユニットセルの大きさ, 整数のリスト
+
+
+
 ``model`` セクション
 ==========================
 
@@ -112,4 +214,91 @@
 交換相互作用および双二次相互作用としてリストを与えることで、格子ボンドの種類ごとに相互作用の大きさを変えることができます。
 リストの要素数が格子ボンドの種類より少ない場合、足りない分は指定された最後の要素で埋められます。
 
-物理量測定に使われる局所物理量として、 :math:`S^z` と :math:`S^x` が定義されます。
+
+``observable`` セクション
+==========================
+
+``tenes_simple`` ではデフォルトでは、物理量測定に使われる局所物理量として、 :math:`S^z` と :math:`S^x` が定義されます。
+より詳細な物理量測定は、 ``tenes`` と共通のフォーマットで上書きして行うことができます。
+以下、 ``tenes`` と共通のフォーマットを記載します。
+
+.. csv-table::
+   :header: "名前", "説明", "型"
+   :widths: 15, 30, 20
+
+   ``local_operator``,    サイト演算子 (ex. Sz),                          文字列のリスト
+   ``hamiltonian``,       ボンドハミルトニアン,                           文字列のリスト
+   ``hamiltonian_bonds``, ボンドハミルトニアンの種類と作用するボンドの組, 文字列
+
+``local_operator``, ``hamiltonian``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``evolution.matrix`` と同様。
+定義した順番がそのまま演算子・ハミルトニアンのインデックスに対応します。
+
+``hamiltonian_bonds``
+~~~~~~~~~~~~~~~~~~~~~
+
+``evolution.simple_update`` と同様。
+
+例
+~~
+
+::
+
+    [observable]
+    local_operator = [
+    """
+      0.5  0.0
+      0.0 -0.5
+    """,
+    """
+      0.0 0.5
+      0.5 0.0
+    """,
+    ]
+
+    hamiltonian_bonds = """
+    0 1 h 0
+    3 2 h 0
+    2 3 h 0
+    1 0 h 0
+    0 2 v 0
+    3 1 v 0
+    2 0 v 0
+    1 3 v 0
+    """
+
+    hamiltonian = [
+    """
+      0.25   0.0    0.0     0.0
+      0.0   -0.25   0.5     0.0  
+      0.0    0.5   -0.25    0.0  
+      0.0    0.0    0.0     0.25
+    """,
+    ]
+
+``correlation`` セクション
+==========================
+
+``tenes_simple`` では相関関数 ``C = <A(0)B(r)>`` はデフォルトでは計算されません。
+相関関数を計算したい場合は、 ``tenes`` と共通のファイルフォーマットで指定することができます。
+以下、 ``correlation`` セクションで指定できるパラメータについて説明します。
+
+.. csv-table::
+   :header: "名前", "説明", "型"
+   :widths: 15, 30, 20
+
+   ``r_max``,     相関関数の距離 r の最大値, 整数
+   ``operators``, "相関関数を測る演算子 A,    B の番号", 整数のリストのリスト
+
+演算子は ``observable`` セクションで指定したものが用いられます。
+
+例
+~~
+
+::
+
+    [correlation]
+    r_max = 5
+    operators = [[0,0], [0,1], [1,1]]
