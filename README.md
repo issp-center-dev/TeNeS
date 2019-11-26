@@ -81,7 +81,7 @@ The file format of an input file is described in the manual page (under the cons
 
 ## Question or comment
 
-Feel free to ask any question through an issue (public) or an e-mail (private) (`ptns-dev__at__issp.u-tokyo.ac.jp`, `__at__ -> @`).
+Feel free to ask any question through an issue (public) or an e-mail (private) (`tenes-dev__at__issp.u-tokyo.ac.jp`, `__at__ -> @`).
 
 Pull request is welcome (even for a small typo, of course!).
 
