@@ -16,28 +16,27 @@ add_custom_target(doc-en-html ALL
     ${SPHINX_HTML_DIR}
   )
 
-# if(LATEX_FOUND)
-#   add_custom_target(doc-en-pdf ALL
-#     COMMAND
-#       env PYTHONPATH="${pythonpath_build}:$ENV{PYTHONPATH}"
-#       ${SPHINX_EXECUTABLE}
-#       -b latex
-#       -d ${SPHINX_CACHE_DIR}
-#       ${CMAKE_CURRENT_SOURCE_DIR}
-#       ${SPHINX_PDF_DIR}
-#     COMMAND
-#       cd pdf && make
-#     )
-#   install(DIRECTORY ${SPHINX_PDF_DIR}
-#     DESTINATION ${TENES_DOC_DIR_EN}
-#     FILES_MATCHING PATTERN "*.pdf"
-#     )
-#
-#   add_custom_target(doc-en DEPENDS doc-en-html doc-en-pdf)
-# else(LATEX_FOUND)
-#   add_custom_target(doc-en DEPENDS doc-en-html)
-# endif(LATEX_FOUND)
-add_custom_target(doc-en DEPENDS doc-en-html)
+if(LATEX_FOUND)
+   add_custom_target(doc-en-pdf ALL
+     COMMAND
+       env PYTHONPATH="${pythonpath_build}:$ENV{PYTHONPATH}"
+       ${SPHINX_EXECUTABLE}
+       -b latex
+       -d ${SPHINX_CACHE_DIR}
+       ${CMAKE_CURRENT_SOURCE_DIR}
+       ${SPHINX_PDF_DIR}
+     COMMAND
+       cd pdf && make
+     )
+   install(DIRECTORY ${SPHINX_PDF_DIR}
+     DESTINATION ${TENES_DOC_DIR_EN}
+     FILES_MATCHING PATTERN "*.pdf"
+     )
+
+  add_custom_target(doc-en DEPENDS doc-en-html doc-en-pdf)
+ else(LATEX_FOUND)
+   add_custom_target(doc-en DEPENDS doc-en-html)
+ endif(LATEX_FOUND)
 
 install(DIRECTORY ${SPHINX_HTML_DIR}
   DESTINATION ${TENES_DOC_DIR_EN}

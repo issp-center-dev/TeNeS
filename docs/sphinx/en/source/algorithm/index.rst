@@ -16,7 +16,7 @@ Please see the following documents if you want to know the algorithms used in ``
    -  H. C. Jiang, Z. Y. Weng, and T. Xiang, Phys. Rev. Lett. 101,
       090603 (2008).
 
--  About Full update（including the evaluation of the CTMRG's environment）
+-  About Full update (including the evaluation of the CTMRG's environment)
 
    -  J. Jordan, R. Orús, G. Vidal, F. Verstraete, and J. I. Cirac,
       Phys. Rev. Lett. 101, 250602 (2008).

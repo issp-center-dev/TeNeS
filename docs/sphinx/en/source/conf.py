@@ -150,8 +150,6 @@ latex_documents = [
      u'Institute for Solid State Physics, University of Tokyo', 'manual', 'True'),
 ]
 
-latex_docclass =  {'manual': 'jsbook'}
-
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples

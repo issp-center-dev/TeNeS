@@ -1,106 +1,100 @@
 .. highlight:: none
 
-``tense_simple`` の入力ファイル
+Input file for ``tense_simple`` 
 ---------------------------------
 
--  ファイルフォーマットは
+-  File format is
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
-   形式
--  ``model``, ``parameter``, ``lattice``, ``observable``, ``correlation``
-   の5つのセクションを持ちます。 なお、 ``observable``, ``correlation`` セクションは、
-   エキスパートモードの入力ファイルと共通ですので、そちらを参照してください。ここでは, ``lattice``, ``model`` セクションについて解説します。
+   format.
+-  The input file has five sections : ``model``, ``parameter``, ``lattice``, ``observable``, ``correlation`` .
 
-   -  将来的にはファイル名を指定することで分割可能にする予定です。
+-  In future, the file will be split by specifying a file name.
 
-
-``parameter`` セクション
+``parameter`` section
 ==========================
 
-``parameter`` セクションの内容は、そのまま出力の ``parameter`` セクションにコピーされます。
-
-また、 simple update と full update における虚時間発展演算子の虚時間刻み幅を
-サブセクション ``simple_update``, ``full_update`` で指定できます。
+The contents of the ``parameter`` section are copied directly to the ``parameter`` section of the input file of ``tenes``.
+You can also specify the imaginary time step size for the imaginary time evolution operator in simple and full updates in the subsections ``simple_update``, ``full_update``.
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``tau``, 虚時間発展演算子における虚時間の刻み幅, 実数, 0.01
+   ``tau``, imaginary time step in the imaginary time evolution operator, Real, 0.01
 
-以下は ``tenes`` の入力ファイルと共通のパラメータになります。
+The following parameters are common to the ``tenes`` input file.
 
 ``parameter.tensor``
 ~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``D``,        中心テンソルがもつ virtual ボンドの次元,  整数,   2
-   ``CHI``,      角転送行列の virtual ボンドの次元,        整数,   4
-   ``save_dir``, 最適化後のテンソルを書き込むディレクトリ, 文字列, ""
-   ``load_dir``, 初期テンソルを読み込むディレクトリ,       文字列, ""
+   ``D``,        The virtual bond dimensions of the central tensor,  Integer,   2
+   ``CHI``,      The virtual bond dimensions of the angular transfer matrix,        Integer,   4
+   ``save_dir``, Directory to write optimized tensors, Str, ""
+   ``load_dir``, Directory to read initial tensor, Str, ""
 
 
 - ``save_dir``
-  - 最適化後のテンソルをこのディレクトリ以下に保存します
-  - 空文字列の場合は保存しません
+  - Store optimized tensors below this directory.
+  - When it is empty, the tensors are not saved.
 - ``load_dir``
-  - 各種テンソルをこのディレクトリ以下から読み込みます
-  - 保存したときと同じ並列度である必要があります
-  - 空文字列の場合は読み込みません
+  - Read various tensors from below this directory.
+  - Must be same degree of parallelism as when saved.
+  - Not read if it is empty.
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``num_step``,              simple update の回数,                       整数, 0
-   ``inverse_lambda_cutoff``, simple update でゼロとみなす平均場のcutoff, 実数, 1e-12
+   ``num_step``,              Number of simple updates, Integer, 0
+   ``inverse_lambda_cutoff``, cutoff of the mean field to be considered zero in the simple update, Real, 1e-12
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``num_step``,                 full update の回数,                                               整数,   0
-   ``inverse_projector_cutoff``, 使っていない気がする（オリジナルのinverse\_env\_cut?）,           実数,   1e-12
-   ``inverse_precision``,        full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff, 実数,   1e-12
-   ``convergence_epsilon``,      full update でtruncationの最適化を行う際の収束判定値,             実数,   1e-12
-   ``iteration_max``,            full update でtruncationの最適化を行う際のiterationの最大回数,    整数,   1000
-   ``gauge_fix``,                テンソルのゲージを固定するかどうか,                               真偽値, true
-   ``fastfullupdate``,           Fast full update にするかどうか,                                  真偽値, true
+   ``num_step``,                 Number of full updates,  Integer,   0
+   ``inverse_precision``,        Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update, Real,   1e-12
+   ``convergence_epsilon``,      Convergence criteria for truncation optimization with full update, Real, 1e-12
+   ``iteration_max``,            Maximum iteration number for truncation optimization on full updates,    Integer,   1000
+   ``gauge_fix``,                Whether the tensor gauge is fixed, Boolean, true
+   ``fastfullupdate``,           Whether the Fast full update is adopted, Boolean, true
 
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``inverse_projector_cutoff``, CTMのprojectorを計算する際にゼロとみなす特異値のcutoff, 実数,   1e-12
-   ``convergence_epsilon``,      CTMの収束判定値,                                        実数,   1e-10
-   ``iteration_max``,            CTMの収束iterationの最大回数,                           整数,   100
-   ``projector_corner``,         CTMのprojector計算で1/4角のテンソルのみを使う,          真偽値, true
-   ``use_rsvd``,                 SVD を 乱択SVD で置き換えるかどうか,                    真偽値, false
-   ``rsvd_oversampling_factor``, ,                                                       整数,   2
+   ``inverse_projector_cutoff``, Cutoff of singular values to be considered as zero when computing CTM projectors, Real,   1e-12
+   ``convergence_epsilon``,      CTM convergence criteria,                                        Real,   1e-10
+   ``iteration_max``,            Maximum iteration number of convergence for CTM,                           Integer,   100
+   ``projector_corner``,         Whether to use only the 1/4 corner tensor in the CTM projector calculation,          Boolean, true
+   ``use_rsvd``,                 Whether to replace SVD with Random SVD,                    Boolean, false
+   ``rsvd_oversampling_factor``, ,                                                       Integer,   2
 
 
 ``parameter.random``
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``seed``, テンソルの初期化に用いる疑似乱数生成器のシード, 整数, 11
+   ``seed``, Seed of the pseudo-random number generator used to initialize the tensor, Integer, 11
 
-例
-~~
+Example
+~~~~~~~
 
 ::
 
@@ -119,26 +113,26 @@
     iteration_max = 5
 
 
-``lattice`` セクション
+``lattice`` section
 ==========================
 
-計算する格子を指定します。
-正方格子 (square lattice) と 蜂の巣格子 (honeycomb lattice) が定義されています。
+Specify the lattice information.
+Square lattice and honeycomb lattice are defined as lattice types.
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``type``, "格子名 (square lattice もしくは honeycomb lattice)", 文字列, --
-   ``L_sub``, ユニットセルの大きさ, 整数もしくは2つの整数からなるリスト, --
+   ``type``, "Lattice name (square lattice or honeycomb lattice)", Str, --
+   ``L_sub``, Unit cell size, Integer or a list of two integers, --
 
 
-正方格子 square lattice
+Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ボンドは水平方向と垂直方向の2種類あります。
+There are two types of bond, horizontal and vertical.
 
-``L_sub = 2`` のときのユニットセルは次の通り::
+The unit cell for ``L_sub = 2`` is given as follows::
 
  0   1
  |   |
@@ -147,14 +141,14 @@
  0 - 1 - 0
 
 
-蜂の巣格子 honeycomb lattice
+Honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ユニットセルの大きさ (``L_sub`` の各要素)は偶数でなければなりません。
+Unit cell size (Each element of ``L _ sub``) must be an even number.
 
-ボンドはx, y, z の3種類あります（それぞれ、下図の ``-``, ``~``, ``|`` に対応）。
+There are 3 types of bonds: x, y, and z (corresponding to ``-``, ``~``, ``|``  in the below figure).
 
-``L_sub = 2`` のときのユニットセルは次の通り::
+The unit cell for ``L_sub = 2`` is given as follows::
 
  0   1
      |
@@ -163,86 +157,77 @@
  0 - 1 ~ 0
 
 
-以下は、 ``tenes`` と共通のパラメータになります。
-
-.. csv-table::
-   :header: "名前", "説明", "型"
-   :widths: 15, 30, 20
-
-   ``L_sub``, ユニットセルの大きさ, 整数のリスト
-
-
-
-``model`` セクション
+``model`` section
 ==========================
 
-計算する模型を指定します。
-スピン系 (spin) が定義済みです。
+Specify the type of the model.
+Spin system is only defined for ver. 0.1.
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 15, 10
 
-   ``type``, 模型の種類, 文字列, --
+   ``type``, The type of the model, Str, --
 
 
-模型の種類によって相互作用などのパラメータ名が変わります。
+Parameter names such as interaction depends on the model type.
 
-スピン系 spin
+Spin system
 ~~~~~~~~~~~~~~~~~~~~~
 
-スピン系
+Spin system
 
 .. math ::
 
  \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]
 
 .. csv-table::
-   :header: "名前", "説明", "型", "デフォルト"
+   :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``S``, "局所スピンの大きさ", 実数, 0.5
-   ``Jx``, "交換相互作用J のx 成分", 実数もしくは実数のリスト, 1.0
-   ``Jy``, "交換相互作用J のy 成分", 実数もしくは実数のリスト, 1.0
-   ``Jz``, "交換相互作用J のz 成分", 実数もしくは実数のリスト, 1.0
-   ``BQ``, "双二次相互作用B", 実数もしくは実数のリスト, 0.0
-   ``h``, "縦磁場 h", 実数, 0.0
-   ``G``, "横磁場 :math:`\Gamma` ", 実数, 0.0
-   ``D``, "オンサイトスピン異方性 D", 実数, 0.0
+   ``S``, "Magnituide of the local spin", Real, 0.5
+   ``Jx``, "The x component of the exchange interaction J", Real or a list of Real, 1.0
+   ``Jy``, "The y component of the exchange interaction J", Real or a list of Real, 1.0
+   ``Jz``,"The z component of the exchange interaction J", Real or a list of Real, 1.0, Real or a list of Real, 1.0
+   ``BQ``, "Biquadratic interaction B", Real or a list of Real, 0.0
+   ``h``, "longitudinal magnetic field h", Real, 0.0
+   ``G``, "Transverse magnetic field
+ :math:`\Gamma` ", Real, 0.0
+   ``D``, "On-site spin anisotropy D", Real, 0.0
 
 
-交換相互作用および双二次相互作用としてリストを与えることで、格子ボンドの種類ごとに相互作用の大きさを変えることができます。
-リストの要素数が格子ボンドの種類より少ない場合、足りない分は指定された最後の要素で埋められます。
+By providing a list of exchange and biquadratic interactions, we can vary the magnitude of the interaction for each type of lattice bond.
+If the number of elements in the list is less than the type of lattice bond, the remainder is filled in with the last element specified.
 
 
-``observable`` セクション
+``observable`` section
 ==========================
 
-``tenes_simple`` ではデフォルトでは、物理量測定に使われる局所物理量として、 :math:`S^z` と :math:`S^x` が定義されます。
-より詳細な物理量測定は、 ``tenes`` と共通のフォーマットで上書きして行うことができます。
-以下、 ``tenes`` と共通のフォーマットを記載します。
+By default, the local physical quantities used for physical quantities measurements: :math:`S^z`  and :math:`S^x` .
+More detailed physical quantities measurements can be made by overwriting the format common to ``tenes``.
+The following format is common to "tenes`.
 
 .. csv-table::
-   :header: "名前", "説明", "型"
+   :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``local_operator``,    サイト演算子 (ex. Sz),                          文字列のリスト
-   ``hamiltonian``,       ボンドハミルトニアン,                           文字列のリスト
-   ``hamiltonian_bonds``, ボンドハミルトニアンの種類と作用するボンドの組, 文字列
+   ``local_operator``,    Site opertor (ex. Sz),                      A list of Str
+   ``hamiltonian``,       Bond hamiltonian,                           A list of Str
+   ``hamiltonian_bonds``, Type of bond Hamiltonian and the set of bonds that act, Str
 
 ``local_operator``, ``hamiltonian``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``evolution.matrix`` と同様。
-定義した順番がそのまま演算子・ハミルトニアンのインデックスに対応します。
+Same as ``evolution.matrix`` .
+The order you define corresponds exactly to the index of the operator Hamiltonian.
 
 ``hamiltonian_bonds``
 ~~~~~~~~~~~~~~~~~~~~~
 
-``evolution.simple_update`` と同様。
+Same as ``evolution.simple_update`` .
 
-例
-~~
+Example
+~~~~~~~~
 
 ::
 
@@ -278,24 +263,25 @@
     """,
     ]
 
-``correlation`` セクション
+``correlation`` section
 ==========================
 
-``tenes_simple`` では相関関数 ``C = <A(0)B(r)>`` はデフォルトでは計算されません。
-相関関数を計算したい場合は、 ``tenes`` と共通のファイルフォーマットで指定することができます。
-以下、 ``correlation`` セクションで指定できるパラメータについて説明します。
+For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
+For calculating correlation functions, it can be specified in the same file format as ``tenes``.
+In the following, the parameters about correlation function are described.
 
 .. csv-table::
-   :header: "名前", "説明", "型"
+   :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``r_max``,     相関関数の距離 r の最大値, 整数
-   ``operators``, "相関関数を測る演算子 A,    B の番号", 整数のリストのリスト
+   ``r_max``,    Maximum distance r of the correlation function, Integer
+   ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
 
-演算子は ``observable`` セクションで指定したものが用いられます。
 
-例
-~~
+The operators defined in the ``observable`` section are used.
+
+Example
+~~~~~~~
 
 ::
 
