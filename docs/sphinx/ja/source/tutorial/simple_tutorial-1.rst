@@ -10,15 +10,11 @@
 
    [parameter]
    [parameter.tensor]
-   D  = 6     # tensor_dim
-   CHI  = 16  # env_dim
+   D  = 2     # tensor_dim
+   CHI  = 10  # env_dim
 
    [parameter.simple_update]
    num_step = 1000
-   tau = 0.01
-
-   [parameter.full_update]
-   num_step = 1
    tau = 0.01
 
    [parameter.ctm]
@@ -46,9 +42,8 @@
 計算を実行すると、
 
 .. code:: bash
-	  
+
 	  Start simple update
-	  Start full update
 	  Start calculating observables
 	  Start updating environment
 	  Start calculating local operators
@@ -61,21 +56,24 @@
 
 	  Energy = -0.5
 	  Local operator 0 = 0.5
-	  Local operator 1 = -5.93812416234e-12
+	  Local operator 1 = 1.90794709356e-11
 
-	  time simple update = 6.803028
-	  time full update   = 3.997954
-	  time environmnent  = 5.276899
-	  time observable    = 1.340076
+	  time simple update = 3.21127
+	  time full update   = 0
+	  time environmnent  = 0.875561
+	  time observable    = 0.132412
 	  
-のように計算が実行されます。計算終了後は ``output`` フォルダに
+のように計算が実行されます。
+最初に各プロセスの実行状況が表示されます。
+計算終了後、 ``Energy`` と局在演算子 ``Local operator 0`` (``<Sz>``),   ``Local operator 1`` (``<Sx>``)がそれぞれ出力されます。最後に ``time`` でどの程度計算時間がかかったか出力されます(単位は秒)。
+計算終了後は ``output`` フォルダに
 ``energy.dat, parameters.dat, time.dat, neighbor_obs.dat, site_obs.dat``
 がそれぞれ出力されます。各出力ファイルの詳細は、ファイルフォーマットをご覧ください。
-``<Sz>`` の値は、 ``site_obs.dat`` の ``0 0`` 成分から抽出することが可能で、 ``G`` をパラメータとして0.1刻みで0-2.0まで振り、得られた結果を下図に表示します。
+``<Sz>`` の値は、 ``site_obs.dat`` の ``0 0`` 成分もしくは標準出力の ``Local operator 0`` に続く値から抽出することが可能で、 
+``G`` をパラメータとして0.1刻みで0-2.0まで振り、得られた結果を下図に表示します。
 
 .. image:: ../../../img/tutorial_1_Sz_vs_G.pdf
    :width: 400px
    :align: center
 
 図から ``G`` が大きくなるにつれ、 ``<Sz>`` が ``0.5`` から徐々に小さくなり最終的には0になることがわかります。
-
