@@ -1,35 +1,34 @@
 .. highlight:: none
 
-Output files
+出力ファイル
 ---------------------------------
 
-Output files are generated in the ``output`` directry.
+計算結果は ``output`` ディレクトリ以下に保存されます。
 
 
 ``parameters.dat``
 =====================
 
-Paramters in ``parameter`` and ``lattice`` sections are outputted.
+``parameter`` と ``lattice`` のパラメータが出力されます。
 
 ``energy.dat``
 ==============
-
-The energy of each site is output.
+サイトあたりのエネルギーが出力されます。
 
 ``site_obs.dat``
 =================
 
 
--  The expected values of the site operator are outputted.
--  Each row consists of four columns.
+-  サイト演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle` が出力されます。
+-  各行4列からなります。
 
-   1. Index of the operator
-   2. Index of the sites
-   3. Real part of the expected value
-   4. Imaginary part of the expected value
+   1. 演算子のインデックス :math:`\alpha`
+   2. サイトのインデックス :math:`i`
+   3. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\rangle`
+   4. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\rangle`
 
-Example
-~~~~~~~
+例
+~~
 
 ::
 
@@ -50,53 +49,14 @@ Example
 ``neighbor_obs.dat``
 ======================
 
--  Nearest neighbor correlations for site operations are outputted.
--  Each row consists of four columns.
+-  サイト演算子の最近接相関 :math:`\langle\hat{A}^\alpha_i \hat{A}^\alpha_j\rangle` が出力されます。
+-  各行5列からなります。
 
-   1. Index of the operator
-   2. Index of the sites
-   3. Index of the sites
-   4. Real part of the expected value
-   5. Imaginary part of the expected value
-
-::
-
-    # $1: op_index
-    # $2: source_site
-    # $3: target_site
-    # $4: real
-    # $5: imag
-
-    0 0 1 -7.05927615064968900e-02 0.00000000000000000e+00
-    0 0 2 -7.27068456430051274e-02 0.00000000000000000e+00
-    0 1 0 -7.13284385957392297e-02 0.00000000000000000e+00
-    0 1 3 -7.19523349256113581e-02 0.00000000000000000e+00
-    0 2 3 -7.12610364895483045e-02 0.00000000000000000e+00
-    0 2 0 -7.19731507561011952e-02 0.00000000000000000e+00
-    0 3 2 -7.05633558230210067e-02 0.00000000000000000e+00
-    0 3 1 -7.26803750807340498e-02 0.00000000000000000e+00
-    1 0 1 -1.85942869237103348e-01 0.00000000000000000e+00
-    1 0 2 -1.87164731677545187e-01 0.00000000000000000e+00
-    1 1 0 -1.86360382550076586e-01 0.00000000000000000e+00
-    1 1 3 -1.86768451086366694e-01 0.00000000000000000e+00
-    1 2 3 -1.86384181909805935e-01 0.00000000000000000e+00
-    1 2 0 -1.86747576732693515e-01 0.00000000000000000e+00
-    1 3 2 -1.85975089525013598e-01 0.00000000000000000e+00
-    1 3 1 -1.87196522916879049e-01 0.00000000000000000e+00
-
-``correlation.dat``
-=====================
-
--  Correlation functions are outputted.
--  Each row consists of eight columns.
-
-   1. Index of the left-hand operator
-   2. Site index of the left operator
-   3. Index of the right operator
-   4. Site index of the right operator
-   5. Unit cell offset of the right operator (x)
-   6. Unit cell offset of the right operator (y)
-   7. 
+   1. 演算子のインデックス :math:`\alpha`
+   2. サイトのインデックス :math:`i`
+   3. サイトのインデックス :math:`j`
+   4. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle`
+   5. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle`
 
 ::
 
@@ -126,20 +86,20 @@ Example
 ``correlation.dat``
 =====================
 
--  Correlation functions are outputted.
--  Each row consists of eight columns.
+-  相関関数 :math:`C^{\alpha \beta}_{ij}(x,y) \equiv \langle \hat{A}^\alpha_i(0,0) \hat{A}^\beta_j(x,y) \rangle` が出力されます。
+-  各行8列から構成されます。
 
-   1. Index of the left-hand operator
-   2. Site index of the left operator
-   3. Index of the right operator
-   4. Site index of the right operator
-   5. Unit cell offset of the right operator (x)
-   6. Unit cell offset of the right operator (y)
-   7. Real part of the expected value
-   8. Imaginary part of the expected value
+   1. 左演算子のインデックス :math:`\alpha`
+   2. 左演算子のサイトインデックス :math:`i`
+   3. 右演算子のインデックス :math:`\beta`
+   4. 右演算子のサイトインデックス :math:`j`
+   5. 右演算子のユニットセルオフセット (x) :math:`x`
+   6. 右演算子のユニットセルオフセット (y) :math:`y`
+   7. 演算子の実部 :math:`\mathrm{Re}C^{\alpha \beta}_{ij}(x,y)`
+   8. 演算子の虚部 :math:`\mathrm{Im}C^{\alpha \beta}_{ij}(x,y)`
 
-Example
-~~~~~~~
+例
+~~
 
 ::
 
@@ -163,10 +123,10 @@ Example
     0 0 0 0 0 2 7.54607806587391516e-04 0.00000000000000000e+00 
     0 0 0 2 0 2 -4.47734559969679546e-04 0.00000000000000000e+00 
     1 0 1 1 0 0 -1.85942869237103237e-01 0.00000000000000000e+00 
-    ...
+    （中略）
     1 3 1 1 0 3 -1.65874245891461547e-01 0.00000000000000000e+00
 
 ``time.dat``
 =====================
 
-The calculation time is outputted.
+計算時間が出力されます。

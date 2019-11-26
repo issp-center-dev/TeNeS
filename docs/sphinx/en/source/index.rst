@@ -17,6 +17,7 @@ Contents
    install
    how_to_use/index
    file_specification/index
+   tutorial/index
    algorithm/index
    acknowledge/index
    contact/index
