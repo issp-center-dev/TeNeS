@@ -318,7 +318,7 @@ def dump(param):
 
     ret.append("[parameter]")
     pparam = param["parameter"]
-    for name in ("tensor", "simple_update", "full_update", "ctm"):
+    for name in ("tensor", "simple_update", "full_update", "ctm", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():

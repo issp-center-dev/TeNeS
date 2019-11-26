@@ -112,7 +112,8 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   ldof = lops.begin()->shape()[0];
 
   // set seed for randomized svd
-  random_tensor::set_seed(11 + mpirank);
+  int seed = peps_parameters.seed;
+  random_tensor::set_seed(seed + mpirank);
 
   if (outdir.empty()) {
     outdir += ".";

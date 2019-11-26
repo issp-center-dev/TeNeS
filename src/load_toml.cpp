@@ -122,5 +122,11 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
   }
 
+  // random
+  auto random = param->get_table("random");
+  if(random != nullptr){
+    pparam.seed = find_or(random, "seed", 11);
+  }
+
   return pparam;
 }

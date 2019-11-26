@@ -43,6 +43,10 @@ public:
   // observable
   int Lcor;
 
+
+  // misc
+  int seed;
+
   PEPS_Parameters();
 
   void save(const char *filename, bool append = false);

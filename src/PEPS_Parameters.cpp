@@ -36,6 +36,9 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FastFullUpdate = true;
 
   Lcor = 0;
+
+  // random
+  seed = 11;
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -55,6 +58,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
     I_Lcor,
+    I_seed,
 
     N_PARAMS_INT_INDEX,
   };
@@ -88,6 +92,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
     SAVE_PARAM(Lcor, int);
+    SAVE_PARAM(seed, int);
 
     SAVE_PARAM(Inverse_lambda_cut, double);
     SAVE_PARAM(Inverse_projector_cut, double);
@@ -116,6 +121,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
     LOAD_PARAM(Lcor, int);
+    LOAD_PARAM(seed, int);
 
     LOAD_PARAM(Inverse_lambda_cut, double);
     LOAD_PARAM(Inverse_projector_cut, double);
@@ -164,6 +170,8 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       << std::endl;
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
+
+  ofs << "seed = " << seed << std::endl;
 
   ofs.close();
 }
