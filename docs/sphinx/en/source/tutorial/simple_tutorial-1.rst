@@ -1,12 +1,12 @@
 .. highlight:: none
 
-Transverse magnetic Ising model
-----------------------------------
+Ising model with transverse magnetic field
+---------------------------------------------
 
-This section presents an example of calculation when the transverse magnetic field is changed with respect to the transverse magnetic Ising model.
+This section presents an example of calculation when the transverse magnetic field is applied to the Ising model.
 By changing the variable  ``G`` in the input file,
 the magnitude of the transverse magnetic field will be modified.
-For example, when the transverse magnetic field becomes 0, the input file becomes
+For example, when the transverse magnetic field is 0, the input file becomes
 
 .. code::
 
