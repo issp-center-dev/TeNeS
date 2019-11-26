@@ -64,6 +64,15 @@ In this case, you can specify the compiler by the following way,
 $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 ```
 
+### Specify Python interpreter
+
+CMake detects also python interpreter automatically but sometimes this is not what you want.
+In this case, you can specify the python interpreter by the following way,
+
+``` bash
+$ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
+```
+
 ### Use the pre-built mptensor
 
 TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) .
