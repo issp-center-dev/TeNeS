@@ -24,5 +24,5 @@ Contacts
 
   If you have any questions about topics related to your research that are difficult to consult at Issues on GitHub, please contact the following contact information.
 
-  E-mail: ``ptns-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @)
+  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @)
   

@@ -25,5 +25,5 @@
 
   研究に関連するトピックなどGitHubのIssuesで相談しづらいことを問い合わせる際には, 以下の連絡先にコンタクトをしてください。
 
-  E-mail: ``ptns-dev__at__issp.u-tokyo.ac.jp`` (_at_を@に変更してください)
+  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (_at_を@に変更してください)
   

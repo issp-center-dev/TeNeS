@@ -9,6 +9,7 @@ Usage
 - ``tenes_standard.py`` (from ver. 1.0):  A tool that generates input files for ``tenes`` by using input files for generating the lattice model.
   
 The following sections describe how to use each script, and finally how to use ``tenes``.
+If you want to work with other models or grids, you can do so by creating the input file for ``tenes`` directly.
 See the file format for details on the input file of ``tenes``.
   
 .. toctree::
