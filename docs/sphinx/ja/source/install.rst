@@ -66,15 +66,23 @@ ScaLAPACKについては自身でインストールする必要があります�
 
 .. admonition:: コンパイラの指定
 
-   ``CMake`` では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のコマンドを打ってください。
+   ``CMake`` では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のようにオプションを追加してください。
    ::
 
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
+.. admonition:: Python インタープリタの指定
+
+   ``CMake`` では自動でPython インタープリタを検出してビルドを行います。指定したい場合には, 以下のようにオプションを追加してください。
+   ::
+
+      $ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
+
+
 .. admonition:: プリインストールされた ``mptensor`` の利用
 
-   ``TeNeS`` でプリインストールされた ``mptensor`` を使用したい場合には、以下のコマンドを打ってください。
+   ``TeNeS`` でプリインストールされた ``mptensor`` を使用したい場合には、以下のようにオプションを追加してください。
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
