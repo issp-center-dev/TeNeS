@@ -1,24 +1,24 @@
 .. highlight:: none
 
-``tenes`` の入力ファイル
+Input file for ``tenes`` 
 ---------------------------------
 
--  ファイルフォーマットは
-   `TOML <https://qiita.com/minoritea/items/c0de47b8beb813c655d4>`__
-   形式
--  ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
-   の5つのセクションを持ちます。
 
-   -  将来的にはファイル名を指定することで分割可能にする予定です。
+-  File format is
+   `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
+   format.
+-  The input file has five sections: ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
 
-``parameter`` セクション
+   -   In the future we will be able to split it by specifying the file name.
+
+``parameter`` section
 ========================
 
 更新回数など、種々のパラメータを記述します。このセクションのみ、各々のパラメータにデフォルト値が存在します。
 サブセクションとして ``tensor``, ``simple_update``, ``full_update``,
 ``ctm``, ``random`` を持ちます。
 
-``parameter.tensor``
+``parameter.section``
 ~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
