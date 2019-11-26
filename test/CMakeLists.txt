@@ -20,7 +20,7 @@ foreach(basename input simple_update full_update)
     target_include_directories(${testname} PRIVATE ${MPTENSOR_INCLUDE_DIR})
     target_include_directories(${testname} PRIVATE ${MPI_CXX_INCLUDE_DIRS})
     target_include_directories(${testname} PRIVATE ${PROJECT_SOURCE_DIR}/src)
-    target_include_directories(${testname} PRIVATE ${PROJECT_SOURCE_DIR}/deps/cpptoml/include)
+    target_include_directories(${testname} PRIVATE ${CPPTOML_INCLUDE_DIR})
 
     target_link_libraries(${testname} mptensor)
     target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES})

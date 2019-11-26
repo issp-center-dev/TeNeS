@@ -43,6 +43,14 @@ public:
   // observable
   int Lcor;
 
+
+  // random
+  int seed;
+
+  // IO
+  std::string tensor_load_dir;
+  std::string tensor_save_dir;
+
   PEPS_Parameters();
 
   void save(const char *filename, bool append = false);

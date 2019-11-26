@@ -9,9 +9,13 @@ import toml
 
 TeNeSInput = namedtuple("TeNeSInput", "param lattice model lop ham")
 
+# https://stackoverflow.com/a/42913743
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
 
 def make_evolution_tensor(Ham, tau):
-    eigval, eigvec = linalg.eig(Ham)
+    eigval, eigvec = linalg.eigh(Ham)
     return np.dot(np.dot(eigvec, np.diag(np.exp(-tau * eigval))), eigvec.transpose())
 
 
@@ -283,6 +287,11 @@ def tenes_simple(param):
         for bt in range(lattice.bondtypes)
     ]
 
+    for bt in range(lattice.bondtypes):
+        if not check_symmetric(hams[bt]):
+            msg = 'Bond Hamiltonian {} is not symmetric'.format(bt)
+            raise RuntimeError(msg)
+
     dict_observable = {"local_operator": lops, "hamiltonian": hams}
 
     res = {}
@@ -309,7 +318,7 @@ def dump(param):
 
     ret.append("[parameter]")
     pparam = param["parameter"]
-    for name in ("tensor", "simple_update", "full_update", "ctm"):
+    for name in ("tensor", "simple_update", "full_update", "ctm", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():
@@ -418,4 +427,5 @@ if __name__ == "__main__":
 
     with open(args.output, "w") as f:
         f.write(dump(res))
-        f.write('\n')
+        f.write("\n")
+

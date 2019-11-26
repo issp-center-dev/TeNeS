@@ -39,6 +39,7 @@ public:
   std::vector<std::vector<std::vector<double>>> measure_NN(bool save);
   std::vector<Correlation> measure_correlation(bool save);
   void optimize();
+  void save_tensors() const;
 
 private:
   static constexpr int nleg = 4;
@@ -112,7 +113,8 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   ldof = lops.begin()->shape()[0];
 
   // set seed for randomized svd
-  random_tensor::set_seed(11 + mpirank);
+  int seed = peps_parameters.seed;
+  random_tensor::set_seed(seed + mpirank);
 
   if (outdir.empty()) {
     outdir += ".";
@@ -195,19 +197,65 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   }
   int nr;
 
-  Index index;
-  for (int i = 0; i < lattice.N_UNIT; ++i) {
-    for (int n = 0; n < Tn[i].local_size(); ++n) {
-      index = Tn[i].global_index(n);
-      if (index == Index(0, 0, 0, 0, 0)) {
-        Tn[i].set_value(index, 1.0);
-      } else {
-        nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
-             index[4] * D * D * D * D;
-        Tn[i].set_value(index, ran[nr]);
+  std::string const& load_dir = peps_parameters.tensor_load_dir;
+  if(load_dir.empty()){
+    Index index;
+    for (int i = 0; i < lattice.N_UNIT; ++i) {
+      for (int n = 0; n < Tn[i].local_size(); ++n) {
+        index = Tn[i].global_index(n);
+        if (index == Index(0, 0, 0, 0, 0)) {
+          Tn[i].set_value(index, 1.0);
+        } else {
+          nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
+               index[4] * D * D * D * D;
+          Tn[i].set_value(index, ran[nr]);
+        }
       }
     }
-  }
+  }else{
+    struct stat status;
+    if (stat(load_dir.c_str(), &status) != 0) {
+      std::string msg = load_dir + " does not exists.";
+      throw std::runtime_error(msg);
+    }
+    for(int i=0; i<N_UNIT; ++i){
+      std::string filename = load_dir + "/";
+      std::string suffix = "_" + std::to_string(i) + ".dat";
+      Tn[i].load((filename + "T" + suffix).c_str());
+      eTt[i].load((filename + "Et" + suffix).c_str());
+      eTr[i].load((filename + "Er" + suffix).c_str());
+      eTb[i].load((filename + "Eb" + suffix).c_str());
+      eTl[i].load((filename + "El" + suffix).c_str());
+      C1[i].load((filename + "C1" + suffix).c_str());
+      C2[i].load((filename + "C2" + suffix).c_str());
+      C3[i].load((filename + "C3" + suffix).c_str());
+      C4[i].load((filename + "C4" + suffix).c_str());
+    }
+    int nl = N_UNIT * nleg * D;
+    std::vector<double> ls;
+    if(mpirank == 0){
+      for(int i=0; i<N_UNIT; ++i){
+        std::ifstream ifs(load_dir + "/lambda_" + std::to_string(i) + ".dat");
+        for(int j=0; j<nleg; ++j){
+          for(int k=0; k<D; ++k){
+            double temp = 0.0;
+            ifs >> temp;
+            ls.push_back(temp);
+          }
+        }
+      }
+    }
+    MPI_Bcast(&(ls[0]), nl, MPI_DOUBLE, 0, comm);
+    int index=0;
+    for(int i=0; i<N_UNIT; ++i){
+      for(int j=0; j<nleg; ++j){
+        for(int k=0; k<D; ++k){
+          lambda_tensor[i][j][k] = ls[index];
+          ++index;
+        }
+      }
+    }
+  } // end of else part of if(load_dir.empty())
 }
 
 template <class ptensor> inline void TeNeS<ptensor>::update_CTM() {
@@ -689,6 +737,43 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 }
 
 template <class ptensor>
+void TeNeS<ptensor>::save_tensors() const{
+  std::string const& save_dir = peps_parameters.tensor_save_dir;
+  if(save_dir.empty()){
+    return;
+  }
+  if(mpirank==0){
+    struct stat status;
+    if (stat(save_dir.c_str(), &status) != 0) {
+      mkdir(save_dir.c_str(), 0755);
+    }
+  }
+  for(int i=0; i<N_UNIT; ++i){
+    std::string filename = save_dir + "/";
+    std::string suffix = "_" + std::to_string(i) + ".dat";
+    Tn[i].save((filename + "T" + suffix).c_str());
+    eTt[i].save((filename + "Et" + suffix).c_str());
+    eTr[i].save((filename + "Er" + suffix).c_str());
+    eTb[i].save((filename + "Eb" + suffix).c_str());
+    eTl[i].save((filename + "El" + suffix).c_str());
+    C1[i].save((filename + "C1" + suffix).c_str());
+    C2[i].save((filename + "C2" + suffix).c_str());
+    C3[i].save((filename + "C3" + suffix).c_str());
+    C4[i].save((filename + "C4" + suffix).c_str());
+  }
+  if(mpirank==0){
+    for(int i=0; i<N_UNIT; ++i){
+      std::ofstream ofs(save_dir+"/lambda_" + std::to_string(i) + ".dat");
+      for(int j=0; j<nleg; ++j){
+        for(int k=0; k<D; ++k){
+          ofs << lambda_tensor[i][j][k] << std::endl;
+        }
+      }
+    }
+  }
+}
+
+template <class ptensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           Edges simple_edges, Edges full_edges, Edges ham_edges,
           std::vector<ptensor> evolutions, std::vector<ptensor> hams,
@@ -698,6 +783,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
   TeNeS<ptensor> tns(comm, peps_parameters, lattice, simple_edges, full_edges,
                      ham_edges, evolutions, hams, lops, corparam);
   tns.optimize();
+  tns.save_tensors();
   tns.measure();
   return 0;
 }

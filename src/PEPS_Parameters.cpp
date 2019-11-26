@@ -36,12 +36,21 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FastFullUpdate = true;
 
   Lcor = 0;
+
+  // random
+  seed = 11;
+
+  // IO
+  tensor_load_dir = "";
+  tensor_save_dir = "";
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
 #define LOAD_PARAM(name, type) name = static_cast<decltype(name)>(params_##type[I_##name])
 
 void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
+  using std::string;
+
   enum PARAMS_INT_INDEX {
     I_D,
     I_CHI,
@@ -55,6 +64,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
     I_Lcor,
+    I_seed,
 
     N_PARAMS_INT_INDEX,
   };
@@ -69,11 +79,19 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     N_PARAMS_DOUBLE_INDEX,
   };
 
+  enum PARAMS_STRING_INDEX {
+    I_tensor_load_dir,
+    I_tensor_save_dir,
+
+    N_PARAMS_STRING_INDEX,
+  };
+
   int irank;
   MPI_Comm_rank(MPI_COMM_WORLD, &irank);
 
   std::vector<int> params_int(N_PARAMS_INT_INDEX);
   std::vector<double> params_double(N_PARAMS_DOUBLE_INDEX);
+  std::vector<std::string> params_string(N_PARAMS_STRING_INDEX);
 
   if (irank == root) {
     SAVE_PARAM(D, int);
@@ -88,6 +106,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
     SAVE_PARAM(Lcor, int);
+    SAVE_PARAM(seed, int);
 
     SAVE_PARAM(Inverse_lambda_cut, double);
     SAVE_PARAM(Inverse_projector_cut, double);
@@ -95,6 +114,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Inverse_Env_cut, double);
     SAVE_PARAM(Full_Inverse_precision, double);
     SAVE_PARAM(Full_Convergence_Epsilon, double);
+
+    SAVE_PARAM(tensor_load_dir, string);
 
     MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
     MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
@@ -116,6 +137,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
     LOAD_PARAM(Lcor, int);
+    LOAD_PARAM(seed, int);
 
     LOAD_PARAM(Inverse_lambda_cut, double);
     LOAD_PARAM(Inverse_projector_cut, double);
@@ -123,6 +145,9 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Inverse_Env_cut, double);
     LOAD_PARAM(Full_Inverse_precision, double);
     LOAD_PARAM(Full_Convergence_Epsilon, double);
+
+    LOAD_PARAM(tensor_load_dir, string);
+    LOAD_PARAM(tensor_save_dir, string);
   }
 }
 
@@ -164,6 +189,11 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       << std::endl;
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
+
+  ofs << "seed = " << seed << std::endl;
+
+  ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
+  ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
 
   ofs.close();
 }

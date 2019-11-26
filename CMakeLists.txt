@@ -10,6 +10,7 @@ endif()
 
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
+option(CPPTOML_ROOT "External directory where cpptoml is download into" OFF)
 option(Testing "Enable tests" ON)
 option(Document "Build docs" OFF)
 
@@ -17,11 +18,18 @@ if(Testing)
     enable_testing()
 endif()
 
+
+set(USE_SANITIZER OFF)
+if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
+    set(USE_SANITIZER ON)
+endif ()
+
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-# Update submodules as needed
+    set(DEPS_DIR "${PROJECT_SOURCE_DIR}/deps/submoduled")
+    # Update submodules as needed
     if(GIT_SUBMODULE)
         message(STATUS "Submodule update")
         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
@@ -31,18 +39,26 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
             message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
         endif()
     endif()
+
+    foreach(submod mptensor cpptoml)
+        if(NOT EXISTS "${DEPS_DIR}/${submod}/CMakeLists.txt")
+            message(FATAL_ERROR "The submodule ${submod} were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+        endif()
+    endforeach()
+
+else()
+    set(DEPS_DIR "${PROJECT_SOURCE_DIR}/deps/cloned")
+    add_subdirectory("${PROJECT_SOURCE_DIR}/deps/cloned")
 endif()
-foreach(submod mptensor cpptoml)
-    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/deps/${submod}/CMakeLists.txt")
-    message(FATAL_ERROR "The submodule ${submod} were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
-endif()
-endforeach()
+
 
 include(${PROJECT_SOURCE_DIR}/config/cxx11.cmake)
 cxx11()
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/deps/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
-find_package(Sanitizers)
+if (USE_SANITIZER)
+    set(CMAKE_MODULE_PATH "${DEPS_DIR}/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+    find_package(Sanitizers)
+endif()
 
 set(OMP_FLAG "")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
@@ -83,10 +99,10 @@ else()
 endif()
 
 if(NOT MPTENSOR_ROOT)
-    set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/deps/mptensor/config" ${CMAKE_MODULE_PATH})
-    add_subdirectory("${PROJECT_SOURCE_DIR}/deps/mptensor")
-    set(MPTENSOR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/deps/mptensor/src/)
-    set(MPTENSOR_LIB_DIR ${CMAKE_BINARY_DIR}/deps/mptensor/src)
+    set(CMAKE_MODULE_PATH "${DEPS_DIR}/mptensor/config" ${CMAKE_MODULE_PATH})
+    add_subdirectory("${DEPS_DIR}/mptensor")
+    set(MPTENSOR_INCLUDE_DIR ${DEPS_DIR}/mptensor/src/)
+    set(MPTENSOR_LIB_DIR ${DEPS_DIR}/mptensor/src)
 else()
     message(STATUS "To use pre-built mptensor at ${MPTENSOR_ROOT}")
     set(MPTENSOR_INCLUDE_DIR ${MPTENSOR_ROOT}/include)
@@ -101,6 +117,17 @@ else()
         message(FATAL_ERROR "${MPTENSOR_INCLUDE_DIR}/mptensor.hpp is not found.")
     endif()
 endif()
+
+if(CPPTOML_ROOT)
+    set(CPPTOML_INCLUDE_DIR ${CPPTOML_ROOT}/include)
+else()
+    set(CPPTOML_INCLUDE_DIR ${DEPS_DIR}/cpptoml/include)
+endif()
+
+message(STATUS "MPTENSOR_INCLUDE_DIR: ${MPTENSOR_INCLUDE_DIR}")
+message(STATUS "MPTENSOR_LIB_DIR: ${MPTENSOR_LIB_DIR}")
+message(STATUS "CPPTOML_INCLUDE_DIR: ${CPPTOML_INCLUDE_DIR}")
+
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
 add_subdirectory(${PROJECT_SOURCE_DIR}/tool)

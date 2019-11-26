@@ -89,6 +89,8 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   if(tensor != nullptr){
     pparam.D = find_or(tensor, "D", 2);
     pparam.CHI = find_or(tensor, "CHI", 4);
+    pparam.tensor_load_dir = find_or(tensor, "load_dir", std::string(""));
+    pparam.tensor_save_dir = find_or(tensor, "save_dir", std::string(""));
   }
 
   // Simple update
@@ -120,6 +122,12 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     pparam.CTM_Projector_corner = find_or(ctm, "projector_corner", false);
     pparam.Use_RSVD = find_or(ctm, "use_rsvd", false);
     pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
+  }
+
+  // random
+  auto random = param->get_table("random");
+  if(random != nullptr){
+    pparam.seed = find_or(random, "seed", 11);
   }
 
   return pparam;
