@@ -124,13 +124,28 @@ Square lattice and honeycomb lattice are defined as lattice types.
    :widths: 15, 30, 20, 10
 
    ``type``, "Lattice name (square lattice or honeycomb lattice)", Str, --
-   ``L_sub``, Unit cell size, Integer or a list of two integers, --
+   ``L_sub``, Unit cell size, An integer or a list of two integers, --
+
+
+When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
+If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
+A list of three or more elements causes an error.
+
+Sites in a unit cell are indexed starting from 0.
+These are arranged in order from the x direction.
+
+Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
+
+ y
+ ^     4 5
+ |     2 3
+ .->x  0 1
 
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are two types of bond, horizontal and vertical.
+There are two types of bond, horizontal (0) and vertical (1) (corresponding to ``-`` and ``|`` in the below figure).
 
 The unit cell for ``L_sub = 2`` is given as follows::
 
@@ -144,9 +159,11 @@ The unit cell for ``L_sub = 2`` is given as follows::
 Honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Unit cell size (Each element of ``L _ sub``) must be an even number.
+Unit cell size (Each element of ``L_sub``) must be an even number.
 
 There are 3 types of bonds: x, y, and z (corresponding to ``-``, ``~``, ``|``  in the below figure).
+Each site with an even index has a rightward (x), a leftward (y), and an upward (z) bonds and
+each site with an odd index has a leftward (x), a rightward (y), and a bottomward (z) bonds.
 
 The unit cell for ``L_sub = 2`` is given as follows::
 

@@ -112,12 +112,31 @@ Example
 ========================
 
 Specify the ''unit cell'' information.
+Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``L_sub``, Unit cell size, A list of integer
+   ``L_sub``, Unit cell size, An integer or a list of integer
+
+
+When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
+If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
+A list of three or more elements causes an error.
+
+Sites in a unit cell are indexed starting from 0.
+These are arranged in order from the x direction.
+
+Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
+
+ y
+ ^     4 5
+ |     2 3
+ .->x  0 1
+
+
+Information of bonds is given in the ``evolution`` and the ``observable`` sections.
 
 ``evolution`` section
 ========================
