@@ -1,7 +1,7 @@
 .. highlight:: none
 
 Usage of ``tenes``
-------------------------------
+--------------------
 
 If you prepare input files of ``tenes`` by yourself,
 You can directry run ``tenes`` as follows:
@@ -34,4 +34,3 @@ You can directry run ``tenes`` as follows:
 .. code:: bash
 
     tnsolve input.toml
-

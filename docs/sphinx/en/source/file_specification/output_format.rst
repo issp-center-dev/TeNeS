@@ -51,52 +51,13 @@ Example
 ======================
 
 -  Nearest neighbor correlations for site operations are outputted.
--  Each row consists of four columns.
+-  Each row consists of five columns.
 
    1. Index of the operator
    2. Index of the sites
    3. Index of the sites
    4. Real part of the expected value
    5. Imaginary part of the expected value
-
-::
-
-    # $1: op_index
-    # $2: source_site
-    # $3: target_site
-    # $4: real
-    # $5: imag
-
-    0 0 1 -7.05927615064968900e-02 0.00000000000000000e+00
-    0 0 2 -7.27068456430051274e-02 0.00000000000000000e+00
-    0 1 0 -7.13284385957392297e-02 0.00000000000000000e+00
-    0 1 3 -7.19523349256113581e-02 0.00000000000000000e+00
-    0 2 3 -7.12610364895483045e-02 0.00000000000000000e+00
-    0 2 0 -7.19731507561011952e-02 0.00000000000000000e+00
-    0 3 2 -7.05633558230210067e-02 0.00000000000000000e+00
-    0 3 1 -7.26803750807340498e-02 0.00000000000000000e+00
-    1 0 1 -1.85942869237103348e-01 0.00000000000000000e+00
-    1 0 2 -1.87164731677545187e-01 0.00000000000000000e+00
-    1 1 0 -1.86360382550076586e-01 0.00000000000000000e+00
-    1 1 3 -1.86768451086366694e-01 0.00000000000000000e+00
-    1 2 3 -1.86384181909805935e-01 0.00000000000000000e+00
-    1 2 0 -1.86747576732693515e-01 0.00000000000000000e+00
-    1 3 2 -1.85975089525013598e-01 0.00000000000000000e+00
-    1 3 1 -1.87196522916879049e-01 0.00000000000000000e+00
-
-``correlation.dat``
-=====================
-
--  Correlation functions are outputted.
--  Each row consists of eight columns.
-
-   1. Index of the left-hand operator
-   2. Site index of the left operator
-   3. Index of the right operator
-   4. Site index of the right operator
-   5. Unit cell offset of the right operator (x)
-   6. Unit cell offset of the right operator (y)
-   7. 
 
 ::
 

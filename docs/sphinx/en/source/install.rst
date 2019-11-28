@@ -16,13 +16,29 @@ The following tools are required for building TeNeS.
 
 1. C++11 compiler
 2. CMake (>=2.8.14)
-3. MPI と ScaLAPACK
+3. MPI and ScaLAPACK
 
-TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
+``TeNeS`` depends on the following libraries, but these are downloaded automatically through the build process.
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
+
+ScaLAPACK must be installed by yourself. If you use homebrew in Mac, type the following command:
+
+.. code::
+
+   brew install scalapack
+
+For others, see the web page of ScaLAPACK.
+
+For ``tenes_simple`` which generates the input file for ``tenes``, 
+the following libraries are needed.
+
+1. Python (>= ver.3 is recommended)
+2. numpy
+3. toml
+
 
 Install
 ======================

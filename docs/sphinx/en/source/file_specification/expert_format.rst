@@ -1,89 +1,95 @@
 .. highlight:: none
 
-Input files for ``tenes`` (ja)
+Input file for ``tenes`` 
 ---------------------------------
 
--  ファイルフォーマットは
-   `TOML <https://qiita.com/minoritea/items/c0de47b8beb813c655d4>`__
-   形式
--  ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
-   の5つのセクションを持ちます。
 
-   -  将来的にはファイル名を指定することで分割可能にする予定です。
+-  File format is
+   `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
+   format.
+-  The input file has five sections: ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
 
-``parameter`` セクション
+   -   In the future we will be able to split it by specifying the file name.
+
+``parameter`` section
 ========================
 
-更新回数など、種々のパラメータを記述します。このセクションのみ、各々のパラメータにデフォルト値が存在します。
-サブセクションとして ``tensor``, ``simple_update``, ``full_update``,
-``ctm`` を持ちます。
+Various parameters such as the number of updates are specified in this section. 
+Only the parameters in this section have default values.
+This section has five sub sections, ``tensor``, ``simple_update``, ``full_update``, ``ctm``, ``random``.
 
 ``parameter.tensor``
 ~~~~~~~~~~~~~~~~~~~~
 
-+------------+---------------------------------------------------------------+-----------+
-| 名前       | 説明                                                          | デフォルト|
-+============+===============================================================+===========+
-| ``D``      | 中心テンソルがもつ virtual ボンドの次元                       | 2         |
-+------------+---------------------------------------------------------------+-----------+
-| ``CHI``    | 角転送行列の virtual ボンドの次元                             | 4         |
-+------------+---------------------------------------------------------------+-----------+
-| ``Lcor``   | 相関関数を測る距離の上限                                      | 0         |
-+------------+---------------------------------------------------------------+-----------+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 15, 30, 20, 10
+
+   ``D``,        The virtual bond dimensions of the central tensor,  Integer,   2
+   ``CHI``,      The virtual bond dimensions of the angular transfer matrix,        Integer,   4
+   ``save_dir``, Directory to write optimized tensors, Str, ""
+   ``load_dir``, Directory to read initial tensor, Str, ""
+
+
+- ``save_dir``
+  - Store optimized tensors below this directory.
+  - When it is empty, the tensors are not saved.
+- ``load_dir``
+  - Read various tensors from below this directory.
+  - Must be same degree of parallelism as when saved.
+  - Not read if it is empty.
+
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+-----------------------------+----------------------------------------------+-----------+
-| 名前                        | 説明                                         | デフォルト|
-+=============================+==============================================+===========+
-| ``num_step``                | simple update の回数                         | 0         |
-+-----------------------------+----------------------------------------------+-----------+
-| ``inverse_lambda_cutoff``   | simple update でゼロとみなす平均場のcutoff   | 1e-12     |
-+-----------------------------+----------------------------------------------+-----------+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 15, 30, 20, 10
+
+   ``num_step``,              Number of simple updates, Integer, 0
+   ``inverse_lambda_cutoff``, cutoff of the mean field to be considered zero in the simple update, Real, 1e-12
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| 名前                           | 説明                                                               | デフォルト|
-+================================+====================================================================+===========+
-| ``num_step``                   | full update の回数                                                 | 0         |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``inverse_projector_cutoff``   | 使っていない気がする（オリジナルのinverse\_env\_cut?）             | 1e-12     |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``inverse_precision``          | full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff   | 1e-12     |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``convergence_epsilon``        | full update でtruncationの最適化を行う際の収束判定値               | 1e-12     |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``iteration_max``              | full update でtruncationの最適化を行う際のiterationの最大回数      | 1000      |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``gauge_fix``                  | テンソルのゲージを固定するかどうか                                 | true      |
-+--------------------------------+--------------------------------------------------------------------+-----------+
-| ``fastfullupdate``             | Fast full update にするかどうか                                    | true      |
-+--------------------------------+--------------------------------------------------------------------+-----------+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 15, 30, 20, 10
+
+   ``num_step``,                 Number of full updates,  Integer,   0
+   ``inverse_precision``,        Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update, Real,   1e-12
+   ``convergence_epsilon``,      Convergence criteria for truncation optimization with full update, Real, 1e-12
+   ``iteration_max``,            Maximum iteration number for truncation optimization on full updates,    Integer,   1000
+   ``gauge_fix``,                Whether the tensor gauge is fixed, Boolean, true
+   ``fastfullupdate``,           Whether the Fast full update is adopted, Boolean, true
 
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
 
-+--------------------------------+----------------------------------------------------------+-----------+
-| 名前                           | 説明                                                     | デフォルト|
-+================================+==========================================================+===========+
-| ``inverse_projector_cutoff``   | CTMのprojectorを計算する際にゼロとみなす特異値のcutoff   | 1e-12     |
-+--------------------------------+----------------------------------------------------------+-----------+
-| ``convergence_epsilon``        | CTMの収束判定値                                          | 1e-10     |
-+--------------------------------+----------------------------------------------------------+-----------+
-| ``iteration_max``              | CTMの収束iterationの最大回数                             | 100       |
-+--------------------------------+----------------------------------------------------------+-----------+
-| ``projector_corner``           | CTMのprojector計算で1/4角のテンソルのみを使う            | true      |
-+--------------------------------+----------------------------------------------------------+-----------+
-| ``use_rsvd``                   | SVD を 乱択SVD で置き換えるかどうか                      | false     |
-+--------------------------------+----------------------------------------------------------+-----------+
-| ``rsvd_oversampling_factor``   |                                                          | 2         |
-+--------------------------------+----------------------------------------------------------+-----------+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 15, 30, 20, 10
 
-例
-~~
+   ``inverse_projector_cutoff``, Cutoff of singular values to be considered as zero when computing CTM projectors, Real,   1e-12
+   ``convergence_epsilon``,      CTM convergence criteria,                                        Real,   1e-10
+   ``iteration_max``,            Maximum iteration number of convergence for CTM,                           Integer,   100
+   ``projector_corner``,         Whether to use only the 1/4 corner tensor in the CTM projector calculation,          Boolean, true
+   ``use_rsvd``,                 Whether to replace SVD with Random SVD,                    Boolean, false
+   ``rsvd_oversampling_factor``, ,                                                       Integer,   2
+
+
+``parameter.random``
+~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 15, 30, 20, 10
+
+   ``seed``, Seed of the pseudo-random number generator used to initialize the tensor, Integer, 11
+
+Example
+~~~~~~~
 
 ::
 
@@ -101,53 +107,51 @@ Input files for ``tenes`` (ja)
     [parameter.ctm]
     iteration_max = 5
 
-``lattice`` セクション
+
+``lattice`` section
 ========================
 
-「ユニットセル」の情報を記述します。
+Specify the ''unit cell'' information.
 
-+-------------+------------------------+----------------+
-| 名前        | 説明                   | 型             |
-+=============+========================+================+
-| ``L_sub``   | ユニットセルの大きさ   | 整数のリスト   |
-+-------------+------------------------+----------------+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
 
-``evolution`` セクション
+   ``L_sub``, Unit cell size, A list of integer
+
+``evolution`` section
 ========================
 
-simple update, full update で使う虚時間発展演算子を記述します。
+Define the imaginary time evolution opetrators used in simple and full updates.
 
-+---------------------+--------------------------------------------------------------------------------+------------------+
-| 名前                | 説明                                                                           | 型               |
-+=====================+================================================================================+==================+
-| ``matrix``          | 虚時間発展演算子の行列表現                                                     | 文字列のリスト   |
-+---------------------+--------------------------------------------------------------------------------+------------------+
-| ``simple_update``   | simple update における、虚時間発展演算子のインデックスと作用するボンドの順番   | 文字列           |
-+---------------------+--------------------------------------------------------------------------------+------------------+
-| ``full_update``     | full update における、虚時間発展演算子のインデックスと作用するボンドの順番     | 文字列           |
-+---------------------+--------------------------------------------------------------------------------+------------------+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
+
+   ``matrix``,        Matrix representation about the imaginary time evolution opetrators, A list of string
+   ``simple_update``, The order of the bonds that act on the index of the imaginary time evolution operator in simple update, A list of string
+   ``full_update``,   The order of the bonds that act on the index of the imaginary time evolution operator in full update,   A list of string
 
 ``matrix``
 ~~~~~~~~~~
 
--  ひとつの文字列がひとつの行列を意味します。
--  列は１つ以上の空白で区切られ、行は１つ以上の改行で区切られます。
--  定義した順番がそのまま行列の番号に対応し、 ``*_update``
-   での指定で使われます (0-origin)。
+- One matrix is defined by a list of string.
+- Columns are separated by one or more blanks, and rows are separated by one or more newlines.
+- The order defined corresponds exactly to the number of the matrix. This order numbers are used to specify ``*_update`` (0-origin).
 
 ``*_update``
 ~~~~~~~~~~~~
 
--  1行が1回の演算子作用を表します。
--  各行は ``int int char int`` の４つのフィールドからなります。
+-  One row represents one operator action.
+-  Each line consists of four fields: ``int int string int``.
 
-   1. ボンドがつながるサイト
-   2. ボンドがつながるサイト
-   3. 横方向 (h) か縦方向 (v) か
-   4. 演算子番号 (0-origin)
+   1. A site to which bond connects
+   2. A site to which bond connects
+   3. Horizontal (h) or Vertical (v)
+   4. Operator number (0-origin)
 
-例
-~~
+Example
+~~~~~~~
 
 .. code:: 
 
@@ -183,33 +187,32 @@ simple update, full update で使う虚時間発展演算子を記述します�
     """
     ]
 
-``observable`` セクション
+``observable`` section
 ==========================
 
-物理量測定に関する諸々を記述します。
+In this section, the information about observing physical quantities is specified.
 
-+-------------------------+--------------------------------------------------+------------------+
-| 名前                    | 説明                                             | 型               |
-+=========================+==================================================+==================+
-| ``local_operator``      | サイト演算子 (ex. Sz)                            | 文字列のリスト   |
-+-------------------------+--------------------------------------------------+------------------+
-| ``hamiltonian``         | ボンドハミルトニアン                             | 文字列のリスト   |
-+-------------------------+--------------------------------------------------+------------------+
-| ``hamiltonian_bonds``   | ボンドハミルトニアンの種類と作用するボンドの組   | 文字列           |
-+-------------------------+--------------------------------------------------+------------------+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
+
+   ``local_operator``,    Site opertor (ex. Sz),                      A list of string
+   ``hamiltonian``,       Bond hamiltonian,                           A list of string
+   ``hamiltonian_bonds``, Type of bond Hamiltonian and the set of bonds that act, string
 
 ``local_operator``, ``hamiltonian``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``evolution.matrix`` と同様。
+Same as ``evolution.matrix`` .
+The order you define corresponds exactly to the index of the operator Hamiltonian.
 
 ``hamiltonian_bonds``
 ~~~~~~~~~~~~~~~~~~~~~
 
-``evolution.simple_update`` と同様。
+Same as ``evolution.simple_update`` .
 
-例
-~~
+Example
+~~~~~~~~
 
 ::
 
@@ -245,27 +248,26 @@ simple update, full update で使う虚時間発展演算子を記述します�
     """,
     ]
 
-``correlation`` セクション
+
+``correlation`` section
 ==========================
 
-相関関数 ``C = <A(0)B(r)>`` を指定するセクション
+In the following, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` are described.
 
-+-----------------+-----------------------------------+------------------------+
-| 名前            | 説明                              | 型                     |
-+=================+===================================+========================+
-| ``r_max``       | 相関関数の距離 r の最大値         | 整数                   |
-+-----------------+-----------------------------------+------------------------+
-| ``operators``   | 相関関数を測る演算子 A,B の番号   | 整数のリストのリスト   |
-+-----------------+-----------------------------------+------------------------+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
 
-演算子は ``observable`` セクションで指定したものが用いられます。
+   ``r_max``,    Maximum distance r of the correlation function, Integer
+   ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
 
-例
-~~
+The operators defined in the ``observable`` section are used.
+
+Example
+~~~~~~~
 
 ::
 
     [correlation]
     r_max = 5
     operators = [[0,0], [0,1], [1,1]]
-
