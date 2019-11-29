@@ -29,7 +29,7 @@ public:
   int Max_CTM_Iteration;
   bool CTM_Projector_corner;
   bool Use_RSVD;
-  int RSVD_Oversampling_factor;
+  double RSVD_Oversampling_factor;
 
   // Full update
   int num_full_step;

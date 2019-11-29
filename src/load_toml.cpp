@@ -121,7 +121,11 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     pparam.Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
     pparam.CTM_Projector_corner = find_or(ctm, "projector_corner", false);
     pparam.Use_RSVD = find_or(ctm, "use_rsvd", false);
-    pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2);
+    pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2.0);
+    if(pparam.RSVD_Oversampling_factor < 1.0){
+      std::string msg = "rsvd_oversampling_factor must be >= 1.0";
+      throw std::runtime_error(msg);
+    }
   }
 
   // random

@@ -24,7 +24,7 @@ PEPS_Parameters::PEPS_Parameters() {
   Max_CTM_Iteration = 100;
   CTM_Projector_corner = false;
   Use_RSVD = false;
-  RSVD_Oversampling_factor = 2;
+  RSVD_Oversampling_factor = 2.0;
 
   // Full update
   num_full_step = 0;
@@ -59,7 +59,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
     I_Use_RSVD,
-    I_RSVD_Oversampling_factor,
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
@@ -75,6 +74,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Inverse_Env_cut,
     I_Full_Inverse_precision,
     I_Full_Convergence_Epsilon,
+    I_RSVD_Oversampling_factor,
 
     N_PARAMS_DOUBLE_INDEX,
   };
@@ -101,7 +101,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
     SAVE_PARAM(Use_RSVD, int);
-    SAVE_PARAM(RSVD_Oversampling_factor, int);
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
@@ -114,6 +113,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Inverse_Env_cut, double);
     SAVE_PARAM(Full_Inverse_precision, double);
     SAVE_PARAM(Full_Convergence_Epsilon, double);
+    SAVE_PARAM(RSVD_Oversampling_factor, double);
 
     SAVE_PARAM(tensor_load_dir, string);
 
@@ -132,7 +132,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
     LOAD_PARAM(Use_RSVD, int);
-    LOAD_PARAM(RSVD_Oversampling_factor, int);
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
@@ -145,6 +144,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Inverse_Env_cut, double);
     LOAD_PARAM(Full_Inverse_precision, double);
     LOAD_PARAM(Full_Convergence_Epsilon, double);
+    LOAD_PARAM(RSVD_Oversampling_factor, double);
 
     LOAD_PARAM(tensor_load_dir, string);
     LOAD_PARAM(tensor_save_dir, string);

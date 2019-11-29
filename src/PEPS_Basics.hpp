@@ -477,7 +477,7 @@ void Calc_projector_left_block(
       Shape shape_col(t34, e56, t34);
 
       int info = rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-                      peps_parameters.RSVD_Oversampling_factor * e78);
+                      static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
       for (int i = 0; i < e78; ++i) {
@@ -638,7 +638,7 @@ void Calc_projector_updown_blocks(
       Shape shape_col(t23, e34, t23);
 
       int info = rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-                      peps_parameters.RSVD_Oversampling_factor * e78);
+                      static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
       for (int i = 0; i < e78; ++i) {
