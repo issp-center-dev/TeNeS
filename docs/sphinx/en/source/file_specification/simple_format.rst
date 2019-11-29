@@ -31,10 +31,10 @@ The following parameters are common to the ``tenes`` input file.
    :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``D``,        The virtual bond dimensions of the central tensor,  Integer,   2
-   ``CHI``,      The virtual bond dimensions of the angular transfer matrix,        Integer,   4
-   ``save_dir``, Directory to write optimized tensors, Str, ""
-   ``load_dir``, Directory to read initial tensor, Str, ""
+   ``D``,        "The virtual bond dimensions of the central tensor",  Integer,   2
+   ``CHI``,      "The virtual bond dimensions of the angular transfer matrix",        Integer,   4
+   ``save_dir``, "Directory to write optimized tensors", Str, \"\"
+   ``load_dir``, "Directory to read initial tensor", Str, \"\"
 
 
 - ``save_dir``
@@ -52,8 +52,8 @@ The following parameters are common to the ``tenes`` input file.
    :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``num_step``,              Number of simple updates, Integer, 0
-   ``inverse_lambda_cutoff``, cutoff of the mean field to be considered zero in the simple update, Real, 1e-12
+   ``num_step``,      "Number of simple updates",                                            Integer, 0
+   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update", Real,    1e-12
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,12 +62,13 @@ The following parameters are common to the ``tenes`` input file.
    :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``num_step``,                 Number of full updates,  Integer,   0
-   ``inverse_precision``,        Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update, Real,   1e-12
-   ``convergence_epsilon``,      Convergence criteria for truncation optimization with full update, Real, 1e-12
-   ``iteration_max``,            Maximum iteration number for truncation optimization on full updates,    Integer,   1000
-   ``gauge_fix``,                Whether the tensor gauge is fixed, Boolean, true
-   ``fastfullupdate``,           Whether the Fast full update is adopted, Boolean, true
+   ``num_step``,            "Number of full updates",                                                                                      Integer, 0
+   ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
+   ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
+   ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-12
+   ``iteration_max``,       "Maximum iteration number for truncation optimization on full updates",                                        Integer, 1000
+   ``gauge_fix``,           "Whether the tensor gauge is fixed",                                                                           Boolean, true
+   ``fastfullupdate``,      "Whether the Fast full update is adopted",                                                                     Boolean, true
 
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
@@ -76,12 +77,12 @@ The following parameters are common to the ``tenes`` input file.
    :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``inverse_projector_cutoff``, Cutoff of singular values to be considered as zero when computing CTM projectors, Real,   1e-12
-   ``convergence_epsilon``,      CTM convergence criteria,                                        Real,   1e-10
-   ``iteration_max``,            Maximum iteration number of convergence for CTM,                           Integer,   100
-   ``projector_corner``,         Whether to use only the 1/4 corner tensor in the CTM projector calculation,          Boolean, true
-   ``use_rsvd``,                 Whether to replace SVD with Random SVD,                    Boolean, false
-   ``rsvd_oversampling_factor``, ,                                                       Integer,   2
+   ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
+   ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
+   ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
+   ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
+   ``use_rsvd``,                 "Whether to replace SVD with Random SVD",                                                                    Boolean, false
+   ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method", Real,    2.0
 
 
 ``parameter.random``
@@ -91,7 +92,9 @@ The following parameters are common to the ``tenes`` input file.
    :header: "Name", "Description", "Type", "Default"
    :widths: 15, 30, 20, 10
 
-   ``seed``, Seed of the pseudo-random number generator used to initialize the tensor, Integer, 11
+   ``seed``, "Seed of the pseudo-random number generator used to initialize the tensor", Integer, 11
+
+Each MPI process has the own seed as ``seed`` plus the process ID (MPI rank).
 
 Example
 ~~~~~~~
@@ -120,11 +123,11 @@ Specify the lattice information.
 Square lattice and honeycomb lattice are defined as lattice types.
 
 .. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
 
-   ``type``, "Lattice name (square lattice or honeycomb lattice)", Str, --
-   ``L_sub``, Unit cell size, An integer or a list of two integers, --
+   ``type``, "Lattice name (square lattice or honeycomb lattice)", Str
+   ``L_sub``, "Unit cell size", An integer or a list of two integers
 
 
 When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
@@ -181,10 +184,10 @@ Specify the type of the model.
 Spin system is only defined for ver. 0.1.
 
 .. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 15, 10
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 15
 
-   ``type``, The type of the model, Str, --
+   ``type``, "The type of the model", Str
 
 
 Parameter names such as interaction depends on the model type.
@@ -291,7 +294,7 @@ In the following, the parameters about correlation function are described.
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``r_max``,    Maximum distance r of the correlation function, Integer
+   ``r_max``,     "Maximum distance r of the correlation function", Integer
    ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
 
 
