@@ -96,31 +96,30 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   // Simple update
   auto simple = param->get_table("simple_update");
   if(simple != nullptr){
-    pparam.num_simple_step = find_or(simple, "num_step", 0);
-    pparam.Inverse_lambda_cut = find_or(simple, "inverse_lambda_cutoff", 1e-12);
+    pparam.num_simple_step    = find_or(simple, "num_step", 0);
+    pparam.Inverse_lambda_cut = find_or(simple, "lambda_cutoff", 1e-12);
   }
 
   // Full update
   auto full = param->get_table("full_update");
   if(full != nullptr){
-    pparam.num_full_step = find_or(full, "num_step", 0);
-    pparam.Full_Inverse_precision = find_or(full, "inverse_precision", 1e-12);
+    pparam.num_full_step            = find_or(full, "num_step", 0);
+    pparam.Full_Inverse_precision   = find_or(full, "inverse_precision", 1e-12);
     pparam.Full_Convergence_Epsilon = find_or(full, "convergence_epsilon", 1e-12);
-    pparam.Inverse_Env_cut = find_or(full, "env_cutoff", 1e-12);
-    pparam.Full_max_iteration = find_or(full, "iteration_max", 1000);
-    pparam.Full_Gauge_Fix = find_or(full, "gauge_fix", true);
-    pparam.Full_Use_FastFullUpdate = find_or(full, "fastfullupdate", true);
+    pparam.Inverse_Env_cut          = find_or(full, "env_cutoff", 1e-12);
+    pparam.Full_max_iteration       = find_or(full, "iteration_max", 1000);
+    pparam.Full_Gauge_Fix           = find_or(full, "gauge_fix", true);
+    pparam.Full_Use_FastFullUpdate  = find_or(full, "fastfullupdate", true);
   }
 
   // Environment
   auto ctm = param->get_table("ctm");
   if(ctm != nullptr){
-    pparam.Inverse_projector_cut =
-        find_or(ctm, "inverse_projector_cutoff", 1e-12);
-    pparam.CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
-    pparam.Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
-    pparam.CTM_Projector_corner = find_or(ctm, "projector_corner", false);
-    pparam.Use_RSVD = find_or(ctm, "use_rsvd", false);
+    pparam.Inverse_projector_cut    = find_or(ctm, "projector_cutoff", 1e-12);
+    pparam.CTM_Convergence_Epsilon  = find_or(ctm, "convergence_epsilon", 1e-10);
+    pparam.Max_CTM_Iteration        = find_or(ctm, "iteration_max", 100);
+    pparam.CTM_Projector_corner     = find_or(ctm, "projector_corner", false);
+    pparam.Use_RSVD                 = find_or(ctm, "use_rsvd", false);
     pparam.RSVD_Oversampling_factor = find_or(ctm, "rsvd_oversampling_factor", 2.0);
     if(pparam.RSVD_Oversampling_factor < 1.0){
       std::string msg = "rsvd_oversampling_factor must be >= 1.0";
