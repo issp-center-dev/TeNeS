@@ -47,7 +47,7 @@
    :widths: 15, 30, 20, 10
 
    ``num_step``,              "simple update の回数",                       整数, 0
-   ``inverse_lambda_cutoff``, "simple update でゼロとみなす平均場のcutoff", 実数, 1e-12
+   ``lambda_cutoff``, "simple update でゼロとみなす平均場のcutoff", 実数, 1e-12
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
