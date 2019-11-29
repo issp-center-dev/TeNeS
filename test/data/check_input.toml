@@ -10,7 +10,7 @@ inverse_lambda_cutoff = 1e-10
 
 [parameter.full_update]
 num_step = 1
-inverse_projector_cutoff = 1e-10
+env_cutoff = 1e-10
 inverse_precision = 1e-10
 convergence_epsilon = 1e-10
 iteration_max = 100
