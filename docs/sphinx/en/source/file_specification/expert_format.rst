@@ -114,7 +114,7 @@ Example
 ``lattice`` section
 ========================
 
-Specify the ''unit cell'' information.
+Specify the unit cell information.
 Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
 
 .. csv-table::
@@ -159,7 +159,7 @@ Define the imaginary time evolution opetrators used in simple and full updates.
 
 - One matrix is defined by a list of string.
 - Columns are separated by one or more blanks, and rows are separated by one or more newlines.
-- The order defined corresponds exactly to the number of the matrix. This order numbers are used to specify ``*_update`` (0-origin).
+- The order defined corresponds exactly to the number of the matrix. This order numbers are used to specify ``simple_update`` and ``full_update`` (0-origin).
 
 ``*_update``
 ~~~~~~~~~~~~
@@ -212,7 +212,7 @@ Example
 ``observable`` section
 ==========================
 
-In this section, the information about observing physical quantities is specified.
+In this section, the information about physical quantities to be observed is specified.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
@@ -274,7 +274,7 @@ Example
 ``correlation`` section
 ==========================
 
-In the following, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` are described.
+In the following, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` is described.
 
 .. csv-table::
    :header: "Name", "Description", "Type"

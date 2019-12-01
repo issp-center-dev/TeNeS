@@ -42,7 +42,7 @@ The following parameters are common to the ``tenes`` input file.
   - When it is empty, the tensors are not saved.
 - ``load_dir``
   - Read various tensors from below this directory.
-  - Must be same degree of parallelism as when saved.
+  - Must be the same degree of parallelism as when saved.
   - Not read if it is empty.
 
 ``parameter.simple_update``
@@ -181,7 +181,7 @@ The unit cell for ``L_sub = 2`` is given as follows::
 ==========================
 
 Specify the type of the model.
-Spin system is only defined for ver. 0.1.
+Only the Spin system can be spcified in ver. 0.1.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
@@ -189,8 +189,6 @@ Spin system is only defined for ver. 0.1.
 
    ``type``, "The type of the model", Str
 
-
-Parameter names such as interaction depends on the model type.
 
 Spin system
 ~~~~~~~~~~~~~~~~~~~~~
@@ -208,7 +206,7 @@ Spin system
    ``S``, "Magnituide of the local spin", Real, 0.5
    ``Jx``, "The x component of the exchange interaction J", Real or a list of Real, 1.0
    ``Jy``, "The y component of the exchange interaction J", Real or a list of Real, 1.0
-   ``Jz``,"The z component of the exchange interaction J", Real or a list of Real, 1.0, Real or a list of Real, 1.0
+   ``Jz``,"The z component of the exchange interaction J", Real or a list of Real, 1.0
    ``BQ``, "Biquadratic interaction B", Real or a list of Real, 0.0
    ``h``, "longitudinal magnetic field h", Real, 0.0
    ``G``, "Transverse magnetic field
@@ -224,7 +222,7 @@ If the number of elements in the list is less than the type of lattice bond, the
 ==========================
 
 By default, the local physical quantities used for physical quantities measurements: :math:`S^z`  and :math:`S^x` .
-More detailed physical quantities measurements can be made by overwriting the format common to ``tenes``.
+Measurements of more detailed physical quantities can be made by overwriting the format common to ``tenes``.
 The following format is common to "tenes`.
 
 .. csv-table::
@@ -287,7 +285,7 @@ Example
 ==========================
 
 For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
-For calculating correlation functions, it can be specified in the same file format as ``tenes``.
+For calculating correlation functions, they have to be specified in the same file format as ``tenes``.
 In the following, the parameters about correlation function are described.
 
 .. csv-table::

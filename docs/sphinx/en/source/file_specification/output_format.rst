@@ -9,7 +9,7 @@ Output files are generated in the ``output`` directry.
 ``parameters.dat``
 =====================
 
-Paramters in ``parameter`` and ``lattice`` sections are outputted.
+Paramters in the ``parameter`` and ``lattice`` sections defined in the input file are outputted.
 
 ``energy.dat``
 ==============
@@ -90,7 +90,7 @@ Example
 -  Correlation functions are outputted.
 -  Each row consists of eight columns.
 
-   1. Index of the left-hand operator
+   1. Index of the left operator
    2. Site index of the left operator
    3. Index of the right operator
    4. Site index of the right operator
