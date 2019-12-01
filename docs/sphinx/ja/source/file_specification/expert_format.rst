@@ -23,7 +23,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``D``,        "中心テンソルがもつ virtual ボンドの次元",  整数,   2
    ``CHI``,      "角転送行列の virtual ボンドの次元",        整数,   4
@@ -44,7 +44,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``num_step``,              "simple update の回数",                       整数, 0
    ``lambda_cutoff``, "simple update でゼロとみなす平均場のcutoff", 実数, 1e-12
@@ -54,7 +54,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``num_step``,            "full update の回数",                                                 整数,   0
    ``env_cutoff``,          "full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff", 実数,   1e-12
@@ -69,7 +69,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``projector_cutoff``,         "CTMのprojectorを計算する際にゼロとみなす特異値のcutoff",         実数,   1e-12
    ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-10
@@ -84,7 +84,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``seed``, "テンソルの初期化や乱択SVD に用いる疑似乱数生成器のシード", 整数, 11
 
@@ -161,8 +161,8 @@ simple update, full update で使う虚時間発展演算子を記述します�
 -  定義した順番がそのまま行列の番号に対応し、 ``*_update``
    での指定で使われます (0-origin)。
 
-``*_update``
-~~~~~~~~~~~~
+``simple_update``, ``full_update``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  1行が1回の演算子作用を表します。
 -  各行は ``int int char int`` の４つのフィールドからなります。
@@ -279,7 +279,7 @@ simple update, full update で使う虚時間発展演算子を記述します�
    :header: "名前", "説明", "型"
    :widths: 15, 30, 20
 
-   ``r_max``,     "相関関数の距離 r の最大値", 整数
+   ``r_max``,     "相関関数の距離 :math:`r` の最大値", 整数
    ``operators``, "相関関数を測る演算子 A, B の番号", 整数のリストのリスト
 
 演算子は ``observable`` セクションで指定したものが用いられます。

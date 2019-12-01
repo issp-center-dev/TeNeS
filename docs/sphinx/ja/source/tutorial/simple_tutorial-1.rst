@@ -72,6 +72,22 @@
 ``<Sz>`` の値は、 ``site_obs.dat`` の ``0 0`` 成分もしくは標準出力の ``Local operator 0`` に続く値から抽出することが可能で、 
 ``G`` をパラメータとして0.1刻みで0-2.0まで振り、得られた結果を下図に表示します。
 
+なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` の ``tutorial_example.py`` , ``tutorial_read.py`` があります。実行は、
+
+.. code::
+
+   $ python tutorial_example.py
+
+でできます(MacBook2017, 1.4 GHz Intel Core i7で数分程度で計算が全て終了します)。
+得られた結果は
+
+.. code::
+
+   $ python tutorial_read.py
+
+とすることで, 標準出力に、G, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
+
+
 .. image:: ../../../img/tutorial_1_Sz_vs_G.pdf
    :width: 400px
    :align: center

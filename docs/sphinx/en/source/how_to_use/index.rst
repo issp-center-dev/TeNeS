@@ -10,7 +10,7 @@ Usage
   
 The following sections describe how to use each script, and finally how to use ``tenes``.
 If you want to work with other models or grids, you can do so by creating the input file for ``tenes`` directly.
-See the file format for details on the input file of ``tenes``.
+See :doc:`../file_specification/index` for details on the input file of ``tenes``.
   
 .. toctree::
    :maxdepth: 2

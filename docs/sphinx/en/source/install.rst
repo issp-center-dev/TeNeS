@@ -49,20 +49,19 @@ Install
 
   $ mkdir build
   $ cd build
-  $ cmake ..
+  $ cmake  -DCMAKE_INSTALL_PREFIX=<path to install to> ..
   $ make
 
 The executable file ``tests``  will be generated in  ``build/src`` directory.
-  
+The default value of the ``<path to install to>`` is ``/usr/local``. 
+
 2. Install ``TeNeS`` by typing the following commands:
 
 ::
 
-  $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
-  $ make
   $ make install
 
-The above installs ``tenes`` into the ``<path to install to>/bin`` . The default value of the ``<path to install to>`` is ``/usr/local``. 
+In this case, ``tenes`` is installed into the ``<path to install to>/bin`` . 
 
 .. admonition:: Specify compiler
 
@@ -75,7 +74,7 @@ The above installs ``tenes`` into the ``<path to install to>/bin`` . The default
 
 .. admonition:: Use the pre-built mptensor
 
-   ``TeNeS`` is based on the parallerized tensor library ``mptensor``. The build system of ``TeNeS`` installs this automatically, but you can use the extra pre-built mptensor by the following way.
+   ``TeNeS`` is based on the parallerized tensor library ``mptensor``. The build system of ``TeNeS`` installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../

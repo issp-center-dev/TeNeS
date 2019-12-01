@@ -48,20 +48,18 @@ ScaLAPACKについては自身でインストールする必要があります�
 
   $ mkdir build
   $ cd build
-  $ cmake ..
+  $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
   $ make
 
 上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tests`` が作成されます。
-  
+``<path to install to>`` のデフォルト値は ``/usr/local`` です。
+
 2. 次にインストールを実行します。
 
 ::
-
-  $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
-  $ make
   $ make install
  
-上の例では、実行ファイル ``tenes`` が ``<path to install to>/bin`` にインストールされます。 ``<path to install to>`` のデフォルト値は ``/usr/local`` です。
+実行ファイル ``tenes`` が ``<path to install to>/bin`` にインストールされます。 
 
 
 .. admonition:: コンパイラの指定
@@ -80,9 +78,9 @@ ScaLAPACKについては自身でインストールする必要があります�
       $ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
 
 
-.. admonition:: プリインストールされた ``mptensor`` の利用
+.. admonition:: ``mptensor`` の指定
 
-   ``TeNeS`` でプリインストールされた ``mptensor`` を使用したい場合には、以下のようにオプションを追加してください。
+   ユーザーが事前にインストールした ``mptensor`` を使用したい場合には、以下のようにオプションを追加してください。
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../

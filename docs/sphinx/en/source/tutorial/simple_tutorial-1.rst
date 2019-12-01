@@ -74,6 +74,21 @@ The value of ``<Sz>`` can be extracted from the value following the ``0 0`` comp
 or the ``Local operator 0`` in the standard output.
 By changing ``G`` in increments of 0.1 from 0 to 2.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
 
+As an exapmle of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
+The calculation will be done by typing the following command:
+
+.. code::
+
+   $ python tutorial_example.py
+
+For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in  a few minutes. By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are ouputted in the standard output:
+
+.. code::
+
+   $ python tutorial_read.py
+
+
+
 .. image:: ../../../img/tutorial_1_Sz_vs_G.pdf
    :width: 400px
    :align: center

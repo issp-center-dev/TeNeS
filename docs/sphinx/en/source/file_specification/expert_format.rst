@@ -23,7 +23,7 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10 
 
    ``D``,        "The virtual bond dimensions of the central tensor",  Integer,   2
    ``CHI``,      "The virtual bond dimensions of the angular transfer matrix",        Integer,   4
@@ -45,7 +45,7 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10 
 
    ``num_step``,      "Number of simple updates",                                            Integer, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update", Real,    1e-12
@@ -55,7 +55,7 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10 
 
    ``num_step``,            "Number of full updates",                                                                                      Integer, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
@@ -70,7 +70,7 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10 
 
    ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
    ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
@@ -85,7 +85,7 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10 
 
    ``seed``, "Seed of the pseudo-random number generator used to initialize the tensor", Integer, 11
 
@@ -161,8 +161,8 @@ Define the imaginary time evolution opetrators used in simple and full updates.
 - Columns are separated by one or more blanks, and rows are separated by one or more newlines.
 - The order defined corresponds exactly to the number of the matrix. This order numbers are used to specify ``simple_update`` and ``full_update`` (0-origin).
 
-``*_update``
-~~~~~~~~~~~~
+``simple_update`` and ``full_update``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  One row represents one operator action.
 -  Each line consists of four fields: ``int int string int``.
@@ -280,7 +280,7 @@ In the following, the parameters about the correlation function :math:`C = \lang
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``r_max``,     "Maximum distance r of the correlation function", Integer
+   ``r_max``,     "Maximum distance :math:`r` of the correlation function", Integer
    ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
 
 The operators defined in the ``observable`` section are used.

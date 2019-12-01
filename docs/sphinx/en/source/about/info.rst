@@ -19,7 +19,7 @@ Developers
 Version information
 ======================
 
-- ver. 0.1: 2019/xx/yy.
+- ver. 0.1: 2019/12/04.
 
 License
 ==================

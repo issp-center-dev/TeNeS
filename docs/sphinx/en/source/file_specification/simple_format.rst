@@ -18,7 +18,7 @@ You can also specify the imaginary time step size for the imaginary time evoluti
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``tau``, imaginary time step in the imaginary time evolution operator, Real, 0.01
 
@@ -29,7 +29,7 @@ The following parameters are common to the ``tenes`` input file.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``D``,        "The virtual bond dimensions of the central tensor",  Integer,   2
    ``CHI``,      "The virtual bond dimensions of the angular transfer matrix",        Integer,   4
@@ -50,7 +50,7 @@ The following parameters are common to the ``tenes`` input file.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``num_step``,      "Number of simple updates",                                            Integer, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update", Real,    1e-12
@@ -60,7 +60,7 @@ The following parameters are common to the ``tenes`` input file.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``num_step``,            "Number of full updates",                                                                                      Integer, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
@@ -75,7 +75,7 @@ The following parameters are common to the ``tenes`` input file.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
    ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
@@ -90,7 +90,7 @@ The following parameters are common to the ``tenes`` input file.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``seed``, "Seed of the pseudo-random number generator used to initialize the tensor", Integer, 11
 
@@ -124,7 +124,7 @@ Square lattice and honeycomb lattice are defined as lattice types.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
+   :widths: 30, 30, 20
 
    ``type``, "Lattice name (square lattice or honeycomb lattice)", Str
    ``L_sub``, "Unit cell size", An integer or a list of two integers
@@ -185,7 +185,7 @@ Only the Spin system can be spcified in ver. 0.1.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
-   :widths: 15, 30, 15
+   :widths: 30, 30, 15
 
    ``type``, "The type of the model", Str
 
@@ -201,7 +201,7 @@ Spin system
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
-   :widths: 15, 30, 20, 10
+   :widths: 30, 30, 10, 10
 
    ``S``, "Magnituide of the local spin", Real, 0.5
    ``Jx``, "The x component of the exchange interaction J", Real or a list of Real, 1.0
@@ -222,87 +222,11 @@ If the number of elements in the list is less than the type of lattice bond, the
 ==========================
 
 By default, the local physical quantities used for physical quantities measurements: :math:`S^z`  and :math:`S^x` .
-Measurements of more detailed physical quantities can be made by overwriting the format common to ``tenes``.
-The following format is common to "tenes`.
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``local_operator``,    Site opertor (ex. Sz),                      A list of Str
-   ``hamiltonian``,       Bond hamiltonian,                           A list of Str
-   ``hamiltonian_bonds``, Type of bond Hamiltonian and the set of bonds that act, Str
-
-``local_operator``, ``hamiltonian``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Same as ``evolution.matrix`` .
-The order you define corresponds exactly to the index of the operator Hamiltonian.
-
-``hamiltonian_bonds``
-~~~~~~~~~~~~~~~~~~~~~
-
-Same as ``evolution.simple_update`` .
-
-Example
-~~~~~~~~
-
-::
-
-    [observable]
-    local_operator = [
-    """
-      0.5  0.0
-      0.0 -0.5
-    """,
-    """
-      0.0 0.5
-      0.5 0.0
-    """,
-    ]
-
-    hamiltonian_bonds = """
-    0 1 h 0
-    3 2 h 0
-    2 3 h 0
-    1 0 h 0
-    0 2 v 0
-    3 1 v 0
-    2 0 v 0
-    1 3 v 0
-    """
-
-    hamiltonian = [
-    """
-      0.25   0.0    0.0     0.0
-      0.0   -0.25   0.5     0.0  
-      0.0    0.5   -0.25    0.0  
-      0.0    0.0    0.0     0.25
-    """,
-    ]
+Measurements of more detailed physical quantities can be made by overwriting the format common to the input file of ``tenes``. For details, See ``observable`` section :doc:`expert_format`.
 
 ``correlation`` section
 ==========================
 
 For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
-For calculating correlation functions, they have to be specified in the same file format as ``tenes``.
-In the following, the parameters about correlation function are described.
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``r_max``,     "Maximum distance r of the correlation function", Integer
-   ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
-
-
-The operators defined in the ``observable`` section are used.
-
-Example
-~~~~~~~
-
-::
-
-    [correlation]
-    r_max = 5
-    operators = [[0,0], [0,1], [1,1]]
+For calculating correlation functions, they have to be specified in the same file format as the input file of ``tenes``.
+For details, See ``correlation`` section :doc:`expert_format`.
