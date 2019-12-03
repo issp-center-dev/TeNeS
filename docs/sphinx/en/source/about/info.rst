@@ -1,6 +1,7 @@
 Overview
 =================
-T.B.A.
+``TeNeS`` is an open-source program package for calculation of many-body quantum states base on the tensor network method. In ver. 0.1, this package calculates ground-state wavefunctions of quantum spin models, and evaluates physical quantities such as magnetization and correlation functions. For predefined models and lattices, there is a tool that makes it easy for users to generate input files.
+In ver. 1.0, a tool that is useful to define the own models and lattices from a simple input file will be developed. Furthermore, the Boson system will be able to be treated. This improvement will enable us to deal with various two-dimensional quantum spin and boson systems.
 
 
 Developers
