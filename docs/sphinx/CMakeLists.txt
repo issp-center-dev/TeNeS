@@ -9,7 +9,7 @@ endif()
 
 find_package(LATEX)
 
-add_subdirectory(ja/source)
-add_subdirectory(en/source)
+add_subdirectory(ja)
+add_subdirectory(en)
 
 add_custom_target(doc DEPENDS doc-ja doc-en)
