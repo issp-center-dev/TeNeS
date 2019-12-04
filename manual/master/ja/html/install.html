@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>2. インストール方法 &#8212; TeNeS 0.1 ドキュメント</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="3. 使用方法" href="how_to_use/index.html" />
+    <link rel="prev" title="1.1. 概要" href="about/info.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>2. インストール方法<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<div class="section" id="id2">
+<h2>2.1. ダウンロード<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>TeNeS のソースコードは <a class="reference external" href="https://github.com/issp-center-dev/TeNeS">GitHub page</a> からダウンロードできます。gitがインストールされている環境で、以下のコマンドを打つとダウンロードが開始されます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/issp-center-dev/TeNeS</span></code></p>
+</div>
+<div class="section" id="id3">
+<h2>2.2. 必要なライブラリ・環境<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>TeNeSをコンパイルするには以下のライブラリ・環境が必要です。</p>
+<ol class="arabic simple">
+<li><p>C++11 compiler</p></li>
+<li><p>CMake (&gt;=2.8.14)</p></li>
+<li><p>MPI と ScaLAPACK</p></li>
+</ol>
+<p>TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。</p>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
+<li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
+<li><p><a class="reference external" href="https://github.com/arsenm/sanitizers-cmake">sanitizers-cmake</a></p></li>
+</ol>
+<p>ScaLAPACKについては自身でインストールする必要があります。Macでhomebrewを利用されている方は、</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">brew</span> <span class="n">install</span> <span class="n">scalapack</span>
+</pre></div>
+</div>
+<p>でインストールすることが可能です。それ以外の方は、ScaLAPACKのホームページを参照の上、インストールをしてください。</p>
+<p>また、入力ファイル作成ツール <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用には以下のライブラリ・環境が必要です。</p>
+<ol class="arabic simple">
+<li><p>Python (バージョン3以上での稼働を確認)</p></li>
+<li><p>numpy</p></li>
+<li><p>toml</p></li>
+</ol>
+</div>
+<div class="section" id="id4">
+<h2>2.3. インストール<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<ol class="arabic simple">
+<li><p>以下の手順に従ってビルドを行います。</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir build
+$ cd build
+$ cmake -DCMAKE_INSTALL_PREFIX=&lt;path to install to&gt; ../
+$ make
+</pre></div>
+</div>
+<p>上記のコマンドで <code class="docutils literal notranslate"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal notranslate"><span class="pre">tests</span></code> が作成されます。
+<code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> のデフォルト値は <code class="docutils literal notranslate"><span class="pre">/usr/local</span></code> です。</p>
+<ol class="arabic simple" start="2">
+<li><p>次にインストールを実行します。</p></li>
+</ol>
+<dl class="simple">
+<dt>::</dt><dd><p>$ make install</p>
+</dd>
+</dl>
+<p>実行ファイル <code class="docutils literal notranslate"><span class="pre">tenes</span></code> が <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;/bin</span></code> にインストールされます。</p>
+<div class="admonition- admonition">
+<p class="admonition-title">コンパイラの指定</p>
+<p><code class="docutils literal notranslate"><span class="pre">CMake</span></code> では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のようにオプションを追加してください。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DCMAKE_CXX_COMPILER=&lt;path to your compiler&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-python admonition">
+<p class="admonition-title">Python インタープリタの指定</p>
+<p><code class="docutils literal notranslate"><span class="pre">CMake</span></code> では自動でPython インタープリタを検出してビルドを行います。指定したい場合には, 以下のようにオプションを追加してください。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DPYTHON_EXECUTABLE=&lt;path to your interpreter&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-mptensor admonition">
+<p class="admonition-title"><code class="docutils literal notranslate"><span class="pre">mptensor</span></code> の指定</p>
+<p>ユーザーが事前にインストールした <code class="docutils literal notranslate"><span class="pre">mptensor</span></code> を使用したい場合には、以下のようにオプションを追加してください。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DMPTENSOR_ROOT=&lt;path to mptensor&gt; ../
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">TeNeS</a></h1>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">2. インストール方法</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">2.1. ダウンロード</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">2.2. 必要なライブラリ・環境</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">2.3. インストール</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algorithm/index.html">6. 参考文献</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="about/info.html" title="前の章へ">1.1. 概要</a></li>
+      <li>Next: <a href="how_to_use/index.html" title="次の章へ">3. 使用方法</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/install.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

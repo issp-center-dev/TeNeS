@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>3. 使用方法 &#8212; TeNeS 0.1 ドキュメント</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="3.1. tenes_simple の使用方法" href="simple_usage.html" />
+    <link rel="prev" title="2. インストール方法" href="../install.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>3. 使用方法<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">TeNeS</span></code> では事前に所定のフォーマットに従い模型や演算順などを定義するための複数の入力ファイルを作成する必要があります。入力ファイルの作成をしやすいように、</p>
+<ul class="simple">
+<li><p>あらかじめ定義された格子模型に対して, 簡単な入力ファイルから <code class="docutils literal notranslate"><span class="pre">tenes</span></code> を実行するための入力ファイルを生成するツール <code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code></p></li>
+<li><p>所定のフォーマットに従い、自分で格子模型などを定義した入力ファイルを作成し実行することで、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> を実行するための入力ファイルを生成するツール <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> (ver. 1.0 で実装予定)</p></li>
+</ul>
+<p>が用意されています。上記以外の模型や格子に対応させたい場合には、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを直接作成することで対応できます。 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルの詳細については、<a class="reference internal" href="../file_specification/index.html"><span class="doc">ファイルフォーマット</span></a> をご覧ください。</p>
+<p>以下、それぞれのツールの使用方法について記載し、最後に <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法について説明します。</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">TeNeS</a></h1>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. 使用方法</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/index.html">6. 参考文献</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../install.html" title="前の章へ">2. インストール方法</a></li>
+      <li>Next: <a href="simple_usage.html" title="次の章へ">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/how_to_use/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

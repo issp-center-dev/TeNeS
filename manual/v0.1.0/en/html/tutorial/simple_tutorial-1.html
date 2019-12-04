@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>4.1. Ising model with transverse magnetic field &#8212; TeNeS 0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5. File format" href="../file_specification/index.html" />
+    <link rel="prev" title="4. Tutorial" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="ising-model-with-transverse-magnetic-field">
+<h1>4.1. Ising model with transverse magnetic field<a class="headerlink" href="#ising-model-with-transverse-magnetic-field" title="Permalink to this headline">¶</a></h1>
+<p>This section presents an example of calculation when the transverse magnetic field is applied to the Ising model.
+By changing the variable  <code class="docutils literal notranslate"><span class="pre">G</span></code> in the input file,
+the magnitude of the transverse magnetic field will be modified.
+For example, when the transverse magnetic field is 0, the input file becomes</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.tensor]
+D  = 2     # tensor_dim
+CHI  = 10  # env_dim
+
+[parameter.simple_update]
+num_step = 1000
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L_sub = [2,2]
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+G = 0.0
+</pre></div>
+</div>
+<p>In this case, since <code class="docutils literal notranslate"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferro magnetic state becomes the ground state at <code class="docutils literal notranslate"><span class="pre">G=0</span></code>.
+When the input file name is <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> , type the following commands to execute <code class="docutils literal notranslate"><span class="pre">tenes</span></code> :</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes_simple simple.toml
+$ tenes input.toml
+</pre></div>
+</div>
+<p>Then, the following logs are output to the standard output.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Start simple update
+Start calculating observables
+Start updating environment
+Start calculating <span class="nb">local</span> operators
+Save site observables to output/site_obs.dat
+Start calculating energy
+Save energy to output/energy.dat
+Start calculating NN correlation
+Save NN correlation to output/neighbor_obs.dat
+Save elapsed <span class="nb">times</span> to output/time.dat
+
+<span class="nv">Energy</span> <span class="o">=</span> -0.5
+Local operator <span class="nv">0</span> <span class="o">=</span> <span class="m">0</span>.5
+Local operator <span class="nv">1</span> <span class="o">=</span> <span class="m">1</span>.90794709356e-11
+
+<span class="nb">time</span> simple <span class="nv">update</span> <span class="o">=</span> <span class="m">3</span>.21127
+<span class="nb">time</span> full <span class="nv">update</span>   <span class="o">=</span> <span class="m">0</span>
+<span class="nb">time</span> <span class="nv">environmnent</span>  <span class="o">=</span> <span class="m">0</span>.875561
+<span class="nb">time</span> <span class="nv">observable</span>    <span class="o">=</span> <span class="m">0</span>.132412
+</pre></div>
+</div>
+<p>The execution status of each process is displayed first.
+After finishing the calculation, <code class="docutils literal notranslate"><span class="pre">Energy</span></code> and the local operators <code class="docutils literal notranslate"><span class="pre">Local</span> <span class="pre">operator</span> <span class="pre">0</span></code> (<code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code>),   <code class="docutils literal notranslate"><span class="pre">Local</span> <span class="pre">operator</span> <span class="pre">1</span></code> (<code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code>) are outputted, respectively. Finally, <code class="docutils literal notranslate"><span class="pre">time</span></code> is printed to show the calculation time (Time unit is seconds).
+In the <code class="docutils literal notranslate"><span class="pre">output</span></code> folder,
+<code class="docutils literal notranslate"><span class="pre">energy.dat,</span> <span class="pre">parameters.dat,</span> <span class="pre">time.dat,</span> <span class="pre">neighbor_obs.dat,</span> <span class="pre">site_obs.dat</span></code>
+are outputted. For details about each output file, see the file formats.
+The value of <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> can be extracted from the value following the <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span></code> component of <code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code>
+or the <code class="docutils literal notranslate"><span class="pre">Local</span> <span class="pre">operator</span> <span class="pre">0</span></code> in the standard output.
+By changing <code class="docutils literal notranslate"><span class="pre">G</span></code> in increments of 0.1 from 0 to 2.0 and running <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes</span></code>, the following result is obtained.</p>
+<p>As an exapmle of the sample script, <code class="docutils literal notranslate"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal notranslate"><span class="pre">tutorial_read.py</span></code> are prepared in the <code class="docutils literal notranslate"><span class="pre">sample/01_transverse_field_ising</span></code> directory.
+The calculation will be done by typing the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ python tutorial_example.py
+</pre></div>
+</div>
+<p>For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in  a few minutes. By typing the following command, G, energy, <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> are ouputted in the standard output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ python tutorial_read.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" class="align-center" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
+<p>As you can see from the figure, with increasing <code class="docutils literal notranslate"><span class="pre">G</span></code>, the <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> decreases gradually from <code class="docutils literal notranslate"><span class="pre">0.5</span></code> to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">TeNeS</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.1. Ising model with transverse magnetic field</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/index.html">6. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">4. Tutorial</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">4. Tutorial</a></li>
+      <li>Next: <a href="../file_specification/index.html" title="next chapter">5. File format</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/tutorial/simple_tutorial-1.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
