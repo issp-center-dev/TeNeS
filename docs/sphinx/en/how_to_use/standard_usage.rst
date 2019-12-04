@@ -1,6 +1,6 @@
 .. highlight:: none
 
-Usage of ``tenes_simple.py``
+Usage of ``tenes_standard.py``
 --------------------------------
 
-``tenes_simple.py`` will be released at ver.1.0.
+``tenes_standard.py`` will be released at ver.1.0.
