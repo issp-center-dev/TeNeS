@@ -164,3 +164,7 @@ endif()
 if(Document)
     add_subdirectory(${PROJECT_SOURCE_DIR}/docs/sphinx)
 endif()
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/sample
+    DESTINATION share/tenes/${TENES_VERSION}
+)
