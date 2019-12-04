@@ -13,6 +13,7 @@ option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
 option(CPPTOML_ROOT "External directory where cpptoml is download into" OFF)
 option(PYTHON_EXECUTABLE "Path to the python interpreter" OFF)
 option(Testing "Enable tests" ON)
+option(Document "Build docs" OFF)
 
 if(Testing)
     enable_testing()
@@ -158,4 +159,8 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/tool)
 
 if(Testing)
     add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+endif()
+
+if(Document)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/docs/sphinx)
 endif()
