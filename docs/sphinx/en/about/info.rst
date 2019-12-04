@@ -15,7 +15,7 @@ Developers
   - Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
   - Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
   - Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
-  - Naoki Kawashim (Institute for Solid State Physics, Univ. of Tokyo)
+  - Naoki Kawashima (Institute for Solid State Physics, Univ. of Tokyo)
 
 Version information
 ======================
