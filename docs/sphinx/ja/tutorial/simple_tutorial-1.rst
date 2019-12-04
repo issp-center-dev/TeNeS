@@ -88,7 +88,7 @@
 とすることで, 標準出力に、G, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
 
 
-.. image:: ../../img/tutorial_1_Sz_vs_G.pdf
+.. image:: ../../img/tutorial_1_Sz_vs_G.*
    :width: 400px
    :align: center
 

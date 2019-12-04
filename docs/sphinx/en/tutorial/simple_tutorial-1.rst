@@ -89,7 +89,7 @@ For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in  a few 
 
 
 
-.. image:: ../../img/tutorial_1_Sz_vs_G.pdf
+.. image:: ../../img/tutorial_1_Sz_vs_G.*
    :width: 400px
    :align: center
 

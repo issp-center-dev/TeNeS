@@ -28,9 +28,8 @@ if(LATEX_FOUND)
      COMMAND
        cd pdf && make
      )
-   install(DIRECTORY ${SPHINX_PDF_DIR}
+   install(FILES ${SPHINX_PDF_DIR}/TeNeS.pdf
      DESTINATION ${TENES_DOC_DIR_EN}
-     FILES_MATCHING PATTERN "*.pdf"
      )
 
   add_custom_target(doc-en DEPENDS doc-en-html doc-en-pdf)
