@@ -28,6 +28,9 @@ The following tools are required for building TeNeS.
 - C++11 compiler
 - CMake (>=2.8.14)
 - MPI and ScaLAPACK
+- Python (>=2.7)
+    - numpy
+    - toml
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
@@ -104,5 +107,5 @@ Pull request is welcome (even for a small typo, of course!).
 TeNeS is available under the GNU GPL v3.
 
 ## Acknowledgement
-TeNeS is developed under the support of "Project for advancement of software usability in materials science" in fiscal year 2019 by The Institute for Solid State Physics, The University of Tokyo.
-
+TeNeS was supported by MEXT as “Exploratory Challenge on Post-K computer” (Frontiers of Basic Science: Challenging the Limits) and “Priority Issue on Post-K computer” (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
+We also would also like to express our thanks for the support of the “Project for advancement of software usability in materials science” of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
