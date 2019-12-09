@@ -8,7 +8,16 @@
 
 TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
 
-## Table of Contents
+## Online manual
+- master (Latest, UNSTABLE)
+    - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
+    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
+- v0.1 (Latest stable)
+    - [English](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html)
+    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html)
+
+
+## Getting started
 
 - [Prerequisites](#prerequisites)
 - [Install](#install)
@@ -95,7 +104,7 @@ $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
 $ tenes input.toml
 ```
 
-The file format of an input file is described in the manual page (under the construction).
+The file format of an input file is described in the manual page.
 
 ## Question or comment
 
