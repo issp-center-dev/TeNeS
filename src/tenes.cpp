@@ -270,7 +270,12 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
   ptensor Tn1_new;
   ptensor Tn2_new;
   std::vector<double> lambda_c;
-  for (int int_tau = 0; int_tau < peps_parameters.num_simple_step; ++int_tau) {
+  const int nsteps = peps_parameters.num_simple_step;
+
+  int ireport = 1;
+  int next_report_step = 0.1*nsteps-1;
+
+  for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto ed : simple_edges) {
       const int source = ed.source_site;
       const int target = ed.target_site;
@@ -285,6 +290,14 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
       Tn[source] = Tn1_new;
       Tn[target] = Tn2_new;
     }
+
+    if(mpirank==0 && peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      if(int_tau == next_report_step){
+        std::cout << 100.0*(int_tau+1)/nsteps << "% done" << std::endl;
+        ++ireport;
+        next_report_step = 0.1*ireport*nsteps-1;
+      }
+    }
   }
   time_simple_update += MPI_Wtime() - start_time;
 }
@@ -296,8 +309,13 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
     update_CTM();
   }
 
+  const int nsteps = peps_parameters.num_full_step;
+
+  int ireport = 1;
+  int next_report_step = 0.1*nsteps-1;
+
   start_time = MPI_Wtime();
-  for (int int_tau = 0; int_tau < peps_parameters.num_full_step; ++int_tau) {
+  for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto ed : full_edges) {
       const int source = ed.source_site;
       const int target = ed.target_site;
@@ -355,6 +373,14 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
         }
       } else {
         update_CTM();
+      }
+    }
+
+    if(mpirank==0 && peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      if(int_tau == next_report_step){
+        std::cout << 100.0*(int_tau+1)/nsteps << "% done" << std::endl;
+        ++ireport;
+        next_report_step = 0.1*ireport*nsteps-1;
       }
     }
   }
