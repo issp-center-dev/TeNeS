@@ -1,4 +1,4 @@
-#include <mpi.h>
+#include "mpi.h"
 
 int main_impl(int argc, char **argv);
 

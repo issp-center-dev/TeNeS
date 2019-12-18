@@ -8,6 +8,8 @@
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
 
+#include "type.hpp"
+
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
@@ -815,7 +817,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
 }
 
 // template specialization
-using d_tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
+using d_tensor = mptensor::Tensor<mptensor_matrix_type, double>;
 template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              Lattice lattice, Edges simple_edges,
                              Edges full_edges, Edges ham_edges,
@@ -824,7 +826,7 @@ template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              std::vector<d_tensor> lops,
                              CorrelationParameter corparam);
 /*
-using c_tensor = mptensor::Tensor<mptensor::scalapack::Matrix,
+using c_tensor = mptensor::Tensor<mptensor_matrix_type,
 std::complex<double>>; template int tenes<c_tensor>(MPI_Comm comm,
                       PEPS_Parameters peps_parameters,
                       Lattice lattice,

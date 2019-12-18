@@ -14,13 +14,13 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <mpi.h>
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
 #include <numeric>
 #include <vector>
 
+#include "mpi.h"
 #include "PEPS_Parameters.hpp"
 using namespace mptensor;
 // Contractions

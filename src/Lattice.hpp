@@ -4,7 +4,7 @@
 #include <array>
 #include <vector>
 
-#include <mpi.h>
+#include "mpi.h"
 
 // Lattice setting
 

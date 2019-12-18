@@ -7,12 +7,12 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <mpi.h>
 #include <mptensor/complex.hpp>
 #include <mptensor/tensor.hpp>
 #include <numeric>
 #include <vector>
 
+#include "mpi.h"
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"

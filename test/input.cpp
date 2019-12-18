@@ -9,9 +9,14 @@
 #include <edge.cpp>
 #include <PEPS_Parameters.cpp>
 #include <load_toml.cpp>
+#include <mpi.cpp>
 
 TEST_CASE("input"){
+#ifdef _NO_MPI
+  using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
+#else
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
+#endif
 
   auto input_toml = cpptoml::parse_file("data/check_input.toml");
 

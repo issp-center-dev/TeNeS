@@ -1,8 +1,9 @@
 #ifndef TENES_HPP
 #define TENES_HPP
 
-#include <mpi.h>
 #include <vector>
+
+#include "mpi.h"
 
 class Lattice;
 class PEPS_Parameters;
