@@ -16,7 +16,6 @@ TeNeSをコンパイルするには以下のライブラリ・環境が必要で
 
 1. C++11 compiler
 2. CMake (>=2.8.14)
-3. MPI と ScaLAPACK
 
 TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。
 
@@ -24,11 +23,13 @@ TeNeSは以下のライブラリに依存していますが、自動でダウン
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
-ScaLAPACKについては自身でインストールする必要があります。Macでhomebrewを利用されている方は、
+MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
+MPI, ScaLAPACKについては自身でインストールする必要があります。
+たとえば macOS でhomebrewを利用されている方は、
 
 .. code::
 
-   brew install scalapack
+   brew install open-mpi scalapack
 
 でインストールすることが可能です。それ以外の方は、ScaLAPACKのホームページを参照の上、インストールをしてください。
 
@@ -61,6 +62,10 @@ ScaLAPACKについては自身でインストールする必要があります�
  
 実行ファイル ``tenes`` が ``<path to install to>/bin`` にインストールされます。 
 
+
+.. admonition:: MPI/ScaLAPACK 並列化の無効化
+  
+  MPI および ScaLAPACK を利用しない場合には、 ``-DENABLE_MPI=OFF`` オプションを ``cmake`` コマンドに追加してください。
 
 .. admonition:: コンパイラの指定
 
