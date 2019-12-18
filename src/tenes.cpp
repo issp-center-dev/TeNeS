@@ -10,6 +10,7 @@
 
 #include "type.hpp"
 
+#include "timer.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
@@ -261,14 +262,14 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
 }
 
 template <class ptensor> inline void TeNeS<ptensor>::update_CTM() {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
   Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, peps_parameters,
                        lattice);
-  time_environment += MPI_Wtime() - start_time;
+  time_environment += timer.elapsed();
 }
 
 template <class ptensor> void TeNeS<ptensor>::simple_update() {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
   ptensor Tn1_new;
   ptensor Tn2_new;
   std::vector<double> lambda_c;
@@ -301,11 +302,12 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
       }
     }
   }
-  time_simple_update += MPI_Wtime() - start_time;
+  time_simple_update += timer.elapsed();
 }
 
 template <class ptensor> void TeNeS<ptensor>::full_update() {
-  double start_time = 0.0;
+  Timer<> timer;
+
   ptensor Tn1_new, Tn2_new;
   if (peps_parameters.num_full_step > 0) {
     update_CTM();
@@ -316,7 +318,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
   int ireport = 1;
   int next_report_step = 0.1*nsteps-1;
 
-  start_time = MPI_Wtime();
+  timer.reset();
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto ed : full_edges) {
       const int source = ed.source_site;
@@ -386,7 +388,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
       }
     }
   }
-  time_full_update += MPI_Wtime() - start_time;
+  time_full_update += timer.elapsed();
 }
 
 template <class ptensor> void TeNeS<ptensor>::optimize() {
@@ -411,7 +413,7 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
 
 template <class ptensor>
 std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
   const int nlops = lops.size();
   std::vector<std::vector<double>> local_obs(nlops,
                                              std::vector<double>(N_UNIT, 0));
@@ -427,7 +429,7 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
     }
   }
 
-  time_observable += MPI_Wtime() - start_time;
+  time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/site_obs.dat";
@@ -456,7 +458,7 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
 }
 
 template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
   double energy = 0.0;
 
   for (auto ed : ham_edges) {
@@ -486,7 +488,7 @@ template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
   }
   energy /= N_UNIT;
 
-  time_observable += MPI_Wtime() - start_time;
+  time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/energy.dat";
@@ -505,7 +507,7 @@ template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
 template <class ptensor>
 std::vector<std::vector<std::vector<double>>>
 TeNeS<ptensor>::measure_NN(bool save) {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
   const int nlops = lops.size();
   std::vector<std::vector<std::vector<double>>> neighbor_obs(
       nlops,
@@ -545,7 +547,7 @@ TeNeS<ptensor>::measure_NN(bool save) {
       }
     }
   }
-  time_observable += MPI_Wtime() - start_time;
+  time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/neighbor_obs.dat";
@@ -578,7 +580,7 @@ TeNeS<ptensor>::measure_NN(bool save) {
 
 template <class ptensor>
 std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
-  double start_time = MPI_Wtime();
+  Timer<> timer;
 
   const int nlops = lops.size();
   const int r_max = corparam.r_max;
@@ -670,7 +672,7 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
     }
   }
 
-  time_observable += MPI_Wtime() - start_time;
+  time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
     std::string filename = outdir + "/correlation.dat";
