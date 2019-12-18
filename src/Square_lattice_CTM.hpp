@@ -12,7 +12,7 @@
 #include <numeric>
 #include <vector>
 
-#include "mpi.h"
+#include "mpi.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"

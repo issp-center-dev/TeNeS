@@ -20,7 +20,7 @@
 #include <numeric>
 #include <vector>
 
-#include "mpi.h"
+#include "mpi.hpp"
 #include "PEPS_Parameters.hpp"
 using namespace mptensor;
 // Contractions

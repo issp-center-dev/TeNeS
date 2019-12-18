@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "mpi.h"
+#include "mpi.hpp"
 
 class Lattice;
 class PEPS_Parameters;
