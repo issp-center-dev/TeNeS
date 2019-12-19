@@ -2,6 +2,10 @@ os: linux
 dist: xenial
 language: cpp
 sudo: enabled
+env:
+  matrix:
+    - ENABLE_MPI=ON
+    - ENABLE_MPI=OFF
 
 install:
   - export ROOTDIR=`pwd`
@@ -17,6 +21,6 @@ script:
   - cd ${ROOTDIR}
   - mkdir build
   - cd build
-  - cmake ../
+  - cmake -DENABLE_MPI=${ENABLE_MPI} ../
   - VERBOSE=1 make
   - ctest -VV
