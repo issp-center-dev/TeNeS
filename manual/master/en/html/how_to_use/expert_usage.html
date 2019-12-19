@@ -1,77 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>3.3. Usage of tenes &#8212; TeNeS 0.1 documentation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3.3. Usage of tenes &mdash; TeNeS 0.1 documentation</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 documentation" href="../index.html" />
+    <link rel="up" title="3. Usage" href="index.html" />
     <link rel="next" title="4. Tutorial" href="../tutorial/index.html" />
-    <link rel="prev" title="3.2. Usage of tenes_simple.py" href="standard_usage.html" />
+    <link rel="prev" title="3.2. Usage of tenes_standard.py" href="standard_usage.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="usage-of-tenes">
-<h1>3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code><a class="headerlink" href="#usage-of-tenes" title="Permalink to this headline">¶</a></h1>
-<p>If you prepare input files of <code class="docutils literal notranslate"><span class="pre">tenes</span></code> by yourself,
-You can directry run <code class="docutils literal notranslate"><span class="pre">tenes</span></code> as follows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes --help
-TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice system
+<h1>3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code><a class="headerlink" href="#usage-of-tenes" title="Permalink to this headline">¶</a></h1>
+<p>If you prepare input files of <code class="docutils literal"><span class="pre">tenes</span></code> by yourself,
+You can directry run <code class="docutils literal"><span class="pre">tenes</span></code> as follows:</p>
+<div class="code bash highlight-none"><div class="highlight"><pre>$ tenes --help
+TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
 
   Usage:
-    tenes <span class="o">[</span>--quiet<span class="o">]</span> &lt;input_toml&gt;
+    tenes [--quiet] &lt;input_toml&gt;
     tenes --help
     tenes --version
 
   Options:
-    -h --help       Show this <span class="nb">help</span> message.
+    -h --help       Show this help message.
     -v --version    Show the version.
     -q --quiet      Do not print any messages.
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>Take the input file name as an argument.</p></li>
-<li><p>The command line options are:</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">help</span></code>
-- Show help messages.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">version</span></code>
-- Show the version number.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">quiet</span></code>
-- Do not print any messages to the standard output.</p></li>
+<li>Take the input file name as an argument.</li>
+<li>The command line options are:<ul>
+<li><code class="docutils literal"><span class="pre">help</span></code>
+- Show help messages.</li>
+<li><code class="docutils literal"><span class="pre">version</span></code>
+- Show the version number.</li>
+<li><code class="docutils literal"><span class="pre">quiet</span></code>
+- Do not print any messages to the standard output.</li>
 </ul>
 </li>
 </ul>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tnsolve input.toml
+<div class="code bash highlight-none"><div class="highlight"><pre>tnsolve input.toml
 </pre></div>
 </div>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -82,6 +87,11 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
 
 
 
@@ -90,9 +100,9 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">3. Usage</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code></a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
@@ -107,7 +117,7 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">3. Usage</a><ul>
-      <li>Previous: <a href="standard_usage.html" title="previous chapter">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code></a></li>
+      <li>Previous: <a href="standard_usage.html" title="previous chapter">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
       <li>Next: <a href="../tutorial/index.html" title="next chapter">4. Tutorial</a></li>
   </ul></li>
   </ul></li>
@@ -115,22 +125,17 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -139,11 +144,11 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/how_to_use/expert_usage.rst.txt"
+      <a href="../_sources/how_to_use/expert_usage.txt"
           rel="nofollow">Page source</a>
     </div>
 

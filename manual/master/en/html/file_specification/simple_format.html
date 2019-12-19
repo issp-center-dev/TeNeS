@@ -1,287 +1,294 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>5.1. Input file for tense_simple &#8212; TeNeS 0.1 documentation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5.1. Input file for tense_simple &mdash; TeNeS 0.1 documentation</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 documentation" href="../index.html" />
+    <link rel="up" title="5. File format" href="index.html" />
     <link rel="next" title="5.2. Input file for tenes" href="expert_format.html" />
     <link rel="prev" title="5. File format" href="index.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="input-file-for-tense-simple">
-<h1>5.1. Input file for <code class="docutils literal notranslate"><span class="pre">tense_simple</span></code><a class="headerlink" href="#input-file-for-tense-simple" title="Permalink to this headline">¶</a></h1>
+<h1>5.1. Input file for <code class="docutils literal"><span class="pre">tense_simple</span></code><a class="headerlink" href="#input-file-for-tense-simple" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><p>File format is
+<li>File format is
 <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a>
-format.</p></li>
-<li><p>The input file has five sections : <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">lattice</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code> .</p></li>
-<li><p>In future, the file will be split by specifying a file name.</p></li>
+format.</li>
+<li>The input file has five sections : <code class="docutils literal"><span class="pre">model</span></code>, <code class="docutils literal"><span class="pre">parameter</span></code>, <code class="docutils literal"><span class="pre">lattice</span></code>, <code class="docutils literal"><span class="pre">observable</span></code>, <code class="docutils literal"><span class="pre">correlation</span></code> .</li>
+<li>In future, the file will be split by specifying a file name.</li>
 </ul>
 <div class="section" id="parameter-section">
-<h2>5.1.1. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this headline">¶</a></h2>
-<p>The contents of the <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section are copied directly to the <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section of the input file of <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.
-You can also specify the imaginary time step size for the imaginary time evolution operator in simple and full updates in the subsections <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>.</p>
-<table class="colwidths-given docutils align-center">
+<h2>5.1.1. <code class="docutils literal"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this headline">¶</a></h2>
+<p>The contents of the <code class="docutils literal"><span class="pre">parameter</span></code> section are copied directly to the <code class="docutils literal"><span class="pre">parameter</span></code> section of the input file of <code class="docutils literal"><span class="pre">tenes</span></code>.
+You can also specify the imaginary time step size for the imaginary time evolution operator in simple and full updates in the subsections <code class="docutils literal"><span class="pre">simple_update</span></code>, <code class="docutils literal"><span class="pre">full_update</span></code>.</p>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
-<td><p>imaginary time step in the imaginary time evolution operator</p></td>
-<td><p>Real</p></td>
-<td><p>0.01</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tau</span></code></td>
+<td>imaginary time step in the imaginary time evolution operator</td>
+<td>Real</td>
+<td>0.01</td>
 </tr>
 </tbody>
 </table>
-<p>The following parameters are common to the <code class="docutils literal notranslate"><span class="pre">tenes</span></code> input file.</p>
+<p>The following parameters are common to the <code class="docutils literal"><span class="pre">tenes</span></code> input file.</p>
 <div class="section" id="parameter-tensor">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.tensor</span></code><a class="headerlink" href="#parameter-tensor" title="Permalink to this headline">¶</a></h3>
-<table class="colwidths-given docutils align-center">
+<h3><code class="docutils literal"><span class="pre">parameter.tensor</span></code><a class="headerlink" href="#parameter-tensor" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></td>
-<td><p>The virtual bond dimensions of the central tensor</p></td>
-<td><p>Integer</p></td>
-<td><p>2</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<td>The virtual bond dimensions of the central tensor</td>
+<td>Integer</td>
+<td>2</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CHI</span></code></p></td>
-<td><p>The virtual bond dimensions of the angular transfer matrix</p></td>
-<td><p>Integer</p></td>
-<td><p>4</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">CHI</span></code></td>
+<td>The virtual bond dimensions of the angular transfer matrix</td>
+<td>Integer</td>
+<td>4</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">save_dir</span></code></p></td>
-<td><p>Directory to write optimized tensors</p></td>
-<td><p>Str</p></td>
-<td><p>“”</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">save_dir</span></code></td>
+<td>Directory to write optimized tensors</td>
+<td>Str</td>
+<td>&#8220;&#8221;</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">load_dir</span></code></p></td>
-<td><p>Directory to read initial tensor</p></td>
-<td><p>Str</p></td>
-<td><p>“”</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">load_dir</span></code></td>
+<td>Directory to read initial tensor</td>
+<td>Str</td>
+<td>&#8220;&#8221;</td>
 </tr>
 </tbody>
 </table>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">save_dir</span></code>
+<li><code class="docutils literal"><span class="pre">save_dir</span></code>
 - Store optimized tensors below this directory.
-- When it is empty, the tensors are not saved.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">load_dir</span></code>
+- When it is empty, the tensors are not saved.</li>
+<li><code class="docutils literal"><span class="pre">load_dir</span></code>
 - Read various tensors from below this directory.
 - Must be the same degree of parallelism as when saved.
-- Not read if it is empty.</p></li>
+- Not read if it is empty.</li>
 </ul>
 </div>
 <div class="section" id="parameter-simple-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h3>
-<table class="colwidths-given docutils align-center">
+<h3><code class="docutils literal"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
-<td><p>Number of simple updates</p></td>
-<td><p>Integer</p></td>
-<td><p>0</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
+<td>Number of simple updates</td>
+<td>Integer</td>
+<td>0</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
-<td><p>cutoff of the mean field to be considered zero in the simple update</p></td>
-<td><p>Real</p></td>
-<td><p>1e-12</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">lambda_cutoff</span></code></td>
+<td>cutoff of the mean field to be considered zero in the simple update</td>
+<td>Real</td>
+<td>1e-12</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section" id="parameter-full-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h3>
-<table class="colwidths-given docutils align-center">
+<h3><code class="docutils literal"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
-<td><p>Number of full updates</p></td>
-<td><p>Integer</p></td>
-<td><p>0</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
+<td>Number of full updates</td>
+<td>Integer</td>
+<td>0</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>
-<td><p>Cutoff of singular values to be considered as zero when computing environment through full updates</p></td>
-<td><p>Real</p></td>
-<td><p>1e-12</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">env_cutoff</span></code></td>
+<td>Cutoff of singular values to be considered as zero when computing environment through full updates</td>
+<td>Real</td>
+<td>1e-12</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inverse_precision</span></code></p></td>
-<td><p>Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update</p></td>
-<td><p>Real</p></td>
-<td><p>1e-12</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">inverse_precision</span></code></td>
+<td>Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update</td>
+<td>Real</td>
+<td>1e-12</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
-<td><p>Convergence criteria for truncation optimization with full update</p></td>
-<td><p>Real</p></td>
-<td><p>1e-12</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
+<td>Convergence criteria for truncation optimization with full update</td>
+<td>Real</td>
+<td>1e-12</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
-<td><p>Maximum iteration number for truncation optimization on full updates</p></td>
-<td><p>Integer</p></td>
-<td><p>1000</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
+<td>Maximum iteration number for truncation optimization on full updates</td>
+<td>Integer</td>
+<td>1000</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
-<td><p>Whether the tensor gauge is fixed</p></td>
-<td><p>Boolean</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">gauge_fix</span></code></td>
+<td>Whether the tensor gauge is fixed</td>
+<td>Boolean</td>
+<td>true</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fastfullupdate</span></code></p></td>
-<td><p>Whether the Fast full update is adopted</p></td>
-<td><p>Boolean</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
+<td>Whether the Fast full update is adopted</td>
+<td>Boolean</td>
+<td>true</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section" id="parameter-ctm">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h3>
-<table class="colwidths-given docutils align-center">
+<h3><code class="docutils literal"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_cutoff</span></code></p></td>
-<td><p>Cutoff of singular values to be considered as zero when computing CTM projectors</p></td>
-<td><p>Real</p></td>
-<td><p>1e-12</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">projector_cutoff</span></code></td>
+<td>Cutoff of singular values to be considered as zero when computing CTM projectors</td>
+<td>Real</td>
+<td>1e-12</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
-<td><p>CTM convergence criteria</p></td>
-<td><p>Real</p></td>
-<td><p>1e-10</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
+<td>CTM convergence criteria</td>
+<td>Real</td>
+<td>1e-10</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
-<td><p>Maximum iteration number of convergence for CTM</p></td>
-<td><p>Integer</p></td>
-<td><p>100</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
+<td>Maximum iteration number of convergence for CTM</td>
+<td>Integer</td>
+<td>100</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
-<td><p>Whether to use only the 1/4 corner tensor in the CTM projector calculation</p></td>
-<td><p>Boolean</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">projector_corner</span></code></td>
+<td>Whether to use only the 1/4 corner tensor in the CTM projector calculation</td>
+<td>Boolean</td>
+<td>true</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
-<td><p>Whether to replace SVD with Random SVD</p></td>
-<td><p>Boolean</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
+<td>Whether to replace SVD with Random SVD</td>
+<td>Boolean</td>
+<td>false</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
-<td><p>Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method</p></td>
-<td><p>Real</p></td>
-<td><p>2.0</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
+<td>Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method</td>
+<td>Real</td>
+<td>2.0</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section" id="parameter-random">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h3>
-<table class="colwidths-given docutils align-center">
+<h3><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Default</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
-<td><p>Seed of the pseudo-random number generator used to initialize the tensor</p></td>
-<td><p>Integer</p></td>
-<td><p>11</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">seed</span></code></td>
+<td>Seed of the pseudo-random number generator used to initialize the tensor</td>
+<td>Integer</td>
+<td>11</td>
 </tr>
 </tbody>
 </table>
-<p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
+<p>Each MPI process has the own seed as <code class="docutils literal"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
 </div>
 <div class="section" id="example">
 <h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+<div class="highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.tensor]
 D  = 4     # tensor_dim
 CHI  = 16  # env_dim
@@ -299,39 +306,39 @@ iteration_max = 5
 </div>
 </div>
 <div class="section" id="lattice-section">
-<h2>5.1.2. <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section<a class="headerlink" href="#lattice-section" title="Permalink to this headline">¶</a></h2>
+<h2>5.1.2. <code class="docutils literal"><span class="pre">lattice</span></code> section<a class="headerlink" href="#lattice-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the lattice information.
 Square lattice and honeycomb lattice are defined as lattice types.</p>
-<table class="colwidths-given docutils align-center">
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 25%" />
+<col width="38%" />
+<col width="38%" />
+<col width="25%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code></p></td>
-<td><p>Lattice name (square lattice or honeycomb lattice)</p></td>
-<td><p>Str</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
+<td>Lattice name (square lattice or honeycomb lattice)</td>
+<td>Str</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code></p></td>
-<td><p>Unit cell size</p></td>
-<td><p>An integer or a list of two integers</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">L_sub</span></code></td>
+<td>Unit cell size</td>
+<td>An integer or a list of two integers</td>
 </tr>
 </tbody>
 </table>
-<p>When a list of two integers is passed as <code class="docutils literal notranslate"><span class="pre">L_sub</span></code>, the first element gives the value of <code class="docutils literal notranslate"><span class="pre">Lx</span></code> and the second one does <code class="docutils literal notranslate"><span class="pre">Ly</span></code>.
-If <code class="docutils literal notranslate"><span class="pre">L_sub</span></code> is an integer, Both <code class="docutils literal notranslate"><span class="pre">Lx</span></code> and <code class="docutils literal notranslate"><span class="pre">Ly</span></code> will have the same value.
+<p>When a list of two integers is passed as <code class="docutils literal"><span class="pre">L_sub</span></code>, the first element gives the value of <code class="docutils literal"><span class="pre">Lx</span></code> and the second one does <code class="docutils literal"><span class="pre">Ly</span></code>.
+If <code class="docutils literal"><span class="pre">L_sub</span></code> is an integer, Both <code class="docutils literal"><span class="pre">Lx</span></code> and <code class="docutils literal"><span class="pre">Ly</span></code> will have the same value.
 A list of three or more elements causes an error.</p>
 <p>Sites in a unit cell are indexed starting from 0.
 These are arranged in order from the x direction.</p>
-<p>Sites in a unit cell of <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> are arranged as follows:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>y
+<p>Sites in a unit cell of <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> are arranged as follows:</p>
+<div class="highlight-none"><div class="highlight"><pre>y
 ^     4 5
 |     2 3
 .-&gt;x  0 1
@@ -339,9 +346,9 @@ These are arranged in order from the x direction.</p>
 </div>
 <div class="section" id="square-lattice">
 <h3>Square lattice<a class="headerlink" href="#square-lattice" title="Permalink to this headline">¶</a></h3>
-<p>There are two types of bond, horizontal (0) and vertical (1) (corresponding to <code class="docutils literal notranslate"><span class="pre">-</span></code> and <code class="docutils literal notranslate"><span class="pre">|</span></code> in the below figure).</p>
-<p>The unit cell for <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">2</span></code> is given as follows:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0   1
+<p>There are two types of bond, horizontal (0) and vertical (1) (corresponding to <code class="docutils literal"><span class="pre">-</span></code> and <code class="docutils literal"><span class="pre">|</span></code> in the below figure).</p>
+<p>The unit cell for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">2</span></code> is given as follows:</p>
+<div class="highlight-none"><div class="highlight"><pre>0   1
 |   |
 2 - 3 - 2
 |   |
@@ -351,12 +358,12 @@ These are arranged in order from the x direction.</p>
 </div>
 <div class="section" id="honeycomb-lattice">
 <h3>Honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Permalink to this headline">¶</a></h3>
-<p>Unit cell size (Each element of <code class="docutils literal notranslate"><span class="pre">L_sub</span></code>) must be an even number.</p>
-<p>There are 3 types of bonds: x, y, and z (corresponding to <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">~</span></code>, <code class="docutils literal notranslate"><span class="pre">|</span></code>  in the below figure).
+<p>Unit cell size (Each element of <code class="docutils literal"><span class="pre">L_sub</span></code>) must be an even number.</p>
+<p>There are 3 types of bonds: x, y, and z (corresponding to <code class="docutils literal"><span class="pre">-</span></code>, <code class="docutils literal"><span class="pre">~</span></code>, <code class="docutils literal"><span class="pre">|</span></code>  in the below figure).
 Each site with an even index has a rightward (x), a leftward (y), and an upward (z) bonds and
 each site with an odd index has a leftward (x), a rightward (y), and a bottomward (z) bonds.</p>
-<p>The unit cell for <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">2</span></code> is given as follows:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0   1
+<p>The unit cell for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">2</span></code> is given as follows:</p>
+<div class="highlight-none"><div class="highlight"><pre>0   1
     |
 2 ~ 3 - 2
 |
@@ -366,83 +373,83 @@ each site with an odd index has a leftward (x), a rightward (y), and a bottomwar
 </div>
 </div>
 <div class="section" id="model-section">
-<h2>5.1.3. <code class="docutils literal notranslate"><span class="pre">model</span></code> section<a class="headerlink" href="#model-section" title="Permalink to this headline">¶</a></h2>
+<h2>5.1.3. <code class="docutils literal"><span class="pre">model</span></code> section<a class="headerlink" href="#model-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the type of the model.
 Only the Spin system can be spcified in ver. 0.1.</p>
-<table class="colwidths-given docutils align-center">
+<table border="1" class="docutils">
 <colgroup>
-<col style="width: 40%" />
-<col style="width: 40%" />
-<col style="width: 20%" />
+<col width="40%" />
+<col width="40%" />
+<col width="20%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Type</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code></p></td>
-<td><p>The type of the model</p></td>
-<td><p>Str</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
+<td>The type of the model</td>
+<td>Str</td>
 </tr>
 </tbody>
 </table>
 <div class="section" id="spin-system">
 <h3>Spin system<a class="headerlink" href="#spin-system" title="Permalink to this headline">¶</a></h3>
 <p>Spin system</p>
-<div class="math notranslate nohighlight">
+<div class="math">
 \[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]\]</div>
-<table class="docutils align-center" id="id1">
-<caption><span class="caption-text">:header: “Name”, “Description”, “Type”, “Default”
+<table border="1" class="docutils" id="id1">
+<caption><span class="caption-text">:header: &#8220;Name&#8221;, &#8220;Description&#8221;, &#8220;Type&#8221;, &#8220;Default&#8221;
   :widths: 30, 30, 10, 10</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
 </colgroup>
-<tbody>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">S</span></code></p></td>
-<td><p>Magnituide of the local spin</p></td>
-<td><p>Real</p></td>
-<td><p>0.5</p></td>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">S</span></code></td>
+<td>Magnituide of the local spin</td>
+<td>Real</td>
+<td>0.5</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Jx</span></code></p></td>
-<td><p>The x component of the exchange interaction J</p></td>
-<td><p>Real or a list of Real</p></td>
-<td><p>1.0</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Jx</span></code></td>
+<td>The x component of the exchange interaction J</td>
+<td>Real or a list of Real</td>
+<td>1.0</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Jy</span></code></p></td>
-<td><p>The y component of the exchange interaction J</p></td>
-<td><p>Real or a list of Real</p></td>
-<td><p>1.0</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Jy</span></code></td>
+<td>The y component of the exchange interaction J</td>
+<td>Real or a list of Real</td>
+<td>1.0</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Jz</span></code></p></td>
-<td><p>The z component of the exchange interaction J</p></td>
-<td><p>Real or a list of Real</p></td>
-<td><p>1.0</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Jz</span></code></td>
+<td>The z component of the exchange interaction J</td>
+<td>Real or a list of Real</td>
+<td>1.0</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BQ</span></code></p></td>
-<td><p>Biquadratic interaction B</p></td>
-<td><p>Real or a list of Real</p></td>
-<td><p>0.0</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">BQ</span></code></td>
+<td>Biquadratic interaction B</td>
+<td>Real or a list of Real</td>
+<td>0.0</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">h</span></code></p></td>
-<td><p>longitudinal magnetic field h</p></td>
-<td><p>Real</p></td>
-<td><p>0.0</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">h</span></code></td>
+<td>longitudinal magnetic field h</td>
+<td>Real</td>
+<td>0.0</td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">G</span></code></p></td>
-<td><p>Transverse magnetic field
-<span class="math notranslate nohighlight">\(\Gamma\)</span></p></td>
-<td><p>Real</p></td>
-<td><p>0.0</p></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">G</span></code></td>
+<td>Transverse magnetic field
+<span class="math">\(\Gamma\)</span></td>
+<td>Real</td>
+<td>0.0</td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></td>
-<td><p>On-site spin anisotropy D</p></td>
-<td><p>Real</p></td>
-<td><p>0.0</p></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<td>On-site spin anisotropy D</td>
+<td>Real</td>
+<td>0.0</td>
 </tr>
 </tbody>
 </table>
@@ -451,21 +458,20 @@ If the number of elements in the list is less than the type of lattice bond, the
 </div>
 </div>
 <div class="section" id="observable-section">
-<h2>5.1.4. <code class="docutils literal notranslate"><span class="pre">observable</span></code> section<a class="headerlink" href="#observable-section" title="Permalink to this headline">¶</a></h2>
-<p>By default, the local physical quantities used for physical quantities measurements: <span class="math notranslate nohighlight">\(S^z\)</span>  and <span class="math notranslate nohighlight">\(S^x\)</span> .
-Measurements of more detailed physical quantities can be made by overwriting the format common to the input file of <code class="docutils literal notranslate"><span class="pre">tenes</span></code>. For details, See <code class="docutils literal notranslate"><span class="pre">observable</span></code> section <a class="reference internal" href="expert_format.html"><span class="doc">Input file for tenes</span></a>.</p>
+<h2>5.1.4. <code class="docutils literal"><span class="pre">observable</span></code> section<a class="headerlink" href="#observable-section" title="Permalink to this headline">¶</a></h2>
+<p>By default, the local physical quantities used for physical quantities measurements: <span class="math">\(S^z\)</span>  and <span class="math">\(S^x\)</span> .
+Measurements of more detailed physical quantities can be made by overwriting the format common to the input file of <code class="docutils literal"><span class="pre">tenes</span></code>. For details, See <code class="docutils literal"><span class="pre">observable</span></code> section <a class="reference internal" href="expert_format.html"><em>Input file for tenes</em></a>.</p>
 </div>
 <div class="section" id="correlation-section">
-<h2>5.1.5. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this headline">¶</a></h2>
-<p>For <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> , correlation functions <span class="math notranslate nohighlight">\(C = \langle A(0)B(r)\rangle\)</span> are not calculated by default.
-For calculating correlation functions, they have to be specified in the same file format as the input file of <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.
-For details, See <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section <a class="reference internal" href="expert_format.html"><span class="doc">Input file for tenes</span></a>.</p>
+<h2>5.1.5. <code class="docutils literal"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this headline">¶</a></h2>
+<p>For <code class="docutils literal"><span class="pre">tenes_simple</span></code> , correlation functions <span class="math">\(C = \langle A(0)B(r)\rangle\)</span> are not calculated by default.
+For calculating correlation functions, they have to be specified in the same file format as the input file of <code class="docutils literal"><span class="pre">tenes</span></code>.
+For details, See <code class="docutils literal"><span class="pre">correlation</span></code> section <a class="reference internal" href="expert_format.html"><em>Input file for tenes</em></a>.</p>
 </div>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -475,6 +481,11 @@ For details, See <code class="docutils literal notranslate"><span class="pre">co
 
 
 
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
 
 
 
@@ -486,8 +497,8 @@ For details, See <code class="docutils literal notranslate"><span class="pre">co
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">5.1. Input file for <code class="docutils literal notranslate"><span class="pre">tense_simple</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">5.1. Input file for <code class="docutils literal"><span class="pre">tense_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.2. Input file for <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="output_format.html">5.3. Output files</a></li>
 </ul>
 </li>
@@ -502,29 +513,24 @@ For details, See <code class="docutils literal notranslate"><span class="pre">co
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">5. File format</a><ul>
       <li>Previous: <a href="index.html" title="previous chapter">5. File format</a></li>
-      <li>Next: <a href="expert_format.html" title="next chapter">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+      <li>Next: <a href="expert_format.html" title="next chapter">5.2. Input file for <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
   </ul></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -533,11 +539,11 @@ For details, See <code class="docutils literal notranslate"><span class="pre">co
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/file_specification/simple_format.rst.txt"
+      <a href="../_sources/file_specification/simple_format.txt"
           rel="nofollow">Page source</a>
     </div>
 

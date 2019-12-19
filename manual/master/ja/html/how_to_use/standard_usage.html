@@ -1,48 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>3.2. tenes_standard.py の使用方法 &#8212; TeNeS 0.1 ドキュメント</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3.2. tenes_standard.py の使用方法 &mdash; TeNeS 0.1 ドキュメント</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="索引" href="../genindex.html" />
-    <link rel="search" title="検索" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 ドキュメント" href="../index.html" />
+    <link rel="up" title="3. 使用方法" href="index.html" />
     <link rel="next" title="3.3. tenes の使用方法" href="expert_usage.html" />
     <link rel="prev" title="3.1. tenes_simple の使用方法" href="simple_usage.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="tenes-standard-py">
-<h1>3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法<a class="headerlink" href="#tenes-standard-py" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> はver.1.0で作成予定です。
+<h1>3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法<a class="headerlink" href="#tenes-standard-py" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p><code class="docutils literal"><span class="pre">tenes_standard.py</span></code> はver.1.0で作成予定です。
 ver. 1.0は2020年度中の公開を目指し開発中です。</p>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -53,17 +59,22 @@ ver. 1.0は2020年度中の公開を目指し開発中です。</p>
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
 
 
 
-<h3>ナビゲーション</h3>
+
+<h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">3. 使用方法</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
@@ -78,30 +89,25 @@ ver. 1.0は2020年度中の公開を目指し開発中です。</p>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">3. 使用方法</a><ul>
-      <li>Previous: <a href="simple_usage.html" title="前の章へ">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-      <li>Next: <a href="expert_usage.html" title="次の章へ">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+      <li>Previous: <a href="simple_usage.html" title="前の章へ">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+      <li>Next: <a href="expert_usage.html" title="次の章へ">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
   </ul></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>クイック検索</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -110,11 +116,11 @@ ver. 1.0は2020年度中の公開を目指し開発中です。</p>
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/how_to_use/standard_usage.rst.txt"
+      <a href="../_sources/how_to_use/standard_usage.txt"
           rel="nofollow">Page source</a>
     </div>
 

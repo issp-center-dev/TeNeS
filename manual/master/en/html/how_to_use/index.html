@@ -1,60 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>3. Usage &#8212; TeNeS 0.1 documentation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3. Usage &mdash; TeNeS 0.1 documentation</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 documentation" href="../index.html" />
     <link rel="next" title="3.1. Usage of tenes_simple" href="simple_usage.html" />
     <link rel="prev" title="2. Install" href="../install.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="usage">
 <h1>3. Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">TeNeS</span></code> needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:</p>
+<p><code class="docutils literal"><span class="pre">TeNeS</span></code> needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code>: A tool that generates input files for <code class="docutils literal notranslate"><span class="pre">tenes</span></code> by using a simple input file which specifies lattice model predefined.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> (from ver. 1.0):  A tool that generates input files for <code class="docutils literal notranslate"><span class="pre">tenes</span></code> by using input files for generating the lattice model.</p></li>
+<li><code class="docutils literal"><span class="pre">tenes_simple.py</span></code>: A tool that generates input files for <code class="docutils literal"><span class="pre">tenes</span></code> by using a simple input file which specifies lattice model predefined.</li>
+<li><code class="docutils literal"><span class="pre">tenes_standard.py</span></code> (from ver. 1.0):  A tool that generates input files for <code class="docutils literal"><span class="pre">tenes</span></code> by using input files for generating the lattice model.</li>
 </ul>
-<p>The following sections describe how to use each script, and finally how to use <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.
-If you want to work with other models or grids, you can do so by creating the input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code> directly.
-See <a class="reference internal" href="../file_specification/index.html"><span class="doc">File format</span></a> for details on the input file of <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
+<p>The following sections describe how to use each script, and finally how to use <code class="docutils literal"><span class="pre">tenes</span></code>.
+If you want to work with other models or grids, you can do so by creating the input file for <code class="docutils literal"><span class="pre">tenes</span></code> directly.
+See <a class="reference internal" href="../file_specification/index.html"><em>File format</em></a> for details on the input file of <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 </ul>
 </div>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -65,6 +70,11 @@ See <a class="reference internal" href="../file_specification/index.html"><span 
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
 
 
 
@@ -72,10 +82,10 @@ See <a class="reference internal" href="../file_specification/index.html"><span 
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple.py</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">3. Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
@@ -90,28 +100,23 @@ See <a class="reference internal" href="../file_specification/index.html"><span 
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
       <li>Previous: <a href="../install.html" title="previous chapter">2. Install</a></li>
-      <li>Next: <a href="simple_usage.html" title="next chapter">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+      <li>Next: <a href="simple_usage.html" title="next chapter">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -120,11 +125,11 @@ See <a class="reference internal" href="../file_specification/index.html"><span 
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/how_to_use/index.rst.txt"
+      <a href="../_sources/how_to_use/index.txt"
           rel="nofollow">Page source</a>
     </div>
 

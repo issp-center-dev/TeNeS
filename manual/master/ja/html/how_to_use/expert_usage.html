@@ -1,77 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>3.3. tenes の使用方法 &#8212; TeNeS 0.1 ドキュメント</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3.3. tenes の使用方法 &mdash; TeNeS 0.1 ドキュメント</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="索引" href="../genindex.html" />
-    <link rel="search" title="検索" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 ドキュメント" href="../index.html" />
+    <link rel="up" title="3. 使用方法" href="index.html" />
     <link rel="next" title="4. チュートリアル" href="../tutorial/index.html" />
     <link rel="prev" title="3.2. tenes_standard.py の使用方法" href="standard_usage.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="tenes">
-<h1>3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法<a class="headerlink" href="#tenes" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の実行は以下のように行うことができます。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes --help
-TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice system
+<h1>3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法<a class="headerlink" href="#tenes" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p><code class="docutils literal"><span class="pre">tenes</span></code> の実行は以下のように行うことができます。</p>
+<div class="code bash highlight-none"><div class="highlight"><pre>$ tenes --help
+TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
 
   Usage:
-    tenes <span class="o">[</span>--quiet<span class="o">]</span> &lt;input_toml&gt;
+    tenes [--quiet] &lt;input_toml&gt;
     tenes --help
     tenes --version
 
   Options:
-    -h --help       Show this <span class="nb">help</span> message.
+    -h --help       Show this help message.
     -v --version    Show the version.
     -q --quiet      Do not print any messages.
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>引数として入力ファイル名を取ります。</p></li>
-<li><p>コマンドラインオプションは、以下の通りです。</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">help</span></code>
-- ヘルプメッセージの表示</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">version</span></code>
-- バージョン情報の表示</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">quiet</span></code>
-- 標準出力に何も書き出さないようにします</p></li>
+<li>引数として入力ファイル名を取ります。</li>
+<li>コマンドラインオプションは、以下の通りです。<ul>
+<li><code class="docutils literal"><span class="pre">help</span></code>
+- ヘルプメッセージの表示</li>
+<li><code class="docutils literal"><span class="pre">version</span></code>
+- バージョン情報の表示</li>
+<li><code class="docutils literal"><span class="pre">quiet</span></code>
+- 標準出力に何も書き出さないようにします</li>
 </ul>
 </li>
 </ul>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tenes input.toml
+<div class="code bash highlight-none"><div class="highlight"><pre>tenes input.toml
 </pre></div>
 </div>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -82,17 +87,22 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
 
 
 
-<h3>ナビゲーション</h3>
+
+<h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">3. 使用方法</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
@@ -107,7 +117,7 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">3. 使用方法</a><ul>
-      <li>Previous: <a href="standard_usage.html" title="前の章へ">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+      <li>Previous: <a href="standard_usage.html" title="前の章へ">3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
       <li>Next: <a href="../tutorial/index.html" title="次の章へ">4. チュートリアル</a></li>
   </ul></li>
   </ul></li>
@@ -115,22 +125,17 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>クイック検索</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -139,11 +144,11 @@ TeNeS: TEnsor NEtwork Solver <span class="k">for</span> 2D quantum lattice syste
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/how_to_use/expert_usage.rst.txt"
+      <a href="../_sources/how_to_use/expert_usage.txt"
           rel="nofollow">Page source</a>
     </div>
 

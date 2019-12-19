@@ -1,66 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta charset="utf-8" />
-    <title>5.3. 出力ファイル &#8212; TeNeS 0.1 ドキュメント</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5.3. 出力ファイル &mdash; TeNeS 0.1 ドキュメント</title>
+    
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="index" title="索引" href="../genindex.html" />
-    <link rel="search" title="検索" href="../search.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 0.1 ドキュメント" href="../index.html" />
+    <link rel="up" title="5. ファイルフォーマット" href="index.html" />
     <link rel="next" title="6. 参考文献" href="../algorithm/index.html" />
     <link rel="prev" title="5.2. tenes の入力ファイル" href="expert_format.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
-  
+  </head>
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
-
           <div class="body" role="main">
             
   <div class="section" id="id1">
 <h1>5.3. 出力ファイル<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p>計算結果は <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリ以下に保存されます。</p>
+<p>計算結果は <code class="docutils literal"><span class="pre">output</span></code> ディレクトリ以下に保存されます。</p>
 <div class="section" id="parameters-dat">
-<h2>5.3.1. <code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">parameter</span></code> と <code class="docutils literal notranslate"><span class="pre">lattice</span></code> のパラメータが出力されます。</p>
+<h2>5.3.1. <code class="docutils literal"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">parameter</span></code> と <code class="docutils literal"><span class="pre">lattice</span></code> のパラメータが出力されます。</p>
 </div>
 <div class="section" id="energy-dat">
-<h2>5.3.2. <code class="docutils literal notranslate"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>5.3.2. <code class="docutils literal"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>サイトあたりのエネルギーが出力されます。</p>
 </div>
 <div class="section" id="site-obs-dat">
-<h2>5.3.3. <code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>5.3.3. <code class="docutils literal"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <ul class="simple">
-<li><p>サイト演算子の期待値 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i\rangle\)</span> が出力されます。</p></li>
-<li><p>各行4列からなります。</p>
-<ol class="arabic simple">
-<li><p>演算子のインデックス <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
-<li><p>サイトのインデックス <span class="math notranslate nohighlight">\(i\)</span></p></li>
-<li><p>期待値の実部 <span class="math notranslate nohighlight">\(\mathrm{Re}\langle\hat{A}^\alpha_i\rangle\)</span></p></li>
-<li><p>期待値の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}\langle\hat{A}^\alpha_i\rangle\)</span></p></li>
+<li>サイト演算子の期待値 <span class="math">\(\langle\hat{A}^\alpha_i\rangle\)</span> が出力されます。</li>
+<li>各行4列からなります。<ol class="arabic">
+<li>演算子のインデックス <span class="math">\(\alpha\)</span></li>
+<li>サイトのインデックス <span class="math">\(i\)</span></li>
+<li>期待値の実部 <span class="math">\(\mathrm{Re}\langle\hat{A}^\alpha_i\rangle\)</span></li>
+<li>期待値の虚部 <span class="math">\(\mathrm{Im}\langle\hat{A}^\alpha_i\rangle\)</span></li>
 </ol>
 </li>
 </ul>
 <div class="section" id="id2">
 <h3>例<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
+<div class="highlight-none"><div class="highlight"><pre># $1: op_index
 # $2: site_index
 # $3: real
 # $4: imag
@@ -78,20 +84,19 @@
 </div>
 </div>
 <div class="section" id="neighbor-obs-dat">
-<h2>5.3.4. <code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>5.3.4. <code class="docutils literal"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <ul class="simple">
-<li><p>サイト演算子の最近接相関 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i \hat{A}^\alpha_j\rangle\)</span> が出力されます。</p></li>
-<li><p>各行5列からなります。</p>
-<ol class="arabic simple">
-<li><p>演算子のインデックス <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
-<li><p>サイトのインデックス <span class="math notranslate nohighlight">\(i\)</span></p></li>
-<li><p>サイトのインデックス <span class="math notranslate nohighlight">\(j\)</span></p></li>
-<li><p>期待値の実部 <span class="math notranslate nohighlight">\(\mathrm{Re}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle\)</span></p></li>
-<li><p>期待値の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle\)</span></p></li>
+<li>サイト演算子の最近接相関 <span class="math">\(\langle\hat{A}^\alpha_i \hat{A}^\alpha_j\rangle\)</span> が出力されます。</li>
+<li>各行5列からなります。<ol class="arabic">
+<li>演算子のインデックス <span class="math">\(\alpha\)</span></li>
+<li>サイトのインデックス <span class="math">\(i\)</span></li>
+<li>サイトのインデックス <span class="math">\(j\)</span></li>
+<li>期待値の実部 <span class="math">\(\mathrm{Re}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle\)</span></li>
+<li>期待値の虚部 <span class="math">\(\mathrm{Im}\langle\hat{A}^\alpha_i\hat{A}^\alpha_j\rangle\)</span></li>
 </ol>
 </li>
 </ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
+<div class="highlight-none"><div class="highlight"><pre># $1: op_index
 # $2: source_site
 # $3: target_site
 # $4: real
@@ -117,25 +122,24 @@
 </div>
 </div>
 <div class="section" id="correlation-dat">
-<h2>5.3.5. <code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>5.3.5. <code class="docutils literal"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <ul class="simple">
-<li><p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_{ij}(x,y) \equiv \langle \hat{A}^\alpha_i(0,0) \hat{A}^\beta_j(x,y) \rangle\)</span> が出力されます。</p></li>
-<li><p>各行8列から構成されます。</p>
-<ol class="arabic simple">
-<li><p>左演算子のインデックス <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
-<li><p>左演算子のサイトインデックス <span class="math notranslate nohighlight">\(i\)</span></p></li>
-<li><p>右演算子のインデックス <span class="math notranslate nohighlight">\(\beta\)</span></p></li>
-<li><p>右演算子のサイトインデックス <span class="math notranslate nohighlight">\(j\)</span></p></li>
-<li><p>右演算子のユニットセルオフセット (x) <span class="math notranslate nohighlight">\(x\)</span></p></li>
-<li><p>右演算子のユニットセルオフセット (y) <span class="math notranslate nohighlight">\(y\)</span></p></li>
-<li><p>演算子の実部 <span class="math notranslate nohighlight">\(\mathrm{Re}C^{\alpha \beta}_{ij}(x,y)\)</span></p></li>
-<li><p>演算子の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}C^{\alpha \beta}_{ij}(x,y)\)</span></p></li>
+<li>相関関数 <span class="math">\(C^{\alpha \beta}_{ij}(x,y) \equiv \langle \hat{A}^\alpha_i(0,0) \hat{A}^\beta_j(x,y) \rangle\)</span> が出力されます。</li>
+<li>各行8列から構成されます。<ol class="arabic">
+<li>左演算子のインデックス <span class="math">\(\alpha\)</span></li>
+<li>左演算子のサイトインデックス <span class="math">\(i\)</span></li>
+<li>右演算子のインデックス <span class="math">\(\beta\)</span></li>
+<li>右演算子のサイトインデックス <span class="math">\(j\)</span></li>
+<li>右演算子のユニットセルオフセット (x) <span class="math">\(x\)</span></li>
+<li>右演算子のユニットセルオフセット (y) <span class="math">\(y\)</span></li>
+<li>演算子の実部 <span class="math">\(\mathrm{Re}C^{\alpha \beta}_{ij}(x,y)\)</span></li>
+<li>演算子の虚部 <span class="math">\(\mathrm{Im}C^{\alpha \beta}_{ij}(x,y)\)</span></li>
 </ol>
 </li>
 </ul>
 <div class="section" id="id3">
 <h3>例<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
+<div class="highlight-none"><div class="highlight"><pre># $1: left_op
 # $2: left_site
 # $3: right_op
 # $4: right_site
@@ -162,14 +166,13 @@
 </div>
 </div>
 <div class="section" id="time-dat">
-<h2>5.3.6. <code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>5.3.6. <code class="docutils literal"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算時間が出力されます。</p>
 </div>
 </div>
 
 
           </div>
-          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -180,19 +183,24 @@
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
 
 
 
-<h3>ナビゲーション</h3>
+
+<h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">5. ファイルフォーマット</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.1. <code class="docutils literal notranslate"><span class="pre">tense_simple</span></code> の入力ファイル</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.2. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">5.3. 出力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.1. <code class="docutils literal"><span class="pre">tense_simple</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.2. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">5.3. 出力ファイル</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../algorithm/index.html">6. 参考文献</a></li>
@@ -205,7 +213,7 @@
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">5. ファイルフォーマット</a><ul>
-      <li>Previous: <a href="expert_format.html" title="前の章へ">5.2. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+      <li>Previous: <a href="expert_format.html" title="前の章へ">5.2. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
       <li>Next: <a href="../algorithm/index.html" title="次の章へ">6. 参考文献</a></li>
   </ul></li>
   </ul></li>
@@ -213,22 +221,17 @@
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>クイック検索</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
     </form>
-    </div>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
-
-
-
-
-
-
-
-
         </div>
       </div>
       <div class="clearer"></div>
@@ -237,11 +240,11 @@
       &copy;2019, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.0.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
-      <a href="../_sources/file_specification/output_format.rst.txt"
+      <a href="../_sources/file_specification/output_format.txt"
           rel="nofollow">Page source</a>
     </div>
 
