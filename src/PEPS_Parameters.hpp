@@ -1,7 +1,7 @@
 #ifndef _PEPS_PARAMETERS_HPP_
 #define _PEPS_PARAMETERS_HPP_
 
-#include <mpi.h>
+#include "mpi.hpp"
 
 class PEPS_Parameters {
 public:

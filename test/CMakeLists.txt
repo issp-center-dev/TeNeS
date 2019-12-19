@@ -16,6 +16,9 @@ foreach(basename input simple_update full_update)
     add_executable(${testname} "${basename}.cpp")
 
     target_compile_options(${testname} PRIVATE ${OMP_FLAG})
+    if (NOT ENABLE_MPI)
+        target_compile_definitions(${testname} PRIVATE -D_NO_MPI)
+    endif()
 
     target_include_directories(${testname} PRIVATE ${MPTENSOR_INCLUDE_DIR})
     target_include_directories(${testname} PRIVATE ${MPI_CXX_INCLUDE_DIRS})
@@ -23,7 +26,7 @@ foreach(basename input simple_update full_update)
     target_include_directories(${testname} PRIVATE ${CPPTOML_INCLUDE_DIR})
 
     target_link_libraries(${testname} mptensor)
-    target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
+    target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
 endforeach()

@@ -6,9 +6,14 @@
 
 #include <PEPS_Basics.hpp>
 #include <PEPS_Parameters.cpp>
+#include <mpi.cpp>
 
 TEST_CASE("testing full update"){
+#ifdef _NO_MPI
+  using tensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
+#else
   using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
+#endif
 
   const int ldof = 2;
   const int D = 2;

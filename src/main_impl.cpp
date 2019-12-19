@@ -1,4 +1,5 @@
 #include <cpptoml.h>
+#include "type.hpp"
 #include "util/file.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
@@ -9,7 +10,7 @@
 #include "version.hpp"
 
 int main_impl(int argc, char **argv) {
-  using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
+  using ptensor = mptensor::Tensor<mptensor_matrix_type, double>;
 
   int mpisize=0, mpirank=0;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);

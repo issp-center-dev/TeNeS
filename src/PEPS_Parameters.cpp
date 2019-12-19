@@ -1,5 +1,4 @@
 #include <fstream>
-#include <mpi.h>
 #include <sstream>
 #include <string>
 #include <vector>

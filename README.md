@@ -38,7 +38,6 @@ The following tools are required for building TeNeS.
 
 - C++11 compiler
 - CMake (>=2.8.14)
-- MPI and ScaLAPACK
 - Python (>=2.7)
     - numpy
     - toml
@@ -48,6 +47,8 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 - [mptensor](https://github.com/smorita/mptensor)
 - [cpptoml](https://github.com/skystrife/cpptoml)
 - [sanitizers-cmake](https://github.com/arsenm/sanitizers-cmake)
+
+TeNeS can be parallerized by using MPI and ScaLAPACK.
 
 ## Install
 
@@ -90,6 +91,10 @@ In this case, you can specify the python interpreter by the following way,
 ``` bash
 $ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
 ```
+
+### Disable MPI/ScaLAPACK parallelization
+
+To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` commands.
 
 ### Use the pre-built mptensor
 
