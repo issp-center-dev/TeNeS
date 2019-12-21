@@ -12,16 +12,20 @@ L_sub = [2, 2]
 
 [[lattice.site]]
 index = 0
-initial = 0
+initial_state = [1.0, 0.0]
+noise = 0.01
 [[lattice.site]]
 index = 1
-initial = 0
+initial_state = [1.0, 0.0]
+noise = 0.01
 [[lattice.site]]
 index = 2
-initial = 0
+initial_state = [1.0, 0.0]
+noise = 0.01
 [[lattice.site]]
 index = 3
-initial = 0
+initial_state = [1.0, 0.0]
+noise = 0.01
 
 [observable]
 local_operator = [

@@ -91,6 +91,7 @@ class SquareLattice(Lattice):
     def load(self, param):
         self.Lsub = make_Lsub(param["L_sub"])
         self.initial_states = param.get("initial", "random")
+        self.noise = param.get("noise", 1e-2)
         X, Y = self.Lsub
 
         self.bonds = []
@@ -124,6 +125,7 @@ class HoneycombLattice(Lattice):
     def load(self, param):
         self.Lsub = make_Lsub(param["L_sub"])
         self.initial_states = param.get("initial", "random")
+        self.noise = param.get("noise", 1e-2)
         X, Y = self.Lsub
         if not all(map(lambda x: x % 2 == 0, self.Lsub)):
             msg = "All elements of Lsub must be even for a honeycomb lattice."
@@ -338,27 +340,34 @@ def dump(param):
     ret.append('type = "{}"'.format(lattice.type))
     ret.append("L_sub = {}".format(lattice.Lsub))
 
+    model = param['model']
     N = lattice.Lsub[0] * lattice.Lsub[1]
     ret.append("")
     if lattice.initial_states == "ferro":
+        st = [0.0] * model.N
+        st[0] = 1.0
         for i in range(N):
             ret.append("[[lattice.site]]")
             ret.append("index = {}".format(i))
-            ret.append("initial = 0")
+            ret.append("initial_state = {}".format(st))
+            ret.append("noise = {}".format(lattice.noise))
     elif lattice.initial_states == "antiferro":
+        st = [0.0] * model.N
+        st[0] = 1.0
         for y in range(lattice.Lsub[1]):
             for x in range(lattice.Lsub[0]):
                 ret.append("[[lattice.site]]")
                 ret.append("index = {}".format(x + lattice.Lsub[0] * y))
                 if (x + y) % 2 == 0:
-                    ret.append("initial = {}".format(0))
+                    ret.append("initial_state = {}".format(st))
                 else:
-                    ret.append("initial = {}".format(param["model"].N - 1))
+                    ret.append("initial_state = {}".format(st[-1::-1]))
+                ret.append("noise = {}".format(lattice.noise))
     elif lattice.initial_states == "random":
         for i in range(N):
             ret.append("[[lattice.site]]")
             ret.append("index = {}".format(i))
-            ret.append("initial = -1")
+            ret.append("initial_state = [0.0]")
     else:
         msg = "Unknown initial state: {}".format(lattice.initial_states)
         raise RuntimeError(msg)

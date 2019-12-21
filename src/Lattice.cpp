@@ -3,16 +3,23 @@
 
 #include "Lattice.hpp"
 
-Lattice::Lattice(int X, int Y) : LX(X), LY(Y), N_UNIT(LX * LY), initial_dirs(N_UNIT, -1) {
+Lattice::Lattice(int X, int Y)
+    : LX(X),
+      LY(Y),
+      N_UNIT(LX * LY),
+      initial_dirs(N_UNIT, std::vector<double>(1)),
+      noises(N_UNIT, 0.0) {
   assert(X > 0);
   assert(Y > 0);
 
-  reset();
+  calc_neighbors();
 }
-void Lattice::reset() {
+
+void Lattice::calc_neighbors() {
   N_UNIT = LX * LY;
   Tensor_list.assign(LX, std::vector<int>(LY));
-  initial_dirs.assign(N_UNIT, -1);
+  initial_dirs.assign(N_UNIT, std::vector<double>(1));
+  noises.assign(N_UNIT, 0.0);
   NN_Tensor.resize(N_UNIT);
   for (int ix = 0; ix < LX; ++ix) {
     for (int iy = 0; iy < LY; ++iy) {
@@ -30,12 +37,13 @@ void Lattice::reset() {
     }
   }
 }
+
 void Lattice::reset(int X, int Y) {
   assert(X > 0);
   assert(Y > 0);
   LX = X;
   LY = Y;
-  reset();
+  calc_neighbors();
 }
 
 void Lattice::save(const char *filename, bool append) {
@@ -53,7 +61,10 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   int irank;
   MPI_Comm_rank(MPI_COMM_WORLD, &irank);
   std::vector<int> params_int(3);
-  std::vector<int> init_dirs;
+  std::vector<std::vector<double>> init_dirs(N_UNIT);
+  std::vector<double> ns;
+
+  int ldof = 0;
 
   if (irank == root) {
     params_int[0] = LX;
@@ -63,16 +74,32 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
     init_dirs.assign(initial_dirs.begin(), initial_dirs.end());
 
     MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-    MPI_Bcast(&init_dirs.front(), N_UNIT, MPI_INT, 0, comm);
+
+    for(int i=0; i<N_UNIT; ++i){
+      ldof = init_dirs[i].size();
+      MPI_Bcast(&ldof, 1, MPI_INT, 0, comm);
+      MPI_Bcast(&init_dirs[i].front(), ldof, MPI_DOUBLE, 0, comm);
+    }
+
+    ns.assign(noises.begin(), noises.end());
+    MPI_Bcast(&ns.front(), N_UNIT, MPI_DOUBLE, 0, comm);
+
   } else {
     MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
-    initial_dirs.resize(N_UNIT);
-    MPI_Bcast(&init_dirs.front(), N_UNIT, MPI_INT, 0, comm);
-
     LX = params_int[0];
     LY = params_int[1];
     N_UNIT = params_int[2];
+
+    for(int i=0; i<N_UNIT; ++i){
+      MPI_Bcast(&ldof, 1, MPI_INT, 0, comm);
+      init_dirs[i].resize(ldof);
+      MPI_Bcast(&init_dirs[i].front(), ldof, MPI_DOUBLE, 0, comm);
+    }
+
+    ns.resize(N_UNIT);
+    MPI_Bcast(&ns.front(), N_UNIT, MPI_DOUBLE, 0, comm);
   }
-  reset();
+  calc_neighbors();
   initial_dirs.assign(init_dirs.begin(), init_dirs.end());
+  noises.assign(ns.begin(), ns.end());
 }

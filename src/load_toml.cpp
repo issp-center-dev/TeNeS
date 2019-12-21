@@ -40,11 +40,19 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                   << std::endl;
         // ERROR
       }
-      auto dir = site->get_as<int>("initial");
+
+      auto dir = site->get_array_of<double>("initial_state");
       if (dir){
         lat.initial_dirs[*index] = *dir;
       }else{
-        lat.initial_dirs[*index] = -1;
+        lat.initial_dirs[*index] = std::vector<double>{0.0};
+      }
+
+      auto noise = site->get_as<double>("noise");
+      if (noise){
+        lat.noises[*index] = *noise;
+      }else{
+        lat.noises[*index] = 0.0;
       }
     }
   }

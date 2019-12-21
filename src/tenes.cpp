@@ -194,34 +194,36 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
 
   std::vector<double> ran(D * D * D * D * ldof);
   std::mt19937 gen(11);
-  std::uniform_real_distribution<double> dist(-0.01, 0.01);
-  for (int i = 0; i < D * D * D * D * ldof; i++) {
-    ran[i] = dist(gen);
-  }
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
   int nr;
 
   std::string const& load_dir = peps_parameters.tensor_load_dir;
   if(load_dir.empty()){
     Index index;
     for (int i = 0; i < lattice.N_UNIT; ++i) {
-      int dir = lattice.initial_dirs[i];
-      if(dir >= 0){
+      for (int i = 0; i < D * D * D * D * ldof; i++) {
+        ran[i] = dist(gen);
+      }
+      auto dir = lattice.initial_dirs[i];
+      if(std::all_of(dir.begin(), dir.end(), [=](double x){return x==0.0;})){
+        // random
         for (int n = 0; n < Tn[i].local_size(); ++n) {
+          const double noise = 1.0e-2;
           index = Tn[i].global_index(n);
-          if(index[4] == dir){
-            nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
-                 index[4] * D * D * D * D;
-            Tn[i].set_value(index, ran[nr]);
-          }else{
-            Tn[i].set_value(index, 0.0);
-          }
+          nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
+               index[4] * D * D * D * D;
+          Tn[i].set_value(index, noise*ran[nr]);
         }
       }else{
         for (int n = 0; n < Tn[i].local_size(); ++n) {
           index = Tn[i].global_index(n);
-          nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
-               index[4] * D * D * D * D;
-          Tn[i].set_value(index, ran[nr]);
+          if(index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0){
+            Tn[i].set_value(index, dir[index[4]]);
+          }else{
+            nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
+                 index[4] * D * D * D * D;
+            Tn[i].set_value(index, lattice.noises[i] * ran[nr]);
+          }
         }
       }
     }
