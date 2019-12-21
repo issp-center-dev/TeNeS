@@ -204,11 +204,21 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   if(load_dir.empty()){
     Index index;
     for (int i = 0; i < lattice.N_UNIT; ++i) {
-      for (int n = 0; n < Tn[i].local_size(); ++n) {
-        index = Tn[i].global_index(n);
-        if (index == Index(0, 0, 0, 0, 0)) {
-          Tn[i].set_value(index, 1.0);
-        } else {
+      int dir = lattice.initial_dirs[i];
+      if(dir >= 0){
+        for (int n = 0; n < Tn[i].local_size(); ++n) {
+          index = Tn[i].global_index(n);
+          if(index[4] == dir){
+            nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
+                 index[4] * D * D * D * D;
+            Tn[i].set_value(index, ran[nr]);
+          }else{
+            Tn[i].set_value(index, 0.0);
+          }
+        }
+      }else{
+        for (int n = 0; n < Tn[i].local_size(); ++n) {
+          index = Tn[i].global_index(n);
           nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
                index[4] * D * D * D * D;
           Tn[i].set_value(index, ran[nr]);

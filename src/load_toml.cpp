@@ -24,11 +24,32 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "lattice") {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
-    std::cerr << "cannot find Lsub in the section [" << tablename << "]"
+    std::cerr << "cannot find L_sub in the section [" << tablename << "]"
               << std::endl;
     // ERROR
   }
-  return Lattice((*Lsub)[0], (*Lsub)[1]);
+
+  Lattice lat((*Lsub)[0], (*Lsub)[1]);
+
+  auto sites = toml->get_table_array("site");
+  if (sites){
+    for(const auto& site: *sites){
+      auto index = site->get_as<int>("index");
+      if (!index){
+        std::cerr << "cannot find \"index\" in the section [[" << tablename << ".site]]"
+                  << std::endl;
+        // ERROR
+      }
+      auto dir = site->get_as<int>("initial");
+      if (dir){
+        lat.initial_dirs[*index] = *dir;
+      }else{
+        lat.initial_dirs[*index] = -1;
+      }
+    }
+  }
+
+  return lat;
 }
 
 Edges gen_edges(decltype(cpptoml::parse_file("")) toml, const char *key,

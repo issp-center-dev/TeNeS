@@ -34,6 +34,8 @@ public:
   int LY;
   int N_UNIT;
 
+  std::vector<int> initial_dirs;
+
   std::vector<std::vector<int>> Tensor_list;
   std::vector<std::array<int, 4>> NN_Tensor;
 

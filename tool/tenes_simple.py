@@ -90,6 +90,7 @@ class SquareLattice(Lattice):
 
     def load(self, param):
         self.Lsub = make_Lsub(param["L_sub"])
+        self.initial_states = param.get("initial", "random")
         X, Y = self.Lsub
 
         self.bonds = []
@@ -122,6 +123,8 @@ class HoneycombLattice(Lattice):
 
     def load(self, param):
         self.Lsub = make_Lsub(param["L_sub"])
+        self.initial_states = param.get("initial", "random")
+        X, Y = self.Lsub
         if not all(map(lambda x: x % 2 == 0, self.Lsub)):
             msg = "All elements of Lsub must be even for a honeycomb lattice."
             raise RuntimeError(msg)
@@ -188,7 +191,8 @@ class SpinModel:
         if int(2 * S) != 2 * S:
             msg = "S is neighther integer nor half-integer: {}".format(S)
             raise RuntimeError(msg)
-        M = int(2 * S) + 1
+        self.N = int(2 * S) + 1
+        M = self.N
         Sz = np.zeros((M, M))
         Splus = np.zeros((M, M))
         Sminus = np.zeros((M, M))
@@ -333,6 +337,31 @@ def dump(param):
     lattice = param["lattice"]
     ret.append('type = "{}"'.format(lattice.type))
     ret.append("L_sub = {}".format(lattice.Lsub))
+
+    N = lattice.Lsub[0] * lattice.Lsub[1]
+    ret.append("")
+    if lattice.initial_states == "ferro":
+        for i in range(N):
+            ret.append("[[lattice.site]]")
+            ret.append("index = {}".format(i))
+            ret.append("initial = 0")
+    elif lattice.initial_states == "antiferro":
+        for y in range(lattice.Lsub[1]):
+            for x in range(lattice.Lsub[0]):
+                ret.append("[[lattice.site]]")
+                ret.append("index = {}".format(x + lattice.Lsub[0] * y))
+                if (x + y) % 2 == 0:
+                    ret.append("initial = {}".format(0))
+                else:
+                    ret.append("initial = {}".format(param["model"].N - 1))
+    elif lattice.initial_states == "random":
+        for i in range(N):
+            ret.append("[[lattice.site]]")
+            ret.append("index = {}".format(i))
+            ret.append("initial = -1")
+    else:
+        msg = "Unknown initial state: {}".format(lattice.initial_states)
+        raise RuntimeError(msg)
 
     ret.append("")
     ret.append("[observable]")
