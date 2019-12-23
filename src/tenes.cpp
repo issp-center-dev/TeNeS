@@ -193,7 +193,7 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   }
 
   std::vector<double> ran(D * D * D * D * ldof);
-  std::mt19937 gen(11);
+  std::mt19937 gen(peps_parameters.seed);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   int nr;
 
