@@ -476,7 +476,8 @@ void Calc_projector_left_block(
       Shape shape_row(t12, e12, t12);
       Shape shape_col(t34, e56, t34);
 
-      int info = rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
+      /*int info ()= */
+      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
                       static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
@@ -501,7 +502,8 @@ void Calc_projector_left_block(
       Tensor<Matrix, C> VT;
       std::vector<double> s;
 
-      int info = svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)),
+      /* int info = */
+      svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)),
                      Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
@@ -556,13 +558,14 @@ void Calc_projector_updown_blocks(
     Tensor<Matrix, C> &PL) {
   // based on P. Corboz, T.M.Rice and M. Troyer, PRL 113, 046402(2014)
 
-  int e12 = eT1.shape()[1];
+  // comment out for unused variables
+  // int e12 = eT1.shape()[1];
   int e34 = eT3.shape()[1];
-  int e56 = eT5.shape()[1];
+  // int e56 = eT5.shape()[1];
   int e78 = eT7.shape()[1];
-  int t12 = Tn1.shape()[2];
+  // int t12 = Tn1.shape()[2];
   int t23 = Tn2.shape()[3];
-  int t34 = Tn3.shape()[0];
+  // int t34 = Tn3.shape()[0];
   int t41 = Tn4.shape()[1];
 
   if (t41 != 1) {
@@ -637,7 +640,8 @@ void Calc_projector_updown_blocks(
       Shape shape_row(t23, e34, t23);
       Shape shape_col(t23, e34, t23);
 
-      int info = rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
+      /* int info = */
+      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
                       static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
@@ -668,7 +672,8 @@ void Calc_projector_updown_blocks(
       Tensor<Matrix, C> VT;
       std::vector<double> s;
 
-      int info = svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)),
+      /* int info = */
+      svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)),
                      Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
@@ -816,8 +821,6 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     }
   };
 
-  int m1 = Tn1.shape()[4];
-  int m2 = Tn2.shape()[4];
   int dc = Tn1.shape()[connect1];
   Tensor<Matrix, C> Tn1_lambda, Tn2_lambda;
   Tn1_lambda = Tn1;
@@ -995,8 +998,6 @@ void Full_update_bond_horizontal(
   Shape Tn2_shape = Tn2.shape();
 
   int D_connect = Tn1_shape[2];
-  int m1 = Tn1_shape[4];
-  int m2 = Tn2_shape[4];
 
   // Connecting [2] bond of Tn1 and [0] bond of Tn2
   // QR decomposition
@@ -1359,7 +1360,7 @@ void EvolutionaryTensor(Tensor<Matrix, C> &U, const Tensor<Matrix, C> &H,
 
   Tensor<Matrix, C> V;
   std::vector<double> s;
-  int info = eigh(H, s, V);
+  /* int info = */ eigh(H, s, V);
   for (size_t i = 0; i < N; ++i) {
     s[i] = std::exp(-tau * s[i]);
   }
