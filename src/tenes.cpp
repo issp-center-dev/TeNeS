@@ -207,23 +207,18 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
       auto dir = lattice.initial_dirs[i];
       if(std::all_of(dir.begin(), dir.end(), [=](double x){return x==0.0;})){
         // random
-        for (int n = 0; n < Tn[i].local_size(); ++n) {
-          const double noise = 1.0e-2;
-          index = Tn[i].global_index(n);
+        for(int j=0; j<ldof; ++j){
+          dir[j] = dist(gen);
+        }
+      }
+      for (int n = 0; n < Tn[i].local_size(); ++n) {
+        index = Tn[i].global_index(n);
+        if(index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0){
+          Tn[i].set_value(index, dir[index[4]]);
+        }else{
           nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
                index[4] * D * D * D * D;
-          Tn[i].set_value(index, noise*ran[nr]);
-        }
-      }else{
-        for (int n = 0; n < Tn[i].local_size(); ++n) {
-          index = Tn[i].global_index(n);
-          if(index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0){
-            Tn[i].set_value(index, dir[index[4]]);
-          }else{
-            nr = index[0] + index[1] * D + index[2] * D * D + index[3] * D * D * D +
-                 index[4] * D * D * D * D;
-            Tn[i].set_value(index, lattice.noises[i] * ran[nr]);
-          }
+          Tn[i].set_value(index, lattice.noises[i] * ran[nr]);
         }
       }
     }
