@@ -15,4 +15,7 @@ ctm_iteration_max = 3
 ctm_projector_corner = false
 use_rsvd = false
 rsvd_oversampling_factor = 2
+seed = 11
+tensor_load_dir = 
+tensor_save_dir = 
 Lsub = [ 2 , 2 ]

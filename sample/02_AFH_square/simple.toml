@@ -17,6 +17,7 @@ iteration_max = 5
 [lattice]
 type = "square lattice"
 L_sub = [2,2]
+initial = "antiferro"
 
 [model]
 type = "spin"

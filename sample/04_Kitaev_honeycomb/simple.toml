@@ -17,6 +17,7 @@ iteration_max = 5
 [lattice]
 type = "honeycomb lattice"
 L_sub = [2,2]
+initial = "ferro"
 
 [model]
 type = "spin"

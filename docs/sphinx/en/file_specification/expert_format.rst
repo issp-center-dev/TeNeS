@@ -25,16 +25,19 @@ This section has five sub sections, ``tensor``, ``simple_update``, ``full_update
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``D``,        "The virtual bond dimensions of the central tensor",  Integer,   2
-   ``CHI``,      "The virtual bond dimensions of the angular transfer matrix",        Integer,   4
-   ``save_dir``, "Directory to write optimized tensors", Str, '""'
-   ``load_dir``, "Directory to read initial tensor", Str, '""'
+   ``D``,        "The virtual bond dimensions of the central tensor",          Integer, 2
+   ``CHI``,      "The virtual bond dimensions of the angular transfer matrix", Integer, 4
+   ``save_dir``, "Directory to write optimized tensors",                       String,  '""'
+   ``load_dir``, "Directory to read initial tensor",                           String,  '""'
 
 
 - ``save_dir``
+
   - Store optimized tensors below this directory.
   - When it is empty, the tensors are not saved.
+
 - ``load_dir``
+
   - Read various tensors from below this directory.
   - Must be same degree of parallelism as when saved.
   - Not read if it is empty.
@@ -116,6 +119,7 @@ Example
 
 Specify the unit cell information.
 Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
+``lattice`` section has an array of subsections ``lattice.site`` .
 
 .. csv-table::
    :header: "Name", "Description", "Type"
@@ -141,6 +145,30 @@ Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
 
 Information of bonds is given in the ``evolution`` and the ``observable`` sections.
 
+``lattice.site``
+~~~~~~~~~~~~~~~~~~
+
+Define the initial state of each site.
+A whole wave function is a direct product state of all sites.
+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
+
+   ``index``, "Site index", Integer
+   ``initial_state``, "Coefficients of state", List of reals
+   ``noise``, "Amplitude of noise in elements", Real
+
+``initial_state`` specifies coefficients :math:`A_\alpha` in 
+:math:`|\psi\rangle_i = \sum_\alpha A_\alpha |\alpha\rangle_i` .
+If all the components are zero, coeffeicients will be randomly initialized.
+TeNeS initializes elements which all the virtual indices are zero by using these components,
+:math:`T_{0,0,0,0}^\alpha = A_\alpha` .
+The other components will be initialized by uniformly random numbers over ``[-noise, noise]`` .
+
+For example, for :math:`S=1/2` case, `initial_state = [1.0, 0.0]` gives :math:`S^z = 1/2` state and `initial_state = [1.0, 1.0]` gives :math:`S^x = 1/2` state. 
+
+
 ``evolution`` section
 ========================
 
@@ -150,9 +178,9 @@ Define the imaginary time evolution opetrators used in simple and full updates.
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``matrix``,        "Matrix representation about the imaginary time evolution opetrators", A list of string
-   ``simple_update``, "The order of the bonds that act on the index of the imaginary time evolution operator in simple update", A list of string
-   ``full_update``,   "The order of the bonds that act on the index of the imaginary time evolution operator in full update",   A list of string
+   ``matrix``,        "Matrix representation about the imaginary time evolution opetrators",                                    List of string
+   ``simple_update``, "The order of the bonds that act on the index of the imaginary time evolution operator in simple update", List of string
+   ``full_update``,   "The order of the bonds that act on the index of the imaginary time evolution operator in full update",   List of string
 
 ``matrix``
 ~~~~~~~~~~
@@ -218,8 +246,8 @@ In this section, the information about physical quantities to be observed is spe
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``local_operator``,    "Site opertor (ex. Sz)",                      A list of string
-   ``hamiltonian``,       "Bond hamiltonian",                           A list of string
+   ``local_operator``,    "Site opertor (ex. Sz)",                                  A list of string
+   ``hamiltonian``,       "Bond hamiltonian",                                       A list of string
    ``hamiltonian_bonds``, "Type of bond Hamiltonian and the set of bonds that act", string
 
 ``local_operator``, ``hamiltonian``
@@ -280,8 +308,8 @@ In the following, the parameters about the correlation function :math:`C = \lang
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``r_max``,     "Maximum distance :math:`r` of the correlation function", Integer
-   ``operators``, "Numbers of operators A and B that measure correlation functions", A list for Integer
+   ``r_max``,     "Maximum distance :math:`r` of the correlation function",          Integer
+   ``operators``, "Numbers of operators A and B that measure correlation functions", List for Integer
 
 The operators defined in the ``observable`` section are used.
 

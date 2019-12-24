@@ -8,6 +8,7 @@ Jz = 1.0
 [lattice]
 type = 'square lattice'
 L_sub = [2,2]
+initial = 'ferro'
 
 [parameter]
 [parameter.simple_update]

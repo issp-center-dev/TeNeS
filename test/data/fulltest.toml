@@ -14,6 +14,18 @@ iteration_max = 3
 
 [lattice]
 L_sub = [2,2]
+[[lattice.sites]]
+index = 0
+initial_state = [1.0, 0.0]
+[[lattice.sites]]
+index = 1
+initial_state = [0.0, 1.0]
+[[lattice.sites]]
+index = 2
+initial_state = [0.0, 1.0]
+[[lattice.sites]]
+index = 3
+initial_state = [1.0, 0.0]
 
 [evolution]
 simple_update = """

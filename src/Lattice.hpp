@@ -34,6 +34,9 @@ public:
   int LY;
   int N_UNIT;
 
+  std::vector<std::vector<double>> initial_dirs;
+  std::vector<double> noises;
+
   std::vector<std::vector<int>> Tensor_list;
   std::vector<std::array<int, 4>> NN_Tensor;
 
@@ -52,8 +55,8 @@ public:
   int top(int index) const { return NN_Tensor[index][1]; }
   int bottom(int index) const { return NN_Tensor[index][3]; }
 
-  void reset();
   void reset(int X, int Y);
+  void calc_neighbors();
 
   void save(const char *filename, bool append = false);
 
