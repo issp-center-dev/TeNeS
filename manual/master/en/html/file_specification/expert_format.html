@@ -85,24 +85,28 @@ This section has five sub sections, <code class="docutils literal"><span class="
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">save_dir</span></code></td>
 <td>Directory to write optimized tensors</td>
-<td>Str</td>
+<td>String</td>
 <td>&#8216;&#8221;&#8220;&#8217;</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">load_dir</span></code></td>
 <td>Directory to read initial tensor</td>
-<td>Str</td>
+<td>String</td>
 <td>&#8216;&#8221;&#8220;&#8217;</td>
 </tr>
 </tbody>
 </table>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">save_dir</span></code>
-- Store optimized tensors below this directory.
-- When it is empty, the tensors are not saved.</li>
-<li><code class="docutils literal"><span class="pre">load_dir</span></code>
-- Read various tensors from below this directory.
-- Must be same degree of parallelism as when saved.
-- Not read if it is empty.</li>
+<li><code class="docutils literal"><span class="pre">save_dir</span></code><ul>
+<li>Store optimized tensors below this directory.</li>
+<li>When it is empty, the tensors are not saved.</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">load_dir</span></code><ul>
+<li>Read various tensors from below this directory.</li>
+<li>Must be same degree of parallelism as when saved.</li>
+<li>Not read if it is empty.</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="parameter-simple-update">
@@ -288,7 +292,8 @@ iteration_max = 5
 <div class="section" id="lattice-section">
 <h2>5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> section<a class="headerlink" href="#lattice-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the unit cell information.
-Unit cell has a shape of a rectangular with the size of <code class="docutils literal"><span class="pre">Lx</span></code> times <code class="docutils literal"><span class="pre">Ly</span></code>.</p>
+Unit cell has a shape of a rectangular with the size of <code class="docutils literal"><span class="pre">Lx</span></code> times <code class="docutils literal"><span class="pre">Ly</span></code>.
+<code class="docutils literal"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal"><span class="pre">lattice.site</span></code> .</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="23%" />
@@ -321,6 +326,45 @@ These are arranged in order from the x direction.</p>
 </pre></div>
 </div>
 <p>Information of bonds is given in the <code class="docutils literal"><span class="pre">evolution</span></code> and the <code class="docutils literal"><span class="pre">observable</span></code> sections.</p>
+<div class="section" id="lattice-site">
+<h3><code class="docutils literal"><span class="pre">lattice.site</span></code><a class="headerlink" href="#lattice-site" title="Permalink to this headline">¶</a></h3>
+<p>Define the initial state of each site.
+A whole wave function is a direct product state of all sites.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="46%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">index</span></code></td>
+<td>Site index</td>
+<td>Integer</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">initial_state</span></code></td>
+<td>Coefficients of state</td>
+<td>List of reals</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<td>Amplitude of noise in elements</td>
+<td>Real</td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal"><span class="pre">initial_state</span></code> specifies coefficients <span class="math">\(A_\alpha\)</span> in
+<span class="math">\(|\psi\rangle_i = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> .
+If all the components are zero, coeffeicients will be randomly initialized.
+TeNeS initializes elements which all the virtual indices are zero by using these components,
+<span class="math">\(T_{0,0,0,0}^\alpha = A_\alpha\)</span> .
+The other components will be initialized by uniformly random numbers over <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise]</span></code> .</p>
+<p>For example, for <span class="math">\(S=1/2\)</span> case, <cite>initial_state = [1.0, 0.0]</cite> gives <span class="math">\(S^z = 1/2\)</span> state and <cite>initial_state = [1.0, 1.0]</cite> gives <span class="math">\(S^x = 1/2\)</span> state.</p>
+</div>
 </div>
 <div class="section" id="evolution-section">
 <h2>5.2.3. <code class="docutils literal"><span class="pre">evolution</span></code> section<a class="headerlink" href="#evolution-section" title="Permalink to this headline">¶</a></h2>
@@ -340,15 +384,15 @@ These are arranged in order from the x direction.</p>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">matrix</span></code></td>
 <td>Matrix representation about the imaginary time evolution opetrators</td>
-<td>A list of string</td>
+<td>List of string</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">simple_update</span></code></td>
 <td>The order of the bonds that act on the index of the imaginary time evolution operator in simple update</td>
-<td>A list of string</td>
+<td>List of string</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">full_update</span></code></td>
 <td>The order of the bonds that act on the index of the imaginary time evolution operator in full update</td>
-<td>A list of string</td>
+<td>List of string</td>
 </tr>
 </tbody>
 </table>
@@ -508,7 +552,7 @@ hamiltonian = [
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">operators</span></code></td>
 <td>Numbers of operators A and B that measure correlation functions</td>
-<td>A list for Integer</td>
+<td>List for Integer</td>
 </tr>
 </tbody>
 </table>

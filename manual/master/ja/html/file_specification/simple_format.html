@@ -122,13 +122,17 @@
 </tbody>
 </table>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">save_dir</span></code>
-- 最適化後のテンソルをこのディレクトリ以下に保存します
-- 空文字列の場合は保存しません</li>
-<li><code class="docutils literal"><span class="pre">load_dir</span></code>
-- 各種テンソルをこのディレクトリ以下から読み込みます
-- 保存したときと同じ並列度である必要があります
-- 空文字列の場合は読み込みません</li>
+<li><code class="docutils literal"><span class="pre">save_dir</span></code><ul>
+<li>最適化後のテンソルをこのディレクトリ以下に保存します</li>
+<li>空文字列の場合は保存しません</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">load_dir</span></code><ul>
+<li>各種テンソルをこのディレクトリ以下から読み込みます</li>
+<li>保存したときと同じ並列度である必要があります</li>
+<li>空文字列の場合は読み込みません</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="parameter-simple-update">
@@ -340,6 +344,16 @@ iteration_max = 5
 <td>整数もしくは2つの整数からなるリスト</td>
 <td>&#8211;</td>
 </tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
+<td>初期テンソル</td>
+<td>文字列</td>
+<td>random</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<td>初期テンソル</td>
+<td>実数</td>
+<td>1e-2</td>
+</tr>
 </tbody>
 </table>
 <p>ユニットセルは <code class="docutils literal"><span class="pre">Lx</span></code> かける <code class="docutils literal"><span class="pre">Ly</span></code> の大きさをもつ長方形の形をしています。
@@ -354,6 +368,9 @@ iteration_max = 5
 .-&gt;x  0 1
 </pre></div>
 </div>
+<p><code class="docutils literal"><span class="pre">initial</span></code> と <code class="docutils literal"><span class="pre">noise</span></code> は波動関数の初期状態を決めるパラメータです。
+<code class="docutils literal"><span class="pre">initial</span></code> としては <code class="docutils literal"><span class="pre">&quot;ferro&quot;,</span> <span class="pre">&quot;antiferro&quot;,</span> <span class="pre">&quot;random&quot;</span></code> が指定可能です。
+<code class="docutils literal"><span class="pre">noise</span></code> はテンソルの要素に付与されるゆらぎの大きさです。</p>
 <div class="section" id="square-lattice">
 <h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>ボンドは水平方向 (0) と垂直方向 (1) の2種類あります（下図の <code class="docutils literal"><span class="pre">-</span></code> と <code class="docutils literal"><span class="pre">|</span></code> に対応）。</p>

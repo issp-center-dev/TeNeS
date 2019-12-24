@@ -55,7 +55,7 @@
 </ul>
 <div class="section" id="parameter">
 <h2>5.2.1. <code class="docutils literal"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="このヘッドラインへのパーマリンク">¶</a></h2>
-<p>更新回数など、種々のパラメータを記述します。このセクションのみ、各々のパラメータにデフォルト値が存在します。
+<p>更新回数など、種々のパラメータを記述します。このセクションでは、各々のパラメータにデフォルト値が存在します。
 サブセクションとして <code class="docutils literal"><span class="pre">tensor</span></code>, <code class="docutils literal"><span class="pre">simple_update</span></code>, <code class="docutils literal"><span class="pre">full_update</span></code>,
 <code class="docutils literal"><span class="pre">ctm</span></code>, <code class="docutils literal"><span class="pre">random</span></code> を持ちます。</p>
 <div class="section" id="parameter-tensor">
@@ -98,13 +98,17 @@
 </tbody>
 </table>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">save_dir</span></code>
-- 最適化後のテンソルをこのディレクトリ以下に保存します
-- 空文字列の場合は保存しません</li>
-<li><code class="docutils literal"><span class="pre">load_dir</span></code>
-- 各種テンソルをこのディレクトリ以下から読み込みます
-- 保存したときと同じ並列度である必要があります
-- 空文字列の場合は読み込みません</li>
+<li><code class="docutils literal"><span class="pre">save_dir</span></code><ul>
+<li>最適化後のテンソルをこのディレクトリ以下に保存します</li>
+<li>空文字列の場合は保存しません</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">load_dir</span></code><ul>
+<li>各種テンソルをこのディレクトリ以下から読み込みます</li>
+<li>保存したときと同じ並列度である必要があります</li>
+<li>空文字列の場合は読み込みません</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="parameter-simple-update">
@@ -290,7 +294,8 @@ iteration_max = 5
 <div class="section" id="lattice">
 <h2>5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>「ユニットセル」の情報を記述します。
-ユニットセルは <code class="docutils literal"><span class="pre">Lx</span></code> かける <code class="docutils literal"><span class="pre">Ly</span></code> の大きさをもつ長方形の形をしています。</p>
+ユニットセルは <code class="docutils literal"><span class="pre">Lx</span></code> かける <code class="docutils literal"><span class="pre">Ly</span></code> の大きさをもつ長方形の形をしています。
+また、サブセクション <code class="docutils literal"><span class="pre">site</span></code> を持ちます。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="23%" />
@@ -322,6 +327,46 @@ iteration_max = 5
 </pre></div>
 </div>
 <p>ボンドの情報は <code class="docutils literal"><span class="pre">evolution</span></code> や <code class="docutils literal"><span class="pre">observable</span></code> で与えられます。</p>
+<div class="section" id="lattice-site">
+<h3><code class="docutils literal"><span class="pre">lattice.site</span></code> サブセクション<a class="headerlink" href="#lattice-site" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>各サイトのテンソルがあらわす初期状態を指定します。
+全体の初期状態は、各サイトの初期状態の直積で与えられます。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="46%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">index</span></code></td>
+<td>サイト番号</td>
+<td>整数</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">initial_state</span></code></td>
+<td>初期状態の係数</td>
+<td>実数のリスト</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<td>テンソル要素のゆらぎの大きさ</td>
+<td>実数</td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal"><span class="pre">initial_state</span></code> では
+<span class="math">\(|\psi\rangle_i = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span>
+の <span class="math">\(A_\alpha\)</span> の値を指定します。
+ゼロのみからなる配列を渡した場合、乱数初期化します。
+実際には、すべてのvirtual ボンドインデックスが0 である要素が、 <span class="math">\(T_{0,0,0,0}^\alpha = A_\alpha\)</span> のように初期化されます。
+他の要素には <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> の一様乱数が入力されます。</p>
+<p>たとえば、 <span class="math">\(S=1/2\)</span> のとき、 <span class="math">\(S^z\)</span> 方向に向いた状態を初期値にしたい場合には <cite>initial_state = [1.0, 0.0]</cite> に、
+<span class="math">\(S^x\)</span> 方向に向いた状態を初期値にしたい場合には <cite>initial_state = [1.0, 1.0]</cite> とします。</p>
+</div>
 </div>
 <div class="section" id="evolution">
 <h2>5.2.3. <code class="docutils literal"><span class="pre">evolution</span></code> セクション<a class="headerlink" href="#evolution" title="このヘッドラインへのパーマリンク">¶</a></h2>

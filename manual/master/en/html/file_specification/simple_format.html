@@ -105,24 +105,28 @@ You can also specify the imaginary time step size for the imaginary time evoluti
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">save_dir</span></code></td>
 <td>Directory to write optimized tensors</td>
-<td>Str</td>
+<td>String</td>
 <td>&#8220;&#8221;</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">load_dir</span></code></td>
 <td>Directory to read initial tensor</td>
-<td>Str</td>
+<td>String</td>
 <td>&#8220;&#8221;</td>
 </tr>
 </tbody>
 </table>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">save_dir</span></code>
-- Store optimized tensors below this directory.
-- When it is empty, the tensors are not saved.</li>
-<li><code class="docutils literal"><span class="pre">load_dir</span></code>
-- Read various tensors from below this directory.
-- Must be the same degree of parallelism as when saved.
-- Not read if it is empty.</li>
+<li><code class="docutils literal"><span class="pre">save_dir</span></code><ul>
+<li>Store optimized tensors below this directory.</li>
+<li>When it is empty, the tensors are not saved.</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">load_dir</span></code><ul>
+<li>Read various tensors from below this directory.</li>
+<li>Must be the same degree of parallelism as when saved.</li>
+<li>Not read if it is empty.</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="parameter-simple-update">
@@ -311,24 +315,38 @@ iteration_max = 5
 Square lattice and honeycomb lattice are defined as lattice types.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="25%" />
+<col width="30%" />
+<col width="30%" />
+<col width="20%" />
+<col width="20%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
 <th class="head">Description</th>
 <th class="head">Type</th>
+<th class="head">Default</th>
 </tr>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
 <td>Lattice name (square lattice or honeycomb lattice)</td>
-<td>Str</td>
+<td>String</td>
+<td>&#8211;</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">L_sub</span></code></td>
 <td>Unit cell size</td>
-<td>An integer or a list of two integers</td>
+<td>Integer or a list of two integers</td>
+<td>&#8211;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
+<td>Initial state</td>
+<td>String</td>
+<td>random</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<td>Noise of initial components</td>
+<td>Real</td>
+<td>1e-2</td>
 </tr>
 </tbody>
 </table>
@@ -344,6 +362,9 @@ These are arranged in order from the x direction.</p>
 .-&gt;x  0 1
 </pre></div>
 </div>
+<p><code class="docutils literal"><span class="pre">initial</span></code> ane <code class="docutils literal"><span class="pre">noise</span></code> specifies an initial state.
+<code class="docutils literal"><span class="pre">initial</span></code> can take the following value: <code class="docutils literal"><span class="pre">&quot;ferro&quot;,</span> <span class="pre">&quot;antiferro&quot;,</span> <span class="pre">&quot;random&quot;</span></code> .
+<code class="docutils literal"><span class="pre">noise</span></code> is an amplitude of a noise.</p>
 <div class="section" id="square-lattice">
 <h3>Square lattice<a class="headerlink" href="#square-lattice" title="Permalink to this headline">¶</a></h3>
 <p>There are two types of bond, horizontal (0) and vertical (1) (corresponding to <code class="docutils literal"><span class="pre">-</span></code> and <code class="docutils literal"><span class="pre">|</span></code> in the below figure).</p>
@@ -391,7 +412,7 @@ Only the Spin system can be spcified in ver. 0.1.</p>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
 <td>The type of the model</td>
-<td>Str</td>
+<td>String</td>
 </tr>
 </tbody>
 </table>
