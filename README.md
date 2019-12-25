@@ -1,10 +1,7 @@
-Build status: [![Build status (master)](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS)
+| Build status | Documentation (latest) | Documentation (latest stable) |
+| :-: | :-: | :-: |
+| [![Build status (master)](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc latest en](https://img.shields.io/badge/doc--en-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc latest ja](https://img.shields.io/badge/doc--ja-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) | [![doc latest_stable en](https://img.shields.io/badge/doc--en-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html) [![doc latest_stable ja](https://img.shields.io/badge/doc--ja-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html) |
 
-Documentation (latest): [![doc latest en](https://img.shields.io/badge/doc--en-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
-[![doc latest ja](https://img.shields.io/badge/doc--ja-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
-
-Documentation (latest stable): [![doc latest_stable en](https://img.shields.io/badge/doc--en-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html)
-[![doc latest_stable ja](https://img.shields.io/badge/doc--ja-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html)
 
 # TeNeS
 
