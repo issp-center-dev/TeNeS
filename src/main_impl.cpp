@@ -9,6 +9,8 @@
 #include "util/read_matrix.hpp"
 #include "version.hpp"
 
+namespace tenes {
+
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor_matrix_type, double>;
 
@@ -128,3 +130,5 @@ int main_impl(int argc, char **argv) {
   return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges,
                full_edges, ham_edges, evolutions, hams, lops, corparam);
 }
+
+} // end of namespace tenes

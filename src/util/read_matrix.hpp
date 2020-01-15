@@ -10,6 +10,8 @@
 
 #include "string.hpp"
 
+namespace tenes { 
+
 namespace util {
 template <class ptensor> ptensor read_matrix(std::string const &str) {
   std::vector<std::vector<double>> A;
@@ -49,5 +51,6 @@ std::vector<ptensor> read_matrix(std::vector<std::string> const &strs) {
 }
 
 } // namespace util
+} // namespace tenes
 
 #endif // UTIL_READ_MATRIX_HPP

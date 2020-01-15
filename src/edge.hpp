@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+namespace tenes {
+
 /*
  * axis:
  *
@@ -65,5 +67,7 @@ using Edges = std::vector<Edge>;
  *
  */
 Edges make_edges(std::string const &str);
+
+} // end of namespace tenes
 
 #endif // EDGE_HPP

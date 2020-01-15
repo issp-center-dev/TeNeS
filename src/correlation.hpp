@@ -4,6 +4,8 @@
 #include <vector>
 #include <utility>
 
+namespace tenes {
+
 struct Correlation {
   int left_index, right_index;
   int offset_x, offset_y;
@@ -17,5 +19,7 @@ struct CorrelationParameter{
   CorrelationParameter():r_max(0){}
   CorrelationParameter(int r_max, std::vector<std::pair<int,int>> const& ops): r_max(r_max), operators(ops){}
 };
+
+} // end of namespace tenes
 
 #endif // CORRELATION_HPP

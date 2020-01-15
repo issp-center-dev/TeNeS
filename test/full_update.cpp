@@ -15,6 +15,9 @@ TEST_CASE("testing full update"){
   using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 #endif
 
+  using mptensor::Shape;
+  using mptensor::Index;
+
   const int ldof = 2;
   const int D = 2;
   const int chi = 4;
@@ -70,12 +73,12 @@ TEST_CASE("testing full update"){
 
   // calculation
 
-  PEPS_Parameters peps_parameters;
+  tenes::PEPS_Parameters peps_parameters;
   int connect = 2;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 
-  Full_update_bond(C[0], C[1], C[2], C[3],
+  tenes::Full_update_bond(C[0], C[1], C[2], C[3],
                    E[0], E[1], E[2],
                    E[3], E[4], E[5],
                    T[0], T[1], op,

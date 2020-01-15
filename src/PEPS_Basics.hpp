@@ -22,6 +22,9 @@
 
 #include "mpi.hpp"
 #include "PEPS_Parameters.hpp"
+
+namespace tenes {
+
 using namespace mptensor;
 // Contractions
 template <template <typename> class Matrix, typename C>
@@ -776,6 +779,7 @@ void Calc_Next_eT(const Tensor<Matrix, C> &eT8, const Tensor<Matrix, C> &Tn1,
   double max_all = max_abs(eT_out);
   eT_out /= max_all;
 }
+
 template <template <typename> class Matrix, typename C>
 void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
                         const Tensor<Matrix, C> &Tn2,
@@ -785,17 +789,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
                         const PEPS_Parameters peps_parameters,
                         Tensor<Matrix, C> &Tn1_new, Tensor<Matrix, C> &Tn2_new,
                         std::vector<double> &lambda_c) {
-  // --前処理--
-  int connect2;
-  if (connect1 == 0) {
-    connect2 = 2;
-  } else if (connect1 == 1) {
-    connect2 = 3;
-  } else if (connect1 == 2) {
-    connect2 = 0;
-  } else {
-    connect2 = 1;
-  }
+  int connect2 = (connect1+2)%4;
 
   std::vector<std::vector<double>> lambda1_inv(4);
   std::vector<std::vector<double>> lambda2_inv(4);
@@ -822,9 +816,8 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   };
 
   int dc = Tn1.shape()[connect1];
-  Tensor<Matrix, C> Tn1_lambda, Tn2_lambda;
-  Tn1_lambda = Tn1;
-  Tn2_lambda = Tn2;
+  Tensor<Matrix, C> Tn1_lambda = Tn1;
+  Tensor<Matrix, C> Tn2_lambda = Tn2;
 
   if (connect1 == 0) {
     Tn1_lambda.multiply_vector(lambda1[1], 1, lambda1[2], 2, lambda1[3], 3);
@@ -838,6 +831,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   } else {
     Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[1], 1, lambda1[2], 2);
   }
+
   if (connect2 == 0) {
     Tn2_lambda.multiply_vector(lambda2[1], 1, lambda2[2], 2, lambda2[3], 3);
     Tn2_lambda.transpose(Axes(1, 2, 3, 0, 4));
@@ -856,8 +850,8 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   int info = qr(Tn1_lambda, Axes(0, 1, 2), Axes(3, 4), Q1, R1);
 
   info = qr(Tn2_lambda, Axes(0, 1, 2), Axes(3, 4), Q2, R2);
-  // connetc R1, R2, op
 
+  // connect R1, R2, op
   /*
     INFO:8 (1,2) Finish 7/8 script=[0, 1, -1, 2, -1]
     ##############################
@@ -866,7 +860,6 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     # final_bond_order  (c1, c2, m1o, m2o)
     ##############################
   */
-
   Tensor<Matrix, C> Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
                                       Axes(1, 3), Axes(0, 1));
 
@@ -875,7 +868,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   std::vector<double> s;
   info = svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
 
-  lambda_c = std::vector<double>(&s[0], &s[dc]);
+  lambda_c = std::vector<double>(s.begin(), s.begin()+dc);
   Tensor<Matrix, C> Uc = slice(U, 2, 0, dc);
   Tensor<Matrix, C> VTc = slice(VT, 0, 0, dc);
 
@@ -899,56 +892,37 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   Uc.multiply_vector(lambda_c, 2);
   VTc.multiply_vector(lambda_c, 0);
 
-  // Create new tensors
-  // remove lambda effets
+  // Remove lambda effects from Qs
+  // and create new tensors
   if (connect1 == 0) {
     Q1.multiply_vector(lambda1_inv[1], 0, lambda1_inv[2], 1, lambda1_inv[3], 2);
+    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(4, 0, 1, 2, 3));
   } else if (connect1 == 1) {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[2], 1, lambda1_inv[3], 2);
+    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 4, 1, 2, 3));
   } else if (connect1 == 2) {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[1], 1, lambda1_inv[3], 2);
+    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 4, 2, 3));
   } else {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[1], 1, lambda1_inv[2], 2);
+    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 2, 4, 3));
   };
 
   if (connect2 == 0) {
     Q2.multiply_vector(lambda2_inv[1], 0, lambda2_inv[2], 1, lambda2_inv[3], 2);
+    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(3, 0, 1, 2, 4));
   } else if (connect2 == 1) {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[2], 1, lambda2_inv[3], 2);
+    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 3, 1, 2, 4));
   } else if (connect2 == 2) {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[1], 1, lambda2_inv[3], 2);
+    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 3, 2, 4));
   } else {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[1], 1, lambda2_inv[2], 2);
-  };
-
-  if (connect1 == 0) {
-    Tn1_new =
-        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(4, 0, 1, 2, 3));
-  } else if (connect1 == 1) {
-    Tn1_new =
-        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 4, 1, 2, 3));
-  } else if (connect1 == 2) {
-    Tn1_new =
-        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 4, 2, 3));
-  } else {
-    Tn1_new =
-        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 2, 4, 3));
-  };
-
-  if (connect2 == 0) {
-    Tn2_new =
-        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(3, 0, 1, 2, 4));
-  } else if (connect2 == 1) {
-    Tn2_new =
-        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 3, 1, 2, 4));
-  } else if (connect2 == 2) {
-    Tn2_new =
-        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 3, 2, 4));
-  } else {
-    Tn2_new =
-        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 2, 3, 4));
+    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 2, 3, 4));
   };
 }
+
 // for full update
 template <template <typename> class Matrix, typename C>
 Tensor<Matrix, C> Create_Environment_two_sites(
@@ -984,6 +958,7 @@ Tensor<Matrix, C> Create_Environment_two_sites(
              Axes(0, 1), Axes(0, 1))
       .transpose(Axes(3, 1, 2, 0));
 }
+
 template <template <typename> class Matrix, typename C>
 void Full_update_bond_horizontal(
     const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
@@ -1453,5 +1428,7 @@ FinishCorrelation(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
           Axes(0, 1, 2, 3), Axes(0, 1, 4, 3)),
       Axes(0, 1), Axes(0, 1));
 }
+
+} // end of namespace tenes
 
 #endif // _PEPS_BASICS_HPP_

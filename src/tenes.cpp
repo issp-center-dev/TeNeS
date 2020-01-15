@@ -20,6 +20,8 @@
 
 #include "tenes.hpp"
 
+namespace tenes { 
+
 using namespace mptensor;
 
 template <class ptensor> class TeNeS {
@@ -846,3 +848,5 @@ std::complex<double>>; template int tenes<c_tensor>(MPI_Comm comm,
                       CorrelationParameter corparam
     );
     */
+
+} // end of namespace tenes

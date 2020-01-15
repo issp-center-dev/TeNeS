@@ -3,6 +3,8 @@
 
 #include "Lattice.hpp"
 
+namespace tenes {
+
 Lattice::Lattice(int X, int Y)
     : LX(X),
       LY(Y),
@@ -103,3 +105,5 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   initial_dirs.assign(init_dirs.begin(), init_dirs.end());
   noises.assign(ns.begin(), ns.end());
 }
+
+} // end of namespace tenes

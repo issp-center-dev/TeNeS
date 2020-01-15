@@ -3,6 +3,8 @@
 
 #include <chrono>
 
+namespace tenes {
+
 template <class CT = std::chrono::high_resolution_clock>
 class Timer{
 public:
@@ -18,5 +20,7 @@ public:
 private:
   typename clock_type::time_point start;
 };
+
+} // end of namespace tenes
 
 #endif // TENES_TIME_HPP

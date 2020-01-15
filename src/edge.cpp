@@ -6,6 +6,8 @@
 #include "edge.hpp"
 #include "util/string.hpp"
 
+namespace tenes {
+
 Edges make_edges(std::string const &str) {
   constexpr static int NFIELD = 4;
   Edges edges;
@@ -43,3 +45,5 @@ Edges make_edges(std::string const &str) {
   }
   return edges;
 }
+
+} // end of namespace tenes

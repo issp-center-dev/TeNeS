@@ -17,6 +17,8 @@
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
 
+namespace tenes {
+
 /*
  * corner and edge tensor
  *
@@ -763,5 +765,7 @@ int Calc_CTM_Environment(
   }
   return count;
 }
+
+} // end of namespace tenes
 
 #endif // _SQUARE_LATTICE_HPP_
