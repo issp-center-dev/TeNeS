@@ -5,6 +5,8 @@
 
 #include "PEPS_Parameters.hpp"
 
+namespace tenes {
+
 PEPS_Parameters::PEPS_Parameters() {
   // Tensor
   D = 2;
@@ -196,3 +198,5 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   ofs.close();
 }
+
+} // end of namespace tenes

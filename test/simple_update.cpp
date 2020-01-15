@@ -15,6 +15,9 @@ TEST_CASE("testing simple update"){
   using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 #endif
 
+  using mptensor::Shape;
+  using mptensor::Index;
+
   const int ldof = 2;
   const int D = 2;
   const int nleg = 4;
@@ -82,7 +85,7 @@ TEST_CASE("testing simple update"){
 
   // calculation
 
-  PEPS_Parameters peps_parameters;
+  tenes::PEPS_Parameters peps_parameters;
   int connect = 2;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;

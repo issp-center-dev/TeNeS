@@ -3,6 +3,8 @@
 
 #include "mpi.hpp"
 
+namespace tenes {
+
 class PEPS_Parameters {
 public:
   // Tensor
@@ -58,4 +60,6 @@ public:
 
   void Bcast(MPI_Comm comm, int root = 0);
 };
+
+} // end of namespace tenes
 #endif // _PEPS_PARAMETERS_HPP_

@@ -6,6 +6,8 @@
 
 #include "mpi.hpp"
 
+namespace tenes {
+
 // Lattice setting
 
 /*
@@ -187,5 +189,7 @@ public:
 };
 
 */
+
+} // end of namespace tenes
 
 #endif // LATTICE_HPP

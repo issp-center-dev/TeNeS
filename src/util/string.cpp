@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+namespace tenes{
 namespace util {
 
 std::vector<std::string> split(std::string const &str,
@@ -47,5 +48,6 @@ std::string drop_comment(std::string const &str) {
 }
 
 } // namespace util
+} // namespace tenes
 
 #endif // UTIL_STRING_HPP

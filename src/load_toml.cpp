@@ -13,6 +13,7 @@
 #include "tenes.hpp"
 #include "util/read_matrix.hpp"
 
+namespace tenes { 
 
 template <typename T>
 inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
@@ -164,3 +165,5 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
 
   return pparam;
 }
+
+} // end of namespace tenes

@@ -12,6 +12,7 @@
 #include <mpi.cpp>
 
 TEST_CASE("input"){
+  using namespace tenes;
 #ifdef _NO_MPI
   using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
 #else
