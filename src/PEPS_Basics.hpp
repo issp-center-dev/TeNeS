@@ -20,8 +20,8 @@
 #include <numeric>
 #include <vector>
 
-#include "mpi.hpp"
 #include "PEPS_Parameters.hpp"
+#include "mpi.hpp"
 
 namespace tenes {
 
@@ -181,32 +181,34 @@ C Contract_two_sites_horizontal_op12(
   return trace(
       op12,
       tensordot(
-          tensordot(eT1,
-                    tensordot(Tn1,
-                              tensordot(conj(Tn1),
-                                        tensordot(eT5,
-                                                  tensordot(C1,
-                                                            tensordot(C4, eT6,
-                                                                      Axes(1),
-                                                                      Axes(0)),
-                                                            Axes(0), Axes(1)),
-                                                  Axes(1), Axes(1)),
-                                        Axes(0, 3), Axes(5, 2)),
-                              Axes(0, 3), Axes(6, 4)),
-                    Axes(0, 2, 3), Axes(7, 0, 3)),
-          tensordot(eT2,
-                    tensordot(Tn2,
-                              tensordot(conj(Tn2),
-                                        tensordot(eT4,
-                                                  tensordot(C2,
-                                                            tensordot(C3, eT3,
-                                                                      Axes(0),
-                                                                      Axes(1)),
-                                                            Axes(1), Axes(1)),
-                                                  Axes(0), Axes(1)),
-                                        Axes(2, 3), Axes(5, 2)),
-                              Axes(2, 3), Axes(6, 4)),
-                    Axes(1, 2, 3), Axes(7, 1, 4)),
+          tensordot(
+              eT1,
+              tensordot(
+                  Tn1,
+                  tensordot(
+                      conj(Tn1),
+                      tensordot(
+                          eT5,
+                          tensordot(C1, tensordot(C4, eT6, Axes(1), Axes(0)),
+                                    Axes(0), Axes(1)),
+                          Axes(1), Axes(1)),
+                      Axes(0, 3), Axes(5, 2)),
+                  Axes(0, 3), Axes(6, 4)),
+              Axes(0, 2, 3), Axes(7, 0, 3)),
+          tensordot(
+              eT2,
+              tensordot(
+                  Tn2,
+                  tensordot(
+                      conj(Tn2),
+                      tensordot(
+                          eT4,
+                          tensordot(C2, tensordot(C3, eT3, Axes(0), Axes(1)),
+                                    Axes(1), Axes(1)),
+                          Axes(0), Axes(1)),
+                      Axes(2, 3), Axes(5, 2)),
+                  Axes(2, 3), Axes(6, 4)),
+              Axes(1, 2, 3), Axes(7, 1, 4)),
           Axes(0, 1, 3, 5), Axes(0, 1, 3, 5)),
       Axes(0, 1, 2, 3), Axes(0, 2, 1, 3));
 }
@@ -237,32 +239,34 @@ C Contract_two_sites_vertical_op12(
   return trace(
       op12,
       tensordot(
-          tensordot(eT2,
-                    tensordot(Tn1,
-                              tensordot(conj(Tn1),
-                                        tensordot(eT6,
-                                                  tensordot(C1,
-                                                            tensordot(C2, eT1,
-                                                                      Axes(0),
-                                                                      Axes(1)),
-                                                            Axes(1), Axes(1)),
-                                                  Axes(1), Axes(0)),
-                                        Axes(0, 1), Axes(2, 5)),
-                              Axes(0, 1), Axes(4, 6)),
-                    Axes(0, 2, 3), Axes(7, 0, 3)),
-          tensordot(eT3,
-                    tensordot(Tn2,
-                              tensordot(conj(Tn2),
-                                        tensordot(eT5,
-                                                  tensordot(C3,
-                                                            tensordot(C4, eT4,
-                                                                      Axes(0),
-                                                                      Axes(1)),
-                                                            Axes(1), Axes(1)),
-                                                  Axes(0), Axes(1)),
-                                        Axes(0, 3), Axes(2, 5)),
-                              Axes(0, 3), Axes(4, 6)),
-                    Axes(1, 2, 3), Axes(7, 1, 4)),
+          tensordot(
+              eT2,
+              tensordot(
+                  Tn1,
+                  tensordot(
+                      conj(Tn1),
+                      tensordot(
+                          eT6,
+                          tensordot(C1, tensordot(C2, eT1, Axes(0), Axes(1)),
+                                    Axes(1), Axes(1)),
+                          Axes(1), Axes(0)),
+                      Axes(0, 1), Axes(2, 5)),
+                  Axes(0, 1), Axes(4, 6)),
+              Axes(0, 2, 3), Axes(7, 0, 3)),
+          tensordot(
+              eT3,
+              tensordot(
+                  Tn2,
+                  tensordot(
+                      conj(Tn2),
+                      tensordot(
+                          eT5,
+                          tensordot(C3, tensordot(C4, eT4, Axes(0), Axes(1)),
+                                    Axes(1), Axes(1)),
+                          Axes(0), Axes(1)),
+                      Axes(0, 3), Axes(2, 5)),
+                  Axes(0, 3), Axes(4, 6)),
+              Axes(1, 2, 3), Axes(7, 1, 4)),
           Axes(0, 1, 3, 5), Axes(0, 1, 3, 5)),
       Axes(0, 1, 2, 3), Axes(0, 2, 1, 3));
 }
@@ -346,8 +350,9 @@ C Contract_four_sites(
 }
 // environment
 
-template <template <typename> class Matrix, typename C> class Mult_col {
-public:
+template <template <typename> class Matrix, typename C>
+class Mult_col {
+ public:
   Mult_col(const Tensor<Matrix, C> &LT, const Tensor<Matrix, C> &LB)
       : LT_(LT), LB_(LB){};
   Tensor<Matrix, C> operator()(const Tensor<Matrix, C> &T_in) {
@@ -355,13 +360,14 @@ public:
                      Axes(1, 3, 5), Axes(0, 1, 2));
   };
 
-private:
+ private:
   const Tensor<Matrix, C> &LT_;
   const Tensor<Matrix, C> &LB_;
 };
 
-template <template <typename> class Matrix, typename C> class Mult_row {
-public:
+template <template <typename> class Matrix, typename C>
+class Mult_row {
+ public:
   Mult_row(const Tensor<Matrix, C> &LT, const Tensor<Matrix, C> &LB)
       : LT_(LT), LB_(LB){};
   Tensor<Matrix, C> operator()(const Tensor<Matrix, C> &T_in) {
@@ -369,35 +375,37 @@ public:
                      Axes(1, 2, 3), Axes(0, 2, 4));
   };
 
-private:
+ private:
   const Tensor<Matrix, C> &LT_;
   const Tensor<Matrix, C> &LB_;
 };
-template <template <typename> class Matrix, typename C> class Mult_col_ud {
-public:
+template <template <typename> class Matrix, typename C>
+class Mult_col_ud {
+ public:
   Mult_col_ud(const Tensor<Matrix, C> &LT, const Tensor<Matrix, C> &RT,
               const Tensor<Matrix, C> &RB, const Tensor<Matrix, C> &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
   Tensor<Matrix, C> operator()(const Tensor<Matrix, C> &T_in) {
     return tensordot(
         RT_,
-        tensordot(LT_,
-                  tensordot(LB_,
-                            tensordot(RB_, T_in, Axes(1, 3, 5), Axes(0, 1, 2)),
-                            Axes(1, 3, 5), Axes(0, 1, 2)),
-                  Axes(1, 3, 5), Axes(0, 1, 2)),
+        tensordot(
+            LT_,
+            tensordot(LB_, tensordot(RB_, T_in, Axes(1, 3, 5), Axes(0, 1, 2)),
+                      Axes(1, 3, 5), Axes(0, 1, 2)),
+            Axes(1, 3, 5), Axes(0, 1, 2)),
         Axes(0, 3, 4), Axes(0, 1, 2));
   };
 
-private:
+ private:
   const Tensor<Matrix, C> &LT_;
   const Tensor<Matrix, C> &RT_;
   const Tensor<Matrix, C> &RB_;
   const Tensor<Matrix, C> &LB_;
 };
 
-template <template <typename> class Matrix, typename C> class Mult_row_ud {
-public:
+template <template <typename> class Matrix, typename C>
+class Mult_row_ud {
+ public:
   Mult_row_ud(const Tensor<Matrix, C> &LT, const Tensor<Matrix, C> &RT,
               const Tensor<Matrix, C> &RB, const Tensor<Matrix, C> &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
@@ -409,7 +417,7 @@ public:
         RB_, Axes(1, 2, 3), Axes(0, 2, 4));
   };
 
-private:
+ private:
   const Tensor<Matrix, C> &LT_;
   const Tensor<Matrix, C> &RT_;
   const Tensor<Matrix, C> &RB_;
@@ -468,7 +476,6 @@ void Calc_projector_left_block(
     // Tensor<Matrix, C> R1 = LT;
     // Tensor<Matrix, C> R2 = LB;
     if ((t12 != 1 && t34 != 1) && peps_parameters.Use_RSVD) {
-
       Mult_col<Matrix, C> m_col(LT, LB);
       Mult_row<Matrix, C> m_row(LT, LB);
 
@@ -481,7 +488,7 @@ void Calc_projector_left_block(
 
       /*int info ()= */
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-                      static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
+           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
       for (int i = 0; i < e78; ++i) {
@@ -506,8 +513,8 @@ void Calc_projector_left_block(
       std::vector<double> s;
 
       /* int info = */
-      svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)),
-                     Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT);
+      svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)), Axes(0, 1, 2),
+          Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
       s_c.resize(e78);
@@ -632,7 +639,6 @@ void Calc_projector_updown_blocks(
                             conj(Tn4), Axes(2, 5), Axes(0, 3)),
                   Axes(0, 3, 4), Axes(1, 3, 6));
     if (t23 != 1 && peps_parameters.Use_RSVD) {
-
       Mult_col_ud<Matrix, C> m_col(LT, RT, RB, LB);
       Mult_row_ud<Matrix, C> m_row(LT, RT, RB, LB);
 
@@ -645,7 +651,7 @@ void Calc_projector_updown_blocks(
 
       /* int info = */
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-                      static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
+           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
       double denom = s[0];
 
       for (int i = 0; i < e78; ++i) {
@@ -666,7 +672,6 @@ void Calc_projector_updown_blocks(
                      Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     } else {
-
       // full svd
       Tensor<Matrix, C> R1 = tensordot(RT, LT, Axes(0, 3, 4), Axes(0, 2, 4));
       Tensor<Matrix, C> R2 = tensordot(RB, LB, Axes(0, 2, 4), Axes(1, 3, 5));
@@ -676,8 +681,8 @@ void Calc_projector_updown_blocks(
       std::vector<double> s;
 
       /* int info = */
-      svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)),
-                     Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT);
+      svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)), Axes(0, 1, 2),
+          Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
       s_c.resize(e78);
@@ -721,7 +726,6 @@ void Calc_Next_CTM(const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C4,
                    const Tensor<Matrix, C> &eT1, const Tensor<Matrix, C> &eT6,
                    const Tensor<Matrix, C> &PU, const Tensor<Matrix, C> &PL,
                    Tensor<Matrix, C> &C1_out, Tensor<Matrix, C> &C4_out) {
-
   C1_out = tensordot(PU, tensordot(C1, eT1, Axes(1), Axes(0)), Axes(0, 1, 2),
                      Axes(0, 2, 3));
   C4_out = tensordot(tensordot(eT6, C4, Axes(1), Axes(0)), PL, Axes(3, 1, 2),
@@ -789,7 +793,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
                         const PEPS_Parameters peps_parameters,
                         Tensor<Matrix, C> &Tn1_new, Tensor<Matrix, C> &Tn2_new,
                         std::vector<double> &lambda_c) {
-  int connect2 = (connect1+2)%4;
+  int connect2 = (connect1 + 2) % 4;
 
   std::vector<std::vector<double>> lambda1_inv(4);
   std::vector<std::vector<double>> lambda2_inv(4);
@@ -868,7 +872,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   std::vector<double> s;
   info = svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
 
-  lambda_c = std::vector<double>(s.begin(), s.begin()+dc);
+  lambda_c = std::vector<double>(s.begin(), s.begin() + dc);
   Tensor<Matrix, C> Uc = slice(U, 2, 0, dc);
   Tensor<Matrix, C> VTc = slice(VT, 0, 0, dc);
 
@@ -896,30 +900,38 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   // and create new tensors
   if (connect1 == 0) {
     Q1.multiply_vector(lambda1_inv[1], 0, lambda1_inv[2], 1, lambda1_inv[3], 2);
-    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(4, 0, 1, 2, 3));
+    Tn1_new =
+        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(4, 0, 1, 2, 3));
   } else if (connect1 == 1) {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[2], 1, lambda1_inv[3], 2);
-    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 4, 1, 2, 3));
+    Tn1_new =
+        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 4, 1, 2, 3));
   } else if (connect1 == 2) {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[1], 1, lambda1_inv[3], 2);
-    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 4, 2, 3));
+    Tn1_new =
+        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 4, 2, 3));
   } else {
     Q1.multiply_vector(lambda1_inv[0], 0, lambda1_inv[1], 1, lambda1_inv[2], 2);
-    Tn1_new = tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 2, 4, 3));
+    Tn1_new =
+        tensordot(Q1, Uc, Axes(3), Axes(0)).transpose(Axes(0, 1, 2, 4, 3));
   };
 
   if (connect2 == 0) {
     Q2.multiply_vector(lambda2_inv[1], 0, lambda2_inv[2], 1, lambda2_inv[3], 2);
-    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(3, 0, 1, 2, 4));
+    Tn2_new =
+        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(3, 0, 1, 2, 4));
   } else if (connect2 == 1) {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[2], 1, lambda2_inv[3], 2);
-    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 3, 1, 2, 4));
+    Tn2_new =
+        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 3, 1, 2, 4));
   } else if (connect2 == 2) {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[1], 1, lambda2_inv[3], 2);
-    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 3, 2, 4));
+    Tn2_new =
+        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 3, 2, 4));
   } else {
     Q2.multiply_vector(lambda2_inv[0], 0, lambda2_inv[1], 1, lambda2_inv[2], 2);
-    Tn2_new = tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 2, 3, 4));
+    Tn2_new =
+        tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 2, 3, 4));
   };
 }
 
@@ -1113,8 +1125,8 @@ void Full_update_bond_horizontal(
 
   U.multiply_vector(lambda_c, 2);
   VT.multiply_vector(lambda_c, 0);
-  R1 = transpose(U, Axes(0, 2, 1));  // envR1 , D_connect, m1
-  R2 = transpose(VT, Axes(1, 0, 2)); // envR2 , D_connect, m2
+  R1 = transpose(U, Axes(0, 2, 1));   // envR1 , D_connect, m1
+  R2 = transpose(VT, Axes(1, 0, 2));  // envR2 , D_connect, m2
 
   int count = 0;
   C C_phi, Old_delta, delta;
@@ -1137,7 +1149,6 @@ void Full_update_bond_horizontal(
   Tensor<Matrix, C> W_vec, N_mat, N_mat_inv;
   double denom;
   while (!convergence && (count < peps_parameters.Full_max_iteration)) {
-
     /*
       ## for R1
       ## create W
@@ -1147,7 +1158,7 @@ void Full_update_bond_horizontal(
     W_vec =
         tensordot(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
                   conj(R2), Axes(1, 3),
-                  Axes(0, 2)); // transpose(0,2,1)).reshape(envR1*D_connect,m1)
+                  Axes(0, 2));  // transpose(0,2,1)).reshape(envR1*D_connect,m1)
     /*
       ## create N
       ## (envR1, envR1*, D_connect,D_connect*)
@@ -1179,7 +1190,7 @@ void Full_update_bond_horizontal(
     W_vec =
         tensordot(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
                   conj(R1), Axes(0, 2),
-                  Axes(0, 2)); //).transpose(0,2,1).reshape(envR2*D_connect,m2)
+                  Axes(0, 2));  //).transpose(0,2,1).reshape(envR2*D_connect,m2)
 
     /*
       ## create N
@@ -1187,8 +1198,9 @@ void Full_update_bond_horizontal(
     */
     N_mat = tensordot(
         tensordot(Environment, R1, Axes(0), Axes(0)), conj(R1), Axes(1, 4),
-        Axes(0,
-             2)); //.transpose(1,3,0,2).reshape(envR2*D_connect,envR2*D_connect)
+        Axes(
+            0,
+            2));  //.transpose(1,3,0,2).reshape(envR2*D_connect,envR2*D_connect)
 
     // Moore-Penrose Psude Inverse (for Hermitian matrix)
     info = svd(N_mat, Axes(1, 3), Axes(0, 2), U, s, VT);
@@ -1207,18 +1219,19 @@ void Full_update_bond_horizontal(
 
     R2 = tensordot(N_mat_inv, W_vec, Axes(0, 1), Axes(0, 2));
 
-    delta = -2.0 * trace(tensordot(tensordot(Environment, Theta, Axes(0, 1),
-                                             Axes(0, 1)),
-                                   conj(R2), Axes(1, 3), Axes(0, 2)),
-                         conj(R1), Axes(0, 1, 2), Axes(0, 2, 1)) +
-            trace(R1,
-                  tensordot(
-                      R2,
+    delta =
+        -2.0 * trace(tensordot(
+                         tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
+                         conj(R2), Axes(1, 3), Axes(0, 2)),
+                     conj(R1), Axes(0, 1, 2), Axes(0, 2, 1)) +
+        trace(
+            R1,
+            tensordot(R2,
                       tensordot(Environment,
                                 tensordot(conj(R1), conj(R2), Axes(1), Axes(1)),
                                 Axes(2, 3), Axes(0, 2)),
                       Axes(0, 2), Axes(1, 3)),
-                  Axes(0, 1, 2), Axes(1, 0, 2));
+            Axes(0, 1, 2), Axes(1, 0, 2));
 
     // std::cout<<"delta "<<delta<<std::endl;
 
@@ -1235,7 +1248,8 @@ void Full_update_bond_horizontal(
     count += 1;
   }
   // Post processing
-  if (!convergence && peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
+  if (!convergence &&
+      peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
     std::cout << "warning: Full update iteration was not conveged! count= "
               << count << std::endl;
   }
@@ -1369,7 +1383,7 @@ void StartCorrelation(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C1,
           tensordot(
               Tn1,
               tensordot(
-                  tensordot(conj(Tn1), op, Axes(4), Axes(1) // Tn2 = conj(Tn1)
+                  tensordot(conj(Tn1), op, Axes(4), Axes(1)  // Tn2 = conj(Tn1)
                             ),
                   tensordot(eT3,
                             tensordot(C1, tensordot(C4, eT4, Axes(1), Axes(0)),
@@ -1392,7 +1406,7 @@ void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
   A = transpose(tensordot(eT1,
                           tensordot(Tn1,
                                     tensordot(conj(Tn1),
-                                              tensordot( // Tn2 = conj(Tn1)
+                                              tensordot(  // Tn2 = conj(Tn1)
                                                   A, eT3, Axes(1), Axes(1)),
                                               Axes(0, 3), Axes(2, 5)),
                                     Axes(0, 3, 4), Axes(4, 6, 2)),
@@ -1401,11 +1415,11 @@ void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
 }
 
 template <template <typename> class Matrix, typename C>
-double
-FinishCorrelation(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
-                  const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
-                  const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,
-                  const Tensor<Matrix, C> &Tn1, const Tensor<Matrix, C> &op) {
+double FinishCorrelation(
+    const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
+    const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
+    const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,
+    const Tensor<Matrix, C> &Tn1, const Tensor<Matrix, C> &op) {
   ////////////////////////////////////////////////////////////
   // (op*(Tn1*((A*eT1)*(Tn2*(eT3*(C2*(C3*eT2)))))))
   // cpu_cost= 7.5525e+06  memory= 252504
@@ -1418,7 +1432,7 @@ FinishCorrelation(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
           tensordot(
               tensordot(A, eT1, Axes(0), Axes(0)),
               tensordot(conj(Tn1),
-                        tensordot( // Tn2 = conj(Tn1)
+                        tensordot(  // Tn2 = conj(Tn1)
                             eT3,
                             tensordot(C2, tensordot(C3, eT2, Axes(0), Axes(1)),
                                       Axes(1), Axes(1)),
@@ -1429,6 +1443,6 @@ FinishCorrelation(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
       Axes(0, 1), Axes(0, 1));
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // _PEPS_BASICS_HPP_
+#endif  // _PEPS_BASICS_HPP_

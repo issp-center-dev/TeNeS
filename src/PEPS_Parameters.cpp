@@ -1,9 +1,9 @@
+#include "PEPS_Parameters.hpp"
+
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "PEPS_Parameters.hpp"
 
 namespace tenes {
 
@@ -47,7 +47,8 @@ PEPS_Parameters::PEPS_Parameters() {
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
-#define LOAD_PARAM(name, type) name = static_cast<decltype(name)>(params_##type[I_##name])
+#define LOAD_PARAM(name, type) \
+  name = static_cast<decltype(name)>(params_##type[I_##name])
 
 void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   using std::string;
@@ -199,4 +200,4 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs.close();
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes

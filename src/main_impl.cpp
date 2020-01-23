@@ -1,11 +1,12 @@
 #include <cpptoml.h>
-#include "type.hpp"
-#include "util/file.hpp"
+
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "load_toml.cpp"
 #include "tenes.hpp"
+#include "type.hpp"
+#include "util/file.hpp"
 #include "util/read_matrix.hpp"
 #include "version.hpp"
 
@@ -14,13 +15,12 @@ namespace tenes {
 int main_impl(int argc, char **argv) {
   using ptensor = mptensor::Tensor<mptensor_matrix_type, double>;
 
-  int mpisize=0, mpirank=0;
+  int mpisize = 0, mpirank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
 
-
-  std::string usage = 
-  R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
+  std::string usage =
+      R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
   
   Usage:
     tenes [--quiet] <input_toml>
@@ -33,26 +33,23 @@ int main_impl(int argc, char **argv) {
     -q --quiet      Do not print any messages.
   )";
 
-  if(argc==1){
-    if(mpirank==0)
-      std::cout << usage << std::endl;
+  if (argc == 1) {
+    if (mpirank == 0) std::cout << usage << std::endl;
     return 0;
   }
 
-  for(int i=1; i<argc; ++i){
+  for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
-    if(opt == "-h" || opt == "--help"){
-      if(mpirank==0)
-        std::cout << usage << std::endl;
+    if (opt == "-h" || opt == "--help") {
+      if (mpirank == 0) std::cout << usage << std::endl;
       return 0;
     }
   }
 
-  for(int i=1; i<argc; ++i){
+  for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
-    if(opt == "-v" || opt == "--version"){
-      if(mpirank==0)
-        std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+    if (opt == "-v" || opt == "--version") {
+      if (mpirank == 0) std::cout << "TeNeS v" << TENES_VERSION << std::endl;
       return 0;
     }
   }
@@ -61,18 +58,19 @@ int main_impl(int argc, char **argv) {
 
   PrintLevel print_level = PrintLevel::info;
   std::string input_filename;
-  for(int i=1; i<argc; ++i){
+  for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
-    if(opt == "-q" || opt == "--quiet"){
+    if (opt == "-q" || opt == "--quiet") {
       print_level = PrintLevel::none;
-    }else{
+    } else {
       input_filename = opt;
     }
   }
 
-  if(!file_exists(input_filename)){
-    if(mpirank==0)
-      std::cout << "ERROR: cannot find the input file: "<< input_filename << std::endl;
+  if (!file_exists(input_filename)) {
+    if (mpirank == 0)
+      std::cout << "ERROR: cannot find the input file: " << input_filename
+                << std::endl;
     return 1;
   }
 
@@ -131,4 +129,4 @@ int main_impl(int argc, char **argv) {
                full_edges, ham_edges, evolutions, hams, lops, corparam);
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes

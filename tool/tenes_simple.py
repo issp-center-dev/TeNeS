@@ -340,7 +340,7 @@ def dump(param):
     ret.append('type = "{}"'.format(lattice.type))
     ret.append("L_sub = {}".format(lattice.Lsub))
 
-    model = param['model']
+    model = param["model"]
     N = lattice.Lsub[0] * lattice.Lsub[1]
     ret.append("")
     if lattice.initial_states == "ferro":

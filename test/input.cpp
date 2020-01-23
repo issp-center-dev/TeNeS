@@ -1,17 +1,17 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
-#include <vector>
 #include <fstream>
+#include <vector>
 
 #include <util/string.cpp>
 #include <Lattice.cpp>
-#include <edge.cpp>
 #include <PEPS_Parameters.cpp>
+#include <edge.cpp>
 #include <load_toml.cpp>
 #include <mpi.cpp>
 
-TEST_CASE("input"){
+TEST_CASE("input") {
   using namespace tenes;
 #ifdef _NO_MPI
   using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
@@ -21,12 +21,13 @@ TEST_CASE("input"){
 
   auto input_toml = cpptoml::parse_file("data/check_input.toml");
 
-  SUBCASE("parameter"){
-    PEPS_Parameters peps_parameters = gen_param(input_toml->get_table("parameter"));
+  SUBCASE("parameter") {
+    PEPS_Parameters peps_parameters =
+        gen_param(input_toml->get_table("parameter"));
 
     CHECK(peps_parameters.D == 4);
     CHECK(peps_parameters.CHI == 16);
-    
+
     CHECK(peps_parameters.num_simple_step == 1000);
     CHECK(peps_parameters.Inverse_lambda_cut == 1e-10);
 
@@ -46,19 +47,20 @@ TEST_CASE("input"){
     CHECK(peps_parameters.RSVD_Oversampling_factor == 10);
   }
 
-  SUBCASE("lattice"){
+  SUBCASE("lattice") {
     auto toml_lattice = input_toml->get_table("lattice");
     Lattice lattice = gen_lattice(toml_lattice);
     CHECK(lattice.LX == 3);
     CHECK(lattice.LY == 2);
   }
 
-  SUBCASE("evolution"){
-    auto toml_evolution= input_toml->get_table("evolution");
+  SUBCASE("evolution") {
+    auto toml_evolution = input_toml->get_table("evolution");
 
     {
       INFO("simple_update");
-      const auto simple_edges = gen_edges(toml_evolution, "simple_update", "evolution");
+      const auto simple_edges =
+          gen_edges(toml_evolution, "simple_update", "evolution");
       CHECK(simple_edges[0].dir == Edge::horizontal);
       CHECK(simple_edges[0].source_site == 0);
       CHECK(simple_edges[0].target_site == 1);
@@ -71,7 +73,8 @@ TEST_CASE("input"){
     }
     {
       INFO("full_update");
-      const auto full_edges = gen_edges(toml_evolution, "full_update", "evolution");
+      const auto full_edges =
+          gen_edges(toml_evolution, "full_update", "evolution");
       CHECK(full_edges[0].dir == Edge::horizontal);
       CHECK(full_edges[0].source_site == 0);
       CHECK(full_edges[0].target_site == 2);
@@ -85,15 +88,16 @@ TEST_CASE("input"){
 
     {
       INFO("matrix");
-      const auto evolutions = gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
-      CHECK(evolutions[0].shape() == mptensor::Shape(4,4));
-      for(int i=0; i<4; ++i){
-        for(int j=0; j<4; ++j){
+      const auto evolutions =
+          gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
+      CHECK(evolutions[0].shape() == mptensor::Shape(4, 4));
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
           double val;
-          evolutions[0].get_value(mptensor::Index(i,j), val);
-          if(i==j){
+          evolutions[0].get_value(mptensor::Index(i, j), val);
+          if (i == j) {
             CHECK(val == 1.0);
-          }else{
+          } else {
             CHECK(val == 0.0);
           }
         }
@@ -101,68 +105,72 @@ TEST_CASE("input"){
     }
   }
 
-  SUBCASE("observable"){
+  SUBCASE("observable") {
     auto toml_observable = input_toml->get_table("observable");
 
     {
       INFO("local_operator");
-      const auto lops = gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
+      const auto lops = gen_matrices<ptensor>(toml_observable, "local_operator",
+                                              "observable");
       CHECK(lops.size() == 2);
-      CHECK(lops[0].shape() == mptensor::Shape(2,2));
+      CHECK(lops[0].shape() == mptensor::Shape(2, 2));
 
       double val;
-      lops[0].get_value(mptensor::Index(0,0), val);
+      lops[0].get_value(mptensor::Index(0, 0), val);
       CHECK(val == 0.5);
-      lops[0].get_value(mptensor::Index(0,1), val);
+      lops[0].get_value(mptensor::Index(0, 1), val);
       CHECK(val == 0.0);
-      lops[0].get_value(mptensor::Index(1,0), val);
+      lops[0].get_value(mptensor::Index(1, 0), val);
       CHECK(val == 0.0);
-      lops[0].get_value(mptensor::Index(1,1), val);
+      lops[0].get_value(mptensor::Index(1, 1), val);
       CHECK(val == -0.5);
 
-      lops[1].get_value(mptensor::Index(0,0), val);
+      lops[1].get_value(mptensor::Index(0, 0), val);
       CHECK(val == 0.0);
-      lops[1].get_value(mptensor::Index(0,1), val);
+      lops[1].get_value(mptensor::Index(0, 1), val);
       CHECK(val == 0.5);
-      lops[1].get_value(mptensor::Index(1,0), val);
+      lops[1].get_value(mptensor::Index(1, 0), val);
       CHECK(val == 0.5);
-      lops[1].get_value(mptensor::Index(1,1), val);
+      lops[1].get_value(mptensor::Index(1, 1), val);
       CHECK(val == 0.0);
     }
 
-    const auto hams = gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
+    const auto hams =
+        gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
     {
       INFO("hamiltonian");
-      const auto hams = gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
+      const auto hams =
+          gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
       CHECK(hams.size() == 1);
-      CHECK(hams[0].shape() == mptensor::Shape(4,4));
+      CHECK(hams[0].shape() == mptensor::Shape(4, 4));
 
       double val;
-      for(int i=0; i<4; ++i)
-      for(int j=0; j<4; ++j){
-        double val;
-        hams[0].get_value(mptensor::Index(i,j), val);
-        if(i==0 && j==0){
-          CHECK(val == 0.25);
-        }else if(i==1 && j==1){
-          CHECK(val == -0.25);
-        }else if(i==1 && j==2){
-          CHECK(val == 0.5);
-        }else if(i==2 && j==1){
-          CHECK(val == 0.5);
-        }else if(i==2 && j==2){
-          CHECK(val == -0.25);
-        }else if(i==3 && j==3){
-          CHECK(val == 0.25);
-        }else{
-          CHECK(val == 0.0);
+      for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+          double val;
+          hams[0].get_value(mptensor::Index(i, j), val);
+          if (i == 0 && j == 0) {
+            CHECK(val == 0.25);
+          } else if (i == 1 && j == 1) {
+            CHECK(val == -0.25);
+          } else if (i == 1 && j == 2) {
+            CHECK(val == 0.5);
+          } else if (i == 2 && j == 1) {
+            CHECK(val == 0.5);
+          } else if (i == 2 && j == 2) {
+            CHECK(val == -0.25);
+          } else if (i == 3 && j == 3) {
+            CHECK(val == 0.25);
+          } else {
+            CHECK(val == 0.0);
+          }
         }
-      }
     }
 
     {
       INFO("hamiltonian_bonds");
-      const auto ham_edges = gen_edges(toml_observable, "hamiltonian_bonds", "observable");
+      const auto ham_edges =
+          gen_edges(toml_observable, "hamiltonian_bonds", "observable");
       CHECK(ham_edges[0].dir == Edge::horizontal);
       CHECK(ham_edges[0].source_site == 0);
       CHECK(ham_edges[0].target_site == 1);
@@ -173,10 +181,9 @@ TEST_CASE("input"){
       CHECK(ham_edges[1].target_site == 1);
       CHECK(ham_edges[1].op_id == 2);
     }
-
   }
 
-  SUBCASE("correlation"){
+  SUBCASE("correlation") {
     auto toml_cor = input_toml->get_table("correlation");
     CorrelationParameter corparam = gen_corparam(toml_cor, "correlation");
     CHECK(corparam.r_max == 5);
@@ -185,6 +192,4 @@ TEST_CASE("input"){
     CHECK(std::get<0>(corparam.operators[1]) == 1);
     CHECK(std::get<1>(corparam.operators[1]) == 1);
   }
-
 }
-

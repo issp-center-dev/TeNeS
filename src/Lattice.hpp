@@ -31,7 +31,7 @@ namespace tenes {
  *
  */
 class Lattice {
-public:
+ public:
   int LX;
   int LY;
   int N_UNIT;
@@ -47,7 +47,7 @@ public:
   int x(int index) const { return index % LX; }
   int y(int index) const { return index / LX; }
   int index(int x, int y) const {
-    int X = (x < 0) ? (x % LX + LX) : x % LX; // c++11 requires neg%pos is neg
+    int X = (x < 0) ? (x % LX + LX) : x % LX;  // c++11 requires neg%pos is neg
     int Y = (y < 0) ? (y % LY + LY) : y % LY;
     return X + Y * LX;
   }
@@ -190,6 +190,6 @@ public:
 
 */
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // LATTICE_HPP
+#endif  // LATTICE_HPP

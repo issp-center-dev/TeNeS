@@ -1,7 +1,7 @@
+#include "Lattice.hpp"
+
 #include <cassert>
 #include <fstream>
-
-#include "Lattice.hpp"
 
 namespace tenes {
 
@@ -77,7 +77,7 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
 
     MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
 
-    for(int i=0; i<N_UNIT; ++i){
+    for (int i = 0; i < N_UNIT; ++i) {
       ldof = init_dirs[i].size();
       MPI_Bcast(&ldof, 1, MPI_INT, 0, comm);
       MPI_Bcast(&init_dirs[i].front(), ldof, MPI_DOUBLE, 0, comm);
@@ -92,7 +92,7 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
     LY = params_int[1];
     N_UNIT = params_int[2];
 
-    for(int i=0; i<N_UNIT; ++i){
+    for (int i = 0; i < N_UNIT; ++i) {
       MPI_Bcast(&ldof, 1, MPI_INT, 0, comm);
       init_dirs[i].resize(ldof);
       MPI_Bcast(&init_dirs[i].front(), ldof, MPI_DOUBLE, 0, comm);
@@ -106,4 +106,4 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   noises.assign(ns.begin(), ns.end());
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes

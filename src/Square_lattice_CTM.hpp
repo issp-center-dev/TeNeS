@@ -12,10 +12,10 @@
 #include <numeric>
 #include <vector>
 
-#include "mpi.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
+#include "mpi.hpp"
 
 namespace tenes {
 
@@ -87,7 +87,6 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
   }
   int iy_up, iy_down;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-
     i = lattice.Tensor_list[ix][iy];
     j = lattice.NN_Tensor[i][2];
     k = lattice.NN_Tensor[j][3];
@@ -756,9 +755,10 @@ int Calc_CTM_Environment(
     }
   }
 
-  if (!convergence && peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
-    std::cout << "Warning: CTM did not converge! count, sig_max = "
-              << count << " " << sig_max << std::endl;
+  if (!convergence &&
+      peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
+    std::cout << "Warning: CTM did not converge! count, sig_max = " << count
+              << " " << sig_max << std::endl;
   }
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
     std::cout << "CTM: count to convergence= " << count << std::endl;
@@ -766,6 +766,6 @@ int Calc_CTM_Environment(
   return count;
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // _SQUARE_LATTICE_HPP_
+#endif  // _SQUARE_LATTICE_HPP_

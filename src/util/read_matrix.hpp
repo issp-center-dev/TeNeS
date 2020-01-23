@@ -2,18 +2,18 @@
 #define UTIL_READ_MATRIX_HPP
 
 #include <algorithm>
+#include <mptensor.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <mptensor.hpp>
-
 #include "string.hpp"
 
-namespace tenes { 
+namespace tenes {
 
 namespace util {
-template <class ptensor> ptensor read_matrix(std::string const &str) {
+template <class ptensor>
+ptensor read_matrix(std::string const &str) {
   std::vector<std::vector<double>> A;
   const static std::string delim = " \t";
   std::string line;
@@ -50,7 +50,7 @@ std::vector<ptensor> read_matrix(std::vector<std::string> const &strs) {
   return ret;
 }
 
-} // namespace util
-} // namespace tenes
+}  // namespace util
+}  // namespace tenes
 
-#endif // UTIL_READ_MATRIX_HPP
+#endif  // UTIL_READ_MATRIX_HPP

@@ -30,8 +30,12 @@ struct Edge {
   direction dir;
   int op_id;
   Edge()
-      : source_site(-1), source_leg(-1), target_site(-1), target_leg(-1),
-        dir(horizontal), op_id(-1) {}
+      : source_site(-1),
+        source_leg(-1),
+        target_site(-1),
+        target_leg(-1),
+        dir(horizontal),
+        op_id(-1) {}
 
   /*
    * horizontal:
@@ -45,9 +49,12 @@ struct Edge {
    *  t
    */
   Edge(int source_site, int target_site, direction dir, int op_id)
-      : source_site(source_site), source_leg(dir == horizontal ? 2 : 3),
-        target_site(target_site), target_leg(dir == horizontal ? 0 : 1),
-        dir(dir), op_id(op_id) {}
+      : source_site(source_site),
+        source_leg(dir == horizontal ? 2 : 3),
+        target_site(target_site),
+        target_leg(dir == horizontal ? 0 : 1),
+        dir(dir),
+        op_id(op_id) {}
 
   bool is_horizontal() const { return dir == horizontal; }
   bool is_vertical() const { return !is_horizontal(); }
@@ -68,6 +75,6 @@ using Edges = std::vector<Edge>;
  */
 Edges make_edges(std::string const &str);
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // EDGE_HPP
+#endif  // EDGE_HPP

@@ -1,9 +1,10 @@
+#include "edge.hpp"
+
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "edge.hpp"
 #include "util/string.hpp"
 
 namespace tenes {
@@ -29,16 +30,16 @@ Edges make_edges(std::string const &str) {
     int target = std::stoi(words[1]);
     Edge::direction dir = Edge::horizontal;
     switch (words[2][0]) {
-    case 'h':
-      dir = Edge::horizontal;
-      break;
-    case 'v':
-      dir = Edge::vertical;
-      break;
-    default:
-      std::stringstream msg("the third arg in ");
-      msg << line << " should be h or v .";
-      throw std::invalid_argument(msg.str());
+      case 'h':
+        dir = Edge::horizontal;
+        break;
+      case 'v':
+        dir = Edge::vertical;
+        break;
+      default:
+        std::stringstream msg("the third arg in ");
+        msg << line << " should be h or v .";
+        throw std::invalid_argument(msg.str());
     }
     int opid = std::stoi(words[3]);
     edges.push_back(Edge(source, target, dir, opid));
@@ -46,4 +47,4 @@ Edges make_edges(std::string const &str) {
   return edges;
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes

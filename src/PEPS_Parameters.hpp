@@ -1,17 +1,19 @@
 #ifndef _PEPS_PARAMETERS_HPP_
 #define _PEPS_PARAMETERS_HPP_
 
+#include <string>
+
 #include "mpi.hpp"
 
 namespace tenes {
 
 class PEPS_Parameters {
-public:
+ public:
   // Tensor
-  int D;   // Bond dimension for central tensor
-  int CHI; // Bond dimension for environment tensor
+  int D;    // Bond dimension for central tensor
+  int CHI;  // Bond dimension for environment tensor
 
-  enum PrintLevel{
+  enum PrintLevel {
     none,
     fatal,
     error,
@@ -40,11 +42,10 @@ public:
   double Full_Convergence_Epsilon;
   int Full_max_iteration;
   bool Full_Gauge_Fix;
-  bool Full_Use_FastFullUpdate; // Fast Full Update
+  bool Full_Use_FastFullUpdate;  // Fast Full Update
 
   // observable
   int Lcor;
-
 
   // random
   int seed;
@@ -61,5 +62,5 @@ public:
   void Bcast(MPI_Comm comm, int root = 0);
 };
 
-} // end of namespace tenes
-#endif // _PEPS_PARAMETERS_HPP_
+}  // end of namespace tenes
+#endif  // _PEPS_PARAMETERS_HPP_

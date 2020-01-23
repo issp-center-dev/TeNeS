@@ -1,17 +1,16 @@
 #ifndef UTIL_FILE_HPP
 #define UTIL_FILE_HPP
 
-#include <string>
 #include <fstream>
+#include <string>
 
-namespace tenes{
+namespace tenes {
 
-inline bool file_exists(const std::string& path)
-{
+inline bool file_exists(const std::string& path) {
   std::ifstream ifs(path);
   return ifs.is_open();
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // UTIL_FILE_HPP
+#endif  // UTIL_FILE_HPP

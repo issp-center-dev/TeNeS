@@ -1,8 +1,8 @@
 #ifndef CORRELATION_HPP
 #define CORRELATION_HPP
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace tenes {
 
@@ -13,13 +13,14 @@ struct Correlation {
   double real, imag;
 };
 
-struct CorrelationParameter{
+struct CorrelationParameter {
   int r_max;
-  std::vector<std::pair<int,int>> operators;
-  CorrelationParameter():r_max(0){}
-  CorrelationParameter(int r_max, std::vector<std::pair<int,int>> const& ops): r_max(r_max), operators(ops){}
+  std::vector<std::pair<int, int>> operators;
+  CorrelationParameter() : r_max(0) {}
+  CorrelationParameter(int r_max, std::vector<std::pair<int, int>> const& ops)
+      : r_max(r_max), operators(ops) {}
 };
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // CORRELATION_HPP
+#endif  // CORRELATION_HPP

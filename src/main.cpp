@@ -1,6 +1,6 @@
 #include "mpi.hpp"
 
-namespace tenes{
+namespace tenes {
 int main_impl(int argc, char **argv);
 }
 

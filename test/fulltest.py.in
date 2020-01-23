@@ -1,7 +1,8 @@
 from __future__ import print_function
-from os.path import join
+
 import subprocess
 import sys
+from os.path import join
 
 
 def nearly_equal(x, y, tol):
@@ -40,10 +41,7 @@ def check(filename, resdir, refdir, tol):
     return True
 
 
-cmd = [
-    join("@CMAKE_BINARY_DIR@", "src", "tenes"),
-    join("data", "fulltest.toml"),
-]
+cmd = [join("@CMAKE_BINARY_DIR@", "src", "tenes"), join("data", "fulltest.toml")]
 subprocess.call(cmd)
 
 

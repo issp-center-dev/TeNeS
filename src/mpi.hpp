@@ -6,9 +6,9 @@
 using MPI_Comm = int;
 using MPI_Datatype = int;
 
-constexpr MPI_Comm MPI_COMM_WORLD=0;
-constexpr MPI_Datatype MPI_INT=0;
-constexpr MPI_Datatype MPI_DOUBLE=0;
+constexpr MPI_Comm MPI_COMM_WORLD = 0;
+constexpr MPI_Datatype MPI_INT = 0;
+constexpr MPI_Datatype MPI_DOUBLE = 0;
 
 int MPI_Init(int*, char***);
 int MPI_Barrier(MPI_Comm);
