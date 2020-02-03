@@ -35,7 +35,7 @@ The following tools are required for building TeNeS.
 
 - C++11 compiler
 - CMake (>=2.8.14)
-- Python (>=2.7)
+- Python (>= 3.0.0)
     - numpy
     - toml
 

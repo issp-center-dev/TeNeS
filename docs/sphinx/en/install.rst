@@ -33,11 +33,11 @@ MPI and ScaLAPACK must be installed by yourself. If you use homebrew on macOS, f
 For others, see the official instruction of some MPI implementation (e.g., OpenMPI) and ScaLAPACK.
 
 For ``tenes_simple`` which generates the input file for ``tenes``, 
-the following libraries are needed.
+Python3 is required.
+Additionary, the following python packages are required.
 
-1. Python (>= ver.3 is recommended)
-2. numpy
-3. toml
+1. numpy
+2. toml
 
 
 Install
