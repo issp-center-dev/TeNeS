@@ -23,40 +23,73 @@ inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
 }
 
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
-                    const char *tablename = "lattice") {
+                    const char *tablename = "tensor") {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
     std::cerr << "cannot find L_sub in the section [" << tablename << "]"
               << std::endl;
-    // ERROR
+    assert(false);
   }
 
   Lattice lat((*Lsub)[0], (*Lsub)[1]);
 
-  auto sites = toml->get_table_array("site");
-  if (sites){
-    for(const auto& site: *sites){
-      auto index = site->get_as<int>("index");
-      if (!index){
+  auto sites = toml->get_table_array("unitcell");
+  if (!sites){
+    std::cerr << "cannot find unitcell in the section [" << tablename << "]"
+              << std::endl;
+    assert(false);
+  }
+  for(const auto& site: *sites){
+    std::vector<int> indices;
+    auto index_int = site->get_as<int>("index");
+    auto index_arr = site->get_array_of<int64_t>("index");
+
+    if (index_arr){
+      indices.assign(index_arr->begin(), index_arr->end());
+      if(indices.empty()){
+        for(int i=0; i<lat.N_UNIT; ++i){
+          indices.push_back(i);
+        }
+      }
+    } else if (index_int){
+      indices.push_back(*index_int);
+    } else {
         std::cerr << "cannot find \"index\" in the section [[" << tablename << ".site]]"
                   << std::endl;
-        // ERROR
-      }
+        assert(false);
+    }
 
+    for(int index: indices){
       auto dir = site->get_array_of<double>("initial_state");
       if (dir){
-        lat.initial_dirs[*index] = *dir;
+        lat.initial_dirs[index] = *dir;
       }else{
-        lat.initial_dirs[*index] = std::vector<double>{0.0};
+        lat.initial_dirs[index] = std::vector<double>{0.0};
       }
 
       auto noise = site->get_as<double>("noise");
       if (noise){
-        lat.noises[*index] = *noise;
+        lat.noises[index] = *noise;
       }else{
-        lat.noises[*index] = 0.0;
+        lat.noises[index] = 0.0;
       }
-    }
+
+      auto pdim = site->get_as<int>("physical_dim");
+      lat.physical_dims[index] = *pdim;
+
+      auto vdim_int = site->get_as<int>("virtual_dim");
+      auto vdim_arr = site->get_array_of<int64_t>("virtual_dim");
+      std::vector<int> vdim;
+
+      if (vdim_arr){
+        vdim.assign((*vdim_arr).begin(), (*vdim_arr).end());
+      } else if (vdim_int){
+        vdim.assign(4, *vdim_int);
+      }
+      for(int i=0; i<4; ++i){
+        lat.virtual_dims[index][i] = vdim[i];
+      }
+    } // end of for indices
   }
 
   return lat;
@@ -68,7 +101,7 @@ Edges gen_edges(decltype(cpptoml::parse_file("")) toml, const char *key,
   if (!str) {
     std::cerr << "cannot find " << key << " in the section [" << tablename
               << "]" << std::endl;
-    // ERROR
+    assert(false);
   }
   return make_edges(*str);
 }
@@ -80,7 +113,7 @@ std::vector<tensor> gen_matrices(decltype(cpptoml::parse_file("")) toml,
   if (!strs) {
     std::cerr << "cannot find " << key << " in the section [" << tablename
               << "]" << std::endl;
-    // ERROR
+    assert(false);
   }
   return util::read_matrix<tensor>(*strs);
 }

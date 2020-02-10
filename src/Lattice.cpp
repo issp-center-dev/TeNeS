@@ -9,6 +9,8 @@ Lattice::Lattice(int X, int Y)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
+      physical_dims(N_UNIT, -1),
+      virtual_dims(N_UNIT, std::array<int, 4>{-1,-1,-1,-1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
       noises(N_UNIT, 0.0) {
   assert(X > 0);
@@ -86,6 +88,14 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
     ns.assign(noises.begin(), noises.end());
     MPI_Bcast(&ns.front(), N_UNIT, MPI_DOUBLE, 0, comm);
 
+    std::vector<int> phys(physical_dims.begin(), physical_dims.end());
+    MPI_Bcast(&phys.front(), N_UNIT, MPI_INT, 0, comm);
+
+    for(int i=0; i < N_UNIT; ++i){
+      std::array<int, 4> vs = virtual_dims[i];
+      MPI_Bcast(vs.data(), 4, MPI_INT, 0, comm);
+    }
+
   } else {
     MPI_Bcast(&params_int.front(), 3, MPI_INT, 0, comm);
     LX = params_int[0];
@@ -100,6 +110,15 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
 
     ns.resize(N_UNIT);
     MPI_Bcast(&ns.front(), N_UNIT, MPI_DOUBLE, 0, comm);
+
+    std::vector<int> phys(N_UNIT);
+    MPI_Bcast(&phys.front(), N_UNIT, MPI_INT, 0, comm);
+    physical_dims.assign(phys.begin(), phys.end());
+    for(int i=0; i < N_UNIT; ++i){
+      std::array<int, 4> vs;
+      MPI_Bcast(vs.data(), 4, MPI_INT, 0, comm);
+      virtual_dims[i] = vs;
+    }
   }
   calc_neighbors();
   initial_dirs.assign(init_dirs.begin(), init_dirs.end());

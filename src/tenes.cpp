@@ -58,7 +58,7 @@ private:
   Edges ham_edges;
   std::vector<ptensor> hams;
   std::vector<ptensor> lops;
-  ptensor op_identity;
+  std::vector<ptensor> op_identity;
 
   CorrelationParameter corparam;
 
@@ -67,12 +67,10 @@ private:
   std::vector<ptensor> C1, C2, C3, C4;
   std::vector<std::vector<std::vector<double>>> lambda_tensor;
 
-  int D;
   int CHI;
   int LX;
   int LY;
   int N_UNIT;
-  int ldof;
 
   std::string outdir;
 
@@ -93,6 +91,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       ham_edges(ham_edges_), lops(lops_), corparam(corparam_), outdir("output"),
       time_simple_update(), time_full_update(), time_environment(),
       time_observable() {
+
   MPI_Comm_size(comm, &mpisize);
   MPI_Comm_rank(comm, &mpirank);
 
@@ -102,7 +101,6 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     peps_parameters.print_level = PEPS_Parameters::PrintLevel::none;
   }
 
-  D = peps_parameters.D;
   CHI = peps_parameters.CHI;
 
   lattice.Bcast(comm);
@@ -110,7 +108,6 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   LX = lattice.LX;
   LY = lattice.LY;
   N_UNIT = lattice.N_UNIT;
-  ldof = lops.begin()->shape()[0];
 
   // set seed for randomized svd
   int seed = peps_parameters.seed;
@@ -133,23 +130,6 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     lattice.save_append(param_file.c_str());
   }
 
-  op_identity = ptensor(Shape(ldof, ldof));
-  for (int i = 0; i < ldof; ++i) {
-    for (int j = 0; j < i; ++j)
-      op_identity.set_value(Index(i, j), 0.0);
-    op_identity.set_value(Index(i, i), 1.0);
-    for (int j = i + 1; j < ldof; ++j)
-      op_identity.set_value(Index(i, j), 0.0);
-  }
-
-  const int LDOF = ldof;
-
-  std::transform(hams_.begin(), hams_.end(), std::back_inserter(hams),
-                 [LDOF](ptensor const &A) {
-                   return transpose(reshape(A, Shape(LDOF, LDOF, LDOF, LDOF)),
-                                    Axes(2, 3, 0, 1));
-                 });
-
   initialize_tensors();
 }
 
@@ -166,25 +146,34 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   lambda_tensor.clear();
 
   for (int i = 0; i < N_UNIT; ++i) {
-    Tn.push_back(ptensor(Shape(D, D, D, D, ldof)));
-    eTt.push_back(ptensor(Shape(CHI, CHI, D, D)));
-    eTr.push_back(ptensor(Shape(CHI, CHI, D, D)));
-    eTb.push_back(ptensor(Shape(CHI, CHI, D, D)));
-    eTl.push_back(ptensor(Shape(CHI, CHI, D, D)));
+    const auto pdim = lattice.physical_dims[i];
+    const auto vdim = lattice.virtual_dims[i];
+
+    Tn.push_back(ptensor(Shape(vdim[0], vdim[1], vdim[2], vdim[3], pdim)));
+    eTt.push_back(ptensor(Shape(CHI, CHI, vdim[1], vdim[1])));
+    eTr.push_back(ptensor(Shape(CHI, CHI, vdim[2], vdim[2])));
+    eTb.push_back(ptensor(Shape(CHI, CHI, vdim[3], vdim[3])));
+    eTl.push_back(ptensor(Shape(CHI, CHI, vdim[0], vdim[0])));
     C1.push_back(ptensor(Shape(CHI, CHI)));
     C2.push_back(ptensor(Shape(CHI, CHI)));
     C3.push_back(ptensor(Shape(CHI, CHI)));
     C4.push_back(ptensor(Shape(CHI, CHI)));
-    lambda_tensor.push_back(
-        std::vector<std::vector<double>>(nleg, std::vector<double>(D)));
+
+    std::vector<std::vector<double>> lambda(nleg);
     for (int j = 0; j < nleg; ++j) {
-      for (int k = 0; k < D; ++k) {
-        lambda_tensor[i][j][k] = 1.0;
+      lambda[j] = std::vector<double>(vdim[j], 1.0);
+    }
+    lambda_tensor.push_back(lambda);
+
+    ptensor id(mptensor::Shape(pdim, pdim));
+    for (int j = 0; j < pdim; ++j) {
+      for (int k = 0; k < pdim; ++k) {
+        id.set_value(mptensor::Index(j, k), (j == k ? 1.0 : 0.0));
       }
     }
+    op_identity.push_back(id);
   }
 
-  std::vector<double> ran(D * D * D * D * ldof);
   std::mt19937 gen(peps_parameters.seed);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   int nr;
@@ -193,15 +182,21 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   if (load_dir.empty()) {
     Index index;
     for (int i = 0; i < lattice.N_UNIT; ++i) {
-      for (int i = 0; i < D * D * D * D * ldof; i++) {
-        ran[i] = dist(gen);
+      const auto pdim = lattice.physical_dims[i];
+      const auto vdim = lattice.virtual_dims[i];
+
+      const size_t ndim = vdim[0] * vdim[1] * vdim[2] * vdim[3] * pdim;
+      std::vector<double> ran(ndim);
+
+      for (int j = 0; j < ndim; j++) {
+        ran[j] = dist(gen);
       }
       auto &dir = lattice.initial_dirs[i];
       if (std::all_of(dir.begin(), dir.end(),
                       [=](double x) { return x == 0.0; })) {
         // random
-        dir.resize(ldof);
-        for (int j = 0; j < ldof; ++j) {
+        dir.resize(pdim);
+        for (int j = 0; j < pdim; ++j) {
           dir[j] = dist(gen);
         }
       }
@@ -210,13 +205,15 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
           Tn[i].set_value(index, dir[index[4]]);
         } else {
-          nr = index[0] + index[1] * D + index[2] * D * D +
-               index[3] * D * D * D + index[4] * D * D * D * D;
+          nr = index[0] + index[1] * vdim[0] + index[2] * vdim[0] * vdim[1] +
+               index[3] * vdim[0] * vdim[1] * vdim[2] +
+               index[4] * vdim[0] * vdim[1] * vdim[2] * vdim[3];
           Tn[i].set_value(index, lattice.noises[i] * ran[nr]);
         }
       }
     }
   } else {
+    // load from the checkpoint
     struct stat status;
     if (stat(load_dir.c_str(), &status) != 0) {
       std::string msg = load_dir + " does not exists.";
@@ -235,13 +232,13 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
       C3[i].load((filename + "C3" + suffix).c_str());
       C4[i].load((filename + "C4" + suffix).c_str());
     }
-    int nl = N_UNIT * nleg * D;
     std::vector<double> ls;
     if (mpirank == 0) {
       for (int i = 0; i < N_UNIT; ++i) {
+        const auto vdim = lattice.virtual_dims[i];
         std::ifstream ifs(load_dir + "/lambda_" + std::to_string(i) + ".dat");
         for (int j = 0; j < nleg; ++j) {
-          for (int k = 0; k < D; ++k) {
+          for (int k = 0; k < vdim[j]; ++k) {
             double temp = 0.0;
             ifs >> temp;
             ls.push_back(temp);
@@ -249,11 +246,17 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
         }
       }
     }
-    MPI_Bcast(&(ls[0]), nl, MPI_DOUBLE, 0, comm);
+    int lsize = ls.size();
+    MPI_Bcast(&lsize, 1, MPI_INT, 0, comm);
+    if (mpirank != 0) {
+      ls.resize(lsize);
+    }
+    MPI_Bcast(&(ls[0]), lsize, MPI_DOUBLE, 0, comm);
     int index = 0;
     for (int i = 0; i < N_UNIT; ++i) {
+      const auto vdim = lattice.virtual_dims[i];
       for (int j = 0; j < nleg; ++j) {
-        for (int k = 0; k < D; ++k) {
+        for (int k = 0; k < vdim[j]; ++k) {
           lambda_tensor[i][j][k] = ls[index];
           ++index;
         }
@@ -468,7 +471,7 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_local(bool save) {
 
   for (int i = 0; i < N_UNIT; ++i) {
     double norm = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                    eTb[i], eTl[i], Tn[i], op_identity);
+                                    eTb[i], eTl[i], Tn[i], op_identity[i]);
     for (int ilops = 0; ilops < nlops; ++ilops) {
       double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
                                      eTb[i], eTl[i], Tn[i], lops[ilops]) /
@@ -516,7 +519,7 @@ template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
       const double local_norm = Contract_two_sites_horizontal(
           C1[source], C2[target], C3[target], C4[source], eTt[source],
           eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-          Tn[source], Tn[target], op_identity, op_identity);
+          Tn[source], Tn[target], op_identity[source], op_identity[target]);
       energy += Contract_two_sites_horizontal_op12(
                     C1[source], C2[target], C3[target], C4[source], eTt[source],
                     eTt[target], eTr[target], eTb[target], eTb[source],
@@ -526,7 +529,7 @@ template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
       const double local_norm = Contract_two_sites_vertical(
           C1[source], C2[source], C3[target], C4[target], eTt[source],
           eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-          Tn[source], Tn[target], op_identity, op_identity);
+          Tn[source], Tn[target], op_identity[source], op_identity[target]);
       energy += Contract_two_sites_vertical_op12(
                     C1[source], C2[source], C3[target], C4[target], eTt[source],
                     eTr[source], eTr[target], eTb[target], eTl[target],
@@ -567,7 +570,7 @@ TeNeS<ptensor>::measure_NN(bool save) {
       const double local_norm = Contract_two_sites_horizontal(
           C1[source], C2[target], C3[target], C4[source], eTt[source],
           eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-          Tn[source], Tn[target], op_identity, op_identity);
+          Tn[source], Tn[target], op_identity[source], op_identity[target]);
       for (int ilops = 0; ilops < nlops; ++ilops) {
         double val =
             Contract_two_sites_horizontal(
@@ -583,7 +586,7 @@ TeNeS<ptensor>::measure_NN(bool save) {
       const double local_norm = Contract_two_sites_vertical(
           C1[target], C2[target], C3[source], C4[source], eTt[target],
           eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
-          Tn[target], Tn[source], op_identity, op_identity);
+          Tn[target], Tn[source], op_identity[source], op_identity[target]);
       for (int ilops = 0; ilops < nlops; ++ilops) {
         double val =
             Contract_two_sites_vertical(
@@ -638,10 +641,11 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
     r_ops[std::get<0>(ops)].push_back(std::get<1>(ops));
   }
 
-  ptensor correlation_T(Shape(CHI, CHI, D, D));
-  ptensor correlation_norm(Shape(CHI, CHI, D, D));
   std::vector<Correlation> correlations;
   for (int left_index = 0; left_index < N_UNIT; ++left_index) {
+    const auto vdim = lattice.virtual_dims[left_index];
+    ptensor correlation_T(Shape(CHI, CHI, vdim[0], vdim[0]));
+    ptensor correlation_norm(Shape(CHI, CHI, vdim[0], vdim[0]));
     for (int left_ilop = 0; left_ilop < nlops; ++left_ilop) {
       if (r_ops[left_ilop].empty()) {
         continue;
@@ -655,7 +659,7 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
                          Tn[left_index], lops[left_ilop]);
         StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
                          eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], op_identity);
+                         Tn[left_index], op_identity[left_index]);
 
         for (int r = 0; r < r_max; ++r) {
           const int right_x = (left_x + r + 1) % LX;
@@ -663,10 +667,10 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
           const int offset_x = (left_x + r + 1) / LX;
           const int offset_y = 0;
           const int right_index = lattice.index(right_x, right_y);
-          double norm = FinishCorrelation(correlation_norm, C2[right_index],
-                                          C3[right_index], eTt[right_index],
-                                          eTr[right_index], eTb[right_index],
-                                          Tn[right_index], op_identity);
+          double norm = FinishCorrelation(
+              correlation_norm, C2[right_index], C3[right_index],
+              eTt[right_index], eTr[right_index], eTb[right_index],
+              Tn[right_index], op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
             double val = FinishCorrelation(correlation_T, C2[right_index],
                                            C3[right_index], eTt[right_index],
@@ -691,7 +695,7 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
                          lops[left_ilop]);
         StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
                          eTl[left_index], eTr[left_index], eTb[left_index], tn,
-                         op_identity);
+                         op_identity[left_index]);
 
         for (int r = 0; r < r_max; ++r) {
           const int right_x = left_x;
@@ -703,7 +707,7 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
           double norm = FinishCorrelation(correlation_norm, C1[right_index],
                                           C2[right_index], eTl[right_index],
                                           eTt[right_index], eTr[right_index],
-                                          tn, op_identity);
+                                          tn, op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
             double val = FinishCorrelation(correlation_T, C1[right_index],
                                            C2[right_index], eTl[right_index],
@@ -765,10 +769,11 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   }
   auto local_obs = measure_local(true);
 
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-    std::clog << "  Start calculating energy" << std::endl;
-  }
-  auto energy = measure_energy(true);
+  // if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  //   std::clog << "  Start calculating energy" << std::endl;
+  // }
+  // auto energy = measure_energy(true);
+  auto energy = 0.0;
 
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
@@ -844,7 +849,7 @@ template <class ptensor> void TeNeS<ptensor>::save_tensors() const {
     for (int i = 0; i < N_UNIT; ++i) {
       std::ofstream ofs(save_dir + "/lambda_" + std::to_string(i) + ".dat");
       for (int j = 0; j < nleg; ++j) {
-        for (int k = 0; k < D; ++k) {
+        for (int k = 0; k < lattice.virtual_dims[i][j]; ++k) {
           ofs << lambda_tensor[i][j][k] << std::endl;
         }
       }
@@ -856,9 +861,10 @@ template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           Operators<tensor> simple_updates, Operators<tensor> full_updates,
           Edges ham_edges, std::vector<tensor> hamiltonians,
-          std::vector<tensor> local_operators, CorrelationParameter corparam){
-  TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
-                     ham_edges, hamiltonians, local_operators, corparam);
+          std::vector<tensor> local_operators, CorrelationParameter corparam) {
+  TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates,
+                    full_updates, ham_edges, hamiltonians, local_operators,
+                    corparam);
   tns.optimize();
   tns.save_tensors();
   tns.measure();

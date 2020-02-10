@@ -36,11 +36,14 @@ class Lattice {
   int LY;
   int N_UNIT;
 
-  std::vector<std::vector<double>> initial_dirs;
-  std::vector<double> noises;
-
   std::vector<std::vector<int>> Tensor_list;
   std::vector<std::array<int, 4>> NN_Tensor;
+
+  std::vector<int> physical_dims;
+  std::vector<std::array<int, 4>> virtual_dims;
+
+  std::vector<std::vector<double>> initial_dirs;
+  std::vector<double> noises;
 
   Lattice(int X, int Y);
 

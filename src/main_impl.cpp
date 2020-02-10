@@ -87,10 +87,10 @@ int main_impl(int argc, char **argv) {
   peps_parameters.print_level = print_level;
   peps_parameters.Bcast(MPI_COMM_WORLD);
 
-  auto toml_lattice = input_toml->get_table("lattice");
+  auto toml_lattice = input_toml->get_table("tensor");
   if (toml_lattice == nullptr) {
     // ERROR
-    std::cout << "[lattice] not found" << std::endl;
+    std::cout << "[tensor] not found" << std::endl;
     return 1;
   }
   Lattice lattice = gen_lattice(toml_lattice);
