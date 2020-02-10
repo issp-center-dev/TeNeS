@@ -52,10 +52,11 @@ class Lattice {
     return X + Y * LX;
   }
 
-  int left(int index) const { return NN_Tensor[index][0]; }
-  int right(int index) const { return NN_Tensor[index][2]; }
-  int top(int index) const { return NN_Tensor[index][1]; }
-  int bottom(int index) const { return NN_Tensor[index][3]; }
+  int neighbor(int index, int direction) const { return NN_Tensor[index][direction]; }
+  int left(int index) const { return neighbor(index, 0); }
+  int right(int index) const { return neighbor(index, 2); }
+  int top(int index) const { return neighbor(index, 1); }
+  int bottom(int index) const { return neighbor(index, 3); }
 
   void reset(int X, int Y);
   void calc_neighbors();

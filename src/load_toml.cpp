@@ -10,6 +10,7 @@
 #include "correlation.hpp"
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
+#include "operator.hpp"
 #include "tenes.hpp"
 #include "util/read_matrix.hpp"
 
@@ -165,5 +166,39 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
 
   return pparam;
 }
+
+
+template <class tensor>
+Operator<tensor> load_operator(decltype(cpptoml::parse_file("")) param) {
+  auto source_site = param->get_as<int>("source_site");
+  auto source_leg = param->get_as<int>("source_leg");
+  auto dimensions = param->get_array_of<int64_t>("dimensions");
+  auto elements = param->get_as<std::string>("elements");
+  auto shape = mptensor::Shape();
+  for(auto d: *dimensions){
+    shape.push(d);
+  }
+  tensor A = util::read_tensor<tensor>(*elements, shape);
+  return Operator<tensor>(*source_site, *source_leg, A);
+}
+
+template <class tensor>
+Operators<tensor> load_updates(decltype(cpptoml::parse_file("")) param, std::string const &key){
+  Operators<tensor> ret;
+  auto tables = param->get_table_array_qualified(key);
+  for(const auto& table: *tables){
+    ret.push_back(load_operator<tensor>(table));
+  }
+  return ret;
+}
+template <class tensor>
+Operators<tensor> load_simple_updates(decltype(cpptoml::parse_file("")) param){
+  return load_updates<tensor>(param, "evolution.simple");
+}
+template <class tensor>
+Operators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param){
+  return load_updates<tensor>(param, "evolution.full");
+}
+
 
 } // end of namespace tenes

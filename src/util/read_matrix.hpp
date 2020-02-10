@@ -28,14 +28,15 @@ ptensor read_matrix(std::string const &str) {
     A.push_back(row);
   }
 
-  const auto N = A.size();
+  const auto Nrow = A.size();
+  const auto Ncol = A[0].size();
   for (auto const &row : A) {
-    assert(row.size() == N);
+    assert(row.size() == Ncol);
   }
 
-  ptensor ret(mptensor::Shape(N, N));
-  for (int i = 0; i < N; ++i) {
-    for (int j = 0; j < N; ++j) {
+  ptensor ret(mptensor::Shape(Nrow, Ncol));
+  for (int i = 0; i < Nrow; ++i) {
+    for (int j = 0; j < Ncol; ++j) {
       ret.set_value(mptensor::Index(i, j), A[i][j]);
     }
   }
@@ -47,6 +48,29 @@ std::vector<ptensor> read_matrix(std::vector<std::string> const &strs) {
   std::vector<ptensor> ret;
   std::transform(strs.begin(), strs.end(), std::back_inserter(ret),
                  [](std::string s) { return read_matrix<ptensor>(s); });
+  return ret;
+}
+
+
+template <class ptensor>
+ptensor read_tensor(std::string const &str, mptensor::Shape dims){
+  ptensor ret(dims);
+  const size_t rank = ret.rank();
+
+  const static std::string delim = " \t";
+  std::string line;
+
+  std::stringstream ss(str);
+  while (std::getline(ss, line)) {
+    mptensor::Index index;
+    index.resize(rank);
+    auto fields = util::split(line);
+    assert(fields.size() == rank+2);
+    for(size_t i=0; i<rank; ++i){
+      index[i] = std::stoi(fields[i]);
+    }
+    ret.set_value(index, std::stof(fields[rank]));
+  }
   return ret;
 }
 

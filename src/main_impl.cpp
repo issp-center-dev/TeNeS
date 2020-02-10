@@ -4,6 +4,7 @@
 #include "PEPS_Parameters.hpp"
 #include "edge.hpp"
 #include "load_toml.cpp"
+#include "operator.hpp"
 #include "tenes.hpp"
 #include "type.hpp"
 #include "util/file.hpp"
@@ -34,14 +35,16 @@ int main_impl(int argc, char **argv) {
   )";
 
   if (argc == 1) {
-    if (mpirank == 0) std::cout << usage << std::endl;
+    if (mpirank == 0)
+      std::cout << usage << std::endl;
     return 0;
   }
 
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-h" || opt == "--help") {
-      if (mpirank == 0) std::cout << usage << std::endl;
+      if (mpirank == 0)
+        std::cout << usage << std::endl;
       return 0;
     }
   }
@@ -49,7 +52,8 @@ int main_impl(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-v" || opt == "--version") {
-      if (mpirank == 0) std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+      if (mpirank == 0)
+        std::cout << "TeNeS v" << TENES_VERSION << std::endl;
       return 0;
     }
   }
@@ -99,11 +103,9 @@ int main_impl(int argc, char **argv) {
     std::cout << "[evolution] not found" << std::endl;
     return 1;
   }
-  const auto simple_edges =
-      gen_edges(toml_evolution, "simple_update", "evolution");
-  const auto full_edges = gen_edges(toml_evolution, "full_update", "evolution");
-  const auto evolutions =
-      gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
+
+  const auto simple_updates = load_simple_updates<ptensor>(input_toml);
+  const auto full_updates = load_full_updates<ptensor>(input_toml);
 
   // observable
   auto toml_observable = input_toml->get_table("observable");
@@ -125,8 +127,8 @@ int main_impl(int argc, char **argv) {
                              ? gen_corparam(toml_correlation, "correlation")
                              : CorrelationParameter());
 
-  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_edges,
-               full_edges, ham_edges, evolutions, hams, lops, corparam);
+  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
+               full_updates, ham_edges, hams, lops, corparam);
 }
 
-}  // end of namespace tenes
+} // end of namespace tenes
