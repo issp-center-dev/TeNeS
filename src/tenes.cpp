@@ -892,16 +892,15 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   }
   auto local_obs = measure_onsite(true);
 
-  // if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-  //   std::clog << "  Start calculating energy" << std::endl;
-  // }
-  // auto energy = measure_energy(true);
-  auto energy = 0.0;
 
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
   auto NN_obs = measure_twobody(true);
+  auto energy = 0.0;
+  for(const auto& nn: NN_obs[0]){
+    energy += nn.second;
+  }
 
   /*
   if (corparam.r_max > 0) {
