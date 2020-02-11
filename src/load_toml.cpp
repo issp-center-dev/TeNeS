@@ -10,7 +10,6 @@
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
-#include "edge.hpp"
 #include "operator.hpp"
 #include "tenes.hpp"
 #include "util/read_matrix.hpp"
@@ -95,17 +94,6 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
   }
 
   return lat;
-}
-
-Edges gen_edges(decltype(cpptoml::parse_file("")) toml, const char *key,
-                const char *tablename) {
-  auto str = toml->get_as<std::string>(key);
-  if (!str) {
-    std::cerr << "cannot find " << key << " in the section [" << tablename
-              << "]" << std::endl;
-    assert(false);
-  }
-  return make_edges(*str);
 }
 
 template <typename tensor>

@@ -2,7 +2,6 @@
 
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
-#include "edge.hpp"
 #include "load_toml.cpp"
 #include "operator.hpp"
 #include "tenes.hpp"
@@ -121,13 +120,6 @@ int main_impl(int argc, char **argv) {
   const auto twobody_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT,
                                                    2, "observable.twobody");
 
-  const auto lops =
-      gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
-  const auto hams =
-      gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
-  const auto ham_edges =
-      gen_edges(toml_observable, "hamiltonian_bonds", "observable");
-
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
   const auto corparam = (toml_correlation != nullptr
@@ -136,7 +128,6 @@ int main_impl(int argc, char **argv) {
 
   return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
                full_updates, onsite_obs, twobody_obs,
-               // ham_edges, hams, lops,
                corparam);
 }
 

@@ -2,8 +2,10 @@
 #include <algorithm>
 #include <complex>
 #include <limits>
+#include <map>
 #include <random>
 #include <sys/stat.h>
+#include <tuple>
 
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
@@ -16,7 +18,6 @@
 #include "PEPS_Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "correlation.hpp"
-#include "edge.hpp"
 #include "timer.hpp"
 
 #include "tenes.hpp"
@@ -25,15 +26,24 @@ namespace tenes {
 
 using namespace mptensor;
 
+struct Bond {
+  int source_site;
+  int target_site;
+  int offset_x;
+  int offset_y;
+};
+
+bool operator<(const Bond &a, const Bond &b) {
+  return std::tie(a.source_site, a.target_site, a.offset_x, a.offset_y) <
+         std::tie(b.source_site, b.target_site, b.offset_x, b.offset_y);
+}
+
 template <class ptensor> class TeNeS {
 public:
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         NNOperators<ptensor> simple_updates_,
         NNOperators<ptensor> full_updates_, Operators<ptensor> onsite_operators,
-        Operators<ptensor> twobody_operators,
-        // Edges ham_edges_, std::vector<ptensor> hams_,
-        // std::vector<ptensor> lops_,
-        CorrelationParameter corparam_);
+        Operators<ptensor> twobody_operators, CorrelationParameter corparam_);
 
   void initialize_tensors();
   void update_CTM();
@@ -42,8 +52,7 @@ public:
 
   void measure();
   std::vector<std::vector<double>> measure_onsite(bool save);
-  // double measure_energy(bool save);
-  std::vector<std::vector<std::vector<double>>> measure_NN(bool save);
+  std::vector<std::map<Bond, double>> measure_twobody(bool save);
   // std::vector<Correlation> measure_correlation(bool save);
   void optimize();
   void save_tensors() const;
@@ -64,9 +73,6 @@ private:
   int num_onsite_operators;
   int num_twobody_operators;
 
-  // Edges ham_edges;
-  // std::vector<ptensor> hams;
-  // std::vector<ptensor> lops;
   std::vector<ptensor> op_identity;
 
   CorrelationParameter corparam;
@@ -90,19 +96,18 @@ private:
 };
 
 template <class ptensor>
-TeNeS<ptensor>::TeNeS(
-    MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
-    NNOperators<ptensor> simple_updates_, NNOperators<ptensor> full_updates_,
-    Operators<ptensor> onsite_operators_, Operators<ptensor> twobody_operators_,
-    // Edges ham_edges_, std::vector<ptensor> hams_, std::vector<ptensor> lops_,
-    CorrelationParameter corparam_)
+TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
+                      Lattice lattice_, NNOperators<ptensor> simple_updates_,
+                      NNOperators<ptensor> full_updates_,
+                      Operators<ptensor> onsite_operators_,
+                      Operators<ptensor> twobody_operators_,
+                      CorrelationParameter corparam_)
     : comm(comm_), peps_parameters(peps_parameters_), lattice(lattice_),
       simple_updates(simple_updates_), full_updates(full_updates_),
       onsite_operators(onsite_operators_),
-      twobody_operators(twobody_operators_),
-      // ham_edges(ham_edges_), lops(lops_),
-      corparam(corparam_), outdir("output"), time_simple_update(),
-      time_full_update(), time_environment(), time_observable() {
+      twobody_operators(twobody_operators_), corparam(corparam_),
+      outdir("output"), time_simple_update(), time_full_update(),
+      time_environment(), time_observable() {
 
   MPI_Comm_size(comm, &mpisize);
   MPI_Comm_rank(comm, &mpirank);
@@ -509,15 +514,15 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
   time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
-    std::string filename = outdir + "/site_obs.dat";
+    std::string filename = outdir + "/onsite_obs.dat";
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save site observables to " << filename << std::endl;
+      std::clog << "    Save onsite observables to " << filename << std::endl;
     }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
     ofs << "# $1: op_group\n";
-    ofs << "# $2: site_index ( -1: mean, -2: sum ) \n";
+    ofs << "# $2: site_index (-1: mean, -2: sum) \n";
     ofs << "# $3: real\n";
     ofs << "# $4: imag\n";
     ofs << std::endl;
@@ -541,162 +546,121 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
   return local_obs;
 }
 
-/*
-template <class ptensor> double TeNeS<ptensor>::measure_energy(bool save) {
-  Timer<> timer;
-  double energy = 0.0;
-
-  for (auto ed : ham_edges) {
-    const int source = ed.source_site;
-    const int target = ed.target_site;
-    if (ed.is_horizontal()) {
-      const double local_norm = Contract_two_sites_horizontal(
-          C1[source], C2[target], C3[target], C4[source], eTt[source],
-          eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-          Tn[source], Tn[target], op_identity[source], op_identity[target]);
-      energy += Contract_two_sites_horizontal_op12(
-                    C1[source], C2[target], C3[target], C4[source], eTt[source],
-                    eTt[target], eTr[target], eTb[target], eTb[source],
-                    eTl[source], Tn[source], Tn[target], hams[ed.op_id]) /
-                local_norm;
-    } else {
-      const double local_norm = Contract_two_sites_vertical(
-          C1[source], C2[source], C3[target], C4[target], eTt[source],
-          eTr[source], eTr[target], eTb[target], eTl[target], eTl[source],
-          Tn[source], Tn[target], op_identity[source], op_identity[target]);
-      energy += Contract_two_sites_vertical_op12(
-                    C1[source], C2[source], C3[target], C4[target], eTt[source],
-                    eTr[source], eTr[target], eTb[target], eTl[target],
-                    eTl[source], Tn[source], Tn[target], hams[ed.op_id]) /
-                local_norm;
-    }
-  }
-  energy /= N_UNIT;
-
-  time_observable += timer.elapsed();
-
-  if (save && mpirank == 0) {
-    std::string filename = outdir + "/energy.dat";
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save energy to " << filename << std::endl;
-    }
-    std::ofstream ofs(filename.c_str());
-    ofs << std::scientific
-        << std::setprecision(std::numeric_limits<double>::max_digits10);
-    ofs << energy << std::endl;
-  }
-
-  return energy;
-}
-*/
-
 template <class ptensor>
-std::vector<std::vector<std::vector<double>>>
-TeNeS<ptensor>::measure_NN(bool save) {
+std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twobody(bool save) {
   Timer<> timer;
 
   const int nlops = num_twobody_operators;
+  std::vector<std::map<Bond, double>> ret(nlops);
 
   // 0: (2x1), 1: (1x2), 2: (2x2)
   std::vector<std::vector<double>> norms(
       N_UNIT, std::vector<double>(3, std::numeric_limits<double>::quiet_NaN()));
 
-  for (const auto &op: twobody_operators){
-    int source = op.source_site;
+  for (const auto &op : twobody_operators) {
+    const int source = op.source_site;
     const int x_source = source % lattice.LX;
     const int y_source = source / lattice.LX;
-    int target = op.target_site;
+    const int target = op.target_site;
     const int x_target = (target % lattice.LX) + op.offset_x * lattice.LX;
     const int y_target = (target / lattice.LX) + op.offset_y * lattice.LY;
-    int dx = x_target - x_source;
-    int dy = y_target - y_source;
+    const int dx = x_target - x_source;
+    const int dy = y_target - y_source;
 
-    if(dx <=-2 || dx >= 2 || dy <=-2 || dy >= 2){
-      std::cerr << "Warning: now version of TeNeS does not support too long interaction" << std::endl;
-      std::cerr << "group = " << op.group << " (dx = " << dx << ", dy = " << dy << ")" << std::endl;
+    if (dx <= -2 || dx >= 2 || dy <= -2 || dy >= 2) {
+      std::cerr << "Warning: now version of TeNeS does not support too long "
+                   "operator"
+                << std::endl;
+      std::cerr << "group = " << op.group << " (dx = " << dx << ", dy = " << dy
+                << ")" << std::endl;
       continue;
     }
 
-    if (dy == 1){
-
-    }
-
-  }
-
-  std::vector<std::vector<std::vector<double>>> neighbor_obs(
-      nlops,
-      std::vector<std::vector<double>>(N_UNIT, std::vector<double>(2, 0.0)));
-
-  /*
-  const int nlops = lops.size();
-  std::vector<std::vector<std::vector<double>>> neighbor_obs(
-      nlops,
-      std::vector<std::vector<double>>(N_UNIT, std::vector<double>(2, 0.0)));
-
-  for (int source = 0; source < N_UNIT; ++source) {
-    { // horizontal
-      int target = lattice.right(source);
-      const double local_norm = Contract_two_sites_horizontal(
-          C1[source], C2[target], C3[target], C4[source], eTt[source],
-          eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-          Tn[source], Tn[target], op_identity[source], op_identity[target]);
-      for (int ilops = 0; ilops < nlops; ++ilops) {
-        double val =
-            Contract_two_sites_horizontal(
-                C1[source], C2[target], C3[target], C4[source], eTt[source],
-                eTt[target], eTr[target], eTb[target], eTb[source], eTl[source],
-                Tn[source], Tn[target], lops[ilops], lops[ilops]) /
-            local_norm;
-        neighbor_obs[ilops][source][0] = val;
-      }
-    }
-    { // vertical
-      int target = lattice.top(source);
-      const double local_norm = Contract_two_sites_vertical(
-          C1[target], C2[target], C3[source], C4[source], eTt[target],
-          eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
-          Tn[target], Tn[source], op_identity[source], op_identity[target]);
-      for (int ilops = 0; ilops < nlops; ++ilops) {
-        double val =
-            Contract_two_sites_vertical(
-                C1[target], C2[target], C3[source], C4[source], eTt[target],
-                eTr[target], eTr[source], eTb[source], eTl[source], eTl[target],
-                Tn[target], Tn[source], lops[ilops], lops[ilops]) /
-            local_norm;
-        neighbor_obs[ilops][source][1] = val;
+    const int nhop = std::abs(dx) + std::abs(dy);
+    if (nhop == 1) {
+      if (dy == 0) { // horizontal
+        const int SOURCE = (dx == 1 ? source : target);
+        const int TARGET = (dx == 1 ? target : source);
+        auto OP = op.op;
+        if (dx == -1) {
+          OP = OP.transpose({1, 0, 3, 2});
+        }
+        double norm = norms[SOURCE][0];
+        if (std::isnan(norm)) {
+          norm = Contract_two_sites_horizontal(
+              C1[SOURCE], C2[TARGET], C3[TARGET], C4[SOURCE], eTt[SOURCE],
+              eTt[TARGET], eTr[TARGET], eTb[TARGET], eTb[SOURCE], eTl[SOURCE],
+              Tn[SOURCE], Tn[TARGET], op_identity[SOURCE], op_identity[TARGET]);
+          norms[SOURCE][0] = norm;
+        }
+        const double value = Contract_two_sites_horizontal_op12(
+            C1[SOURCE], C2[TARGET], C3[TARGET], C4[SOURCE], eTt[SOURCE],
+            eTt[TARGET], eTr[TARGET], eTb[TARGET], eTb[SOURCE], eTl[SOURCE],
+            Tn[SOURCE], Tn[TARGET], OP);
+        ret[op.group][{op.source_site, op.target_site, op.offset_x,
+                       op.offset_y}] = value / norm;
+      } else { // vertical
+        const int SOURCE = (dy == -1 ? source : target);
+        const int TARGET = (dy == -1 ? target : source);
+        auto OP = op.op;
+        if (dy == 1) {
+          OP = OP.transpose({1, 0, 3, 2});
+        }
+        double norm = norms[SOURCE][1];
+        if (std::isnan(norm)) {
+          norm = Contract_two_sites_vertical(
+              C1[SOURCE], C2[SOURCE], C3[TARGET], C4[TARGET], eTt[SOURCE],
+              eTr[SOURCE], eTr[TARGET], eTb[TARGET], eTl[TARGET], eTl[SOURCE],
+              Tn[SOURCE], Tn[TARGET], op_identity[SOURCE], op_identity[TARGET]);
+          norms[SOURCE][1] = norm;
+        }
+        const double value = Contract_two_sites_vertical_op12(
+            C1[SOURCE], C2[SOURCE], C3[TARGET], C4[TARGET], eTt[SOURCE],
+            eTr[SOURCE], eTr[TARGET], eTb[TARGET], eTl[TARGET], eTl[SOURCE],
+            Tn[SOURCE], Tn[TARGET], OP);
+        ret[op.group][{op.source_site, op.target_site, op.offset_x,
+                       op.offset_y}] = value / norm;
       }
     }
   }
-  */
+
   time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
-    std::string filename = outdir + "/neighbor_obs.dat";
+    std::string filename = outdir + "/twobody_obs.dat";
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save NN correlation to " << filename << std::endl;
+      std::clog << "    Save twobody observables to " << filename << std::endl;
     }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
         << std::setprecision(std::numeric_limits<double>::max_digits10);
-    ofs << "# $1: op_index\n";
-    ofs << "# $2: source_site\n";
+    ofs << "# $1: op_group\n";
+    ofs << "# $2: source_site (-1: mean, -2: sum)\n";
     ofs << "# $3: target_site\n";
-    ofs << "# $4: real\n";
-    ofs << "# $5: imag\n";
+    ofs << "# $4: offset_x\n";
+    ofs << "# $5: offset_y\n";
+    ofs << "# $6: real\n";
+    ofs << "# $7: imag\n";
     ofs << std::endl;
     for (int ilops = 0; ilops < nlops; ++ilops) {
-      for (int source = 0; source < N_UNIT; ++source) {
-        int target = lattice.right(source);
-        ofs << ilops << " " << source << " " << target << " "
-            << neighbor_obs[ilops][source][0] << " " << 0.0 << std::endl;
-        target = lattice.top(source);
-        ofs << ilops << " " << source << " " << target << " "
-            << neighbor_obs[ilops][source][1] << " " << 0.0 << std::endl;
+      double sum = 0.0;
+      int num = 0;
+      for (const auto &r : ret[ilops]) {
+        auto bond = r.first;
+        auto value = r.second;
+        sum += value;
+        num += 1;
+        ofs << ilops << " " << bond.source_site << " " << bond.target_site
+            << " " << bond.offset_x << " " << bond.offset_y << " " << value
+            << " " << 0.0 << std::endl;
       }
+      ofs << ilops << " " << -1 << " 0 0 0 " << sum / num << " " << 0.0
+          << std::endl;
+      ofs << ilops << " " << -2 << " 0 0 0 " << sum << " " << 0.0 << std::endl;
     }
   }
 
-  return neighbor_obs;
+  return ret;
 }
 
 /*
@@ -850,7 +814,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
-  auto NN_obs = measure_NN(true);
+  auto NN_obs = measure_twobody(true);
 
   /*
   if (corparam.r_max > 0) {
@@ -935,13 +899,9 @@ template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
           Operators<tensor> onsite_operators,
-          Operators<tensor> twobody_operators,
-          // Edges ham_edges, std::vector<tensor> hamiltonians,
-          // std::vector<tensor> local_operators,
-          CorrelationParameter corparam) {
+          Operators<tensor> twobody_operators, CorrelationParameter corparam) {
   TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates,
                     full_updates, onsite_operators, twobody_operators,
-                    // ham_edges, hamiltonians, local_operators,
                     corparam);
   tns.optimize();
   tns.save_tensors();
@@ -957,9 +917,6 @@ template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              NNOperators<d_tensor> full_updates,
                              Operators<d_tensor> onsite_operators,
                              Operators<d_tensor> twobody_operators,
-                             // Edges ham_edges,
-                             // std::vector<d_tensor> hams,
-                             // std::vector<d_tensor> lops,
                              CorrelationParameter corparam);
 /*
 using c_tensor = mptensor::Tensor<mptensor_matrix_type,
