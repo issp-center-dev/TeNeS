@@ -559,11 +559,11 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twobody(bool save) {
 
   for (const auto &op : twobody_operators) {
     const int source = op.source_site;
-    const int x_source = source % lattice.LX;
-    const int y_source = source / lattice.LX;
+    const int x_source = lattice.x(source);
+    const int y_source = lattice.y(source);
     const int target = op.target_site;
-    const int x_target = (target % lattice.LX) + op.offset_x * lattice.LX;
-    const int y_target = (target / lattice.LX) + op.offset_y * lattice.LY;
+    const int x_target = lattice.x(target) + op.offset_x * lattice.LX;
+    const int y_target = lattice.y(target) + op.offset_y * lattice.LY;
     const int dx = x_target - x_source;
     const int dy = y_target - y_source;
 
@@ -621,6 +621,93 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twobody(bool save) {
         ret[op.group][{op.source_site, op.target_site, op.offset_x,
                        op.offset_y}] = value / norm;
       }
+    } else { // nhops == 2
+      assert(std::abs(dx) == std::abs(dy));
+      assert(std::abs(dx) == 1);
+
+      ptensor U, VT;
+      std::vector<double> s;
+      mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+
+      int left_top, left_bottom, right_top, right_bottom;
+      if (dx == 1 && dy == 1) {
+        left_top = lattice.index(x_source, y_source + 1);
+        left_bottom = source;
+        right_top = target;
+        right_bottom = lattice.index(x_source + 1, y_source);
+      } else if (dx == 1 && dy == -1) {
+        left_top = source;
+        left_bottom = lattice.index(x_source, y_source - 1);
+        right_top = lattice.index(x_source + 1, y_source);
+        right_bottom = target;
+      } else if (dx == -1 && dy == 1) {
+        left_top = target;
+        left_bottom = lattice.index(x_source - 1, y_source);
+        right_top = lattice.index(x_source, y_source + 1);
+        right_bottom = source;
+      } else {
+        left_top = lattice.index(x_source - 1, y_source);
+        left_bottom = target;
+        right_top = source;
+        right_bottom = lattice.index(x_source, y_source - 1);
+      }
+      double norm = norms[left_top][2];
+      if (std::isnan(norm)) {
+        norm = Contract_four_sites(
+            C1[left_top], C2[right_top], C3[right_bottom], C4[left_bottom],
+            eTt[left_top], eTt[right_top], eTr[right_top], eTr[right_bottom],
+            eTb[right_bottom], eTb[left_bottom], eTl[left_bottom],
+            eTl[left_top], Tn[left_top], Tn[right_top], Tn[right_bottom],
+            Tn[left_bottom], op_identity[left_top], op_identity[right_top],
+            op_identity[right_bottom], op_identity[left_bottom]);
+        norms[left_top][2] = norm;
+      }
+      double value = 0.0;
+      std::vector<ptensor> local_ops(4);
+      for (int i = 0; i < s.size(); ++i) {
+
+        if (dx == 1 && dy == 1) {
+          local_ops[0] = op_identity[left_top];
+          local_ops[1] =
+              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
+          local_ops[2] = op_identity[right_bottom];
+          local_ops[3] =
+              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
+        } else if (dx == 1 && dy == -1) {
+          local_ops[0] =
+              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
+          local_ops[1] = op_identity[right_top];
+          local_ops[2] =
+              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
+          local_ops[3] = op_identity[left_bottom];
+        } else if (dx == -1 && dy == 1) {
+          local_ops[0] =
+              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
+          local_ops[1] = op_identity[right_top];
+          local_ops[2] =
+              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
+          local_ops[3] = op_identity[left_bottom];
+        } else {
+          local_ops[0] = op_identity[left_top];
+          local_ops[1] =
+              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
+          local_ops[2] = op_identity[right_bottom];
+          local_ops[3] =
+              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
+        }
+
+        double localvalue = Contract_four_sites(
+            C1[left_top], C2[right_top], C3[right_bottom], C4[left_bottom],
+            eTt[left_top], eTt[right_top], eTr[right_top], eTr[right_bottom],
+            eTb[right_bottom], eTb[left_bottom], eTl[left_bottom],
+            eTl[left_top], Tn[left_top], Tn[right_top], Tn[right_bottom],
+            Tn[left_bottom], local_ops[0], local_ops[1], local_ops[2],
+            local_ops[3]);
+        value += localvalue * s[i];
+      }
+
+      ret[op.group][{op.source_site, op.target_site, op.offset_x,
+                     op.offset_y}] = value / norm;
     }
   }
 
