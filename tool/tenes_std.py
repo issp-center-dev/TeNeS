@@ -473,7 +473,7 @@ class TwoBodyObservables:
         ret.append('"""')
         return ret
 
-    def to_twobody_operators(self) -> List[TwoBodyOperator]:
+    def to_twosite_operators(self) -> List[TwoBodyOperator]:
         return [TwoBodyOperator(self.elements, bond) for bond in self.bonds]
 
 
@@ -572,25 +572,25 @@ class Model:
             self.unitcell, offset_x_min, offset_y_min, offset_x_max, offset_y_max
         )
 
-        self.onsites = []
+        self.onesites = []
         self.twobodies = []
         if "observable" in param:
             observable = param["observable"]
-            for onsite in observable.get("onsite", []):
-                group = onsite["group"]
-                sites = onsite["sites"]
-                dim = onsite["dim"]
-                elements = load_tensor(onsite["elements"], [dim, dim], atol=atol)
+            for onesite in observable.get("onesite", []):
+                group = onesite["group"]
+                sites = onesite["sites"]
+                dim = onesite["dim"]
+                elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
                 obs = OnsiteObservable(group, elements, sites)
-                self.onsites.append(obs)
+                self.onesites.append(obs)
 
-            for twobody in observable.get("twobody", []):
-                group = twobody["group"]
+            for twosite in observable.get("twosite", []):
+                group = twosite["group"]
                 bonds = [
-                    parse_bond(line) for line in twobody["bonds"].strip().splitlines()
+                    parse_bond(line) for line in twosite["bonds"].strip().splitlines()
                 ]
-                dim = twobody["dim"]
-                elements = load_tensor(twobody["elements"], dim + dim, atol=atol)
+                dim = twosite["dim"]
+                elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
                 obs = TwoBodyObservables(group, elements, bonds)
                 self.twobodies.append(obs)
 
@@ -628,22 +628,22 @@ class Model:
 
         # observable
         f.write("[observable]\n")
-        for onsite in self.onsites:
-            f.write("[[observable.onsite]]\n")
-            for line in onsite.to_toml_strs():
+        for onesite in self.onesites:
+            f.write("[[observable.onesite]]\n")
+            for line in onesite.to_toml_strs():
                 f.write(line + "\n")
         f.write("\n")
 
         for obs in self.energy_obs:
-            f.write("[[observable.twobody]]\n")
+            f.write("[[observable.twosite]]\n")
             for line in obs.to_toml_strs():
                 f.write(line + "\n")
 
-        for twobody in self.twobodies:
-            if twobody.group == 0:
+        for twosite in self.twobodies:
+            if twosite.group == 0:
                 continue
-            f.write("[[observable.twobody]]\n")
-            for line in twobody.to_toml_strs():
+            f.write("[[observable.twosite]]\n")
+            for line in twosite.to_toml_strs():
                 f.write(line + "\n")
         f.write("\n")
 

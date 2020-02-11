@@ -42,8 +42,8 @@ template <class ptensor> class TeNeS {
 public:
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         NNOperators<ptensor> simple_updates_,
-        NNOperators<ptensor> full_updates_, Operators<ptensor> onsite_operators,
-        Operators<ptensor> twobody_operators, CorrelationParameter corparam_);
+        NNOperators<ptensor> full_updates_, Operators<ptensor> onesite_operators,
+        Operators<ptensor> twosite_operators, CorrelationParameter corparam_);
 
   void initialize_tensors();
   void update_CTM();
@@ -51,8 +51,8 @@ public:
   void full_update();
 
   void measure();
-  std::vector<std::vector<double>> measure_onsite(bool save);
-  std::vector<std::map<Bond, double>> measure_twobody(bool save);
+  std::vector<std::vector<double>> measure_onesite(bool save);
+  std::vector<std::map<Bond, double>> measure_twosite(bool save);
   // std::vector<Correlation> measure_correlation(bool save);
   void optimize();
   void save_tensors() const;
@@ -68,10 +68,10 @@ private:
 
   NNOperators<ptensor> simple_updates;
   NNOperators<ptensor> full_updates;
-  Operators<ptensor> onsite_operators;
-  Operators<ptensor> twobody_operators;
-  int num_onsite_operators;
-  int num_twobody_operators;
+  Operators<ptensor> onesite_operators;
+  Operators<ptensor> twosite_operators;
+  int num_onesite_operators;
+  int num_twosite_operators;
 
   std::vector<ptensor> op_identity;
 
@@ -99,13 +99,13 @@ template <class ptensor>
 TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                       Lattice lattice_, NNOperators<ptensor> simple_updates_,
                       NNOperators<ptensor> full_updates_,
-                      Operators<ptensor> onsite_operators_,
-                      Operators<ptensor> twobody_operators_,
+                      Operators<ptensor> onesite_operators_,
+                      Operators<ptensor> twosite_operators_,
                       CorrelationParameter corparam_)
     : comm(comm_), peps_parameters(peps_parameters_), lattice(lattice_),
       simple_updates(simple_updates_), full_updates(full_updates_),
-      onsite_operators(onsite_operators_),
-      twobody_operators(twobody_operators_), corparam(corparam_),
+      onesite_operators(onesite_operators_),
+      twosite_operators(twosite_operators_), corparam(corparam_),
       outdir("output"), time_simple_update(), time_full_update(),
       time_environment(), time_observable() {
 
@@ -150,16 +150,16 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   initialize_tensors();
 
   int maxops = -1;
-  for (auto const &op : onsite_operators) {
+  for (auto const &op : onesite_operators) {
     maxops = std::max(op.group, maxops);
   }
-  num_onsite_operators = maxops + 1;
+  num_onesite_operators = maxops + 1;
 
   maxops = -1;
-  for (auto const &op : twobody_operators) {
+  for (auto const &op : twosite_operators) {
     maxops = std::max(op.group, maxops);
   }
-  num_twobody_operators = maxops + 1;
+  num_twosite_operators = maxops + 1;
 }
 
 template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
@@ -492,9 +492,9 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
 }
 
 template <class ptensor>
-std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
+std::vector<std::vector<double>> TeNeS<ptensor>::measure_onesite(bool save) {
   Timer<> timer;
-  const int nlops = num_onsite_operators;
+  const int nlops = num_onesite_operators;
   std::vector<std::vector<double>> local_obs(
       nlops,
       std::vector<double>(N_UNIT, std::numeric_limits<double>::quiet_NaN()));
@@ -504,7 +504,7 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
     norm[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
                                 eTb[i], eTl[i], Tn[i], op_identity[i]);
   }
-  for (auto const &op : onsite_operators) {
+  for (auto const &op : onesite_operators) {
     const int i = op.source_site;
     double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
                                    eTb[i], eTl[i], Tn[i], op.op);
@@ -514,9 +514,9 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
   time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
-    std::string filename = outdir + "/onsite_obs.dat";
+    std::string filename = outdir + "/onesite_obs.dat";
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save onsite observables to " << filename << std::endl;
+      std::clog << "    Save onesite observables to " << filename << std::endl;
     }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
@@ -547,17 +547,17 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onsite(bool save) {
 }
 
 template <class ptensor>
-std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twobody(bool save) {
+std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
   Timer<> timer;
 
-  const int nlops = num_twobody_operators;
+  const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, double>> ret(nlops);
 
   // 0: (2x1), 1: (1x2), 2: (2x2)
   std::vector<std::vector<double>> norms(
       N_UNIT, std::vector<double>(3, std::numeric_limits<double>::quiet_NaN()));
 
-  for (const auto &op : twobody_operators) {
+  for (const auto &op : twosite_operators) {
     const int source = op.source_site;
     const int x_source = lattice.x(source);
     const int y_source = lattice.y(source);
@@ -714,9 +714,9 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twobody(bool save) {
   time_observable += timer.elapsed();
 
   if (save && mpirank == 0) {
-    std::string filename = outdir + "/twobody_obs.dat";
+    std::string filename = outdir + "/twosite_obs.dat";
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save twobody observables to " << filename << std::endl;
+      std::clog << "    Save twosite observables to " << filename << std::endl;
     }
     std::ofstream ofs(filename.c_str());
     ofs << std::scientific
@@ -890,13 +890,13 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating local operators" << std::endl;
   }
-  auto local_obs = measure_onsite(true);
+  auto local_obs = measure_onesite(true);
 
 
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
-  auto NN_obs = measure_twobody(true);
+  auto NN_obs = measure_twosite(true);
   auto energy = 0.0;
   for(const auto& nn: NN_obs[0]){
     energy += nn.second;
@@ -927,7 +927,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 
       std::cout << "Energy = " << energy << std::endl;
 
-      for (int ilops = 0; ilops < num_onsite_operators; ++ilops) {
+      for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
         double sum = 0.0;
         for (int i = 0; i < N_UNIT; ++i) {
           sum += local_obs[ilops][i];
@@ -984,10 +984,10 @@ template <class ptensor> void TeNeS<ptensor>::save_tensors() const {
 template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-          Operators<tensor> onsite_operators,
-          Operators<tensor> twobody_operators, CorrelationParameter corparam) {
+          Operators<tensor> onesite_operators,
+          Operators<tensor> twosite_operators, CorrelationParameter corparam) {
   TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates,
-                    full_updates, onsite_operators, twobody_operators,
+                    full_updates, onesite_operators, twosite_operators,
                     corparam);
   tns.optimize();
   tns.save_tensors();
@@ -1001,8 +1001,8 @@ template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              Lattice lattice,
                              NNOperators<d_tensor> simple_updates,
                              NNOperators<d_tensor> full_updates,
-                             Operators<d_tensor> onsite_operators,
-                             Operators<d_tensor> twobody_operators,
+                             Operators<d_tensor> onesite_operators,
+                             Operators<d_tensor> twosite_operators,
                              CorrelationParameter corparam);
 /*
 using c_tensor = mptensor::Tensor<mptensor_matrix_type,

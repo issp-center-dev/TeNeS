@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from collections import namedtuple
 from itertools import product
 
@@ -12,16 +10,16 @@ TeNeSInput = namedtuple("TeNeSInput", "param lattice model lop ham")
 
 
 # https://stackoverflow.com/a/42913743
-def check_symmetric(a, rtol=1e-05, atol=1e-08):
+def check_symmetric(a: np.ndarray, rtol: float = 1e-05, atol: float = 1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
 
-def make_evolution_tensor(Ham, tau):
+def make_evolution_tensor(Ham: np.ndarray, tau: float):
     eigval, eigvec = linalg.eigh(Ham)
     return np.dot(np.dot(eigvec, np.diag(np.exp(-tau * eigval))), eigvec.transpose())
 
 
-def array_to_strarr(A):
+def array_to_strarr(A: np.ndarray):
     res = []
     X, Y = A.shape
     for x in range(X):
@@ -32,15 +30,15 @@ def array_to_strarr(A):
     return res
 
 
-def index2coord(index, X):
+def index2coord(index: int, X: int):
     return index % X, index // X
 
 
-def coord2index(x, y, X):
+def coord2index(x: int, y: int, X: int):
     return x + y * X
 
 
-def getparam(param, name, index, default):
+def getparam(param: dict, name: str, index: int, default):
     P = param.get(name, default)
     if isinstance(P, list):
         if index > len(P):
@@ -65,7 +63,7 @@ def make_Lsub(Lsub):
 Bond = namedtuple("Bond", "source target dir type")
 
 
-def dumpbond(bond):
+def dumpbond(bond: Bond):
     return "{} {} {} {}".format(bond.source, bond.target, bond.dir, bond.type)
 
 
@@ -79,7 +77,7 @@ class Lattice(object):
 
 
 class SquareLattice(Lattice):
-    def __init__(self, param=None):
+    def __init__(self, param: dict = None):
         super(SquareLattice, self).__init__()
         self.type = "square lattice"
         self.Lsub = [0, 0]
@@ -88,7 +86,7 @@ class SquareLattice(Lattice):
         if param is not None:
             self.load(param)
 
-    def load(self, param):
+    def load(self, param: dict):
         self.Lsub = make_Lsub(param["L_sub"])
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
@@ -114,7 +112,7 @@ class SquareLattice(Lattice):
 
 
 class HoneycombLattice(Lattice):
-    def __init__(self, param=None):
+    def __init__(self, param: dict = None):
         super(HoneycombLattice, self).__init__()
         self.type = "honeycomb lattice"
         self.z = 3
@@ -122,7 +120,7 @@ class HoneycombLattice(Lattice):
         if param is not None:
             self.load(param)
 
-    def load(self, param):
+    def load(self, param: dict):
         self.Lsub = make_Lsub(param["L_sub"])
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
@@ -166,7 +164,7 @@ class SpinModel:
     def __init__(self):
         pass
 
-    def localoperators(self, param):
+    def localoperators(self, param: dict):
         """
         Generates spin operators, Sz and Sx
 
@@ -177,13 +175,13 @@ class SpinModel:
 
         Returns
         -------
-        Sz : darray
+        Sz : ndarray
             Sz operator
-        Sx : darray
+        Sx : ndarray
             Sx operator
-        Splus : darray
+        Splus : ndarray
             Splus operator
-        Sminus : darray
+        Sminus : ndarray
             Sminus operator
 
         """
@@ -209,7 +207,7 @@ class SpinModel:
 
         return Sz, Sx, Splus, Sminus
 
-    def bondhamiltonian(self, param, bondtype, z):
+    def bondhamiltonian(self, param: dict, bondtype: int, z: int):
         """
         Geneates bond Hamiltonian of spin system
 
@@ -224,7 +222,7 @@ class SpinModel:
 
         Returns
         -------
-        hamiltonian : ndarray
+        hamiltonian : np.nndarray
             bond Hamiltonian
 
         """
@@ -256,7 +254,7 @@ class SpinModel:
         return ham
 
 
-def tenes_simple(param):
+def tenes_simple(param: dict):
     """
     Generates TeNeS input for spin system on a square lattice
 
@@ -320,7 +318,7 @@ def tenes_simple(param):
     return res
 
 
-def dump(param):
+def dump(param: dict):
     ret = []
 
     ret.append("[parameter]")
@@ -335,19 +333,23 @@ def dump(param):
                     ret.append("{} = {}".format(k, v))
 
     ret.append("")
-    ret.append("[lattice]")
-    lattice = param["lattice"]
-    ret.append('type = "{}"'.format(lattice.type))
-    ret.append("L_sub = {}".format(lattice.Lsub))
 
     model = param["model"]
+    lattice = param["lattice"]
+
     N = lattice.Lsub[0] * lattice.Lsub[1]
+
+    ret.append("[tensor]")
+    ret.append('type = "{}"'.format(lattice.type))
+    ret.append("L_sub = {}".format(lattice.Lsub))
+    
+
     ret.append("")
     if lattice.initial_states == "ferro":
         st = [0.0] * model.N
         st[0] = 1.0
         for i in range(N):
-            ret.append("[[lattice.site]]")
+            ret.append("[[tensor.unitcell]]")
             ret.append("index = {}".format(i))
             ret.append("initial_state = {}".format(st))
             ret.append("noise = {}".format(lattice.noise))
@@ -356,7 +358,7 @@ def dump(param):
         st[0] = 1.0
         for y in range(lattice.Lsub[1]):
             for x in range(lattice.Lsub[0]):
-                ret.append("[[lattice.site]]")
+                ret.append("[[tensor.unitcell]]")
                 ret.append("index = {}".format(x + lattice.Lsub[0] * y))
                 if (x + y) % 2 == 0:
                     ret.append("initial_state = {}".format(st))
@@ -365,7 +367,7 @@ def dump(param):
                 ret.append("noise = {}".format(lattice.noise))
     elif lattice.initial_states == "random":
         for i in range(N):
-            ret.append("[[lattice.site]]")
+            ret.append("[[tensor.unitcell]]")
             ret.append("index = {}".format(i))
             ret.append("initial_state = [0.0]")
     else:
@@ -378,7 +380,10 @@ def dump(param):
     lops = obs["local_operator"]
     hams = obs["hamiltonian"]
     ret.append("local_operator = [")
-    for lop in lops:
+    for i, lop in enumerate(lops):
+        ret.append('[[observable.onsite]]')
+        ret.append('group = {}'.format(i))
+        ret.append('sites = []')
         ret.append('"""')
         for line in array_to_strarr(lop):
             ret.append(line)

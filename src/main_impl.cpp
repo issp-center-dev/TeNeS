@@ -114,11 +114,11 @@ int main_impl(int argc, char **argv) {
     return 1;
   }
 
-  // onsite observable
-  const auto onsite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT, 1,
-                                                  "observable.onsite");
-  const auto twobody_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT,
-                                                   2, "observable.twobody");
+  // onesite observable
+  const auto onesite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT, 1,
+                                                  "observable.onesite");
+  const auto twosite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT,
+                                                   2, "observable.twosite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -127,7 +127,7 @@ int main_impl(int argc, char **argv) {
                              : CorrelationParameter());
 
   return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-               full_updates, onsite_obs, twobody_obs,
+               full_updates, onesite_obs, twosite_obs,
                corparam);
 }
 
