@@ -51,7 +51,6 @@ std::vector<ptensor> read_matrix(std::vector<std::string> const &strs) {
   return ret;
 }
 
-
 template <class ptensor>
 ptensor read_tensor(std::string const &str, mptensor::Shape dims){
   ptensor ret(dims);

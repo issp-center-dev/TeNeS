@@ -114,6 +114,13 @@ int main_impl(int argc, char **argv) {
     std::cout << "[observable] not found" << std::endl;
     return 1;
   }
+
+  // onsite observable
+  const auto onsite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT, 1,
+                                                  "observable.onsite");
+  const auto twobody_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT,
+                                                   2, "observable.twobody");
+
   const auto lops =
       gen_matrices<ptensor>(toml_observable, "local_operator", "observable");
   const auto hams =
@@ -128,7 +135,9 @@ int main_impl(int argc, char **argv) {
                              : CorrelationParameter());
 
   return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-               full_updates, ham_edges, hams, lops, corparam);
+               full_updates, onsite_obs, twobody_obs,
+               // ham_edges, hams, lops,
+               corparam);
 }
 
 } // end of namespace tenes

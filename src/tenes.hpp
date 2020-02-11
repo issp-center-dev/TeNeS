@@ -17,9 +17,11 @@ struct CorrelationParameter;
 
 template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
-          Operators<tensor> simple_updates, Operators<tensor> full_updates,
-          Edges ham_edges, std::vector<tensor> hamiltonians,
-          std::vector<tensor> local_operators, CorrelationParameter corparam);
+          NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
+          Operators<tensor> onsite_operators, Operators<tensor> twobody_operators,
+          // Edges ham_edges, std::vector<tensor> hamiltonians,
+          // std::vector<tensor> local_operators,
+          CorrelationParameter corparam);
 
 } // end of namespace tenes
 
