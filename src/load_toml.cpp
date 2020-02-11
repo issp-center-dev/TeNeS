@@ -248,8 +248,8 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   std::vector<Operator<tensor>> ret;
 
   if (nbody == 1) {
-    auto site_int = param->get_as<int>("site");
-    auto site_arr = param->get_array_of<int64_t>("site");
+    auto site_int = param->get_as<int>("sites");
+    auto site_arr = param->get_array_of<int64_t>("sites");
     std::vector<int> sites;
     if (site_arr) {
       sites.assign(site_arr->begin(), site_arr->end());
@@ -261,7 +261,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     } else if (site_int) {
       sites.push_back(*site_int);
     } else {
-      std::cerr << "cannot find \"site\"" << std::endl;
+      std::cerr << "cannot find \"sites\"" << std::endl;
       assert(false);
     }
     for (int s : sites) {
