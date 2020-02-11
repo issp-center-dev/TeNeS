@@ -1,6 +1,6 @@
 from collections import namedtuple
 from itertools import product
-from typing import List, TextIO, Tuple
+from typing import IO, List, Tuple
 
 import numpy as np
 
@@ -9,16 +9,6 @@ import scipy.sparse as sparse
 
 def all_positive(xs, v=0):
     return all(map(lambda x: x > v, xs))
-
-
-def bicoeff(n: int, k: int) -> int:
-    assert n >= 0 and 0 <= k <= n
-    k = min(k, n - k)
-    ret = 1
-    for i in np.arange(k):
-        ret *= n - i
-        ret //= i + 1
-    return ret
 
 
 Bond = namedtuple("Bond", ("source_site", "target_site", "offset_x", "offset_y"))
@@ -45,6 +35,7 @@ def encode_bond(bond: Bond) -> str:
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
     A_re = np.zeros(dims)
     A_im = np.zeros(dims)
+    ndim = A_re.ndim
     for line in elements_str.strip().splitlines():
         words = line.strip().split()
         if len(words) != len(dims) + 2:
@@ -52,14 +43,13 @@ def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.n
                 len(dims) + 2, len(words)
             )
             raise RuntimeError(msg)
-        i1 = int(words[0])
-        i2 = int(words[1])
-        o1 = int(words[2])
-        o2 = int(words[3])
-        re = float(words[4])
-        im = float(words[5])
-        A_re[i1, i2, o1, o2] = re
-        A_im[i1, i2, o1, o2] = im
+
+        index = [int(x) for x in words[0:ndim]]
+
+        re = float(words[ndim])
+        im = float(words[ndim + 1])
+        A_re[tuple(index)] = re
+        A_im[tuple(index)] = im
 
     is_real = np.all(np.isclose(A_im, 0.0, rtol=0.0, atol=atol))
     if is_real:
@@ -379,12 +369,14 @@ class TwoBodyOperator:
         self.elements = elements
         self.bond = bond
 
-    def to_toml(self, unitcell: Unitcell):
+    def to_toml_strs(self, unitcell: Unitcell) -> List[str]:
         ret = []
         ret.append("source_site = {}".format(self.bond.source_site))
         ret.append("source_leg = {}".format(unitcell.bond_direction(self.bond)))
         ret.append("dimensions = {}".format(list(self.elements.shape)))
-        it = np.nditer(self.elements, flags=['multi_index'], op_flags=['readonly'], order='F')
+        it = np.nditer(
+            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+        )
         ret.append('elements = """')
         while not it.finished:
             i = it.multi_index
@@ -392,14 +384,97 @@ class TwoBodyOperator:
             if np.abs(v) == 0.0:
                 it.iternext()
                 continue
-            line = ''
+            line = ""
             for j in i:
-                line += str(j) + ' '
-            line += ' {} {}'.format(np.real(v), np.imag(v))
+                line += str(j) + " "
+            line += " {} {}".format(np.real(v), np.imag(v))
             ret.append(line)
             it.iternext()
         ret.append('"""')
         return ret
+
+
+class OnsiteObservable:
+    def __init__(self, group: int, elements: np.ndarray, sites: List[int]):
+        self.group = group
+        assert elements.ndim == 2
+        assert elements.shape[0] == elements.shape[1]
+        self.elements = elements
+        self.sites = sites
+
+    def to_toml_strs(self) -> List[str]:
+        ret = []
+        ret.append("group = {}".format(self.group))
+        ret.append("sites = {}".format(self.sites))
+        dim = self.elements.shape[0]
+        ret.append("dim = {}".format(dim))
+        it = np.nditer(
+            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+        )
+        ret.append('elements = """')
+        while not it.finished:
+            i = it.multi_index
+            v = self.elements[i]
+            if np.abs(v) == 0.0:
+                it.iternext()
+                continue
+            line = ""
+            for j in i:
+                line += str(j) + " "
+            line += " {} {}".format(np.real(v), np.imag(v))
+            ret.append(line)
+            it.iternext()
+        ret.append('"""')
+        return ret
+
+
+class TwoBodyObservables:
+    def __init__(self, group: int, elements: np.ndarray, bonds: List[Bond]):
+        self.group = group
+        dim = elements.ndim
+        nbody = dim // 2
+        assert nbody == 2
+        assert dim == 2 * nbody
+        for i in range(nbody):
+            assert elements.shape[i] == elements.shape[i + nbody]
+
+        self.elements = elements
+        self.bonds = bonds
+
+    def to_toml_strs(self) -> List[str]:
+        ret = []
+        ret.append("group = {}".format(self.group))
+        dims = list(self.elements.shape[0:2])
+        ret.append("dim = {}".format(dims))
+        ret.append('bonds = """')
+        for b in self.bonds:
+            ret.append(
+                "{} {} {} {}".format(
+                    b.source_site, b.target_site, b.offset_x, b.offset_y
+                )
+            )
+        ret.append('"""')
+        it = np.nditer(
+            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+        )
+        ret.append('elements = """')
+        while not it.finished:
+            i = it.multi_index
+            v = self.elements[i]
+            if np.abs(v) == 0.0:
+                it.iternext()
+                continue
+            line = ""
+            for j in i:
+                line += str(j) + " "
+            line += " {} {}".format(np.real(v), np.imag(v))
+            ret.append(line)
+            it.iternext()
+        ret.append('"""')
+        return ret
+
+    def to_twobody_operators(self) -> List[TwoBodyOperator]:
+        return [TwoBodyOperator(self.elements, bond) for bond in self.bonds]
 
 
 def make_evolution(
@@ -464,6 +539,7 @@ class Model:
 
         self.unitcell = Unitcell(param["tensor"])
         offset_x_min = offset_x_max = offset_y_min = offset_y_max = 0
+        self.energy_obs = []
         self.hamiltonians = []
         for ham in param["hamiltonian"]:
             dims = ham["dims"]
@@ -478,6 +554,7 @@ class Model:
             )
             elements = load_tensor(ham["elements"], dims + dims, atol=atol)
             assert is_hermite(elements)
+            bonds = []
             for line in ham["bonds"].strip().splitlines():
                 b = parse_bond(line)
                 offset_x_min = min(b.offset_x, offset_x_min)
@@ -486,11 +563,36 @@ class Model:
                 offset_y_max = max(b.offset_y, offset_y_max)
                 assert self.unitcell.sites[b.source_site].phys_dim == elements.shape[0]
                 assert self.unitcell.sites[b.target_site].phys_dim == elements.shape[1]
+                bonds.append(b)
                 op = TwoBodyOperator(elements, b)
                 self.hamiltonians.append(op)
+            enes = TwoBodyObservables(0, elements, bonds)
+            self.energy_obs.append(enes)
         self.graph = LatticeGraph(
             self.unitcell, offset_x_min, offset_y_min, offset_x_max, offset_y_max
         )
+
+        self.onsites = []
+        self.twobodies = []
+        if "observable" in param:
+            observable = param["observable"]
+            for onsite in observable.get("onsite", []):
+                group = onsite["group"]
+                sites = onsite["sites"]
+                dim = onsite["dim"]
+                elements = load_tensor(onsite["elements"], [dim, dim], atol=atol)
+                obs = OnsiteObservable(group, elements, sites)
+                self.onsites.append(obs)
+
+            for twobody in observable.get("twobody", []):
+                group = twobody["group"]
+                bonds = [
+                    parse_bond(line) for line in twobody["bonds"].strip().splitlines()
+                ]
+                dim = twobody["dim"]
+                elements = load_tensor(twobody["elements"], dim + dim, atol=atol)
+                obs = TwoBodyObservables(group, elements, bonds)
+                self.twobodies.append(obs)
 
         self.simple_updates = []
         self.full_updates = []
@@ -501,38 +603,60 @@ class Model:
             for evo in make_evolution(ham, self.graph, self.full_tau):
                 self.full_updates.append(evo)
 
-    def to_toml(self, f: TextIO):
+    def to_toml(self, f: IO):
         # parameter
-        f.write('[parameter]\n')
-        f.write('[parameter.simple_update]\n')
-        for k, v in self.parameter['simple_update'].items():
-            f.write('{} = {}\n'.format(k, v))
-        f.write('[parameter.full_update]\n')
-        for k, v in self.parameter['simple_update'].items():
-            f.write('{} = {}\n'.format(k, v))
-        f.write('\n')
+        f.write("[parameter]\n")
+        for tablename, table in self.parameter.items():
+            f.write("[parameter.{}]\n".format(tablename))
+            for k, v in table.items():
+                f.write("{} = {}\n".format(k, v))
+        f.write("\n")
 
         # tensor
-        f.write('[tensor]\n')
-        f.write('L_sub = {}\n'.format(self.param['tensor']['L_sub']))
-        for ucell in self.param['tensor']['unitcell']:
-            f.write('index = {}\n'.format(ucell['index']))
-            f.write('physical_dim = {}\n'.format(ucell['physical_dim']))
-            f.write('virtual_dim = {}\n'.format(ucell['virtual_dim']))
-        f.write('\n')
+        f.write("[tensor]\n")
+        f.write("L_sub = {}\n".format(self.param["tensor"]["L_sub"]))
+        for ucell in self.param["tensor"]["unitcell"]:
+            f.write("[[tensor.unitcell]]\n")
+            f.write("index = {}\n".format(ucell["index"]))
+            f.write("physical_dim = {}\n".format(ucell["physical_dim"]))
+            f.write("virtual_dim = {}\n".format(ucell["virtual_dim"]))
+            if "initial_state" in ucell:
+                f.write("initial_state = {}".format(ucell["initial_state"]))
+            if "noise" in ucell:
+                f.write("noise = {}".format(ucell["noise"]))
+        f.write("\n")
 
         # observable
-        # f.write('[observable]\n')
+        f.write("[observable]\n")
+        for onsite in self.onsites:
+            f.write("[[observable.onsite]]\n")
+            for line in onsite.to_toml_strs():
+                f.write(line + "\n")
+        f.write("\n")
 
-        f.write('[evolution]\n')
+        for obs in self.energy_obs:
+            f.write("[[observable.twobody]]\n")
+            for line in obs.to_toml_strs():
+                f.write(line + "\n")
+
+        for twobody in self.twobodies:
+            if twobody.group == 0:
+                continue
+            f.write("[[observable.twobody]]\n")
+            for line in twobody.to_toml_strs():
+                f.write(line + "\n")
+        f.write("\n")
+
+        f.write("[evolution]\n")
         for update in self.simple_updates:
-            f.write('[[evolution.simple]]\n')
-            for line in update.to_toml(self.unitcell):
-                f.write(line+'\n')
+            f.write("[[evolution.simple]]\n")
+            for line in update.to_toml_strs(self.unitcell):
+                f.write(line + "\n")
         for update in self.full_updates:
-            f.write('[[evolution.full]]\n')
-            for line in update.to_toml(self.unitcell):
-                f.write(line+'\n')
+            f.write("[[evolution.full]]\n")
+            for line in update.to_toml_strs(self.unitcell):
+                f.write(line + "\n")
+
 
 if __name__ == "__main__":
     import argparse
@@ -558,5 +682,5 @@ if __name__ == "__main__":
     param = toml.load(args.input)
     model = Model(param)
 
-    with open(args.output, 'w') as f:
+    with open(args.output, "w") as f:
         model.to_toml(f)

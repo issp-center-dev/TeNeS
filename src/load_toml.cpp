@@ -141,8 +141,6 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   // Tensor
   auto tensor = param->get_table("tensor");
   if (tensor != nullptr) {
-    pparam.D = find_or(tensor, "D", 2);
-    pparam.CHI = find_or(tensor, "CHI", 4);
     pparam.tensor_load_dir = find_or(tensor, "load_dir", std::string(""));
     pparam.tensor_save_dir = find_or(tensor, "save_dir", std::string(""));
   }
@@ -170,6 +168,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   // Environment
   auto ctm = param->get_table("ctm");
   if (ctm != nullptr) {
+    pparam.CHI = find_or(ctm, "dimension", 4);
     pparam.Inverse_projector_cut = find_or(ctm, "projector_cutoff", 1e-12);
     pparam.CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
     pparam.Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
