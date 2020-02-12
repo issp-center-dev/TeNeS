@@ -30,14 +30,11 @@ TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice sys
 - [Acknowledgement](#acknowledgement)
 
 
-## Prerequisites
+## Prerequisites and dependencies
 The following tools are required for building TeNeS.
 
 - C++11 compiler
 - CMake (>=2.8.14)
-- Python (>= 3.0.0)
-    - numpy
-    - toml
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
@@ -46,6 +43,14 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 - [sanitizers-cmake](https://github.com/arsenm/sanitizers-cmake)
 
 TeNeS can be parallerized by using MPI and ScaLAPACK.
+
+TeNeS tools (`tenes_simple`, `tenes_std`) are written in Python3.
+The following external packages are required (and can be installed via `pip` command)
+
+- numpy
+- scipy
+- toml
+- typing (mandatory for python < 3.5)
 
 ## Install
 
@@ -58,7 +63,7 @@ $ cmake ../
 $ make
 ```
 
-The above commands makes an exectutable file `teses` in the `build/src` directory.
+The above commands makes an exectutable file `tenes` in the `build/src` directory.
 
 ### Install
 
