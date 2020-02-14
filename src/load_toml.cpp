@@ -32,7 +32,9 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
     assert(false);
   }
 
-  Lattice lat((*Lsub)[0], (*Lsub)[1]);
+  auto skew = find_or<int>(toml, "skew", 0);
+
+  Lattice lat((*Lsub)[0], (*Lsub)[1], skew);
 
   auto sites = toml->get_table_array("unitcell");
   if (!sites) {
@@ -92,6 +94,8 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
       }
     } // end of for indices
   }
+
+  lat.check_dims();
 
   return lat;
 }

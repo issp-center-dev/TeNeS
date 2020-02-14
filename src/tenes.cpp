@@ -42,7 +42,8 @@ template <class ptensor> class TeNeS {
 public:
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         NNOperators<ptensor> simple_updates_,
-        NNOperators<ptensor> full_updates_, Operators<ptensor> onesite_operators,
+        NNOperators<ptensor> full_updates_,
+        Operators<ptensor> onesite_operators,
         Operators<ptensor> twosite_operators, CorrelationParameter corparam_);
 
   void initialize_tensors();
@@ -562,7 +563,8 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
     const int x_source = lattice.x(source);
     const int y_source = lattice.y(source);
     const int target = op.target_site;
-    const int x_target = lattice.x(target) + op.offset_x * lattice.LX;
+    const int x_target =
+        lattice.x(target) + op.offset_x * lattice.LX + op.offset_y * lattice.skew;
     const int y_target = lattice.y(target) + op.offset_y * lattice.LY;
     const int dx = x_target - x_source;
     const int dy = y_target - y_source;
@@ -629,28 +631,31 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
       std::vector<double> s;
       mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
 
-      int left_top, left_bottom, right_top, right_bottom;
+      int left_top;
+      int psource, ptarget;
       if (dx == 1 && dy == 1) {
-        left_top = lattice.index(x_source, y_source + 1);
-        left_bottom = source;
-        right_top = target;
-        right_bottom = lattice.index(x_source + 1, y_source);
+        left_top = lattice.top(source);
+        psource = 3;
+        ptarget = 1;
       } else if (dx == 1 && dy == -1) {
         left_top = source;
-        left_bottom = lattice.index(x_source, y_source - 1);
-        right_top = lattice.index(x_source + 1, y_source);
-        right_bottom = target;
+        psource = 0;
+        ptarget = 2;
       } else if (dx == -1 && dy == 1) {
         left_top = target;
-        left_bottom = lattice.index(x_source - 1, y_source);
-        right_top = lattice.index(x_source, y_source + 1);
-        right_bottom = source;
-      } else {
-        left_top = lattice.index(x_source - 1, y_source);
-        left_bottom = target;
-        right_top = source;
-        right_bottom = lattice.index(x_source, y_source - 1);
+        psource = 2;
+        ptarget = 0;
+      } else { // dx == -1 && dy == -1
+        left_top = lattice.left(source);
+        psource = 1;
+        ptarget = 3;
       }
+      const int right_top = lattice.right(left_top);
+      const int right_bottom = lattice.bottom(right_top);
+      const int left_bottom = lattice.left(right_bottom);
+      std::array<int, 4> plaq = {left_top, right_top, right_bottom,
+                                 left_bottom};
+
       double norm = norms[left_top][2];
       if (std::isnan(norm)) {
         norm = Contract_four_sites(
@@ -664,37 +669,14 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
       }
       double value = 0.0;
       std::vector<ptensor> local_ops(4);
+      for (int i = 0; i < N_UNIT; ++i) {
+        local_ops[i] = op_identity[plaq[i]];
+      }
       for (int i = 0; i < s.size(); ++i) {
-
-        if (dx == 1 && dy == 1) {
-          local_ops[0] = op_identity[left_top];
-          local_ops[1] =
-              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
-          local_ops[2] = op_identity[right_bottom];
-          local_ops[3] =
-              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
-        } else if (dx == 1 && dy == -1) {
-          local_ops[0] =
-              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
-          local_ops[1] = op_identity[right_top];
-          local_ops[2] =
-              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
-          local_ops[3] = op_identity[left_bottom];
-        } else if (dx == -1 && dy == 1) {
-          local_ops[0] =
-              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
-          local_ops[1] = op_identity[right_top];
-          local_ops[2] =
-              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
-          local_ops[3] = op_identity[left_bottom];
-        } else {
-          local_ops[0] = op_identity[left_top];
-          local_ops[1] =
-              reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
-          local_ops[2] = op_identity[right_bottom];
-          local_ops[3] =
-              reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
-        }
+        local_ops[psource] =
+            reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
+        local_ops[ptarget] =
+            reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
 
         double localvalue = Contract_four_sites(
             C1[left_top], C2[right_top], C3[right_bottom], C4[left_bottom],
@@ -892,13 +874,12 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   }
   auto local_obs = measure_onesite(true);
 
-
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
   auto NN_obs = measure_twosite(true);
   auto energy = 0.0;
-  for(const auto& nn: NN_obs[0]){
+  for (const auto &nn : NN_obs[0]) {
     energy += nn.second;
   }
 

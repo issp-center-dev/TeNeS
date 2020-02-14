@@ -5,10 +5,11 @@
 
 namespace tenes {
 
-Lattice::Lattice(int X, int Y)
+Lattice::Lattice(int X, int Y, int skew)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
+      skew(skew),
       physical_dims(N_UNIT, -1),
       virtual_dims(N_UNIT, std::array<int, 4>{-1,-1,-1,-1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
@@ -31,8 +32,8 @@ void Lattice::calc_neighbors() {
       Tensor_list[ix][iy] = i;
     }
   }
-  for (int ix = 0; ix < LX; ++ix) {
-    for (int iy = 0; iy < LY; ++iy) {
+  for (int iy = 0; iy < LY; ++iy) {
+    for (int ix = 0; ix < LX; ++ix) {
       const int i = ix + iy * LX;
       NN_Tensor[i][0] = Tensor_list[(ix - 1 + LX) % LX][iy];
       NN_Tensor[i][1] = Tensor_list[ix][(iy + 1) % LY];
@@ -40,6 +41,13 @@ void Lattice::calc_neighbors() {
       NN_Tensor[i][3] = Tensor_list[ix][(iy - 1 + LY) % LY];
     }
   }
+  if(skew!=0){
+    for (int ix = 0; ix < LX; ++ix){
+      NN_Tensor[ix][3] = Tensor_list[(ix+LX+skew)%LX][LY-1];
+      NN_Tensor[N_UNIT+ix-LX][1] = Tensor_list[(ix+LX-skew)%LX][0];
+    }
+  }
+  logical_check();
 }
 
 void Lattice::reset(int X, int Y) {
@@ -124,5 +132,52 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   initial_dirs.assign(init_dirs.begin(), init_dirs.end());
   noises.assign(ns.begin(), ns.end());
 }
+
+void Lattice::check_dims() const{
+  for(int i=0; i<N_UNIT; ++i){
+    assert(virtual_dims[i][0] == virtual_dims[left(i)][2]);
+    assert(virtual_dims[i][1] == virtual_dims[top(i)][3]);
+    assert(virtual_dims[i][2] == virtual_dims[right(i)][0]);
+    assert(virtual_dims[i][3] == virtual_dims[bottom(i)][1]);
+  }
+}
+
+void Lattice::logical_check() const{
+  for(int i=0; i<N_UNIT; ++i){
+    // index <-> coords
+    {
+      int x = this->x(i);
+      int y = this->y(i);
+      assert(i == this->index(x, y));
+    }
+
+    // neighbors
+    {
+      int left = this->left(i);
+      assert(i == this->right(left));
+    }
+
+    {
+      int right = this->right(i);
+      assert(i == this->left(right));
+    }
+
+    {
+      int top = this->top(i);
+      assert(i == this->bottom(top));
+    }
+
+    {
+      int bottom = this->bottom(i);
+      assert(i == this->top(bottom));
+    }
+
+    // loops
+    {
+      assert(top(left(i)) == left(top(i)));
+    }
+  }
+}
+
 
 }  // end of namespace tenes

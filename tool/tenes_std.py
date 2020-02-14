@@ -20,9 +20,6 @@ def parse_bond(line: str) -> Bond:
     target_site = int(words[1])
     offset_x = int(words[2])
     offset_y = int(words[3])
-    assert (
-        source_site != target_site
-    ), "Both source and target sites have the same site index; this is unsupported."
     return Bond(source_site, target_site, offset_x, offset_y)
 
 
@@ -148,6 +145,8 @@ class Unitcell:
         else:
             self.L = L
 
+        self.skew = lat_dict.get("skew", 0)
+
         N = self.L[0] * self.L[1]
         self.sites = [None] * N
         for site in lat_dict["unitcell"]:
@@ -166,7 +165,7 @@ class Unitcell:
     def bond_displacement(self, bond: Bond) -> Tuple:
         x, y = self.index2coord(bond.source_site)
         X, Y = self.index2coord(bond.target_site)
-        X += self.L[0] * bond.offset_x
+        X += (self.L[0]) * bond.offset_x + self.skew * bond.offset_y
         Y += self.L[1] * bond.offset_y
         dx = X - x
         dy = Y - y
@@ -206,6 +205,13 @@ class Unitcell:
             if Y == self.L[1]:
                 Y = 0
                 offset_y = 1
+                X = x - self.skew
+                if X < 0:
+                    X += self.L[0]
+                    offset_x = -1
+                elif X >= self.L[0]:
+                    X -= self.L[0]
+                    offset_x = 1
         elif direction == 2:
             X = x + 1
             if X == self.L[0]:
@@ -216,6 +222,14 @@ class Unitcell:
             if Y < 0:
                 Y = self.L[1] - 1
                 offset_y = -1
+                X = x + self.skew
+                if X < 0:
+                    X += self.L[0]
+                    offset_x = -1
+                elif X >= self.L[0]:
+                    X -= self.L[0]
+                    offset_x = 1
+
         return Bond(source, self.coord2index(X, Y), offset_x, offset_y)
 
     def check(self):
@@ -264,11 +278,19 @@ class Unitcell:
         if direction == 0:
             x = (x - 1 + self.L[0]) % self.L[0]
         elif direction == 1:
-            y = (y + 1) % self.L[1]
+            if self.skew == 0 or y < self.L[1]:
+                y = (y + 1) % self.L[1]
+            else:
+                y = 0
+                x = (x + self.skew + self.L[0]) % self.L[0]
         elif direction == 2:
             x = (x + 1) % self.L[0]
         elif direction == 4:
-            y = (y - 1 + self.L[1]) % self.L[1]
+            if self.skew == 0 or y == 0:
+                y = (y - 1 + self.L[1]) % self.L[1]
+            else:
+                y = 0
+                x = (x - self.skew + self.L[0]) % self.L[0]
         else:
             msg = "ERROR: given direction is {}, but must be 0, 1, 2, or 3".format(
                 direction
@@ -615,6 +637,8 @@ class Model:
         # tensor
         f.write("[tensor]\n")
         f.write("L_sub = {}\n".format(self.param["tensor"]["L_sub"]))
+        if "skew" in self.param["tensor"]:
+            f.write("skew = {}\n".format(self.param["tensor"]["skew"]))
         for ucell in self.param["tensor"]["unitcell"]:
             f.write("[[tensor.unitcell]]\n")
             f.write("index = {}\n".format(ucell["index"]))
