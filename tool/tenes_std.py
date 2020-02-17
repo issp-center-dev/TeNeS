@@ -645,9 +645,9 @@ class Model:
             f.write("physical_dim = {}\n".format(ucell["physical_dim"]))
             f.write("virtual_dim = {}\n".format(ucell["virtual_dim"]))
             if "initial_state" in ucell:
-                f.write("initial_state = {}".format(ucell["initial_state"]))
+                f.write("initial_state = {}\n".format(ucell["initial_state"]))
             if "noise" in ucell:
-                f.write("noise = {}".format(ucell["noise"]))
+                f.write("noise = {}\n".format(ucell["noise"]))
         f.write("\n")
 
         # observable
