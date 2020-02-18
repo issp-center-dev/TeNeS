@@ -215,7 +215,6 @@ class TriangularLattice(Lattice):
             if self.initial_states == "antiferro":
                 x, y = index2coord(source, L)
                 nhop = nhops[x, y]
-                print(x, y, nhop)
                 nhops[x + 1, y] = min(nhop + 1, nhops[x + 1, y])
                 nhops[x, y + 1] = min(nhop + 1, nhops[x, y + 1])
                 nhops[x + 1, y + 1] = min(nhop + 2, nhops[x + 1, y + 1])
