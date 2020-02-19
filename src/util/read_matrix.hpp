@@ -23,7 +23,7 @@ ptensor read_matrix(std::string const &str) {
     auto fields = util::split(line);
     std::vector<double> row;
     for (auto field : fields) {
-      row.push_back(std::stof(field));
+      row.push_back(std::stod(field));
     }
     A.push_back(row);
   }
@@ -68,7 +68,7 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims){
     for(size_t i=0; i<rank; ++i){
       index[i] = std::stoi(fields[i]);
     }
-    ret.set_value(index, std::stof(fields[rank]));
+    ret.set_value(index, std::stod(fields[rank]));
   }
   return ret;
 }

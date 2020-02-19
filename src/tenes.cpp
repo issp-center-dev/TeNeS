@@ -669,7 +669,7 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
       }
       double value = 0.0;
       std::vector<ptensor> local_ops(4);
-      for (int i = 0; i < N_UNIT; ++i) {
+      for (int i = 0; i < plaq.size(); ++i) {
         local_ops[i] = op_identity[plaq[i]];
       }
       for (int i = 0; i < s.size(); ++i) {
