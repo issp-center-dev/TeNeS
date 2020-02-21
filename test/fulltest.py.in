@@ -1,15 +1,11 @@
-from __future__ import print_function
-
 import subprocess
 import sys
 from os.path import join
 
-
-def nearly_equal(x, y, tol):
-    return -tol < x - y < tol
+import numpy as np
 
 
-def check(filename, resdir, refdir, tol):
+def check(filename, resdir, refdir, *, rtol, atol):
     res = []
     with open(join(resdir, filename)) as f:
         for line in f:
@@ -29,16 +25,20 @@ def check(filename, resdir, refdir, tol):
             ref.append(list(map(float, words)))
 
     if len(res) != len(ref):
+        print("{}: number of entries do not match".format(filename))
+        print("  result:    {}".format(len(res)))
+        print("  reference: {}".format(len(ref)))
         return False
 
+    fl = True
     for i, (rs, rf) in enumerate(zip(res, ref)):
         for s, f in zip(rs, rf):
-            if not nearly_equal(s, f, tol):
+            if not np.isclose(s, f, rtol=rtol, atol=atol):
                 print("{}: {}-th data do not match:".format(filename, i))
                 print("  result:    ", " ".join(map(str, rs)))
                 print("  reference: ", " ".join(map(str, rf)))
-                return False
-    return True
+                fl = False
+    return fl
 
 
 cmd = [join("@CMAKE_BINARY_DIR@", "src", "tenes"), join("data", "fulltest.toml")]
@@ -47,12 +47,13 @@ subprocess.call(cmd)
 
 resdir = "output"
 refdir = join("data", "full_output")
-tol = 1.0e-12
+atol = 1.0e-4
+rtol = 1.0e-3
 
 result = True
 
-result = check("onesite_obs.dat", resdir, refdir, tol) and result
-result = check("twosite_obs.dat", resdir, refdir, tol) and result
+result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 # result = check("correlation.dat", resdir, refdir, tol) and result
 
 if result:

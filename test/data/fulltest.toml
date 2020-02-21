@@ -5,6 +5,8 @@ num_step = 100
 [parameter.full_update]
 tau = 0.01
 num_step = 1
+[parameter.ctm]
+dimension = 10
 
 [tensor]
 L_sub = [2, 2]
