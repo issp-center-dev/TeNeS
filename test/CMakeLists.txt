@@ -3,14 +3,6 @@ link_directories(${MPTENSOR_LIB_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py
-               @ONLY)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/simple_mode.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/simple_mode.py
-               @ONLY)
-
 foreach(basename input simple_update full_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
@@ -31,5 +23,9 @@ foreach(basename input simple_update full_update)
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
 endforeach()
 
-add_test(NAME simple_mode COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/simple_mode.py)
-add_test(NAME fulltest COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py)
+foreach(name simple_mode std_mode fulltest)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/${name}.py
+               @ONLY)
+add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
+endforeach()

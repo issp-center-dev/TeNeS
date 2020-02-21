@@ -1,0 +1,47 @@
+[parameter]
+[parameter.simple_update]
+tau = 0.01
+num_step = 100
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [3, 3, 3, 3]
+noise = 0.01
+initial_state = [1.0, 0.0]
+
+[[hamiltonian]]
+dims = [2, 2]
+bonds = """
+0 1 0 0
+0 3 0 0
+"""
+elements = """
+0 1 1 0 0.5 0.0
+1 0 0 1 0.5 0.0
+"""
+
+[observable]
+[[observable.onesite]]
+group = 0
+sites = []
+dim = 2
+elements = """
+0 0 0.5 0.0
+1 1 -0.5 0.0
+"""
+[[observable.onesite]]
+group = 1
+sites = []
+dim = 2
+elements = """
+1 0 0.5 0.0
+0 1 0.5 0.0
+"""
