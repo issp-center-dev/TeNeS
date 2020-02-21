@@ -14,7 +14,7 @@ def check(filename, resdir, refdir, tol):
     with open(join(resdir, filename)) as f:
         for line in f:
             line = line.split("#")[0].strip()
-            if len(line) == 0:
+            if not line:
                 continue
             words = line.split()
             res.append(list(map(float, words)))
@@ -23,7 +23,7 @@ def check(filename, resdir, refdir, tol):
     with open(join(refdir, filename)) as f:
         for line in f:
             line = line.split("#")[0].strip()
-            if len(line) == 0:
+            if not line:
                 continue
             words = line.split()
             ref.append(list(map(float, words)))
@@ -51,10 +51,9 @@ tol = 1.0e-12
 
 result = True
 
-result = check("energy.dat", resdir, refdir, tol) and result
-result = check("site_obs.dat", resdir, refdir, tol) and result
-result = check("neighbor_obs.dat", resdir, refdir, tol) and result
-result = check("correlation.dat", resdir, refdir, tol) and result
+result = check("onesite_obs.dat", resdir, refdir, tol) and result
+result = check("twosite_obs.dat", resdir, refdir, tol) and result
+# result = check("correlation.dat", resdir, refdir, tol) and result
 
 if result:
     sys.exit(0)
