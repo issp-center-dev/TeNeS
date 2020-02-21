@@ -2,14 +2,22 @@
 #include "doctest.h"
 
 #include <fstream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include <util/string.cpp>
 #include <Lattice.cpp>
 #include <PEPS_Parameters.cpp>
-#include <edge.cpp>
 #include <load_toml.cpp>
 #include <mpi.cpp>
+
+auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
+  std::stringstream ss;
+  ss << str;
+  cpptoml::parser p{ss};
+  return p.parse();
+}
 
 TEST_CASE("input") {
   using namespace tenes;
@@ -19,13 +27,41 @@ TEST_CASE("input") {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
 #endif
 
-  auto input_toml = cpptoml::parse_file("data/check_input.toml");
-
   SUBCASE("parameter") {
-    PEPS_Parameters peps_parameters =
-        gen_param(input_toml->get_table("parameter"));
+    INFO("parameter");
+    auto toml = parse_str(R"(
+[parameter]
+[parameter.tensor]
+save_dir = "checkpoint"
+load_dir = "checkpoint"
 
-    CHECK(peps_parameters.D == 4);
+[parameter.simple_update]
+num_step = 1000
+lambda_cutoff = 1e-10
+
+[parameter.full_update]
+num_step = 1
+inverse_precision = 1e-10
+convergence_epsilon = 1e-10
+env_cutoff = 1e-10
+iteration_max = 100
+gauge_fix = false
+fastfullupdate = false
+
+[parameter.ctm]
+dimension = 16
+projector_cutoff = 1e-10
+convergence_epsilon = 1e-8
+iteration_max = 10
+projector_corner = true
+use_rsvd = true
+rsvd_oversampling_factor = 3.0
+
+[parameter.random]
+seed = 42)");
+
+    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+
     CHECK(peps_parameters.CHI == 16);
 
     CHECK(peps_parameters.num_simple_step == 1000);
@@ -44,152 +80,138 @@ TEST_CASE("input") {
     CHECK(peps_parameters.Max_CTM_Iteration == 10);
     CHECK(peps_parameters.CTM_Projector_corner == true);
     CHECK(peps_parameters.Use_RSVD == true);
-    CHECK(peps_parameters.RSVD_Oversampling_factor == 10);
+    CHECK(peps_parameters.RSVD_Oversampling_factor == 3.0);
+
+    CHECK(peps_parameters.seed == 42);
   }
 
-  SUBCASE("lattice") {
-    auto toml_lattice = input_toml->get_table("lattice");
-    Lattice lattice = gen_lattice(toml_lattice);
-    CHECK(lattice.LX == 3);
-    CHECK(lattice.LY == 2);
+  SUBCASE("tensor") {
+    INFO("tensor");
+    auto toml = parse_str(R"(
+[tensor]
+L_sub = [4, 1]
+skew = 2
+[[tensor.unitcell]]
+index = [0, 2]
+physical_dim = 2
+virtual_dim = [4, 3, 4, 3]
+initial_state = [1.0, 0.0]
+noise = 0.01
+[[tensor.unitcell]]
+index = [1, 3]
+physical_dim = 3
+virtual_dim = [4, 1, 4, 1]
+initial_state = [0.0, 1.0]
+noise = 0.01
+    )");
+    Lattice lattice = gen_lattice(toml->get_table("tensor"));
+    CHECK(lattice.LX == 4);
+    CHECK(lattice.LY == 1);
+    CHECK(lattice.skew == 2);
   }
 
   SUBCASE("evolution") {
-    auto toml_evolution = input_toml->get_table("evolution");
-
     {
       INFO("simple_update");
-      const auto simple_edges =
-          gen_edges(toml_evolution, "simple_update", "evolution");
-      CHECK(simple_edges[0].dir == Edge::horizontal);
-      CHECK(simple_edges[0].source_site == 0);
-      CHECK(simple_edges[0].target_site == 1);
-      CHECK(simple_edges[0].op_id == 0);
-
-      CHECK(simple_edges[1].dir == Edge::vertical);
-      CHECK(simple_edges[1].source_site == 0);
-      CHECK(simple_edges[1].target_site == 1);
-      CHECK(simple_edges[1].op_id == 1);
+      auto toml = parse_str(R"(
+[evolution]
+[[evolution.simple]]
+source_site = 0
+source_leg = 2
+dimensions = [2,2,2,4]
+elements = """
+0 0 0 0 1.0 0.0
+"""
+      )");
+      const auto simple_updates = tenes::load_simple_updates<ptensor>(toml);
+      CHECK(simple_updates[0].source_site == 0);
+      CHECK(simple_updates[0].source_leg == 2);
+      auto &op = simple_updates[0].op;
+      CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
+      double v = 0.0;
+      op.get_value({0, 0, 0, 0}, v);
+      CHECK(v == 1.0);
     }
     {
       INFO("full_update");
-      const auto full_edges =
-          gen_edges(toml_evolution, "full_update", "evolution");
-      CHECK(full_edges[0].dir == Edge::horizontal);
-      CHECK(full_edges[0].source_site == 0);
-      CHECK(full_edges[0].target_site == 2);
-      CHECK(full_edges[0].op_id == 0);
-
-      CHECK(full_edges[1].dir == Edge::vertical);
-      CHECK(full_edges[1].source_site == 0);
-      CHECK(full_edges[1].target_site == 2);
-      CHECK(full_edges[1].op_id == 2);
-    }
-
-    {
-      INFO("matrix");
-      const auto evolutions =
-          gen_matrices<ptensor>(toml_evolution, "matrix", "evolution");
-      CHECK(evolutions[0].shape() == mptensor::Shape(4, 4));
-      for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-          double val;
-          evolutions[0].get_value(mptensor::Index(i, j), val);
-          if (i == j) {
-            CHECK(val == 1.0);
-          } else {
-            CHECK(val == 0.0);
-          }
-        }
-      }
+      auto toml = parse_str(R"(
+[evolution]
+[[evolution.full]]
+source_site = 0
+source_leg = 2
+dimensions = [2,2,2,4]
+elements = """
+0 0 0 0 1.0 0.0
+"""
+      )");
+      const auto full_updates = tenes::load_full_updates<ptensor>(toml);
+      CHECK(full_updates[0].source_site == 0);
+      CHECK(full_updates[0].source_leg == 2);
+      auto &op = full_updates[0].op;
+      CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
+      double v = 0.0;
+      op.get_value({0, 0, 0, 0}, v);
+      CHECK(v == 1.0);
     }
   }
 
   SUBCASE("observable") {
-    auto toml_observable = input_toml->get_table("observable");
-
     {
-      INFO("local_operator");
-      const auto lops = gen_matrices<ptensor>(toml_observable, "local_operator",
-                                              "observable");
-      CHECK(lops.size() == 2);
-      CHECK(lops[0].shape() == mptensor::Shape(2, 2));
-
-      double val;
-      lops[0].get_value(mptensor::Index(0, 0), val);
-      CHECK(val == 0.5);
-      lops[0].get_value(mptensor::Index(0, 1), val);
-      CHECK(val == 0.0);
-      lops[0].get_value(mptensor::Index(1, 0), val);
-      CHECK(val == 0.0);
-      lops[0].get_value(mptensor::Index(1, 1), val);
-      CHECK(val == -0.5);
-
-      lops[1].get_value(mptensor::Index(0, 0), val);
-      CHECK(val == 0.0);
-      lops[1].get_value(mptensor::Index(0, 1), val);
-      CHECK(val == 0.5);
-      lops[1].get_value(mptensor::Index(1, 0), val);
-      CHECK(val == 0.5);
-      lops[1].get_value(mptensor::Index(1, 1), val);
-      CHECK(val == 0.0);
+      INFO("onesite");
+      auto toml = parse_str(R"(
+[observable]
+[[observable.onesite]]
+group = 0
+sites = []
+dim = 2
+elements = """
+0 0 1.0 0.0
+"""
+      )");
+      auto onesites = load_operators<ptensor>(toml, 2, 1, "observable.onesite");
+      for(int i=0; i<2; ++i){
+        auto const& on = onesites[i];
+        CHECK(on.group == 0);
+        CHECK(on.source_site == i);
+        CHECK(on.target_site == -1);
+        CHECK(on.offset_x == 0);
+        CHECK(on.offset_y == 0);
+        CHECK(on.op.shape() == mptensor::Shape{2,2});
+        double v = 0.0;
+        on.op.get_value({0, 0}, v);
+        CHECK(v == 1.0);
+      }
     }
-
-    const auto hams =
-        gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
     {
-      INFO("hamiltonian");
-      const auto hams =
-          gen_matrices<ptensor>(toml_observable, "hamiltonian", "observable");
-      CHECK(hams.size() == 1);
-      CHECK(hams[0].shape() == mptensor::Shape(4, 4));
-
-      double val;
-      for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j) {
-          double val;
-          hams[0].get_value(mptensor::Index(i, j), val);
-          if (i == 0 && j == 0) {
-            CHECK(val == 0.25);
-          } else if (i == 1 && j == 1) {
-            CHECK(val == -0.25);
-          } else if (i == 1 && j == 2) {
-            CHECK(val == 0.5);
-          } else if (i == 2 && j == 1) {
-            CHECK(val == 0.5);
-          } else if (i == 2 && j == 2) {
-            CHECK(val == -0.25);
-          } else if (i == 3 && j == 3) {
-            CHECK(val == 0.25);
-          } else {
-            CHECK(val == 0.0);
-          }
-        }
-    }
-
-    {
-      INFO("hamiltonian_bonds");
-      const auto ham_edges =
-          gen_edges(toml_observable, "hamiltonian_bonds", "observable");
-      CHECK(ham_edges[0].dir == Edge::horizontal);
-      CHECK(ham_edges[0].source_site == 0);
-      CHECK(ham_edges[0].target_site == 1);
-      CHECK(ham_edges[0].op_id == 0);
-
-      CHECK(ham_edges[1].dir == Edge::vertical);
-      CHECK(ham_edges[1].source_site == 0);
-      CHECK(ham_edges[1].target_site == 1);
-      CHECK(ham_edges[1].op_id == 2);
+      INFO("twosite");
+      auto toml = parse_str(R"(
+[observable]
+[[observable.twosite]]
+group = 0
+dim = [2,2]
+bonds = """
+0 1 0 0
+1 2 1 1
+"""
+elements = """
+0 0 0 0 1.0 0.0
+"""
+      )");
+      auto onesites = load_operators<ptensor>(toml, 2, 2, "observable.twosite");
+      for(int i=0; i<2; ++i){
+        auto const& on = onesites[i];
+        CHECK(on.group == 0);
+        CHECK(on.source_site == i);
+        CHECK(on.target_site == i+1);
+        CHECK(on.offset_x == i);
+        CHECK(on.offset_y == i);
+        CHECK(on.op.shape() == mptensor::Shape{2,2,2,2});
+        double v = 0.0;
+        on.op.get_value({0, 0, 0, 0}, v);
+        CHECK(v == 1.0);
+      }
     }
   }
 
-  SUBCASE("correlation") {
-    auto toml_cor = input_toml->get_table("correlation");
-    CorrelationParameter corparam = gen_corparam(toml_cor, "correlation");
-    CHECK(corparam.r_max == 5);
-    CHECK(std::get<0>(corparam.operators[0]) == 0);
-    CHECK(std::get<1>(corparam.operators[0]) == 0);
-    CHECK(std::get<0>(corparam.operators[1]) == 1);
-    CHECK(std::get<1>(corparam.operators[1]) == 1);
-  }
+  SUBCASE("correlation") {}
 }
