@@ -12,13 +12,13 @@ skew = 0
 [[tensor.unitcell]]
 index = [0, 3]
 physical_dim = 2
-virtual_dim = [2, 2, 2, 2]
+virtual_dim = [3, 3, 3, 3]
 initial_state = [1.0, 0.0]
 noise = 0.01
 [[tensor.unitcell]]
 index = [1, 2]
 physical_dim = 2
-virtual_dim = [2, 2, 2, 2]
+virtual_dim = [3, 3, 3, 3]
 initial_state = [0.0, 1.0]
 noise = 0.01
 
