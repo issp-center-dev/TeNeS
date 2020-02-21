@@ -1,6 +1,7 @@
 import subprocess
 import sys
-from os.path import join
+from shutil import rmtree, move
+from os.path import exists, join
 
 import numpy as np
 
@@ -40,13 +41,14 @@ def check(filename, resdir, refdir, *, rtol, atol):
                 fl = False
     return fl
 
-
-cmd = [join("@CMAKE_BINARY_DIR@", "src", "tenes"), join("data", "fulltest.toml")]
+testname = sys.argv[1]
+cmd = [join("@CMAKE_BINARY_DIR@", "src", "tenes"), join("data", "{}.toml".format(testname))]
 subprocess.call(cmd)
-
-
-resdir = "output"
-refdir = join("data", "full_output")
+resdir = "output_{}".format(testname)
+if exists(resdir):
+    rmtree(resdir)
+move("output", resdir)
+refdir = join("data", resdir)
 atol = 1.0e-4
 rtol = 1.0e-3
 
