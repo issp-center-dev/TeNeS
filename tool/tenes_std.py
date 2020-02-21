@@ -342,7 +342,6 @@ class LatticeGraph:
                         A[source_site, target_site] = 2 * weight
         self.path_weight, self.path_pred = sparse.csgraph.shortest_path(
             sparse.csr_matrix(A),
-            indices=[self.graph_site(i) for i in range(unitcell.numsites())],
             return_predecessors=True,
         )
 
@@ -363,7 +362,7 @@ class LatticeGraph:
 
     def make_path(self, bond: Bond) -> List[Bond]:
         target_index = self.graph_site(bond.target_site, bond.offset_x, bond.offset_y)
-        path_pred = self.path_pred[bond.source_site]
+        path_pred = self.path_pred[self.graph_site(bond.source_site)]
         targets = [target_index]
         target_index = path_pred[target_index]
         while target_index >= 0:
