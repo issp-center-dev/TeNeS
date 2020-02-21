@@ -528,7 +528,7 @@ def make_evolution(
     index += list(range(4 + nmids, 2 * nsites))
     index += [3]
     I = np.eye(np.prod(mdofs)).reshape(mdofs + mdofs)
-    A = np.einsum("ijkl, ... -> ijkl...", evo, I).transpose(index)
+    A = np.einsum("ijkl,...->ijkl...", evo, I).transpose(index)
 
     dofs = [dims[0]] + mdofs + [dims[1]]
 
