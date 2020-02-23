@@ -13,12 +13,12 @@ mutable struct Tensors
     ops :: Vector{Tensor}
     nrow :: Int
     ncol :: Int
-    function Tensors(nrow::Integer, ncol::Integer; orig::Integer=0) 
-        corners = gen_corners()
-        edges = gen_edges(nrow, ncol, orig=orig)
-        centers = gen_centers(nrow, ncol, orig=orig)
-        Ccenters = gen_centers(nrow, ncol, conj=true, orig=orig)
-        ops = gen_ops(nrow, ncol, orig=orig)
+    function Tensors(nrow::Integer, ncol::Integer; orig::Integer=0, pass_as_vector::Bool=false)
+        corners = gen_corners(orig=orig, pass_as_vector=pass_as_vector)
+        edges = gen_edges(nrow, ncol, orig=orig, pass_as_vector=pass_as_vector)
+        centers = gen_centers(nrow, ncol, orig=orig, pass_as_vector=pass_as_vector)
+        Ccenters = gen_centers(nrow, ncol, conj=true, orig=orig, pass_as_vector=pass_as_vector)
+        ops = gen_ops(nrow, ncol, orig=orig, pass_as_vector=pass_as_vector)
         tns = new(corners, edges, centers, Ccenters, ops, nrow, ncol)
         contract!(tns)
         check_bonds(tns)
@@ -26,41 +26,48 @@ mutable struct Tensors
     end
 end
 
-function gen_corners()
+function gen_corners(; orig::Integer=0, pass_as_vector::Bool=false)
     corners = Tensor[]
-    push!(corners, Tensor("C_tl", ["C_tl_b", "C_tl_r"]))
-    push!(corners, Tensor("C_tr", ["C_tr_l", "C_tr_b"]))
-    push!(corners, Tensor("C_br", ["C_br_t", "C_br_l"]))
-    push!(corners, Tensor("C_bl", ["C_bl_r", "C_bl_t"]))
+    if pass_as_vector
+        for i in 0:3
+            index = orig+i
+            push!(corners, Tensor("*(C[$(index)])", ["C_$(index)_0", "C_$(index)_1"]))
+        end
+    else
+        push!(corners, Tensor("C_tl", ["C_tl_b", "C_tl_r"]))
+        push!(corners, Tensor("C_tr", ["C_tr_l", "C_tr_b"]))
+        push!(corners, Tensor("C_br", ["C_br_t", "C_br_l"]))
+        push!(corners, Tensor("C_bl", ["C_bl_r", "C_bl_t"]))
+    end
     return corners
 end
 
-function gen_edges(nrow, ncol; orig=0)
+function gen_edges(nrow, ncol; orig=0, pass_as_vector::Bool=false)
     edges = Tensor[]
     for icol in 1:ncol
         i = orig+icol-1
-        name = "eT_t$(i)"
+        name = pass_as_vector ? "*(eTt[$(i)])" : "eTt_$(i)"
         push!(edges, Tensor(name, ["$(name)_$dir" for dir in ("l", "r", "b", "Cb")]))
     end
     for irow in 1:nrow
         i = orig+irow-1
-        name = "eT_r$(i)"
+        name = pass_as_vector ? "*(eTr[$(i)])" : "eTr_$(i)"
         push!(edges, Tensor(name, ["$(name)_$dir" for dir in ("t", "b", "l", "Cl")]))
     end
     for icol in reverse(1:ncol)
         i = orig+icol-1
-        name = "eT_b$(i)"
+        name = pass_as_vector ? "*(eTb[$(i)])" : "eTb_$(i)"
         push!(edges, Tensor(name, ["$(name)_$dir" for dir in ("r", "l", "t", "Ct")]))
     end
     for irow in reverse(1:nrow)
         i = orig+irow-1
-        name = "eT_l$(i)"
+        name = pass_as_vector ? "*(eTl[$(i)])" : "eTl_$(i)"
         push!(edges, Tensor(name, ["$(name)_$dir" for dir in ("b", "t", "r", "Cr")]))
     end
     return edges
 end
 
-function gen_centers(nrow, ncol; conj::Bool=false, orig::Integer=0)
+function gen_centers(nrow, ncol; conj::Bool=false, orig::Integer=0, pass_as_vector::Bool=false)
     centers = Tensor[]
     for irow in 1:nrow
         irow = orig+irow-1
@@ -68,10 +75,10 @@ function gen_centers(nrow, ncol; conj::Bool=false, orig::Integer=0)
             icol = orig+icol-1
             bond_base = "Tn_$(irow)_$(icol)"
             if conj
-                name = "conj(Tn_$(irow)_$(icol))"
+                name = pass_as_vector ? "conj(*(Tn[$(irow)][$(icol)]))" : "conj(Tn_$(irow)_$(icol))"
                 bond_prefix = "C"
             else
-                name = "Tn_$(irow)_$(icol)"
+                name = pass_as_vector ? "*(Tn[$(irow)][$(icol)])" : "Tn_$(irow)_$(icol)"
                 bond_prefix = ""
             end
             bonds =  ["$(bond_prefix)$(bond_base)_$dir" for dir in ("l", "t", "r", "b")]
@@ -82,13 +89,14 @@ function gen_centers(nrow, ncol; conj::Bool=false, orig::Integer=0)
     return centers
 end
 
-function gen_ops(nrow, ncol; orig=0)
+function gen_ops(nrow, ncol; orig=0, pass_as_vector::Bool=false)
     ops = Tensor[]
     for irow in 1:nrow
         irow = orig + irow -1
         for icol in 1:ncol
             icol = orig + icol -1
-            push!(ops, Tensor("op_$(irow)_$(icol)", ["p_$(irow)_$icol", "Cp_$(irow)_$icol"] ))
+            name = pass_as_vector ? "*(op[$(irow)][$(icol)])" : "op_$(irow)_$(icol)"
+            push!(ops, Tensor(name, ["p_$(irow)_$icol", "Cp_$(irow)_$icol"] ))
         end
     end
     return ops
@@ -154,15 +162,19 @@ function contract!(tensors::Tensors)
             index = coord2index(irow, icol)
             if icol > 1
                 centers[index].bonds[1] = centers[coord2index(irow, icol-1)].bonds[3]
+                Ccenters[index].bonds[1] = Ccenters[coord2index(irow, icol-1)].bonds[3]
             end
             if irow > 1
                 centers[index].bonds[2] = centers[coord2index(irow-1, icol)].bonds[4]
+                Ccenters[index].bonds[2] = Ccenters[coord2index(irow-1, icol)].bonds[4]
             end
             if icol < ncol
                 centers[index].bonds[3] = centers[coord2index(irow, icol+1)].bonds[1]
+                Ccenters[index].bonds[3] = Ccenters[coord2index(irow, icol+1)].bonds[1]
             end
             if irow < nrow
                 centers[index].bonds[4] = centers[coord2index(irow+1, icol)].bonds[2]
+                Ccenters[index].bonds[4] = Ccenters[coord2index(irow+1, icol)].bonds[2]
             end
         end
     end
@@ -202,7 +214,6 @@ function ctm_bonds(tensors::Tensors)
 end
 
 function check_bonds(tensors::Tensors)
-    fails = Set{String}()
     counts = Dict{String, Int}()
     for T in Iterators.flatten((tensors.corners, tensors.edges, tensors.centers, tensors.Ccenters, tensors.ops))
         for b in T.bonds
@@ -213,12 +224,16 @@ function check_bonds(tensors::Tensors)
             counts[b] = c+1
         end
     end
-    if length(fails) > 0
-        println("FAILED: following bonds have more than 2 endpoints")
-        for b in fails
-            println(b)
+    OK = true
+    for (b,c) in counts
+        if c != 2
+            println("FAILED: bond $(b) appears $(c) time(s)")
+            OK = false
         end
-        error()
+        if !OK
+            dump_tensors(stdout, tensors)
+            error("some bonds have trouble")
+        end
     end
 end
 
@@ -235,7 +250,7 @@ function dump(tensors::Tensors; args...)
     dump(stdout, tensors; args...)
 end
 
-function dump(io::IO, tensors::Tensors; pdim::Integer=2, vdim::Integer=4, Cdim::Integer=vdim^2, lang::AbstractString="cpp")
+function dump_tensors(io::IO, tensors::Tensors)
     for t in tensors.corners
         println(io, t)
     end
@@ -260,6 +275,10 @@ function dump(io::IO, tensors::Tensors; pdim::Integer=2, vdim::Integer=4, Cdim::
         println(io, t)
     end
     println(io)
+end
+
+function dump(io::IO, tensors::Tensors; pdim::Integer=2, vdim::Integer=4, Cdim::Integer=vdim^2, lang::AbstractString="cpp")
+    dump_tensors(io, tensors)
 
     print(io, "bond_dim ", pdim)
     for b in phys_bonds(tensors)
@@ -292,7 +311,7 @@ function dump(io::IO, tensors::Tensors; pdim::Integer=2, vdim::Integer=4, Cdim::
     println(io, "indent ", indent)
 end
 
-function dump_fn_declare(io::IO, tensors::Tensors; lang::AbstractString="cpp")
+function dump_fn_declare(io::IO, tensors::Tensors; lang::AbstractString="cpp", pass_as_vector::Bool=false)
 
     iter = Iterators.flatten((tensors.corners, tensors.edges, tensors.centers, tensors.ops))
 
@@ -300,19 +319,39 @@ function dump_fn_declare(io::IO, tensors::Tensors; lang::AbstractString="cpp")
         println(io, "template <class tensor>")
         println(io, "typename tensor::value_type")
         println(io, "Contract_$(tensors.nrow)x$(tensors.ncol)(")
-        args = String[]
-        for T in iter
-            push!(args, "  const tensor &$(T.name)")
+        if pass_as_vector
+            println(io, "  std::vector<const tensor*> &C,")
+            println(io, "  std::vector<const tensor*> &eTt,")
+            println(io, "  std::vector<const tensor*> &eTr,")
+            println(io, "  std::vector<const tensor*> &eTb,")
+            println(io, "  std::vector<const tensor*> &eTl,")
+            println(io, "  std::vector<std::vector<const tensor*>> &Tn,")
+            println(io, "  std::vector<std::vector<const tensor*>> &op")
+        else
+            args = String[]
+            for T in iter
+                push!(args, "  const tensor &$(T.name)")
+            end
+            println(io, join(args, ",\n"))
         end
-        println(io, join(args, ",\n"))
         println(io, ")")
     else
         println(io, "def Contract_$(tensors.nrow)x$(tensors.ncol)(")
-        args = String[]
-        for T in iter
-            push!(args, "    $(T.name): np.ndarray")
+        if pass_as_vector
+            println(io, "    C: List[np.ndarray],")
+            println(io, "    eTt: List[np.ndarray],")
+            println(io, "    eTr: List[np.ndarray],")
+            println(io, "    eTb: List[np.ndarray],")
+            println(io, "    eTl: List[np.ndarray],")
+            println(io, "    Tn: List[List[np.ndarray]],")
+            println(io, "    op: List[List[np.ndarray]]")
+        else
+            args = String[]
+            for T in iter
+                push!(args, "    $(T.name): np.ndarray")
+            end
+            println(io, join(args, ",\n"))
         end
-        println(io, join(args, ",\n"))
         println(io, ") -> np.ndarray:")
     end
 end
@@ -321,16 +360,16 @@ if abspath(PROGRAM_FILE) == abspath(@__FILE__)
     doc = """
 
     Usage:
-        cont.jl [--output=<output>] [--pdim=<pdim>] [--vdim=<vdim>] [--cdim=<cdim>] [--lang=<lang>] [--tdt_path=<tdt_path>] <nrow> <ncol>
+        cont.jl [--output=<output>] [--pdim=<pdim>] [--vdim=<vdim>] [--cdim=<cdim>] [--lang=<lang>] [--tdt_path=<tdt_path>] [--pass_as_vector] <nrow> <ncol>
 
     Options:
-      --output=<output>         filename to be saved [default: STDOUT]
-      --pdim=<pdim>             dim. of physical bonds [default: 2]
-      --vdim=<vdim>             dim. of virtual bonds [default: 4]
-      --cdim=<cdim>             dim. of ctm bonds [default: vdim^2]
-      --lang=<lang>             cpp or python [default: cpp]
-      --tdt_path=<tdt_path>     path to tdt.py (if empty, don't run tdt.py) [default: ""]
-
+        --output=<output>         filename to be saved [default: STDOUT]
+        --pdim=<pdim>             dim. of physical bonds [default: 2]
+        --vdim=<vdim>             dim. of virtual bonds [default: 4]
+        --cdim=<cdim>             dim. of ctm bonds [default: vdim^2]
+        --lang=<lang>             cpp or python [default: cpp]
+        --tdt_path=<tdt_path>     path to tdt.py (if empty, don't run tdt.py) [default: ""]
+        --pass_as_vector          generate API as a function of vectors
     """
 
     ARGS_ORIG = ARGS[:]
@@ -342,8 +381,9 @@ if abspath(PROGRAM_FILE) == abspath(@__FILE__)
     cdim = args["--cdim"] == "vdim^2" ? vdim^2 : parse(Int, args["--cdim"])
     lang = args["--lang"]
     tdt_path = args["--tdt_path"]
+    pass_as_vector = args["--pass_as_vector"]
 
-    tensors = Tensors(parse(Int, args["<nrow>"]), parse(Int, args["<ncol>"]), orig=0)
+    tensors = Tensors(parse(Int, args["<nrow>"]), parse(Int, args["<ncol>"]), orig=0, pass_as_vector=pass_as_vector)
 
     println(io, """
             # This file is generated by $(PROGRAM_FILE) $(join(ARGS_ORIG, " "))
@@ -352,7 +392,7 @@ if abspath(PROGRAM_FILE) == abspath(@__FILE__)
     dump(io, tensors, pdim=pdim, vdim=vdim, Cdim=cdim, lang=lang)
     println(io)
     println(io)
-    dump_fn_declare(io, tensors, lang=lang)
+    dump_fn_declare(io, tensors, lang=lang, pass_as_vector=pass_as_vector)
 
     if io != stdout && length(tdt_path) > 0
         close(io)
@@ -362,8 +402,38 @@ if abspath(PROGRAM_FILE) == abspath(@__FILE__)
                 println(io, "{")
                 indent = "  "
                 write_return = false
+
+                if pass_as_vector
+                    println(io, "#ifndef NDEBUG")
+                    println(io, "  const size_t nrow = Tn.size();")
+                    println(io, "  const size_t ncol = Tn[0].size();")
+                    println(io, "  for(const auto& r: Tn) assert(r.size() == ncol);")
+                    println(io, "  assert(C.size() == 4);")
+                    println(io, "  assert(eTt.size() == ncol);")
+                    println(io, "  assert(eTr.size() == nrow);")
+                    println(io, "  assert(eTb.size() == ncol);")
+                    println(io, "  assert(eTl.size() == nrow);")
+                    println(io, "  assert(op.size() == nrow);")
+                    println(io, "  for(const auto& r: op) assert(r.size() == ncol);")
+                    println(io, "#endif")
+                end
             else
                 indent = "    "
+
+                if pass_as_vector
+                    println(io, "    nrow = len(Tn)")
+                    println(io, "    ncol = len(Tn[0])")
+                    println(io, "    for r in Tn:")
+                    println(io, "        assert(len(r) == ncol)")
+                    println(io, "    assert(len(C) == 4)")
+                    println(io, "    assert(len(eTt) == ncol)")
+                    println(io, "    assert(len(eTr) == nrow)")
+                    println(io, "    assert(len(eTb) == ncol)")
+                    println(io, "    assert(len(eTl) == nrow)")
+                    println(io, "    assert(len(op) == nrow")
+                    println(io, "    for r in op:")
+                    println(io, "        assert(len(r) == ncol)")
+                end
             end
             for line in split(res, "\n")
                 if length(line) == 0
