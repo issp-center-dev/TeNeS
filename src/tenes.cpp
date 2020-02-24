@@ -59,6 +59,10 @@ public:
   void save_tensors() const;
 
 private:
+  int siteoperator_index(int site, int group) const {
+    return site_ops_indices[site][group];
+  }
+
   static constexpr int nleg = 4;
 
   MPI_Comm comm;
@@ -71,6 +75,7 @@ private:
   NNOperators<ptensor> full_updates;
   Operators<ptensor> onesite_operators;
   Operators<ptensor> twosite_operators;
+  std::vector<std::vector<int>> site_ops_indices;
   int num_onesite_operators;
   int num_twosite_operators;
 
@@ -161,6 +166,12 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     maxops = std::max(op.group, maxops);
   }
   num_twosite_operators = maxops + 1;
+
+  site_ops_indices.resize(N_UNIT, std::vector<int>(num_onesite_operators, -1));
+  for(int i=0; i<onesite_operators.size(); ++i){
+    auto const& op = onesite_operators[i];
+    site_ops_indices[op.source_site][op.group] = i;
+  }
 }
 
 template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
@@ -654,18 +665,25 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
       norms[norm_key] = norm;
     }
 
-    ptensor U, VT;
-    std::vector<double> s;
-    mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
-    const int ns = s.size();
     double value = 0.0;
-    for(int is=0; is<ns; ++is){
-      ptensor source_op = reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
-      op_[source_row][source_col] = &source_op;
-      ptensor target_op = reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-      op_[target_row][target_col] = &target_op;
+    if(op.ops_indices.empty()){
+      ptensor U, VT;
+      std::vector<double> s;
+      mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+      const int ns = s.size();
+      for(int is=0; is<ns; ++is){
+        ptensor source_op = reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
+        op_[source_row][source_col] = &source_op;
+        ptensor target_op = reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
+        op_[target_row][target_col] = &target_op;
+        auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+        value += localvalue * s[is];
+      }
+    }else{
+      op_[source_row][source_col] = &(onesite_operators[siteoperator_index(op.source_site, op.ops_indices[0])].op);
+      op_[target_row][target_col] = &(onesite_operators[siteoperator_index(op.target_site, op.ops_indices[1])].op);
       auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-      value += localvalue * s[is];
+      value += localvalue;
     }
     ret[op.group][{op.source_site, op.target_site, op.offset_x,
                    op.offset_y}] = value / norm;

@@ -237,9 +237,21 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   auto elements = param->get_as<std::string>("elements");
   auto ops = param->get_array_of<int64_t>("ops");
   if(elements && ops){
-    throw input_error("Both elements and ops are defined.");
+    std::stringstream ss;
+    ss << "Both elements and ops are defined in a section " << tablename;
+    throw tenes::input_error(ss.str());
   }
-  tensor A = util::read_tensor<tensor>(*elements, shape);
+  tensor A;
+  std::vector<int> op_ind;
+  if(elements){
+    A = util::read_tensor<tensor>(*elements, shape);
+  }else if(ops){
+    op_ind.assign(ops->begin(), ops->end());
+  }else{
+    std::stringstream ss;
+    ss << "Neither elements nor ops are not defined in a section " << tablename;
+    throw tenes::input_error(ss.str());
+  }
 
   auto group = param->get_as<int>("group");
   if(!group){
@@ -265,7 +277,11 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       throw input_error(detail::msg_cannot_find("sites", tablename));
     }
     for (int s : sites) {
-      ret.emplace_back(*group, s, A);
+      if(elements){
+        ret.emplace_back(*group, s, A);
+      }else{
+        ret.emplace_back(*group, s, op_ind);
+      }
     }
   } else { // nbody == 2
     auto bonds_str = param->get_as<std::string>("bonds");
@@ -274,8 +290,13 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     }
     auto bonds = read_bonds(*bonds_str);
     for (auto bond : bonds) {
-      ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
-                       std::get<2>(bond), std::get<3>(bond), A);
+      if(elements){
+        ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
+                         std::get<2>(bond), std::get<3>(bond), A);
+      }else{
+        ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
+                         std::get<2>(bond), std::get<3>(bond), op_ind);
+      }
     }
   }
   return ret;
