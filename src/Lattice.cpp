@@ -50,6 +50,29 @@ void Lattice::calc_neighbors() {
   logical_check();
 }
 
+int Lattice::other(int index, int dx, int dy) const {
+  while(dx != 0){
+    if(dx>0){
+      index = right(index);
+      --dx;
+    }else{
+      index = left(index);
+      ++dx;
+    }
+  }
+
+  while(dy != 0){
+    if(dy>0){
+      index = top(index);
+      --dy;
+    }else{
+      index = bottom(index);
+      ++dy;
+    }
+  }
+  return index;
+}
+
 void Lattice::reset(int X, int Y) {
   assert(X > 0);
   assert(Y > 0);
@@ -143,6 +166,7 @@ void Lattice::check_dims() const{
 }
 
 void Lattice::logical_check() const{
+#ifndef NDEBUG
   for(int i=0; i<N_UNIT; ++i){
     // index <-> coords
     {
@@ -177,6 +201,7 @@ void Lattice::logical_check() const{
       assert(top(left(i)) == left(top(i)));
     }
   }
+#endif
 }
 
 

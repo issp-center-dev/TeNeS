@@ -554,9 +554,12 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, double>> ret(nlops);
 
-  // 0: (2x1), 1: (1x2), 2: (2x2)
-  std::vector<std::vector<double>> norms(
-      N_UNIT, std::vector<double>(3, std::numeric_limits<double>::quiet_NaN()));
+  constexpr int nmax = 4;
+
+  // norm[{site, dx, dy}]
+  std::map<std::tuple<int, int, int>, double> norms;
+  // std::vector<std::vector<std::vector<double>>> norms(
+  //    N_UNIT, std::vector<double>(d_max, std::vectorstd::numeric_limits<double>::quiet_NaN()));
 
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
@@ -569,7 +572,9 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
     const int dx = x_target - x_source;
     const int dy = y_target - y_source;
 
-    if (dx <= -2 || dx >= 2 || dy <= -2 || dy >= 2) {
+    const int ncol = std::abs(dx)+1;
+    const int nrow = std::abs(dy)+1;
+    if (ncol > nmax || nrow > nmax) {
       std::cerr << "Warning: now version of TeNeS does not support too long "
                    "operator"
                 << std::endl;
@@ -578,119 +583,92 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
       continue;
     }
 
-    const int nhop = std::abs(dx) + std::abs(dy);
-    if (nhop == 1) {
-      if (dy == 0) { // horizontal
-        const int SOURCE = (dx == 1 ? source : target);
-        const int TARGET = (dx == 1 ? target : source);
-        auto OP = op.op;
-        if (dx == -1) {
-          OP = OP.transpose({1, 0, 3, 2});
-        }
-        double norm = norms[SOURCE][0];
-        if (std::isnan(norm)) {
-          norm = Contract_two_sites_horizontal(
-              C1[SOURCE], C2[TARGET], C3[TARGET], C4[SOURCE], eTt[SOURCE],
-              eTt[TARGET], eTr[TARGET], eTb[TARGET], eTb[SOURCE], eTl[SOURCE],
-              Tn[SOURCE], Tn[TARGET], op_identity[SOURCE], op_identity[TARGET]);
-          norms[SOURCE][0] = norm;
-        }
-        const double value = Contract_two_sites_horizontal_op12(
-            C1[SOURCE], C2[TARGET], C3[TARGET], C4[SOURCE], eTt[SOURCE],
-            eTt[TARGET], eTr[TARGET], eTb[TARGET], eTb[SOURCE], eTl[SOURCE],
-            Tn[SOURCE], Tn[TARGET], OP);
-        ret[op.group][{op.source_site, op.target_site, op.offset_x,
-                       op.offset_y}] = value / norm;
-      } else { // vertical
-        const int SOURCE = (dy == -1 ? source : target);
-        const int TARGET = (dy == -1 ? target : source);
-        auto OP = op.op;
-        if (dy == 1) {
-          OP = OP.transpose({1, 0, 3, 2});
-        }
-        double norm = norms[SOURCE][1];
-        if (std::isnan(norm)) {
-          norm = Contract_two_sites_vertical(
-              C1[SOURCE], C2[SOURCE], C3[TARGET], C4[TARGET], eTt[SOURCE],
-              eTr[SOURCE], eTr[TARGET], eTb[TARGET], eTl[TARGET], eTl[SOURCE],
-              Tn[SOURCE], Tn[TARGET], op_identity[SOURCE], op_identity[TARGET]);
-          norms[SOURCE][1] = norm;
-        }
-        const double value = Contract_two_sites_vertical_op12(
-            C1[SOURCE], C2[SOURCE], C3[TARGET], C4[TARGET], eTt[SOURCE],
-            eTr[SOURCE], eTr[TARGET], eTb[TARGET], eTl[TARGET], eTl[SOURCE],
-            Tn[SOURCE], Tn[TARGET], OP);
-        ret[op.group][{op.source_site, op.target_site, op.offset_x,
-                       op.offset_y}] = value / norm;
-      }
-    } else { // nhops == 2
-      assert(std::abs(dx) == std::abs(dy));
-      assert(std::abs(dx) == 1);
+    std::vector<const ptensor*> C_(4, nullptr);
+    std::vector<const ptensor*> eTt_(ncol, nullptr);
+    std::vector<const ptensor*> eTr_(nrow, nullptr);
+    std::vector<const ptensor*> eTb_(ncol, nullptr);
+    std::vector<const ptensor*> eTl_(nrow, nullptr);
 
-      ptensor U, VT;
-      std::vector<double> s;
-      mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+    /*
+     * Caution: orders of tensors in unitcell and Contract_* function are different
+     *
+     * Lattice:
+     *
+     *    y
+     *    ^
+     *    |
+     *    0--> x
+     *
+     * Contract_*:
+     *    0-->col
+     *    |
+     *    v
+     *    row
+     *
+     */
+    std::vector<std::vector<const ptensor*>> Tn_(nrow, std::vector<const ptensor*>(ncol, nullptr));
+    std::vector<std::vector<const ptensor*>> op_(nrow, std::vector<const ptensor*>(ncol, nullptr));
 
-      int left_top;
-      int psource, ptarget;
-      if (dx == 1 && dy == 1) {
-        left_top = lattice.top(source);
-        psource = 3;
-        ptarget = 1;
-      } else if (dx == 1 && dy == -1) {
-        left_top = source;
-        psource = 0;
-        ptarget = 2;
-      } else if (dx == -1 && dy == 1) {
-        left_top = target;
-        psource = 2;
-        ptarget = 0;
-      } else { // dx == -1 && dy == -1
-        left_top = lattice.left(source);
-        psource = 1;
-        ptarget = 3;
-      }
-      const int right_top = lattice.right(left_top);
-      const int right_bottom = lattice.bottom(right_top);
-      const int left_bottom = lattice.left(right_bottom);
-      std::array<int, 4> plaq = {left_top, right_top, right_bottom,
-                                 left_bottom};
+    std::vector<std::vector<int>> indices(nrow, std::vector<int>(ncol));
 
-      double norm = norms[left_top][2];
-      if (std::isnan(norm)) {
-        norm = Contract_four_sites(
-            C1[left_top], C2[right_top], C3[right_bottom], C4[left_bottom],
-            eTt[left_top], eTt[right_top], eTr[right_top], eTr[right_bottom],
-            eTb[right_bottom], eTb[left_bottom], eTl[left_bottom],
-            eTl[left_top], Tn[left_top], Tn[right_top], Tn[right_bottom],
-            Tn[left_bottom], op_identity[left_top], op_identity[right_top],
-            op_identity[right_bottom], op_identity[left_bottom]);
-        norms[left_top][2] = norm;
-      }
-      double value = 0.0;
-      std::vector<ptensor> local_ops(4);
-      for (int i = 0; i < plaq.size(); ++i) {
-        local_ops[i] = op_identity[plaq[i]];
-      }
-      for (int i = 0; i < s.size(); ++i) {
-        local_ops[psource] =
-            reshape(slice(U, 2, i, i + 1), {U.shape()[0], U.shape()[0]});
-        local_ops[ptarget] =
-            reshape(slice(VT, 0, i, i + 1), {VT.shape()[1], VT.shape()[1]});
+    int source_col, source_row, target_col, target_row;
 
-        double localvalue = Contract_four_sites(
-            C1[left_top], C2[right_top], C3[right_bottom], C4[left_bottom],
-            eTt[left_top], eTt[right_top], eTr[right_top], eTr[right_bottom],
-            eTb[right_bottom], eTb[left_bottom], eTl[left_bottom],
-            eTl[left_top], Tn[left_top], Tn[right_top], Tn[right_bottom],
-            Tn[left_bottom], local_ops[0], local_ops[1], local_ops[2],
-            local_ops[3]);
-        value += localvalue * s[i];
-      }
-
-      ret[op.group][{op.source_site, op.target_site, op.offset_x,
-                     op.offset_y}] = value / norm;
+    if(dx >= 0){
+      source_col = 0;
+      target_col = ncol-1;
+    }else{
+      source_col = ncol-1;
+      target_col = 0;
     }
+    if(dy >= 0){
+      source_row = nrow-1;
+      target_row = 0;
+    }else{
+      source_row = 0;
+      target_row = nrow-1;
+    }
+
+    for(int row=0; row<nrow; ++row){
+      for(int col=0; col<ncol; ++col){
+        const int index = lattice.other(source, col-source_col, source_row-row);
+        indices[row][col] = index;
+        op_[row][col] = &(op_identity[index]);
+        Tn_[row][col] = &(Tn[index]);
+      }
+      eTl_[row] = &(eTl[indices[row][0]]);
+      eTr_[row] = &(eTr[indices[row][ncol-1]]);
+    }
+    for(int col=0; col<ncol; ++col){
+      eTt_[col] = &(eTt[indices[0][col]]);
+      eTb_[col] = &(eTb[indices[nrow-1][col]]);
+    }
+    C_[0] = &(C1[indices[0][0]]);
+    C_[1] = &(C2[indices[0][ncol-1]]);
+    C_[2] = &(C3[indices[nrow-1][ncol-1]]);
+    C_[3] = &(C4[indices[nrow-1][0]]);
+
+    const auto norm_key = std::make_tuple(indices[0][0], nrow, ncol);
+    auto norm = (norms.count(norm_key) ? norms[norm_key] : std::numeric_limits<double>::quiet_NaN() );
+    if(std::isnan(norm)){
+      norm = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      norms[norm_key] = norm;
+    }
+
+    ptensor U, VT;
+    std::vector<double> s;
+    mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+    const int ns = s.size();
+    double value = 0.0;
+    for(int is=0; is<ns; ++is){
+      ptensor source_op = reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
+      op_[source_row][source_col] = &source_op;
+      ptensor target_op = reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
+      op_[target_row][target_col] = &target_op;
+      auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      value += localvalue * s[is];
+    }
+    ret[op.group][{op.source_site, op.target_site, op.offset_x,
+                   op.offset_y}] = value / norm;
   }
 
   time_observable += timer.elapsed();

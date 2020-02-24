@@ -25,7 +25,7 @@ endif()
 
 target_compile_options(tenes PRIVATE ${OMP_FLAG})
 target_compile_options(tenes PRIVATE -Wall)
-target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra>)
+target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-sign-compare -Wpedantic >)
 
 target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})

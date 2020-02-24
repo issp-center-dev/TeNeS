@@ -11,7 +11,6 @@
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
 #include "operator.hpp"
-#include "tenes.hpp"
 #include "util/read_matrix.hpp"
 #include "util/string.hpp"
 
@@ -98,18 +97,6 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
   lat.check_dims();
 
   return lat;
-}
-
-template <typename tensor>
-std::vector<tensor> gen_matrices(decltype(cpptoml::parse_file("")) toml,
-                                 const char *key, const char *tablename) {
-  auto strs = toml->get_array_of<std::string>(key);
-  if (!strs) {
-    std::cerr << "cannot find " << key << " in the section [" << tablename
-              << "]" << std::endl;
-    assert(false);
-  }
-  return util::read_matrix<tensor>(*strs);
 }
 
 CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
@@ -270,7 +257,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (int s : sites) {
       ret.emplace_back(*group, s, A);
     }
-  } else {
+  } else { // nbody == 2
     auto bonds_str = param->get_as<std::string>("bonds");
     assert(bonds_str);
     auto bonds = read_bonds(*bonds_str);

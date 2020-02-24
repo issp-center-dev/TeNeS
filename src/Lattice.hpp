@@ -63,6 +63,8 @@ class Lattice {
   int top(int index) const { return neighbor(index, 1); }
   int bottom(int index) const { return neighbor(index, 3); }
 
+  int other(int index, int dx, int dy) const;
+
   void reset(int X, int Y);
   void calc_neighbors();
 

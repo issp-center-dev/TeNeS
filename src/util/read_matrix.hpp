@@ -30,9 +30,11 @@ ptensor read_matrix(std::string const &str) {
 
   const auto Nrow = A.size();
   const auto Ncol = A[0].size();
+#ifndef NDEBUG
   for (auto const &row : A) {
     assert(row.size() == Ncol);
   }
+#endif
 
   ptensor ret(mptensor::Shape(Nrow, Ncol));
   for (int i = 0; i < Nrow; ++i) {
