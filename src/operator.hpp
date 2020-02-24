@@ -12,14 +12,22 @@ template <class tensor> struct Operator {
   int offset_x;
   int offset_y;
   tensor op;
+  std::vector<int> ops_indices;
 
   Operator(int group, int site, tensor const &op)
       : group(group), source_site(site), target_site(-1), offset_x(0),
         offset_y(0), op(op) {}
+  Operator(int group, int site, std::vector<int> const &ops_indices)
+      : group(group), source_site(site), target_site(-1), offset_x(0),
+        offset_y(0), ops_indices(ops_indices) {}
   Operator(int group, int source_site, int target_site, int offset_x,
            int offset_y, tensor const &op)
       : group(group), source_site(source_site), target_site(target_site),
         offset_x(offset_x), offset_y(offset_y), op(op) {}
+  Operator(int group, int source_site, int target_site, int offset_x,
+           int offset_y, std::vector<int> const &ops_indices)
+      : group(group), source_site(source_site), target_site(target_site),
+        offset_x(offset_x), offset_y(offset_y), ops_indices(ops_indices) {}
 };
 
 template <class tensor> using Operators = std::vector<Operator<tensor>>;

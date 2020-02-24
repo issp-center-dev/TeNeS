@@ -2,6 +2,10 @@
 
 #include <cassert>
 #include <fstream>
+#include <sstream>
+#include <tuple>
+
+#include "exception.hpp"
 
 namespace tenes {
 
@@ -14,9 +18,12 @@ Lattice::Lattice(int X, int Y, int skew)
       virtual_dims(N_UNIT, std::array<int, 4>{-1,-1,-1,-1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
       noises(N_UNIT, 0.0) {
-  assert(X > 0);
-  assert(Y > 0);
-
+  if( X <= 0){
+    throw tenes::input_error("Lattice.X should be positive");
+  }
+  if( Y <= 0){
+    throw tenes::input_error("Lattice.Y should be positive");
+  }
   calc_neighbors();
 }
 
@@ -74,8 +81,12 @@ int Lattice::other(int index, int dx, int dy) const {
 }
 
 void Lattice::reset(int X, int Y) {
-  assert(X > 0);
-  assert(Y > 0);
+  if( X <= 0){
+    throw tenes::input_error("Lattice.X should be positive");
+  }
+  if( Y <= 0){
+    throw tenes::input_error("Lattice.Y should be positive");
+  }
   LX = X;
   LY = Y;
   calc_neighbors();
@@ -157,11 +168,25 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
 }
 
 void Lattice::check_dims() const{
+  std::vector<std::tuple<int, int, int, int>> fails;
   for(int i=0; i<N_UNIT; ++i){
-    assert(virtual_dims[i][0] == virtual_dims[left(i)][2]);
-    assert(virtual_dims[i][1] == virtual_dims[top(i)][3]);
-    assert(virtual_dims[i][2] == virtual_dims[right(i)][0]);
-    assert(virtual_dims[i][3] == virtual_dims[bottom(i)][1]);
+    if(virtual_dims[i][0] != virtual_dims[left(i)][2]){
+      fails.push_back(std::make_tuple(i, 0, left(i), 2));
+    }
+    if(virtual_dims[i][1] != virtual_dims[top(i)][3]){
+      fails.push_back(std::make_tuple(i, 1, top(i), 3));
+    }
+  }
+  if(!fails.empty()){
+    int i, j;
+    int i_leg, j_leg;
+    std::stringstream ss;
+    ss << "virtual dimension mismatch :\n";
+    for(auto const& tpl: fails){
+      std::tie(i, i_leg, j, j_leg) = tpl;
+      ss << "  " << i_leg << " bond of " << i << " site and " << j_leg << " bond of " << j << " site\n";
+    }
+    throw tenes::input_error(ss.str());
   }
 }
 

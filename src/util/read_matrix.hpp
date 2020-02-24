@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "string.hpp"
+#include "../exception.hpp"
 
 namespace tenes {
 
@@ -62,15 +63,39 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims){
   std::string line;
 
   std::stringstream ss(str);
+  int linenum = 0;
   while (std::getline(ss, line)) {
     mptensor::Index index;
     index.resize(rank);
     auto fields = util::split(line);
-    assert(fields.size() == rank+2);
+    if(fields.empty()){
+      ++linenum;
+      continue;
+    }
+
+    if(fields.size() != rank+2){
+      std::stringstream msg;
+      msg << "cannot parse tensor; the number of columns differs from tensor rank + 2";
+      std::stringstream ss2(str);
+      int linenum2 = 0;
+      while (std::getline(ss2, line)){
+        msg << "\n" << line;
+        if(linenum2 == linenum){
+          msg << "\n";
+          for(int i=0; i<line.length(); ++i){
+            msg << "^";
+          }
+        }
+        ++linenum2;
+      }
+      throw tenes::input_error(msg.str());
+    }
+
     for(size_t i=0; i<rank; ++i){
       index[i] = std::stoi(fields[i]);
     }
     ret.set_value(index, std::stod(fields[rank]));
+    ++linenum;
   }
   return ret;
 }

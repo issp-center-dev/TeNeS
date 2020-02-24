@@ -21,6 +21,8 @@
 #include <numeric>
 #include <vector>
 
+#include "exception.hpp"
+
 #include "PEPS_Parameters.hpp"
 #include "mpi.hpp"
 

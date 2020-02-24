@@ -11,10 +11,20 @@
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
 #include "operator.hpp"
+#include "exception.hpp"
 #include "util/read_matrix.hpp"
 #include "util/string.hpp"
 
 namespace tenes {
+
+namespace detail{
+std::string msg_cannot_find(std::string key, std::string section){
+  std::stringstream ss;
+  ss << "cannot find \"" << key << "\" in a section \"" << section << "\"";
+  return ss.str();
+}
+}
+
 
 template <typename T>
 inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
@@ -26,9 +36,7 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "tensor") {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
-    std::cerr << "cannot find L_sub in the section [" << tablename << "]"
-              << std::endl;
-    assert(false);
+    throw input_error(detail::msg_cannot_find("L_sub", tablename));
   }
 
   auto skew = find_or<int>(toml, "skew", 0);
@@ -37,9 +45,7 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
 
   auto sites = toml->get_table_array("unitcell");
   if (!sites) {
-    std::cerr << "cannot find unitcell in the section [" << tablename << "]"
-              << std::endl;
-    assert(false);
+    throw input_error(detail::msg_cannot_find("unitcell", tablename));
   }
   for (const auto &site : *sites) {
     std::vector<int> indices;
@@ -56,9 +62,7 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
     } else if (index_int) {
       indices.push_back(*index_int);
     } else {
-      std::cerr << "cannot find \"index\" in the section [[" << tablename
-                << ".site]]" << std::endl;
-      assert(false);
+      throw input_error(detail::msg_cannot_find("index", tablename));
     }
 
     for (int index : indices) {
@@ -103,17 +107,13 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
                                   const char *tablename = "correlation") {
   auto r = toml->get_as<int64_t>("r_max");
   if (!r) {
-    std::cerr << "cannot find r_max in the section [" << tablename << "]"
-              << std::endl;
-    // ERROR
+    throw input_error(detail::msg_cannot_find("r_max", tablename));
   }
   int rmax = static_cast<int>(*r);
 
   auto oplist = toml->get_array_of<cpptoml::array>("operators");
   if (!oplist) {
-    std::cerr << "cannot find operators in the section [" << tablename << "]"
-              << std::endl;
-    // ERROR
+    throw input_error(detail::msg_cannot_find("operators", tablename));
   }
 
   std::vector<std::pair<int, int>> ops;
@@ -185,7 +185,9 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
 std::tuple<int, int, int, int> read_bond(std::string line) {
   using std::stoi;
   auto words = util::split(util::strip(line));
-  assert(words.size() == 4);
+  if(words.size() != 4){
+    throw input_error("A bond should have 4 integers");
+  }
   return std::make_tuple(stoi(words[0]), stoi(words[1]), stoi(words[2]),
                          stoi(words[3]));
 }
@@ -205,14 +207,18 @@ std::vector<std::tuple<int, int, int, int>> read_bonds(std::string str) {
 
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                int nsites, int nbody) {
+                                int nsites, int nbody, const char* tablename="observable.onesite") {
   assert(nbody == 1 || nbody == 2);
 
   mptensor::Shape shape;
   auto dim_arr = param->get_array_of<int64_t>("dim");
   auto dim_int = param->get_as<int>("dim");
   if (dim_arr) {
-    assert(dim_arr->size() == nbody);
+    if(dim_arr->size() != nbody){
+      std::stringstream ss;
+      ss << "operator is " << nbody << "-sites but dim has " << dim_arr->size() << " integers";
+      throw input_error(ss.str());
+    }
     for (int d : *dim_arr) {
       shape.push(d);
     }
@@ -221,7 +227,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       shape.push(*dim_int);
     }
   } else{
-    assert(false);
+    throw input_error(detail::msg_cannot_find("dim", tablename));
   }
 
   for (int i = 0; i < nbody; ++i) {
@@ -229,11 +235,16 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   }
 
   auto elements = param->get_as<std::string>("elements");
-  assert(elements);
+  auto ops = param->get_array_of<int64_t>("ops");
+  if(elements && ops){
+    throw input_error("Both elements and ops are defined.");
+  }
   tensor A = util::read_tensor<tensor>(*elements, shape);
 
   auto group = param->get_as<int>("group");
-  assert(group);
+  if(!group){
+    throw input_error(detail::msg_cannot_find("group", tablename));
+  }
 
   std::vector<Operator<tensor>> ret;
 
@@ -251,15 +262,16 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     } else if (site_int) {
       sites.push_back(*site_int);
     } else {
-      std::cerr << "cannot find \"sites\"" << std::endl;
-      assert(false);
+      throw input_error(detail::msg_cannot_find("sites", tablename));
     }
     for (int s : sites) {
       ret.emplace_back(*group, s, A);
     }
   } else { // nbody == 2
     auto bonds_str = param->get_as<std::string>("bonds");
-    assert(bonds_str);
+    if(!bonds_str){
+      throw input_error(detail::msg_cannot_find("bonds", tablename));
+    }
     auto bonds = read_bonds(*bonds_str);
     for (auto bond : bonds) {
       ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
@@ -272,11 +284,12 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
 template <class tensor>
 Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
                                  int nsites, int nbody,
-                                 std::string const &key) {
+                                 std::string const &key
+                                 ) {
   Operators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    auto obs = load_operator<tensor>(table, nsites, nbody);
+    auto obs = load_operator<tensor>(table, nsites, nbody, key.c_str());
     std::copy(obs.begin(), obs.end(), std::back_inserter(ret));
     // std::move(obs.begin(), obs.end(), std::back_inserter(ret));
   }
@@ -284,14 +297,31 @@ Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
 }
 
 template <class tensor>
-NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param) {
+NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param, const char* tablename="evolution.simple") {
   auto source_site = param->get_as<int>("source_site");
+  if(!source_site){
+    throw input_error(detail::msg_cannot_find("source_site", tablename));
+  }
   auto source_leg = param->get_as<int>("source_leg");
+  if(!source_leg){
+    throw input_error(detail::msg_cannot_find("source_leg", tablename));
+  }
   auto dimensions = param->get_array_of<int64_t>("dimensions");
+  if(!dimensions){
+    throw input_error(detail::msg_cannot_find("dimensions", tablename));
+  }
   auto elements = param->get_as<std::string>("elements");
+  if(!elements){
+    throw input_error(detail::msg_cannot_find("elements", tablename));
+  }
   auto shape = mptensor::Shape();
   for (auto d : *dimensions) {
     shape.push(d);
+  }
+  if(shape.size() != 4){
+    std::stringstream ss;
+    ss << tablename << ".dimensions should have 4 integers";
+    throw input_error(ss.str());
   }
   tensor A = util::read_tensor<tensor>(*elements, shape);
   return NNOperator<tensor>(*source_site, *source_leg, A);
@@ -303,7 +333,7 @@ NNOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
   NNOperators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    ret.push_back(load_nn_operator<tensor>(table));
+    ret.push_back(load_nn_operator<tensor>(table, key.c_str()));
   }
   return ret;
 }
