@@ -500,7 +500,7 @@ def hamiltonians(lattice: Lattice, model: Model) -> List[Hamiltonian]:
     return ret
 
 
-def tenes_simple(param: Dict[str, Any]) -> List[str]:
+def tenes_simple(param: Dict[str, Any]) -> str:
     """
     Parameters
     ----------
@@ -561,9 +561,11 @@ def tenes_simple(param: Dict[str, Any]) -> List[str]:
 
     ret.append("[observable]")
     lops = model.onesite_observables_as_dict()
+    groups = []
     for lop in lops:
         ret.append("[[observable.onesite]]")
         ret.append("group = {}".format(lop["group"]))
+        groups.append(lop["group"])
         ret.append("sites = {}".format(lop["sites"]))
         ret.append("dim = {}".format(lop["dim"]))
         ret.append('elements = """')
@@ -571,12 +573,23 @@ def tenes_simple(param: Dict[str, Any]) -> List[str]:
             ret.append(line)
         ret.append('"""')
 
+    groups = list(set(groups))
+    groups.sort()
+
     if "correlation" in param:
         corparam = param["correlation"]
         ret.append("")
         ret.append("[correlation]")
         ret.append("r_max = {}".format(corparam["r_max"]))
-        ret.append("operators = {}".format(corparam["operators"]))
+        if not "operators" in corparam:
+            corparam["operators"] = []
+            for g in groups:
+                corparam["operators"].append([g,g])
+
+        ret.append("operators = [")
+        for ops in corparam["operators"]:
+            ret.append("  {},".format(ops))
+        ret.append("]")
 
     return "\n".join(ret)
 

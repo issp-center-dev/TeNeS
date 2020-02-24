@@ -557,6 +557,7 @@ class Model:
         self.parameter = param["parameter"]
         self.simple_tau = self.parameter["simple_update"]["tau"]
         self.full_tau = self.parameter["full_update"]["tau"]
+        self.correlation = param.get("correlation", None)
 
         self.unitcell = Unitcell(param["tensor"])
         offset_x_min = offset_x_max = offset_y_min = offset_y_max = 0
@@ -670,6 +671,16 @@ class Model:
                 f.write(line + "\n")
         f.write("\n")
 
+        # correlation
+        if self.correlation is not None:
+            f.write("[correlation]\n")
+            f.write("r_max = {}\n".format(self.correlation["r_max"]))
+            f.write("operators = [\n")
+            for ops in self.correlation["operators"]:
+                f.write("  {},\n".format(ops))
+            f.write("]\n")
+            f.write("\n")
+
         f.write("[evolution]\n")
         for update in self.simple_updates:
             f.write("[[evolution.simple]]\n")
@@ -679,6 +690,7 @@ class Model:
             f.write("[[evolution.full]]\n")
             for line in update.to_toml_strs(self.unitcell):
                 f.write(line + "\n")
+
 
 
 if __name__ == "__main__":

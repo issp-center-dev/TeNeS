@@ -1,7 +1,7 @@
 #ifndef CORRELATION_HPP
 #define CORRELATION_HPP
 
-#include <utility>
+#include <tuple>
 #include <vector>
 
 namespace tenes {
@@ -15,9 +15,9 @@ struct Correlation {
 
 struct CorrelationParameter {
   int r_max;
-  std::vector<std::pair<int, int>> operators;
+  std::vector<std::tuple<int, int>> operators;
   CorrelationParameter() : r_max(0) {}
-  CorrelationParameter(int r_max, std::vector<std::pair<int, int>> const& ops)
+  CorrelationParameter(int r_max, std::vector<std::tuple<int, int>> const& ops)
       : r_max(r_max), operators(ops) {}
 };
 

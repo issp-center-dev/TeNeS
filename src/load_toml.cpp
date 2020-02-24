@@ -116,11 +116,10 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
     throw input_error(detail::msg_cannot_find("operators", tablename));
   }
 
-  std::vector<std::pair<int, int>> ops;
+  std::vector<std::tuple<int, int>> ops;
   for (auto op : *oplist) {
     auto i = op->get_array_of<int64_t>();
-    ops.push_back(
-        std::make_pair(static_cast<int>((*i)[0]), static_cast<int>((*i)[1])));
+    ops.emplace_back(static_cast<int>((*i)[0]), static_cast<int>((*i)[1]));
   }
 
   return CorrelationParameter{rmax, ops};

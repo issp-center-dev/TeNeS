@@ -54,7 +54,7 @@ public:
   void measure();
   std::vector<std::vector<double>> measure_onesite(bool save);
   std::vector<std::map<Bond, double>> measure_twosite(bool save);
-  // std::vector<Correlation> measure_correlation(bool save);
+  std::vector<Correlation> measure_correlation(bool save);
   void optimize();
   void save_tensors() const;
 
@@ -728,12 +728,11 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
   return ret;
 }
 
-/*
 template <class ptensor>
 std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
   Timer<> timer;
 
-  const int nlops = lops.size();
+  const int nlops = num_onesite_operators;
   const int r_max = corparam.r_max;
   std::vector<std::vector<int>> r_ops(nlops);
   for (auto ops : corparam.operators) {
@@ -754,9 +753,14 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
       const int left_x = lattice.x(left_index);
       const int left_y = lattice.y(left_index);
       { // horizontal
+        int left_op_index = siteoperator_index(left_index, left_ilop);
+        if(left_op_index < 0){
+          continue;
+        }
+        const auto left_op = onesite_operators[left_op_index].op;
         StartCorrelation(correlation_T, C1[left_index], C4[left_index],
                          eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], lops[left_ilop]);
+                         Tn[left_index], left_op);
         StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
                          eTt[left_index], eTb[left_index], eTl[left_index],
                          Tn[left_index], op_identity[left_index]);
@@ -772,10 +776,15 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
               eTt[right_index], eTr[right_index], eTb[right_index],
               Tn[right_index], op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
+            int right_op_index = siteoperator_index(right_index, right_ilop);
+            if(right_op_index < 0){
+              continue;
+            }
+            const auto right_op = onesite_operators[right_op_index].op;
             double val = FinishCorrelation(correlation_T, C2[right_index],
                                            C3[right_index], eTt[right_index],
                                            eTr[right_index], eTb[right_index],
-                                           Tn[right_index], lops[left_ilop]) /
+                                           Tn[right_index], right_op) /
                          norm;
             correlations.push_back(Correlation{left_index, right_index,
                                                offset_x, offset_y, left_ilop,
@@ -789,10 +798,15 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
         }
       }
       { // vertical
+        int left_op_index = siteoperator_index(left_index, left_ilop);
+        if(left_op_index < 0){
+          continue;
+        }
+        const auto left_op = onesite_operators[left_op_index].op;
         ptensor tn = transpose(Tn[left_index], Axes(3, 0, 1, 2, 4));
         StartCorrelation(correlation_T, C4[left_index], C3[left_index],
                          eTl[left_index], eTr[left_index], eTb[left_index], tn,
-                         lops[left_ilop]);
+                         left_op);
         StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
                          eTl[left_index], eTr[left_index], eTb[left_index], tn,
                          op_identity[left_index]);
@@ -809,10 +823,15 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
                                           eTt[right_index], eTr[right_index],
                                           tn, op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
+            int right_op_index = siteoperator_index(right_index, right_ilop);
+            if(right_op_index < 0){
+              continue;
+            }
+            const auto right_op = onesite_operators[right_op_index].op;
             double val = FinishCorrelation(correlation_T, C1[right_index],
                                            C2[right_index], eTl[right_index],
                                            eTt[right_index], eTr[right_index],
-                                           tn, lops[left_ilop]) /
+                                           tn, right_op) /
                          norm;
             correlations.push_back(Correlation{left_index, right_index,
                                                offset_x, offset_y, left_ilop,
@@ -854,7 +873,6 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
   }
   return correlations;
 }
-*/
 
 template <class ptensor> void TeNeS<ptensor>::measure() {
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
@@ -879,14 +897,12 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     energy += nn.second;
   }
 
-  /*
   if (corparam.r_max > 0) {
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
       std::clog << "  Start calculating long range correlation" << std::endl;
     }
     auto correlations = measure_correlation(true);
   }
-  */
 
   if (mpirank == 0) {
     std::string filename = outdir + "/time.dat";
