@@ -51,11 +51,14 @@ public:
   void simple_update();
   void full_update();
 
-  void measure();
-  std::vector<std::vector<double>> measure_onesite(bool save);
-  std::vector<std::map<Bond, double>> measure_twosite(bool save);
-  std::vector<Correlation> measure_correlation(bool save);
   void optimize();
+  void measure();
+  std::vector<std::vector<double>> measure_onesite();
+  std::vector<std::map<Bond, double>> measure_twosite();
+  std::vector<Correlation> measure_correlation();
+  void save_onesite(std::vector<std::vector<double>> const& onesite_obs);
+  void save_twosite(std::vector<std::map<Bond, double>> const& twosite_obs);
+  void save_correlation(std::vector<Correlation> const& correlations);
   void save_tensors() const;
 
 private:
@@ -504,7 +507,7 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
 }
 
 template <class ptensor>
-std::vector<std::vector<double>> TeNeS<ptensor>::measure_onesite(bool save) {
+std::vector<std::vector<double>> TeNeS<ptensor>::measure_onesite() {
   Timer<> timer;
   const int nlops = num_onesite_operators;
   std::vector<std::vector<double>> local_obs(
@@ -525,41 +528,46 @@ std::vector<std::vector<double>> TeNeS<ptensor>::measure_onesite(bool save) {
 
   time_observable += timer.elapsed();
 
-  if (save && mpirank == 0) {
-    std::string filename = outdir + "/onesite_obs.dat";
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save onesite observables to " << filename << std::endl;
-    }
-    std::ofstream ofs(filename.c_str());
-    ofs << std::scientific
-        << std::setprecision(std::numeric_limits<double>::max_digits10);
-    ofs << "# $1: op_group\n";
-    ofs << "# $2: site_index (-1: mean, -2: sum) \n";
-    ofs << "# $3: real\n";
-    ofs << "# $4: imag\n";
-    ofs << std::endl;
-
-    for (int ilops = 0; ilops < nlops; ++ilops) {
-      int num = 0;
-      double sum = 0.0;
-      for (int i = 0; i < N_UNIT; ++i) {
-        if (std::isnan(local_obs[ilops][i])) {
-          continue;
-        }
-        num += 1;
-        sum += local_obs[ilops][i];
-        ofs << ilops << " " << i << " " << local_obs[ilops][i] << " " << 0.0
-            << std::endl;
-      }
-      ofs << ilops << " " << -1 << " " << sum / num << " " << 0.0 << std::endl;
-      ofs << ilops << " " << -2 << " " << sum << " " << 0.0 << std::endl;
-    }
-  }
   return local_obs;
 }
 
 template <class ptensor>
-std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
+void TeNeS<ptensor>::save_onesite(std::vector<std::vector<double>> const& onesite_obs){
+  if (mpirank != 0) {
+    return;
+  }
+
+  const int nlops = num_onesite_operators;
+  std::string filename = outdir + "/onesite_obs.dat";
+  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+    std::clog << "    Save onesite observables to " << filename << std::endl;
+  }
+  std::ofstream ofs(filename.c_str());
+  ofs << std::scientific
+      << std::setprecision(std::numeric_limits<double>::max_digits10);
+  ofs << "# $1: op_group\n";
+  ofs << "# $2: site_index\n";
+  ofs << "# $3: real\n";
+  ofs << "# $4: imag\n";
+  ofs << std::endl;
+
+  for (int ilops = 0; ilops < nlops; ++ilops) {
+    int num = 0;
+    double sum = 0.0;
+    for (int i = 0; i < N_UNIT; ++i) {
+      if (std::isnan(onesite_obs[ilops][i])) {
+        continue;
+      }
+      num += 1;
+      sum += onesite_obs[ilops][i];
+      ofs << ilops << " " << i << " " << onesite_obs[ilops][i] << " " << 0.0
+          << std::endl;
+    }
+  }
+}
+
+template <class ptensor>
+std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite() {
   Timer<> timer;
 
   const int nlops = num_twosite_operators;
@@ -567,10 +575,7 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
 
   constexpr int nmax = 4;
 
-  // norm[{site, dx, dy}]
   std::map<std::tuple<int, int, int>, double> norms;
-  // std::vector<std::vector<std::vector<double>>> norms(
-  //    N_UNIT, std::vector<double>(d_max, std::vectorstd::numeric_limits<double>::quiet_NaN()));
 
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
@@ -708,53 +713,54 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
   }
 
   time_observable += timer.elapsed();
-
-  if (save && mpirank == 0) {
-    std::string filename = outdir + "/twosite_obs.dat";
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save twosite observables to " << filename << std::endl;
-    }
-    std::ofstream ofs(filename.c_str());
-    ofs << std::scientific
-        << std::setprecision(std::numeric_limits<double>::max_digits10);
-    ofs << "# $1: op_group\n";
-    ofs << "# $2: source_site (-1: mean, -2: sum)\n";
-    ofs << "# $3: target_site\n";
-    ofs << "# $4: offset_x\n";
-    ofs << "# $5: offset_y\n";
-    ofs << "# $6: real\n";
-    ofs << "# $7: imag\n";
-    ofs << std::endl;
-    for (int ilops = 0; ilops < nlops; ++ilops) {
-      double sum = 0.0;
-      int num = 0;
-      for (const auto &r : ret[ilops]) {
-        auto bond = r.first;
-        auto value = r.second;
-        sum += value;
-        num += 1;
-        ofs << ilops << " " << bond.source_site << " " << bond.target_site
-            << " " << bond.offset_x << " " << bond.offset_y << " " << value
-            << " " << 0.0 << std::endl;
-      }
-      ofs << ilops << " " << -1 << " 0 0 0 " << sum / num << " " << 0.0
-          << std::endl;
-      ofs << ilops << " " << -2 << " 0 0 0 " << sum << " " << 0.0 << std::endl;
-    }
-  }
-
   return ret;
 }
 
 template <class ptensor>
-std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
+void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, double>> const& twosite_obs){
+  if (mpirank != 0) {
+    return;
+  }
+
+  const int nlops = num_twosite_operators;
+  std::string filename = outdir + "/twosite_obs.dat";
+  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+    std::clog << "    Save twosite observables to " << filename << std::endl;
+  }
+  std::ofstream ofs(filename.c_str());
+  ofs << std::scientific
+      << std::setprecision(std::numeric_limits<double>::max_digits10);
+  ofs << "# $1: op_group\n";
+  ofs << "# $2: source_site\n";
+  ofs << "# $3: target_site\n";
+  ofs << "# $4: offset_x\n";
+  ofs << "# $5: offset_y\n";
+  ofs << "# $6: real\n";
+  ofs << "# $7: imag\n";
+  ofs << std::endl;
+  for (int ilops = 0; ilops < nlops; ++ilops) {
+    double sum = 0.0;
+    int num = 0;
+    for (const auto &r : twosite_obs[ilops]) {
+      auto bond = r.first;
+      auto value = r.second;
+      sum += value;
+      num += 1;
+      ofs << ilops << " " << bond.source_site << " " << bond.target_site
+          << " " << bond.offset_x << " " << bond.offset_y << " " << value
+          << " " << 0.0 << std::endl;
+    }
+  }
+}
+
+template <class ptensor>
+std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
   Timer<> timer;
 
   const int nlops = num_onesite_operators;
   const int r_max = corparam.r_max;
   std::vector<std::vector<int>> r_ops(nlops);
   for (auto ops : corparam.operators) {
-    // TODO: range check
     r_ops[std::get<0>(ops)].push_back(std::get<1>(ops));
   }
 
@@ -864,32 +870,36 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation(bool save) {
   }
 
   time_observable += timer.elapsed();
-
-  if (save && mpirank == 0) {
-    std::string filename = outdir + "/correlation.dat";
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save long-range correlations to " << filename
-                << std::endl;
-    }
-    std::ofstream ofs(filename.c_str());
-    ofs << std::scientific
-        << std::setprecision(std::numeric_limits<double>::max_digits10);
-    ofs << "# $1: left_op\n";
-    ofs << "# $2: left_site\n";
-    ofs << "# $3: right_op\n";
-    ofs << "# $4: right_site\n";
-    ofs << "# $5: offset_x\n";
-    ofs << "# $6: offset_y\n";
-    ofs << "# $7: real\n";
-    ofs << "# $8: imag\n";
-    ofs << std::endl;
-    for (auto const &cor : correlations) {
-      ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
-          << cor.right_index << " " << cor.offset_x << " " << cor.offset_y
-          << " " << cor.real << " " << cor.imag << " " << std::endl;
-    }
-  }
   return correlations;
+}
+
+template <class ptensor>
+void TeNeS<ptensor>::save_correlation(std::vector<Correlation> const& correlations){
+  if (mpirank != 0) {
+    return;
+  }
+  std::string filename = outdir + "/correlation.dat";
+  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+    std::clog << "    Save long-range correlations to " << filename
+              << std::endl;
+  }
+  std::ofstream ofs(filename.c_str());
+  ofs << std::scientific
+      << std::setprecision(std::numeric_limits<double>::max_digits10);
+  ofs << "# $1: left_op\n";
+  ofs << "# $2: left_site\n";
+  ofs << "# $3: right_op\n";
+  ofs << "# $4: right_site\n";
+  ofs << "# $5: offset_x\n";
+  ofs << "# $6: offset_y\n";
+  ofs << "# $7: real\n";
+  ofs << "# $8: imag\n";
+  ofs << std::endl;
+  for (auto const &cor : correlations) {
+    ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
+        << cor.right_index << " " << cor.offset_x << " " << cor.offset_y
+        << " " << cor.real << " " << cor.imag << " " << std::endl;
+  }
 }
 
 template <class ptensor> void TeNeS<ptensor>::measure() {
@@ -904,46 +914,66 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating local operators" << std::endl;
   }
-  auto local_obs = measure_onesite(true);
+  auto onesite_obs = measure_onesite();
+  save_onesite(onesite_obs);
 
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
-  auto NN_obs = measure_twosite(true);
-  auto energy = 0.0;
-  for (const auto &nn : NN_obs[0]) {
-    energy += nn.second;
-  }
+  auto twosite_obs = measure_twosite();
+  save_twosite(twosite_obs);
 
   if (corparam.r_max > 0) {
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
       std::clog << "  Start calculating long range correlation" << std::endl;
     }
-    auto correlations = measure_correlation(true);
+    auto correlations = measure_correlation();
+    save_correlation(correlations);
   }
 
   if (mpirank == 0) {
-    std::string filename = outdir + "/time.dat";
-    std::ofstream ofs(filename.c_str());
-    ofs << "time simple update = " << time_simple_update << std::endl;
-    ofs << "time full update   = " << time_full_update << std::endl;
-    ofs << "time environmnent  = " << time_environment << std::endl;
-    ofs << "time observable    = " << time_observable << std::endl;
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-      std::clog << "    Save elapsed times to " << filename << std::endl;
+    std::vector<double> loc_obs(num_onesite_operators);
+    for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+      for (int i = 0; i < N_UNIT; ++i) {
+        loc_obs[ilops] += onesite_obs[ilops][i];
+      }
+    }
+    auto energy = 0.0;
+    for (const auto &obs : twosite_obs[0]) {
+      energy += obs.second;
     }
 
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+
+    {
+      std::string filename = outdir + "/energy.dat";
+      std::ofstream ofs(filename.c_str());
+
+      if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+        ofs << "energy = " << energy/N_UNIT << std::endl;
+        for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+          ofs << "onesite_obs[" << ilops << "] = " << loc_obs[ilops] / N_UNIT << std::endl;
+        }
+        std::clog << "    Save energy density and onesite observable densities to " << filename << std::endl;
+      }
+    }
+    {
+      std::string filename = outdir + "/time.dat";
+      std::ofstream ofs(filename.c_str());
+      ofs << "time simple update = " << time_simple_update << std::endl;
+      ofs << "time full update   = " << time_full_update << std::endl;
+      ofs << "time environmnent  = " << time_environment << std::endl;
+      ofs << "time observable    = " << time_observable << std::endl;
+      if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+        std::clog << "    Save elapsed times to " << filename << std::endl;
+      }
+    }
+
+    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
       std::cout << std::endl;
 
-      std::cout << "Energy/Site = " << energy/N_UNIT << std::endl;
-
+      std::cout << "Energy density = " << energy/N_UNIT << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
-        double sum = 0.0;
-        for (int i = 0; i < N_UNIT; ++i) {
-          sum += local_obs[ilops][i];
-        }
-        std::cout << "Onesite operator/Site " << ilops << " = " << sum / N_UNIT
+        std::cout << "Onesite operator[" << ilops << "] density = " << loc_obs[ilops] / N_UNIT
                   << std::endl;
       }
       std::cout << std::endl;
