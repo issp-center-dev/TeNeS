@@ -1,16 +1,26 @@
 import subprocess
 
+import numpy as np
+
 import toml
 
-total = 20
-for idx in range(total + 1):
-    print("Caclulation Process: {}/{}".format(idx, total))
-    dict_toml = toml.load(open("simple.toml"))
-    dict_toml["model"]["G"] = 0.2 * idx
-    toml.dump(dict_toml, open("simple_{}.toml".format(idx), mode="w"))
-    cmd = "tenes_simple simple_{}.toml -o input_{}.toml".format(idx, idx)
+
+num_g = 21
+min_g = 0.0
+max_g = 2.0
+
+total = 0
+for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
+    print("Caclulation Process: {}/{}".format(idx+1, num_g))
+    with open("simple.toml") as f:
+        dict_toml = toml.load(f)
+    dict_toml["parameter"]["directory"] = {"output": "output_{}".format(idx)}
+    dict_toml["model"]["G"] = float(g)
+    with open("simple_{}.toml".format(idx), 'w') as f:
+        toml.dump(dict_toml, f)
+    cmd = "tenes_simple simple_{}.toml -o std_{}.toml".format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = "tenes_std std_{}.toml -o input_{}.toml".format(idx, idx)
     subprocess.call(cmd.split())
     cmd = "tenes input_{}.toml".format(idx)
-    subprocess.call(cmd.split())
-    cmd = "mv output output_{}".format(idx)
     subprocess.call(cmd.split())
