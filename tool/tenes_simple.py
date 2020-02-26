@@ -385,14 +385,12 @@ class SpinModel(Model):
         ham += B * SS ** 2
         return ham
 
-    def read_params(self, param: Dict[str, Any]):
+    def read_params(self, modelparam: Dict[str, Any]):
         ret = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
             [{}, {}, {}],  # 3rd neighbors
         ]
-
-        modelparam = param["model"]
 
         def update(types, names, n, key):
             for typ in types:
@@ -482,7 +480,7 @@ def make_model(param: Dict[str, Any]) -> Model:
     """
     modelparam = param["model"]
     if modelparam["type"] == "spin":
-        model = SpinModel(param)
+        model = SpinModel(modelparam)
     else:
         msg = "Unknown model type: {}".format(modelparam["type"])
         raise RuntimeError(msg)
