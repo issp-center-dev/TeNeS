@@ -43,7 +43,7 @@ if res["parameter"] != ref["parameter"]:
     result = False
 
 if res["tensor"] != ref["tensor"]:
-    print('check for the section "lattice" fails')
+    print('check for the section "tensor" fails')
     result = False
 
 ham_result = True
