@@ -667,17 +667,35 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite(bool save) {
 
     double value = 0.0;
     if(op.ops_indices.empty()){
-      ptensor U, VT;
-      std::vector<double> s;
-      mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
-      const int ns = s.size();
-      for(int is=0; is<ns; ++is){
-        ptensor source_op = reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
-        op_[source_row][source_col] = &source_op;
-        ptensor target_op = reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-        op_[target_row][target_col] = &target_op;
-        auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-        value += localvalue * s[is];
+      if(nrow * ncol == 2){
+        if(nrow == 2){
+          const int top = indices[0][0];
+          const int bottom = indices[1][0];
+          ptensor o = (top == source ? op.op : mptensor::transpose(op.op, {1, 0, 3, 2}));
+          value = Contract_two_sites_vertical_op12(C1[top], C2[top], C3[bottom], C4[bottom],
+                                                   eTt[top], eTr[top], eTr[bottom], eTb[bottom], eTl[bottom], eTl[top],
+                                                   Tn[top], Tn[bottom], o);
+        }else{
+          const int left = indices[0][0];
+          const int right = indices[0][1];
+          ptensor o = (left == source ? op.op : mptensor::transpose(op.op, {1, 0, 3, 2}));
+          value = Contract_two_sites_horizontal_op12(C1[left], C2[right], C3[right], C4[left],
+                                                     eTt[left], eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
+                                                     Tn[left], Tn[right], o);
+        }
+      }else{
+        ptensor U, VT;
+        std::vector<double> s;
+        mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+        const int ns = s.size();
+        for(int is=0; is<ns; ++is){
+          ptensor source_op = reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
+          op_[source_row][source_col] = &source_op;
+          ptensor target_op = reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
+          op_[target_row][target_col] = &target_op;
+          auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+          value += localvalue * s[is];
+        }
       }
     }else{
       op_[source_row][source_col] = &(onesite_operators[siteoperator_index(op.source_site, op.ops_indices[0])].op);
@@ -918,14 +936,14 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
       std::cout << std::endl;
 
-      std::cout << "Energy = " << energy << std::endl;
+      std::cout << "Energy/Site = " << energy/N_UNIT << std::endl;
 
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
         double sum = 0.0;
         for (int i = 0; i < N_UNIT; ++i) {
           sum += local_obs[ilops][i];
         }
-        std::cout << "Local operator " << ilops << " = " << sum / N_UNIT
+        std::cout << "Onesite operator/Site " << ilops << " = " << sum / N_UNIT
                   << std::endl;
       }
       std::cout << std::endl;
