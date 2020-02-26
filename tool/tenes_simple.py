@@ -513,7 +513,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     ret = []
     ret.append("[parameter]")
     pparam = param["parameter"]
-    for name in ("tensor", "simple_update", "full_update", "ctm", "random"):
+    for name in ("directory", "simple_update", "full_update", "ctm", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():

@@ -53,6 +53,7 @@ class PEPS_Parameters {
   // IO
   std::string tensor_load_dir;
   std::string tensor_save_dir;
+  std::string outdir;
 
   PEPS_Parameters();
 

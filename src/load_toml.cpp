@@ -129,10 +129,11 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   PEPS_Parameters pparam;
 
   // Tensor
-  auto tensor = param->get_table("tensor");
-  if (tensor != nullptr) {
-    pparam.tensor_load_dir = find_or(tensor, "load_dir", std::string(""));
-    pparam.tensor_save_dir = find_or(tensor, "save_dir", std::string(""));
+  auto directory = param->get_table("directory");
+  if (directory != nullptr) {
+    pparam.outdir = find_or(directory, "output", std::string("output"));
+    pparam.tensor_load_dir = find_or(directory, "tensor_load", std::string(""));
+    pparam.tensor_save_dir = find_or(directory, "tensor_save", std::string(""));
   }
 
   // Simple update

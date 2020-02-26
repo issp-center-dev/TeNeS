@@ -139,6 +139,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   int seed = peps_parameters.seed;
   random_tensor::set_seed(seed + mpirank);
 
+  outdir = peps_parameters.outdir;
   if (outdir.empty()) {
     outdir += ".";
   }

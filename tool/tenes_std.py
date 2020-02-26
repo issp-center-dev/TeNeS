@@ -631,7 +631,10 @@ class Model:
         for tablename, table in self.parameter.items():
             f.write("[parameter.{}]\n".format(tablename))
             for k, v in table.items():
-                f.write("{} = {}\n".format(k, v))
+                if isinstance(v, str):
+                    f.write("{} = '{}'\n".format(k, v))
+                else:
+                    f.write("{} = {}\n".format(k, v))
         f.write("\n")
 
         # tensor

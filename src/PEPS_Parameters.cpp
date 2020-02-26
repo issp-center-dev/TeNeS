@@ -9,8 +9,7 @@ namespace tenes {
 
 PEPS_Parameters::PEPS_Parameters() {
   // Tensor
-  D = 2;
-  CHI = D * D;
+  CHI = 2;
 
   // Debug
   print_level = PrintLevel::info;
@@ -44,6 +43,7 @@ PEPS_Parameters::PEPS_Parameters() {
   // IO
   tensor_load_dir = "";
   tensor_save_dir = "";
+  outdir = "output";
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -54,7 +54,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   using std::string;
 
   enum PARAMS_INT_INDEX {
-    I_D,
     I_CHI,
     I_print_level,
     I_num_simple_step,
@@ -84,6 +83,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   enum PARAMS_STRING_INDEX {
     I_tensor_load_dir,
     I_tensor_save_dir,
+    I_outdir,
 
     N_PARAMS_STRING_INDEX,
   };
@@ -96,7 +96,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   std::vector<std::string> params_string(N_PARAMS_STRING_INDEX);
 
   if (irank == root) {
-    SAVE_PARAM(D, int);
     SAVE_PARAM(CHI, int);
     SAVE_PARAM(print_level, int);
     SAVE_PARAM(num_simple_step, int);
@@ -118,6 +117,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(RSVD_Oversampling_factor, double);
 
     SAVE_PARAM(tensor_load_dir, string);
+    SAVE_PARAM(tensor_save_dir, string);
+    SAVE_PARAM(outdir, string);
 
     MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
     MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
@@ -127,7 +128,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
               comm);
 
-    LOAD_PARAM(D, int);
     LOAD_PARAM(CHI, int);
     LOAD_PARAM(print_level, int);
     LOAD_PARAM(num_simple_step, int);
@@ -150,6 +150,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
 
     LOAD_PARAM(tensor_load_dir, string);
     LOAD_PARAM(tensor_save_dir, string);
+    LOAD_PARAM(outdir, string);
   }
 }
 
@@ -164,7 +165,6 @@ void PEPS_Parameters::save(const char *filename, bool append) {
     ofs.open(filename, std::ios::out);
   }
   // Tensor
-  ofs << "D = " << D << std::endl;
   ofs << "CHI = " << CHI << std::endl;
 
   // Simple update
@@ -196,6 +196,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
   ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
+  ofs << "outdir = " << outdir << std::endl;
 
   ofs.close();
 }
