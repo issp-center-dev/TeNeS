@@ -7,8 +7,8 @@ main_impl.cpp
 tenes.cpp 
 PEPS_Parameters.cpp
 Lattice.cpp
-mpi.cpp
 util/string.cpp
+mpi.cpp
 )
 
 if (USE_SANITIZER)
@@ -25,7 +25,7 @@ endif()
 
 target_compile_options(tenes PRIVATE ${OMP_FLAG})
 target_compile_options(tenes PRIVATE -Wall)
-target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-sign-compare -Wpedantic >)
+target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-unused-parameter -Wno-sign-compare -Wpedantic >)
 
 target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})

@@ -6,6 +6,7 @@
 #include <random>
 #include <sys/stat.h>
 #include <tuple>
+#include <type_traits>
 
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
@@ -40,6 +41,9 @@ bool operator<(const Bond &a, const Bond &b) {
 
 template <class ptensor> class TeNeS {
 public:
+  using tensor_type = typename ptensor::value_type;
+  static constexpr bool is_tensor_real = std::is_floating_point<tensor_type>::value;
+
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         NNOperators<ptensor> simple_updates_,
         NNOperators<ptensor> full_updates_,
@@ -53,11 +57,11 @@ public:
 
   void optimize();
   void measure();
-  std::vector<std::vector<double>> measure_onesite();
-  std::vector<std::map<Bond, double>> measure_twosite();
+  std::vector<std::vector<tensor_type>> measure_onesite();
+  std::vector<std::map<Bond, tensor_type>> measure_twosite();
   std::vector<Correlation> measure_correlation();
-  void save_onesite(std::vector<std::vector<double>> const& onesite_obs);
-  void save_twosite(std::vector<std::map<Bond, double>> const& twosite_obs);
+  void save_onesite(std::vector<std::vector<tensor_type>> const& onesite_obs);
+  void save_twosite(std::vector<std::map<Bond, tensor_type>> const& twosite_obs);
   void save_correlation(std::vector<Correlation> const& correlations);
   void save_tensors() const;
 
@@ -65,6 +69,13 @@ private:
   int siteoperator_index(int site, int group) const {
     return site_ops_indices[site][group];
   }
+
+  template <class T>
+  tensor_type to_tensor_type(T const &v) const { return to_tensor_type_impl<tensor_type>(v, nullptr); }
+  template <class U>
+  tensor_type to_tensor_type_impl(std::complex<double> v, typename std::enable_if<std::is_floating_point<U>::value>::type*) const { return std::real(v); }
+  template <class U>
+  tensor_type to_tensor_type_impl(std::complex<double> v, typename std::enable_if<!std::is_floating_point<U>::value>::type*) const { return v; }
 
   static constexpr int nleg = 4;
 
@@ -231,10 +242,10 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
       const auto vdim = lattice.virtual_dims[i];
 
       const size_t ndim = vdim[0] * vdim[1] * vdim[2] * vdim[3] * pdim;
-      std::vector<double> ran(ndim);
+      std::vector<double> ran_re(ndim);
 
       for (int j = 0; j < ndim; j++) {
-        ran[j] = dist(gen);
+        ran_re[j] = dist(gen);
       }
       auto &dir = lattice.initial_dirs[i];
       if (std::all_of(dir.begin(), dir.end(),
@@ -245,6 +256,12 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
           dir[j] = dist(gen);
         }
       }
+
+      std::vector<double> ran_im(ndim);
+      for (int j = 0; j < ndim; j++) {
+        // gen randoms here for backward compatibility
+        ran_im[j] = dist(gen);
+      }
       for (int n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
@@ -253,7 +270,8 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
           nr = index[0] + index[1] * vdim[0] + index[2] * vdim[0] * vdim[1] +
                index[3] * vdim[0] * vdim[1] * vdim[2] +
                index[4] * vdim[0] * vdim[1] * vdim[2] * vdim[3];
-          Tn[i].set_value(index, lattice.noises[i] * ran[nr]);
+          auto v = lattice.noises[i]*std::complex<double>(ran_re[nr], ran_im[nr]);
+          Tn[i].set_value(index, to_tensor_type(v));
         }
       }
     }
@@ -262,7 +280,7 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
     struct stat status;
     if (stat(load_dir.c_str(), &status) != 0) {
       std::string msg = load_dir + " does not exists.";
-      throw std::runtime_error(msg);
+      throw tenes::runtime_error(msg);
     }
     for (int i = 0; i < N_UNIT; ++i) {
       std::string filename = load_dir + "/";
@@ -291,12 +309,7 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
         }
       }
     }
-    int lsize = ls.size();
-    MPI_Bcast(&lsize, 1, MPI_INT, 0, comm);
-    if (mpirank != 0) {
-      ls.resize(lsize);
-    }
-    MPI_Bcast(&(ls[0]), lsize, MPI_DOUBLE, 0, comm);
+    bcast(ls, 0, comm);
     int index = 0;
     for (int i = 0; i < N_UNIT; ++i) {
       const auto vdim = lattice.virtual_dims[i];
@@ -508,32 +521,34 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
 }
 
 template <class ptensor>
-std::vector<std::vector<double>> TeNeS<ptensor>::measure_onesite() {
+auto TeNeS<ptensor>::measure_onesite() 
+-> std::vector<std::vector<typename TeNeS<ptensor>::tensor_type>> 
+{
   Timer<> timer;
   const int nlops = num_onesite_operators;
-  std::vector<std::vector<double>> local_obs(
+  std::vector<std::vector<tensor_type>> local_obs(
       nlops,
-      std::vector<double>(N_UNIT, std::numeric_limits<double>::quiet_NaN()));
+      std::vector<tensor_type>(N_UNIT, std::numeric_limits<double>::quiet_NaN()));
 
   std::vector<double> norm(N_UNIT);
   for (int i = 0; i < N_UNIT; ++i) {
-    norm[i] = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                eTb[i], eTl[i], Tn[i], op_identity[i]);
+    const auto n = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                     eTb[i], eTl[i], Tn[i], op_identity[i]);
+    norm[i] = std::real(n);
   }
   for (auto const &op : onesite_operators) {
     const int i = op.source_site;
-    double val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                   eTb[i], eTl[i], Tn[i], op.op);
+    const auto val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                       eTb[i], eTl[i], Tn[i], op.op);
     local_obs[op.group][i] = val / norm[i];
   }
-
   time_observable += timer.elapsed();
 
   return local_obs;
 }
 
 template <class ptensor>
-void TeNeS<ptensor>::save_onesite(std::vector<std::vector<double>> const& onesite_obs){
+void TeNeS<ptensor>::save_onesite(std::vector<std::vector<typename TeNeS<ptensor>::tensor_type>> const& onesite_obs){
   if (mpirank != 0) {
     return;
   }
@@ -554,25 +569,27 @@ void TeNeS<ptensor>::save_onesite(std::vector<std::vector<double>> const& onesit
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
     int num = 0;
-    double sum = 0.0;
+    tensor_type sum = 0.0;
     for (int i = 0; i < N_UNIT; ++i) {
-      if (std::isnan(onesite_obs[ilops][i])) {
+      if (std::isnan(std::real(onesite_obs[ilops][i]))){
         continue;
       }
       num += 1;
-      sum += onesite_obs[ilops][i];
-      ofs << ilops << " " << i << " " << onesite_obs[ilops][i] << " " << 0.0
+      const auto v = onesite_obs[ilops][i];
+      sum += v;
+      ofs << ilops << " " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
     }
   }
 }
 
 template <class ptensor>
-std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite() {
+auto TeNeS<ptensor>::measure_twosite() 
+-> std::vector<std::map<Bond, typename TeNeS<ptensor>::tensor_type>> {
   Timer<> timer;
 
   const int nlops = num_twosite_operators;
-  std::vector<std::map<Bond, double>> ret(nlops);
+  std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
   constexpr int nmax = 4;
 
@@ -667,11 +684,11 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite() {
     const auto norm_key = std::make_tuple(indices[0][0], nrow, ncol);
     auto norm = (norms.count(norm_key) ? norms[norm_key] : std::numeric_limits<double>::quiet_NaN() );
     if(std::isnan(norm)){
-      norm = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      norm = std::real(Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
       norms[norm_key] = norm;
     }
 
-    double value = 0.0;
+    tensor_type value = 0.0;
     if(op.ops_indices.empty()){
       if(nrow * ncol == 2){
         if(nrow == 2){
@@ -718,7 +735,7 @@ std::vector<std::map<Bond, double>> TeNeS<ptensor>::measure_twosite() {
 }
 
 template <class ptensor>
-void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, double>> const& twosite_obs){
+void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, typename TeNeS<ptensor>::tensor_type>> const& twosite_obs){
   if (mpirank != 0) {
     return;
   }
@@ -740,7 +757,7 @@ void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, double>> const& two
   ofs << "# $7: imag\n";
   ofs << std::endl;
   for (int ilops = 0; ilops < nlops; ++ilops) {
-    double sum = 0.0;
+    tensor_type sum = 0.0;
     int num = 0;
     for (const auto &r : twosite_obs[ilops]) {
       auto bond = r.first;
@@ -748,8 +765,8 @@ void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, double>> const& two
       sum += value;
       num += 1;
       ofs << ilops << " " << bond.source_site << " " << bond.target_site
-          << " " << bond.offset_x << " " << bond.offset_y << " " << value
-          << " " << 0.0 << std::endl;
+          << " " << bond.offset_x << " " << bond.offset_y << " " << std::real(value)
+          << " " << std::imag(value) << std::endl;
     }
   }
 }
@@ -796,24 +813,24 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
           const int offset_x = (left_x + r + 1) / LX;
           const int offset_y = 0;
           const int right_index = lattice.index(right_x, right_y);
-          double norm = FinishCorrelation(
+          double norm = std::real(FinishCorrelation(
               correlation_norm, C2[right_index], C3[right_index],
               eTt[right_index], eTr[right_index], eTb[right_index],
-              Tn[right_index], op_identity[right_index]);
+              Tn[right_index], op_identity[right_index]));
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if(right_op_index < 0){
               continue;
             }
             const auto right_op = onesite_operators[right_op_index].op;
-            double val = FinishCorrelation(correlation_T, C2[right_index],
+            auto val = FinishCorrelation(correlation_T, C2[right_index],
                                            C3[right_index], eTt[right_index],
                                            eTr[right_index], eTb[right_index],
                                            Tn[right_index], right_op) /
                          norm;
             correlations.push_back(Correlation{left_index, right_index,
                                                offset_x, offset_y, left_ilop,
-                                               right_ilop, val, 0.0});
+                                               right_ilop, std::real(val), std::imag(val)});
           }
 
           Transfer(correlation_T, eTt[right_index], eTb[right_index],
@@ -843,24 +860,24 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
           const int offset_y = (left_y + r + 1) / LY;
           const int right_index = lattice.index(right_x, right_y);
           tn = transpose(Tn[right_index], Axes(3, 0, 1, 2, 4));
-          double norm = FinishCorrelation(correlation_norm, C1[right_index],
+          double norm = std::real(FinishCorrelation(correlation_norm, C1[right_index],
                                           C2[right_index], eTl[right_index],
                                           eTt[right_index], eTr[right_index],
-                                          tn, op_identity[right_index]);
+                                          tn, op_identity[right_index]));
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if(right_op_index < 0){
               continue;
             }
             const auto right_op = onesite_operators[right_op_index].op;
-            double val = FinishCorrelation(correlation_T, C1[right_index],
+            auto val = FinishCorrelation(correlation_T, C1[right_index],
                                            C2[right_index], eTl[right_index],
                                            eTt[right_index], eTr[right_index],
                                            tn, right_op) /
                          norm;
             correlations.push_back(Correlation{left_index, right_index,
                                                offset_x, offset_y, left_ilop,
-                                               right_ilop, val, 0.0});
+                                               right_ilop, std::real(val), std::imag(val)});
           }
 
           Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
@@ -910,8 +927,6 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   }
   update_CTM();
 
-  // const int nlops = lops.size();
-
   if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
     std::clog << "  Start calculating local operators" << std::endl;
   }
@@ -933,7 +948,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   }
 
   if (mpirank == 0) {
-    std::vector<double> loc_obs(num_onesite_operators);
+    std::vector<tensor_type> loc_obs(num_onesite_operators);
     for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
       for (int i = 0; i < N_UNIT; ++i) {
         loc_obs[ilops] += onesite_obs[ilops][i];
@@ -941,18 +956,24 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     }
     auto energy = 0.0;
     for (const auto &obs : twosite_obs[0]) {
-      energy += obs.second;
+      energy += std::real(obs.second);
     }
 
 
     {
+      const double invV = 1.0 / N_UNIT;
       std::string filename = outdir + "/energy.dat";
       std::ofstream ofs(filename.c_str());
 
       if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
-        ofs << "energy = " << energy/N_UNIT << std::endl;
+        ofs << "energy = " << energy * invV << std::endl;
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
-          ofs << "onesite_obs[" << ilops << "] = " << loc_obs[ilops] / N_UNIT << std::endl;
+          const auto v = loc_obs[ilops] * invV;
+          if(is_tensor_real){
+            ofs << "onesite_obs[" << ilops << "] = " << v << std::endl;
+          }else{
+            ofs << "onesite_obs[" << ilops << "] = " << std::real(v) << " +i " << std::imag(v) << std::endl;
+          }
         }
         std::clog << "    Save energy density and onesite observable densities to " << filename << std::endl;
       }
@@ -970,12 +991,17 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     }
 
     if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+      const double invV = 1.0 / N_UNIT;
       std::cout << std::endl;
 
       std::cout << "Energy density = " << energy/N_UNIT << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
-        std::cout << "Onesite operator[" << ilops << "] density = " << loc_obs[ilops] / N_UNIT
-                  << std::endl;
+        const auto v = loc_obs[ilops] * invV;
+        if(is_tensor_real){
+          std::cout << "Onesite operator[" << ilops << "] density = " << v << std::endl;
+        }else{
+          std::cout << "Onesite operator[" << ilops << "] density = " << std::real(v) << " +i " << std::imag(v) << std::endl;
+        }
       }
       std::cout << std::endl;
 
@@ -1046,18 +1072,14 @@ template int tenes<d_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                              Operators<d_tensor> onesite_operators,
                              Operators<d_tensor> twosite_operators,
                              CorrelationParameter corparam);
-/*
-using c_tensor = mptensor::Tensor<mptensor_matrix_type,
-std::complex<double>>;
-template int tenes<c_tensor>(MPI_Comm comm,
-                      PEPS_Parameters peps_parameters,
-                      Lattice lattice,
-                      Edges simple_edges,
-                      Edges full_edges,
-                      std::vector<c_tensor> hams,
-                      std::vector<d_tensor> lops,
-                      CorrelationParameter corparam
-    );
-    */
+
+using c_tensor = mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
+template int tenes<c_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
+                             Lattice lattice,
+                             NNOperators<c_tensor> simple_updates,
+                             NNOperators<c_tensor> full_updates,
+                             Operators<c_tensor> onesite_operators,
+                             Operators<c_tensor> twosite_operators,
+                             CorrelationParameter corparam);
 
 } // end of namespace tenes

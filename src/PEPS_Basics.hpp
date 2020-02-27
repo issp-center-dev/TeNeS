@@ -1465,7 +1465,7 @@ void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
 }
 
 template <template <typename> class Matrix, typename C>
-double FinishCorrelation(
+C FinishCorrelation(
     const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
     const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,

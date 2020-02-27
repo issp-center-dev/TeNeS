@@ -1,3 +1,5 @@
+#include <complex>
+
 #include <cpptoml.h>
 
 #include "Lattice.hpp"
@@ -13,6 +15,7 @@
 namespace tenes {
 
 int main_impl(int argc, char **argv) {
+  // using ptensor = mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
   using ptensor = mptensor::Tensor<mptensor_matrix_type, double>;
 
   int mpisize = 0, mpirank = 0;
