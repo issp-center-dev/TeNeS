@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 message(STATUS "CMake version: " ${CMAKE_VERSION})
 project(TeNeS CXX)
-set(TENES_VERSION 0.1.0)
+set(TENES_VERSION 1.0-dev)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.4)
     # old FindLAPACK.cmake requires C-lang enabled...

@@ -129,7 +129,7 @@
 
 正方格子 ``type = "square lattice"`` で ``L=2`` のときの
 テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-図 :numref:`fig_square_1st`, :numref:`fig_square_2nd`, :numref:`fig_square_3rd` に示します。
+:numref:`fig_square_1st`, :numref:`fig_square_2nd`, :numref:`fig_square_3rd` に示します。
 四角はテンソルを表し、細線が最近接ボンドを表します。
 太矢印と数字は2種類のボンドを表します。
 破線はひとつのユニットセルを表します。
@@ -161,7 +161,7 @@
 
 蜂の巣格子 ``type = "honeycomb lattice"`` で ``L=2`` のときの
 テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-図 :numref:`fig_honeycomb_1st`, :numref:`fig_honeycomb_2nd`, :numref:`fig_honeycomb_3rd` に示します。
+:numref:`fig_honeycomb_1st`, :numref:`fig_honeycomb_2nd`, :numref:`fig_honeycomb_3rd` に示します。
 蜂の巣格子ではx 方向のユニットセルの大きさ ``L`` は偶数でなければいけません。
 四角はテンソルを表し、細線が最近接ボンドを表します。
 太矢印と数字は3種類のボンドを表します。
@@ -193,7 +193,7 @@
 
 三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
 テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-図 :numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
+:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
 蜂の巣格子ではx 方向のユニットセルの大きさ ``L`` は偶数でなければいけません。
 四角はテンソルを表し、細線が最近接ボンドを表します。
 太矢印と数字は3種類のボンドを表します。
