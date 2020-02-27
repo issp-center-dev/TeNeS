@@ -341,8 +341,7 @@ class LatticeGraph:
                     else:
                         A[source_site, target_site] = 2 * weight
         self.path_weight, self.path_pred = sparse.csgraph.shortest_path(
-            sparse.csr_matrix(A),
-            return_predecessors=True,
+            sparse.csr_matrix(A), return_predecessors=True
         )
 
     def graph_site(self, localsite: int, offset_x: int = 0, offset_y: int = 0) -> int:
@@ -386,32 +385,42 @@ class LatticeGraph:
 
 
 class TwoBodyOperator:
-    def __init__(self, elements: np.ndarray, bond: Bond):
-        self.elements = elements
+    def __init__(
+        self, bond: Bond, *, elements: np.ndarray = None, ops: List[int] = None
+    ):
         self.bond = bond
+        if elements is not None:
+            self.elements = elements
+            self.ops = None
+        if ops is not None:
+            self.ops = ops
+            self.elements = None
 
     def to_toml_strs(self, unitcell: Unitcell) -> List[str]:
         ret = []
         ret.append("source_site = {}".format(self.bond.source_site))
         ret.append("source_leg = {}".format(unitcell.bond_direction(self.bond)))
-        ret.append("dimensions = {}".format(list(self.elements.shape)))
-        it = np.nditer(
-            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
-        )
-        ret.append('elements = """')
-        while not it.finished:
-            i = it.multi_index
-            v = self.elements[i]
-            if np.abs(v) == 0.0:
+        if self.elements is not None:
+            ret.append("dimensions = {}".format(list(self.elements.shape)))
+            it = np.nditer(
+                self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+            )
+            ret.append('elements = """')
+            while not it.finished:
+                i = it.multi_index
+                v = self.elements[i]
+                if np.abs(v) == 0.0:
+                    it.iternext()
+                    continue
+                line = ""
+                for j in i:
+                    line += str(j) + " "
+                line += " {} {}".format(np.real(v), np.imag(v))
+                ret.append(line)
                 it.iternext()
-                continue
-            line = ""
-            for j in i:
-                line += str(j) + " "
-            line += " {} {}".format(np.real(v), np.imag(v))
-            ret.append(line)
-            it.iternext()
-        ret.append('"""')
+            ret.append('"""')
+        else:
+            ret.append("ops = {}".format(self.ops))
         return ret
 
 
@@ -450,23 +459,32 @@ class OnsiteObservable:
 
 
 class TwoBodyObservables:
-    def __init__(self, group: int, elements: np.ndarray, bonds: List[Bond]):
+    def __init__(
+        self,
+        group: int,
+        bonds: List[Bond],
+        *,
+        elements: np.ndarray = None,
+        ops: List[int] = None
+    ):
         self.group = group
-        dim = elements.ndim
-        nbody = dim // 2
-        assert nbody == 2
-        assert dim == 2 * nbody
-        for i in range(nbody):
-            assert elements.shape[i] == elements.shape[i + nbody]
-
-        self.elements = elements
+        if elements is not None:
+            dim = elements.ndim
+            nbody = dim // 2
+            assert nbody == 2
+            assert dim == 2 * nbody
+            for i in range(nbody):
+                assert elements.shape[i] == elements.shape[i + nbody]
+            self.elements = elements
+            self.ops = None
+        else:
+            self.elements = None
+            self.ops = ops
         self.bonds = bonds
 
     def to_toml_strs(self) -> List[str]:
         ret = []
         ret.append("group = {}".format(self.group))
-        dims = list(self.elements.shape[0:2])
-        ret.append("dim = {}".format(dims))
         ret.append('bonds = """')
         for b in self.bonds:
             ret.append(
@@ -475,27 +493,37 @@ class TwoBodyObservables:
                 )
             )
         ret.append('"""')
-        it = np.nditer(
-            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
-        )
-        ret.append('elements = """')
-        while not it.finished:
-            i = it.multi_index
-            v = self.elements[i]
-            if np.abs(v) == 0.0:
+        if self.elements is not None:
+            dims = list(self.elements.shape[0:2])
+            ret.append("dim = {}".format(dims))
+            it = np.nditer(
+                self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+            )
+            ret.append('elements = """')
+            while not it.finished:
+                i = it.multi_index
+                v = self.elements[i]
+                if np.abs(v) == 0.0:
+                    it.iternext()
+                    continue
+                line = ""
+                for j in i:
+                    line += str(j) + " "
+                line += " {} {}".format(np.real(v), np.imag(v))
+                ret.append(line)
                 it.iternext()
-                continue
-            line = ""
-            for j in i:
-                line += str(j) + " "
-            line += " {} {}".format(np.real(v), np.imag(v))
-            ret.append(line)
-            it.iternext()
-        ret.append('"""')
+            ret.append('"""')
+        else:
+            ret.append("ops = {}".format(self.ops))
         return ret
 
     def to_twosite_operators(self) -> List[TwoBodyOperator]:
-        return [TwoBodyOperator(self.elements, bond) for bond in self.bonds]
+        if self.elements is not None:
+            return [
+                TwoBodyOperator(bond, elements=self.elements) for bond in self.bonds
+            ]
+        else:
+            return [TwoBodyOperator(bond, ops=self.ops) for bond in self.bonds]
 
 
 def make_evolution(
@@ -514,7 +542,7 @@ def make_evolution(
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
     if nhops == 1:
-        return [TwoBodyOperator(evo, hamiltonian.bond)]
+        return [TwoBodyOperator(hamiltonian.bond, elements=evo)]
 
     mdofs = []
     unitcell = graph.unitcell
@@ -545,9 +573,9 @@ def make_evolution(
         U = np.dot(U, np.diag(S))
         B = U.reshape((A.shape[0], A.shape[1], dofs[0], -1))
         A = Vt.reshape([B.shape[3]] + dofs[2:] + dofs[1:])
-        ret.append(TwoBodyOperator(B, bond))
+        ret.append(TwoBodyOperator(bond, elements=B))
         dofs.pop(0)
-    ret.append(TwoBodyOperator(A, bonds[-1]))
+    ret.append(TwoBodyOperator(bonds[-1], elements=A))
     return ret
 
 
@@ -555,8 +583,8 @@ class Model:
     def __init__(self, param: dict, atol: float = 1e-15):
         self.param = param
         self.parameter = param["parameter"]
-        self.simple_tau = self.parameter["simple_update"]["tau"]
-        self.full_tau = self.parameter["full_update"]["tau"]
+        self.simple_tau = self.parameter["simple_update"].get("tau", 0.01)
+        self.full_tau = self.parameter["full_update"].get("tau", 0.01)
         self.correlation = param.get("correlation", None)
 
         self.unitcell = Unitcell(param["tensor"])
@@ -586,9 +614,9 @@ class Model:
                 assert self.unitcell.sites[b.source_site].phys_dim == elements.shape[0]
                 assert self.unitcell.sites[b.target_site].phys_dim == elements.shape[1]
                 bonds.append(b)
-                op = TwoBodyOperator(elements, b)
+                op = TwoBodyOperator(b, elements=elements)
                 self.hamiltonians.append(op)
-            enes = TwoBodyObservables(0, elements, bonds)
+            enes = TwoBodyObservables(0, bonds, elements=elements)
             self.energy_obs.append(enes)
         self.graph = LatticeGraph(
             self.unitcell, offset_x_min, offset_y_min, offset_x_max, offset_y_max
@@ -611,9 +639,12 @@ class Model:
                 bonds = [
                     parse_bond(line) for line in twosite["bonds"].strip().splitlines()
                 ]
-                dim = twosite["dim"]
-                elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
-                obs = TwoBodyObservables(group, elements, bonds)
+                if "elements" in twosite:
+                    dim = twosite["dim"]
+                    elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
+                    obs = TwoBodyObservables(group, bonds, elements=elements)
+                else:
+                    obs = TwoBodyObservables(group, bonds, ops=twosite["ops"])
                 self.twobodies.append(obs)
 
         self.simple_updates = []
@@ -625,7 +656,7 @@ class Model:
             for evo in make_evolution(ham, self.graph, self.full_tau):
                 self.full_updates.append(evo)
 
-    def to_toml(self, f: IO):
+    def to_toml(self, f: IO, *, no_hamiltonian_observe=False):
         # parameter
         f.write("[parameter]\n")
         for tablename, table in self.parameter.items():
@@ -661,13 +692,14 @@ class Model:
                 f.write(line + "\n")
         f.write("\n")
 
-        for obs in self.energy_obs:
-            f.write("[[observable.twosite]]\n")
-            for line in obs.to_toml_strs():
-                f.write(line + "\n")
+        if not no_hamiltonian_observe:
+            for obs in self.energy_obs:
+                f.write("[[observable.twosite]]\n")
+                for line in obs.to_toml_strs():
+                    f.write(line + "\n")
 
         for twosite in self.twobodies:
-            if twosite.group == 0:
+            if twosite.group == 0 and not no_hamiltonian_observe:
                 continue
             f.write("[[observable.twosite]]\n")
             for line in twosite.to_toml_strs():
@@ -695,7 +727,6 @@ class Model:
                 f.write(line + "\n")
 
 
-
 if __name__ == "__main__":
     import argparse
     import sys
@@ -712,6 +743,12 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
 
+    parser.add_argument(
+        "--no-hamiltonian-observe",
+        action="store_true",
+        help="Do not overwrite twosite observable with group=0 by bond Hamiltonian",
+    )
+
     args = parser.parse_args()
     if args.input == args.output:
         print("The names of input and output are the same")
@@ -721,4 +758,5 @@ if __name__ == "__main__":
     model = Model(param)
 
     with open(args.output, "w") as f:
-        model.to_toml(f)
+        model.to_toml(f, no_hamiltonian_observe=args.no_hamiltonian_observe)
+
