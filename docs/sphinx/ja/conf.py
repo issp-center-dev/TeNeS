@@ -182,3 +182,5 @@ html_sidebars = {
         'donate.html',
     ]
 }
+
+numfig = True
