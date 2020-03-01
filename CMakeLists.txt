@@ -103,6 +103,7 @@ else()
 endif()
 
 if(NOT MPTENSOR_ROOT)
+    set(MPTENSOR_BUILD_LIBRARY_ONLY ON)
     set(CMAKE_MODULE_PATH "${DEPS_DIR}/mptensor/config" ${CMAKE_MODULE_PATH})
     add_subdirectory("${DEPS_DIR}/mptensor")
     set(MPTENSOR_INCLUDE_DIR ${DEPS_DIR}/mptensor/src/)
