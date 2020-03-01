@@ -71,11 +71,7 @@ private:
   }
 
   template <class T>
-  tensor_type to_tensor_type(T const &v) const { return to_tensor_type_impl<tensor_type>(v, nullptr); }
-  template <class U>
-  tensor_type to_tensor_type_impl(std::complex<double> v, typename std::enable_if<std::is_floating_point<U>::value>::type*) const { return std::real(v); }
-  template <class U>
-  tensor_type to_tensor_type_impl(std::complex<double> v, typename std::enable_if<!std::is_floating_point<U>::value>::type*) const { return v; }
+  tensor_type to_tensor_type(T const &v) const { return convert_complex<tensor_type>(v); }
 
   static constexpr int nleg = 4;
 
@@ -231,11 +227,14 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   }
 
   std::mt19937 gen(peps_parameters.seed);
+  // use another rng for backward compatibility
+  std::mt19937 gen_im(peps_parameters.seed*11+137);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   int nr;
 
   std::string const &load_dir = peps_parameters.tensor_load_dir;
   if (load_dir.empty()) {
+
     Index index;
     for (int i = 0; i < lattice.N_UNIT; ++i) {
       const auto pdim = lattice.physical_dims[i];
@@ -259,8 +258,7 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
 
       std::vector<double> ran_im(ndim);
       for (int j = 0; j < ndim; j++) {
-        // gen randoms here for backward compatibility
-        ran_im[j] = dist(gen);
+        ran_im[j] = dist(gen_im);
       }
       for (int n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
