@@ -220,30 +220,6 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
                                 int nsites, int nbody, const char* tablename="observable.onesite") {
   assert(nbody == 1 || nbody == 2);
 
-  mptensor::Shape shape;
-  auto dim_arr = param->get_array_of<int64_t>("dim");
-  auto dim_int = param->get_as<int>("dim");
-  if (dim_arr) {
-    if(dim_arr->size() != nbody){
-      std::stringstream ss;
-      ss << "operator is " << nbody << "-sites but dim has " << dim_arr->size() << " integers";
-      throw input_error(ss.str());
-    }
-    for (int d : *dim_arr) {
-      shape.push(d);
-    }
-  } else if (dim_int) {
-    for (int i = 0; i < nbody; ++i) {
-      shape.push(*dim_int);
-    }
-  } else{
-    throw input_error(detail::msg_cannot_find("dim", tablename));
-  }
-
-  for (int i = 0; i < nbody; ++i) {
-    shape.push(shape[i]);
-  }
-
   auto elements = param->get_as<std::string>("elements");
   auto ops = param->get_array_of<int64_t>("ops");
   if(elements && ops){
@@ -253,23 +229,41 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   }
   tensor A;
   std::vector<int> op_ind;
-  if(nbody==1){
-    if(!elements){
-      std::stringstream ss;
-      ss << "elements not found in a section " << tablename;
-      throw tenes::input_error(ss.str());
+  if(nbody==1 && !elements){
+    std::stringstream ss;
+    ss << "elements not found in a section " << tablename;
+    throw tenes::input_error(ss.str());
+  }
+  if(elements){
+    mptensor::Shape shape;
+    auto dim_arr = param->get_array_of<int64_t>("dim");
+    auto dim_int = param->get_as<int>("dim");
+    if (dim_arr) {
+      if(dim_arr->size() != nbody){
+        std::stringstream ss;
+        ss << "operator is " << nbody << "-sites but dim has " << dim_arr->size() << " integers";
+        throw input_error(ss.str());
+      }
+      for (int d : *dim_arr) {
+        shape.push(d);
+      }
+    } else if (dim_int) {
+      for (int i = 0; i < nbody; ++i) {
+        shape.push(*dim_int);
+      }
+    } else{
+      throw input_error(detail::msg_cannot_find("dim", tablename));
+    }
+    for (int i = 0; i < nbody; ++i) {
+      shape.push(shape[i]);
     }
     A = util::read_tensor<tensor>(*elements, shape);
+  }else if(ops){
+    op_ind.assign(ops->begin(), ops->end());
   }else{
-    if(elements){
-      A = util::read_tensor<tensor>(*elements, shape);
-    }else if(ops){
-      op_ind.assign(ops->begin(), ops->end());
-    }else{
-      std::stringstream ss;
-      ss << "Neither elements nor ops are not defined in a section " << tablename;
-      throw tenes::input_error(ss.str());
-    }
+    std::stringstream ss;
+    ss << "Neither elements nor ops are not defined in a section " << tablename;
+    throw tenes::input_error(ss.str());
   }
 
   auto group = param->get_as<int>("group");
