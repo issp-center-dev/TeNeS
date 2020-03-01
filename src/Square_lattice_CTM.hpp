@@ -16,6 +16,7 @@
 #include "PEPS_Basics.hpp"
 #include "PEPS_Parameters.hpp"
 #include "mpi.hpp"
+#include "printlevel.hpp"
 
 namespace tenes {
 
@@ -749,18 +750,18 @@ int Calc_CTM_Environment(
     C2_old = C2;
     C3_old = C3;
     C4_old = C4;
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
+    if (peps_parameters.print_level >= PrintLevel::debug) {
       std::cout << "CTM: count, sig_max " << count << " " << sig_max
                 << std::endl;
     }
   }
 
   if (!convergence &&
-      peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
+      peps_parameters.print_level >= PrintLevel::warn) {
     std::cout << "Warning: CTM did not converge! count, sig_max = " << count
               << " " << sig_max << std::endl;
   }
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
+  if (peps_parameters.print_level >= PrintLevel::debug) {
     std::cout << "CTM: count to convergence= " << count << std::endl;
   }
   return count;

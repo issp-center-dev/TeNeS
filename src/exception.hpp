@@ -10,6 +10,11 @@ public:
   logic_error(const std::string &what_arg) : std::logic_error(what_arg) {}
   logic_error(const char *what_arg) : std::logic_error(what_arg) {}
 };
+class unimplemented_error : public tenes::logic_error {
+public:
+  unimplemented_error(const std::string &what_arg) : tenes::logic_error(what_arg) {}
+  unimplemented_error(const char *what_arg) : tenes::logic_error(what_arg) {}
+};
 
 class runtime_error : public std::runtime_error {
 public:

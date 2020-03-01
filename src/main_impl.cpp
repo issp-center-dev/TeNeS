@@ -1,3 +1,6 @@
+#include <complex>
+#include <numeric>
+
 #include <cpptoml.h>
 
 #include "Lattice.hpp"
@@ -8,73 +11,99 @@
 #include "type.hpp"
 #include "util/file.hpp"
 #include "util/read_matrix.hpp"
-#include "version.hpp"
+#include "printlevel.hpp"
+#include "exception.hpp"
+#include "mpi.hpp"
+
+namespace {
+tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+to_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops){
+  tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+  for(auto const & op: ops){
+    if(op.is_onesite()){
+      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+      for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+        A[lindex] = op.op[lindex].real();
+      }
+      ret.emplace_back(op.group, op.source_site, A);
+    }else if(op.ops_indices.empty()){
+      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+      for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+        A[lindex] = op.op[lindex].real();
+      }
+      ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, A);
+    }else{
+      ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, op.ops_indices);
+    }
+  }
+  return ret;
+}
+
+bool is_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops, double tol){
+  for(auto const& op: ops){
+    if(!op.ops_indices.empty()){ continue; }
+    int res = 0;
+    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+      if(std::abs(op.op[lindex].imag()) > tol){
+        res = 1;
+        break;
+      }
+    }
+    tenes::allreduce_sum(res, op.op.get_comm());
+    if(res>0){
+      return false;
+    }
+  }
+  return true;
+}
+
+tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops){
+  tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+  for(auto const & op: ops){
+    mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+      A[lindex] = op.op[lindex].real();
+    }
+    ret.emplace_back(op.source_site, op.source_leg, A);
+  }
+  return ret;
+}
+
+bool is_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops, double tol){
+  for(auto const& op: ops){
+    int res = 0;
+    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+      if(std::abs(op.op[lindex].imag()) > tol){
+        res = 1;
+        break;
+      }
+    }
+    tenes::allreduce_sum(res, op.op.get_comm());
+    if(res>0){
+      return false;
+    }
+  }
+  return true;
+}
+
+} // end of unnamed namespace
+
 
 namespace tenes {
 
-int main_impl(int argc, char **argv) {
-  using ptensor = mptensor::Tensor<mptensor_matrix_type, double>;
+int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=PrintLevel::info) {
+  using tensor_complex = mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
 
   int mpisize = 0, mpirank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
-  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
-
-  std::string usage =
-      R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
-  
-  Usage:
-    tenes [--quiet] <input_toml>
-    tenes --help
-    tenes --version
-
-  Options:
-    -h --help       Show this help message.
-    -v --version    Show the version.
-    -q --quiet      Do not print any messages.
-  )";
-
-  if (argc == 1) {
-    if (mpirank == 0)
-      std::cout << usage << std::endl;
-    return 0;
-  }
-
-  for (int i = 1; i < argc; ++i) {
-    std::string opt = argv[i];
-    if (opt == "-h" || opt == "--help") {
-      if (mpirank == 0)
-        std::cout << usage << std::endl;
-      return 0;
-    }
-  }
-
-  for (int i = 1; i < argc; ++i) {
-    std::string opt = argv[i];
-    if (opt == "-v" || opt == "--version") {
-      if (mpirank == 0)
-        std::cout << "TeNeS v" << TENES_VERSION << std::endl;
-      return 0;
-    }
-  }
-
-  using PrintLevel = PEPS_Parameters::PrintLevel;
-
-  PrintLevel print_level = PrintLevel::info;
-  std::string input_filename;
-  for (int i = 1; i < argc; ++i) {
-    std::string opt = argv[i];
-    if (opt == "-q" || opt == "--quiet") {
-      print_level = PrintLevel::none;
-    } else {
-      input_filename = opt;
-    }
-  }
+  MPI_Comm_rank(com, &mpirank);
+  MPI_Comm_size(com, &mpisize);
 
   if (!file_exists(input_filename)) {
-    if (mpirank == 0)
-      std::cout << "ERROR: cannot find the input file: " << input_filename
-                << std::endl;
-    return 1;
+    std::stringstream ss;
+    ss << "ERROR: cannot find the input file: " << input_filename
+              << std::endl;
+    throw tenes::input_error(ss.str());
   }
 
   auto input_toml = cpptoml::parse_file(input_filename);
@@ -88,9 +117,7 @@ int main_impl(int argc, char **argv) {
 
   auto toml_lattice = input_toml->get_table("tensor");
   if (toml_lattice == nullptr) {
-    // ERROR
-    std::cout << "[tensor] not found" << std::endl;
-    return 1;
+    throw tenes::input_error("[tensor] not found");
   }
   Lattice lattice = gen_lattice(toml_lattice);
   lattice.Bcast(MPI_COMM_WORLD);
@@ -98,27 +125,21 @@ int main_impl(int argc, char **argv) {
   // time evolution
   auto toml_evolution = input_toml->get_table("evolution");
   if (toml_evolution == nullptr) {
-    // ERROR
-    std::cout << "[evolution] not found" << std::endl;
-    return 1;
+    throw tenes::input_error("[evolution] not found");
   }
 
-  const auto simple_updates = load_simple_updates<ptensor>(input_toml);
-  const auto full_updates = load_full_updates<ptensor>(input_toml);
+  const auto simple_updates = load_simple_updates<tensor_complex>(input_toml);
+  const auto full_updates = load_full_updates<tensor_complex>(input_toml);
 
   // observable
   auto toml_observable = input_toml->get_table("observable");
   if (toml_observable == nullptr) {
-    // ERROR
-    std::cout << "[observable] not found" << std::endl;
-    return 1;
+    throw tenes::input_error("[observable] not found");
   }
 
   // onesite observable
-  const auto onesite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT, 1,
-                                                  "observable.onesite");
-  const auto twosite_obs = load_operators<ptensor>(input_toml, lattice.N_UNIT,
-                                                   2, "observable.twosite");
+  const auto onesite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 1, "observable.onesite");
+  const auto twosite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 2, "observable.twosite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -126,9 +147,22 @@ int main_impl(int argc, char **argv) {
                              ? gen_corparam(toml_correlation, "correlation")
                              : CorrelationParameter());
 
-  return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-               full_updates, onesite_obs, twosite_obs,
-               corparam);
+  const double tol = peps_parameters.iszero_tol;
+  bool& is_real = peps_parameters.is_real;
+  is_real = is_real && ::is_real(simple_updates, tol);
+  is_real = is_real && ::is_real(full_updates, tol);
+  is_real = is_real && ::is_real(onesite_obs, tol);
+  is_real = is_real && ::is_real(twosite_obs, tol);
+
+  if(is_real){
+    return tenes(MPI_COMM_WORLD, peps_parameters, lattice, to_real(simple_updates),
+                 to_real(full_updates), to_real(onesite_obs), to_real(twosite_obs),
+                 corparam);
+  }else{
+    return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
+                 full_updates, onesite_obs, twosite_obs,
+                 corparam);
+  }
 }
 
 } // end of namespace tenes

@@ -23,6 +23,7 @@
 
 #include "exception.hpp"
 
+#include "printlevel.hpp"
 #include "PEPS_Parameters.hpp"
 #include "mpi.hpp"
 
@@ -1299,11 +1300,11 @@ void Full_update_bond_horizontal(
   }
   // Post processing
   if (!convergence &&
-      peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
+      peps_parameters.print_level >= PrintLevel::warn) {
     std::cout << "warning: Full update iteration was not conveged! count= "
               << count << std::endl;
   }
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
+  if (peps_parameters.print_level >= PrintLevel::debug) {
     std::cout << "Full Update: count, delta,original_norm = " << count << " "
               << delta + C_phi << " " << C_phi << std::endl;
   }
@@ -1465,7 +1466,7 @@ void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
 }
 
 template <template <typename> class Matrix, typename C>
-double FinishCorrelation(
+C FinishCorrelation(
     const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
     const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,

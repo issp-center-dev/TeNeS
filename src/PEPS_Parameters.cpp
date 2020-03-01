@@ -40,7 +40,9 @@ PEPS_Parameters::PEPS_Parameters() {
   // random
   seed = 11;
 
-  // IO
+  // general
+  is_real = false;
+  iszero_tol = 0.0;
   tensor_load_dir = "";
   tensor_save_dir = "";
   outdir = "output";
@@ -65,6 +67,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Use_FastFullUpdate,
     I_Lcor,
     I_seed,
+    I_is_real,
 
     N_PARAMS_INT_INDEX,
   };
@@ -76,6 +79,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Inverse_precision,
     I_Full_Convergence_Epsilon,
     I_RSVD_Oversampling_factor,
+    I_iszero_tol,
 
     N_PARAMS_DOUBLE_INDEX,
   };
@@ -116,6 +120,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Convergence_Epsilon, double);
     SAVE_PARAM(RSVD_Oversampling_factor, double);
 
+    SAVE_PARAM(is_real, int);
+    SAVE_PARAM(iszero_tol, double);
     SAVE_PARAM(tensor_load_dir, string);
     SAVE_PARAM(tensor_save_dir, string);
     SAVE_PARAM(outdir, string);
@@ -148,6 +154,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Convergence_Epsilon, double);
     LOAD_PARAM(RSVD_Oversampling_factor, double);
 
+    LOAD_PARAM(is_real, int);
+    LOAD_PARAM(iszero_tol, double);
     LOAD_PARAM(tensor_load_dir, string);
     LOAD_PARAM(tensor_save_dir, string);
     LOAD_PARAM(outdir, string);
@@ -194,6 +202,8 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   ofs << "seed = " << seed << std::endl;
 
+  ofs << "is_real = " << is_real << std::endl;
+  ofs << "iszero_tol = " << is_real << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
   ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
   ofs << "outdir = " << outdir << std::endl;

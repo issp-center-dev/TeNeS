@@ -32,6 +32,15 @@ inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
   return param->get_as<T>(key).value_or(value);
 }
 
+template <typename T>
+inline void load_if(T& dst, decltype(cpptoml::parse_file("")) param, const char *key){
+  auto v = param->get_as<T>(key);
+  if (v){
+    dst = *v;
+  }
+}
+
+
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "tensor") {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
@@ -128,55 +137,56 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
 PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   PEPS_Parameters pparam;
 
-  // Tensor
-  auto directory = param->get_table("directory");
-  if (directory != nullptr) {
-    pparam.outdir = find_or(directory, "output", std::string("output"));
-    pparam.tensor_load_dir = find_or(directory, "tensor_load", std::string(""));
-    pparam.tensor_save_dir = find_or(directory, "tensor_save", std::string(""));
+  // general
+  auto general = param->get_table("general");
+  if (general != nullptr) {
+    load_if(pparam.is_real, general, "is_real");
+    load_if(pparam.iszero_tol, general, "iszero_tol");
+    load_if(pparam.outdir, general, "output");
+    load_if(pparam.tensor_load_dir, general, "tensor_load");
+    load_if(pparam.tensor_save_dir, general, "tensor_save");
   }
 
   // Simple update
   auto simple = param->get_table("simple_update");
   if (simple != nullptr) {
-    pparam.num_simple_step = find_or(simple, "num_step", 0);
-    pparam.Inverse_lambda_cut = find_or(simple, "lambda_cutoff", 1e-12);
+    load_if(pparam.num_simple_step, simple, "num_step");
+    load_if(pparam.Inverse_lambda_cut, simple, "lambda_cutoff");
   }
 
   // Full update
   auto full = param->get_table("full_update");
   if (full != nullptr) {
-    pparam.num_full_step = find_or(full, "num_step", 0);
-    pparam.Full_Inverse_precision = find_or(full, "inverse_precision", 1e-12);
-    pparam.Full_Convergence_Epsilon =
-        find_or(full, "convergence_epsilon", 1e-12);
-    pparam.Inverse_Env_cut = find_or(full, "env_cutoff", 1e-12);
-    pparam.Full_max_iteration = find_or(full, "iteration_max", 1000);
-    pparam.Full_Gauge_Fix = find_or(full, "gauge_fix", true);
-    pparam.Full_Use_FastFullUpdate = find_or(full, "fastfullupdate", true);
+    load_if(pparam.num_full_step, full, "num_step");
+    load_if(pparam.Full_Inverse_precision, full, "inverse_precision");
+    load_if(pparam.Full_Convergence_Epsilon, full, "convergence_epsilon");
+    load_if(pparam.Inverse_Env_cut, full, "env_cutoff");
+    load_if(pparam.Full_max_iteration, full, "iteration_max");
+    load_if(pparam.Full_Gauge_Fix, full, "gauge_fix");
+    load_if(pparam.Full_Use_FastFullUpdate, full, "fastfullupdate");
   }
 
   // Environment
   auto ctm = param->get_table("ctm");
   if (ctm != nullptr) {
-    pparam.CHI = find_or(ctm, "dimension", 4);
-    pparam.Inverse_projector_cut = find_or(ctm, "projector_cutoff", 1e-12);
-    pparam.CTM_Convergence_Epsilon = find_or(ctm, "convergence_epsilon", 1e-10);
-    pparam.Max_CTM_Iteration = find_or(ctm, "iteration_max", 100);
-    pparam.CTM_Projector_corner = find_or(ctm, "projector_corner", false);
-    pparam.Use_RSVD = find_or(ctm, "use_rsvd", false);
-    pparam.RSVD_Oversampling_factor =
-        find_or(ctm, "rsvd_oversampling_factor", 2.0);
+    load_if(pparam.CHI, ctm, "dimension");
+    load_if(pparam.Inverse_projector_cut, ctm, "projector_cutoff");
+    load_if(pparam.CTM_Convergence_Epsilon, ctm, "convergence_epsilon");
+    load_if(pparam.Max_CTM_Iteration, ctm, "iteration_max");
+    load_if(pparam.CTM_Projector_corner, ctm, "projector_corner");
+    load_if(pparam.Use_RSVD, ctm, "use_rsvd");
+    load_if(pparam.RSVD_Oversampling_factor, ctm, "rsvd_oversampling_factor");
+
     if (pparam.RSVD_Oversampling_factor < 1.0) {
       std::string msg = "rsvd_oversampling_factor must be >= 1.0";
-      throw std::runtime_error(msg);
+      throw tenes::input_error(msg);
     }
   }
 
   // random
   auto random = param->get_table("random");
   if (random != nullptr) {
-    pparam.seed = find_or(random, "seed", 11);
+    load_if(pparam.seed, random, "seed");
   }
 
   return pparam;
@@ -219,6 +229,11 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   }
   tensor A;
   std::vector<int> op_ind;
+  if(nbody==1 && !elements){
+    std::stringstream ss;
+    ss << "elements not found in a section " << tablename;
+    throw tenes::input_error(ss.str());
+  }
   if(elements){
     mptensor::Shape shape;
     auto dim_arr = param->get_array_of<int64_t>("dim");
@@ -275,9 +290,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       throw input_error(detail::msg_cannot_find("sites", tablename));
     }
     for (int s : sites) {
-      if(elements){
-        ret.emplace_back(*group, s, A);
-      }
+      ret.emplace_back(*group, s, A);
     }
   } else { // nbody == 2
     auto bonds_str = param->get_as<std::string>("bonds");
