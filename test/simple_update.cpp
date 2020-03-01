@@ -97,11 +97,11 @@ TEST_CASE("testing simple update") {
 
   int sign = 0;
   for (int a = 0; a < 2; ++a) {
-    sign = 0;
-    for (int i = 0; i < D; ++i)
-      for (int j = 0; j < D; ++j)
-        for (int k = 0; k < D; ++k)
-          for (int l = 0; l < D; ++l)
+    for (int i = 0; i < D; ++i){
+      for (int j = 0; j < D; ++j){
+        for (int k = 0; k < D; ++k){
+          for (int l = 0; l < D; ++l){
+            sign = 0;
             for (int m = 0; m < ldof; ++m) {
               double result, answer;
               new_T[a].get_value(Index(i, j, k, l, m), result);
@@ -117,7 +117,7 @@ TEST_CASE("testing simple update") {
               }
               CHECK(result * sign == doctest::Approx(answer).epsilon(tol));
               ofs << result << " ";
-            }
+            }}}}}
     ofs << std::endl;
   }
 

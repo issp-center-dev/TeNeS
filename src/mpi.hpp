@@ -67,16 +67,16 @@ int bcast(std::vector<T> &val, int root, MPI_Comm comm){
 #ifndef _NO_MPI
   const MPI_Datatype datatype = get_MPI_Datatype<T>();
   int rank;
-  MPI_Comm_rank(com, &rank);
+  MPI_Comm_rank(comm, &rank);
   int sz = val.size();
-  int ret=MPI_Bcast(&sz, 1, MPI_INT, root, comm);
+  ret=MPI_Bcast(&sz, 1, MPI_INT, root, comm);
   if(ret!=0){
     return ret;
   }
   if(rank != root){
     val.resize(sz);
   }
-  int ret=MPI_Bcast(&(val[0]), sz, datatype, root, comm);
+  ret=MPI_Bcast(&(val[0]), sz, datatype, root, comm);
 #endif
   return ret;
 }
@@ -87,7 +87,7 @@ int bcast(std::vector<std::complex<T>> &val, int root, MPI_Comm comm){
 #ifndef _NO_MPI
   const MPI_Datatype datatype = get_MPI_Datatype<T>();
   int rank;
-  MPI_Comm_rank(com, &rank);
+  MPI_Comm_rank(comm, &rank);
   int sz = val.size();
   ret=MPI_Bcast(&sz, 1, MPI_INT, root, comm);
   if(ret!=0){
