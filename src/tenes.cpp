@@ -8,6 +8,13 @@
 #include <tuple>
 #include <type_traits>
 
+#ifdef _NO_OMP
+int omp_get_num_threads(){ return 1; }
+#else
+#include <omp.h>
+#endif
+
+
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
@@ -20,6 +27,7 @@
 #include "Square_lattice_CTM.hpp"
 #include "correlation.hpp"
 #include "timer.hpp"
+#include "printlevel.hpp"
 
 #include "tenes.hpp"
 
@@ -131,7 +139,18 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   peps_parameters.Bcast(comm);
   // output debug or warning info only from process 0
   if (mpirank != 0) {
-    peps_parameters.print_level = PEPS_Parameters::PrintLevel::none;
+    peps_parameters.print_level = PrintLevel::none;
+  }
+
+  if(peps_parameters.print_level >= PrintLevel::info){
+    std::clog << "Number of Processes: " << mpisize << std::endl;
+    std::clog << "Number of Threads / Process: " << omp_get_num_threads() << std::endl;
+
+    if(peps_parameters.is_real){
+      std::clog << "Tensor type: real" << std::endl;
+    }else{
+      std::clog << "Tensor type: complex" << std::endl;
+    }
   }
 
   CHI = peps_parameters.CHI;
@@ -242,28 +261,29 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
 
       const size_t ndim = vdim[0] * vdim[1] * vdim[2] * vdim[3] * pdim;
       std::vector<double> ran_re(ndim);
+      std::vector<double> ran_im(ndim);
 
       for (int j = 0; j < ndim; j++) {
         ran_re[j] = dist(gen);
+        ran_im[j] = dist(gen_im);
       }
       auto &dir = lattice.initial_dirs[i];
+      std::vector<double> dir_im(pdim);
       if (std::all_of(dir.begin(), dir.end(),
                       [=](double x) { return x == 0.0; })) {
         // random
         dir.resize(pdim);
         for (int j = 0; j < pdim; ++j) {
           dir[j] = dist(gen);
+          dir_im[j] = dist(gen_im);
         }
       }
 
-      std::vector<double> ran_im(ndim);
-      for (int j = 0; j < ndim; j++) {
-        ran_im[j] = dist(gen_im);
-      }
       for (int n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
-          Tn[i].set_value(index, dir[index[4]]);
+          auto v = std::complex<double>(dir[index[4]], dir_im[index[4]]);
+          Tn[i].set_value(index, to_tensor_type(v));
         } else {
           nr = index[0] + index[1] * vdim[0] + index[2] * vdim[0] * vdim[1] +
                index[3] * vdim[0] * vdim[1] * vdim[2] +
@@ -354,7 +374,7 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
     }
 
     if (mpirank == 0 &&
-        peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+        peps_parameters.print_level >= PrintLevel::info) {
       if (int_tau == next_report_step) {
         std::cout << 100.0 * (int_tau + 1) / nsteps << "% done" << std::endl;
         ++ireport;
@@ -487,7 +507,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
     }
 
     if (mpirank == 0 &&
-        peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+        peps_parameters.print_level >= PrintLevel::info) {
       if (int_tau == next_report_step) {
         std::cout << 100.0 * (int_tau + 1) / nsteps << "% done" << std::endl;
         ++ireport;
@@ -505,13 +525,13 @@ template <class ptensor> void TeNeS<ptensor>::optimize() {
   ptensor Tn1_new, Tn2_new;
   std::vector<double> lambda_c;
 
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "Start simple update" << std::endl;
   }
   simple_update();
 
   if (peps_parameters.num_full_step > 0) {
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+    if (peps_parameters.print_level >= PrintLevel::info) {
       std::clog << "Start full update" << std::endl;
     }
     full_update();
@@ -553,7 +573,7 @@ void TeNeS<ptensor>::save_onesite(std::vector<std::vector<typename TeNeS<ptensor
 
   const int nlops = num_onesite_operators;
   std::string filename = outdir + "/onesite_obs.dat";
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "    Save onesite observables to " << filename << std::endl;
   }
   std::ofstream ofs(filename.c_str());
@@ -740,7 +760,7 @@ void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, typename TeNeS<pten
 
   const int nlops = num_twosite_operators;
   std::string filename = outdir + "/twosite_obs.dat";
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "    Save twosite observables to " << filename << std::endl;
   }
   std::ofstream ofs(filename.c_str());
@@ -895,7 +915,7 @@ void TeNeS<ptensor>::save_correlation(std::vector<Correlation> const& correlatio
     return;
   }
   std::string filename = outdir + "/correlation.dat";
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "    Save long-range correlations to " << filename
               << std::endl;
   }
@@ -919,26 +939,26 @@ void TeNeS<ptensor>::save_correlation(std::vector<Correlation> const& correlatio
 }
 
 template <class ptensor> void TeNeS<ptensor>::measure() {
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "Start calculating observables" << std::endl;
     std::clog << "  Start updating environment" << std::endl;
   }
   update_CTM();
 
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "  Start calculating local operators" << std::endl;
   }
   auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs);
 
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+  if (peps_parameters.print_level >= PrintLevel::info) {
     std::clog << "  Start calculating NN correlation" << std::endl;
   }
   auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs);
 
   if (corparam.r_max > 0) {
-    if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+    if (peps_parameters.print_level >= PrintLevel::info) {
       std::clog << "  Start calculating long range correlation" << std::endl;
     }
     auto correlations = measure_correlation();
@@ -963,7 +983,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       std::string filename = outdir + "/energy.dat";
       std::ofstream ofs(filename.c_str());
 
-      if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+      if (peps_parameters.print_level >= PrintLevel::info) {
         ofs << "energy = " << energy * invV << std::endl;
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
           const auto v = loc_obs[ilops] * invV;
@@ -983,12 +1003,12 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       ofs << "time full update   = " << time_full_update << std::endl;
       ofs << "time environmnent  = " << time_environment << std::endl;
       ofs << "time observable    = " << time_observable << std::endl;
-      if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info) {
+      if (peps_parameters.print_level >= PrintLevel::info) {
         std::clog << "    Save elapsed times to " << filename << std::endl;
       }
     }
 
-    if(peps_parameters.print_level >= PEPS_Parameters::PrintLevel::info){
+    if(peps_parameters.print_level >= PrintLevel::info){
       const double invV = 1.0 / N_UNIT;
       std::cout << std::endl;
 

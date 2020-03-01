@@ -1,4 +1,6 @@
 [parameter]
+[parameter.general]
+is_real = true
 [parameter.simple_update]
 tau = 0.01
 num_step = 100
