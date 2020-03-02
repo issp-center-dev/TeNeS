@@ -664,6 +664,8 @@ class Model:
             for k, v in table.items():
                 if isinstance(v, str):
                     f.write("{} = '{}'\n".format(k, v))
+                elif isinstance(v, bool):
+                    f.write("{} = {}\n".format(k, "true" if v else "false"))
                 else:
                     f.write("{} = {}\n".format(k, v))
         f.write("\n")

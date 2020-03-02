@@ -256,6 +256,7 @@ class Model(object):
             dic["sites"] = []
             dic["dim"] = self.N
             dic["elements"] = "\n".join(dump_op(op))
+            dic["is_real"] = np.all(np.isreal(op))
             ret.append(dic)
         return ret
 
@@ -513,12 +514,14 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     ret = []
     ret.append("[parameter]")
     pparam = param["parameter"]
-    for name in ("directory", "simple_update", "full_update", "ctm", "random"):
+    for name in ("general", "simple_update", "full_update", "ctm", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():
                 if isinstance(v, str):
                     ret.append('{} = "{}"'.format(k, v))
+                elif isinstance(v, bool):
+                    ret.append('{} = {}'.format(k, "true" if v else "false"))
                 else:
                     ret.append("{} = {}".format(k, v))
     ret.append("")
@@ -559,17 +562,21 @@ def tenes_simple(param: Dict[str, Any]) -> str:
 
     ret.append("[observable]")
     lops = model.onesite_observables_as_dict()
+    is_complex = False
+    if "general" in pparam:
+        is_complex = not pparam["general"].get("is_real", False)
     groups = []
     for lop in lops:
-        ret.append("[[observable.onesite]]")
-        ret.append("group = {}".format(lop["group"]))
-        groups.append(lop["group"])
-        ret.append("sites = {}".format(lop["sites"]))
-        ret.append("dim = {}".format(lop["dim"]))
-        ret.append('elements = """')
-        for line in lop["elements"].split("\n"):
-            ret.append(line)
-        ret.append('"""')
+        if is_complex or lop["is_real"]:
+            ret.append("[[observable.onesite]]")
+            ret.append("group = {}".format(lop["group"]))
+            groups.append(lop["group"])
+            ret.append("sites = {}".format(lop["sites"]))
+            ret.append("dim = {}".format(lop["dim"]))
+            ret.append('elements = """')
+            for line in lop["elements"].split("\n"):
+                ret.append(line)
+            ret.append('"""')
 
     groups = list(set(groups))
     groups.sort()
