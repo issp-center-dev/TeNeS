@@ -105,6 +105,13 @@ The default value of the <code class="docutils literal"><span class="pre">&lt;pa
 </pre></div>
 </div>
 </div>
+<div class="admonition-specify-python-interpreter admonition">
+<p class="first admonition-title">Specify Python interpreter</p>
+<p><code class="docutils literal"><span class="pre">CMake</span></code> detects your python interpreter automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DTENES_PYTHON_EXECUTABLE=&lt;path to your interpreter&gt; ../
+</pre></div>
+</div>
+</div>
 <div class="admonition-use-the-pre-built-mptensor admonition">
 <p class="first admonition-title">Use the pre-built mptensor</p>
 <p><code class="docutils literal"><span class="pre">TeNeS</span></code> is based on the parallerized tensor library <code class="docutils literal"><span class="pre">mptensor</span></code>. The build system of <code class="docutils literal"><span class="pre">TeNeS</span></code> installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.</p>

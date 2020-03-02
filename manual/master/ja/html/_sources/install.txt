@@ -80,7 +80,7 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
    ``CMake`` では自動でPython インタープリタを検出してビルドを行います。指定したい場合には, 以下のようにオプションを追加してください。
    ::
 
-      $ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
+      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
 
 
 .. admonition:: ``mptensor`` の指定
