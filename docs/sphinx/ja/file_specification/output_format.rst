@@ -11,8 +11,20 @@
 
 ``parameter`` と ``lattice`` のパラメータが出力されます。
 
+
+``energy.dat``
+================
+
+``energy`` (``group=0`` なる twosite 演算子)と各種 onesite 演算子のサイトあたりの期待値が出力されます。
+
+::
+   energy = -0.627826
+   onesite_obs[0] = 0.42345
+   onesite_obs[1] = 0.261635
+
+
 ``onesite_obs.dat``
-=================
+=====================
 
 
 -  onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle` が出力されます。

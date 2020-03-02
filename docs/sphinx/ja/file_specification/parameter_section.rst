@@ -2,24 +2,34 @@
 
 
 更新回数など、 計算にあらわれる種々のパラメータを記述します。
-サブセクションとして ``directory``, ``simple_update``, ``full_update``,
+サブセクションとして ``general``, ``simple_update``, ``full_update``,
 ``ctm``, ``random`` を持ちます。
 
 simple update およびfull updateの虚時間刻み ``parameter.simple_update.tau`` と ``parameter.full_update.tau`` のみ、 ``tenes`` 本体ではなくスタンダードモード ``tenes_std`` で使われるパラメータです。
 
-``parameter.directory``
+``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-入出力ディレクトリを設定します。
+全般的な設定をします。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 30, 30, 10, 10
+   :widths: 20, 30, 10, 10
 
+   ``is_real``, "すべてのテンソルを実数に制限するかどうか", 真偽値, false
+   ``iszero_tol``, "テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数, 0.0
    ``output``, "最適化後のテンソルを書き込むディレクトリ", 文字列, \"output\"
    ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ", 文字列, \"\"
    ``tensor_load``, "初期テンソルを読み込むディレクトリ",       文字列, \"\"
 
+
+- ``is_real``
+
+  - ``true`` にするとテンソルの要素を実数に制限して計算を行います
+  - 一つでも複素演算子があると計算が始まりません
+
+- ``iszero_tol``
+  - テンソル要素の実部・虚部の読み込みにおいて、絶対値が ``iszero_tol`` 以下はゼロとみなします
 
 - ``output``
 
