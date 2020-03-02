@@ -562,7 +562,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
 
     ret.append("[observable]")
     lops = model.onesite_observables_as_dict()
-    is_complex = False
+    is_complex = True
     if "general" in pparam:
         is_complex = not pparam["general"].get("is_real", False)
     groups = []
