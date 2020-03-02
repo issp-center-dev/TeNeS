@@ -9,6 +9,8 @@
 .. code::
 
    [parameter]
+   [parameter.general]
+   is_real = true
 
    [parameter.simple_update]
    num_step = 10000
@@ -91,7 +93,7 @@
 ``energy.dat, parameters.dat, time.dat, onesite_obs.dat, twosite_obs.dat``
 がそれぞれ出力されます。各出力ファイルの詳細は、ファイルフォーマットをご覧ください。
 例えば ``<Sz>`` の値は、 ``onesite_obs.dat`` の2行目から読み取ることが可能です。
-``G`` をパラメータとして0.1刻みで0-2.0まで振ったときの結果を下図に表示します。
+``G`` をパラメータとして0.1刻みで0-3.0まで振ったときの結果を下図に表示します。
 
 なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` の ``tutorial_example.py`` , ``tutorial_read.py`` があります。実行は、
 
@@ -109,7 +111,7 @@
 とすることで, 標準出力に、G, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
 
 
-.. image:: ../../img/tutorial_1_Sz_vs_G.*
+.. figure:: ../../img/tutorial_1_Sz_vs_G.*
    :width: 400px
    :align: center
 

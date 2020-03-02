@@ -1,7 +1,9 @@
 [parameter]
+[parameter.general]
+is_real = true
 
 [parameter.simple_update]
-num_step = 10000
+num_step = 1000
 tau = 0.01
 
 [parameter.full_update]

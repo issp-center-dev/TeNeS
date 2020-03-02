@@ -2,13 +2,16 @@ from os.path import join
 
 import numpy as np
 
+import toml
 
-num_g = 21
-min_g = 0.0
-max_g = 2.0
 
-for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
+num_g = 16
+
+for idx, in range(num_g):
     try:
+        with open("simple.toml") as f:
+            dict_toml = toml.load(f)
+        g = dict_toml["model"]["G"]
         with open(join("output_{}".format(idx), "energy.dat")) as f:
             lines = f.readlines()
             ene = lines[0].split('=')[1].strip()
