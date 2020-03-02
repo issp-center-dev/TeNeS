@@ -168,7 +168,7 @@ elements = """
 0 0 1.0 0.0
 """
       )");
-      auto onesites = load_operators<ptensor>(toml, 2, 1, "observable.onesite");
+      auto onesites = load_operators<ptensor>(toml, 2, 1, 0.0, "observable.onesite");
       for(int i=0; i<2; ++i){
         auto const& on = onesites[i];
         CHECK(on.group == 0);
@@ -197,7 +197,7 @@ elements = """
 0 0 0 0 1.0 0.0
 """
       )");
-      auto onesites = load_operators<ptensor>(toml, 2, 2, "observable.twosite");
+      auto onesites = load_operators<ptensor>(toml, 2, 2, 0.0, "observable.twosite");
       for(int i=0; i<2; ++i){
         auto const& on = onesites[i];
         CHECK(on.group == 0);

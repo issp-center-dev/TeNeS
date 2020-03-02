@@ -127,6 +127,8 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
     throw tenes::input_error("[evolution] not found");
   }
 
+  const double tol = peps_parameters.iszero_tol;
+
   const auto simple_updates = load_simple_updates<tensor_complex>(input_toml);
   const auto full_updates = load_full_updates<tensor_complex>(input_toml);
 
@@ -137,8 +139,8 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
   }
 
   // onesite observable
-  const auto onesite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 1, "observable.onesite");
-  const auto twosite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 2, "observable.twosite");
+  const auto onesite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 1, tol, "observable.onesite");
+  const auto twosite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 2, tol, "observable.twosite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -146,7 +148,6 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
                              ? gen_corparam(toml_correlation, "correlation")
                              : CorrelationParameter());
 
-  const double tol = peps_parameters.iszero_tol;
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);
   is_real = is_real && ::is_real(full_updates, tol);

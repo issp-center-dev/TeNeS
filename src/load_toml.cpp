@@ -217,7 +217,8 @@ std::vector<std::tuple<int, int, int, int>> read_bonds(std::string str) {
 
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                int nsites, int nbody, const char* tablename="observable.onesite") {
+                                int nsites, int nbody, double atol=0.0,
+                                const char* tablename="observable.onesite") {
   assert(nbody == 1 || nbody == 2);
 
   auto elements = param->get_as<std::string>("elements");
@@ -257,7 +258,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (int i = 0; i < nbody; ++i) {
       shape.push(shape[i]);
     }
-    A = util::read_tensor<tensor>(*elements, shape);
+    A = util::read_tensor<tensor>(*elements, shape, atol);
   }else if(ops){
     op_ind.assign(ops->begin(), ops->end());
   }else{
@@ -314,12 +315,13 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
 template <class tensor>
 Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
                                  int nsites, int nbody,
+                                 double atol,
                                  std::string const &key
                                  ) {
   Operators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    auto obs = load_operator<tensor>(table, nsites, nbody, key.c_str());
+    auto obs = load_operator<tensor>(table, nsites, nbody, atol, key.c_str());
     std::copy(obs.begin(), obs.end(), std::back_inserter(ret));
     // std::move(obs.begin(), obs.end(), std::back_inserter(ret));
   }
@@ -327,7 +329,7 @@ Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
 }
 
 template <class tensor>
-NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param, const char* tablename="evolution.simple") {
+NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param, double atol=0.0, const char* tablename="evolution.simple") {
   auto source_site = param->get_as<int>("source_site");
   if(!source_site){
     throw input_error(detail::msg_cannot_find("source_site", tablename));
@@ -353,28 +355,29 @@ NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param, con
     ss << tablename << ".dimensions should have 4 integers";
     throw input_error(ss.str());
   }
-  tensor A = util::read_tensor<tensor>(*elements, shape);
+  tensor A = util::read_tensor<tensor>(*elements, shape, atol);
   return NNOperator<tensor>(*source_site, *source_leg, A);
 }
 
 template <class tensor>
 NNOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
+                                 double atol,
                                  std::string const &key) {
   NNOperators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    ret.push_back(load_nn_operator<tensor>(table, key.c_str()));
+    ret.push_back(load_nn_operator<tensor>(table, atol, key.c_str()));
   }
   return ret;
 }
 template <class tensor>
 NNOperators<tensor>
-load_simple_updates(decltype(cpptoml::parse_file("")) param) {
-  return load_updates<tensor>(param, "evolution.simple");
+load_simple_updates(decltype(cpptoml::parse_file("")) param, double atol=0.0) {
+  return load_updates<tensor>(param, atol, "evolution.simple");
 }
 template <class tensor>
-NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param) {
-  return load_updates<tensor>(param, "evolution.full");
+NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param, double atol=0.0) {
+  return load_updates<tensor>(param, atol, "evolution.full");
 }
 
 } // end of namespace tenes
