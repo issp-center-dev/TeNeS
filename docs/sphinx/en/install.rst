@@ -76,6 +76,15 @@ In this case, ``tenes`` is installed into the ``<path to install to>/bin`` .
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
+.. admonition:: Specify Python interpreter
+
+   ``CMake`` detects your python interpreter automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,
+
+   ::
+
+      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
+
+
 .. admonition:: Use the pre-built mptensor
 
    ``TeNeS`` is based on the parallerized tensor library ``mptensor``. The build system of ``TeNeS`` installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
