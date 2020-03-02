@@ -86,7 +86,7 @@ CMake detects also python interpreter automatically but sometimes this is not wh
 In this case, you can specify the python interpreter by the following way,
 
 ``` bash
-$ cmake -DPYTHON_EXECUTABLE=<path to your interpreter> ../
+$ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
 ```
 
 ### Disable MPI/ScaLAPACK parallelization
