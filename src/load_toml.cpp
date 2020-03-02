@@ -12,7 +12,7 @@
 #include "correlation.hpp"
 #include "operator.hpp"
 #include "exception.hpp"
-#include "util/read_matrix.hpp"
+#include "util/read_tensor.hpp"
 #include "util/string.hpp"
 
 namespace tenes {

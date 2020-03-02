@@ -139,12 +139,12 @@ int allreduce_sum(std::vector<T> &val, MPI_Comm comm){
 }
 
 template <class T>
-int allreduce_sum(std::complex<T> &val, MPI_Comm comm){
+int allreduce_sum(std::complex<T> /* &val */, MPI_Comm /* comm */){
   throw tenes::unimplemented_error("allreduce for complex is not implemented");
 }
 
 template <class T>
-int allreduce_sum(std::vector<std::complex<T>> &val, MPI_Comm comm){
+int allreduce_sum(std::vector<std::complex<T>> /* &val */, MPI_Comm /* comm */){
   throw tenes::unimplemented_error("allreduce for complex is not implemented");
 }
 

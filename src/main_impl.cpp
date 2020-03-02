@@ -3,17 +3,16 @@
 
 #include <cpptoml.h>
 
+#include "printlevel.hpp"
+#include "type.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "load_toml.cpp"
 #include "operator.hpp"
 #include "tenes.hpp"
-#include "type.hpp"
-#include "util/file.hpp"
-#include "util/read_matrix.hpp"
-#include "printlevel.hpp"
 #include "exception.hpp"
 #include "mpi.hpp"
+#include "util/file.hpp"
 
 namespace {
 tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
@@ -148,11 +147,18 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
                              : CorrelationParameter());
 
   const double tol = peps_parameters.iszero_tol;
-  bool& is_real = peps_parameters.is_real;
+  bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);
   is_real = is_real && ::is_real(full_updates, tol);
   is_real = is_real && ::is_real(onesite_obs, tol);
   is_real = is_real && ::is_real(twosite_obs, tol);
+
+  if(peps_parameters.is_real && !is_real){
+    std::stringstream ss;
+    ss << "TeNeS invoked in real tensor mode (parameter.general.is_real = true) but some operators are complex.\n";
+    ss << "Consider using larger parameter.general.iszero_tol (present: " << tol << ")";
+    throw tenes::input_error(ss.str());
+  }
 
   if(is_real){
     return tenes(MPI_COMM_WORLD, peps_parameters, lattice, to_real(simple_updates),

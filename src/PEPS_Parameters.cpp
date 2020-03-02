@@ -203,7 +203,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "seed = " << seed << std::endl;
 
   ofs << "is_real = " << is_real << std::endl;
-  ofs << "iszero_tol = " << is_real << std::endl;
+  ofs << "iszero_tol = " << iszero_tol << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
   ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
   ofs << "outdir = " << outdir << std::endl;

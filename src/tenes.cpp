@@ -28,6 +28,7 @@ int omp_get_num_threads(){ return 1; }
 #include "correlation.hpp"
 #include "timer.hpp"
 #include "printlevel.hpp"
+#include "util/type_traits.hpp"
 
 #include "tenes.hpp"
 

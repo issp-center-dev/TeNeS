@@ -1,5 +1,5 @@
-#ifndef UTIL_READ_MATRIX_HPP
-#define UTIL_READ_MATRIX_HPP
+#ifndef UTIL_READ_TENSOR_HPP
+#define UTIL_READ_TENSOR_HPP
 
 #include <algorithm>
 #include <mptensor.hpp>
@@ -8,54 +8,16 @@
 #include <vector>
 
 #include "string.hpp"
+#include "type_traits.hpp"
 #include "../exception.hpp"
 
 namespace tenes {
 
 namespace util {
-template <class ptensor>
-ptensor read_matrix(std::string const &str) {
-  std::vector<std::vector<double>> A;
-  const static std::string delim = " \t";
-  std::string line;
-
-  std::stringstream ss(str);
-  while (std::getline(ss, line)) {
-    auto fields = util::split(line);
-    std::vector<double> row;
-    for (auto field : fields) {
-      row.push_back(std::stod(field));
-    }
-    A.push_back(row);
-  }
-
-  const auto Nrow = A.size();
-  const auto Ncol = A[0].size();
-#ifndef NDEBUG
-  for (auto const &row : A) {
-    assert(row.size() == Ncol);
-  }
-#endif
-
-  ptensor ret(mptensor::Shape(Nrow, Ncol));
-  for (int i = 0; i < Nrow; ++i) {
-    for (int j = 0; j < Ncol; ++j) {
-      ret.set_value(mptensor::Index(i, j), A[i][j]);
-    }
-  }
-  return ret;
-}
-
-template <class ptensor>
-std::vector<ptensor> read_matrix(std::vector<std::string> const &strs) {
-  std::vector<ptensor> ret;
-  std::transform(strs.begin(), strs.end(), std::back_inserter(ret),
-                 [](std::string s) { return read_matrix<ptensor>(s); });
-  return ret;
-}
 
 template <class ptensor>
 ptensor read_tensor(std::string const &str, mptensor::Shape dims){
+  using value_type = typename ptensor::value_type;
   ptensor ret(dims);
   const size_t rank = ret.rank();
 
@@ -94,7 +56,7 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims){
     for(size_t i=0; i<rank; ++i){
       index[i] = std::stoi(fields[i]);
     }
-    ret.set_value(index, std::stod(fields[rank]));
+    ret.set_value(index, convert_complex<value_type>(std::complex<double>(std::stod(fields[rank]), std::stod(fields[rank+1]))));
     ++linenum;
   }
   return ret;
@@ -103,4 +65,4 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims){
 }  // namespace util
 }  // namespace tenes
 
-#endif  // UTIL_READ_MATRIX_HPP
+#endif  // UTIL_READ_TENSOR_HPP
