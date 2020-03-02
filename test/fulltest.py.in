@@ -1,29 +1,61 @@
 import subprocess
 import sys
-from shutil import rmtree, move
-from os.path import exists, join
+from os.path import join
 
 import numpy as np
 
+import toml
+
+
+def check_energy(resdir, refdir, *, rtol, atol):
+    def read(filename):
+        ret = []
+        with open(filename) as f:
+            for line in f:
+                words = line.split()
+                if len(words) == 3:
+                    # real
+                    ret.append(float(words[2]))
+                elif len(words) == 5:
+                    # complex
+                    ret.append(complex(float(words[2]), float(words[4])))
+                else:
+                    raise RuntimeError("unknown format in energy.dat")
+        return ret
+
+    res = read(join(resdir, "energy.dat"))
+    ref = read(join(refdir, "energy.dat"))
+
+    if len(res) != len(ref):
+        print("energy.dat: number of entries do not match")
+        print("  result:    {}".format(len(res)))
+        print("  reference: {}".format(len(ref)))
+        return False
+
+    fl = True
+    for i, (s, f) in enumerate(zip(res, ref)):
+        if type(s) != type(f) or not np.isclose(s, f, rtol=rtol, atol=atol):
+            print("energy.dat: {}-th data do not match:".format(i))
+            print("  result:    ", s)
+            print("  reference: ", f)
+            fl = False
+    return fl
+
 
 def check(filename, resdir, refdir, *, rtol, atol):
-    res = []
-    with open(join(resdir, filename)) as f:
-        for line in f:
-            line = line.split("#")[0].strip()
-            if not line:
-                continue
-            words = line.split()
-            res.append(list(map(float, words)))
+    def read(filename):
+        ret = []
+        with open(filename) as f:
+            for line in f:
+                line = line.split("#")[0].strip()
+                if not line:
+                    continue
+                words = line.split()
+                ret.append(list(map(float, words)))
+        return ret
 
-    ref = []
-    with open(join(refdir, filename)) as f:
-        for line in f:
-            line = line.split("#")[0].strip()
-            if not line:
-                continue
-            words = line.split()
-            ref.append(list(map(float, words)))
+    res = read(join(resdir, filename))
+    ref = read(join(refdir, filename))
 
     if len(res) != len(ref):
         print("{}: number of entries do not match".format(filename))
@@ -41,19 +73,26 @@ def check(filename, resdir, refdir, *, rtol, atol):
                 fl = False
     return fl
 
+
 testname = sys.argv[1]
-cmd = [join("@CMAKE_BINARY_DIR@", "src", "tenes"), join("data", "{}.toml".format(testname))]
+inputfile = join("data", "{}.toml".format(testname))
+cmd = [
+    join("@CMAKE_BINARY_DIR@", "src", "tenes"),
+    inputfile,
+]
 subprocess.call(cmd)
-resdir = "output_{}".format(testname)
-if exists(resdir):
-    rmtree(resdir)
-move("output", resdir)
+
+with open(inputfile) as f:
+    param = toml.load(f)
+
+resdir = param["parameter"]["general"]["output"]
 refdir = join("data", resdir)
 atol = 1.0e-4
 rtol = 1.0e-3
 
 result = True
 
+result = check_energy(resdir, refdir, rtol=rtol, atol=atol) and result
 result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 # result = check("correlation.dat", resdir, refdir, tol) and result

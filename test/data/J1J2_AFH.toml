@@ -1,6 +1,7 @@
 [parameter]
 [parameter.general]
 is_real = true
+output = "output_J1J2_AFH"
 [parameter.simple_update]
 tau = 0.01
 num_step = 100
@@ -8,7 +9,7 @@ num_step = 100
 tau = 0.01
 num_step = 1
 [parameter.ctm]
-dimension = 10
+dimension = 5
 
 [tensor]
 L_sub = [2, 2]
@@ -16,7 +17,7 @@ skew = 0
 [[tensor.unitcell]]
 index = []
 physical_dim = 2
-virtual_dim = [3, 3, 3, 3]
+virtual_dim = [2, 2, 2, 2]
 initial_state = [0.0]
 noise = 0.01
 

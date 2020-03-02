@@ -1,6 +1,7 @@
 [parameter]
 [parameter.general]
 is_real = true
+output = "output_AntiferroHeisenberg_real"
 [parameter.simple_update]
 tau = 0.01
 num_step = 100

@@ -29,11 +29,9 @@ foreach(name simple_mode std_mode)
                    @ONLY)
     add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
 endforeach()
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py
-               @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py @ONLY)
 
-foreach(name AntiferroHeisenberg J1J2_AFH)
+foreach(name AntiferroHeisenberg_real AntiferroHeisenberg_complex J1J2_AFH)
     add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
 
