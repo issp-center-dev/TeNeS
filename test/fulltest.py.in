@@ -76,10 +76,14 @@ def check(filename, resdir, refdir, *, rtol, atol):
 
 testname = sys.argv[1]
 inputfile = join("data", "{}.toml".format(testname))
-cmd = [
-    join("@CMAKE_BINARY_DIR@", "src", "tenes"),
-    inputfile,
-]
+cmd = []
+if "@MPIEXEC@":
+    cmd.append("@MPIEXEC@")
+    cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+    cmd.append("1")
+cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+cmd.append(inputfile)
+
 subprocess.call(cmd)
 
 with open(inputfile) as f:

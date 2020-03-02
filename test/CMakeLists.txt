@@ -20,7 +20,11 @@ foreach(basename input simple_update full_update)
     target_link_libraries(${testname} mptensor)
     target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
-    add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
+    if(ENABLE_MPI)
+        add_test(NAME ${testname} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:${testname}>)
+    else()
+        add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
+    endif()
 endforeach()
 
 foreach(name simple_mode std_mode)
