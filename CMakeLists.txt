@@ -121,7 +121,7 @@ else()
 endif()
 
 if(NOT MPTENSOR_ROOT)
-    set(MPTENSOR_BUILD_LIBS_ONLY ON)
+    set(MPTENSOR_BUILD_LIBS_ONLY ON CACHE BOOL "Build only the library in mptensor")
     set(CMAKE_MODULE_PATH "${DEPS_DIR}/mptensor/config" ${CMAKE_MODULE_PATH})
     add_subdirectory("${DEPS_DIR}/mptensor")
     set(MPTENSOR_INCLUDE_DIR ${DEPS_DIR}/mptensor/src/)
