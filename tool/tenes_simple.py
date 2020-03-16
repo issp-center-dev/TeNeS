@@ -57,7 +57,7 @@ class Lattice(object):
         self.z = 0
         self.skew = 0
         self.L = param["L"]
-        self.W = param.get("L", self.L)
+        self.W = param.get("W", self.L)
         self.vdims = [[param["virtual_dim"]] * 4]
         self.sublattice = [[]]
         self.bonds = [[[] for j in range(3)] for i in range(3)]
