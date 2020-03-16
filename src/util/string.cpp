@@ -12,9 +12,14 @@ namespace util {
 std::vector<std::string> split(std::string const &str,
                                std::string const &delim = " \t") {
   std::vector<std::string> words;
-  auto index = str.find_first_not_of(delim);
+  auto index = 0;
+  auto last = str.size();
   while (index != std::string::npos) {
     auto next = str.find_first_of(delim, index);
+    if(next == std::string::npos){
+      words.push_back(str.substr(index, last - index + 1));
+      break;
+    }
     words.push_back(str.substr(index, next - index + 1));
     index = str.find_first_not_of(delim, next);
   }

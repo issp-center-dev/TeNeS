@@ -100,7 +100,7 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
   MPI_Comm_rank(com, &mpirank);
   MPI_Comm_size(com, &mpisize);
 
-  if (!file_exists(input_filename)) {
+  if (!util::path_exists(input_filename)) {
     std::stringstream ss;
     ss << "ERROR: cannot find the input file: " << input_filename
               << std::endl;
@@ -161,6 +161,32 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
     ss << "TeNeS invoked in real tensor mode (parameter.general.is_real = true) but some operators are complex.\n";
     ss << "Consider using larger parameter.general.iszero_tol (present: " << tol << ")";
     throw tenes::input_error(ss.str());
+  }
+
+  std::string outdir = peps_parameters.outdir;
+  bool is_ok = true;
+  if (mpirank == 0) {
+    if(!util::isdir(outdir)){
+      is_ok = util::mkdir(outdir);
+    }
+  }
+  bcast(is_ok, 0, com);
+  if(!is_ok){
+    std::stringstream ss;
+    ss << "Cannot mkdir " << outdir;
+    throw tenes::runtime_error(ss.str());
+  }
+
+  if (mpirank == 0) {
+    std::string basename = util::basename(input_filename);
+    std::ifstream ifs(input_filename.c_str());
+    std::string dst_filename = outdir + "/" + basename;
+    std::cout << dst_filename << std::endl;
+    std::ofstream ofs(dst_filename.c_str());
+    std::string line;
+    while (std::getline(ifs, line)){
+      ofs << line << std::endl;
+    }
   }
 
   if(is_real){

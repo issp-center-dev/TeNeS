@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 #include <algorithm>
 #include <complex>
+#include <ctime>
 #include <limits>
 #include <map>
 #include <random>
@@ -29,11 +30,11 @@ int omp_get_num_threads(){ return 1; }
 #include "timer.hpp"
 #include "printlevel.hpp"
 #include "util/type_traits.hpp"
+#include "util/file.hpp"
 
 #include "tenes.hpp"
 
 namespace tenes {
-
 using namespace mptensor;
 
 struct Bond {
@@ -46,6 +47,27 @@ bool operator<(const Bond &a, const Bond &b) {
   return std::tie(a.source_site, a.dx, a.dy) <
          std::tie(b.source_site, b.dx, b.dy);
 }
+
+std::string datetime(std::time_t const &t){
+  std::tm *lt = std::localtime(&t);
+  char dt[64];
+  std::strftime(dt, 64, "%FT%T", lt);
+  char tz[7];
+  std::strftime(tz, 7, "%z", lt);
+  if(tz[0] != 'Z' and tz[0] != 'z'){
+    for(size_t i = 6; i>3; --i){
+      tz[i] = tz[i-1];
+    }
+    tz[3] = ':';
+  }
+  std::string ret = dt;
+  return ret + tz;
+}
+std::string datetime(){
+  std::time_t t = std::time(nullptr);
+  return datetime(t);
+}
+
 
 template <class ptensor> class TeNeS {
 public:
@@ -166,21 +188,43 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   random_tensor::set_seed(seed + mpirank);
 
   outdir = peps_parameters.outdir;
-  if (outdir.empty()) {
-    outdir += ".";
-  }
+
+  bool is_ok = true;
 
   if (mpirank == 0) {
-    // folder check
-    struct stat status;
-    if (stat(outdir.c_str(), &status) != 0) {
-      mkdir(outdir.c_str(), 0755);
+    if(!util::isdir(outdir)){
+      is_ok = is_ok && util::mkdir(outdir);
     }
 
     std::string param_file = outdir + "/parameters.dat";
 
     peps_parameters.save(param_file.c_str());
     lattice.save_append(param_file.c_str());
+
+    std::fstream ofs(param_file, std::ios::out | std::ios::app);
+    ofs << std::endl;
+    ofs << "start_datetime =  " << datetime() << std::endl;
+  }
+  bcast(is_ok, 0, comm);
+  if(!is_ok){
+    std::stringstream ss;
+    ss << "Cannot mkdir " << outdir;
+    throw tenes::runtime_error(ss.str());
+  }
+
+  std::string savedir = peps_parameters_.tensor_save_dir;
+  if (mpirank == 0) {
+    if(!savedir.empty()){
+      if(!util::isdir(savedir)){
+        is_ok = is_ok && util::mkdir(savedir);
+      }
+    }
+  }
+  bcast(is_ok, 0, comm);
+  if(!is_ok){
+    std::stringstream ss;
+    ss << "Cannot mkdir " << savedir;
+    throw tenes::runtime_error(ss.str());
   }
 
   initialize_tensors();
@@ -811,8 +855,6 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
         continue;
       }
 
-      const int left_x = lattice.x(left_index);
-      const int left_y = lattice.y(left_index);
       { // horizontal
         int left_op_index = siteoperator_index(left_index, left_ilop);
         if(left_op_index < 0){
@@ -826,12 +868,9 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
                          eTt[left_index], eTb[left_index], eTl[left_index],
                          Tn[left_index], op_identity[left_index]);
 
+        int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
-          const int right_x = (left_x + r + 1) % LX;
-          const int right_y = left_y;
-          const int offset_x = (left_x + r + 1) / LX;
-          const int offset_y = 0;
-          const int right_index = lattice.index(right_x, right_y);
+          right_index = lattice.right(right_index);
           double norm = std::real(FinishCorrelation(
               correlation_norm, C2[right_index], C3[right_index],
               eTt[right_index], eTr[right_index], eTb[right_index],
@@ -847,9 +886,10 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
                                            eTr[right_index], eTb[right_index],
                                            Tn[right_index], right_op) /
                          norm;
-            correlations.push_back(Correlation{left_index, right_index,
-                                               offset_x, offset_y, left_ilop,
-                                               right_ilop, std::real(val), std::imag(val)});
+            correlations.push_back(Correlation{left_index,
+                                               r+1, 0,
+                                               left_ilop, right_ilop,
+                                               std::real(val), std::imag(val)});
           }
 
           Transfer(correlation_T, eTt[right_index], eTb[right_index],
@@ -872,12 +912,9 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
                          eTl[left_index], eTr[left_index], eTb[left_index], tn,
                          op_identity[left_index]);
 
+        int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
-          const int right_x = left_x;
-          const int right_y = (left_y + r + 1) % LY;
-          const int offset_x = 0;
-          const int offset_y = (left_y + r + 1) / LY;
-          const int right_index = lattice.index(right_x, right_y);
+          right_index = lattice.top(right_index);
           tn = transpose(Tn[right_index], Axes(3, 0, 1, 2, 4));
           double norm = std::real(FinishCorrelation(correlation_norm, C1[right_index],
                                           C2[right_index], eTl[right_index],
@@ -894,9 +931,10 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
                                            eTt[right_index], eTr[right_index],
                                            tn, right_op) /
                          norm;
-            correlations.push_back(Correlation{left_index, right_index,
-                                               offset_x, offset_y, left_ilop,
-                                               right_ilop, std::real(val), std::imag(val)});
+            correlations.push_back(Correlation{left_index,
+                                               0, r+1,
+                                               left_ilop, right_ilop,
+                                               std::real(val), std::imag(val)});
           }
 
           Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
@@ -926,16 +964,15 @@ void TeNeS<ptensor>::save_correlation(std::vector<Correlation> const& correlatio
   ofs << "# $1: left_op\n";
   ofs << "# $2: left_site\n";
   ofs << "# $3: right_op\n";
-  ofs << "# $4: right_site\n";
-  ofs << "# $5: offset_x\n";
-  ofs << "# $6: offset_y\n";
-  ofs << "# $7: real\n";
-  ofs << "# $8: imag\n";
+  ofs << "# $4: right_dx\n";
+  ofs << "# $5: right_dy\n";
+  ofs << "# $6: real\n";
+  ofs << "# $7: imag\n";
   ofs << std::endl;
   for (auto const &cor : correlations) {
-    ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
-        << cor.right_index << " " << cor.offset_x << " " << cor.offset_y
-        << " " << cor.real << " " << cor.imag << " " << std::endl;
+    ofs << cor.left_op << " " << cor.left_index << " "
+        << cor.right_op << " " << cor.right_dx << " " << cor.right_dy << " " 
+        << cor.real << " " << cor.imag << " " << std::endl;
   }
 }
 
@@ -947,13 +984,13 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   update_CTM();
 
   if (peps_parameters.print_level >= PrintLevel::info) {
-    std::clog << "  Start calculating local operators" << std::endl;
+    std::clog << "  Start calculating onesite operators" << std::endl;
   }
   auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs);
 
   if (peps_parameters.print_level >= PrintLevel::info) {
-    std::clog << "  Start calculating NN correlation" << std::endl;
+    std::clog << "  Start calculating twosite operators" << std::endl;
   }
   auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs);
@@ -1008,6 +1045,11 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
         std::clog << "    Save elapsed times to " << filename << std::endl;
       }
     }
+    {
+      std::string filename = outdir + "/parameters.dat";
+      std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::app);
+      ofs << "finish_datetime = " << datetime() << std::endl;
+    }
 
     if(peps_parameters.print_level >= PrintLevel::info){
       const double invV = 1.0 / N_UNIT;
@@ -1029,19 +1071,13 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       std::cout << "time environmnent  = " << time_environment << std::endl;
       std::cout << "time observable    = " << time_observable << std::endl;
     }
-  }
+  } // end of if(mpirank == 0)
 }
 
 template <class ptensor> void TeNeS<ptensor>::save_tensors() const {
   std::string const &save_dir = peps_parameters.tensor_save_dir;
   if (save_dir.empty()) {
     return;
-  }
-  if (mpirank == 0) {
-    struct stat status;
-    if (stat(save_dir.c_str(), &status) != 0) {
-      mkdir(save_dir.c_str(), 0755);
-    }
   }
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = save_dir + "/";
@@ -1073,6 +1109,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
           Operators<tensor> onesite_operators,
           Operators<tensor> twosite_operators, CorrelationParameter corparam) {
+
   TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates,
                     full_updates, onesite_operators, twosite_operators,
                     corparam);

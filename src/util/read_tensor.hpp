@@ -32,6 +32,7 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims,
     index.resize(rank);
 
     line = util::drop_comment(line);
+    line = util::strip(line);
     auto fields = util::split(line);
     if (fields.empty()) {
       ++linenum;

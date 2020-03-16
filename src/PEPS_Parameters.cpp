@@ -172,12 +172,12 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   } else {
     ofs.open(filename, std::ios::out);
   }
-  // Tensor
-  ofs << "CHI = " << CHI << std::endl;
 
   // Simple update
   ofs << "simple_num_step = " << num_simple_step << std::endl;
   ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
+
+  ofs << std::endl;
 
   // Full update
   ofs << "full_num_step = " << num_full_step << std::endl;
@@ -191,7 +191,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "full_fastfullupdate = "
       << (Full_Use_FastFullUpdate ? "true" : "false") << std::endl;
 
+  ofs << std::endl;
+
   // Environment
+  ofs << "ctm_dimension = " << CHI << std::endl;
   ofs << "ctm_inverse_projector_cutoff = " << Inverse_Env_cut << std::endl;
   ofs << "ctm_convergence_epsilon = " << CTM_Convergence_Epsilon << std::endl;
   ofs << "ctm_iteration_max = " << Max_CTM_Iteration << std::endl;
@@ -200,8 +203,9 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
 
-  ofs << "seed = " << seed << std::endl;
+  ofs << std::endl;
 
+  ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;

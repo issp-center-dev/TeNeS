@@ -8,6 +8,7 @@ tenes.cpp
 PEPS_Parameters.cpp
 Lattice.cpp
 util/string.cpp
+util/file.cpp
 mpi.cpp
 )
 

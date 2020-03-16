@@ -6,7 +6,7 @@
 -  ファイルフォーマットは
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ 形式
 
--  ``model``, ``lattice``, ``parameter``, ``correlation``
+-  ``model``, ``lattice``, ``parameter``, ``observable``, ``correlation``
    の4つのセクションを持ちます。
    
    - ``parameter`` セクションはそのままスタンダードモードの入力へとコピーされます。
@@ -219,6 +219,14 @@
    :name: fig_triangular_3rd
 
    三角格子の三次近接ボンド。
+
+
+``parameter`` セクション
+=========================
+
+``tenes_simple`` では使われず、 ``tenes_std`` の入力ファイルとしてそのままコピーされます。
+
+.. include:: ./parameter_section.rst
 
 ``observable`` セクション
 ==========================

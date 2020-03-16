@@ -7,8 +7,8 @@
 namespace tenes {
 
 struct Correlation {
-  int left_index, right_index;
-  int offset_x, offset_y;
+  int left_index;
+  int right_dx, right_dy;
   int left_op, right_op;
   double real, imag;
 };

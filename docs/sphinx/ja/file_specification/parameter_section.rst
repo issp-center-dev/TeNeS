@@ -18,7 +18,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
    ``is_real``, "すべてのテンソルを実数に制限するかどうか", 真偽値, false
    ``iszero_tol``, "テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数, 0.0
-   ``output``, "最適化後のテンソルを書き込むディレクトリ", 文字列, \"output\"
+   ``output``, "物理量などを書き込むディレクトリ", 文字列, \"output\"
    ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ", 文字列, \"\"
    ``tensor_load``, "初期テンソルを読み込むディレクトリ",       文字列, \"\"
 

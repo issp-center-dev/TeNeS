@@ -96,11 +96,13 @@ void Lattice::save(const char *filename, bool append) {
   std::ofstream ofs;
   if (append) {
     ofs.open(filename, std::ios::out | std::ios::app);
+    ofs << std::endl;
   } else {
     ofs.open(filename, std::ios::out);
   }
 
   ofs << "Lsub = [ " << LX << " , " << LY << " ]" << std::endl;
+  ofs << "skew = " << skew << std::endl;
 }
 
 void Lattice::Bcast(MPI_Comm comm, int root) {
