@@ -65,12 +65,15 @@ def check(filename, resdir, refdir, *, rtol, atol):
 
     fl = True
     for i, (rs, rf) in enumerate(zip(res, ref)):
+        lfl = True
         for s, f in zip(rs, rf):
             if not np.isclose(s, f, rtol=rtol, atol=atol):
-                print("{}: {}-th data do not match:".format(filename, i))
-                print("  result:    ", " ".join(map(str, rs)))
-                print("  reference: ", " ".join(map(str, rf)))
-                fl = False
+                lfl = False
+        if not lfl:
+            print("{}: {}-th data do not match:".format(filename, i))
+            print("  result:    ", " ".join(map(str, rs)))
+            print("  reference: ", " ".join(map(str, rf)))
+            fl = False
     return fl
 
 

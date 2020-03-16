@@ -22,9 +22,9 @@ auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
 TEST_CASE("input") {
   using namespace tenes;
 #ifdef _NO_MPI
-  using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
+  using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, std::complex<double>>;
 #else
-  using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
+  using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
 #endif
 
   SUBCASE("parameter") {
@@ -128,9 +128,10 @@ elements = """
       CHECK(simple_updates[0].source_leg == 2);
       auto &op = simple_updates[0].op;
       CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
-      double v = 0.0;
+      std::complex<double> v = 0.0;
       op.get_value({0, 0, 0, 0}, v);
-      CHECK(v == 1.0);
+      CHECK(std::real(v) == 1.0);
+      CHECK(std::imag(v) == 0.0);
     }
     {
       INFO("full_update");
@@ -141,7 +142,7 @@ source_site = 0
 source_leg = 2
 dimensions = [2,2,2,4]
 elements = """
-0 0 0 0 1.0 0.0
+0 0 0 0 0.0 1.0
 """
       )");
       const auto full_updates = tenes::load_full_updates<ptensor>(toml);
@@ -149,9 +150,10 @@ elements = """
       CHECK(full_updates[0].source_leg == 2);
       auto &op = full_updates[0].op;
       CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
-      double v = 0.0;
+      std::complex<double> v = 0.0;
       op.get_value({0, 0, 0, 0}, v);
-      CHECK(v == 1.0);
+      CHECK(std::real(v) == 0.0);
+      CHECK(std::imag(v) == 1.0);
     }
   }
 
@@ -168,18 +170,19 @@ elements = """
 0 0 1.0 0.0
 """
       )");
-      auto onesites = load_operators<ptensor>(toml, 2, 1, 0.0, "observable.onesite");
+      const int nsites = 2;
+      const int nbody = 1;
+      auto onesites = load_operators<ptensor>(toml, nsites, nbody, 0.0, "observable.onesite");
       for(int i=0; i<2; ++i){
         auto const& on = onesites[i];
         CHECK(on.group == 0);
         CHECK(on.source_site == i);
-        CHECK(on.target_site == -1);
-        CHECK(on.offset_x == 0);
-        CHECK(on.offset_y == 0);
+        CHECK(on.is_onesite());
         CHECK(on.op.shape() == mptensor::Shape{2,2});
-        double v = 0.0;
+        std::complex<double> v = 0.0;
         on.op.get_value({0, 0}, v);
-        CHECK(v == 1.0);
+        CHECK(std::real(v) == 1.0);
+        CHECK(std::imag(v) == 0.0);
       }
     }
     {
@@ -190,25 +193,27 @@ elements = """
 group = 0
 dim = [2,2]
 bonds = """
-0 1 0 0
-1 2 1 1
+0 1 0
+1 2 1
 """
 elements = """
-0 0 0 0 1.0 0.0
+0 0 0 0 0.0 1.0
 """
       )");
-      auto onesites = load_operators<ptensor>(toml, 2, 2, 0.0, "observable.twosite");
+      const int nsites = 2;
+      const int nbody = 2;
+      auto twosites = load_operators<ptensor>(toml, nsites, nbody, 0.0, "observable.twosite");
       for(int i=0; i<2; ++i){
-        auto const& on = onesites[i];
+        auto const& on = twosites[i];
         CHECK(on.group == 0);
         CHECK(on.source_site == i);
-        CHECK(on.target_site == i+1);
-        CHECK(on.offset_x == i);
-        CHECK(on.offset_y == i);
+        CHECK(on.dx == std::vector<int>{i+1});
+        CHECK(on.dy == std::vector<int>{i});
         CHECK(on.op.shape() == mptensor::Shape{2,2,2,2});
-        double v = 0.0;
+        std::complex<double> v = 0.0;
         on.op.get_value({0, 0, 0, 0}, v);
-        CHECK(v == 1.0);
+        CHECK(std::real(v) == 0.0);
+        CHECK(std::imag(v) == 1.0);
       }
     }
   }

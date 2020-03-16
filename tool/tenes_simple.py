@@ -42,13 +42,13 @@ def getparam(param: dict, name: str, index: int, default):
     return P
 
 
-Bond = namedtuple("Bond", "source target offset_x offset_y")
+Bond = namedtuple("Bond", "source dx dy")
 
 Hamiltonian = namedtuple("Hamiltonian", "elements bonds")
 
 
 def dumpbond(bond: Bond) -> str:
-    return "{} {} {} {}".format(bond.source, bond.target, bond.offset_x, bond.offset_y)
+    return "{} {} {}".format(bond.source, bond.dx, bond.dy)
 
 
 class Lattice(object):
@@ -63,30 +63,6 @@ class Lattice(object):
         self.bonds = [[[] for j in range(3)] for i in range(3)]
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
-
-    def bond(self, source: int, dx: int, dy: int) -> Bond:
-        L, W = self.L, self.W
-        x, y = index2coord(source, L)
-        X = x + dx
-        Y = y + dy
-        ox, oy = 0, 0
-        while Y < 0:
-            oy -= 1
-            Y += W
-            X += self.skew
-        while Y >= W:
-            oy += 1
-            Y -= W
-            X -= self.skew
-        while X < 0:
-            ox -= 1
-            X += L
-        while X >= L:
-            ox += 1
-            X -= L
-
-        target = coord2index(X, Y, L)
-        return Bond(source, target, ox, oy)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
         ret = {}
@@ -130,16 +106,16 @@ class SquareLattice(Lattice):
                     self.sublattice[1].append(source)
 
             # 1st neighbors
-            self.bonds[0][0].append(self.bond(source, 1, 0))
-            self.bonds[0][1].append(self.bond(source, 0, 1))
+            self.bonds[0][0].append(Bond(source, 1, 0))
+            self.bonds[0][1].append(Bond(source, 0, 1))
 
             # 2nd neighbors
-            self.bonds[1][0].append(self.bond(source, 1, 1))
-            self.bonds[1][1].append(self.bond(source, -1, 1))
+            self.bonds[1][0].append(Bond(source, 1, 1))
+            self.bonds[1][1].append(Bond(source, -1, 1))
 
             # 2nd neighbors
-            self.bonds[2][0].append(self.bond(source, 2, 0))
-            self.bonds[2][1].append(self.bond(source, 0, 2))
+            self.bonds[2][0].append(Bond(source, 2, 0))
+            self.bonds[2][1].append(Bond(source, 0, 2))
 
 
 class HoneycombLattice(Lattice):
@@ -167,31 +143,31 @@ class HoneycombLattice(Lattice):
                 self.sublattice[0].append(source)
 
                 # 1st neighbors
-                self.bonds[0][0].append(self.bond(source, 1, 0))
-                self.bonds[0][1].append(self.bond(source, 0, 1))
+                self.bonds[0][0].append(Bond(source, 1, 0))
+                self.bonds[0][1].append(Bond(source, 0, 1))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(self.bond(source, 0, 2))
-                self.bonds[1][1].append(self.bond(source, 1, 1))
-                self.bonds[1][2].append(self.bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(source, 0, 2))
+                self.bonds[1][1].append(Bond(source, 1, 1))
+                self.bonds[1][2].append(Bond(source, -1, 1))
 
                 # 3rd neighbors
-                self.bonds[2][2].append(self.bond(source, 1, 2))
+                self.bonds[2][2].append(Bond(source, 1, 2))
             else:
                 # sublattice B
                 self.sublattice[1].append(source)
 
                 # 1st neighbors
-                self.bonds[0][2].append(self.bond(source, 0, 1))
+                self.bonds[0][2].append(Bond(source, 0, 1))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(self.bond(source, 0, 2))
-                self.bonds[1][1].append(self.bond(source, 1, 1))
-                self.bonds[1][2].append(self.bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(source, 0, 2))
+                self.bonds[1][1].append(Bond(source, 1, 1))
+                self.bonds[1][2].append(Bond(source, -1, 1))
 
                 # 3rd neighbors
-                self.bonds[2][0].append(self.bond(source, 1, 0))
-                self.bonds[2][1].append(self.bond(source, -1, 2))
+                self.bonds[2][0].append(Bond(source, 1, 0))
+                self.bonds[2][1].append(Bond(source, -1, 2))
 
 
 class TriangularLattice(Lattice):
@@ -224,19 +200,19 @@ class TriangularLattice(Lattice):
                     self.sublattice[1].append(source)
 
             # 1st neighbors
-            self.bonds[0][0].append(self.bond(source, 1, 0))
-            self.bonds[0][1].append(self.bond(source, 0, 1))
-            self.bonds[0][2].append(self.bond(source, 1, 1))
+            self.bonds[0][0].append(Bond(source, 1, 0))
+            self.bonds[0][1].append(Bond(source, 0, 1))
+            self.bonds[0][2].append(Bond(source, 1, 1))
 
             # 2nd neighbors
-            self.bonds[1][0].append(self.bond(source, 1, 2))
-            self.bonds[1][1].append(self.bond(source, 2, 1))
-            self.bonds[1][2].append(self.bond(source, 1, -1))
+            self.bonds[1][0].append(Bond(source, 1, 2))
+            self.bonds[1][1].append(Bond(source, 2, 1))
+            self.bonds[1][2].append(Bond(source, 1, -1))
 
             # 3rd neighbors
-            self.bonds[2][0].append(self.bond(source, 2, 0))
-            self.bonds[2][1].append(self.bond(source, 0, 2))
-            self.bonds[2][2].append(self.bond(source, 2, 2))
+            self.bonds[2][0].append(Bond(source, 2, 0))
+            self.bonds[2][1].append(Bond(source, 0, 2))
+            self.bonds[2][2].append(Bond(source, 2, 2))
 
 
 class Model(object):

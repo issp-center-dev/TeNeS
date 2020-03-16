@@ -192,20 +192,20 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   return pparam;
 }
 
-std::tuple<int, int, int, int> read_bond(std::string line) {
+std::tuple<int, int, int> read_bond(std::string line) {
   using std::stoi;
   auto words = util::split(util::strip(line));
-  if(words.size() != 4){
-    throw input_error("A bond should have 4 integers");
+  if(words.size() < 3){
+    throw input_error("A bond should have 3 integers");
   }
-  return std::make_tuple(stoi(words[0]), stoi(words[1]), stoi(words[2]),
-                         stoi(words[3]));
+  return std::make_tuple(stoi(words[0]), stoi(words[1]), stoi(words[2]));
 }
-std::vector<std::tuple<int, int, int, int>> read_bonds(std::string str) {
-  std::vector<std::tuple<int, int, int, int>> ret;
+std::vector<std::tuple<int, int, int>> read_bonds(std::string str) {
+  std::vector<std::tuple<int, int, int>> ret;
   std::string line;
   std::stringstream ss(str);
   while (std::getline(ss, line)) {
+    line = util::strip(util::drop_comment(line));
     if (util::strip(line).empty()) {
       continue;
     }
@@ -302,10 +302,10 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (auto bond : bonds) {
       if(elements){
         ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), std::get<3>(bond), A);
+                         std::get<2>(bond), A);
       }else{
         ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), std::get<3>(bond), op_ind);
+                         std::get<2>(bond), op_ind);
       }
     }
   }
