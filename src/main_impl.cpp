@@ -30,9 +30,11 @@ to_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std::comp
       for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
         A[lindex] = op.op[lindex].real();
       }
-      ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, A);
+      ret.emplace_back(op.group, op.source_site, op.dx, op.dy, A);
+      // ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, A);
     }else{
-      ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, op.ops_indices);
+      ret.emplace_back(op.group, op.source_site, op.dx, op.dy, op.ops_indices);
+      // ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, op.ops_indices);
     }
   }
   return ret;

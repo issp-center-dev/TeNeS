@@ -38,14 +38,13 @@ using namespace mptensor;
 
 struct Bond {
   int source_site;
-  int target_site;
-  int offset_x;
-  int offset_y;
+  int dx;
+  int dy;
 };
 
 bool operator<(const Bond &a, const Bond &b) {
-  return std::tie(a.source_site, a.target_site, a.offset_x, a.offset_y) <
-         std::tie(b.source_site, b.target_site, b.offset_x, b.offset_y);
+  return std::tie(a.source_site, a.dx, a.dy) <
+         std::tie(b.source_site, b.dx, b.dy);
 }
 
 template <class ptensor> class TeNeS {
@@ -616,6 +615,7 @@ auto TeNeS<ptensor>::measure_twosite()
 
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
+    /*
     const int x_source = lattice.x(source);
     const int y_source = lattice.y(source);
     const int target = op.target_site;
@@ -624,6 +624,9 @@ auto TeNeS<ptensor>::measure_twosite()
     const int y_target = lattice.y(target) + op.offset_y * lattice.LY;
     const int dx = x_target - x_source;
     const int dy = y_target - y_source;
+    */
+    const int dx = op.dx[0];
+    const int dy = op.dy[0];
 
     const int ncol = std::abs(dx)+1;
     const int nrow = std::abs(dy)+1;
@@ -741,12 +744,12 @@ auto TeNeS<ptensor>::measure_twosite()
       }
     }else{
       op_[source_row][source_col] = &(onesite_operators[siteoperator_index(op.source_site, op.ops_indices[0])].op);
-      op_[target_row][target_col] = &(onesite_operators[siteoperator_index(op.target_site, op.ops_indices[1])].op);
+      const int target_site = lattice.other(op.source_site, dx, dy);
+      op_[target_row][target_col] = &(onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op);
       auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.target_site, op.offset_x,
-                   op.offset_y}] = value / norm;
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
   }
 
   time_observable += timer.elapsed();
@@ -769,11 +772,10 @@ void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, typename TeNeS<pten
       << std::setprecision(std::numeric_limits<double>::max_digits10);
   ofs << "# $1: op_group\n";
   ofs << "# $2: source_site\n";
-  ofs << "# $3: target_site\n";
-  ofs << "# $4: offset_x\n";
-  ofs << "# $5: offset_y\n";
-  ofs << "# $6: real\n";
-  ofs << "# $7: imag\n";
+  ofs << "# $3: dx\n";
+  ofs << "# $4: dy\n";
+  ofs << "# $5: real\n";
+  ofs << "# $6: imag\n";
   ofs << std::endl;
   for (int ilops = 0; ilops < nlops; ++ilops) {
     tensor_type sum = 0.0;
@@ -783,9 +785,7 @@ void TeNeS<ptensor>::save_twosite(std::vector<std::map<Bond, typename TeNeS<pten
       auto value = r.second;
       sum += value;
       num += 1;
-      ofs << ilops << " " << bond.source_site << " " << bond.target_site
-          << " " << bond.offset_x << " " << bond.offset_y << " " << std::real(value)
-          << " " << std::imag(value) << std::endl;
+      ofs << ilops << " " << bond.source_site << " " << bond.dx << " " << bond.dy << " " << std::real(value) << " " << std::imag(value) << std::endl;
     }
   }
 }

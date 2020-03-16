@@ -11,22 +11,36 @@ def all_positive(xs, v=0):
     return all(map(lambda x: x > v, xs))
 
 
-Bond = namedtuple("Bond", ("source_site", "target_site", "offset_x", "offset_y"))
+# Bond = namedtuple("Bond", ("source_site", "target_site", "offset_x", "offset_y"))
+Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
+
+
+def drop_comment(line: str) -> str:
+    last = line.find('#')
+    if last < 0:
+        return line[:]
+    else:
+        return line[:last+1]
 
 
 def parse_bond(line: str) -> Bond:
+    line = drop_comment(line)
     words = line.split()
     source_site = int(words[0])
-    target_site = int(words[1])
-    offset_x = int(words[2])
-    offset_y = int(words[3])
-    return Bond(source_site, target_site, offset_x, offset_y)
+    dx = int(words[1])
+    dy = int(words[2])
+    return Bond(source_site, dx, dy)
+    # target_site = int(words[1])
+    # offset_x = int(words[2])
+    # offset_y = int(words[3])
+    # return Bond(source_site, target_site, offset_x, offset_y)
 
 
 def encode_bond(bond: Bond) -> str:
-    return "{} {} {} {}".format(
-        bond.source_site, bond.target_site, bond.offset_x, bond.offset_y
-    )
+    return "{} {} {}".format(bond.source_site, bond.dx, bond.dy)
+    # return "{} {} {} {}".format(
+    #     bond.source_site, bond.target_site, bond.offset_x, bond.offset_y
+    # )
 
 
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
@@ -34,6 +48,7 @@ def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.n
     A_im = np.zeros(dims)
     ndim = A_re.ndim
     for line in elements_str.strip().splitlines():
+        line = drop_comment(line)
         words = line.strip().split()
         if len(words) != len(dims) + 2:
             msg = "number of columns should be {} but {} given".format(
@@ -162,19 +177,60 @@ class Unitcell:
     def numsites(self) -> int:
         return len(self.sites)
 
-    def bond_displacement(self, bond: Bond) -> Tuple:
+    def index2coord(self, index: int) -> Tuple[int, int]:
+        d, m = divmod(index, self.L[0])
+        return m, d
+
+    def coord2index(self, x: int, y: int) -> int:
+        x, y, _, _ = self.coord2supercoord(x, y)
+        return x + self.L[0] * y
+
+    def coord2supercoord(self, x: int, y: int) -> Tuple[int, int, int, int]:
+        offset_y = y // self.L[1]
+        x -= offset_y * self.skew
+        offset_x = x // self.L[0]
+        x -= offset_x * self.L[0]
+        y -= offset_y * self.L[1]
+        return x, y, offset_x, offset_y
+
+    def wan2coord(self, site: int, ox: int, oy: int) -> Tuple[int, int]:
+        x, y = self.index2coord(site)
+        x -= oy * self.skew
+        x += ox * self.L[0]
+        y += oy * self.L[1]
+        return x, y
+
+    def source_site(self, bond: Bond) -> int:
+        return bond.source_site
+
+    def source_coord(self, bond: Bond) -> Tuple[int, int]:
+        return self.index2coord(self.source_site(bond))
+
+    def target_site(self, bond: Bond) -> int:
         x, y = self.index2coord(bond.source_site)
-        X, Y = self.index2coord(bond.target_site)
-        X += (self.L[0]) * bond.offset_x + self.skew * bond.offset_y
-        Y += self.L[1] * bond.offset_y
-        dx = X - x
-        dy = Y - y
-        return dx, dy
+        x += bond.dx
+        y += bond.dy
+        x, y, _, _ = self.coord2supercoord(x, y)
+        return self.coord2index(x, y)
+
+    def target_coord(self, bond: Bond) -> Tuple[int, int]:
+        x, y = self.index2coord(bond.source_site)
+        x += bond.dx
+        y += bond.dy
+        return x, y
+
+    def target_offset(self, bond: Bond) -> Tuple[int, int]:
+        x, y = self.target_coord(bond)
+        _, _, ox, oy = self.coord2supercoord(x, y)
+        return ox, oy
+
+    def bond_displacement(self, bond: Bond) -> Tuple:
+        return bond.dx, bond.dy
 
     def bond_direction(self, bond: Bond) -> int:
         dx, dy = self.bond_displacement(bond)
         nhop = abs(dx) + abs(dy)
-        assert nhop == 1
+        assert nhop == 1, '{} {}'.format(dx, dy)
         if dx == 1:
             direction = 2
         elif dx == -1:
@@ -190,47 +246,19 @@ class Unitcell:
         return self.sites[bond.source_site].virtual_dim[direction]
 
     def make_bond(self, source: int, direction: int) -> Bond:
-        assert 0 <= direction < 4
-        x, y = self.index2coord(source)
-        X, Y = x, y
-        offset_x = 0
-        offset_y = 0
+        dx = 0
+        dy = 0
         if direction == 0:
-            X = x - 1
-            if X < 0:
-                X = self.L[0] - 1
-                offset_x = -1
+            dx = -1
         elif direction == 1:
-            Y = y + 1
-            if Y == self.L[1]:
-                Y = 0
-                offset_y = 1
-                X = x - self.skew
-                if X < 0:
-                    X += self.L[0]
-                    offset_x = -1
-                elif X >= self.L[0]:
-                    X -= self.L[0]
-                    offset_x = 1
+            dy = 1
         elif direction == 2:
-            X = x + 1
-            if X == self.L[0]:
-                X = 0
-                offset_x = 1
+            dx = 1
+        elif direction == 3:
+            dy = -1
         else:
-            Y = y - 1
-            if Y < 0:
-                Y = self.L[1] - 1
-                offset_y = -1
-                X = x + self.skew
-                if X < 0:
-                    X += self.L[0]
-                    offset_x = -1
-                elif X >= self.L[0]:
-                    X -= self.L[0]
-                    offset_x = 1
-
-        return Bond(source, self.coord2index(X, Y), offset_x, offset_y)
+            raise RuntimeError()
+        return Bond(source, dx, dy)
 
     def check(self):
         """
@@ -267,36 +295,10 @@ class Unitcell:
             msg = "ERROR: some sites have problems"
             raise RuntimeError(msg)
 
-    def index2coord(self, index: int) -> Tuple:
-        return index % self.L[0], index // self.L[0]
-
-    def coord2index(self, x: int, y: int) -> int:
-        return x + self.L[0] * y
-
     def neighbor(self, index: int, direction: int) -> int:
         x, y = self.index2coord(index)
-        if direction == 0:
-            x = (x - 1 + self.L[0]) % self.L[0]
-        elif direction == 1:
-            if self.skew == 0 or y < self.L[1]:
-                y = (y + 1) % self.L[1]
-            else:
-                y = 0
-                x = (x + self.skew + self.L[0]) % self.L[0]
-        elif direction == 2:
-            x = (x + 1) % self.L[0]
-        elif direction == 4:
-            if self.skew == 0 or y == 0:
-                y = (y - 1 + self.L[1]) % self.L[1]
-            else:
-                y = 0
-                x = (x - self.skew + self.L[0]) % self.L[0]
-        else:
-            msg = "ERROR: given direction is {}, but must be 0, 1, 2, or 3".format(
-                direction
-            )
-            raise RuntimeError(msg)
-        return self.coord2index(x, y)
+        X, Y, _, _ = self.coord2supercoord(x, y)
+        return self.coord2index(X, Y)
 
 
 class LatticeGraph:
@@ -324,19 +326,19 @@ class LatticeGraph:
                 range(offset_x_min, offset_x_max + 1),
             ):
                 for bond in bonds:
+                    x, y = self.unitcell.target_coord(bond)
+                    x, y, ox, oy = self.unitcell.coord2supercoord(x, y)
                     D = unitcell.bond_dim(bond)
                     if D == 1:
                         continue
-                    if not offset_x_min <= bond.offset_x + iox <= offset_x_max:
+                    if not offset_x_min <= ox + iox <= offset_x_max:
                         continue
-                    if not offset_y_min <= bond.offset_y + ioy <= offset_y_max:
+                    if not offset_y_min <= oy + ioy <= offset_y_max:
                         continue
-                    source_site = self.graph_site(bond.source_site, iox, ioy)
-                    target_site = self.graph_site(
-                        bond.target_site, iox + bond.offset_x, ioy + bond.offset_y
-                    )
+                    source_site = self.graph_site(self.unitcell.source_site(bond), iox, ioy)
+                    target_site = self.graph_site(self.unitcell.target_site(bond), iox + ox, ioy + oy)
                     weight = 1.0 / D / D
-                    if bond.offset_x == bond.offset_y == 0:
+                    if ox == oy == 0:
                         A[source_site, target_site] = weight
                     else:
                         A[source_site, target_site] = 2 * weight
@@ -360,7 +362,8 @@ class LatticeGraph:
         return localsite, offset_x, offset_y
 
     def make_path(self, bond: Bond) -> List[Bond]:
-        target_index = self.graph_site(bond.target_site, bond.offset_x, bond.offset_y)
+        ox, oy = self.unitcell.target_offset(bond)
+        target_index = self.graph_site(self.unitcell.target_site(bond), ox, oy)
         path_pred = self.path_pred[self.graph_site(bond.source_site)]
         targets = [target_index]
         target_index = path_pred[target_index]
@@ -374,9 +377,11 @@ class LatticeGraph:
             target_site, target_offset_x, target_offset_y = self.graph_coords(
                 targets.pop()
             )
-            dx = target_offset_x - source_offset_x
-            dy = target_offset_y - source_offset_y
-            b = Bond(source_site, target_site, dx, dy)
+            ox = target_offset_x - source_offset_x
+            oy = target_offset_y - source_offset_y
+            x, y = self.unitcell.index2coord(source_site)
+            X, Y = self.unitcell.wan2coord(target_site, ox, oy)
+            b = Bond(source_site, X-x, Y-y)
             bonds.append(b)
             source_site = target_site
             source_offset_x = target_offset_x
@@ -488,9 +493,7 @@ class TwoBodyObservables:
         ret.append('bonds = """')
         for b in self.bonds:
             ret.append(
-                "{} {} {} {}".format(
-                    b.source_site, b.target_site, b.offset_x, b.offset_y
-                )
+                "{} {} {}".format(b.source_site, b.dx, b.dy)
             )
         ret.append('"""')
         if self.elements is not None:
@@ -607,12 +610,13 @@ class Model:
             bonds = []
             for line in ham["bonds"].strip().splitlines():
                 b = parse_bond(line)
-                offset_x_min = min(b.offset_x, offset_x_min)
-                offset_x_max = max(b.offset_x, offset_x_max)
-                offset_y_min = min(b.offset_y, offset_y_min)
-                offset_y_max = max(b.offset_y, offset_y_max)
-                assert self.unitcell.sites[b.source_site].phys_dim == elements.shape[0]
-                assert self.unitcell.sites[b.target_site].phys_dim == elements.shape[1]
+                ox, oy = self.unitcell.target_offset(b)
+                offset_x_min = min(ox, offset_x_min)
+                offset_x_max = max(ox, offset_x_max)
+                offset_y_min = min(oy, offset_y_min)
+                offset_y_max = max(oy, offset_y_max)
+                assert self.unitcell.sites[self.unitcell.source_site(b)].phys_dim == elements.shape[0]
+                assert self.unitcell.sites[self.unitcell.target_site(b)].phys_dim == elements.shape[1]
                 bonds.append(b)
                 op = TwoBodyOperator(b, elements=elements)
                 self.hamiltonians.append(op)
