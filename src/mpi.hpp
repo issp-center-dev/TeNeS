@@ -38,6 +38,7 @@ template <class T>
 MPI_Datatype get_MPI_Datatype();
 template <> MPI_Datatype get_MPI_Datatype<int>();
 template <> MPI_Datatype get_MPI_Datatype<double>();
+template <> MPI_Datatype get_MPI_Datatype<bool>();
 
 template <class T>
 int bcast(T &val, int root, MPI_Comm comm){
@@ -48,6 +49,20 @@ int bcast(T &val, int root, MPI_Comm comm){
 #endif
   return ret;
 }
+
+int bcast(bool &val, int root, MPI_Comm comm);
+
+// template <>
+// int bcast(bool &val, int root, MPI_Comm comm){
+//   int ret=0;
+// #ifndef _NO_MPI
+//   int v = val?0:1;
+//   ret=MPI_Bcast(&v, 1, MPI_INT, root, comm);
+//   val = v==0;
+// #endif
+//   return ret;
+// }
+
 
 template <class T>
 int bcast(std::complex<T> &val, int root, MPI_Comm comm){

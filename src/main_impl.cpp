@@ -181,7 +181,6 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
     std::string basename = util::basename(input_filename);
     std::ifstream ifs(input_filename.c_str());
     std::string dst_filename = outdir + "/" + basename;
-    std::cout << dst_filename << std::endl;
     std::ofstream ofs(dst_filename.c_str());
     std::string line;
     while (std::getline(ifs, line)){
