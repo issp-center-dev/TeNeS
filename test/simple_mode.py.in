@@ -52,7 +52,7 @@ if len(res['hamiltonian']) != len(ref['hamiltonian']):
     result = False
 else:
     for ham_res, ham_ref in zip(res['hamiltonian'], res['hamiltonian']):
-        ham_result = ham_result and ham_res['dims'] == ham_ref['dims']
+        ham_result = ham_result and ham_res['dim'] == ham_ref['dim']
         ham_result = ham_result and ham_res['bonds'] == ham_ref['bonds']
         elem_res = load_str_as_array(ham_res['elements'])
         elem_ref = load_str_as_array(ham_ref['elements'])
@@ -67,6 +67,7 @@ if len(res['observable']['onesite']) != len(ref['observable']['onesite']):
     result = False
 else:
     for obs_res, obs_ref in zip(res['observable']['onesite'], ref['observable']['onesite']):
+        obs_result = obs_result and obs_res['name'] == obs_ref['name']
         obs_result = obs_result and obs_res['group'] == obs_ref['group']
         obs_result = obs_result and obs_res['sites'] == obs_ref['sites']
         obs_result = obs_result and obs_res['dim'] == obs_ref['dim']
@@ -75,6 +76,28 @@ else:
         obs_result = obs_result and np.allclose(elem_ref, elem_res)
 if not obs_result:
     print('check for the section "observable.onesite" fails')
+    result = False
+
+obs_result = True
+if len(res['observable']['twosite']) != len(ref['observable']['twosite']):
+    obs_result = False
+    result = False
+else:
+    for obs_res, obs_ref in zip(res['observable']['twosite'], ref['observable']['twosite']):
+        obs_result = obs_result and obs_res['name'] == obs_ref['name']
+        obs_result = obs_result and obs_res['group'] == obs_ref['group']
+        obs_result = obs_result and obs_res['bonds'] == obs_ref['bonds']
+        obs_result = obs_result and obs_res['dim'] == obs_ref['dim']
+        if 'elements' in obs_ref:
+            obs_result = obs_result and 'elements' in obs_res
+            elem_res = load_str_as_array(obs_res['elements'])
+            elem_ref = load_str_as_array(obs_ref['elements'])
+            obs_result = obs_result and np.allclose(elem_ref, elem_res)
+        else:
+            obs_result = obs_result and 'elements' not in obs_res
+            obs_result = obs_result and np.all(obs_ref['ops'] == obs_res['ops'])
+if not obs_result:
+    print('check for the section "observable.twosite" fails')
     result = False
 
 if result:

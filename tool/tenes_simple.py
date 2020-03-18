@@ -2,7 +2,7 @@ import copy
 import re
 
 from collections import namedtuple
-from itertools import product
+from itertools import chain, product
 from typing import Any, Dict, Iterable, List
 
 import numpy as np
@@ -226,11 +226,27 @@ class Model(object):
     def onesite_observables_as_dict(self) -> List[Dict[str, Any]]:
         ret = []
 
-        for i, op in enumerate(self.onesite_ops):
+        for i, (name, op) in enumerate(zip(self.onesite_ops_name, self.onesite_ops)):
             dic = {}
             dic["group"] = i
+            dic["name"] = name
             dic["sites"] = []
             dic["dim"] = self.N
+            dic["elements"] = "\n".join(dump_op(op))
+            dic["is_real"] = np.all(np.isreal(op))
+            ret.append(dic)
+        return ret
+
+    def twosite_observables_as_dict(self) -> List[Dict[str, Any]]:
+        ret = []
+
+        for i, (name, op) in enumerate(
+            zip(self.twosite_ops_name, self.twosite_ops), start=1
+        ):
+            dic = {}
+            dic["group"] = i
+            dic["name"] = name
+            dic["dim"] = [self.N, self.N]
             dic["elements"] = "\n".join(dump_op(op))
             dic["is_real"] = np.all(np.isreal(op))
             ret.append(dic)
@@ -293,6 +309,13 @@ class SpinModel(Model):
         Sy = 0.5j * (Sminus - Splus)
 
         self.onesite_ops = [Sz, Sx, Sy]
+        self.onesite_ops_name = ["Sz", "Sx", "Sy"]
+
+        self.twosite_ops = []
+        self.twosite_ops_name = []
+        for name, op in zip(self.onesite_ops_name, self.onesite_ops):
+            self.twosite_ops.append(np.einsum("ij,kl -> ikjl", op, op))
+            self.twosite_ops_name.append("{}{}".format(name, name))
         self.read_params(param)
         super()._sort_ham_groups()
 
@@ -497,7 +520,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
                 if isinstance(v, str):
                     ret.append('{} = "{}"'.format(k, v))
                 elif isinstance(v, bool):
-                    ret.append('{} = {}'.format(k, "true" if v else "false"))
+                    ret.append("{} = {}".format(k, "true" if v else "false"))
                 else:
                     ret.append("{} = {}".format(k, v))
     ret.append("")
@@ -525,7 +548,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
 
     for ham in hams:
         ret.append("[[hamiltonian]]")
-        ret.append("dims = {}".format([model.N, model.N]))
+        ret.append("dim = {}".format([model.N, model.N]))
         ret.append('bonds = """')
         for bond in ham.bonds:
             ret.append(dumpbond(bond))
@@ -545,6 +568,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     for lop in lops:
         if is_complex or lop["is_real"]:
             ret.append("[[observable.onesite]]")
+            ret.append('name = "{}"'.format(lop["name"]))
             ret.append("group = {}".format(lop["group"]))
             groups.append(lop["group"])
             ret.append("sites = {}".format(lop["sites"]))
@@ -553,19 +577,59 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             for line in lop["elements"].split("\n"):
                 ret.append(line)
             ret.append('"""')
-
+            ret.append("")
     groups = list(set(groups))
     groups.sort()
 
+    for ham in hams:
+        ret.append("[[observable.twosite]]")
+        ret.append('name = "hamiltonian"')
+        ret.append("group = 0")
+        ret.append("dim = {}".format([model.N, model.N]))
+        ret.append('bonds = """')
+        for bond in ham.bonds:
+            ret.append(dumpbond(bond))
+        ret.append('"""')
+        ret.append('elements = """')
+        for line in dump_op(ham.elements):
+            ret.append(line)
+        ret.append('"""')
+        ret.append("")
+
+    for i in range(len(model.onesite_ops)):
+        oo = model.onesite_ops[i]
+        if not is_complex:
+            if not np.all(np.isreal(oo)):
+                v = np.einsum('ij,kl -> ikjl', oo, oo)
+                if not np.all(np.isreal(v)):
+                    continue
+        ret.append("[[observable.twosite]]")
+        ret.append('name = "{name}{name}"'.format(name=model.onesite_ops_name[i]))
+        ret.append("group = {}".format(i + 1))
+        ret.append("dim = {}".format([model.N] * 2))
+        ret.append('bonds = """')
+        for bond in chain(*lattice.bonds[0]):
+            ret.append(dumpbond(bond))
+        ret.append('"""')
+        if is_complex or np.all(np.isreal(oo)):
+            ret.append("ops = {}".format([i] * 2))
+        else:
+            v = np.einsum('ij,kl -> ikjl', oo, oo)
+            if is_complex or np.all(np.isreal(v)):
+                ret.append('elements = """')
+                for line in dump_op(v):
+                    ret.append(line)
+                ret.append('"""')
+        ret.append("")
+
     if "correlation" in param:
         corparam = param["correlation"]
-        ret.append("")
         ret.append("[correlation]")
         ret.append("r_max = {}".format(corparam["r_max"]))
         if not "operators" in corparam:
             corparam["operators"] = []
             for g in groups:
-                corparam["operators"].append([g,g])
+                corparam["operators"].append([g, g])
 
         ret.append("operators = [")
         for ops in corparam["operators"]:

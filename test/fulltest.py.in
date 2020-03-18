@@ -7,27 +7,20 @@ import numpy as np
 import toml
 
 
-def check_energy(resdir, refdir, *, rtol, atol):
+def check_density(resdir, refdir, *, rtol, atol):
     def read(filename):
         ret = []
         with open(filename) as f:
             for line in f:
                 words = line.split()
-                if len(words) == 3:
-                    # real
-                    ret.append(float(words[2]))
-                elif len(words) == 5:
-                    # complex
-                    ret.append(complex(float(words[2]), float(words[4])))
-                else:
-                    raise RuntimeError("unknown format in energy.dat")
+                ret.append(complex(float(words[2]), float(words[3])))
         return ret
 
-    res = read(join(resdir, "energy.dat"))
-    ref = read(join(refdir, "energy.dat"))
+    res = read(join(resdir, "density.dat"))
+    ref = read(join(refdir, "density.dat"))
 
     if len(res) != len(ref):
-        print("energy.dat: number of entries do not match")
+        print("density.dat: number of entries do not match")
         print("  result:    {}".format(len(res)))
         print("  reference: {}".format(len(ref)))
         return False
@@ -35,7 +28,7 @@ def check_energy(resdir, refdir, *, rtol, atol):
     fl = True
     for i, (s, f) in enumerate(zip(res, ref)):
         if type(s) != type(f) or not np.isclose(s, f, rtol=rtol, atol=atol):
-            print("energy.dat: {}-th data do not match:".format(i))
+            print("density.dat: {}-th data do not match:".format(i))
             print("  result:    ", s)
             print("  reference: ", f)
             fl = False
@@ -99,7 +92,7 @@ rtol = 1.0e-3
 
 result = True
 
-result = check_energy(resdir, refdir, rtol=rtol, atol=atol) and result
+result = check_density(resdir, refdir, rtol=rtol, atol=atol) and result
 result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 # result = check("correlation.dat", resdir, refdir, tol) and result

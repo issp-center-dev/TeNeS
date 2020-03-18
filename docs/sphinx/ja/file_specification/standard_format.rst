@@ -12,9 +12,6 @@
   
        - ``parameter.simple_update.tau`` および ``parameter.full_update.tau`` に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。
 
-       - ``observable.twosite`` について、 ``group=0`` の演算子はボンドハミルトニアンで上書きされます。
-        
-           - ``tenes_std`` に ``--no-hamiltonian-observe`` オプションを渡すことでこの動作を無効化できます。
 
 ``hamiltonian`` セクション
 ==========================

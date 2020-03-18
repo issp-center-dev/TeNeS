@@ -118,6 +118,8 @@ private:
   std::vector<std::vector<int>> site_ops_indices;
   int num_onesite_operators;
   int num_twosite_operators;
+  std::vector<std::string> onesite_operator_names;
+  std::vector<std::string> twosite_operator_names;
 
   std::vector<ptensor> op_identity;
 
@@ -230,16 +232,56 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   initialize_tensors();
 
   int maxops = -1;
+  size_t maxlength = 0;
   for (auto const &op : onesite_operators) {
     maxops = std::max(op.group, maxops);
   }
   num_onesite_operators = maxops + 1;
+  onesite_operator_names.resize(num_onesite_operators);
+  for (auto const &op : onesite_operators) {
+    if(op.name.empty()){
+      std::stringstream ss;
+      ss << "onesite[" << op.group << "]";
+      onesite_operator_names[op.group] = ss.str();
+    }else{
+      onesite_operator_names[op.group] = op.name;
+    }
+  }
+  for (auto const &s : onesite_operator_names){
+    maxlength = std::max(s.size(), maxlength);
+  }
 
   maxops = -1;
   for (auto const &op : twosite_operators) {
     maxops = std::max(op.group, maxops);
   }
   num_twosite_operators = maxops + 1;
+  twosite_operator_names.resize(num_twosite_operators);
+  for (auto const &op : twosite_operators) {
+    if(op.name.empty()){
+      std::stringstream ss;
+      ss << "twosite[" << op.group << "]";
+      twosite_operator_names[op.group] = ss.str();
+    }else{
+      twosite_operator_names[op.group] = op.name;
+    }
+  }
+  for (auto const &s : twosite_operator_names){
+    maxlength = std::max(s.size(), maxlength);
+  }
+
+  for(auto &s : onesite_operator_names){
+    const auto l = maxlength - s.size();
+    for(size_t i=0; i<l; ++i){
+      s += " ";
+    }
+  }
+  for(auto &s : twosite_operator_names){
+    const auto l = maxlength - s.size();
+    for(size_t i=0; i<l; ++i){
+      s += " ";
+    }
+  }
 
   site_ops_indices.resize(N_UNIT, std::vector<int>(num_onesite_operators, -1));
   for(int i=0; i<onesite_operators.size(); ++i){
@@ -424,9 +466,7 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
   ptensor Tn2_new;
   std::vector<double> lambda_c;
   const int nsteps = peps_parameters.num_simple_step;
-
-  int ireport = 1;
-  int next_report_step = 0.1 * nsteps - 1;
+  double next_report = 10.0;
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : simple_updates) {
@@ -443,12 +483,13 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
       Tn[target] = Tn2_new;
     }
 
-    if (mpirank == 0 &&
-        peps_parameters.print_level >= PrintLevel::info) {
-      if (int_tau == next_report_step) {
-        std::cout << 100.0 * (int_tau + 1) / nsteps << "% done" << std::endl;
-        ++ireport;
-        next_report_step = 0.1 * ireport * nsteps - 1;
+    if(peps_parameters.print_level >= PrintLevel::info) {
+      double r_tau = 100.0 * (int_tau+1) / nsteps;
+      if(r_tau >= next_report){
+        while(r_tau >= next_report){
+          next_report += 10.0;
+        }
+        std::cout << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
       }
     }
   }
@@ -464,9 +505,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
   }
 
   const int nsteps = peps_parameters.num_full_step;
-
-  int ireport = 1;
-  int next_report_step = 0.1 * nsteps - 1;
+  double next_report = 10.0;
 
   timer.reset();
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
@@ -576,12 +615,13 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
       }
     }
 
-    if (mpirank == 0 &&
-        peps_parameters.print_level >= PrintLevel::info) {
-      if (int_tau == next_report_step) {
-        std::cout << 100.0 * (int_tau + 1) / nsteps << "% done" << std::endl;
-        ++ireport;
-        next_report_step = 0.1 * ireport * nsteps - 1;
+    if(peps_parameters.print_level >= PrintLevel::info) {
+      double r_tau = 100.0 * (int_tau+1) / nsteps;
+      if(r_tau >= next_report){
+        while(r_tau >= next_report){
+          next_report += 10.0;
+        }
+        std::cout << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
       }
     }
   }
@@ -1036,6 +1076,13 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
         loc_obs[ilops] += onesite_obs[ilops][i];
       }
     }
+    std::vector<tensor_type> two_obs(num_twosite_operators);
+    for( int iops = 0; iops < num_twosite_operators; ++iops ){
+      for (const auto &obs : twosite_obs[iops]){
+        two_obs[iops] += obs.second;
+      }
+    }
+
     auto energy = 0.0;
     for (const auto &obs : twosite_obs[0]) {
       energy += std::real(obs.second);
@@ -1044,20 +1091,38 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 
     {
       const double invV = 1.0 / N_UNIT;
-      std::string filename = outdir + "/energy.dat";
+      std::string filename = outdir + "/density.dat";
       std::ofstream ofs(filename.c_str());
+      ofs << std::scientific
+          << std::setprecision(std::numeric_limits<double>::max_digits10);
 
-      if (peps_parameters.print_level >= PrintLevel::info) {
-        ofs << "energy = " << energy * invV << std::endl;
+      if (mpirank == 0) {
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
           const auto v = loc_obs[ilops] * invV;
-          if(is_tensor_real){
-            ofs << "onesite_obs[" << ilops << "] = " << v << std::endl;
-          }else{
-            ofs << "onesite_obs[" << ilops << "] = " << std::real(v) << " +i " << std::imag(v) << std::endl;
+          ofs << onesite_operator_names[ilops] << " = ";
+          if(std::real(v)>= 0.0){
+            ofs << " ";
           }
+          ofs << std::real(v) << " ";
+          if(std::imag(v)>= 0.0){
+            ofs << " ";
+          }
+          ofs << std::imag(v) << std::endl;
         }
-        std::clog << "    Save energy density and onesite observable densities to " << filename << std::endl;
+
+        for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+          const auto v = two_obs[ilops] * invV;
+          ofs << twosite_operator_names[ilops] << " = ";
+          if(std::real(v)>= 0.0){
+            ofs << " ";
+          }
+          ofs << std::real(v) << " ";
+          if(std::imag(v)>= 0.0){
+            ofs << " ";
+          }
+          ofs << std::imag(v) << std::endl;
+        }
+        std::clog << "    Save observable densities to " << filename << std::endl;
       }
     }
     {
@@ -1081,14 +1146,14 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       const double invV = 1.0 / N_UNIT;
       std::cout << std::endl;
 
-      std::cout << "Energy density = " << energy/N_UNIT << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
         const auto v = loc_obs[ilops] * invV;
-        if(is_tensor_real){
-          std::cout << "Onesite operator[" << ilops << "] density = " << v << std::endl;
-        }else{
-          std::cout << "Onesite operator[" << ilops << "] density = " << std::real(v) << " +i " << std::imag(v) << std::endl;
-        }
+        std::cout << onesite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
+      }
+
+      for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+        const auto v = two_obs[ilops] * invV;
+        std::cout << twosite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
       }
       std::cout << std::endl;
 
@@ -1127,6 +1192,9 @@ template <class ptensor> void TeNeS<ptensor>::save_tensors() const {
         }
       }
     }
+  }
+  if (peps_parameters.print_level >= PrintLevel::info){
+    std::clog << "Tensors saved in " << save_dir << std::endl;
   }
 }
 

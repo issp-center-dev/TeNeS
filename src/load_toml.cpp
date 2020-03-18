@@ -272,6 +272,8 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     throw input_error(detail::msg_cannot_find("group", tablename));
   }
 
+  auto name = find_or(param, "name", std::string(""));
+
   std::vector<Operator<tensor>> ret;
 
   if (nbody == 1) {
@@ -291,7 +293,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       throw input_error(detail::msg_cannot_find("sites", tablename));
     }
     for (int s : sites) {
-      ret.emplace_back(*group, s, A);
+      ret.emplace_back(name, *group, s, A);
     }
   } else { // nbody == 2
     auto bonds_str = param->get_as<std::string>("bonds");
@@ -301,10 +303,10 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     auto bonds = read_bonds(*bonds_str);
     for (auto bond : bonds) {
       if(elements){
-        ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
+        ret.emplace_back(name, *group, std::get<0>(bond), std::get<1>(bond),
                          std::get<2>(bond), A);
       }else{
-        ret.emplace_back(*group, std::get<0>(bond), std::get<1>(bond),
+        ret.emplace_back(name, *group, std::get<0>(bond), std::get<1>(bond),
                          std::get<2>(bond), op_ind);
       }
     }

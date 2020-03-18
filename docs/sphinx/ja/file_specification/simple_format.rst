@@ -6,7 +6,7 @@
 -  ファイルフォーマットは
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ 形式
 
--  ``model``, ``lattice``, ``parameter``, ``observable``, ``correlation``
+-  ``model``, ``lattice``, ``parameter``, ``correlation``
    の4つのセクションを持ちます。
    
    - ``parameter`` セクションはそのままスタンダードモードの入力へとコピーされます。
@@ -91,6 +91,9 @@
    ``B1''``, "三次近接・第1方向ボンドの双二次相互作用", 実数, 0.0
    ``B2''``, "三次近接・第2方向ボンドの双二次相互作用", 実数, 0.0
 
+
+物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば):math:`S^y` を自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアンおよび最近接ボンド上の :math:`S^z` 相関、 :math:`S^x` 相関、 :math:`S^y` 相関が自動的に定義されます。
 
 ``lattice`` セクション
 ==========================
@@ -227,11 +230,6 @@
 ``tenes_simple`` では使われず、 ``tenes_std`` の入力ファイルとしてそのままコピーされます。
 
 .. include:: ./parameter_section.rst
-
-``observable`` セクション
-==========================
-
-``tenes_simple`` ではデフォルトでは、物理量測定に使われる局所物理量として、 :math:`S^z` と :math:`S^x` が定義されます。 より詳細な物理量測定は、 ``tenes_std`` (および ``tenes`` )の入力ファイルで指定する ``observable`` セクションと共通のフォーマットで指定することができます。詳細は、:doc:`expert_format` の ``observable`` セクションをご覧ください。
 
 ``correlation`` セクション
 ==========================
