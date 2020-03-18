@@ -339,8 +339,7 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
     }
   } else {
     // load from the checkpoint
-    struct stat status;
-    if (stat(load_dir.c_str(), &status) != 0) {
+    if (!util::isdir(load_dir)) {
       std::string msg = load_dir + " does not exists.";
       throw tenes::runtime_error(msg);
     }
@@ -381,6 +380,33 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
           ++index;
         }
       }
+    }
+
+    // overwrite dimensions
+    const Shape Cshape = C1[0].shape();
+    if(CHI != Cshape[0]){
+      if(peps_parameters.print_level >= PrintLevel::info ){
+        std::clog << "WARNING: parameters.ctm.dimension is " << CHI << " but loaded tensors have CHI = " << Cshape[0] << std::endl;
+        std::clog << "         TeNeS overwrites the formar by the latter and continues." << std::endl;
+      }
+      CHI = peps_parameters.CHI = Cshape[0];
+    }
+    for(int i=0; i<N_UNIT; ++i){
+      const Shape Tshape = Tn[i].shape();
+      for(int l=0; l<nleg; ++l){
+        const int vd_param = lattice.virtual_dims[i][l];
+        const int vd_loaded = Tshape[l];
+        if(vd_param != vd_loaded){
+          if(peps_parameters.print_level >= PrintLevel::info ){
+            std::clog << "WARNING: virtual dimension of the leg " << l << " of the tensor " << i << " is " << vd_param << " but loaded tensor has " << vd_loaded << std::endl;
+            std::clog << "         TeNeS overwrites the formar by the latter and continues." << std::endl;
+          }
+          lattice.virtual_dims[i][l] = Tshape[l];
+        }
+      }
+    }
+    if(peps_parameters.print_level >= PrintLevel::info){
+      std::clog << "Tensors loaded from " << load_dir << std::endl;
     }
   } // end of else part of if(load_dir.empty())
 }
