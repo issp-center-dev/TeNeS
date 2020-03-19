@@ -56,59 +56,64 @@
    Number of Threads / Process: 1
    Tensor type: real
    Start simple update
-   10% done
-   20% done
-   30% done
-   40% done
-   50% done
-   60% done
-   70% done
-   80% done
-   90% done
-   100% done
+   10% [100/1000] done
+   20% [200/1000] done
+   30% [300/1000] done
+   40% [400/1000] done
+   50% [500/1000] done
+   60% [600/1000] done
+   70% [700/1000] done
+   80% [800/1000] done
+   90% [900/1000] done
+   100% [1000/1000] done
    Start calculating observables
      Start updating environment
-     Start calculating local operators
+     Start calculating onesite operators
        Save onesite observables to output/onesite_obs.dat
-     Start calculating NN correlation
+     Start calculating twosite operators
        Save twosite observables to output/twosite_obs.dat
-       Save energy density and onesite observable densities to output/energy.dat
+       Save observable densities to output/density.dat
        Save elapsed times to output/time.dat
 
-   Energy density = -0.5
-   Onesite operator[0] density = 0.5
-   Onesite operator[1] density = -5.19665527844e-92
+   Sz          = 0.297866964052 0
+   Sx          = 0.386024172907 0
+   hamiltonian = -0.75730305866 0
+   SzSz        = 0.21686921659 0
+   SxSx        = 0.319350111777 0
+   SySy        = -0.0477650003168 0
 
-   time simple update = 30.756653582
+   time simple update = 0.723227631
    time full update   = 0
-   time environmnent  = 0.10026456
-   time observable    = 0.030680172
+   time environmnent  = 0.280337931
+   time observable    = 0.030397775
 
 
 のように計算が実行されます。
 最初に並列化の情報およびテンソルの実虚が表示されます。
 次に計算プロセスの実行状況が表示されます。
-計算終了後、 ``Energy`` と局在演算子 ``Onesite operator [0]`` (``<Sz>``),   ``Onesite operator [1]`` (``<Sx>``)がそれぞれ出力されます。最後に ``time`` でどの程度計算時間がかかったか出力されます(単位は秒)。
+計算終了後、 1サイト演算子 ``Sz``,   ``Sx`` およびハミルトニアン ``hamiltonian`` , 最近接相関 ``SzSz``, ``SxSx``, ``SySy`` のサイトあたりの期待値が出力されます。
+最後にフェーズごとの計算時間が出力されます(単位は秒)。
 計算終了後は ``output`` フォルダに
-``energy.dat, parameters.dat, time.dat, onesite_obs.dat, twosite_obs.dat``
+``density.dat, parameters.dat, time.dat, onesite_obs.dat, twosite_obs.dat``
 がそれぞれ出力されます。各出力ファイルの詳細は、ファイルフォーマットをご覧ください。
 例えば ``<Sz>`` の値は、 ``onesite_obs.dat`` の2行目から読み取ることが可能です。
 ``G`` をパラメータとして0.1刻みで0-3.0まで振ったときの結果を下図に表示します。
 
-なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` の ``tutorial_example.py`` , ``tutorial_read.py`` があります。実行は、
+なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` の ``tutorial_example.py`` , ``tutorial_read.py`` があります。
+あらかじめ ``tenes`` などにパスを通した上で
 
 .. code::
 
    $ python tutorial_example.py
 
-でできます(MacBook2017, 1.4 GHz Intel Core i7で数分程度で計算が全て終了します)。
+として実行できます(MacBook2017, 1.4 GHz Intel Core i7で数分程度で計算が全て終了します)。
 得られた結果は
 
 .. code::
 
    $ python tutorial_read.py
 
-とすることで, 標準出力に、G, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
+とすることで集計でき、 ``G``, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
 
 
 .. figure:: ../../img/tutorial_1_Sz_vs_G.*
