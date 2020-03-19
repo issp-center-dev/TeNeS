@@ -489,7 +489,7 @@ template <class ptensor> void TeNeS<ptensor>::simple_update() {
         while(r_tau >= next_report){
           next_report += 10.0;
         }
-        std::cout << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
+        std::cout << "  " << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
       }
     }
   }
@@ -621,7 +621,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
         while(r_tau >= next_report){
           next_report += 10.0;
         }
-        std::cout << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
+        std::cout << "  " << next_report - 10.0 << "% ""[" << int_tau+1 << "/" << nsteps << "] done" << std::endl;
       }
     }
   }
@@ -1146,21 +1146,24 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       const double invV = 1.0 / N_UNIT;
       std::cout << std::endl;
 
+      std::cout << "Onesite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
         const auto v = loc_obs[ilops] * invV;
-        std::cout << onesite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
+        std::cout << "  " << onesite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
       }
 
+      std::cout << "Twosite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
         const auto v = two_obs[ilops] * invV;
-        std::cout << twosite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
+        std::cout << "  " << twosite_operator_names[ilops] << " = " << std::real(v) << " " << std::imag(v) << std::endl;
       }
-      std::cout << std::endl;
 
-      std::cout << "time simple update = " << time_simple_update << std::endl;
-      std::cout << "time full update   = " << time_full_update << std::endl;
-      std::cout << "time environmnent  = " << time_environment << std::endl;
-      std::cout << "time observable    = " << time_observable << std::endl;
+      std::cout << "Wall times [sec.]:" << std::endl;
+      std::cout << "  simple update = " << time_simple_update << std::endl;
+      std::cout << "  full update   = " << time_full_update << std::endl;
+      std::cout << "  environmnent  = " << time_environment << std::endl;
+      std::cout << "  observable    = " << time_observable << std::endl;
+      std::cout << std::endl << "Done." << std::endl;
     }
   } // end of if(mpirank == 0)
 }

@@ -51,21 +51,20 @@
 計算を実行すると、
 
 .. code:: bash
-
    Number of Processes: 1
    Number of Threads / Process: 1
    Tensor type: real
    Start simple update
-   10% [100/1000] done
-   20% [200/1000] done
-   30% [300/1000] done
-   40% [400/1000] done
-   50% [500/1000] done
-   60% [600/1000] done
-   70% [700/1000] done
-   80% [800/1000] done
-   90% [900/1000] done
-   100% [1000/1000] done
+     10% [100/1000] done
+     20% [200/1000] done
+     30% [300/1000] done
+     40% [400/1000] done
+     50% [500/1000] done
+     60% [600/1000] done
+     70% [700/1000] done
+     80% [800/1000] done
+     90% [900/1000] done
+     100% [1000/1000] done
    Start calculating observables
      Start updating environment
      Start calculating onesite operators
@@ -75,18 +74,21 @@
        Save observable densities to output/density.dat
        Save elapsed times to output/time.dat
 
-   Sz          = 0.297866964052 0
-   Sx          = 0.386024172907 0
-   hamiltonian = -0.75730305866 0
-   SzSz        = 0.21686921659 0
-   SxSx        = 0.319350111777 0
-   SySy        = -0.0477650003168 0
+   Onesite observables per site:
+     Sz          = 0.297866964052 0
+     Sx          = 0.386024172907 0
+   Twosite observables per site:
+     hamiltonian = -0.75730305866 0
+     SzSz        = 0.21686921659 0
+     SxSx        = 0.319350111777 0
+     SySy        = -0.0477650003168 0
+   Wall times [sec.]:
+     simple update = 0.691005566
+     full update   = 0
+     environmnent  = 0.269068351
+     observable    = 0.030814304
 
-   time simple update = 0.723227631
-   time full update   = 0
-   time environmnent  = 0.280337931
-   time observable    = 0.030397775
-
+   Done.
 
 のように計算が実行されます。
 最初に並列化の情報およびテンソルの実虚が表示されます。
