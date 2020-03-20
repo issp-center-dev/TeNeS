@@ -1,4 +1,7 @@
 link_directories(${MPTENSOR_LIB_DIR})
+if(OpenMP_CXX_LIBRARY_DIRS)
+    link_directories(${OpenMP_CXX_LIBRARY_DIRS})
+endif()
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -16,6 +19,7 @@ foreach(basename input simple_update full_update)
     target_include_directories(${testname} PRIVATE ${MPI_CXX_INCLUDE_DIRS})
     target_include_directories(${testname} PRIVATE ${PROJECT_SOURCE_DIR}/src)
     target_include_directories(${testname} PRIVATE ${CPPTOML_INCLUDE_DIR})
+    target_include_directories(${testname} PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
 
     target_link_libraries(${testname} mptensor)
     target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})

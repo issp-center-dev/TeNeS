@@ -1,5 +1,8 @@
 # include_directories(${MPTENSOR_INCLUDE_DIR})
 link_directories(${MPTENSOR_LIB_DIR})
+if(OpenMP_CXX_LIBRARY_DIRS)
+    link_directories(${OpenMP_CXX_LIBRARY_DIRS})
+endif()
 
 add_executable(tenes
 main.cpp
@@ -34,6 +37,7 @@ target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-unused-para
 
 target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
+target_include_directories(tenes PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${DEPS_DIR}/cpptoml/include)
 
 target_link_libraries(tenes mptensor)
