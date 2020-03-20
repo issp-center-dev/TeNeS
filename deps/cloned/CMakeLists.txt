@@ -12,7 +12,7 @@ function(git_clone uri name branch)
 endfunction()
 
 if (NOT MPTENSOR_ROOT)
-    git_clone(https://github.com/smorita/mptensor mptensor 281147a985efc7e5496d84d4172916c935cc9bcd)
+    git_clone(https://github.com/smorita/mptensor mptensor v0.3.0-rc)
 endif ()
 
 if (NOT CPPTOML_ROOT)
