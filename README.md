@@ -6,6 +6,7 @@
 # TeNeS
 
 TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
+TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tensor operation library, [mptensor](https://github.com/smorita/mptensor).
 
 ## Online manual
 - master (Latest, UNSTABLE)
@@ -34,7 +35,7 @@ TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice sys
 The following tools are required for building TeNeS.
 
 - C++11 compiler
-- CMake (>=2.8.14)
+- CMake (>=3.6.0)
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
@@ -100,7 +101,7 @@ To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` comman
 
 ### Use the pre-built mptensor
 
-TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) .
+TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) (>= v0.3).
 The build system of TeNeS installs this automatically, but you can use the extra pre-built mptensor by the following way.
 
 ``` bash
