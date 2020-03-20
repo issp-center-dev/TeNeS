@@ -2,7 +2,7 @@
 #define UTIL_READ_TENSOR_HPP
 
 #include <algorithm>
-#include <mptensor.hpp>
+#include <mptensor/mptensor.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
