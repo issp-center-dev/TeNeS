@@ -1,5 +1,7 @@
 .. highlight:: none
 
+.. _sec-std-format:
+
 ``tenes_std`` の入力ファイル
 ---------------------------------
 
@@ -13,10 +15,29 @@
        - ``parameter.simple_update.tau`` および ``parameter.full_update.tau`` に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。
 
 
-``hamiltonian`` セクション
-==========================
 
-twosite ハミルトニアンを定義します。
+``tensor`` セクション
+===========================
+
+.. include:: ./tensor_section.rst
+
+
+``observable`` セクション
+=============================
+
+.. include:: ./observable_section.rst
+
+
+``hamiltonian`` セクション
+==============================
+
+ハミルトニアン全体をボンドハミルトニアン(2サイトハミルトニアン) の和
+
+.. math::
+  \mathcal{H} = \sum_{i,j} \mathcal{H}_{ij}
+
+であると捉えて、個々のボンドハミルトニアンを定義します。
+定義のやりかたは ``observable.twosite`` でなされる2サイト演算子と同様です。
 
 .. csv-table::
    :header: "名前", "説明", "型"
@@ -39,48 +60,8 @@ twosite ハミルトニアンを定義します。
 つぎの2つは演算子が作用した後の source site, target site の状態番号を、
 最後の2つはそれぞれ演算子の要素の実部と虚部を示します。
 
-例えば S=1/2 のハイゼンベルグハミルトニアンは次のように定義されます。::
-
-  [[hamiltonian]]
-  dim = [2, 2]
-  bonds = """
-  0 0 1
-  0 1 0
-  1 0 1
-  1 1 0
-  2 0 1
-  2 1 0
-  3 0 1
-  3 1 0
-  """
-  elements = """
-  0 0 0 0  0.25 0.0
-  1 0 1 0  -0.25 0.0
-  0 1 1 0  0.5 0.0
-  1 0 0 1  0.5 0.0
-  0 1 0 1  -0.25 0.0
-  1 1 1 1  0.25 0.0
-  """
-
-
-``observable`` セクション
-=============================
-
-.. include:: ./observable_section.rst
-
-
-- ``observable.twosite`` について、 ``group=0`` の演算子はボンドハミルトニアンで上書きされます。
-
-   - ``tenes_std`` に ``--no-hamiltonian-observe`` オプションを渡すことでこの動作を無効化できます。
-
-
-
-``tensor`` セクション
-===========================
-
-.. include:: ./tensor_section.rst
-
 
 ``correlation`` セクション
+===========================
 
 .. include:: ./correlation_section.rst

@@ -6,19 +6,60 @@
 各種計算結果は ``output`` ディレクトリ以下に保存されます。
 また、入力ファイルとして使ったファイルがコピーされます。
 
-
 ``parameters.dat``
 =====================
 
-``parameter`` と ``lattice`` のパラメータ、実行日時が出力されます。
+実際に計算に使われたパラメータおよび実行日時が出力されます。
+
+例
+~~
+
+::
+
+   simple_num_step = 1000
+   simple_inverse_lambda_cutoff = 1e-12
+
+   full_num_step = 0
+   full_inverse_projector_cutoff = 1e-12
+   full_inverse_precision = 1e-12
+   full_convergence_epsilon = 1e-12
+   full_iteration_max = 1000
+   full_gauge_fix = true
+   full_fastfullupdate = true
+
+   ctm_dimension = 9
+   ctm_inverse_projector_cutoff = 1e-12
+   ctm_convergence_epsilon = 1e-10
+   ctm_iteration_max = 10
+   ctm_projector_corner = false
+   use_rsvd = false
+   rsvd_oversampling_factor = 2
+
+   seed = 11
+   is_real = 1
+   iszero_tol = 0
+   tensor_load_dir = 
+   tensor_save_dir = 
+   outdir = output
+
+   Lsub = [ 2 , 2 ]
+   skew = 0
+
+   start_datetime =  2020-03-21T17:04:06+09:00
+   finish_datetime = 2020-03-21T17:04:08+09:00
 
 
 ``density.dat``
 ================
 
-各種演算子のサイトあたりの期待値が出力されます。
+各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
+各演算子の名前 ``name`` が空だった場合はかわりに演算子番号が出力されます。
+
+例
+~~
 
 ::
+
    Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
    Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
    hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
@@ -30,17 +71,19 @@
 ``onesite_obs.dat``
 =====================
 
+onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle` が出力されます。
+各行4列からなります。
 
--  onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle` が出力されます。
--  各行4列からなります。
+1. 演算子の識別番号 :math:`\alpha`
+2. サイトの番号 :math:`i`
+3. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\rangle`
+4. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\rangle`
 
-   1. 演算子の識別番号 :math:`\alpha`
-   2. サイトの番号 :math:`i`
-   3. 期待値の実部 :math:`\mathrm{Re}\langle\hat{A}^\alpha_i\rangle`
-   4. 期待値の虚部 :math:`\mathrm{Im}\langle\hat{A}^\alpha_i\rangle`
-
+例
+~~
 
 ::
+
    # $1: op_group
    # $2: site_index
    # $3: real
@@ -62,18 +105,21 @@
 ``twosite_obs.dat``
 ======================
 
--  twosite 演算子の期待値が出力されます。
--  各行6列からなります。
+twosite 演算子の期待値が出力されます。
+各行6列からなります。
 
-   1. twosite 演算子の識別番号
-   2. source サイトの番号
-   3. source からみた target のx 変位
-   4. source からみた target のy 変位
-   5. 期待値の実部
-   6. 期待値の虚部
+1. twosite 演算子の識別番号
+2. source サイトの番号
+3. source からみた target のx 変位
+4. source からみた target のy 変位
+5. 期待値の実部
+6. 期待値の虚部
 
+例
+~~
 
 ::
+
    # $1: op_group
    # $2: source_site
    # $3: dx
@@ -93,21 +139,22 @@
 ``correlation.dat``
 =====================
 
--  相関関数 :math:`C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta_j(x_i+x,y_i+y) \rangle` が出力されます。
--  各行7列から構成されます。
+相関関数 :math:`C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle` が出力されます。
+各行7列から構成されます。
 
-   1. 左演算子のインデックス :math:`\alpha`
-   2. 左演算子のサイトインデックス :math:`i`
-   3. 右演算子のインデックス :math:`\beta`
-   4. 右演算子のx方向変位 :math:`x`
-   5. 右演算子のy方向変位 :math:`y`
-   6. 演算子の実部 :math:`\mathrm{Re}C^{\alpha \beta}`
-   7. 演算子の虚部 :math:`\mathrm{Im}C^{\alpha \beta}`
+1. 左演算子の識別番号 :math:`\alpha`
+2. 左演算子のサイト番号 :math:`i`
+3. 右演算子の識別番号 :math:`\beta`
+4. 右演算子のx方向変位 :math:`x`
+5. 右演算子のy方向変位 :math:`y`
+6. 演算子の実部 :math:`\mathrm{Re}C`
+7. 演算子の虚部 :math:`\mathrm{Im}C`
 
 例
 ~~
 
 ::
+
    # $1: left_op
    # $2: left_site
    # $3: right_op
@@ -128,10 +175,21 @@
    0 0 0 0 5 -1.41792935491960648e-01 1.23094733264734764e-14 
    1 0 1 1 0 -7.95389427681298805e-02 6.15901595234210079e-15 
    1 0 1 2 0 2.01916094009441903e-02 -1.27162373457160362e-15 
-    ... Skipped ...
+   ... Skipped ...
    2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16 
+
 
 ``time.dat``
 =====================
 
 計算時間が出力されます。
+
+例
+~~
+
+::
+
+   time simple update = 1.64429
+   time full update   = 0
+   time environmnent  = 0.741858
+   time observable    = 0.104487
