@@ -13,7 +13,7 @@
    is_real = true
 
    [parameter.simple_update]
-   num_step = 10000
+   num_step = 1000
    tau = 0.01
 
    [parameter.full_update]
@@ -51,45 +51,46 @@
 計算を実行すると、
 
 .. code:: bash
-   Number of Processes: 1
-   Number of Threads / Process: 1
-   Tensor type: real
-   Start simple update
-     10% [100/1000] done
-     20% [200/1000] done
-     30% [300/1000] done
-     40% [400/1000] done
-     50% [500/1000] done
-     60% [600/1000] done
-     70% [700/1000] done
-     80% [800/1000] done
-     90% [900/1000] done
-     100% [1000/1000] done
-   Start calculating observables
-     Start updating environment
-     Start calculating onesite operators
-       Save onesite observables to output/onesite_obs.dat
-     Start calculating twosite operators
-       Save twosite observables to output/twosite_obs.dat
-       Save observable densities to output/density.dat
-       Save elapsed times to output/time.dat
 
-   Onesite observables per site:
-     Sz          = 0.297866964052 0
-     Sx          = 0.386024172907 0
-   Twosite observables per site:
-     hamiltonian = -0.75730305866 0
-     SzSz        = 0.21686921659 0
-     SxSx        = 0.319350111777 0
-     SySy        = -0.0477650003168 0
-   Wall times [sec.]:
-     simple update = 0.691005566
-     full update   = 0
-     environmnent  = 0.269068351
-     observable    = 0.030814304
+	  Number of Processes: 1
+	  Number of Threads / Process: 1
+	  Tensor type: real
+	  Start simple update
+	  10% [100/1000] done
+	  20% [200/1000] done
+	  30% [300/1000] done
+	  40% [400/1000] done
+	  50% [500/1000] done
+	  60% [600/1000] done
+	  70% [700/1000] done
+	  80% [800/1000] done
+	  90% [900/1000] done
+	  100% [1000/1000] done
+	  Start calculating observables
+	  Start updating environment
+	  Start calculating onesite operators
+	  Save onesite observables to output_0/onesite_obs.dat
+	  Start calculating twosite operators
+	  Save twosite observables to output_0/twosite_obs.dat
+	  Save observable densities to output_0/density.dat
+	  Save elapsed times to output_0/time.dat
 
-   Done.
+	  Onesite observables per site:
+	  Sz          = 0.5 0
+	  Sx          = -1.28526262482e-13 0
+	  Twosite observables per site:
+	  hamiltonian = -0.5 0
+	  SzSz        = 0.5 0
+	  SxSx        = -1.7374919982e-18 0
+	  SySy        = 1.73749202733e-18 0
+	  Wall times [sec.]:
+	  simple update = 3.545813509
+	  full update   = 0
+	  environmnent  = 0.123170523
+	  observable    = 0.048149856
 
+	  Done.
+	  
 のように計算が実行されます。
 最初に並列化の情報およびテンソルの実虚が表示されます。
 次に計算プロセスの実行状況が表示されます。
@@ -122,4 +123,4 @@
    :width: 400px
    :align: center
 
-図から ``G`` が大きくなるにつれ、 ``<Sz>`` が ``0.5`` から徐々に小さくなり最終的には0になることがわかります。
+図から ``G`` が大きくなるにつれ、 ``<Sz>`` が ``0.5`` から徐々に小さくなり最終的には0になる一方、 ``<Sx>`` は ``0`` から大きくなり最終的には ``0.5`` になることが分かります。
