@@ -95,7 +95,7 @@
    ``B2''``, "三次近接・第2方向ボンドの双二次相互作用", 実数, 0.0
 
 
-物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば):math:`S^y` を自動的に定義されます。
+物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば) :math:`S^y` を自動的に定義されます。
 また、2サイト物理量として、ボンドハミルトニアンおよび最近接ボンド上の :math:`S^z` 相関、 :math:`S^x` 相関、 :math:`S^y` 相関が自動的に定義されます。
 
 ``lattice`` セクション
@@ -200,7 +200,6 @@
 三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
 テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
 :numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
-蜂の巣格子ではx 方向のユニットセルの大きさ ``L`` は偶数でなければいけません。
 四角はテンソルを表し、細線が最近接ボンドを表します。
 太矢印と数字は3種類のボンドを表します。
 破線はひとつのユニットセルを表します。

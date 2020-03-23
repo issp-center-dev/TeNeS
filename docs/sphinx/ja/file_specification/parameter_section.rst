@@ -46,6 +46,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
   - 各種テンソルをこのディレクトリ以下から読み込みます
   - 保存したときと同じ並列度である必要があります
   - 空文字列の場合は読み込みません
+  - 
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
