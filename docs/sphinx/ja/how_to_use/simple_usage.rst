@@ -28,7 +28,8 @@
    - 三角格子
    - 蜂の巣格子
 
-模型・格子や入力ファイルの詳細は :ref:`sec-simple-format` を参照してください。::
+模型・格子や入力ファイルの詳細は :ref:`sec-simple-format` を参照してください。
+::
    [lattice]
    type = "square lattice" # type of lattice
    L = 2                   # size of unitcell

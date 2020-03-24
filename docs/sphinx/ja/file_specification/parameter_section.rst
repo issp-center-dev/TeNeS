@@ -29,6 +29,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
   - 一つでも複素演算子があると計算が始まりません
 
 - ``iszero_tol``
+
   - テンソル要素の実部・虚部の読み込みにおいて、絶対値が ``iszero_tol`` 以下はゼロとみなします
 
 - ``output``
@@ -46,7 +47,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
   - 各種テンソルをこのディレクトリ以下から読み込みます
   - 保存したときと同じ並列度である必要があります
   - 空文字列の場合は読み込みません
-  - 
+
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

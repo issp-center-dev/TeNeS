@@ -1,236 +1,235 @@
 .. highlight:: none
 
+.. _sec-simple-format:
+
 Input file for ``tense_simple`` 
 ---------------------------------
 
 -  File format is
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
    format.
--  The input file has five sections : ``model``, ``parameter``, ``lattice``, ``observable``, ``correlation`` .
+-  The input file has four sections : ``model``, ``parameter``, ``lattice``, ``correlation`` .
 
--  In future, the file will be split by specifying a file name.
-
-``parameter`` section
-==========================
-
-The contents of the ``parameter`` section are copied directly to the ``parameter`` section of the input file of ``tenes``.
-You can also specify the imaginary time step size for the imaginary time evolution operator in simple and full updates in the subsections ``simple_update``, ``full_update``.
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``tau``, imaginary time step in the imaginary time evolution operator, Real, 0.01
-
-The following parameters are common to the ``tenes`` input file.
-
-``parameter.tensor``
-~~~~~~~~~~~~~~~~~~~~
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``D``,        "The virtual bond dimensions of the central tensor",          Integer, 2
-   ``CHI``,      "The virtual bond dimensions of the angular transfer matrix", Integer, 4
-   ``save_dir``, "Directory to write optimized tensors",                       String,  \"\"
-   ``load_dir``, "Directory to read initial tensor",                           String,  \"\"
-
-
-- ``save_dir``
-
-  - Store optimized tensors below this directory.
-  - When it is empty, the tensors are not saved.
-
-- ``load_dir``
-
-  - Read various tensors from below this directory.
-  - Must be the same degree of parallelism as when saved.
-  - Not read if it is empty.
-
-``parameter.simple_update``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``num_step``,      "Number of simple updates",                                            Integer, 0
-   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update", Real,    1e-12
-
-``parameter.full_update``
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``num_step``,            "Number of full updates",                                                                                      Integer, 0
-   ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
-   ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
-   ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-12
-   ``iteration_max``,       "Maximum iteration number for truncation optimization on full updates",                                        Integer, 1000
-   ``gauge_fix``,           "Whether the tensor gauge is fixed",                                                                           Boolean, true
-   ``fastfullupdate``,      "Whether the Fast full update is adopted",                                                                     Boolean, true
-
-``parameter.ctm``
-~~~~~~~~~~~~~~~~~
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
-   ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
-   ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
-   ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
-   ``use_rsvd``,                 "Whether to replace SVD with Random SVD",                                                                    Boolean, false
-   ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method", Real,    2.0
-
-
-``parameter.random``
-~~~~~~~~~~~~~~~~~~~~~
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 10, 10
-
-   ``seed``, "Seed of the pseudo-random number generator used to initialize the tensor", Integer, 11
-
-Each MPI process has the own seed as ``seed`` plus the process ID (MPI rank).
-
-Example
-~~~~~~~
-
-::
-
-    [parameter]
-    [parameter.tensor]
-    D  = 4     # tensor_dim
-    CHI  = 16  # env_dim
-
-    [parameter.simple_update]
-    num_step = 1000
-
-    [parameter.full_update]
-    num_step = 1
-
-    [parameter.ctm]
-    iteration_max = 5
-
-
-``lattice`` section
-==========================
-
-Specify the lattice information.
-Square lattice and honeycomb lattice are defined as lattice types.
-
-.. csv-table::
-   :header: "Name", "Description", "Type", "Default"
-   :widths: 30, 30, 20, 20
-
-   ``type``, "Lattice name (square lattice or honeycomb lattice)", String, --
-   ``L_sub``, "Unit cell size", Integer or a list of two integers, --
-   ``initial``, "Initial state", String, "random"
-   ``noise``, "Noise of initial components", Real, 1e-2
-
-
-When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
-If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
-A list of three or more elements causes an error.
-
-Sites in a unit cell are indexed starting from 0.
-These are arranged in order from the x direction.
-
-Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
-
- y
- ^     4 5
- |     2 3
- .->x  0 1
-
-``initial`` ane ``noise`` specifies an initial state.
-``initial`` can take the following value: ``"ferro", "antiferro", "random"`` .
-``noise`` is an amplitude of a noise.
-
-Square lattice
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There are two types of bond, horizontal (0) and vertical (1) (corresponding to ``-`` and ``|`` in the below figure).
-
-The unit cell for ``L_sub = 2`` is given as follows::
-
- 0   1
- |   |
- 2 - 3 - 2
- |   | 
- 0 - 1 - 0
-
-
-Honeycomb lattice
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Unit cell size (Each element of ``L_sub``) must be an even number.
-
-There are 3 types of bonds: x, y, and z (corresponding to ``-``, ``~``, ``|``  in the below figure).
-Each site with an even index has a rightward (x), a leftward (y), and an upward (z) bonds and
-each site with an odd index has a leftward (x), a rightward (y), and a bottomward (z) bonds.
-
-The unit cell for ``L_sub = 2`` is given as follows::
-
- 0   1
-     |
- 2 ~ 3 - 2
- |   
- 0 - 1 ~ 0
-
+   - The ``parameter`` section is copied to the standard mode input.
 
 ``model`` section
 ==========================
 
-Specify the type of the model.
-Only the Spin system can be spcified in ver. 0.1.
+Specify the model to calculate.
+Spin system (spin) is defined.
 
 .. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 30, 30, 15
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 30, 30, 10, 10
 
-   ``type``, "The type of the model", String
+   ``type``, Model type, String, --
 
 
-Spin system
+The parameter names such as interactions depend on the model type.
+
+Spin system: spin
 ~~~~~~~~~~~~~~~~~~~~~
 
 Spin system
 
 .. math ::
 
- \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]
+ \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]
+
+
+The parameters of the one-body terms are defined as follows.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10
 
-   ``S``, "Magnituide of the local spin", Real, 0.5
-   ``Jx``, "The x component of the exchange interaction J", Real or a list of Real, 1.0
-   ``Jy``, "The y component of the exchange interaction J", Real or a list of Real, 1.0
-   ``Jz``,"The z component of the exchange interaction J", Real or a list of Real, 1.0
-   ``BQ``, "Biquadratic interaction B", Real or a list of Real, 0.0
-   ``h``, "longitudinal magnetic field h", Real, 0.0
-   ``G``, "Transverse magnetic field
- :math:`\Gamma` ", Real, 0.0
-   ``D``, "On-site spin anisotropy D", Real, 0.0
+   ``S``, Magnituide of the local spin, Real (integer or half integer), 0.5
+   ``H``, "longitudinal magnetic field :math:`H`", Real, 0.0
+   ``G``, "Transverse magnetic field :math:`\Gamma` ", Real, 0.0
+   ``D``, "On-site spin anisotropy :math:`D`", Real, 0.0
+
+The exchange interaction :math:`J` can have a bond dependency.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 30, 30, 10, 10
+
+   ``J0``, "Exchange interaction of 0th direction nearest neighbor bond", Real, 0.0
+   ``J1``, "Exchange interaction of 1st direction nearest neighbor bond", Real, 0.0
+   ``J2``, "Exchange interaction of 2nd direction nearest neighbor bond", Real, 0.0
+   ``J0'``, "Exchange interaction of 0th direction next nearest neighbor bond", Real, 0.0
+   ``J1'``, "Exchange interaction of 1st direction next nearest neighbor bond", Real, 0.0
+   ``J2'``, "Exchange interaction of 2nd direction next nearest neighbor bond", Real, 0.0
+   ``J0''``, "Exchange interaction of 0th direction third nearest neighbor bond", Real, 0.0
+   ``J1''``, "Exchange interaction of 1st direction third nearest neighbor bond", Real, 0.0
+   ``J2''``, "Exchange interaction of 2nd direction third nearest neighbor bond", Real, 0.0
+
+The bond direction depends on the lattice defined in the ``lattice`` section.
+For example, a square lattice can be defined for each of the two bond directions, x-direction (0) and y-direction (1).
+By omitting the direction number, you can specify all directions at once.
+You can also specify Ising-like interaction by adding one character of `xyz` at the end.
+If the same bond or component is specified twice or more, an error will occur.
+
+.. image:: ../../img/J.pdf
+   :width: 400px
+   :align: center
+
+Biquadratic interaction  :math:`B` can also have a bond dependency like as :math:`J`.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 30, 30, 10, 10
+
+   ``B0``, "Biquadratic interaction of 0th direction nearest neighbor bond", Real, 0.0
+   ``B1``, "Biquadratic interaction of 1st direction nearest neighbor bond", Real, 0.0
+   ``B2``, "Biquadratic interaction of 2nd direction nearest neighbor bond", Real, 0.0
+   ``B0'``, "Biquadratic interaction of 0th direction next nearest neighbor bond", Real, 0.0
+   ``B1'``, "Biquadratic interaction of 1st direction next nearest neighbor bond", Real, 0.0
+   ``B2'``, "Biquadratic interaction of 2nd direction next nearest neighbor bond", Real, 0.0
+   ``B0''``, "Biquadratic interaction of 0th direction third nearest neighbor bond", Real, 0.0
+   ``B1''``, "Biquadratic interaction of 1st direction third nearest neighbor bond", Real, 0.0
+   ``B2''``, "Biquadratic interaction of 2nd direction third nearest neighbor bond", Real, 0.0
 
 
-By providing a list of exchange and biquadratic interactions, we can vary the magnitude of the interaction for each type of lattice bond.
-If the number of elements in the list is less than the type of lattice bond, the remainder is filled in with the last element specified.
+:math:`S ^ z` and :math:`S ^ x` are automatically defined as one-site physical quantities used for physical quantity measurement.
+If ``parameter.general.is_real = false``, :math:`S ^ y` is also defined. In addition, bond hamiltonian and :math:`S^z` ,  :math:`S^x`,  :math:`S^y` correlations with nearest neighobor bonds are automatically defined
+as two-site physical quantities.
 
-
-``observable`` section
+``lattice`` section
 ==========================
 
-By default, the local physical quantities used for physical quantities measurements: :math:`S^z`  and :math:`S^x` .
-Measurements of more detailed physical quantities can be made by overwriting the format common to the input file of ``tenes``. For details, See ``observable`` section :doc:`expert_format`.
+Specify the lattics to calculate.
+Square, honeycomb, and triangular lattice are defined.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 30, 30, 10, 10
+
+   ``type``, "lattice name (square, triangular or honeycomb lattice)", String, --
+   ``L``, Unit cell size in x direction, Integer, --
+   ``W``, Unit cell size in y direction, Integer, ``L``
+   ``initial``, Inital tensor, String, "random"
+   ``noise``, Noise for initial tensor, Real, 1e-2
+
+The unit cell has a rectangular shape with the size of ``L`` times ``W``.
+Sites in a unit cell are numbered sequentially from 0. They are arranged in order from the x direction.
+
+
+``ex.) L = 2, W = 3``::
+
+ y
+ ^     4 5
+ |     2 3
+ .->x  0 1
+
+``initial`` and ``noise`` are parameters that determine the initial state of the wave function.
+In ``initial``, ``"ferro", "antiferro", "random"`` can be specified.
+``noise`` is the amount of fluctuation given to the elements of the tensor.
+If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
+
+square lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As an example of the ``type = square lattice``, we show the simple case of ``L=2``.
+The definition of tensor alignment and nearest, next, and 3rd nearest neigbor bonds
+is shown in :numref:`fig_square_1st`, :numref:`fig_square_2nd`, :numref:`fig_square_3rd`. 
+The square represents the tensor, and the thin line represents the nearest neighbor bond.
+Bold arrows and numbers represent two types of bonds.
+The broken line represents one unit cell.
+
+.. figure:: ../../img/Square_1st.pdf
+   :width: 200px
+   :align: center
+   :name: fig_square_1st
+
+   The nearest neighbor bond of the square lattice.
+
+.. figure:: ../../img/Square_2nd.pdf
+   :width: 200px
+   :align: center
+   :name: fig_square_2nd
+
+   The 2nd nearest neighbor bond of the square lattice.
+
+.. figure:: ../../img/Square_3rd.pdf
+   :width: 200px
+   :align: center
+   :name: fig_square_3rd
+
+   The 3rd nearest neighbor bond of the square lattice.
+
+triangular lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As an example of the ``type = triangular lattice``, we show the simple case of ``L=2``.
+The definition of tensor alignment and nearest, next, and 3rd nearest neigbor bonds
+is shown in :numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd`.
+The square represents the tensor, and the thin line represents the nearest neighbor bond.
+Bold arrows and numbers represent two types of bonds.
+The broken line represents one unit cell.
+
+.. figure:: ../../img/Triangular_1st.pdf
+   :width: 200px
+   :align: center
+   :name: fig_triangular_1st
+
+   The nearest neighbor bond of the triangular lattice.
+
+.. figure:: ../../img/Triangular_2nd.pdf
+   :width: 200px
+   :align: center
+   :name: fig_triangular_2nd
+
+   The 2nd nearest neighbor bond of the triangular lattice.
+
+.. figure:: ../../img/Triangular_3rd.pdf
+   :width: 200px
+   :align: center
+   :name: fig_triangular_3rd
+
+   The 3rd neighbor bond of the triangular lattice.
+
+honeycomb lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As an example of the ``type = honeycomb lattice``, we show the simple case of ``L=2``.
+The definition of tensor alignment and nearest, next, and 3rd nearest neigbor bonds
+is shown in :numref:`fig_honeycomb_1st`, :numref:`fig_honeycomb_2nd`, :numref:`fig_honeycomb_3rd`.
+In a honeycomb lattice, the unit cell size ``L`` in the x direction must be even number.
+The square represents the tensor, and the thin line represents the nearest neighbor bond.
+Bold arrows and numbers represent two types of bonds.
+The broken line represents one unit cell.
+
+.. figure:: ../../img/Honeycomb_1st.*
+   :width: 200px
+   :align: center
+   :name: fig_honeycomb_1st
+	  
+   The nearest neighbor bond of the honeycomb lattice.
+
+.. figure:: ../../img/Honeycomb_2nd.*
+   :width: 200px
+   :align: center
+   :name: fig_honeycomb_2nd
+
+   The 2nd nearest neighbor bond of the honeycomb lattice.
+
+.. figure:: ../../img/Honeycomb_3rd.*
+   :width: 200px
+   :align: center
+   :name: fig_honeycomb_3rd
+
+   The 3rd nearest neighbor bond of the honeycomb lattice.
+
+
+ 
+``parameter`` section
+==========================
+
+Parameters defined in this section is not used in ``tenes_simple`` but they are copied to the input file of ``tenes_std``.
+
+.. include:: ./parameter_section.rst
+
 
 ``correlation`` section
 ==========================

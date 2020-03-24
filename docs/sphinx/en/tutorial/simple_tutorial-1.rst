@@ -95,7 +95,7 @@ Then, the following logs are output to the standard output.
 	  Done.
 
 
-First, the information of parallelization and the tensors is displayed. Next, the execution status of the calculation process is displayed. After finishing the calculation, the expected values ​​per site of the one-site operators ``Sz``, ``Sx`` and Hamiltonian, the nearest correlation ``SzSz``, ``SxSx``, ``SySy`` are output. Finally, the calculation time for each process is output (the unit is seconds). ``density.dat``, ``parameters.dat``, ``time.dat``, ``onesite_obs.dat``, and ``twosite_obs.dat`` are output to the output folder. For details on each output file, see File Format. For example, the value of ``<Sz>`` can be read from the second line of onesite_obs.dat. By changing ``G`` in increments of 0.1 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
+First, the information of parallelization and the tensors is displayed. Next, the execution status of the calculation process is displayed. After finishing the calculation, the expected values per site of the one-site operators ``Sz``, ``Sx`` and Hamiltonian, the nearest correlation ``SzSz``, ``SxSx``, ``SySy`` are output. Finally, the calculation time for each process is output (the unit is seconds). ``density.dat``, ``parameters.dat``, ``time.dat``, ``onesite_obs.dat``, and ``twosite_obs.dat`` are output to the output folder. For details on each output file, see File Format. For example, the value of ``<Sz>`` can be read from the second line of onesite_obs.dat. By changing ``G`` in increments of 0.1 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
 As an exapmle of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
 The calculation will be done by typing the following command:
 
@@ -116,4 +116,4 @@ For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in  a few 
    :align: center
 
 
-As you can see from the figure, with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, whle the ``<Sx>`` increases from ``0`` to ```0.5``.
+As you can see from the figure, with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ```0.5``.

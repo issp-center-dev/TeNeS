@@ -108,11 +108,11 @@
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``type``, "格子名 (square lattice もしくは honeycomb lattice)", 文字列, --
+   ``type``, "格子名 (square, triangular, もしくは honeycomb lattice)", 文字列, --
    ``L``, ユニットセルのx 方向の大きさ, 整数, --
    ``W``, ユニットセルのy 方向の大きさ, 整数, ``L``
    ``initial``, 初期テンソル, 文字列, "random"
-   ``noise``, 初期テンソル, 実数, 1e-2
+   ``noise``, 初期テンソルの揺らぎ, 実数, 1e-2
 
 
 ユニットセルは ``L`` かける ``W`` の大きさをもつ長方形の形をしています。
@@ -161,7 +161,38 @@
 
    正方格子の三次近接ボンド。
 
+三角格子 triangular lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
+テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
+四角はテンソルを表し、細線が最近接ボンドを表します。
+太矢印と数字は3種類のボンドを表します。
+破線はひとつのユニットセルを表します。
+
+.. figure:: ../../img/Triangular_1st.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_1st
+
+   三角格子の最近接ボンド。
+
+.. figure:: ../../img/Triangular_2nd.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_2nd
+
+   三角格子の次近接ボンド。
+
+.. figure:: ../../img/Triangular_3rd.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_3rd
+
+   三角格子の三次近接ボンド。
+
+   
 蜂の巣格子 honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -193,37 +224,6 @@
    :name: fig_honeycomb_3rd
 
    蜂の巣格子の三次近接ボンド。
-
-三角格子 triangular lattice
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。
-
-.. figure:: ../../img/Triangular_1st.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_1st
-
-   三角格子の最近接ボンド。
-
-.. figure:: ../../img/Triangular_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_2nd
-
-   三角格子の次近接ボンド。
-
-.. figure:: ../../img/Triangular_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_3rd
-
-   三角格子の三次近接ボンド。
 
 
 ``parameter`` セクション
