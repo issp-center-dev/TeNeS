@@ -12,7 +12,7 @@ Contacts
 
   Follow these guidelines when reporting:
 
-   - Please specify the version of ``TeNeS`` you are using.
+   - Please specify the version of TeNeS you are using.
    
    - If there are problems for installation, please inform us about your operating system and the compiler, and include the input / output and CMakeCache.txt when you run cmake and make.
 

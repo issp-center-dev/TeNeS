@@ -2,7 +2,7 @@
 Usage
 ***************************
 
-``TeNeS`` needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:
+TeNeS needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:
 
 - ``tenes_std`` : A tool that generates an input file to execute ``tenes``. An input file of ``tenes_std`` defines a lattice model etc. by yourself according to a predetermined format.
 

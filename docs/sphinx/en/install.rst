@@ -4,7 +4,7 @@ Install
 
 Download
 ===================
-You can download the source code for``TeNeS``from the `GitHub page <https://github.com/issp-center-dev/TeNeS>`_ . 
+You can download the source code for TeNeS from the `GitHub page <https://github.com/issp-center-dev/TeNeS>`_ . 
 If you have git installed on your machine, type the following command to start download:
 
 ``$ git clone https://github.com/issp-center-dev/TeNeS``
@@ -17,7 +17,7 @@ The following tools are required for building TeNeS.
 1. C++11 compiler
 2. CMake (>=2.8.14)
 
-``TeNeS`` depends on the following libraries, but these are downloaded automatically through the build process.
+TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
@@ -43,7 +43,7 @@ Additionary, the following python packages are required.
 Install
 ======================
 
-1. Build ``TeNeS`` by typing the following commands:
+1. Build TeNeS by typing the following commands:
 
 ::
 
@@ -55,7 +55,7 @@ Install
 The executable file ``tests``  will be generated in  ``build/src`` directory.
 The default value of the ``<path to install to>`` is ``/usr/local``. 
 
-2. Install ``TeNeS`` by typing the following commands:
+2. Install TeNeS by typing the following commands:
 
 ::
 
@@ -87,7 +87,7 @@ In this case, ``tenes`` is installed into the ``<path to install to>/bin`` .
 
 .. admonition:: Use the pre-built mptensor
 
-   ``TeNeS`` is based on the parallerized tensor library ``mptensor``. The build system of ``TeNeS`` installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
+   TeNeS is based on the parallerized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
