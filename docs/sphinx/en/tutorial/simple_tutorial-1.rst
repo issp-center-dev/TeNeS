@@ -3,10 +3,10 @@
 Ising model with transverse magnetic field
 ---------------------------------------------
 
-This section presents an example of calculation when the transverse magnetic field is applied to the Ising model.
-By changing the variable  ``G`` in the input file,
+This section presents a calculation of the transverse magnetic field Ising model as an example.
+By changing the variable ``G`` in the input file,
 the magnitude of the transverse magnetic field will be modified.
-For example, when the transverse magnetic field is 0, the input file becomes
+For example, when the transverse magnetic field is 0, the input file is
 
 .. code::
 
@@ -41,8 +41,9 @@ For example, when the transverse magnetic field is 0, the input file becomes
    G  = 0.0
 
 
-In this case, since ``Jz = -1.0`` , the ferro magnetic state becomes the ground state at ``G=0``. 
-When the input file name is ``simple.toml`` , type the following commands to execute ``tenes`` :
+In this case, since ``Jz = -1.0`` , the ferro magnetic state manifests itself as the ground state at ``G=0``. 
+When the input file name is ``simple.toml`` , type the following commands to execute ``tenes``
+(before typing them, please install TeNeS and set PATH properly.):
   
 .. code:: bash
 
@@ -50,7 +51,7 @@ When the input file name is ``simple.toml`` , type the following commands to exe
    $ tenes_std std.toml
    $ tenes input.toml
 
-Then, the following logs are output to the standard output.
+Then, the following logs are output:
 
 .. code:: bash
 
@@ -95,25 +96,31 @@ Then, the following logs are output to the standard output.
 	  Done.
 
 
-First, the information of parallelization and the tensors is displayed. Next, the execution status of the calculation process is displayed. After finishing the calculation, the expected values per site of the one-site operators ``Sz``, ``Sx`` and Hamiltonian, the nearest correlation ``SzSz``, ``SxSx``, ``SySy`` are output. Finally, the calculation time for each process is output (the unit is seconds). ``density.dat``, ``parameters.dat``, ``time.dat``, ``onesite_obs.dat``, and ``twosite_obs.dat`` are output to the output folder. For details on each output file, see File Format. For example, the value of ``<Sz>`` can be read from the second line of onesite_obs.dat. By changing ``G`` in increments of 0.1 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
-As an exapmle of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
+First, the information of parallelization and the tensors (complex or not) is displayed.
+Next, the execution status of the calculation process is displayed.
+After finishing the calculation, the expected values per site of the one-site operators ``Sz``, ``Sx`` and two-site ones Hamiltonian, the nearest correlation ``SzSz``, ``SxSx``, ``SySy`` are output.
+Finally, the calculation time for each process is output in units of seconds.
+``density.dat``, ``parameters.dat``, ``time.dat``, ``onesite_obs.dat``, and ``twosite_obs.dat`` are saved to the output directory.
+For details on each output file, see :ref:`sec-output-format`.
+For example, the value of ``<Sz>`` can be read from ``onesite_obs.dat``.
+By changing ``G`` in increments of 0.2 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
+As an example of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
 The calculation will be done by typing the following command:
 
 .. code::
 
    $ python tutorial_example.py
 
-For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in  a few minutes. By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are ouputted in the standard output:
+For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in a few minutes.
+By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are outputted in the standard output:
 
 .. code::
 
    $ python tutorial_read.py
 
 
-
 .. image:: ../../img/tutorial_1_Sz_vs_G.*
    :width: 400px
    :align: center
 
-
-As you can see from the figure, with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ```0.5``.
+As you can see from the figure, with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ``0.5``.
