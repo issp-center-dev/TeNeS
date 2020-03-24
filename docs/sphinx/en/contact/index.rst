@@ -6,11 +6,11 @@
 Contacts
 =========================================
 
-- About Bugs
+- Bug reports
 
   Please report all problems and bugs on the github Issues page
 
-  To resolve bugs early, follow these guidelines when reporting:
+  Follow these guidelines when reporting:
 
    - Please specify the version of ``TeNeS`` you are using.
    
@@ -22,7 +22,7 @@ Contacts
       
 - Others
 
-  If you have any questions about topics related to your research that are difficult to consult at Issues on GitHub, please contact the following contact information.
+  If you have any questions about topics related to your research that are difficult to consult at Issues on GitHub, 
+please send an e-mail to the following address:
 
-  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @)
-  
+  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @). 

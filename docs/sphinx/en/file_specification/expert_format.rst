@@ -7,215 +7,66 @@ Input file for ``tenes``
 -  File format is
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
    format.
--  The input file has five sections: ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
+-  The input file has five sections: ``parameter``, ``tensor``, ``evolution``, ``observable``, ``correlation``.
 
-   -   In the future we will be able to split it by specifying the file name.
-
-
-``lattice`` section
+``parameter`` section
 ========================
 
-Specify the unit cell information.
-Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
-``lattice`` section has an array of subsections ``lattice.site`` .
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``L_sub``, "Unit cell size", An integer or a list of integer
+.. include:: ./parameter_section.rst
 
 
-When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
-If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
-A list of three or more elements causes an error.
+``tensor`` section
+========================
 
-Sites in a unit cell are indexed starting from 0.
-These are arranged in order from the x direction.
-
-Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
-
- y
- ^     4 5
- |     2 3
- .->x  0 1
+.. include:: ./tensor_section.rst
 
 
-Information of bonds is given in the ``evolution`` and the ``observable`` sections.
+``observable`` section
+==========================
 
-``lattice.site``
-~~~~~~~~~~~~~~~~~~
-
-Define the initial state of each site.
-A whole wave function is a direct product state of all sites.
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``index``, "Site index", Integer
-   ``initial_state``, "Coefficients of state", List of reals
-   ``noise``, "Amplitude of noise in elements", Real
-
-``initial_state`` specifies coefficients :math:`A_\alpha` in 
-:math:`|\psi\rangle_i = \sum_\alpha A_\alpha |\alpha\rangle_i` .
-If all the components are zero, coeffeicients will be randomly initialized.
-TeNeS initializes elements which all the virtual indices are zero by using these components,
-:math:`T_{0,0,0,0}^\alpha = A_\alpha` .
-The other components will be initialized by uniformly random numbers over ``[-noise, noise]`` .
-
-For example, for :math:`S=1/2` case, `initial_state = [1.0, 0.0]` gives :math:`S^z = 1/2` state and `initial_state = [1.0, 1.0]` gives :math:`S^x = 1/2` state. 
+.. include:: ./observable_section.rst
 
 
 ``evolution`` section
 ========================
 
-Define the imaginary time evolution opetrators used in simple and full updates.
+Specify the imaginary time evolution opetrators used in simple and full updates.
+This section has two subsections: ``simple`` and ``full``.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``matrix``,        "Matrix representation about the imaginary time evolution opetrators",                                    List of string
-   ``simple_update``, "The order of the bonds that act on the index of the imaginary time evolution operator in simple update", List of string
-   ``full_update``,   "The order of the bonds that act on the index of the imaginary time evolution operator in full update",   List of string
+   ``source_site``, "Index of source site",                  Integer
+   ``source_leg``,  "Direction from source site to  target site", Integer
+   ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",          A list of integer
+   ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator",    String
 
-``matrix``
-~~~~~~~~~~
 
-- One matrix is defined by a list of string.
-- Columns are separated by one or more blanks, and rows are separated by one or more newlines.
-- The order defined corresponds exactly to the number of the matrix. This order numbers are used to specify ``simple_update`` and ``full_update`` (0-origin).
+``source_leg`` is specified as an integer from 0 to 3.
+Defined as ``0: -x, 1: + y, 2: + x, 3: -y`` in the clockwise order from the -x direction.
 
-``simple_update`` and ``full_update``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``dimensions`` is different from ``dim`` in ``observable`` section, so you need to specify the dimensions of all legs.
+The order of the legs is ``source_initial, target_initial, source_final, target_final``, just like ``elements``.
 
--  One row represents one operator action.
--  Each line consists of four fields: ``int int string int``.
-
-   1. A site to which bond connects
-   2. A site to which bond connects
-   3. Horizontal (h) or Vertical (v)
-   4. Operator number (0-origin)
-
-Example
-~~~~~~~
-
-.. code:: 
+Example :: 
 
     [evolution]
-    simple_update = """
-    0 1 h 0
-    3 2 h 0
-    2 3 h 0
-    1 0 h 0
-    0 2 v 0
-    3 1 v 0
-    2 0 v 0
-    1 3 v 0
+    [[evolution.simple]]
+    source_site = 0
+    source_leg = 2
+    dimensions = [2, 2, 2, 2]
+    elements = """
+    0 0 0 0  0.9975031223974601 0.0
+    1 0 1 0  1.0025156589209967 0.0
+    0 1 1 0  -0.005012536523536871 0.0
+    1 0 0 1  -0.005012536523536871 0.0
+    0 1 0 1  1.0025156589209967 0.0
+    1 1 1 1  0.9975031223974601 0.0
     """
-
-    full_update = """
-    0 1 h 0
-    3 2 h 0
-    2 3 h 0
-    1 0 h 0
-    0 2 v 0
-    3 1 v 0
-    2 0 v 0
-    1 3 v 0
-    """
-
-    matrix = [
-    """
-    0.9975031223974601 0.0 0.0 0.0
-    0.0 1.0025156589209967 -0.005012536523536887 0.0
-    0.0 -0.005012536523536888 1.0025156589209967 0.0
-    0.0 0.0 0.0 0.9975031223974601
-    """
-    ]
-
-``observable`` section
-==========================
-
-In this section, the information about physical quantities to be observed is specified.
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``local_operator``,    "Site opertor (ex. Sz)",                                  A list of string
-   ``hamiltonian``,       "Bond hamiltonian",                                       A list of string
-   ``hamiltonian_bonds``, "Type of bond Hamiltonian and the set of bonds that act", string
-
-``local_operator``, ``hamiltonian``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Same as ``evolution.matrix`` .
-The order you define corresponds exactly to the index of the operator Hamiltonian.
-
-``hamiltonian_bonds``
-~~~~~~~~~~~~~~~~~~~~~
-
-Same as ``evolution.simple_update`` .
-
-Example
-~~~~~~~~
-
-::
-
-    [observable]
-    local_operator = [
-    """
-      0.5  0.0
-      0.0 -0.5
-    """,
-    """
-      0.0 0.5
-      0.5 0.0
-    """,
-    ]
-
-    hamiltonian_bonds = """
-    0 1 h 0
-    3 2 h 0
-    2 3 h 0
-    1 0 h 0
-    0 2 v 0
-    3 1 v 0
-    2 0 v 0
-    1 3 v 0
-    """
-
-    hamiltonian = [
-    """
-      0.25   0.0    0.0     0.0
-      0.0   -0.25   0.5     0.0  
-      0.0    0.5   -0.25    0.0  
-      0.0    0.0    0.0     0.25
-    """,
-    ]
 
 
 ``correlation`` section
 ==========================
 
-In the following, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` is described.
-
-.. csv-table::
-   :header: "Name", "Description", "Type"
-   :widths: 15, 30, 20
-
-   ``r_max``,     "Maximum distance :math:`r` of the correlation function",          Integer
-   ``operators``, "Numbers of operators A and B that measure correlation functions", List for Integer
-
-The operators defined in the ``observable`` section are used.
-
-Example
-~~~~~~~
-
-::
-
-    [correlation]
-    r_max = 5
-    operators = [[0,0], [0,1], [1,1]]
+.. include:: ./correlation_section.rst
