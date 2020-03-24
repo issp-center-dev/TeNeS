@@ -3,7 +3,7 @@
 Usage of ``tenes_simple``
 ----------------------------
 
-``tenes_simple`` is a tool that creates an input file of ``tenes_std`` for predefined models, lattices.
+``tenes_simple`` is a tool that creates an input file of ``tenes_std`` for predefined models and lattices.
 
 
 .. code:: bash
@@ -11,8 +11,8 @@ Usage of ``tenes_simple``
    $ tenes_simple simple.toml
 
 - Takes a file as an argument
-- Output input file for ``tenes_std``
-- Other command line options are as follows
+- Output an input file for ``tenes_std``
+- Command line options are as follows
    - ``--help``
       - Show help message
    - ``--output=filename``
@@ -29,7 +29,7 @@ The currently defined models and lattices are as follows:
    - Triangular lattice
    - Honeycomb lattice
 
-See :ref:`sec-simple-format` for deails of the input file.
+See :ref:`sec-simple-format` for details of the input file.
 ::
    [lattice]
    type = "square lattice" # type of lattice

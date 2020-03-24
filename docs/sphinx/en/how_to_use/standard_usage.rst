@@ -1,9 +1,9 @@
 .. highlight:: none
 
-Usage of ``tenes_std.py``
+Usage of ``tenes_std``
 --------------------------------
 
-``tenes_std`` is a tool to derive imaginary time evolution operators from a given Hamiltonian and generate an input file for ``tenes``.
+``tenes_std`` is a tool to calculate imaginary time evolution operators from a given Hamiltonian and generate an input file for ``tenes``.
 
 .. code:: bash
 
@@ -11,8 +11,8 @@ Usage of ``tenes_std.py``
 
 
 - Takes a file as an argument
-- Output input file for ``tenes``
-- Other command line options are as follows
+- Output an input file for ``tenes``
+- Command line options are as follows
    - ``--help``
       - Show help message
    - ``--output=filename``
@@ -20,8 +20,8 @@ Usage of ``tenes_std.py``
       - Default is ``input.toml``
       - File name cannot be the same as the input file name
 
-By making and editing input files, calculations can be performed on undefined models and grids.	
-See :ref:`sec-std-format` for deails of the input file.
+By making and editing input files, users can simulate on other models and lattices than predefined ones.	
+See :ref:`sec-std-format` for details of the input file.
 ::
    [parameter]
    [parameter.general]
