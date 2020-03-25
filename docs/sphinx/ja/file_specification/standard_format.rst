@@ -12,8 +12,13 @@
 
    - ``hamiltonian`` 以外の4つは以下に挙げる例外を除き、 ``tenes`` の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。
   
-       - ``parameter.simple_update.tau`` および ``parameter.full_update.tau`` に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。
+   - ``parameter.simple_update.tau`` および ``parameter.full_update.tau`` に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。
 
+
+``parameter`` セクション
+===========================
+
+.. include:: ./parameter_section.rst
 
 
 ``tensor`` セクション
@@ -53,12 +58,14 @@
 あとの2つの整数は source site からみた終点サイト (target) の座標 (dx, dy) です。
 
 ``dim`` は演算子の次元、すなわち作用するサイトの取りうる状態数です。
+例として、2つの :math:`S=1/2` スピンの相互作用の場合は、 ``dim = [2,2]`` です。
 
 ``elements`` は演算子の非ゼロ要素を指定する文字列です。
 1つの要素は4つの整数と2つの浮動小数点数を空白区切りからなる1つの行からなります。
-最初の2つは演算子が作用する前の source site, target site の状態番号を、
-つぎの2つは演算子が作用した後の source site, target site の状態番号を、
-最後の2つはそれぞれ演算子の要素の実部と虚部を示します。
+
+- 最初の2つは演算子が作用する **前** の source site, target site の状態番号を示します。
+- つぎの2つは演算子が作用した **後** の source site, target site の状態番号を示します。
+- 最後の2つはそれぞれ演算子の要素の実部と虚部を示します。
 
 
 ``correlation`` セクション

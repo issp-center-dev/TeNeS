@@ -95,8 +95,15 @@
    ``B2''``, "三次近接・第2方向ボンドの双二次相互作用", 実数, 0.0
 
 
-物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば):math:`S^y` を自動的に定義されます。
-また、2サイト物理量として、ボンドハミルトニアンおよび最近接ボンド上の :math:`S^z` 相関、 :math:`S^x` 相関、 :math:`S^y` 相関が自動的に定義されます。
+物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば) :math:`S^y` を自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアン
+
+.. math ::
+
+ \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
+ - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
+
+および最近接ボンド上の :math:`S^z`、 :math:`S^x`、 :math:`S^y` 相関 :math:`S_i^\alpha S_j^\alpha` が自動的に定義されます。
 
 ``lattice`` セクション
 ==========================
@@ -108,11 +115,11 @@
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``type``, "格子名 (square lattice もしくは honeycomb lattice)", 文字列, --
+   ``type``, "格子名 (square, triangular, もしくは honeycomb lattice)", 文字列, --
    ``L``, ユニットセルのx 方向の大きさ, 整数, --
    ``W``, ユニットセルのy 方向の大きさ, 整数, ``L``
    ``initial``, 初期テンソル, 文字列, "random"
-   ``noise``, 初期テンソル, 実数, 1e-2
+   ``noise``, 初期テンソルの揺らぎ, 実数, 1e-2
 
 
 ユニットセルは ``L`` かける ``W`` の大きさをもつ長方形の形をしています。
@@ -161,7 +168,38 @@
 
    正方格子の三次近接ボンド。
 
+三角格子 triangular lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
+テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
+四角はテンソルを表し、細線が最近接ボンドを表します。
+太矢印と数字は3種類のボンドを表します。
+破線はひとつのユニットセルを表します。
+
+.. figure:: ../../img/Triangular_1st.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_1st
+
+   三角格子の最近接ボンド。
+
+.. figure:: ../../img/Triangular_2nd.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_2nd
+
+   三角格子の次近接ボンド。
+
+.. figure:: ../../img/Triangular_3rd.*
+   :width: 200px
+   :align: center
+   :name: fig_triangular_3rd
+
+   三角格子の三次近接ボンド。
+
+   
 蜂の巣格子 honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -193,38 +231,6 @@
    :name: fig_honeycomb_3rd
 
    蜂の巣格子の三次近接ボンド。
-
-三角格子 triangular lattice
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
-蜂の巣格子ではx 方向のユニットセルの大きさ ``L`` は偶数でなければいけません。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。
-
-.. figure:: ../../img/Triangular_1st.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_1st
-
-   三角格子の最近接ボンド。
-
-.. figure:: ../../img/Triangular_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_2nd
-
-   三角格子の次近接ボンド。
-
-.. figure:: ../../img/Triangular_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_3rd
-
-   三角格子の三次近接ボンド。
 
 
 ``parameter`` セクション

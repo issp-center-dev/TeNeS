@@ -1,0 +1,26 @@
+[parameter]
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 10000
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = "triangular lattice"
+L = 3
+W = 3
+virtual_dim = 4
+initial = "random"
+
+[model]
+type = "spin"
+J = 1.0

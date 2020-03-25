@@ -1,5 +1,7 @@
 .. highlight:: none
 
+.. _sec-output-format:
+
 出力ファイル
 ---------------------------------
 

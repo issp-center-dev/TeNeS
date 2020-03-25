@@ -11,7 +11,7 @@
 
 - 引数としてファイルを取ります
 - ``tenes_std`` の入力ファイルを出力します
-- その他、コマンドラインオプションは、以下の通りです
+- コマンドラインオプションは以下の通りです
    - ``--help``
       - ヘルプメッセージの表示
    - ``--output=filename``
@@ -28,7 +28,8 @@
    - 三角格子
    - 蜂の巣格子
 
-模型・格子や入力ファイルの詳細は :ref:`sec-simple-format` を参照してください。::
+模型・格子や入力ファイルの詳細は :ref:`sec-simple-format` を参照してください。
+::
    [lattice]
    type = "square lattice" # type of lattice
    L = 2                   # size of unitcell

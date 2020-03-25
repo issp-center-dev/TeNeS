@@ -8,7 +8,7 @@
 -  ファイルフォーマットは
    `TOML <https://qiita.com/minoritea/items/c0de47b8beb813c655d4>`__
    形式
--  ``parameter``, ``lattice``, ``evolution``, ``observable``, ``correlation``
+-  ``parameter``, ``tensor``, ``evolution``, ``observable``, ``correlation``
    の5つのセクションを持ちます。
 
 ``parameter`` セクション
