@@ -5,6 +5,33 @@ Algorithm
 Tensor Network States
 ===========================
 
+Tensor network states (TNS) are variational wavefunctions represented as products of small tensors :ref:`[TNS] <Ref-TNS>`. For example, in the case of :math:`S=1/2` spin system with :math:`N` sites, a wavefunction can be represented by using the product state basis as
+
+.. math::
+   |\Psi\rangle = \sum_{s_i \pm \uparrow,\downarrow} \Psi_{s_1,s_2,\dots,s_N} |s_1,s_2,\dots,s_N\rangle
+
+In a tensor network state, :math:`\Psi_{s_1,s_2,\dots,s_N}` is represented as a tensor network, e.g,
+
+.. math::
+   \Psi_{s_1,s_2,\dots,s_N} = \mathrm{tTr}\left[T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N]\right],
+
+where :math:`\mathrm{tTr}[\dots]` represents tensor network contraction and :math:`T^{(i)}[s_i]` is a tensor. In the case of a matrix product state (MPS) :ref:`[MPS] <Ref-MPS>` , :math:`T^{(i)}[s_i]` becomes a matrix for a given :math: `s_i` and :math:`\mathrm{tTr}[\dots]` becomes usual matrix products as 
+
+.. math::
+   \Psi_{s_1,s_2,\dots,s_N}^{\mathrm{MPS}} = T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N],
+
+where we assume that shapes of :math:`T^{(1)}[s_1]` , :math:`T^{(i)}[s_i] (i\neq 1, N)`, and  :math:`T^{(N)}[s_N]` are :math:`1 \times D_1` :math:`D_{i-1} \times D_{i}` ,and :math:`D_{N-1} \times 1`, respectively. When we use TNS in order to approximate the ground state wavefunction, the accuracy is determined by :math:`D_i`. :math:`D_i` is usually called as *bond dimension*.  By using a tensor network diagram, MPS is represented as follows:
+
+.. image:: ../../img/MPS.*
+   :align: center
+
+This MPS represents a wavefunction for a finite size system. Similarly, we can also consider an infinitely long MPS to represent an infinite system. Especially, when we assume a lattice transrational symmetry, with a certain period, we can construct an infinite MPS (iMPS) with a few independent tensors. In the case of two-site periodicity, an iMPS looks like as
+
+.. image:: ../../img/iMPS.*
+   :align: center
+
+where tensors with the same color indicate identical tensors.
+
 In TeNeS, we consider two-dimensional infinite tensor product states (iTNS), which are natural extension of iMPS to higher dimensions. We assume a square lattice tensor network with a translational symmetry, whose diagram is shown as
 
 .. image:: ../../img/iTPS.*
