@@ -10,17 +10,17 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 ``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-全般的な設定をします。
+``tenes`` の全般的な設定パラメータ
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 20, 30, 10, 10
 
-   ``is_real``, "すべてのテンソルを実数に制限するかどうか", 真偽値, false
-   ``iszero_tol``, "テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数, 0.0
-   ``output``, "物理量などを書き込むディレクトリ", 文字列, \"output\"
-   ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ", 文字列, \"\"
-   ``tensor_load``, "初期テンソルを読み込むディレクトリ",       文字列, \"\"
+   ``is_real``,     "すべてのテンソルを実数に制限するかどうか",                     真偽値, false
+   ``iszero_tol``,  "演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数,   0.0
+   ``output``,      "物理量などを書き込むディレクトリ",                             文字列, \"output\"
+   ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ",                     文字列, \"\"
+   ``tensor_load``, "初期テンソルを読み込むディレクトリ",                           文字列, \"\"
 
 
 - ``is_real``
@@ -30,7 +30,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
 - ``iszero_tol``
 
-  - テンソル要素の実部・虚部の読み込みにおいて、絶対値が ``iszero_tol`` 以下はゼロとみなします
+  - 各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が ``iszero_tol`` 以下はゼロとみなします
 
 - ``output``
 
@@ -45,31 +45,34 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 - ``tensor_load``
 
   - 各種テンソルをこのディレクトリ以下から読み込みます
-  - 保存したときと同じ並列度である必要があります
   - 空文字列の場合は読み込みません
 
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+simple update に関するパラメータ
+
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``tau``,           "虚時間発展演算子における虚時間刻み",         実数, 0.01
-   ``num_step``,      "simple update の回数",                       整数, 0
-   ``lambda_cutoff``, "simple update でゼロとみなす平均場のcutoff", 実数, 1e-12
+   ``tau``,           "虚時間発展演算子における虚時間刻み :math:`\tau`", 実数, 0.01
+   ``num_step``,      "simple update の回数",                            整数, 0
+   ``lambda_cutoff``, "simple update において平均場 :math:`\lambda` の切り捨て閾値",      実数, 1e-12
 
 
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+full update に関するパラメータ
+
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``tau``,                 "虚時間発展演算子における虚時間刻み",         実数, 0.01
+   ``tau``,                 "虚時間発展演算子における虚時間刻み :math:`\tau`",                    実数,   0.01
    ``num_step``,            "full update の回数",                                                 整数,   0
    ``env_cutoff``,          "full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff", 実数,   1e-12
    ``inverse_precision``,   "full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff",   実数,   1e-12
@@ -81,11 +84,13 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
 
+角転送行列 (CTM) に関するパラメータ
+
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``dimension``,                "角転送行列の virtual ボンドの次元",                              整数,   4
+   ``dimension``,                "CTM のボンド次元 :math:`\chi`",                                  整数,   4
    ``projector_cutoff``,         "CTMのprojectorを計算する際にゼロとみなす特異値のcutoff",         実数,   1e-12
    ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-10
    ``iteration_max``,            "CTMの収束iterationの最大回数",                                   整数,   100
@@ -96,6 +101,8 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
 ``parameter.random``
 ~~~~~~~~~~~~~~~~~~~~~
+
+疑似乱数生成器に関するパラメータ
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
@@ -110,14 +117,15 @@ MPI 並列において、各プロセスは ``seed`` にプロセス番号を足
 
 ::
 
-    [parameter]
-
-    [parameter.simple_update]
-    num_step = 1000
-
-    [parameter.full_update]
-    num_step = 1
-
-    [parameter.ctm]
-    CHI  = 16  # env_dim
-    iteration_max = 5
+  [parameter]
+  [parameter.general]
+  is_real = true
+  [parameter.simple_update]
+  num_step = 100
+  tau = 0.01
+  [parameter.full_update]
+  num_step = 0  # No full update
+  tau = 0.01
+  [parameter.ctm]
+  iteration_max = 10
+  dimension = 9 # CHI

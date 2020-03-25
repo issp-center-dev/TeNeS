@@ -44,22 +44,22 @@
 ``tensor.unitcell`` サブセクション
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-サイトテンソル :math:`T_{ijkl\alpha}^(n)` の情報を指定します。
+サイトテンソル :math:`T_{ijkl\alpha}^{(n)}` の情報を指定します。
 ここで :math:`i,j,k,l` は virtual bond のインデックス、 :math:`\alpha` は physical bond のインデックス、 :math:`n` はサイト番号を意味します。
 
 .. csv-table::
    :header: "名前", "説明", "型"
    :widths: 15, 30, 20
 
-   ``index``,         "サイト番号",                            整数 or 整数のリスト
-   ``physical_dim``,  "サイトテンソルの physical bond の次元", 整数
-   ``virtual_dim``,   "サイトテンソルの virtual bond の次元",  整数 or 整数のリスト
-   ``initial_state``, "初期状態",                              実数のリスト
-   ``noise``,         "初期テンソルのゆらぎの大きさ",          実数
+   ``index``,         "サイト番号",                                     整数 or 整数のリスト
+   ``physical_dim``,  "サイトテンソルの physical bond の次元",          整数
+   ``virtual_dim``,   "サイトテンソルの virtual bond の次元 :math:`D`", 整数 or 整数のリスト
+   ``initial_state``, "初期状態",                                       実数のリスト
+   ``noise``,         "初期テンソルのゆらぎの大きさ",                   実数
 
 
 ``index`` にリストを渡すことによって、複数のサイトを同時に指定できます。
-空のサイトは全サイトを意味します。
+空のサイト ``[]`` は全サイトを意味します。
 
 ``virtual_dim`` にリストを渡すことで、4方向のボンド次元を個別に指定できます。
 順番は、左(-x)、上(+y)、右(+x)、下(-y) の順番です。
@@ -74,8 +74,8 @@
 :math:`|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i` における展開係数 :math:`A_\alpha` の値を指定します。
 係数は自動的に規格化されます。
 ゼロのみからなる配列を渡した場合、乱数初期化します。
-テンソル自体は、 すべてのvirtual ボンドインデックスが0 である要素が、 :math:`T_{0,0,0,0}^\alpha = A_\alpha` のように初期化されます。
-他の要素には ``[-noise, noise)`` の一様乱数が入力されます。
+テンソル自体は、 すべてのvirtual ボンドインデックスが0 である要素が、 :math:`T_{0000\alpha} = A_\alpha` のように初期化されます。
+他の要素には ``[-noise, noise)`` の一様乱数が互いに独立に入力されます。
 
 たとえば、 :math:`S=1/2` のとき、 :math:`S^z` 方向に向いた状態 :math:`|\Psi_i\rangle = |\uparrow\rangle = |0\rangle` を初期値にしたい場合には ``initial_state = [1.0, 0.0]`` に、
 :math:`S^x` 方向に向いた状態 :math:`|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}` を初期値にしたい場合には ``initial_state = [1.0, 1.0]`` とします。

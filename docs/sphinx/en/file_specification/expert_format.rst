@@ -1,8 +1,9 @@
 .. highlight:: none
 
+.. _sec-expert-format:
+
 Input file for ``tenes`` 
 ---------------------------------
-
 
 -  File format is
    `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__
@@ -37,10 +38,10 @@ This section has two subsections: ``simple`` and ``full``.
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``source_site``, "Index of source site",                  Integer
-   ``source_leg``,  "Direction from source site to  target site", Integer
-   ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",          A list of integer
-   ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator",    String
+   ``source_site``, "Index of source site",                                               Integer
+   ``source_leg``,  "Direction from source site to  target site",                         Integer
+   ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",         A list of integer
+   ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator", String
 
 
 ``source_leg`` is specified as an integer from 0 to 3.

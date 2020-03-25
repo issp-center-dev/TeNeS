@@ -1,27 +1,26 @@
 .. highlight:: none
 
 Set various parameters that appear in the calculation, such as the number of updates.
-This section has four subsections: ``general``, ``simple_update``, ``full_update``,
+This section has five subsections: ``general``, ``simple_update``, ``full_update``,
 ``ctm``, ``random``.
 
-Imaginary time increments for simple update ``parameter.simple_update.tau`` and that for full update ``parameter.full_update.tau`` are original parameters used in standard mode ``tenes_std``, not used in ``tenes``.
+Imaginary-time step :math:`\tau` for simple update ``parameter.simple_update.tau`` and that for full update ``parameter.full_update.tau`` are used only in standard mode ``tenes_std``, not used in ``tenes``.
 
 
 ``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Set general parametes for ``tenes``.
+General parameters for ``tenes``.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 20, 30, 10, 10
 
-   ``is_real``, "Flag to limit all tensors to real", Boolean, false
-   ``iszero_tol``, "Absolute cutoff value for loading tensors", Real, 0.0
-   ``output``, "Directori name for outputting physical quantities etc.", String, \"output\"
-   ``tensor_save``, "Directory name for saving optimized tensors", String, \"\"
-   ``tensor_load``, "Directory name for loading initial tensors",       String, \"\"
-
+   ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
+   ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
+   ``output``,      "Directory for saving result such as physical quantities", String,  \"output\"
+   ``tensor_save``, "Directory for saving optimized tensors",                  String,  \"\"
+   ``tensor_load``, "Directory for loading initial tensors",                   String,  \"\"
 
 - ``is_real``
 
@@ -30,43 +29,45 @@ Set general parametes for ``tenes``.
 
 - ``iszero_tol``
 
-  - When the absolute value of tensor elements loaded is less than ``iszero_tol``, it is regarded as zero
+  - When the absolute value of operator elements loaded is less than ``iszero_tol``, it is regarded as zero
 
 - ``output``
 
   - Save numerical results such as physical quantities to files in this directory
-  - The default directory is the current directory.
 
 - ``tensor_save``
 
-  - Save optimized each tensor to files in this directory
-  - Not save if empty 
+  - Save optimized tensors to files in this directory
+  - If empty no tensors will be saved
 
 - ``tensor_load``
 
-  - Read each tensor from this directory
-  - Must be set to the same degree of parallelism where the tensors were saved
-  - Not load tensors if empty 
+  - Read initial tensors from files in this directory
+  - If empty no tensors will be loaded
 
 ``parameter.simple_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Parameters in the simple update procedure.
+
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``, "Imaginary time step in imaginary time evolution operator", Real, 0.01  
-   ``num_step``,      "Number of simple updates",                                            Integer, 0
-   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update", Real,    1e-12
+   ``tau``,           "Imaginary time step :math:`\tau` in imaginary time evolution operator", Real,    0.01
+   ``num_step``,      "Number of simple updates",                                              Integer, 0
+   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Parameters in the full update procedure.
+
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``, "Imaginary time step in imaginary time evolution operator", Real, 0.01  	    
+   ``tau``,                 "Imaginary time step :math:`\tau` in imaginary time evolution operator",                                       Real,    0.01
    ``num_step``,            "Number of full updates",                                                                                      Integer, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
    ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
@@ -78,11 +79,13 @@ Set general parametes for ``tenes``.
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
 
+Parameters for corner transfer matrices, CTM.
+
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``dimension``, "Dimension of virtual bond in angular transfer matrix", Integer, 4
+   ``dimension``,                "Bond Dimension of CTM :math:`\chi`",                                                             Integer, 4
    ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
    ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
    ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
@@ -93,6 +96,8 @@ Set general parametes for ``tenes``.
 
 ``parameter.random``
 ~~~~~~~~~~~~~~~~~~~~~
+
+Parameters for random number generators.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -107,17 +112,15 @@ Example
 
 ::
 
-    [parameter]
-    [parameter.tensor]
-    D  = 4     # tensor_dim
-    CHI  = 16  # env_dim
-
-    [parameter.simple_update]
-    num_step = 1000
-
-    [parameter.full_update]
-    num_step = 1
-
-    [parameter.ctm]
-    iteration_max = 5
-  
+  [parameter]
+  [parameter.general]
+  is_real = true
+  [parameter.simple_update]
+  num_step = 100
+  tau = 0.01
+  [parameter.full_update]
+  num_step = 0  # No full update
+  tau = 0.01
+  [parameter.ctm]
+  iteration_max = 10
+  dimension = 9 # CHI

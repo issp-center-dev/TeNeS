@@ -96,7 +96,14 @@
 
 
 物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば) :math:`S^y` を自動的に定義されます。
-また、2サイト物理量として、ボンドハミルトニアンおよび最近接ボンド上の :math:`S^z` 相関、 :math:`S^x` 相関、 :math:`S^y` 相関が自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアン
+
+.. math ::
+
+ \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
+ - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
+
+および最近接ボンド上の :math:`S^z`、 :math:`S^x`、 :math:`S^y` 相関 :math:`S_i^\alpha S_j^\alpha` が自動的に定義されます。
 
 ``lattice`` セクション
 ==========================
