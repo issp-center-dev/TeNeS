@@ -1,28 +1,23 @@
-.. TeNeS documentation master file, created by
-   sphinx-quickstart on Wed Jul 31 13:13:22 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Contacts
 =========================================
 
-- Bug reports
+- Report bugs
 
-  Please report all problems and bugs on the github Issues page
+  Please report all problems and bugs on the `GitHub Issues page <https://github.com/issp-center-dev/TeNeS/issues>`__
 
   Follow these guidelines when reporting:
 
-   - Please specify the version of TeNeS you are using.
+   - Please specify the version of TeNeS, OS, and compiler you are using.
    
-   - If there are problems for installation, please inform us about your operating system and the compiler, and include the input / output and CMakeCache.txt when you run cmake and make.
+   - If there are problems for installation, please include input / output of ``cmake`` and ``make``, and CMakeCache.txt (one of the output file of ``cmake``).
 
-   - If a problem occurs during execution, enter the input file used for execution and its output.
+   - If a problem occurs during execution, please show the input file used and obtained output.
 
   Thank you for your cooperation.
       
 - Others
 
-  If you have any questions about topics related to your research that are difficult to consult at Issues on GitHub, 
+  If you have any questions about topics related to your research that are difficult to consult in public (e.g., at Issue page on GitHub), 
 please send an e-mail to the following address:
 
-  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace _at_ by @). 
+  E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace ``__at__`` by ``@``). 
