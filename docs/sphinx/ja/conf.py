@@ -146,7 +146,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'TeNeS.tex', u'TeNeS ユーザーマニュアル',
+    (master_doc, 'TeNeS_ja.tex', u'TeNeS ユーザーマニュアル',
      u'東京大学物性研究所', 'manual', 'True'),
 ]
 
