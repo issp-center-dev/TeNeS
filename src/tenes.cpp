@@ -429,21 +429,24 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
     if(CHI != Cshape[0]){
       if(peps_parameters.print_level >= PrintLevel::info ){
         std::clog << "WARNING: parameters.ctm.dimension is " << CHI << " but loaded tensors have CHI = " << Cshape[0] << std::endl;
-        std::clog << "         TeNeS overwrites the formar by the latter and continues." << std::endl;
       }
-      CHI = peps_parameters.CHI = Cshape[0];
     }
     for(int i=0; i<N_UNIT; ++i){
       const Shape Tshape = Tn[i].shape();
+      const int pdim = lattice.physical_dims[i];
+      if(pdim != Tshape[4]){
+        std::stringstream ss;
+        ss << "ERROR: dimension of the physical bond of the tensor " << i << " is " << pdim << " but loaded tensor has " << Tshape[4] << std::endl;
+        throw tenes::input_error(ss.str());
+      }
+
       for(int l=0; l<nleg; ++l){
         const int vd_param = lattice.virtual_dims[i][l];
         const int vd_loaded = Tshape[l];
         if(vd_param != vd_loaded){
           if(peps_parameters.print_level >= PrintLevel::info ){
             std::clog << "WARNING: virtual dimension of the leg " << l << " of the tensor " << i << " is " << vd_param << " but loaded tensor has " << vd_loaded << std::endl;
-            std::clog << "         TeNeS overwrites the formar by the latter and continues." << std::endl;
           }
-          lattice.virtual_dims[i][l] = Tshape[l];
         }
       }
     }
