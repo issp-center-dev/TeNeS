@@ -75,6 +75,12 @@ int main(int argc, char **argv) {
       std::cerr << e.what() << std::endl;;
     }
     status = 1;
+  }catch(const tenes::load_error e){
+    if(mpirank==0){
+      std::cerr << "[TENSOR LOAD ERROR]" << std::endl;
+      std::cerr << e.what() << std::endl;;
+    }
+    status = 1;
   }catch(const tenes::runtime_error e){
     if(mpirank==0){
       std::cerr << "[ERROR]" << std::endl;

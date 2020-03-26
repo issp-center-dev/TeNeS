@@ -26,6 +26,11 @@ public:
   input_error(const std::string &what_arg) : runtime_error(what_arg) {}
   input_error(const char *what_arg) : runtime_error(what_arg) {}
 };
+class load_error : public runtime_error {
+public:
+  load_error(const std::string &what_arg) : runtime_error(what_arg) {}
+  load_error(const char *what_arg) : runtime_error(what_arg) {}
+};
 
 } // end of namespace tenes
 
