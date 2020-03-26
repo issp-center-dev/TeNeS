@@ -10,7 +10,7 @@
 #include <type_traits>
 
 #ifdef _NO_OMP
-int omp_get_num_threads(){ return 1; }
+int omp_get_max_threads(){ return 1; }
 #else
 #include <omp.h>
 #endif
@@ -137,6 +137,7 @@ private:
 
   std::string outdir;
 
+  Timer<> timer_all;
   double time_simple_update;
   double time_full_update;
   double time_environment;
@@ -154,7 +155,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       simple_updates(simple_updates_), full_updates(full_updates_),
       onesite_operators(onesite_operators_),
       twosite_operators(twosite_operators_), corparam(corparam_),
-      outdir("output"), time_simple_update(), time_full_update(),
+      outdir("output"), timer_all(), time_simple_update(), time_full_update(),
       time_environment(), time_observable() {
 
   MPI_Comm_size(comm, &mpisize);
@@ -168,7 +169,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 
   if(peps_parameters.print_level >= PrintLevel::info){
     std::clog << "Number of Processes: " << mpisize << std::endl;
-    std::clog << "Number of Threads / Process: " << omp_get_num_threads() << std::endl;
+    std::clog << "Number of Threads / Process: " << omp_get_max_threads() << std::endl;
 
     if(peps_parameters.is_real){
       std::clog << "Tensor type: real" << std::endl;
@@ -1128,9 +1129,11 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
         std::clog << "    Save observable densities to " << filename << std::endl;
       }
     }
+    const double time_all = timer_all.elapsed();
     {
       std::string filename = outdir + "/time.dat";
       std::ofstream ofs(filename.c_str());
+      ofs << "time all           = " << time_all << std::endl;
       ofs << "time simple update = " << time_simple_update << std::endl;
       ofs << "time full update   = " << time_full_update << std::endl;
       ofs << "time environmnent  = " << time_environment << std::endl;
@@ -1162,6 +1165,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       }
 
       std::cout << "Wall times [sec.]:" << std::endl;
+      std::cout << "  all           = " << time_all << std::endl;
       std::cout << "  simple update = " << time_simple_update << std::endl;
       std::cout << "  full update   = " << time_full_update << std::endl;
       std::cout << "  environmnent  = " << time_environment << std::endl;
