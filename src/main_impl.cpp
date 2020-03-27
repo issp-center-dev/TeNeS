@@ -4,7 +4,7 @@
 #include <cpptoml.h>
 
 #include "printlevel.hpp"
-#include "type.hpp"
+#include "tensor.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "load_toml.cpp"

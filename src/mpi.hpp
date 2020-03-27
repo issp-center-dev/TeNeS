@@ -51,6 +51,8 @@ int bcast(T &val, int root, MPI_Comm comm){
 }
 
 int bcast(bool &val, int root, MPI_Comm comm);
+int bcast(std::string &val, int root, MPI_Comm comm);
+int bcast(std::vector<std::string> &val, int root, MPI_Comm comm);
 
 // template <>
 // int bcast(bool &val, int root, MPI_Comm comm){

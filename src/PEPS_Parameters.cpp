@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "mpi.hpp"
+
 namespace tenes {
 
 PEPS_Parameters::PEPS_Parameters() {
@@ -126,13 +128,19 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(tensor_save_dir, string);
     SAVE_PARAM(outdir, string);
 
-    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
-              comm);
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+    bcast(params_string, 0, comm);
+    // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+    //           comm);
   } else {
-    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
-              comm);
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+    bcast(params_string, 0, comm);
+    // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+    //           comm);
 
     LOAD_PARAM(CHI, int);
     LOAD_PARAM(print_level, int);

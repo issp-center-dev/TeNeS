@@ -3,7 +3,7 @@ import re
 
 from collections import namedtuple
 from itertools import chain, product
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 
@@ -12,11 +12,23 @@ import toml
 TeNeSInput = namedtuple("TeNeSInput", "param tensor ham obs")
 
 
-def index2coord(index: int, X: int):
+def lower_dict(d: dict) -> dict:
+    ks = list(d.keys())
+    for k in ks:
+        if isinstance(d[k], dict):
+            d[k] = lower_dict(d[k])
+        if k.islower():
+            continue
+        d[k.lower()] = d[k]
+        d.pop(k)
+    return d
+
+
+def index2coord(index: int, X: int) -> Tuple[int, int]:
     return index % X, index // X
 
 
-def coord2index(x: int, y: int, X: int):
+def coord2index(x: int, y: int, X: int) -> int:
     return x + y * X
 
 
@@ -56,8 +68,8 @@ class Lattice(object):
         self.type = ""
         self.z = 0
         self.skew = 0
-        self.L = param["L"]
-        self.W = param.get("W", self.L)
+        self.L = param["l"]
+        self.W = param.get("w", self.L)
         self.vdims = [[param["virtual_dim"]] * 4]
         self.sublattice = [[]]
         self.bonds = [[[] for j in range(3)] for i in range(3)]
@@ -290,7 +302,7 @@ class SpinModel(Model):
     def __init__(self, param: Dict[str, Any]):
         super().__init__()
 
-        S = param.get("S", 0.5)
+        S = param.get("s", 0.5)
         assert int(2 * S) == 2 * S
 
         self.N = int(2 * S) + 1
@@ -349,13 +361,13 @@ class SpinModel(Model):
 
         """
 
-        Jz = args.get("Jz", 0.0)
-        Jx = args.get("Jx", 0.0)
-        Jy = args.get("Jy", 0.0)
-        B = args.get("B", 0.0)
-        h = args.get("H", 0.0) / z
-        g = args.get("G", 0.0) / z
-        D = args.get("D", 0.0) / z
+        Jz = args.get("jz", 0.0)
+        Jx = args.get("jx", 0.0)
+        Jy = args.get("jy", 0.0)
+        B = args.get("b", 0.0)
+        h = args.get("h", 0.0) / z
+        g = args.get("g", 0.0) / z
+        D = args.get("d", 0.0) / z
 
         E = np.eye(self.N)
         Sz, Sx, Sy = self.onesite_ops
@@ -400,11 +412,11 @@ class SpinModel(Model):
                         raise RuntimeError(msg)
                     ret[n][typ][name] = modelparam.get(key, 0.0)
 
-        repat_J = re.compile("^J([012]?)('{0,2})([xyz]?)$")
-        repat_B = re.compile("^B([012]?)('{0,2})$")
+        repat_J = re.compile("^j([012]?)('{0,2})([xyz]?)$")
+        repat_B = re.compile("^b([012]?)('{0,2})$")
 
         for key in modelparam.keys():
-            if key.startswith("J"):
+            if key.startswith("j"):
                 ma = repat_J.match(key)
                 if not ma:
                     msg = "Unknown keyname {}".format(key)
@@ -413,7 +425,7 @@ class SpinModel(Model):
                 gr = ma.groups()
                 types = [int(gr[0])] if gr[0] else [0, 1, 2]
                 n = len(gr[1])
-                names = ["J" + gr[2]] if gr[2] else ["Jx", "Jy", "Jz"]
+                names = ["j" + gr[2]] if gr[2] else ["jx", "jy", "jz"]
 
                 update(types, names, n, key)
 
@@ -425,8 +437,8 @@ class SpinModel(Model):
                 gr = ma.groups()
                 types = [int(gr[0])] if gr[0] else [0, 1, 2]
                 n = len(gr[1])
-                update(types, ["B"], n, key)
-        for name in ("H", "G", "D"):
+                update(types, ["b"], n, key)
+        for name in ("h", "g", "d"):
             update(range(3), [name], 0, name)
         self.params = ret
 
@@ -506,6 +518,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         parameter
     """
 
+    param = lower_dict(param)
     lattice = make_lattice(param)
     model = make_model(param)
     hams = hamiltonians(lattice, model)

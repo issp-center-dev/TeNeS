@@ -8,12 +8,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(GIT_SUBMODULE "Check submodules during build" ON)
-option(ENABLE_MPI "Enable MPI parallelization with ScaLAPACK" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
 option(CPPTOML_ROOT "External directory where cpptoml is download into" OFF)
 option(TENES_PYTHON_EXECUTABLE "Path to Python interpreter" OFF)
 option(Testing "Enable tests" ON)
 option(Document "Build docs" OFF)
+# option(ENABLE_MPI "MPI" ON)
+
+if(NOT DEFINED ENABLE_MPI)
+    if(APPLE)
+        set(ENABLE_MPI OFF CACHE BOOL "Use ScaLAPACK" FORCE)
+    else()
+        set(ENABLE_MPI ON CACHE BOOL "Use ScaLAPACK" FORCE)
+    endif()
+else()
+    set(ENABLE_MPI ${ENABLE_MPI} CACHE BOOL "Use ScaLAPACK" FORCE)
+endif()
 
 if(Testing)
     enable_testing()
@@ -65,9 +75,10 @@ endif()
 
 find_package(LAPACK REQUIRED)
 
+
 if(ENABLE_MPI)
     if(APPLE)
-        message(WARNING "macos + ScaLAPACK + complex may fail. We recommend disabling MPI by ENABLE_MPI=OFF")
+        message(WARNING "Apple Accelerate BLAS/LAPACK + ScaLAPACK may fail. We STRONGLY recommend disabling MPI")
     endif()
 
     find_package(MPI REQUIRED)

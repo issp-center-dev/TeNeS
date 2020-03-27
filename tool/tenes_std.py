@@ -7,6 +7,18 @@ import numpy as np
 import scipy.sparse as sparse
 
 
+def lower_dict(d: dict) -> dict:
+    ks = list(d.keys())
+    for k in ks:
+        if isinstance(d[k], dict):
+            d[k] = lower_dict(d[k])
+        if k.islower():
+            continue
+        d[k.lower()] = d[k]
+        d.pop(k)
+    return d
+
+
 def all_positive(xs, v=0):
     return all(map(lambda x: x > v, xs))
 
@@ -146,7 +158,7 @@ class Unitcell:
             self.load_dict(lat_dict)
 
     def load_dict(self, lat_dict: dict):
-        L = lat_dict["L_sub"]
+        L = lat_dict["l_sub"]
         if isinstance(L, int):
             self.L = [L, L]
         else:
@@ -581,6 +593,7 @@ def make_evolution(
 
 class Model:
     def __init__(self, param: dict, atol: float = 1e-15):
+        param = lower_dict(param)
         self.param = param
         self.parameter = param["parameter"]
         self.simple_tau = self.parameter["simple_update"].get("tau", 0.01)
@@ -672,7 +685,7 @@ class Model:
 
         # tensor
         f.write("[tensor]\n")
-        f.write("L_sub = {}\n".format(self.param["tensor"]["L_sub"]))
+        f.write("L_sub = {}\n".format(self.param["tensor"]["l_sub"]))
         if "skew" in self.param["tensor"]:
             f.write("skew = {}\n".format(self.param["tensor"]["skew"]))
         for ucell in self.param["tensor"]["unitcell"]:
