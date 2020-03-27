@@ -36,13 +36,18 @@ class Lattice {
   int LY;
   int N_UNIT;
 
-  std::vector<std::vector<double>> initial_dirs;
-  std::vector<double> noises;
+  int skew;
 
   std::vector<std::vector<int>> Tensor_list;
   std::vector<std::array<int, 4>> NN_Tensor;
 
-  Lattice(int X, int Y);
+  std::vector<int> physical_dims;
+  std::vector<std::array<int, 4>> virtual_dims;
+
+  std::vector<std::vector<double>> initial_dirs;
+  std::vector<double> noises;
+
+  Lattice(int X, int Y, int skew=0);
 
   int x(int index) const { return index % LX; }
   int y(int index) const { return index / LX; }
@@ -52,10 +57,13 @@ class Lattice {
     return X + Y * LX;
   }
 
-  int left(int index) const { return NN_Tensor[index][0]; }
-  int right(int index) const { return NN_Tensor[index][2]; }
-  int top(int index) const { return NN_Tensor[index][1]; }
-  int bottom(int index) const { return NN_Tensor[index][3]; }
+  int neighbor(int index, int direction) const { return NN_Tensor[index][direction]; }
+  int left(int index) const { return neighbor(index, 0); }
+  int right(int index) const { return neighbor(index, 2); }
+  int top(int index) const { return neighbor(index, 1); }
+  int bottom(int index) const { return neighbor(index, 3); }
+
+  int other(int index, int dx, int dy) const;
 
   void reset(int X, int Y);
   void calc_neighbors();
@@ -65,6 +73,11 @@ class Lattice {
   void save_append(const char *filename) { save(filename, true); }
 
   void Bcast(MPI_Comm comm, int root = 0);
+
+  void check_dims() const;
+
+private:
+  void logical_check() const;
 };
 
 /*

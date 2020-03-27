@@ -4,6 +4,7 @@
 #include <string>
 
 #include "mpi.hpp"
+#include "printlevel.hpp"
 
 namespace tenes {
 
@@ -13,14 +14,6 @@ class PEPS_Parameters {
   int D;    // Bond dimension for central tensor
   int CHI;  // Bond dimension for environment tensor
 
-  enum PrintLevel {
-    none,
-    fatal,
-    error,
-    warn,
-    info,
-    debug,
-  };
   PrintLevel print_level;
 
   // Simple update
@@ -50,9 +43,12 @@ class PEPS_Parameters {
   // random
   int seed;
 
-  // IO
+  // general
+  bool is_real;
+  double iszero_tol;
   std::string tensor_load_dir;
   std::string tensor_save_dir;
+  std::string outdir;
 
   PEPS_Parameters();
 

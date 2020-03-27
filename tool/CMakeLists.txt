@@ -1,6 +1,8 @@
-add_custom_target(tenes_simple ALL
-    COMMAND echo '\#!${PYTHON_EXECUTABLE}'  > ${CMAKE_CURRENT_BINARY_DIR}/tenes_simple
-    COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/tenes_simple.py >> ${CMAKE_CURRENT_BINARY_DIR}/tenes_simple
-    COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/tenes_simple
-    )
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/tenes_simple DESTINATION bin)
+foreach(name tenes_simple tenes_std)
+    add_custom_target(${name} ALL
+        COMMAND echo '\#!${PYTHON_EXECUTABLE}'  > ${CMAKE_CURRENT_BINARY_DIR}/${name}
+        COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/${name}.py >> ${CMAKE_CURRENT_BINARY_DIR}/${name}
+        COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/${name}
+        )
+    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${name} DESTINATION bin)
+endforeach()

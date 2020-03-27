@@ -14,19 +14,70 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <mptensor/complex.hpp>
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
 #include <numeric>
 #include <vector>
 
+#include "exception.hpp"
+
+#include "printlevel.hpp"
 #include "PEPS_Parameters.hpp"
 #include "mpi.hpp"
+
+#include "PEPS_Basics_impl.hpp"
 
 namespace tenes {
 
 using namespace mptensor;
 // Contractions
+
+template <class tensor>
+typename tensor::value_type
+Contract(const std::vector<const tensor*> &C,
+         const std::vector<const tensor*> &eTt,
+         const std::vector<const tensor*> &eTr,
+         const std::vector<const tensor*> &eTb,
+         const std::vector<const tensor*> &eTl,
+         const std::vector<std::vector<const tensor*>> &Tn,
+         const std::vector<std::vector<const tensor*>> &op
+         ){
+  const size_t nrow = Tn.size();
+  const size_t ncol = Tn[0].size();
+
+#define CALL_CONTRACT(NROW, NCOL) \
+  do{\
+    if(nrow == NROW && ncol == NCOL){\
+      return Contract_ ## NROW ## x ## NCOL (C, eTt, eTr, eTb, eTl, Tn, op);\
+    }\
+  }while(false)
+
+  CALL_CONTRACT(1, 1);
+  CALL_CONTRACT(2, 1);
+  CALL_CONTRACT(1, 2);
+  CALL_CONTRACT(2, 2);
+  CALL_CONTRACT(3, 1);
+  CALL_CONTRACT(1, 3);
+  CALL_CONTRACT(3, 2);
+  CALL_CONTRACT(2, 3);
+  CALL_CONTRACT(3, 3);
+  CALL_CONTRACT(1, 4);
+  CALL_CONTRACT(4, 1);
+  CALL_CONTRACT(2, 4);
+  CALL_CONTRACT(4, 2);
+  CALL_CONTRACT(4, 3);
+  CALL_CONTRACT(3, 4);
+  CALL_CONTRACT(4, 4);
+
+#undef CALL_CONTRACT
+
+  std::stringstream ss;
+  ss << "Contract_" << nrow << "_" << ncol << " is not implemented";
+  throw std::runtime_error(ss.str());
+}
+
 template <template <typename> class Matrix, typename C>
 C Contract_one_site(const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
                     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &C4,
@@ -1249,11 +1300,11 @@ void Full_update_bond_horizontal(
   }
   // Post processing
   if (!convergence &&
-      peps_parameters.print_level >= PEPS_Parameters::PrintLevel::warn) {
+      peps_parameters.print_level >= PrintLevel::warn) {
     std::cout << "warning: Full update iteration was not conveged! count= "
               << count << std::endl;
   }
-  if (peps_parameters.print_level >= PEPS_Parameters::PrintLevel::debug) {
+  if (peps_parameters.print_level >= PrintLevel::debug) {
     std::cout << "Full Update: count, delta,original_norm = " << count << " "
               << delta + C_phi << " " << C_phi << std::endl;
   }
@@ -1415,7 +1466,7 @@ void Transfer(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &eT1,
 }
 
 template <template <typename> class Matrix, typename C>
-double FinishCorrelation(
+C FinishCorrelation(
     const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &C2,
     const Tensor<Matrix, C> &C3, const Tensor<Matrix, C> &eT1,
     const Tensor<Matrix, C> &eT2, const Tensor<Matrix, C> &eT3,

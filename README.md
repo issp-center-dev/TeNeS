@@ -6,6 +6,7 @@
 # TeNeS
 
 TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice system based on a PEPS wave function and the CTM method.
+TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tensor operation library, [mptensor](https://github.com/smorita/mptensor).
 
 ## Online manual
 - master (Latest, UNSTABLE)
@@ -30,14 +31,11 @@ TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice sys
 - [Acknowledgement](#acknowledgement)
 
 
-## Prerequisites
+## Prerequisites and dependencies
 The following tools are required for building TeNeS.
 
 - C++11 compiler
-- CMake (>=2.8.14)
-- Python (>=2.7)
-    - numpy
-    - toml
+- CMake (>=3.6.0)
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
@@ -46,6 +44,14 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 - [sanitizers-cmake](https://github.com/arsenm/sanitizers-cmake)
 
 TeNeS can be parallerized by using MPI and ScaLAPACK.
+
+TeNeS tools (`tenes_simple`, `tenes_std`) are written in Python3.
+The following external packages are required (and can be installed via `pip` command)
+
+- numpy
+- scipy
+- toml
+- typing (mandatory for python < 3.5)
 
 ## Install
 
@@ -58,9 +64,11 @@ $ cmake ../
 $ make
 ```
 
-The above commands makes an exectutable file `teses` in the `build/src` directory.
+(NOTE: Some system (e.g. CentOS) provides CMake 3 as `cmake3`)
 
-### Install
+The above commands makes an exectutable file `tenes` in the `build/src` directory.
+
+### Install binaries and samples
 
 ``` bash
 $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
@@ -68,7 +76,8 @@ $ make
 $ make install
 ```
 
-The above installs `tenes` into the `<path to install to>/bin` .
+The above installs `tenes`, `tenes_std`, and `tenes_simple` into the `<path to install to>/bin` .
+Samples will be also installed into the `<path to install to>/share/tenes/<VERSION>/sample` .
 The default value of the `<path to install to>` is `/usr/local` .
 
 ### Specify compiler
@@ -95,7 +104,7 @@ To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` comman
 
 ### Use the pre-built mptensor
 
-TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) .
+TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) (>= v0.3).
 The build system of TeNeS installs this automatically, but you can use the extra pre-built mptensor by the following way.
 
 ``` bash
@@ -104,11 +113,79 @@ $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
 
 ## Usage
 
+### Use pre-defined model and lattice
+
+For example, the following file `simple.toml` represents the transverse field Ising model on the square lattice.
+
+```
+[parameter]
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 1000
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 2
+initial = "ferro"
+
+[model]
+type = "spin"
+Jz = -1.0 # negative for FM interaction
+Jx = 0.0
+Jy = 0.0
+G = 1.0   # transverse field
+```
+
+`tenes_simple` is a utility tool for converting this file to another file, `std.toml`, denoting the operator tensors including bond hamiltonian.
+
+``` bash
+$ tenes_simple simple.toml
+```
+
+### Calculate imaginary time evolution operators
+
+`tenes_std` is another utility tool for calculating imaginary time evolution operators and converting `std.toml` to the input file of `tenes`, `input.toml`.
+
+``` bash
+$ tenes_std std.toml
+```
+
+By editing `std.toml`, users can perform other models and lattices as ones like.
+
+### Perform 
+
+To perform simulation, pass `input.toml` to `tenes` as the following
+
 ``` bash
 $ tenes input.toml
 ```
 
-The file format of an input file is described in the manual page.
+Results can be found in `output` directory.
+For example, expectation values of operators per site are stored in `output/densities.dat` as the following,
+
+```
+Sz          =  2.97866964051826333e-01  0.00000000000000000e+00
+Sx          =  3.86024172907023511e-01  0.00000000000000000e+00
+hamiltonian = -7.57303058659582140e-01  0.00000000000000000e+00
+SzSz        =  2.16869216589772901e-01  0.00000000000000000e+00
+SxSx        =  3.19350111777505108e-01  0.00000000000000000e+00
+SySy        = -4.77650003168152704e-02  0.00000000000000000e+00
+```
+
+The file format of input/output files is described in the manual page.
 
 ## Question or comment
 

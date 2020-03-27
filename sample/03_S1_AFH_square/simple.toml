@@ -1,8 +1,4 @@
 [parameter]
-[parameter.tensor]
-D  = 4     # tensor_dim
-CHI  = 16  # env_dim
-
 [parameter.simple_update]
 tau = 0.01
 num_step= 1000
@@ -13,16 +9,16 @@ num_step = 1
 
 [parameter.ctm]
 iteration_max = 5
+dimension = 16
 
 [lattice]
 type = "square lattice"
-L_sub = [2,2]
+L = 2
+W = 2
+virtual_dim = 4
 initial = "antiferro"
 
 [model]
 type = "spin"
 S = 1.0
-Jx = 1.0
-Jy = 1.0
-Jz = 1.0
-
+J = 1.0

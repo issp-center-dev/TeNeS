@@ -1,0 +1,112 @@
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+import toml
+
+
+def check_density(resdir, refdir, *, rtol, atol):
+    def read(filename):
+        ret = []
+        with open(filename) as f:
+            for line in f:
+                words = line.split()
+                ret.append(complex(float(words[2]), float(words[3])))
+        return ret
+
+    res = read(join(resdir, "density.dat"))
+    ref = read(join(refdir, "density.dat"))
+
+    if len(res) != len(ref):
+        print("density.dat: number of entries do not match")
+        print("  result:    {}".format(len(res)))
+        print("  reference: {}".format(len(ref)))
+        return False
+
+    fl = True
+    for i, (s, f) in enumerate(zip(res, ref)):
+        if type(s) != type(f) or not np.isclose(s, f, rtol=rtol, atol=atol):
+            print("density.dat: {}-th data do not match:".format(i))
+            print("  result:    ", s)
+            print("  reference: ", f)
+            fl = False
+    return fl
+
+
+def check(filename, resdir, refdir, *, rtol, atol):
+    def read(filename):
+        ret = []
+        with open(filename) as f:
+            for line in f:
+                line = line.split("#")[0].strip()
+                if not line:
+                    continue
+                words = line.split()
+                ret.append(list(map(float, words)))
+        return ret
+
+    res = read(join(resdir, filename))
+    ref = read(join(refdir, filename))
+
+    if len(res) != len(ref):
+        print("{}: number of entries do not match".format(filename))
+        print("  result:    {}".format(len(res)))
+        print("  reference: {}".format(len(ref)))
+        return False
+
+    fl = True
+    for i, (rs, rf) in enumerate(zip(res, ref)):
+        lfl = True
+        for s, f in zip(rs, rf):
+            if not np.isclose(s, f, rtol=rtol, atol=atol):
+                lfl = False
+        if not lfl:
+            print("{}: {}-th data do not match:".format(filename, i))
+            print("  result:    ", " ".join(map(str, rs)))
+            print("  reference: ", " ".join(map(str, rf)))
+            fl = False
+    return fl
+
+
+inputfile = join("data", "restart_0.toml")
+cmd = []
+if "@MPIEXEC@":
+    cmd.append("@MPIEXEC@")
+    cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+    cmd.append("1")
+cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+cmd.append(inputfile)
+subprocess.call(cmd)
+with open(inputfile) as f:
+    param = toml.load(f)
+refdir = param["parameter"]["general"]["output"]
+
+inputfile = join("data", "restart_1.toml")
+cmd = []
+if "@MPIEXEC@":
+    cmd.append("@MPIEXEC@")
+    cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+    cmd.append("1")
+cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+cmd.append(inputfile)
+subprocess.call(cmd)
+with open(inputfile) as f:
+    param = toml.load(f)
+resdir = param["parameter"]["general"]["output"]
+
+atol = 1.0e-4
+rtol = 1.0e-3
+
+result = True
+
+result = check_density(resdir, refdir, rtol=rtol, atol=atol) and result
+result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+# result = check("correlation.dat", resdir, refdir, tol) and result
+
+if result:
+    sys.exit(0)
+else:
+    sys.exit(1)

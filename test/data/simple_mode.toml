@@ -1,14 +1,25 @@
 [model]
 type = 'spin'
 S = 0.5
-Jx = 1.0
-Jy = 1.0
-Jz = 1.0
+J0x = 1.0
+J0y = 1.0
+J1y = 1.0
+J1z = 1.0
+"J0'x" = 0.5
+"J0'y" = 0.5
+"J1'y" = 0.5
+"J1'z" = 0.5
+"J0''x" = 0.25
+"J0''y" = 0.25
+"J1''y" = 0.25
+"J1''z" = 0.25
 
 [lattice]
 type = 'square lattice'
-L_sub = [2,2]
+L = 2
+W = 2
 initial = 'ferro'
+virtual_dim = 3
 
 [parameter]
 [parameter.simple_update]

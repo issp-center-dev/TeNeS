@@ -5,12 +5,13 @@
 #include <string>
 #include <vector>
 
+#include "mpi.hpp"
+
 namespace tenes {
 
 PEPS_Parameters::PEPS_Parameters() {
   // Tensor
-  D = 2;
-  CHI = D * D;
+  CHI = 2;
 
   // Debug
   print_level = PrintLevel::info;
@@ -41,9 +42,12 @@ PEPS_Parameters::PEPS_Parameters() {
   // random
   seed = 11;
 
-  // IO
+  // general
+  is_real = false;
+  iszero_tol = 0.0;
   tensor_load_dir = "";
   tensor_save_dir = "";
+  outdir = "output";
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -54,7 +58,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   using std::string;
 
   enum PARAMS_INT_INDEX {
-    I_D,
     I_CHI,
     I_print_level,
     I_num_simple_step,
@@ -66,6 +69,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Use_FastFullUpdate,
     I_Lcor,
     I_seed,
+    I_is_real,
 
     N_PARAMS_INT_INDEX,
   };
@@ -77,6 +81,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Inverse_precision,
     I_Full_Convergence_Epsilon,
     I_RSVD_Oversampling_factor,
+    I_iszero_tol,
 
     N_PARAMS_DOUBLE_INDEX,
   };
@@ -84,6 +89,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   enum PARAMS_STRING_INDEX {
     I_tensor_load_dir,
     I_tensor_save_dir,
+    I_outdir,
 
     N_PARAMS_STRING_INDEX,
   };
@@ -96,7 +102,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   std::vector<std::string> params_string(N_PARAMS_STRING_INDEX);
 
   if (irank == root) {
-    SAVE_PARAM(D, int);
     SAVE_PARAM(CHI, int);
     SAVE_PARAM(print_level, int);
     SAVE_PARAM(num_simple_step, int);
@@ -117,17 +122,26 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Convergence_Epsilon, double);
     SAVE_PARAM(RSVD_Oversampling_factor, double);
 
+    SAVE_PARAM(is_real, int);
+    SAVE_PARAM(iszero_tol, double);
     SAVE_PARAM(tensor_load_dir, string);
+    SAVE_PARAM(tensor_save_dir, string);
+    SAVE_PARAM(outdir, string);
 
-    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
-              comm);
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+    bcast(params_string, 0, comm);
+    // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+    //           comm);
   } else {
-    MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
-    MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
-              comm);
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+    bcast(params_string, 0, comm);
+    // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
+    // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
+    //           comm);
 
-    LOAD_PARAM(D, int);
     LOAD_PARAM(CHI, int);
     LOAD_PARAM(print_level, int);
     LOAD_PARAM(num_simple_step, int);
@@ -148,8 +162,11 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Convergence_Epsilon, double);
     LOAD_PARAM(RSVD_Oversampling_factor, double);
 
+    LOAD_PARAM(is_real, int);
+    LOAD_PARAM(iszero_tol, double);
     LOAD_PARAM(tensor_load_dir, string);
     LOAD_PARAM(tensor_save_dir, string);
+    LOAD_PARAM(outdir, string);
   }
 }
 
@@ -163,13 +180,12 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   } else {
     ofs.open(filename, std::ios::out);
   }
-  // Tensor
-  ofs << "D = " << D << std::endl;
-  ofs << "CHI = " << CHI << std::endl;
 
   // Simple update
   ofs << "simple_num_step = " << num_simple_step << std::endl;
   ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
+
+  ofs << std::endl;
 
   // Full update
   ofs << "full_num_step = " << num_full_step << std::endl;
@@ -183,7 +199,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "full_fastfullupdate = "
       << (Full_Use_FastFullUpdate ? "true" : "false") << std::endl;
 
+  ofs << std::endl;
+
   // Environment
+  ofs << "ctm_dimension = " << CHI << std::endl;
   ofs << "ctm_inverse_projector_cutoff = " << Inverse_Env_cut << std::endl;
   ofs << "ctm_convergence_epsilon = " << CTM_Convergence_Epsilon << std::endl;
   ofs << "ctm_iteration_max = " << Max_CTM_Iteration << std::endl;
@@ -192,10 +211,14 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
 
-  ofs << "seed = " << seed << std::endl;
+  ofs << std::endl;
 
+  ofs << "seed = " << seed << std::endl;
+  ofs << "is_real = " << is_real << std::endl;
+  ofs << "iszero_tol = " << iszero_tol << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
   ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
+  ofs << "outdir = " << outdir << std::endl;
 
   ofs.close();
 }

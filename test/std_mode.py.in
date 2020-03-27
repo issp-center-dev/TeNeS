@@ -1,0 +1,110 @@
+from __future__ import print_function
+
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+import toml
+
+
+def nearly_equal(x, y, tol):
+    return -tol < x - y < tol
+
+
+def load_str_as_array(s):
+    res = []
+    for line in s.split("\n"):
+        if not line:
+            continue
+        row = list(map(float, line.split()))
+        res.append(row)
+    return np.array(res)
+
+
+cmd = [
+    join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"),
+    "-o",
+    join("output_std_mode.toml"),
+    join("data", "std_mode.toml"),
+]
+subprocess.call(cmd)
+
+
+res = toml.load("output_std_mode.toml")
+ref = toml.load(join("data", "output_std_mode.toml"))
+tol = 1.0e-12
+
+result = True
+
+if res["parameter"] != ref["parameter"]:
+    print('check for the section "parameter" fails')
+    result = False
+
+if res["tensor"] != ref["tensor"]:
+    print('check for the section "tensor" fails')
+    result = False
+
+obs_result = True
+if len(res['observable']['onesite']) != len(ref['observable']['onesite']):
+    obs_result = False
+    result = False
+else:
+    for obs_res, obs_ref in zip(res['observable']['onesite'], ref['observable']['onesite']):
+        obs_result = obs_result and obs_res['name'] == obs_ref['name']
+        obs_result = obs_result and obs_res['group'] == obs_ref['group']
+        obs_result = obs_result and obs_res['sites'] == obs_ref['sites']
+        obs_result = obs_result and obs_res['dim'] == obs_ref['dim']
+        elem_res = load_str_as_array(obs_res['elements'])
+        elem_ref = load_str_as_array(obs_ref['elements'])
+        obs_result = obs_result and np.allclose(elem_ref, elem_res)
+if not obs_result:
+    print('check for the section "observable.onesite" fails')
+    result = False
+
+obs_result = True
+if len(res['observable']['twosite']) != len(ref['observable']['twosite']):
+    obs_result = False
+    result = False
+else:
+    for obs_res, obs_ref in zip(res['observable']['twosite'], ref['observable']['twosite']):
+        obs_result = obs_result and obs_res['name'] == obs_ref['name']
+        obs_result = obs_result and obs_res['group'] == obs_ref['group']
+        obs_result = obs_result and obs_res['bonds'] == obs_ref['bonds']
+        if 'elements' in obs_ref:
+            obs_result = obs_result and 'elements' in obs_res
+            obs_result = obs_result and obs_res['dim'] == obs_ref['dim']
+            elem_res = load_str_as_array(obs_res['elements'])
+            elem_ref = load_str_as_array(obs_ref['elements'])
+            obs_result = obs_result and np.allclose(elem_ref, elem_res)
+        else:
+            obs_result = obs_result and 'elements' not in obs_res
+            obs_result = obs_result and obs_res['ops'] == obs_ref['ops']
+if not obs_result:
+    print('check for the section "observable.twosite" fails')
+    result = False
+
+
+for name in ('simple', 'full'):
+    evo_result = True
+    if len(res['evolution'][name]) != len(ref['evolution'][name]):
+        evo_result = False
+        result = False
+    else:
+        for evo_res, evo_ref in zip(res['evolution'][name], res['evolution'][name]):
+            evo_result = evo_result and evo_res['source_site'] == evo_ref['source_site']
+            evo_result = evo_result and evo_res['source_leg'] == evo_ref['source_leg']
+            evo_result = evo_result and evo_res['dimensions'] == evo_ref['dimensions']
+            elem_res = load_str_as_array(evo_res['elements'])
+            elem_ref = load_str_as_array(evo_ref['elements'])
+            evo_result = evo_result and np.allclose(elem_ref, elem_res)
+    if not evo_result:
+        print('check for the section "evolution.{}" fails'.format(name))
+        result = False
+
+
+if result:
+    sys.exit(0)
+else:
+    sys.exit(1)
