@@ -19,13 +19,18 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 
 ## Getting started
 
-- [Prerequisites](#prerequisites)
+- [Prerequisites and dependencies](#prerequisites-and-dependencies)
 - [Install](#install)
     - [Simplest way to build](#simplest-way-to-build)
-    - [Install](#install)
+    - [Install binaries and samples](#install-binaries-and-samples)
     - [Specify compiler](#specify-compiler)
+    - [Specify Python interpreter](#specify-python-interpreter)
+    - [Disable MPI/ScaLAPACK parallelization](#disable-mpi/scalapack-parallelization)
     - [Use the pre-built mptensor](#use-the-pre-built-mptensor)
 - [Usage](#usage)
+    - [Use pre-defined model and lattice](#use-pre-defined-model-and-lattice)
+    - [Calculate imaginary time evolution operators](#calculate-imaginary-time-evolution-operators)
+    - [Perform](#perform)
 - [Question or comment](#question-or-comment)
 - [License](#license)
 - [Acknowledgement](#acknowledgement)
@@ -101,6 +106,8 @@ $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
 ### Disable MPI/ScaLAPACK parallelization
 
 To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` commands.
+
+If you use macos, MPI/ScaLAPACK parallelization is disabled by default because the combination of Apple Accelerate BLAS/LAPACK library with ScaLAPACK seems to have some troubles.
 
 ### Use the pre-built mptensor
 
@@ -197,5 +204,5 @@ Pull request is welcome (even for a small typo, of course!).
 TeNeS is available under the GNU GPL v3.
 
 ## Acknowledgement
-TeNeS was supported by MEXT as “Exploratory Challenge on Post-K computer” (Frontiers of Basic Science: Challenging the Limits) and “Priority Issue on Post-K computer” (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
-We also would also like to express our thanks for the support of the “Project for advancement of software usability in materials science” of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
+TeNeS was supported by MEXT as "Exploratory Challenge on Post-K computer" (Frontiers of Basic Science: Challenging the Limits) and "Priority Issue on Post-K computer" (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
+We also would also like to express our thanks for the support of the "Project for advancement of software usability in materials science" of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
