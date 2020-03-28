@@ -90,7 +90,7 @@ html_theme ='alabaster'
 # documentation.
 #
 html_theme_options = {
-    'logo': 'TeNeS_logo_3.png',
+    'logo': 'TeNeS_logo.png',
     'font_family': 'Georgia',
     'sidebar_search_button': 'pink_1'
 }
@@ -152,7 +152,7 @@ latex_documents = [
 ]
 
 latex_docclass =  {'manual': 'jsbook'}
-latex_logo = "../img/TeNeS_logo_3.jpg"
+latex_logo = "../img/TeNeS_logo.pdf"
 
 # -- Options for manual page output ---------------------------------------
 

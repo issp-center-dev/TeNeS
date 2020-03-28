@@ -90,7 +90,7 @@ html_theme ='alabaster'
 # documentation.
 #
 html_theme_options = {
-    'logo': 'TeNeS_logo_3.png',
+    'logo': 'TeNeS_logo.png',
     'font_family': 'Georgia',
     'sidebar_search_button': 'pink_1'
 }
@@ -150,7 +150,7 @@ latex_documents = [
     (master_doc, 'TeNeS_en.tex', u'TeNeS Documentation',
      u'Institute for Solid State Physics, University of Tokyo', 'manual', 'True'),
 ]
-latex_logo = "../img/TeNeS_logo_3.png"
+latex_logo = "../img/TeNeS_logo.pdf"
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples

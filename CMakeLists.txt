@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.6...3.14)
 message(STATUS "CMake version: " ${CMAKE_VERSION})
 project(TeNeS CXX)
 set(TENES_VERSION 1.0-dev)
