@@ -1,3 +1,5 @@
+![TeNeS logo](docs/sphinx/img/TeNeS_logo_banner.png)
+
 | Build status | Documentation (latest) | Documentation (latest stable) |
 | :-: | :-: | :-: |
 | [![Build status (master)](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc latest en](https://img.shields.io/badge/doc--en-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc latest ja](https://img.shields.io/badge/doc--ja-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) | [![doc latest_stable en](https://img.shields.io/badge/doc--en-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html) [![doc latest_stable ja](https://img.shields.io/badge/doc--ja-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html) |
@@ -24,9 +26,9 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
     - [Simplest way to build](#simplest-way-to-build)
     - [Install binaries and samples](#install-binaries-and-samples)
     - [Specify compiler](#specify-compiler)
-    - [Specify Python interpreter](#specify-python-interpreter)
     - [Disable MPI/ScaLAPACK parallelization](#disable-mpi/scalapack-parallelization)
     - [Use the pre-built mptensor](#use-the-pre-built-mptensor)
+    - [Specify Python interpreter](#specify-python-interpreter)
 - [Usage](#usage)
     - [Use pre-defined model and lattice](#use-pre-defined-model-and-lattice)
     - [Calculate imaginary time evolution operators](#calculate-imaginary-time-evolution-operators)
