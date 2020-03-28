@@ -70,7 +70,7 @@ int bcast(std::string &val, int root, MPI_Comm comm){
   if(mpirank!=root){
     val = buf;
   }
-  delete buf;
+  delete[] buf;
 #endif
   return ret;
 }
