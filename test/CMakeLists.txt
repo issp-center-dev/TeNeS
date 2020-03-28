@@ -35,14 +35,14 @@ foreach(name simple_mode std_mode)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in
                    ${CMAKE_CURRENT_BINARY_DIR}/${name}.py
                    @ONLY)
-    add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
+    add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
 endforeach()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py @ONLY)
 
-add_test(NAME restart COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/restart.py)
+add_test(NAME restart COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/restart.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/restart.py.in ${CMAKE_CURRENT_BINARY_DIR}/restart.py @ONLY)
 
 foreach(name AntiferroHeisenberg_real AntiferroHeisenberg_complex J1J2_AFH)
-    add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
+    add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
 

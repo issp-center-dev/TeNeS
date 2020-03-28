@@ -82,18 +82,21 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
-.. admonition:: Specify Python interpreter
-
-   CMake detects your python interpreter automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,
-
-   ::
-
-      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
-
-
 .. admonition:: Use the pre-built mptensor
 
    TeNeS is based on the parallerized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
+
+
+.. admonition:: Specify Python interpreter
+
+   TeNeS tools (``tenes_simple`` and ``tenes_std``) use ``python3`` interpreter which is found in ``PATH`` via ``/usr/bin/env python3``.
+   Please make sure that ``python3`` command invokes the interpreter which you want to use, for example, by using ``type python3``.
+
+   If you want to fix the interpreter (or ``/usr/bin/env`` does not exist), you can specify the interpreter by the following way,
+
+   ::
+
+      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../

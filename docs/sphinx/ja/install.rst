@@ -80,14 +80,6 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
-.. admonition:: Python インタープリタの指定
-
-   CMake では自動でPython インタープリタを検出してビルドを行います。指定したい場合には, 以下のようにオプションを追加してください。
-   ::
-
-      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
-
-
 .. admonition:: mptensor の指定
 
    TeNeS は並列テンソル演算ライブラリ mptensor を利用しています。
@@ -96,3 +88,14 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
+
+
+.. admonition:: Python インタープリタの指定
+
+   TeNeS ツールは Python3 で書かれており、 パスの通った ``python3`` コマンドを自動的に起動します。
+   ツールの実行がうまく行かない場合には、 ``type python3`` などを利用して、 ``python3`` コマンドにパスが通っているかどうか確認してください。
+
+   使うインタープリタを固定したい場合（あるいは ``/usr/bin/env`` コマンドが実行できずにエラーが出る場合）には、 以下のようにCMake オプションを追加してください。
+   ::
+
+      $ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../

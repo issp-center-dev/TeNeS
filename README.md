@@ -51,7 +51,7 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 TeNeS can be parallerized by using MPI and ScaLAPACK.
 
 TeNeS tools (`tenes_simple`, `tenes_std`) are written in Python3.
-The following external packages are required (and can be installed via `pip` command)
+The following external packages are required:
 
 - numpy
 - scipy
@@ -94,15 +94,6 @@ In this case, you can specify the compiler by the following way,
 $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 ```
 
-### Specify Python interpreter
-
-CMake detects also python interpreter automatically but sometimes this is not what you want.
-In this case, you can specify the python interpreter by the following way,
-
-``` bash
-$ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
-```
-
 ### Disable MPI/ScaLAPACK parallelization
 
 To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` commands.
@@ -116,6 +107,17 @@ The build system of TeNeS installs this automatically, but you can use the extra
 
 ``` bash
 $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
+```
+
+### Specify Python interpreter
+
+TeNeS tools `tenes_simple` and `tenes_std` use `python3` which can be found in `PATH` via `/usr/bin/env python3`.
+Please make sure that `python3` command invokes Python3 interpreter, for example, by using `type python3` .
+
+If you want to fix the interpreter to be used (or `/usr/bin/env` does not exist), you can specify it by the following way,
+
+``` bash
+$ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
 ```
 
 ## Usage
