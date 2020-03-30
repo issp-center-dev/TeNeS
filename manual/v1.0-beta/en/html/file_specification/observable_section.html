@@ -1,0 +1,320 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>observable.onesite &mdash; TeNeS 1.0-dev documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0-dev',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0-dev documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p>Define various settings related to physical quantity measurement.
+This section has two types of subsections, <code class="docutils literal"><span class="pre">onesite</span></code> and <code class="docutils literal"><span class="pre">twosite</span></code>.</p>
+<div class="section" id="observable-onesite">
+<h1><code class="docutils literal"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this headline">¶</a></h1>
+<p>Define one-body operators that indicate physical quantities defined at each site <span class="math">\(i\)</span>.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="46%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">name</span></code></td>
+<td>Operator name</td>
+<td>String</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">group</span></code></td>
+<td>Identification number of operators</td>
+<td>Integer</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">sites</span></code></td>
+<td>Site number</td>
+<td>Integer or a list of integer</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">dim</span></code></td>
+<td>Dimension of an operator</td>
+<td>Integer</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">elements</span></code></td>
+<td>Non-zero elements of an operator</td>
+<td>String</td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal"><span class="pre">name</span></code>  specifies an operator name.</p>
+<p><code class="docutils literal"><span class="pre">group</span></code> specifies an identification number of one-site operators.</p>
+<p><code class="docutils literal"><span class="pre">sites</span></code> specifies a site number where an operater acts on.
+By using a list, multiple site the operators can be defined on site at the same time.
+An empty list <code class="docutils literal"><span class="pre">[]</span></code> means all sites.</p>
+<p><code class="docutils literal"><span class="pre">dim</span></code> specifies a dimension of an operator.</p>
+<p><code class="docutils literal"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
+One element is specified by one line consisting of two integers and two floating-point numbers separated by spaces.</p>
+<ul class="simple">
+<li>The first two integers are the state numbers before and after the act of the operator, respectively.</li>
+<li>The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.</li>
+</ul>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>As an example, the case of <span class="math">\(S^z\)</span> operator for S=1/2</p>
+<div class="math">
+\[\begin{split}S^z = \left(\begin{array}{cc} 0.5 &amp; 0.0 \\ 0.0 &amp; -0.5 \end{array}\right)\end{split}\]</div>
+<p>is explained.</p>
+<p>First, set the name to <code class="docutils literal"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;Sz&quot;</span></code> and the identification number to <code class="docutils literal"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code>.</p>
+<p>Next, if the same operator is used at all sites, set <code class="docutils literal"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[]</span></code>.
+Otherwise, for example, if there are sites with different spin length <span class="math">\(S\)</span>, specify a specific site number such as <code class="docutils literal"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[0,1]</span></code>.</p>
+<p>The dimension of the operator is <code class="docutils literal"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">2</span></code>, because it is the size of the matrix shown above.</p>
+<p>Finally, the operator element is defined.
+When we label two basis on site as <span class="math">\(|\uparrow\rangle = |0\rangle\)</span> and <span class="math">\(|\downarrow\rangle = |1\rangle\)</span>,
+non-zero elements of <span class="math">\(S^z\)</span> are represented as</p>
+<div class="highlight-none"><div class="highlight"><pre>elements = &quot;&quot;&quot;
+0 0   0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>As a result, <span class="math">\(S^z\)</span> operator for S=1/2 is defined as follows:</p>
+<div class="highlight-none"><div class="highlight"><pre>[[observable.onesite]]
+name = &quot;Sz&quot;
+group = 0
+sites = []
+dim = 2
+elements = &quot;&quot;&quot;
+0 0  0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="observable-twosite">
+<h1><code class="docutils literal"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this headline">¶</a></h1>
+<p>Define two-body operators that indicate physical quantities defined on two sites.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="46%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">name</span></code></td>
+<td>Operator name</td>
+<td>String</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">group</span></code></td>
+<td>Identification number of operators</td>
+<td>Integer</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">bonds</span></code></td>
+<td>Bond</td>
+<td>String</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">dim</span></code></td>
+<td>Dimension of an operator</td>
+<td>Integer</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">elements</span></code></td>
+<td>Non-zero elements of an operator</td>
+<td>String</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">ops</span></code></td>
+<td>Index of onesite operators</td>
+<td>A list of integer</td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal"><span class="pre">name</span></code>  specifies an operator name.</p>
+<p><code class="docutils literal"><span class="pre">group</span></code> specifies an identification number of two sites operators.</p>
+<p><code class="docutils literal"><span class="pre">bonds</span></code> specifies a string representing the set of site pairs on which the operator acts.
+One line consisting of three integers means one site pair.</p>
+<ul>
+<li><p class="first">The first integer is the number of the source site.</p>
+</li>
+<li><p class="first">The last two integers are the coordinates (dx, dy) of the other site (target site) from the source site.</p>
+<blockquote>
+<div><ul class="simple">
+<li>Both dx and dy must be in the range <span class="math">\(-3 \ le dx \ le 3\)</span>.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p><code class="docutils literal"><span class="pre">dim</span></code> specifies a dimension of an operator.
+In other words, the number of possible states of the site where the operator acts on.
+In the case of interaction between two <span class="math">\(S=1/2\)</span> spins, for example, <code class="docutils literal"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,</span> <span class="pre">2]</span></code> .</p>
+<p><code class="docutils literal"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
+One element consists of one line consisting of four integers and two floating-point numbers separated by spaces.</p>
+<ul class="simple">
+<li>The first two integers are the status numbers of the source site and target site <strong>before</strong> the operator acts on.</li>
+<li>The next two integers show the status numbers of the source site and target site <strong>after</strong> the operator acts on.</li>
+<li>The last two floats indicate the real and imaginary parts of the elements of the operator.</li>
+</ul>
+<p>Using <code class="docutils literal"><span class="pre">ops</span></code>, a two-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal"><span class="pre">observable.onesite</span></code>.
+For example, if <span class="math">\(S^z\)</span> is defined as <code class="docutils literal"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal"><span class="pre">observable.onesite</span></code>,  <span class="math">\(S ^ z_iS ^ z_j\)</span> can be expressed as <code class="docutils literal"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code>.</p>
+<p>If both <code class="docutils literal"><span class="pre">elements</span></code> and <code class="docutils literal"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
+<div class="section" id="id1">
+<h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>As an example, the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code></p>
+<div class="math">
+\[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
+<p>is explained.</p>
+<p>First, the name and identification number is set as <code class="docutils literal"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;hamiltonian&quot;</span></code> and <code class="docutils literal"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code>.
+<code class="docutils literal"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> because the state of each site is a superposition of the two states
+<span class="math">\(|\uparrow\rangle\)</span> and <span class="math">\(|\downarrow\rangle\)</span>.</p>
+<p>Next, let&#8217;s define the bonds. In this case, the site numbers are assigned as</p>
+<div class="highlight-none"><div class="highlight"><pre>2 3
+0 1
+</pre></div>
+</div>
+<p>The bond connecting 0 and 1 is represented as <code class="docutils literal"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
+Similarly, The bond connecting 1 and 3 is represented as <code class="docutils literal"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> because 3 is located at (0,1) from 1.</p>
+<p>Finally, how to define the elements of the operator is explained.
+First, the basis of the site is needed to be labeled. Here, we label <span class="math">\(|\uparrow\rangle\)</span> as 0 and <span class="math">\(|\downarrow\rangle\)</span> as 1.
+Using this basis and label number, for example, one of diagonal elements <span class="math">\(\left\langle \uparrow_i \uparrow_j | \mathcal{H}_{ij} | \uparrow_i \uparrow_j \right\rangle = 1/4\)</span> is specified by <code class="docutils literal"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0.25</span> <span class="pre">0.0</span></code>.
+Likewise, one of off-diagonal elements <span class="math">\(\left\langle \uparrow_i \downarrow_j | \mathcal{H}_{ij} | \downarrow_i \uparrow_j \right\rangle = 1/2\)</span> is specified by <code class="docutils literal"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0.5</span> <span class="pre">0.0</span></code>.</p>
+<p>As a result, the Heisenberg Hamiltonian for S=1/2 is defined as follows:</p>
+<div class="highlight-none"><div class="highlight"><pre>[[observable.twosite]]
+name = &quot;hamiltonian&quot;
+group = 0
+dim = [2, 2]
+bonds = &quot;&quot;&quot;
+0 0 1
+0 1 0
+1 0 1
+1 1 0
+2 0 1
+2 1 0
+3 0 1
+3 1 0
+&quot;&quot;&quot;
+elements = &quot;&quot;&quot;
+0 0 0 0  0.25 0.0
+1 0 1 0  -0.25 0.0
+0 1 1 0  0.5 0.0
+1 0 0 1  0.5 0.0
+0 1 0 1  -0.25 0.0
+1 1 1 1  0.25 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/observable_section.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
