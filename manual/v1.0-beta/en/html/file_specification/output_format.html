@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5.5. Output files &mdash; TeNeS 1.0-beta documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0-beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="up" title="5. File format" href="index.html" />
+    <link rel="next" title="&lt;no title&gt;" href="../algorithm/index.html" />
+    <link rel="prev" title="5.4. Input file for tenes" href="expert_format.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="output-files">
+<span id="sec-output-format"></span><h1>5.5. Output files<a class="headerlink" href="#output-files" title="Permalink to this headline">¶</a></h1>
+<p>Output files are generated in the <code class="docutils literal"><span class="pre">output</span></code> directry.</p>
+<div class="section" id="parameters-dat">
+<h2>5.5.1. <code class="docutils literal"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this headline">¶</a></h2>
+<p>Paramters in the <code class="docutils literal"><span class="pre">parameter</span></code> and <code class="docutils literal"><span class="pre">lattice</span></code> sections defined in the input file are outputted.</p>
+</div>
+<div class="section" id="energy-dat">
+<h2>5.5.2. <code class="docutils literal"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="Permalink to this headline">¶</a></h2>
+<p>The energy of each site is output.</p>
+</div>
+<div class="section" id="site-obs-dat">
+<h2>5.5.3. <code class="docutils literal"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The expected values of the site operator are outputted.</li>
+<li>Each row consists of four columns.<ol class="arabic">
+<li>Index of the operator</li>
+<li>Index of the sites</li>
+<li>Real part of the expected value</li>
+<li>Imaginary part of the expected value</li>
+</ol>
+</li>
+</ul>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre># $1: op_index
+# $2: site_index
+# $3: real
+# $4: imag
+
+0 0 1.92549465249573365e-02 0.00000000000000000e+00
+0 1 -1.92620814130195529e-02 0.00000000000000000e+00
+0 2 -1.95243093055922252e-02 0.00000000000000000e+00
+0 3 1.91619477632061150e-02 0.00000000000000000e+00
+1 0 4.07206063348768799e-01 0.00000000000000000e+00
+1 1 -4.07243511737157671e-01 0.00000000000000000e+00
+1 2 -4.07255967738734126e-01 0.00000000000000000e+00
+1 3 4.07308918791554009e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="neighbor-obs-dat">
+<h2>5.5.4. <code class="docutils literal"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Nearest neighbor correlations for site operations are outputted.</li>
+<li>Each row consists of five columns.<ol class="arabic">
+<li>Index of the operator</li>
+<li>Index of the sites</li>
+<li>Index of the sites</li>
+<li>Real part of the expected value</li>
+<li>Imaginary part of the expected value</li>
+</ol>
+</li>
+</ul>
+<div class="highlight-none"><div class="highlight"><pre># $1: op_index
+# $2: source_site
+# $3: target_site
+# $4: real
+# $5: imag
+
+0 0 1 -7.05927615064968900e-02 0.00000000000000000e+00
+0 0 2 -7.27068456430051274e-02 0.00000000000000000e+00
+0 1 0 -7.13284385957392297e-02 0.00000000000000000e+00
+0 1 3 -7.19523349256113581e-02 0.00000000000000000e+00
+0 2 3 -7.12610364895483045e-02 0.00000000000000000e+00
+0 2 0 -7.19731507561011952e-02 0.00000000000000000e+00
+0 3 2 -7.05633558230210067e-02 0.00000000000000000e+00
+0 3 1 -7.26803750807340498e-02 0.00000000000000000e+00
+1 0 1 -1.85942869237103348e-01 0.00000000000000000e+00
+1 0 2 -1.87164731677545187e-01 0.00000000000000000e+00
+1 1 0 -1.86360382550076586e-01 0.00000000000000000e+00
+1 1 3 -1.86768451086366694e-01 0.00000000000000000e+00
+1 2 3 -1.86384181909805935e-01 0.00000000000000000e+00
+1 2 0 -1.86747576732693515e-01 0.00000000000000000e+00
+1 3 2 -1.85975089525013598e-01 0.00000000000000000e+00
+1 3 1 -1.87196522916879049e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</div>
+<div class="section" id="correlation-dat">
+<h2>5.5.5. <code class="docutils literal"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Correlation functions are outputted.</li>
+<li>Each row consists of eight columns.<ol class="arabic">
+<li>Index of the left operator</li>
+<li>Site index of the left operator</li>
+<li>Index of the right operator</li>
+<li>Site index of the right operator</li>
+<li>Unit cell offset of the right operator (x)</li>
+<li>Unit cell offset of the right operator (y)</li>
+<li>Real part of the expected value</li>
+<li>Imaginary part of the expected value</li>
+</ol>
+</li>
+</ul>
+<div class="section" id="id1">
+<h3>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre># $1: left_op
+# $2: left_site
+# $3: right_op
+# $4: right_site
+# $5: offset_x
+# $6: offset_y
+# $7: real
+# $8: imag
+
+0 0 0 1 0 0 -7.05927615064967928e-02 0.00000000000000000e+00
+0 0 0 0 1 0 1.19668843226761017e-02 0.00000000000000000e+00
+0 0 0 1 1 0 -2.43086229320005863e-03 0.00000000000000000e+00
+0 0 0 0 2 0 7.42729194528496308e-04 0.00000000000000000e+00
+0 0 0 1 2 0 -4.38794819416885419e-04 0.00000000000000000e+00
+0 0 0 2 0 0 -7.27068456430051135e-02 0.00000000000000000e+00
+0 0 0 0 0 1 1.23339845746621279e-02 0.00000000000000000e+00
+0 0 0 2 0 1 -2.50111186244407349e-03 0.00000000000000000e+00
+0 0 0 0 0 2 7.54607806587391516e-04 0.00000000000000000e+00
+0 0 0 2 0 2 -4.47734559969679546e-04 0.00000000000000000e+00
+1 0 1 1 0 0 -1.85942869237103237e-01 0.00000000000000000e+00
+...
+1 3 1 1 0 3 -1.65874245891461547e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="time-dat">
+<h2>5.5.6. <code class="docutils literal"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this headline">¶</a></h2>
+<p>The calculation time is outputted.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal"><span class="pre">tense_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">5.5. Output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">5. File format</a><ul>
+      <li>Previous: <a href="expert_format.html" title="previous chapter">5.4. Input file for <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
+      <li>Next: <a href="../algorithm/index.html" title="next chapter">&lt;no title&gt;</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/output_format.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
