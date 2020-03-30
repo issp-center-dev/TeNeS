@@ -15,6 +15,8 @@ Usage of ``tenes_simple``
 - Command line options are as follows
    - ``--help``
       - Show help message
+   - ``--version``
+      - Show version number
    - ``--output=filename``
       - Specify the output file name ``filename``
       - Default is ``std.toml``

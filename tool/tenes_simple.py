@@ -681,8 +681,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output", dest="output", default="std.toml", help="Output TOML file"
     )
+    parser.add_argument(
+        "-v", "--version", dest="version", action="version", version="1.0-beta"
+    )
 
     args = parser.parse_args()
+    
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
