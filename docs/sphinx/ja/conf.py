@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TeNeS'
-copyright = u'2019, Institute for Solid State Physics, University of Tokyo'
+copyright = u'2019-, Institute for Solid State Physics, University of Tokyo'
 author = u'Institute for Solid State Physics, University of Tokyo'
 
 # The version info for the project you're documenting, acts as replacement for
