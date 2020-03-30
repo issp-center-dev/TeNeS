@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>2. インストール方法 &mdash; TeNeS 0.1 ドキュメント</title>
+    <title>2. インストール方法 &mdash; TeNeS 1.0-dev ドキュメント</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '1.0-dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/translations.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 0.1 ドキュメント" href="index.html" />
+    <link rel="top" title="TeNeS 1.0-dev ドキュメント" href="index.html" />
     <link rel="next" title="3. 使用方法" href="how_to_use/index.html" />
     <link rel="prev" title="1.1. 概要" href="about/info.html" />
    
@@ -52,7 +52,7 @@
 <p>TeNeSをコンパイルするには以下のライブラリ・環境が必要です。</p>
 <ol class="arabic simple">
 <li>C++11 compiler</li>
-<li>CMake (&gt;=2.8.14)</li>
+<li>CMake (&gt;=3.6.0)</li>
 </ol>
 <p>TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。</p>
 <ol class="arabic simple">
@@ -62,22 +62,23 @@
 </ol>
 <p>MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
 MPI, ScaLAPACKについては自身でインストールする必要があります。
-たとえば macOS でhomebrewを利用されている方は、</p>
-<div class="code highlight-python"><div class="highlight"><pre>brew install open-mpi scalapack
+たとえば Debian GNU/Linux （やその派生ディストリビューション）をお使いで、root 権限をお持ちの場合は、</p>
+<div class="code highlight-python"><div class="highlight"><pre>sudo apt install openmpi-bin libopenmpi-dev libscalapack-mpi-dev
 </pre></div>
 </div>
-<p>でインストールすることが可能です。それ以外の方は、ScaLAPACKのホームページを参照の上、インストールをしてください。</p>
-<p>また、入力ファイル作成ツール <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用には以下のライブラリ・環境が必要です。</p>
+<p>でインストールすることが可能です。それ以外の方は、Open MPI などのMPI実装ならびに ScaLAPACKのホームページを参照の上、インストールをしてください。</p>
+<p>入力ファイル作成ツールの使用には Python (&gt;= 3.0.0) および
+以下の Python パッケージが必要です。</p>
 <ol class="arabic simple">
-<li>Python (バージョン3以上での稼働を確認)</li>
 <li>numpy</li>
+<li>scipy</li>
 <li>toml</li>
 </ol>
 </div>
 <div class="section" id="id4">
 <h2>2.3. インストール<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <ol class="arabic simple">
-<li>以下の手順に従ってビルドを行います。</li>
+<li>TeNeS のディレクトリに移動したのち、以下の手順に従ってビルドを行います。</li>
 </ol>
 <div class="highlight-python"><div class="highlight"><pre>$ mkdir build
 $ cd build
@@ -87,36 +88,43 @@ $ make
 </div>
 <p>上記のコマンドで <code class="docutils literal"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal"><span class="pre">tests</span></code> が作成されます。
 <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> のデフォルト値は <code class="docutils literal"><span class="pre">/usr/local</span></code> です。</p>
+<p>（ CentOS など、環境によっては <code class="docutils literal"><span class="pre">cmake3</span></code> とする必要があります。）</p>
 <ol class="arabic simple" start="2">
-<li>次にインストールを実行します。</li>
+<li>次にインストールします。</li>
 </ol>
 <dl class="docutils">
 <dt>::</dt>
 <dd>$ make install</dd>
 </dl>
-<p>実行ファイル <code class="docutils literal"><span class="pre">tenes</span></code> が <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;/bin</span></code> にインストールされます。</p>
+<p>実行ファイル <code class="docutils literal"><span class="pre">tenes</span></code>, <code class="docutils literal"><span class="pre">tenes_std</span></code>, <code class="docutils literal"><span class="pre">tenes_simple</span></code> が <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;/bin</span></code> にインストールされます。</p>
 <div class="admonition-mpi-scalapack admonition">
 <p class="first admonition-title">MPI/ScaLAPACK 並列化の無効化</p>
-<p class="last">MPI および ScaLAPACK を利用しない場合には、 <code class="docutils literal"><span class="pre">-DENABLE_MPI=OFF</span></code> オプションを <code class="docutils literal"><span class="pre">cmake</span></code> コマンドに追加してください。</p>
+<p class="last">MPI および ScaLAPACK を利用しない場合には、 <code class="docutils literal"><span class="pre">-DENABLE_MPI=OFF</span></code> オプションを <code class="docutils literal"><span class="pre">cmake</span></code> コマンドに追加してください。
+macOS では ScaLAPACK の一部関数とシステムのBLAS, LAPACK とで相性が悪く、エラー終了するのを確認しています。
+MPI 並列の無効化を推奨しています。</p>
 </div>
 <div class="admonition- admonition">
 <p class="first admonition-title">コンパイラの指定</p>
-<p><code class="docutils literal"><span class="pre">CMake</span></code> では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のようにオプションを追加してください。</p>
+<p>CMake では自動でコンパイラを検出してビルドを行います。コンパイラを指定したい場合には, 以下のようにオプションを追加してください。</p>
 <div class="last highlight-python"><div class="highlight"><pre>$ cmake -DCMAKE_CXX_COMPILER=&lt;path to your compiler&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-mptensor admonition">
+<p class="first admonition-title">mptensor の指定</p>
+<p>TeNeS は並列テンソル演算ライブラリ mptensor を利用しています。
+CMake は自動で mptensor をダウンロード・ビルドしますが、
+ユーザーが事前にインストールした mptensor を使用したい場合には、以下のようにオプションを追加してください。</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path to mptensor&gt; ../
 </pre></div>
 </div>
 </div>
 <div class="admonition-python admonition">
 <p class="first admonition-title">Python インタープリタの指定</p>
-<p><code class="docutils literal"><span class="pre">CMake</span></code> では自動でPython インタープリタを検出してビルドを行います。指定したい場合には, 以下のようにオプションを追加してください。</p>
+<p>TeNeS ツールは Python3 で書かれており、 パスの通った <code class="docutils literal"><span class="pre">python3</span></code> コマンドを自動的に起動します。
+ツールの実行がうまく行かない場合には、 <code class="docutils literal"><span class="pre">type</span> <span class="pre">python3</span></code> などを利用して、 <code class="docutils literal"><span class="pre">python3</span></code> コマンドにパスが通っているかどうか確認してください。</p>
+<p>使うインタープリタを固定したい場合（あるいは <code class="docutils literal"><span class="pre">/usr/bin/env</span></code> コマンドが実行できずにエラーが出る場合）には、 以下のようにCMake オプションを追加してください。</p>
 <div class="last highlight-python"><div class="highlight"><pre>$ cmake -DTENES_PYTHON_EXECUTABLE=&lt;path to your interpreter&gt; ../
-</pre></div>
-</div>
-</div>
-<div class="admonition-mptensor admonition">
-<p class="first admonition-title"><code class="docutils literal"><span class="pre">mptensor</span></code> の指定</p>
-<p>ユーザーが事前にインストールした <code class="docutils literal"><span class="pre">mptensor</span></code> を使用したい場合には、以下のようにオプションを追加してください。</p>
-<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path to mptensor&gt; ../
 </pre></div>
 </div>
 </div>
@@ -129,7 +137,12 @@ $ make
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="index.html">TeNeS</a></h1>
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
 
 
 
@@ -155,7 +168,7 @@ $ make
 <li class="toctree-l1"><a class="reference internal" href="how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">4. チュートリアル</a></li>
 <li class="toctree-l1"><a class="reference internal" href="file_specification/index.html">5. ファイルフォーマット</a></li>
-<li class="toctree-l1"><a class="reference internal" href="algorithm/index.html">6. 参考文献</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algorithm/algorithms.html">6. アルゴリズム</a></li>
 <li class="toctree-l1"><a class="reference internal" href="acknowledge/index.html">7. 謝辞</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contact/index.html">8. お問い合わせ</a></li>
 </ul>

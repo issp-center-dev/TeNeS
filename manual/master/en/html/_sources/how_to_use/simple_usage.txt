@@ -3,29 +3,56 @@
 Usage of ``tenes_simple``
 ----------------------------
 
-``tenes_simple`` is a tool that creates an input file of ``tenes`` for predefined models, lattices.
+``tenes_simple`` is a tool that creates an input file of ``tenes_std`` for predefined models and lattices.
+
 
 .. code:: bash
 
-   $ ./tenes_simple --help
-   usage: tenes_simple [-h] [-o OUTPUT] input
+   $ tenes_simple simple.toml
 
-   Simple input generator for TeNeS
+- Takes a file as an argument
+- Output an input file for ``tenes_std``
+- Command line options are as follows
+   - ``--help``
+      - Show help message
+   - ``--output=filename``
+      - Specify the output file name ``filename``
+      - Default is ``std.toml``
+      - File name cannot be the same as the input file name
 
-   positional arguments:
-     input                 Input TOML file
+The currently defined models and lattices are as follows:
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     -o OUTPUT, --output OUTPUT
-                           Output TOML file
+- Model
+   - Spin system
+- Lattice
+   - Square lattice
+   - Triangular lattice
+   - Honeycomb lattice
 
--  Take the input file name as an argument.
--  The command line options are:
+See :ref:`sec-simple-format` for details of the input file.
+::
+   [lattice]
+   type = "square lattice" # type of lattice
+   L = 2                   # size of unitcell
+   W = 2                   # size of unitcell
+   virtual_dim = 3         # bond dimension
+   initial = "antiferro"   # initial state
 
-   - ``help``
-      - show help messages.
-   - ``output``
-      - output file name.
-      - default name is ``input.toml``.
-      - Cannot have the same file name as the input file name.
+   [model]
+   type = "spin" # type of model
+   J = 1.0       # Heisenberg interaction
+
+   [parameter]
+   [parameter.general]
+   is_real = true # use real tensor
+
+   [parameter.simple_update]
+   num_step = 1000  # number of steps
+   tau = 0.01       # imaginary time step
+
+   [parameter.full_update]
+   num_step = 0    # number of steps
+   tau = 0.01      # imaginary time step
+
+   [parameter.ctm]
+   dimension = 9       # bond dimension

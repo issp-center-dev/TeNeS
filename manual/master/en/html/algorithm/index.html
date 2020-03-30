@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6. References &mdash; TeNeS 0.1 documentation</title>
+    <title>&lt;no title&gt; &mdash; TeNeS 1.0-dev documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1',
+        VERSION:     '1.0-dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 0.1 documentation" href="../index.html" />
-    <link rel="next" title="7. Acknowledgement" href="../acknowledge/index.html" />
-    <link rel="prev" title="5.3. Output files" href="../file_specification/output_format.html" />
+    <link rel="top" title="TeNeS 1.0-dev documentation" href="../index.html" />
+    <link rel="next" title="6. Algorithm" href="algorithms.html" />
+    <link rel="prev" title="5.5. Output files" href="../file_specification/output_format.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -39,38 +39,12 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="references">
-<h1>6. References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h1>
-<p>Please see the following documents if you want to know the algorithms used in <code class="docutils literal"><span class="pre">TeNeS</span></code>.</p>
-<ul class="simple">
-<li>Lecture slides and video<ul>
-<li>Slide:
-<a class="reference external" href="https://www.issp.u-tokyo.ac.jp/public/caqmp2019/slides/808L_Okubo.pdf">https://www.issp.u-tokyo.ac.jp/public/caqmp2019/slides/808L_Okubo.pdf</a></li>
-<li>youtube:
-<a class="reference external" href="https://www.youtube.com/watch?v=EL9iGwoqZes&amp;list=PLyL_XwLqTTm6roebw6MgIK0ljrN8cSQUX">https://www.youtube.com/watch?v=EL9iGwoqZes&amp;list=PLyL_XwLqTTm6roebw6MgIK0ljrN8cSQUX</a></li>
-</ul>
-</li>
-<li>About Simple update<ul>
-<li><a class="reference external" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.101.090603">H. C. Jiang, Z. Y. Weng, and T. Xiang, Phys. Rev. Lett. **101**,
-090603 (2008)</a>.</li>
-</ul>
-</li>
-<li>About Full update (including the evaluation of the CTMRG&#8217;s environment)<ul>
-<li><a class="reference external" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.101.250602">J. Jordan, R. Orús, G. Vidal, F. Verstraete, and J. I. Cirac,
-Phys. Rev. Lett. **101**, 250602 (2008)</a>.</li>
-<li><a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.80.094403">R. Orús and G. Vidal, Phys. Rev. B **80**, 094403 (2009)</a>.</li>
-<li><a class="reference external" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.113.046402">P. Corboz, T. M. Rice, and M. Troyer, Phys. Rev. Lett. **113**, 046402
-(2014)</a>.</li>
-</ul>
-</li>
-<li>About Fast Full update, Gauge fixing<ul>
-<li><a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.92.035142">Ho N. Phien, Johann A. Bengua, Hoang D. Tuan, Philippe Corboz, and
-Román Orús Phys. Rev. B **92**, 035142 (2015)</a>.</li>
-</ul>
-</li>
-<li>Reviews<ul>
-<li><a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0003491614001596">Román Orús, Annals of Physics, **349**, 117 (2014)</a>.</li>
-<li><a class="reference external" href="https://www.nature.com/articles/s42254-019-0086-7">Román Orús, Nature Reviews Physics, **1**, 538 (2019)</a>.</li>
+  <div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="algorithms.html">6. Algorithm</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="algorithms.html#tensor-network-states">6.1. Tensor Network States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithms.html#contraction-of-itps">6.2. Contraction of iTPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithms.html#optimization-of-itps">6.3. Optimization of iTPS</a></li>
 </ul>
 </li>
 </ul>
@@ -82,7 +56,12 @@ Román Orús Phys. Rev. B **92**, 035142 (2015)</a>.</li>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">TeNeS</a></h1>
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
 
 
 
@@ -97,13 +76,13 @@ Román Orús Phys. Rev. B **92**, 035142 (2015)</a>.</li>
 
 
 <h3>Navigation</h3>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">6. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algorithms.html">6. Algorithm</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
 </ul>
@@ -112,8 +91,8 @@ Román Orús Phys. Rev. B **92**, 035142 (2015)</a>.</li>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../file_specification/output_format.html" title="previous chapter">5.3. Output files</a></li>
-      <li>Next: <a href="../acknowledge/index.html" title="next chapter">7. Acknowledgement</a></li>
+      <li>Previous: <a href="../file_specification/output_format.html" title="previous chapter">5.5. Output files</a></li>
+      <li>Next: <a href="algorithms.html" title="next chapter">6. Algorithm</a></li>
   </ul></li>
 </ul>
 </div>

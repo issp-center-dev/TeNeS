@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. 使用方法 &mdash; TeNeS 0.1 ドキュメント</title>
+    <title>3. 使用方法 &mdash; TeNeS 1.0-dev ドキュメント</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1',
+        VERSION:     '1.0-dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 0.1 ドキュメント" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0-dev ドキュメント" href="../index.html" />
     <link rel="next" title="3.1. tenes_simple の使用方法" href="simple_usage.html" />
     <link rel="prev" title="2. インストール方法" href="../install.html" />
    
@@ -42,17 +42,17 @@
             
   <div class="section" id="id1">
 <h1>3. 使用方法<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">TeNeS</span></code> では事前に所定のフォーマットに従い模型や演算順などを定義するための複数の入力ファイルを作成する必要があります。入力ファイルの作成をしやすいように、</p>
+<p>TeNeS のメインプログラム <code class="docutils literal"><span class="pre">tenes</span></code> を利用するには、模型や演算順などを定義するための入力ファイルを作成する必要があります。入力ファイルの作成をしやすいように、</p>
 <ul class="simple">
-<li>あらかじめ定義された格子模型に対して, 簡単な入力ファイルから <code class="docutils literal"><span class="pre">tenes</span></code> を実行するための入力ファイルを生成するツール <code class="docutils literal"><span class="pre">tenes_simple.py</span></code></li>
-<li>所定のフォーマットに従い、自分で格子模型などを定義した入力ファイルを作成し実行することで、 <code class="docutils literal"><span class="pre">tenes</span></code> を実行するための入力ファイルを生成するツール <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> (ver. 1.0 で実装予定)</li>
+<li><code class="docutils literal"><span class="pre">tenes_std</span></code>: 所定のフォーマットに従い、自分で格子模型などを定義した入力ファイルを作成し実行することで、 <code class="docutils literal"><span class="pre">tenes</span></code> を実行するための入力ファイルを生成するツール</li>
+<li><code class="docutils literal"><span class="pre">tenes_simple</span></code>: あらかじめ定義された格子模型に対して, 簡単な入力ファイルから <code class="docutils literal"><span class="pre">tenes_std</span></code> を実行するための入力ファイルを生成するツール</li>
 </ul>
-<p>が用意されています。上記以外の模型や格子に対応させたい場合には、 <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを直接作成することで対応できます。 <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルの詳細については、<a class="reference internal" href="../file_specification/index.html"><em>ファイルフォーマット</em></a> をご覧ください。</p>
+<p>が用意されています。任意の模型や格子に対応させたい場合には、 <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイルを直接作成することで対応できます。 TeNeS の各種入力ファイルの詳細については、<a class="reference internal" href="../file_specification/index.html"><em>ファイルフォーマット</em></a> をご覧ください。</p>
 <p>以下、それぞれのツールの使用方法について記載し、最後に <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法について説明します。</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal"><span class="pre">tenes_std</span></code> の使用方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
 </ul>
 </div>
@@ -64,7 +64,12 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">TeNeS</a></h1>
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
 
 
 
@@ -84,13 +89,13 @@
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">3. 使用方法</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal"><span class="pre">tenes_standard.py</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal"><span class="pre">tenes_std</span></code> の使用方法</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../algorithm/index.html">6. 参考文献</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
 </ul>

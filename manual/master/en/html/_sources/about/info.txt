@@ -1,14 +1,15 @@
 Overview
 =================
-``TeNeS`` is an open-source program package for calculation of many-body quantum states based on the tensor network method. In ver. 0.1, this package calculates ground-state wavefunctions of quantum spin models, and evaluates physical quantities such as magnetization and correlation functions. For predefined models and lattices, there is a tool that makes it easy for users to generate input files.
-In ver. 1.0, a tool that is useful to define the own models and lattices from a simple input file will be developed. Furthermore, the Boson system will be able to be treated. This improvement will enable us to deal with various two-dimensional quantum spin and boson systems.
-
+TeNeS (**Te** nsor **Ne** twork **S** olver) is an open-source program package for calculation of two-dimensional many-body quantum states based on the tensor network method.
+This package calculates ground-state wavefunctions for user-defined Hamiltonian, and evaluates user-defined physical quantities such as magnetization and correlation functions.
+For predefined models and lattices, there is a tool that makes it easy for users to generate input files.
+TeNeS uses an OpenMP/MPI hybrid parallelized tensor operation library and thus can deal with a large problem by using massively parallel machines.
 
 Developers
 ==================
-``TeNeS`` is developed by the following members.
+TeNeS is developed by the following members.
 
-- ver 0.1
+- ver 1.0
 
   - Tsuyoshi Okubo (Graduate School of Science, Univ. of Tokyo)
   - Satoshi Morita (Institute for Solid State Physics, Univ. of Tokyo)
@@ -20,6 +21,7 @@ Developers
 Version information
 ======================
 
+- ver. 1.0-beta: 2020/03/29.
 - ver. 0.1: 2019/12/04.
 
 License

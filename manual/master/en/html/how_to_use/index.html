@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Usage &mdash; TeNeS 0.1 documentation</title>
+    <title>3. Usage &mdash; TeNeS 1.0-dev documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1',
+        VERSION:     '1.0-dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 0.1 documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0-dev documentation" href="../index.html" />
     <link rel="next" title="3.1. Usage of tenes_simple" href="simple_usage.html" />
     <link rel="prev" title="2. Install" href="../install.html" />
    
@@ -41,18 +41,19 @@
             
   <div class="section" id="usage">
 <h1>3. Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">TeNeS</span></code> needs to create several input files to define models, order of operations, etc. You can create and run the input file directly, but the following script is provided for ease of use:</p>
+<p><code class="docutils literal"><span class="pre">tenes</span></code>, the main program of TeNeS, needs to create input file to define the model, order of operations, etc.
+You can create the input file directly, but the following script is provided for ease of use:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">tenes_simple.py</span></code>: A tool that generates input files for <code class="docutils literal"><span class="pre">tenes</span></code> by using a simple input file which specifies lattice model predefined.</li>
-<li><code class="docutils literal"><span class="pre">tenes_standard.py</span></code> (from ver. 1.0):  A tool that generates input files for <code class="docutils literal"><span class="pre">tenes</span></code> by using input files for generating the lattice model.</li>
+<li><code class="docutils literal"><span class="pre">tenes_std</span></code> : A tool that generates an input file to execute <code class="docutils literal"><span class="pre">tenes</span></code>. An input file of <code class="docutils literal"><span class="pre">tenes_std</span></code> defines a lattice model etc. by yourself according to a predetermined format.</li>
+<li><code class="docutils literal"><span class="pre">tenes_simple</span></code>: A tool that generates input files for <code class="docutils literal"><span class="pre">tenes_std</span></code> from another simpler input file which specifies lattice model predefined.</li>
 </ul>
-<p>The following sections describe how to use each script, and finally how to use <code class="docutils literal"><span class="pre">tenes</span></code>.
-If you want to work with other models or grids, you can do so by creating the input file for <code class="docutils literal"><span class="pre">tenes</span></code> directly.
-See <a class="reference internal" href="../file_specification/index.html"><em>File format</em></a> for details on the input file of <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
+<p>In order to simulate other models and/or lattices than predefined ones, you should create the input file of <code class="docutils literal"><span class="pre">tenes_std</span></code> and convert it.
+Please see <a class="reference internal" href="../file_specification/index.html"><em>File format</em></a> for details on the input files of TeNeS.</p>
+<p>The following sections describe how to use each script, and finally how to use <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_std</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 </ul>
 </div>
@@ -64,7 +65,12 @@ See <a class="reference internal" href="../file_specification/index.html"><em>Fi
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">TeNeS</a></h1>
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
 
 
 
@@ -84,13 +90,13 @@ See <a class="reference internal" href="../file_specification/index.html"><em>Fi
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">3. Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_standard.py</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal"><span class="pre">tenes_std</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../algorithm/index.html">6. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
 </ul>
