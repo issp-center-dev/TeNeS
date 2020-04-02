@@ -155,6 +155,17 @@ class Lattice(object):
                 f.write("{} {} {}\n".format(c[0], c[1], i))
                 f.write("\n\n")
 
+    def numsites(self):
+        return self.L * self.W
+
+    def valid_sites(self):
+        ret = []
+        for sl in self.sublattice:
+            if not sl.is_vacancy:
+                ret += sl.sites
+        ret.sort()
+        return ret
+
 
 class SquareLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
@@ -761,7 +772,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     for i, sl in enumerate(lattice.sublattice):
         ret.append("[[tensor.unitcell]]")
         ret.append("virtual_dim = {}".format(sl.vdim))
-        ret.append("index = {}".format(sl))
+        ret.append("index = {}".format(sl.sites))
         if sl.is_vacancy:
             ret.append("physical_dim = {}".format(1))
             ret.append("initial_state = [1.0]")
@@ -787,6 +798,9 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         ret.append('"""')
         ret.append("")
 
+    vsites = lattice.valid_sites()
+    if len(vsites) == lattice.numsites():
+        vsites = []
     ret.append("[observable]")
     lops = model.onesite_observables_as_dict()
     is_complex = True
@@ -799,7 +813,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             ret.append('name = "{}"'.format(lop["name"]))
             ret.append("group = {}".format(lop["group"]))
             groups.append(lop["group"])
-            ret.append("sites = {}".format(lop["sites"]))
+            ret.append("sites = {}".format(vsites))
             ret.append("dim = {}".format(lop["dim"]))
             ret.append('elements = """')
             for line in lop["elements"].split("\n"):
