@@ -153,10 +153,10 @@ class HoneycombLattice(Lattice):
         self.z = 3
         self.bondtypes = 3
 
+        self.L *= 2
+
         L, W = self.L, self.W
-        if W % 2 != 0:
-            self.skew = 1
-        assert L > 1
+        self.skew = W % L
 
         self.vdims.append(copy.copy(self.vdims[0]))
         self.vdims[0][0] = 1
@@ -164,38 +164,49 @@ class HoneycombLattice(Lattice):
 
         self.sublattice.append([])
 
-        for source in range(L * W):
-            x, y = index2coord(source, L)
-            if (x + y) % 2 == 0:
+        NX = L // 2
+        NY = W
+        for y in range(NY):
+            for X in range(NX):
+                #
                 # sublattice A
-                self.sublattice[0].append(source)
+                #
+                x = (2 * X + y) % L
+                index = coord2index(x, y, L)
+                self.sublattice[0].append(index)
 
                 # 1st neighbors
-                self.bonds[0][0].append(Bond(source, 1, 0))
-                self.bonds[0][1].append(Bond(source, 0, 1))
+                self.bonds[0][0].append(Bond(index, 1, 0))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(Bond(source, 0, 2))
-                self.bonds[1][1].append(Bond(source, 1, 1))
-                self.bonds[1][2].append(Bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 1))
+                self.bonds[1][1].append(Bond(index, 1, 1))
+                self.bonds[1][2].append(Bond(index, 2, 0))
 
                 # 3rd neighbors
-                self.bonds[2][2].append(Bond(source, 1, 2))
-            else:
+                self.bonds[2][1].append(Bond(index, 2, -1))
+                self.bonds[2][2].append(Bond(index, 0, 1))
+
+                #
                 # sublattice B
-                self.sublattice[1].append(source)
+                #
+                x = (2 * X + y + 1) % L
+                index = coord2index(x, y, L)
+                self.sublattice[1].append(index)
 
                 # 1st neighbors
-                self.bonds[0][2].append(Bond(source, 0, 1))
+                self.bonds[0][1].append(Bond(index, 1, 0))
+                self.bonds[0][2].append(Bond(index, 0, 1))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(Bond(source, 0, 2))
-                self.bonds[1][1].append(Bond(source, 1, 1))
-                self.bonds[1][2].append(Bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 1))
+                self.bonds[1][1].append(Bond(index, 1, 1))
+                self.bonds[1][2].append(Bond(index, 2, 0))
 
                 # 3rd neighbors
-                self.bonds[2][0].append(Bond(source, 1, 0))
-                self.bonds[2][1].append(Bond(source, -1, 2))
+                self.bonds[2][0].append(Bond(index, 2, 1))
+        self.sublattice[0].sort()
+        self.sublattice[1].sort()
 
 
 class TriangularLattice(Lattice):
