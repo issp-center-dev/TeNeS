@@ -79,6 +79,26 @@ def dumpbond(bond: Bond) -> str:
     return "{} {} {}".format(bond.source, bond.dx, bond.dy)
 
 
+class SubLattice:
+    def __init__(self, vdim: List[int], is_vacancy: bool = False):
+        self.sites = []
+        self.vdim = vdim
+        self.is_vacancy = is_vacancy
+
+    def add_site(self, site: int):
+        self.sites.append(site)
+
+    def to_dict(self, physdim: int) -> Dict[str, Any]:
+        ret = {}
+        ret["index"] = self.sites
+        if self.is_vacancy:
+            ret["physical_dim"] = 1
+        else:
+            ret["physical_dim"] = physdim
+        ret["virtual_dim"] = self.vdim
+        return ret
+
+
 class Lattice(object):
     def __init__(self, param: Dict[str, Any]):
         self.type = ""
@@ -86,8 +106,8 @@ class Lattice(object):
         self.skew = 0
         self.L = param["l"]
         self.W = param.get("w", self.L)
-        self.vdims = [[param["virtual_dim"]] * 4]
-        self.sublattice = [[]]
+        self.vdim = param["virtual_dim"]
+        self.sublattice = []
         self.bonds = [[[] for j in range(3)] for i in range(3)]
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
@@ -98,16 +118,11 @@ class Lattice(object):
         ret = {}
         ret["L_sub"] = [self.L, self.W]
         ret["skew"] = self.skew
-
-        ret["unitcell"] = []
-        for i, sublat in enumerate(self.sublattice):
-            unitcell = {}
-            unitcell["index"] = sublat
-            unitcell["physical_dim"] = physdim
-            unitcell["virtual_dim"] = self.vdims[i]
-            ret["unitcell"].append(unitcell)
-
+        ret["unitcell"] = [sub.to_dict(physdim) for sub in self.sublattice]
         return ret
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        return np.array([x, y])
 
     def write_coordinates(self, f):
         f.write("# coord_version = 1\n")
@@ -123,7 +138,22 @@ class Lattice(object):
         f.write("# $3: y\n")
         f.write("\n")
         for i, c in enumerate(self.coords):
-            f.write("{} {} {}\n".format(i, c[0], c[1]))
+            if c is not None:
+                # f.write("{} {} {}\n".format(i, c[0], c[1]))
+                x, y = index2coord(i, self.L)
+                C = self.cartesian_coordinate(x, y)
+                f.write("{} {} {}\n".format(i, C[0], C[1]))
+
+    def write_bonds(self, f, nnlevel):
+        for i, bonds in enumerate(self.bonds[nnlevel]):
+            for b in bonds:
+                source = b.source
+                x, y = index2coord(source, self.L)
+                c = self.cartesian_coordinate(x, y)
+                f.write("{} {} {}\n".format(c[0], c[1], i))
+                c = self.cartesian_coordinate(x + b.dx, y + b.dy)
+                f.write("{} {} {}\n".format(c[0], c[1], i))
+                f.write("\n\n")
 
 
 class SquareLattice(Lattice):
@@ -140,18 +170,17 @@ class SquareLattice(Lattice):
         self.latticevector = np.diag([L, W])
 
         if self.initial_states == "ferro":
-            self.sublattice = [[]]
+            self.sublattice = [SubLattice([self.vdim] * 4)]
         elif self.initial_states == "antiferro":
-            self.sublattice = [[], []]
-            self.vdims.append(copy.copy(self.vdims[0]))
+            self.sublattice = [SubLattice([self.vdim] * 4), SubLattice([self.vdim] * 4)]
 
         for source in range(L * W):
             x, y = index2coord(source, L)
             if self.initial_states == "antiferro":
                 if (x + y) % 2 == 0:
-                    self.sublattice[0].append(source)
+                    self.sublattice[0].add_site(source)
                 else:
-                    self.sublattice[1].append(source)
+                    self.sublattice[1].add_site(source)
 
             self.coords.append(np.array([x, y]))
 
@@ -180,11 +209,9 @@ class HoneycombLattice(Lattice):
         L, W = self.L, self.W
         self.skew = W % L
 
-        self.vdims.append(copy.copy(self.vdims[0]))
-        self.vdims[0][0] = 1
-        self.vdims[1][2] = 1
-
-        self.sublattice.append([])
+        vdim = self.vdim
+        self.sublattice.append(SubLattice([vdim, 1, vdim, vdim]))
+        self.sublattice.append(SubLattice([vdim, vdim, vdim, 1]))
 
         self.coords = [np.zeros(2) for _ in range(L * W)]
 
@@ -207,7 +234,7 @@ class HoneycombLattice(Lattice):
                 x = (2 * X + y) % L
                 index = coord2index(x, y, L)
                 self.coords[index] = c
-                self.sublattice[0].append(index)
+                self.sublattice[0].add_site(index)
 
                 # 1st neighbors
                 self.bonds[0][0].append(Bond(index, 1, 0))
@@ -227,7 +254,7 @@ class HoneycombLattice(Lattice):
                 x = (2 * X + y + 1) % L
                 index = coord2index(x, y, L)
                 self.coords[index] = c + other
-                self.sublattice[1].append(index)
+                self.sublattice[1].add_site(index)
 
                 # 1st neighbors
                 self.bonds[0][1].append(Bond(index, 1, 0))
@@ -240,8 +267,16 @@ class HoneycombLattice(Lattice):
 
                 # 3rd neighbors
                 self.bonds[2][0].append(Bond(index, 2, 1))
-        self.sublattice[0].sort()
-        self.sublattice[1].sort()
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([np.sqrt(3.0), 0.0])
+        a1 = np.array([np.sqrt(3.0) / 2, 1.5])
+        other = (a0 + a1) / 3.0
+        X = x - y
+        if X % 2 == 0:
+            return a0 * (X // 2) + a1 * y
+        else:
+            return a0 * (X // 2) + a1 * y + other
 
 
 class TriangularLattice(Lattice):
@@ -259,11 +294,13 @@ class TriangularLattice(Lattice):
         a0 = np.array([1.0, 0.0])
         a1 = np.array([-0.5, np.sqrt(3.0) / 2])
 
+        vdim = self.vdim
+
         if self.initial_states == "ferro":
-            self.sublattice = [[]]
+            self.sublattice.append(SubLattice([vdim] * 4))
         elif self.initial_states == "antiferro":
-            self.sublattice = [[], []]
-            self.vdims.append(copy.copy(self.vdims[0]))
+            self.sublattice.append(SubLattice([vdim] * 4))
+            self.sublattice.append(SubLattice([vdim] * 4))
             nhops = np.ones((L + 1, W + 1), dtype=np.int) * 100000000
             nhops[0, 0] = 0
 
@@ -275,9 +312,9 @@ class TriangularLattice(Lattice):
                 nhops[x, y + 1] = min(nhop + 1, nhops[x, y + 1])
                 nhops[x + 1, y + 1] = min(nhop + 2, nhops[x + 1, y + 1])
                 if nhop % 3 == 0:
-                    self.sublattice[0].append(source)
+                    self.sublattice[0].add_site(source)
                 else:
-                    self.sublattice[1].append(source)
+                    self.sublattice[1].add_site(source)
 
             self.coords.append(a0 * x + a1 * y)
 
@@ -295,6 +332,107 @@ class TriangularLattice(Lattice):
             self.bonds[2][0].append(Bond(source, 2, 0))
             self.bonds[2][1].append(Bond(source, 0, 2))
             self.bonds[2][2].append(Bond(source, 2, 2))
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([-0.5, np.sqrt(3.0) / 2])
+        return a0 * x + a1 * y
+
+
+class KagomeLattice(Lattice):
+    def __init__(self, param: Dict[str, Any]):
+        super().__init__(param)
+        self.type = "kagome lattice"
+        self.z = 4
+
+        self.L *= 2
+        self.W *= 2
+
+        L, W = self.L, self.W
+
+        self.latticevector = np.array([[1.0, 0.0], [0.5, np.sqrt(3.0) / 2]])
+        self.latticevector *= np.array([[L], [W]])
+
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+
+        vd = self.vdim
+        self.sublattice.append(SubLattice([vd, vd, vd, vd], is_vacancy=False))
+        self.sublattice.append(SubLattice([vd, 1, vd, 1], is_vacancy=False))
+        self.sublattice.append(SubLattice([1, vd, 1, vd], is_vacancy=False))
+        self.sublattice.append(SubLattice([1, 1, 1, 1], is_vacancy=True))
+
+        for index in range(L * W):
+            x, y = index2coord(index, L)
+
+            if x % 2 == 0 and y % 2 == 0:
+                #
+                # sublattice A
+                #
+                self.sublattice[0].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][0].append(Bond(index, 1, 0))
+                self.bonds[0][0].append(Bond(index, 0, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, -1, 2))
+                self.bonds[1][0].append(Bond(index, -2, 1))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 2, 0))
+                self.bonds[2][0].append(Bond(index, 0, 2))
+                self.bonds[2][1].append(Bond(index, -2, 2))
+            elif x % 2 == 1 and y % 2 == 0:
+                #
+                # sublattice B
+                #
+                self.sublattice[1].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][1].append(Bond(index, 1, 0))
+                self.bonds[0][0].append(Bond(index, -1, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, 1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 2))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 2, 0))
+                self.bonds[2][0].append(Bond(index, -2, 2))
+                self.bonds[2][1].append(Bond(index, 0, 2))
+            elif x % 2 == 0 and y % 2 == 1:
+                #
+                # sublattice C
+                #
+                self.sublattice[2].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][1].append(Bond(index, 0, 1))
+                self.bonds[0][1].append(Bond(index, -1, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, 1, 1))
+                self.bonds[1][0].append(Bond(index, -2, 1))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 0, 2))
+                self.bonds[2][0].append(Bond(index, -2, 2))
+                self.bonds[2][1].append(Bond(index, 2, 0))
+            else:
+                #
+                # sublattice D (vacancy)
+                #
+                self.sublattice[3].add_site(index)
+                self.coords.append(None)
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+        return a0 * x + a1 * y
 
 
 class Model(object):
@@ -538,6 +676,8 @@ def make_lattice(param: Dict[str, Any]) -> Lattice:
         lattice = HoneycombLattice(latparam)
     elif latname.startswith("triangular"):
         lattice = TriangularLattice(latparam)
+    elif latname.startswith("kagome"):
+        lattice = KagomeLattice(latparam)
     else:
         msg = "Unknown lattice: {}".format(latname)
         raise RuntimeError(msg)
@@ -617,16 +757,21 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     st = [[0.0] * model.N]
     st[0][0] = 1.0
     st.append(st[0][-1::-1])
-    for i, (sl, vdims) in enumerate(zip(lattice.sublattice, lattice.vdims)):
+    st.append(st[0][-1::-1])
+    for i, sl in enumerate(lattice.sublattice):
         ret.append("[[tensor.unitcell]]")
+        ret.append("virtual_dim = {}".format(sl.vdim))
         ret.append("index = {}".format(sl))
-        ret.append("physical_dim = {}".format(model.N))
-        ret.append("virtual_dim = {}".format(vdims))
-        ret.append("noise = {}".format(lattice.noise))
-        if lattice.initial_states == "random":
-            ret.append("initial_state = [0.0]")
+        if sl.is_vacancy:
+            ret.append("physical_dim = {}".format(1))
+            ret.append("initial_state = [1.0]")
         else:
-            ret.append("initial_state = {}".format(st[i]))
+            ret.append("physical_dim = {}".format(model.N))
+            if lattice.initial_states == "random":
+                ret.append("initial_state = [0.0]")
+            else:
+                ret.append("initial_state = {}".format(st[i]))
+        ret.append("noise = {}".format(lattice.noise))
         ret.append("")
 
     for ham in hams:
@@ -740,7 +885,14 @@ if __name__ == "__main__":
         "--coordinatefile",
         dest="coords",
         default="coordinates.dat",
-        help="Lattice Information file",
+        help="Site Information file",
+    )
+    parser.add_argument(
+        "-b",
+        "--bondfile",
+        dest="bondfile",
+        default="",
+        help="Bond Information file",
     )
     parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.0-beta"
@@ -759,3 +911,8 @@ if __name__ == "__main__":
 
     with open(args.coords, "w") as f:
         lattice.write_coordinates(f)
+
+    if args.bondfile:
+        for nn in range(3):
+            with open("{}-{}.dat".format(args.bondfile, nn), "w") as f:
+                lattice.write_bonds(f, nn)
