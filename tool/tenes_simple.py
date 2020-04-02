@@ -91,6 +91,8 @@ class Lattice(object):
         self.bonds = [[[] for j in range(3)] for i in range(3)]
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
+        self.coords = []
+        self.latticevector = np.eye(2)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
         ret = {}
@@ -107,6 +109,22 @@ class Lattice(object):
 
         return ret
 
+    def write_coordinates(self, f):
+        f.write("# coord_version = 1\n")
+        f.write("# name = {}\n".format(self.type))
+        f.write(
+            "# a0 = {} {}\n".format(self.latticevector[0, 0], self.latticevector[0, 1])
+        )
+        f.write(
+            "# a1 = {} {}\n".format(self.latticevector[1, 0], self.latticevector[1, 1])
+        )
+        f.write("# $1: index\n")
+        f.write("# $2: x\n")
+        f.write("# $3: y\n")
+        f.write("\n")
+        for i, c in enumerate(self.coords):
+            f.write("{} {} {}\n".format(i, c[0], c[1]))
+
 
 class SquareLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
@@ -119,6 +137,8 @@ class SquareLattice(Lattice):
             self.skew = 1
         assert L > 1
 
+        self.latticevector = np.diag([L, W])
+
         if self.initial_states == "ferro":
             self.sublattice = [[]]
         elif self.initial_states == "antiferro":
@@ -126,12 +146,14 @@ class SquareLattice(Lattice):
             self.vdims.append(copy.copy(self.vdims[0]))
 
         for source in range(L * W):
+            x, y = index2coord(source, L)
             if self.initial_states == "antiferro":
-                x, y = index2coord(source, L)
                 if (x + y) % 2 == 0:
                     self.sublattice[0].append(source)
                 else:
                     self.sublattice[1].append(source)
+
+            self.coords.append(np.array([x, y]))
 
             # 1st neighbors
             self.bonds[0][0].append(Bond(source, 1, 0))
@@ -164,15 +186,27 @@ class HoneycombLattice(Lattice):
 
         self.sublattice.append([])
 
+        self.coords = [np.zeros(2) for _ in range(L * W)]
+
         NX = L // 2
         NY = W
+
+        self.latticevector = np.array([[np.sqrt(3.0), 0.0], [np.sqrt(3.0) / 2, 1.5]])
+        self.latticevector *= np.array([[NX], [NY]])
+        a0 = np.array([np.sqrt(3.0), 0.0])
+        a1 = np.array([np.sqrt(3.0) / 2, 1.5])
+        other = (a0 + a1) / 3.0
+
         for y in range(NY):
             for X in range(NX):
+                c = a0 * X + a1 * y
+
                 #
                 # sublattice A
                 #
                 x = (2 * X + y) % L
                 index = coord2index(x, y, L)
+                self.coords[index] = c
                 self.sublattice[0].append(index)
 
                 # 1st neighbors
@@ -192,6 +226,7 @@ class HoneycombLattice(Lattice):
                 #
                 x = (2 * X + y + 1) % L
                 index = coord2index(x, y, L)
+                self.coords[index] = c + other
                 self.sublattice[1].append(index)
 
                 # 1st neighbors
@@ -218,6 +253,12 @@ class TriangularLattice(Lattice):
         L, W = self.L, self.W
         assert L > 1 and W > 1
 
+        self.latticevector = np.array([[1.0, 0.0], [-0.5, np.sqrt(3.0) / 2]])
+        self.latticevector *= np.array([[L], [W]])
+
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([-0.5, np.sqrt(3.0) / 2])
+
         if self.initial_states == "ferro":
             self.sublattice = [[]]
         elif self.initial_states == "antiferro":
@@ -227,8 +268,8 @@ class TriangularLattice(Lattice):
             nhops[0, 0] = 0
 
         for source in range(L * W):
+            x, y = index2coord(source, L)
             if self.initial_states == "antiferro":
-                x, y = index2coord(source, L)
                 nhop = nhops[x, y]
                 nhops[x + 1, y] = min(nhop + 1, nhops[x + 1, y])
                 nhops[x, y + 1] = min(nhop + 1, nhops[x, y + 1])
@@ -237,6 +278,8 @@ class TriangularLattice(Lattice):
                     self.sublattice[0].append(source)
                 else:
                     self.sublattice[1].append(source)
+
+            self.coords.append(a0 * x + a1 * y)
 
             # 1st neighbors
             self.bonds[0][0].append(Bond(source, 1, 0))
@@ -640,7 +683,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         oo = model.onesite_ops[i]
         if not is_complex:
             if not np.all(np.isreal(oo)):
-                v = np.einsum('ij,kl -> ikjl', oo, oo)
+                v = np.einsum("ij,kl -> ikjl", oo, oo)
                 if not np.all(np.isreal(v)):
                     continue
         ret.append("[[observable.twosite]]")
@@ -654,7 +697,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         if is_complex or np.all(np.isreal(oo)):
             ret.append("ops = {}".format([i] * 2))
         else:
-            v = np.einsum('ij,kl -> ikjl', oo, oo)
+            v = np.einsum("ij,kl -> ikjl", oo, oo)
             if is_complex or np.all(np.isreal(v)):
                 ret.append('elements = """')
                 for line in dump_op(v):
@@ -676,7 +719,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             ret.append("  {},".format(ops))
         ret.append("]")
 
-    return "\n".join(ret)
+    return "\n".join(ret), lattice
 
 
 if __name__ == "__main__":
@@ -693,16 +736,26 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="std.toml", help="Output TOML file"
     )
     parser.add_argument(
+        "-c",
+        "--coordinatefile",
+        dest="coords",
+        default="coordinates.dat",
+        help="Lattice Information file",
+    )
+    parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.0-beta"
     )
 
     args = parser.parse_args()
-    
+
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
-    res = tenes_simple(toml.load(args.input))
+    res, lattice = tenes_simple(toml.load(args.input))
 
     with open(args.output, "w") as f:
         f.write(res)
         f.write("\n")
+
+    with open(args.coords, "w") as f:
+        lattice.write_coordinates(f)
