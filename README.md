@@ -11,13 +11,12 @@ TeNeS (**Te**nsor **Ne**twork **S**olver) is a solver for 2D quantum lattice sys
 TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tensor operation library, [mptensor](https://github.com/smorita/mptensor).
 
 ## Online manual
-- master (Latest, UNSTABLE)
+- develop (Latest, UNSTABLE)
     - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
     - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
-- v0.1 (Latest stable)
-    - [English](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html)
-    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html)
-
+- master (Latest, stable)
+    - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
+    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
 
 ## Getting started
 
