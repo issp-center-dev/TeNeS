@@ -49,6 +49,63 @@ and each file has some sections.
 <p>For example, <code class="docutils literal"><span class="pre">tenes_simple</span></code> reads <code class="docutils literal"><span class="pre">model</span></code> and <code class="docutils literal"><span class="pre">lattice</span></code> sections and generates <code class="docutils literal"><span class="pre">tensor</span></code>, <code class="docutils literal"><span class="pre">observable</span></code>, and <code class="docutils literal"><span class="pre">hamiltonian</span></code> ones.
 Additionary, this copies <code class="docutils literal"><span class="pre">parameter</span></code> and <code class="docutils literal"><span class="pre">correlation</span></code> sections.</p>
 <p>The following table summarizes how each tool deal with sections.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="27%" />
+<col width="27%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Section</th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_simple</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_std</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes</span></code></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">parameter</span></code></td>
+<td>copy</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">model</span></code></td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">lattice</span></code></td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor</span></code></td>
+<td>out</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">observable</span></code></td>
+<td>out</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">correlation</span></code></td>
+<td>copy</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hamiltonian</span></code></td>
+<td>out</td>
+<td>in</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">evolution</span></code></td>
+<td>&nbsp;</td>
+<td>out</td>
+<td>in</td>
+</tr>
+</tbody>
+</table>
 <ul class="simple">
 <li>&#8220;in&#8221;<ul>
 <li>Tool uses this section as input</li>

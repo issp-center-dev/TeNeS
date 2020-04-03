@@ -51,6 +51,73 @@
 <p>例えば <code class="docutils literal"><span class="pre">tenes_simple</span></code> は <code class="docutils literal"><span class="pre">model</span></code> と <code class="docutils literal"><span class="pre">lattice</span></code> の情報から <code class="docutils literal"><span class="pre">tensor</span></code>, <code class="docutils literal"><span class="pre">observable</span></code>, <code class="docutils literal"><span class="pre">hamiltonian</span></code> の情報を生成し、
 さらに <code class="docutils literal"><span class="pre">parameter</span></code>, <code class="docutils literal"><span class="pre">correlation</span></code> はそのままコピーして、 <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイルとして出力します。</p>
 <p>次表は各セクションの簡単な説明および各ツールがどう扱うかを示しています。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="21%" />
+<col width="21%" />
+<col width="21%" />
+<col width="14%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">セクション名</th>
+<th class="head">説明</th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_simple</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_std</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes</span></code></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">parameter</span></code></td>
+<td>計算パラメータ</td>
+<td>copy</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">model</span></code></td>
+<td>模型パラメータ</td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">lattice</span></code></td>
+<td>格子パラメータ</td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor</span></code></td>
+<td>テンソル</td>
+<td>out</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">observable</span></code></td>
+<td>測定する演算子</td>
+<td>out</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">correlation</span></code></td>
+<td>相関関数</td>
+<td>copy</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hamiltonian</span></code></td>
+<td>ハミルトニアン</td>
+<td>out</td>
+<td>in</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">evolution</span></code></td>
+<td>虚時間発展演算子</td>
+<td>&nbsp;</td>
+<td>out</td>
+<td>in</td>
+</tr>
+</tbody>
+</table>
 <ul class="simple">
 <li>&#8220;in&#8221;<ul>
 <li>ツールはこのセクションの情報を利用します</li>
