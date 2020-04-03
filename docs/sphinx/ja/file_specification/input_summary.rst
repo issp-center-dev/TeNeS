@@ -19,7 +19,6 @@ TeNeS の入力ファイルは `TOML <https://github.com/toml-lang/toml/blob/mas
 .. csv-table::
   :header: "セクション名", "説明", ``tenes_simple``, ``tenes_std``, ``tenes``
   :widths: 15, 15, 15, 15, 10
-  :align: center
 
   ``parameter``,   "計算パラメータ",   "copy", "in / copy", "in"
   ``model``,       "模型パラメータ",   "in",   "",        ""

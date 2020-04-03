@@ -18,7 +18,6 @@ The following table summarizes how each tool deal with sections.
 .. csv-table::
   :header: "Section", ``tenes_simple``, ``tenes_std``, ``tenes``
   :widths: 15, 15, 15, 10
-  :align: center
 
   ``parameter``,   "copy", "in / copy", "in"
   ``model``,       "in",   "",        ""
