@@ -299,11 +299,11 @@ class TriangularLattice(Lattice):
         L, W = self.L, self.W
         assert L > 1 and W > 1
 
-        self.latticevector = np.array([[1.0, 0.0], [-0.5, np.sqrt(3.0) / 2]])
+        self.latticevector = np.array([[1.0, 0.0], [0.5, np.sqrt(3.0) / 2]])
         self.latticevector *= np.array([[L], [W]])
 
         a0 = np.array([1.0, 0.0])
-        a1 = np.array([-0.5, np.sqrt(3.0) / 2])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
 
         vdim = self.vdim
 
@@ -332,21 +332,21 @@ class TriangularLattice(Lattice):
             # 1st neighbors
             self.bonds[0][0].append(Bond(source, 1, 0))
             self.bonds[0][1].append(Bond(source, 0, 1))
-            self.bonds[0][2].append(Bond(source, 1, 1))
+            self.bonds[0][2].append(Bond(source, -1, 1))
 
             # 2nd neighbors
-            self.bonds[1][0].append(Bond(source, 1, 2))
-            self.bonds[1][1].append(Bond(source, 2, 1))
-            self.bonds[1][2].append(Bond(source, 1, -1))
+            self.bonds[1][0].append(Bond(source, -1, 2))
+            self.bonds[1][1].append(Bond(source, -2, 1))
+            self.bonds[1][2].append(Bond(source, 1, 1))
 
             # 3rd neighbors
             self.bonds[2][0].append(Bond(source, 2, 0))
             self.bonds[2][1].append(Bond(source, 0, 2))
-            self.bonds[2][2].append(Bond(source, 2, 2))
+            self.bonds[2][2].append(Bond(source, -2, 2))
 
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
         a0 = np.array([1.0, 0.0])
-        a1 = np.array([-0.5, np.sqrt(3.0) / 2])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
         return a0 * x + a1 * y
 
 
