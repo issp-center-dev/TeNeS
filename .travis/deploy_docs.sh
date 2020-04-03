@@ -6,6 +6,8 @@ fi
 
 if [ "_$TRAVIS_BRANCH" == "_master" ]; then
   echo "This is the master branch, deploy docs."
+elif [ "_$TRAVIS_BRANCH" == "_develop" ]; then
+  echo "This is the develop branch, deploy docs."
 elif [ -n "$TRAVIS_TAG" ]; then
   echo "This is a versioned tag, deploy docs."
 else
@@ -29,6 +31,13 @@ if [ "_${TRAVIS_BRANCH}" == "_master" ]; then
   cp -r ${ROOTDIR}/build/docs/sphinx/ja/html master/ja
   cp -r ${ROOTDIR}/build/docs/sphinx/en/html master/en
   git add master
+elif [ "_${TRAVIS_BRANCH}" == "_develop" ]; then
+  rm -rf develop
+  mkdir -p develop/ja
+  mkdir -p develop/en
+  cp -r ${ROOTDIR}/build/docs/sphinx/ja/html develop/ja
+  cp -r ${ROOTDIR}/build/docs/sphinx/en/html develop/en
+  git add develop
 elif [ -n ${TRAVIS_TAG} ]; then
   rm -rf ${TRAVIS_TAG}
   mkdir -p ${TRAVIS_TAG}/ja
