@@ -1344,7 +1344,7 @@ template <class ptensor> void TeNeS<ptensor>::load_tensors_v1() {
         lambda_tensor[i][j].push_back(ls[index]);
         ++index;
       }
-      lambda_tensor[i][j].resize(vdim[i]);
+      lambda_tensor[i][j].resize(vdim[j]);
     }
   }
 }
