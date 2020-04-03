@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5.5. 出力ファイル &mdash; TeNeS 1.0-beta ドキュメント</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0-beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0-beta ドキュメント" href="../index.html" />
+    <link rel="up" title="5. ファイルフォーマット" href="index.html" />
+    <link rel="next" title="&lt;no title&gt;" href="../algorithm/index.html" />
+    <link rel="prev" title="5.4. tenes の入力ファイル" href="expert_format.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="sec-output-format">
+<span id="id1"></span><h1>5.5. 出力ファイル<a class="headerlink" href="#sec-output-format" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>各種計算結果は <code class="docutils literal"><span class="pre">output</span></code> ディレクトリ以下に保存されます。
+また、入力ファイルとして使ったファイルがコピーされます。</p>
+<div class="section" id="parameters-dat">
+<h2>5.5.1. <code class="docutils literal"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>実際に計算に使われたパラメータおよび実行日時が出力されます。</p>
+<div class="section" id="id2">
+<h3>例<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre>simple_num_step = 1000
+simple_inverse_lambda_cutoff = 1e-12
+
+full_num_step = 0
+full_inverse_projector_cutoff = 1e-12
+full_inverse_precision = 1e-12
+full_convergence_epsilon = 1e-12
+full_iteration_max = 1000
+full_gauge_fix = true
+full_fastfullupdate = true
+
+ctm_dimension = 9
+ctm_inverse_projector_cutoff = 1e-12
+ctm_convergence_epsilon = 1e-10
+ctm_iteration_max = 10
+ctm_projector_corner = false
+use_rsvd = false
+rsvd_oversampling_factor = 2
+
+seed = 11
+is_real = 1
+iszero_tol = 0
+tensor_load_dir =
+tensor_save_dir =
+outdir = output
+
+Lsub = [ 2 , 2 ]
+skew = 0
+
+start_datetime =  2020-03-21T17:04:06+09:00
+finish_datetime = 2020-03-21T17:04:08+09:00
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="density-dat">
+<h2>5.5.2. <code class="docutils literal"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
+各演算子の名前 <code class="docutils literal"><span class="pre">name</span></code> が空だった場合はかわりに演算子番号が出力されます。</p>
+<div class="section" id="id3">
+<h3>例<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre>Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
+Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
+hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
+SzSz        = -3.16323622995942133e-01  0.00000000000000000e+00
+SxSx        = -8.55704529153783616e-02  0.00000000000000000e+00
+SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="onesite-obs-dat">
+<h2>5.5.3. <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>onesite 演算子の期待値 <span class="math">\(\langle\hat{A}^\alpha_i\rangle\)</span> が出力されます。
+各行4列からなります。</p>
+<ol class="arabic simple">
+<li>演算子の識別番号 <span class="math">\(\alpha\)</span></li>
+<li>サイトの番号 <span class="math">\(i\)</span></li>
+<li>期待値の実部 <span class="math">\(\mathrm{Re}\langle\hat{A}^\alpha_i\rangle\)</span></li>
+<li>期待値の虚部 <span class="math">\(\mathrm{Im}\langle\hat{A}^\alpha_i\rangle\)</span></li>
+</ol>
+<div class="section" id="id4">
+<h3>例<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre># $1: op_group
+# $2: site_index
+# $3: real
+# $4: imag
+
+0 0 3.76530616899634130e-01 -2.99603784556741935e-14
+0 1 -3.76509754722919920e-01 3.00680681515725412e-14
+0 2 -3.76530553357656839e-01 3.02876200904715373e-14
+0 3 3.76509691203749330e-01 -2.97993441043978597e-14
+1 0 2.83097867896386720e-05 -6.21066660268729473e-16
+1 1 -2.83466420461770130e-05 -8.15368057756069800e-17
+1 2 -2.83482100124389073e-05 3.48504667721631793e-16
+1 3 2.83082155246732127e-05 -1.53146658372287057e-16
+2 0 -5.10908316848065886e-05 -3.18447603113971937e-16
+2 1 5.11500132844305047e-05 2.55186152594026040e-17
+2 2 5.11528422294741045e-05 6.39101320470157777e-16
+2 3 -5.10879957978090937e-05 -2.65547621655117576e-16
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="twosite-obs-dat">
+<h2>5.5.4. <code class="docutils literal"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>twosite 演算子の期待値が出力されます。
+各行6列からなります。</p>
+<ol class="arabic simple">
+<li>twosite 演算子の識別番号</li>
+<li>source サイトの番号</li>
+<li>source からみた target のx 変位</li>
+<li>source からみた target のy 変位</li>
+<li>期待値の実部</li>
+<li>期待値の虚部</li>
+</ol>
+<div class="section" id="id5">
+<h3>例<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre># $1: op_group
+# $2: source_site
+# $3: dx
+# $4: dy
+# $5: real
+# $6: imag
+
+0 0 0 1 -3.34687360117867760e-01 2.68843730436328272e-14
+0 0 1 0 -3.30837879477270169e-01 2.57989265090129366e-14
+0 1 0 1 -3.34681128826821883e-01 2.69020083537152420e-14
+0 1 1 0 -3.32798087400507758e-01 2.66387741317542961e-14
+0 2 0 1 -3.36648943667345379e-01 2.61735500972987307e-14
+0 2 1 0 -3.30837927854314540e-01 2.64427835764587303e-14
+0 3 0 1 -3.36688835303625589e-01 2.64550560558367253e-14
+0 3 1 0 -3.32798142125971141e-01 2.64082512640410446e-14
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="correlation-dat">
+<h2>5.5.5. <code class="docutils literal"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>相関関数 <span class="math">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
+各行7列から構成されます。</p>
+<ol class="arabic simple">
+<li>左演算子の識別番号 <span class="math">\(\alpha\)</span></li>
+<li>左演算子のサイト番号 <span class="math">\(i\)</span></li>
+<li>右演算子の識別番号 <span class="math">\(\beta\)</span></li>
+<li>右演算子のx方向変位 <span class="math">\(x\)</span></li>
+<li>右演算子のy方向変位 <span class="math">\(y\)</span></li>
+<li>演算子の実部 <span class="math">\(\mathrm{Re}C\)</span></li>
+<li>演算子の虚部 <span class="math">\(\mathrm{Im}C\)</span></li>
+</ol>
+<div class="section" id="id6">
+<h3>例<a class="headerlink" href="#id6" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre># $1: left_op
+# $2: left_site
+# $3: right_op
+# $4: right_dx
+# $5: right_dy
+# $6: real
+# $7: imag
+
+0 0 0 1 0 -1.71759992763061836e-01 1.36428299157186382e-14
+0 0 0 2 0 1.43751794649139675e-01 -1.14110668277268192e-14
+0 0 0 3 0 -1.42375391377041444e-01 1.14103263451826963e-14
+0 0 0 4 0 1.41835919840103741e-01 -1.11365361507372103e-14
+0 0 0 5 0 -1.41783912096811515e-01 1.12856813523671142e-14
+0 0 0 0 1 -1.72711348845767942e-01 1.40873628493918905e-14
+0 0 0 0 2 1.43814797743900907e-01 -1.17958665742991377e-14
+0 0 0 0 3 -1.42415176172922653e-01 1.22109610917000360e-14
+0 0 0 0 4 1.41838862178711583e-01 -1.19321507524565005e-14
+0 0 0 0 5 -1.41792935491960648e-01 1.23094733264734764e-14
+1 0 1 1 0 -7.95389427681298805e-02 6.15901595234210079e-15
+1 0 1 2 0 2.01916094009441903e-02 -1.27162373457160362e-15
+... Skipped ...
+2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="time-dat">
+<h2>5.5.6. <code class="docutils literal"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>計算時間が出力されます。</p>
+<div class="section" id="id7">
+<h3>例<a class="headerlink" href="#id7" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none"><div class="highlight"><pre>time simple update = 1.64429
+time full update   = 0
+time environmnent  = 0.741858
+time observable    = 0.104487
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. ファイルフォーマット</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal"><span class="pre">tense_simple</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">5.5. 出力ファイル</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">5. ファイルフォーマット</a><ul>
+      <li>Previous: <a href="expert_format.html" title="前の章へ">5.4. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+      <li>Next: <a href="../algorithm/index.html" title="次の章へ">&lt;no title&gt;</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/output_format.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
