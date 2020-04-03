@@ -1057,9 +1057,13 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 
   if (mpirank == 0) {
     std::vector<tensor_type> loc_obs(num_onesite_operators);
+    int numsites = 0;
     for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
       for (int i = 0; i < N_UNIT; ++i) {
-        loc_obs[ilops] += onesite_obs[ilops][i];
+        if(lattice.physical_dims[i] > 1){
+          loc_obs[ilops] += onesite_obs[ilops][i];
+          ++numsites;
+        }
       }
     }
     std::vector<tensor_type> two_obs(num_twosite_operators);
@@ -1075,7 +1079,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     }
 
     {
-      const double invV = 1.0 / N_UNIT;
+      const double invV = 1.0 / numsites;
       std::string filename = outdir + "/density.dat";
       std::ofstream ofs(filename.c_str());
       ofs << std::scientific
@@ -1131,7 +1135,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     }
 
     if (peps_parameters.print_level >= PrintLevel::info) {
-      const double invV = 1.0 / N_UNIT;
+      const double invV = 1.0 / numsites;
       std::cout << std::endl;
 
       std::cout << "Onesite observables per site:" << std::endl;
