@@ -1,9 +1,9 @@
 ![TeNeS logo](docs/sphinx/img/TeNeS_logo_banner.png)
 
-| Build status | Documentation (latest) | Documentation (latest stable) |
+| Branch | Build status | Documentation |
 | :-: | :-: | :-: |
-| [![Build status (master)](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc latest en](https://img.shields.io/badge/doc--en-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc latest ja](https://img.shields.io/badge/doc--ja-master-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) | [![doc latest_stable en](https://img.shields.io/badge/doc--en-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/en/html/index.html) [![doc latest_stable ja](https://img.shields.io/badge/doc--ja-v0.1.0-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/v0.1.0/ja/html/index.html) |
-
+| master (latest stable) | [![master](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) |
+| develop (latest) | [![develop](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=develop)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
 
 # TeNeS
 
