@@ -1058,11 +1058,11 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
   if (mpirank == 0) {
     std::vector<tensor_type> loc_obs(num_onesite_operators);
     int numsites = 0;
-    for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
-      for (int i = 0; i < N_UNIT; ++i) {
-        if(lattice.physical_dims[i] > 1){
+    for (int i = 0; i < N_UNIT; ++i) {
+      if(lattice.physical_dims[i] > 1){
+        ++numsites;
+        for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
           loc_obs[ilops] += onesite_obs[ilops][i];
-          ++numsites;
         }
       }
     }
