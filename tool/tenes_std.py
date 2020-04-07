@@ -43,15 +43,17 @@ Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
 
 
 def drop_comment(line: str) -> str:
-    last = line.find('#')
+    last = line.find("#")
     if last < 0:
         return line[:]
     else:
-        return line[:last+1]
+        return line[: last]
 
 
 def parse_bond(line: str) -> Bond:
     line = drop_comment(line)
+    if not line:
+        return None
     words = line.split()
     source_site = int(words[0])
     dx = int(words[1])
@@ -517,9 +519,7 @@ class TwositeObservable:
         ret.append("group = {}".format(self.group))
         ret.append('bonds = """')
         for b in self.bonds:
-            ret.append(
-                "{} {} {}".format(b.source_site, b.dx, b.dy)
-            )
+            ret.append("{} {} {}".format(b.source_site, b.dx, b.dy))
         ret.append('"""')
         if self.elements is not None:
             dims = list(self.elements.shape[0:2])
@@ -635,6 +635,8 @@ class Model:
             bonds = []
             for line in ham["bonds"].strip().splitlines():
                 b = parse_bond(line)
+                if b is None:
+                    continue
                 ox, oy = self.unitcell.target_offset(b)
                 offset_x_min = min(ox, offset_x_min)
                 offset_x_max = max(ox, offset_x_max)
@@ -666,7 +668,9 @@ class Model:
                 name = twosite["name"]
                 group = twosite["group"]
                 bonds = [
-                    parse_bond(line) for line in twosite["bonds"].strip().splitlines()
+                    parse_bond(line)
+                    for line in twosite["bonds"].strip().splitlines()
+                    if parse_bond(line) is not None
                 ]
                 if "elements" in twosite:
                     dim = twosite["dim"]
