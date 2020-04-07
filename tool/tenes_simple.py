@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
-import copy
 import re
 
 from collections import namedtuple
@@ -22,6 +21,8 @@ from itertools import chain, product
 from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
+
+from scipy.linalg import expm, norm
 
 import toml
 
@@ -312,6 +313,7 @@ class TriangularLattice(Lattice):
         elif self.initial_states == "antiferro":
             self.sublattice.append(SubLattice([vdim] * 4))
             self.sublattice.append(SubLattice([vdim] * 4))
+            self.sublattice.append(SubLattice([vdim] * 4))
             nhops = np.ones((L + 1, W + 1), dtype=np.int) * 100000000
             nhops[0, 0] = 0
 
@@ -320,12 +322,14 @@ class TriangularLattice(Lattice):
             if self.initial_states == "antiferro":
                 nhop = nhops[x, y]
                 nhops[x + 1, y] = min(nhop + 1, nhops[x + 1, y])
-                nhops[x, y + 1] = min(nhop + 1, nhops[x, y + 1])
-                nhops[x + 1, y + 1] = min(nhop + 2, nhops[x + 1, y + 1])
+                nhops[x, y + 1] = min(nhop + 2, nhops[x, y + 1])
+                nhops[x - 1, y + 1] = min(nhop + 1, nhops[x - 1, y + 1])
                 if nhop % 3 == 0:
                     self.sublattice[0].add_site(source)
-                else:
+                elif nhop % 3 == 1:
                     self.sublattice[1].add_site(source)
+                else:
+                    self.sublattice[2].add_site(source)
 
             self.coords.append(a0 * x + a1 * y)
 
@@ -517,29 +521,52 @@ class Model(object):
             self.ham_list.append(hl)
 
 
+def Sz(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(N):
+        m = S - i
+        ret[i, i] = m
+    return ret
+
+
+def Splus(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(1, N):
+        m = S - i
+        ret[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
+    return ret
+
+
+def Sminus(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(N - 1):
+        m = S - i
+        ret[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
+    return ret
+
+
+def Sx(S: float) -> np.ndarray:
+    return 0.5 * (Splus(S) + Sminus(S))
+
+
+def Sy(S: float) -> np.ndarray:
+    return -0.5j * (Splus(S) - Sminus(S))
+
+
 class SpinModel(Model):
     def __init__(self, param: Dict[str, Any]):
         super().__init__()
 
-        S = param.get("s", 0.5)
+        self.S = param.get("s", 0.5)
+        S = self.S
         assert int(2 * S) == 2 * S
 
         self.N = int(2 * S) + 1
-        M = self.N
-        Sz = np.zeros((M, M))
-        Splus = np.zeros((M, M))
-        Sminus = np.zeros((M, M))
-        for i in range(M):
-            m = S - i
-            Sz[i, i] = m
-            if i > 0:
-                Splus[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
-            if i < M - 1:
-                Sminus[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
-        Sx = 0.5 * (Splus + Sminus)
-        Sy = 0.5j * (Sminus - Splus)
 
-        self.onesite_ops = [Sz, Sx, Sy]
+        self.onesite_ops = [Sz(S), Sx(S), Sy(S)]
         self.onesite_ops_name = ["Sz", "Sx", "Sy"]
 
         self.twosite_ops = []
@@ -549,6 +576,30 @@ class SpinModel(Model):
             self.twosite_ops_name.append("{}{}".format(name, name))
         self.read_params(param)
         super()._sort_ham_groups()
+
+    def initial_states(self, num_sublattice: int) -> np.ndarray:
+        def coherent_state(theta, phi):
+            zeta = np.tan(0.5 * theta) * np.complex(np.cos(phi), np.sin(phi))
+            sm = Sminus(self.S)
+            U = expm(zeta * sm)
+            ret = np.zeros(self.N)
+            ret[0] = 1.0
+            ret = np.dot(U, ret)
+            return ret / norm(ret)
+
+        ret = np.zeros((num_sublattice, self.N))
+        if num_sublattice == 1:
+            ret[0, 0] = 1.0
+        elif num_sublattice == 2:
+            ret[0, 0] = 1.0
+            ret[1, 1] = 1.0
+        elif num_sublattice == 3:
+            ret[0, 0] = 1.0
+            v = coherent_state(2 * np.pi / 3, 0.0)
+            ret[1, :] = v.real
+            v = coherent_state(2 * np.pi / 3, np.pi)
+            ret[2, :] = v.real
+        return ret
 
     def model_hamiltonian(self, z: int, **args) -> np.ndarray:
         """
@@ -765,10 +816,12 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     ret.append("skew = {}".format(lattice.skew))
 
     ret.append("")
-    st = [[0.0] * model.N]
-    st[0][0] = 1.0
-    st.append(st[0][-1::-1])
-    st.append(st[0][-1::-1])
+
+    num_sublattice = 0
+    for sl in lattice.sublattice:
+        if not sl.is_vacancy:
+            num_sublattice += 1
+    st = model.initial_states(num_sublattice)
     for i, sl in enumerate(lattice.sublattice):
         ret.append("[[tensor.unitcell]]")
         ret.append("virtual_dim = {}".format(sl.vdim))
@@ -781,7 +834,8 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             if lattice.initial_states == "random":
                 ret.append("initial_state = [0.0]")
             else:
-                ret.append("initial_state = {}".format(st[i]))
+                v = ', '.join(map(str, st[i, :]))
+                ret.append("initial_state = [{}]".format(v))
         ret.append("noise = {}".format(lattice.noise))
         ret.append("")
 
@@ -902,11 +956,7 @@ if __name__ == "__main__":
         help="Site Information file",
     )
     parser.add_argument(
-        "-b",
-        "--bondfile",
-        dest="bondfile",
-        default="",
-        help="Bond Information file",
+        "-b", "--bondfile", dest="bondfile", default="", help="Bond Information file",
     )
     parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.0-beta"
