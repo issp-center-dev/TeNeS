@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
-import copy
 import re
 
 from collections import namedtuple
@@ -22,6 +21,8 @@ from itertools import chain, product
 from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
+
+from scipy.linalg import expm, norm
 
 import toml
 
@@ -79,6 +80,26 @@ def dumpbond(bond: Bond) -> str:
     return "{} {} {}".format(bond.source, bond.dx, bond.dy)
 
 
+class SubLattice:
+    def __init__(self, vdim: List[int], is_vacancy: bool = False):
+        self.sites = []
+        self.vdim = vdim
+        self.is_vacancy = is_vacancy
+
+    def add_site(self, site: int):
+        self.sites.append(site)
+
+    def to_dict(self, physdim: int) -> Dict[str, Any]:
+        ret = {}
+        ret["index"] = self.sites
+        if self.is_vacancy:
+            ret["physical_dim"] = 1
+        else:
+            ret["physical_dim"] = physdim
+        ret["virtual_dim"] = self.vdim
+        return ret
+
+
 class Lattice(object):
     def __init__(self, param: Dict[str, Any]):
         self.type = ""
@@ -86,25 +107,64 @@ class Lattice(object):
         self.skew = 0
         self.L = param["l"]
         self.W = param.get("w", self.L)
-        self.vdims = [[param["virtual_dim"]] * 4]
-        self.sublattice = [[]]
+        self.vdim = param["virtual_dim"]
+        self.sublattice = []
         self.bonds = [[[] for j in range(3)] for i in range(3)]
         self.initial_states = param.get("initial", "random")
         self.noise = param.get("noise", 1e-2)
+        self.coords = []
+        self.latticevector = np.eye(2)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
         ret = {}
         ret["L_sub"] = [self.L, self.W]
         ret["skew"] = self.skew
+        ret["unitcell"] = [sub.to_dict(physdim) for sub in self.sublattice]
+        return ret
 
-        ret["unitcell"] = []
-        for i, sublat in enumerate(self.sublattice):
-            unitcell = {}
-            unitcell["index"] = sublat
-            unitcell["physical_dim"] = physdim
-            unitcell["virtual_dim"] = self.vdims[i]
-            ret["unitcell"].append(unitcell)
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        return np.array([x, y])
 
+    def write_coordinates(self, f):
+        f.write("# coord_version = 1\n")
+        f.write("# name = {}\n".format(self.type))
+        f.write(
+            "# a0 = {} {}\n".format(self.latticevector[0, 0], self.latticevector[0, 1])
+        )
+        f.write(
+            "# a1 = {} {}\n".format(self.latticevector[1, 0], self.latticevector[1, 1])
+        )
+        f.write("# $1: index\n")
+        f.write("# $2: x\n")
+        f.write("# $3: y\n")
+        f.write("\n")
+        for i, c in enumerate(self.coords):
+            if c is not None:
+                # f.write("{} {} {}\n".format(i, c[0], c[1]))
+                x, y = index2coord(i, self.L)
+                C = self.cartesian_coordinate(x, y)
+                f.write("{} {} {}\n".format(i, C[0], C[1]))
+
+    def write_bonds(self, f, nnlevel):
+        for i, bonds in enumerate(self.bonds[nnlevel]):
+            for b in bonds:
+                source = b.source
+                x, y = index2coord(source, self.L)
+                c = self.cartesian_coordinate(x, y)
+                f.write("{} {} {}\n".format(c[0], c[1], i))
+                c = self.cartesian_coordinate(x + b.dx, y + b.dy)
+                f.write("{} {} {}\n".format(c[0], c[1], i))
+                f.write("\n\n")
+
+    def numsites(self):
+        return self.L * self.W
+
+    def valid_sites(self):
+        ret = []
+        for sl in self.sublattice:
+            if not sl.is_vacancy:
+                ret += sl.sites
+        ret.sort()
         return ret
 
 
@@ -119,19 +179,22 @@ class SquareLattice(Lattice):
             self.skew = 1
         assert L > 1
 
+        self.latticevector = np.diag([L, W])
+
         if self.initial_states == "ferro":
-            self.sublattice = [[]]
+            self.sublattice = [SubLattice([self.vdim] * 4)]
         elif self.initial_states == "antiferro":
-            self.sublattice = [[], []]
-            self.vdims.append(copy.copy(self.vdims[0]))
+            self.sublattice = [SubLattice([self.vdim] * 4), SubLattice([self.vdim] * 4)]
 
         for source in range(L * W):
+            x, y = index2coord(source, L)
             if self.initial_states == "antiferro":
-                x, y = index2coord(source, L)
                 if (x + y) % 2 == 0:
-                    self.sublattice[0].append(source)
+                    self.sublattice[0].add_site(source)
                 else:
-                    self.sublattice[1].append(source)
+                    self.sublattice[1].add_site(source)
+
+            self.coords.append(np.array([x, y]))
 
             # 1st neighbors
             self.bonds[0][0].append(Bond(source, 1, 0))
@@ -153,49 +216,79 @@ class HoneycombLattice(Lattice):
         self.z = 3
         self.bondtypes = 3
 
+        self.L *= 2
+
         L, W = self.L, self.W
-        if W % 2 != 0:
-            self.skew = 1
-        assert L > 1
+        self.skew = W % L
 
-        self.vdims.append(copy.copy(self.vdims[0]))
-        self.vdims[0][0] = 1
-        self.vdims[1][2] = 1
+        vdim = self.vdim
+        self.sublattice.append(SubLattice([vdim, 1, vdim, vdim]))
+        self.sublattice.append(SubLattice([vdim, vdim, vdim, 1]))
 
-        self.sublattice.append([])
+        self.coords = [np.zeros(2) for _ in range(L * W)]
 
-        for source in range(L * W):
-            x, y = index2coord(source, L)
-            if (x + y) % 2 == 0:
+        NX = L // 2
+        NY = W
+
+        self.latticevector = np.array([[np.sqrt(3.0), 0.0], [np.sqrt(3.0) / 2, 1.5]])
+        self.latticevector *= np.array([[NX], [NY]])
+        a0 = np.array([np.sqrt(3.0), 0.0])
+        a1 = np.array([np.sqrt(3.0) / 2, 1.5])
+        other = (a0 + a1) / 3.0
+
+        for y in range(NY):
+            for X in range(NX):
+                c = a0 * X + a1 * y
+
+                #
                 # sublattice A
-                self.sublattice[0].append(source)
+                #
+                x = (2 * X + y) % L
+                index = coord2index(x, y, L)
+                self.coords[index] = c
+                self.sublattice[0].add_site(index)
 
                 # 1st neighbors
-                self.bonds[0][0].append(Bond(source, 1, 0))
-                self.bonds[0][1].append(Bond(source, 0, 1))
+                self.bonds[0][0].append(Bond(index, 1, 0))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(Bond(source, 0, 2))
-                self.bonds[1][1].append(Bond(source, 1, 1))
-                self.bonds[1][2].append(Bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 1))
+                self.bonds[1][1].append(Bond(index, 1, 1))
+                self.bonds[1][2].append(Bond(index, 2, 0))
 
                 # 3rd neighbors
-                self.bonds[2][2].append(Bond(source, 1, 2))
-            else:
+                self.bonds[2][1].append(Bond(index, 2, -1))
+                self.bonds[2][2].append(Bond(index, 0, 1))
+
+                #
                 # sublattice B
-                self.sublattice[1].append(source)
+                #
+                x = (2 * X + y + 1) % L
+                index = coord2index(x, y, L)
+                self.coords[index] = c + other
+                self.sublattice[1].add_site(index)
 
                 # 1st neighbors
-                self.bonds[0][2].append(Bond(source, 0, 1))
+                self.bonds[0][1].append(Bond(index, 1, 0))
+                self.bonds[0][2].append(Bond(index, 0, 1))
 
                 # 2nd neighbors
-                self.bonds[1][0].append(Bond(source, 0, 2))
-                self.bonds[1][1].append(Bond(source, 1, 1))
-                self.bonds[1][2].append(Bond(source, -1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 1))
+                self.bonds[1][1].append(Bond(index, 1, 1))
+                self.bonds[1][2].append(Bond(index, 2, 0))
 
                 # 3rd neighbors
-                self.bonds[2][0].append(Bond(source, 1, 0))
-                self.bonds[2][1].append(Bond(source, -1, 2))
+                self.bonds[2][0].append(Bond(index, 2, 1))
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([np.sqrt(3.0), 0.0])
+        a1 = np.array([np.sqrt(3.0) / 2, 1.5])
+        other = (a0 + a1) / 3.0
+        X = x - y
+        if X % 2 == 0:
+            return a0 * (X // 2) + a1 * y
+        else:
+            return a0 * (X // 2) + a1 * y + other
 
 
 class TriangularLattice(Lattice):
@@ -207,40 +300,154 @@ class TriangularLattice(Lattice):
         L, W = self.L, self.W
         assert L > 1 and W > 1
 
+        self.latticevector = np.array([[1.0, 0.0], [0.5, np.sqrt(3.0) / 2]])
+        self.latticevector *= np.array([[L], [W]])
+
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+
+        vdim = self.vdim
+
         if self.initial_states == "ferro":
-            self.sublattice = [[]]
+            self.sublattice.append(SubLattice([vdim] * 4))
         elif self.initial_states == "antiferro":
-            self.sublattice = [[], []]
-            self.vdims.append(copy.copy(self.vdims[0]))
+            self.sublattice.append(SubLattice([vdim] * 4))
+            self.sublattice.append(SubLattice([vdim] * 4))
+            self.sublattice.append(SubLattice([vdim] * 4))
             nhops = np.ones((L + 1, W + 1), dtype=np.int) * 100000000
             nhops[0, 0] = 0
 
         for source in range(L * W):
+            x, y = index2coord(source, L)
             if self.initial_states == "antiferro":
-                x, y = index2coord(source, L)
                 nhop = nhops[x, y]
                 nhops[x + 1, y] = min(nhop + 1, nhops[x + 1, y])
-                nhops[x, y + 1] = min(nhop + 1, nhops[x, y + 1])
-                nhops[x + 1, y + 1] = min(nhop + 2, nhops[x + 1, y + 1])
+                nhops[x, y + 1] = min(nhop + 2, nhops[x, y + 1])
+                nhops[x - 1, y + 1] = min(nhop + 1, nhops[x - 1, y + 1])
                 if nhop % 3 == 0:
-                    self.sublattice[0].append(source)
+                    self.sublattice[0].add_site(source)
+                elif nhop % 3 == 1:
+                    self.sublattice[1].add_site(source)
                 else:
-                    self.sublattice[1].append(source)
+                    self.sublattice[2].add_site(source)
+
+            self.coords.append(a0 * x + a1 * y)
 
             # 1st neighbors
             self.bonds[0][0].append(Bond(source, 1, 0))
             self.bonds[0][1].append(Bond(source, 0, 1))
-            self.bonds[0][2].append(Bond(source, 1, 1))
+            self.bonds[0][2].append(Bond(source, -1, 1))
 
             # 2nd neighbors
-            self.bonds[1][0].append(Bond(source, 1, 2))
-            self.bonds[1][1].append(Bond(source, 2, 1))
-            self.bonds[1][2].append(Bond(source, 1, -1))
+            self.bonds[1][0].append(Bond(source, -1, 2))
+            self.bonds[1][1].append(Bond(source, -2, 1))
+            self.bonds[1][2].append(Bond(source, 1, 1))
 
             # 3rd neighbors
             self.bonds[2][0].append(Bond(source, 2, 0))
             self.bonds[2][1].append(Bond(source, 0, 2))
-            self.bonds[2][2].append(Bond(source, 2, 2))
+            self.bonds[2][2].append(Bond(source, -2, 2))
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+        return a0 * x + a1 * y
+
+
+class KagomeLattice(Lattice):
+    def __init__(self, param: Dict[str, Any]):
+        super().__init__(param)
+        self.type = "kagome lattice"
+        self.z = 4
+
+        self.L *= 2
+        self.W *= 2
+
+        L, W = self.L, self.W
+
+        self.latticevector = np.array([[1.0, 0.0], [0.5, np.sqrt(3.0) / 2]])
+        self.latticevector *= np.array([[L], [W]])
+
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+
+        vd = self.vdim
+        self.sublattice.append(SubLattice([vd, vd, vd, vd], is_vacancy=False))
+        self.sublattice.append(SubLattice([vd, 1, vd, 1], is_vacancy=False))
+        self.sublattice.append(SubLattice([1, vd, 1, vd], is_vacancy=False))
+        self.sublattice.append(SubLattice([1, 1, 1, 1], is_vacancy=True))
+
+        for index in range(L * W):
+            x, y = index2coord(index, L)
+
+            if x % 2 == 0 and y % 2 == 0:
+                #
+                # sublattice A
+                #
+                self.sublattice[0].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][0].append(Bond(index, 1, 0))
+                self.bonds[0][0].append(Bond(index, 0, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, -1, 2))
+                self.bonds[1][0].append(Bond(index, -2, 1))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 2, 0))
+                self.bonds[2][0].append(Bond(index, 0, 2))
+                self.bonds[2][1].append(Bond(index, -2, 2))
+            elif x % 2 == 1 and y % 2 == 0:
+                #
+                # sublattice B
+                #
+                self.sublattice[1].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][1].append(Bond(index, 1, 0))
+                self.bonds[0][0].append(Bond(index, -1, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, 1, 1))
+                self.bonds[1][0].append(Bond(index, -1, 2))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 2, 0))
+                self.bonds[2][0].append(Bond(index, -2, 2))
+                self.bonds[2][1].append(Bond(index, 0, 2))
+            elif x % 2 == 0 and y % 2 == 1:
+                #
+                # sublattice C
+                #
+                self.sublattice[2].add_site(index)
+                self.coords.append(a0 * x + a1 * y)
+
+                # 1st neighbors
+                self.bonds[0][1].append(Bond(index, 0, 1))
+                self.bonds[0][1].append(Bond(index, -1, 1))
+
+                # 2nd neighbors
+                self.bonds[1][0].append(Bond(index, 1, 1))
+                self.bonds[1][0].append(Bond(index, -2, 1))
+
+                # 3rd neighbors
+                self.bonds[2][0].append(Bond(index, 0, 2))
+                self.bonds[2][0].append(Bond(index, -2, 2))
+                self.bonds[2][1].append(Bond(index, 2, 0))
+            else:
+                #
+                # sublattice D (vacancy)
+                #
+                self.sublattice[3].add_site(index)
+                self.coords.append(None)
+
+    def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        a0 = np.array([1.0, 0.0])
+        a1 = np.array([0.5, np.sqrt(3.0) / 2])
+        return a0 * x + a1 * y
 
 
 class Model(object):
@@ -314,29 +521,52 @@ class Model(object):
             self.ham_list.append(hl)
 
 
+def Sz(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(N):
+        m = S - i
+        ret[i, i] = m
+    return ret
+
+
+def Splus(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(1, N):
+        m = S - i
+        ret[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
+    return ret
+
+
+def Sminus(S: float) -> np.ndarray:
+    N = int(2 * S) + 1
+    ret = np.zeros((N, N))
+    for i in range(N - 1):
+        m = S - i
+        ret[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
+    return ret
+
+
+def Sx(S: float) -> np.ndarray:
+    return 0.5 * (Splus(S) + Sminus(S))
+
+
+def Sy(S: float) -> np.ndarray:
+    return -0.5j * (Splus(S) - Sminus(S))
+
+
 class SpinModel(Model):
     def __init__(self, param: Dict[str, Any]):
         super().__init__()
 
-        S = param.get("s", 0.5)
+        self.S = param.get("s", 0.5)
+        S = self.S
         assert int(2 * S) == 2 * S
 
         self.N = int(2 * S) + 1
-        M = self.N
-        Sz = np.zeros((M, M))
-        Splus = np.zeros((M, M))
-        Sminus = np.zeros((M, M))
-        for i in range(M):
-            m = S - i
-            Sz[i, i] = m
-            if i > 0:
-                Splus[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
-            if i < M - 1:
-                Sminus[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
-        Sx = 0.5 * (Splus + Sminus)
-        Sy = 0.5j * (Sminus - Splus)
 
-        self.onesite_ops = [Sz, Sx, Sy]
+        self.onesite_ops = [Sz(S), Sx(S), Sy(S)]
         self.onesite_ops_name = ["Sz", "Sx", "Sy"]
 
         self.twosite_ops = []
@@ -346,6 +576,30 @@ class SpinModel(Model):
             self.twosite_ops_name.append("{}{}".format(name, name))
         self.read_params(param)
         super()._sort_ham_groups()
+
+    def initial_states(self, num_sublattice: int) -> np.ndarray:
+        def coherent_state(theta, phi):
+            zeta = np.tan(0.5 * theta) * np.complex(np.cos(phi), np.sin(phi))
+            sm = Sminus(self.S)
+            U = expm(zeta * sm)
+            ret = np.zeros(self.N)
+            ret[0] = 1.0
+            ret = np.dot(U, ret)
+            return ret / norm(ret)
+
+        ret = np.zeros((num_sublattice, self.N))
+        if num_sublattice == 1:
+            ret[0, 0] = 1.0
+        elif num_sublattice == 2:
+            ret[0, 0] = 1.0
+            ret[1, 1] = 1.0
+        elif num_sublattice == 3:
+            ret[0, 0] = 1.0
+            v = coherent_state(2 * np.pi / 3, 0.0)
+            ret[1, :] = v.real
+            v = coherent_state(2 * np.pi / 3, np.pi)
+            ret[2, :] = v.real
+        return ret
 
     def model_hamiltonian(self, z: int, **args) -> np.ndarray:
         """
@@ -484,6 +738,8 @@ def make_lattice(param: Dict[str, Any]) -> Lattice:
         lattice = HoneycombLattice(latparam)
     elif latname.startswith("triangular"):
         lattice = TriangularLattice(latparam)
+    elif latname.startswith("kagome"):
+        lattice = KagomeLattice(latparam)
     else:
         msg = "Unknown lattice: {}".format(latname)
         raise RuntimeError(msg)
@@ -560,19 +816,27 @@ def tenes_simple(param: Dict[str, Any]) -> str:
     ret.append("skew = {}".format(lattice.skew))
 
     ret.append("")
-    st = [[0.0] * model.N]
-    st[0][0] = 1.0
-    st.append(st[0][-1::-1])
-    for i, (sl, vdims) in enumerate(zip(lattice.sublattice, lattice.vdims)):
+
+    num_sublattice = 0
+    for sl in lattice.sublattice:
+        if not sl.is_vacancy:
+            num_sublattice += 1
+    st = model.initial_states(num_sublattice)
+    for i, sl in enumerate(lattice.sublattice):
         ret.append("[[tensor.unitcell]]")
-        ret.append("index = {}".format(sl))
-        ret.append("physical_dim = {}".format(model.N))
-        ret.append("virtual_dim = {}".format(vdims))
-        ret.append("noise = {}".format(lattice.noise))
-        if lattice.initial_states == "random":
-            ret.append("initial_state = [0.0]")
+        ret.append("virtual_dim = {}".format(sl.vdim))
+        ret.append("index = {}".format(sl.sites))
+        if sl.is_vacancy:
+            ret.append("physical_dim = {}".format(1))
+            ret.append("initial_state = [1.0]")
         else:
-            ret.append("initial_state = {}".format(st[i]))
+            ret.append("physical_dim = {}".format(model.N))
+            if lattice.initial_states == "random":
+                ret.append("initial_state = [0.0]")
+            else:
+                v = ', '.join(map(str, st[i, :]))
+                ret.append("initial_state = [{}]".format(v))
+        ret.append("noise = {}".format(lattice.noise))
         ret.append("")
 
     for ham in hams:
@@ -588,6 +852,9 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         ret.append('"""')
         ret.append("")
 
+    vsites = lattice.valid_sites()
+    if len(vsites) == lattice.numsites():
+        vsites = []
     ret.append("[observable]")
     lops = model.onesite_observables_as_dict()
     is_complex = True
@@ -600,7 +867,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             ret.append('name = "{}"'.format(lop["name"]))
             ret.append("group = {}".format(lop["group"]))
             groups.append(lop["group"])
-            ret.append("sites = {}".format(lop["sites"]))
+            ret.append("sites = {}".format(vsites))
             ret.append("dim = {}".format(lop["dim"]))
             ret.append('elements = """')
             for line in lop["elements"].split("\n"):
@@ -629,7 +896,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         oo = model.onesite_ops[i]
         if not is_complex:
             if not np.all(np.isreal(oo)):
-                v = np.einsum('ij,kl -> ikjl', oo, oo)
+                v = np.einsum("ij,kl -> ikjl", oo, oo)
                 if not np.all(np.isreal(v)):
                     continue
         ret.append("[[observable.twosite]]")
@@ -643,7 +910,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         if is_complex or np.all(np.isreal(oo)):
             ret.append("ops = {}".format([i] * 2))
         else:
-            v = np.einsum('ij,kl -> ikjl', oo, oo)
+            v = np.einsum("ij,kl -> ikjl", oo, oo)
             if is_complex or np.all(np.isreal(v)):
                 ret.append('elements = """')
                 for line in dump_op(v):
@@ -665,7 +932,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             ret.append("  {},".format(ops))
         ret.append("]")
 
-    return "\n".join(ret)
+    return "\n".join(ret), lattice
 
 
 if __name__ == "__main__":
@@ -682,16 +949,34 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="std.toml", help="Output TOML file"
     )
     parser.add_argument(
+        "-c",
+        "--coordinatefile",
+        dest="coords",
+        default="coordinates.dat",
+        help="Site Information file",
+    )
+    parser.add_argument(
+        "-b", "--bondfile", dest="bondfile", default="", help="Bond Information file",
+    )
+    parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.0-beta"
     )
 
     args = parser.parse_args()
-    
+
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
-    res = tenes_simple(toml.load(args.input))
+    res, lattice = tenes_simple(toml.load(args.input))
 
     with open(args.output, "w") as f:
         f.write(res)
         f.write("\n")
+
+    with open(args.coords, "w") as f:
+        lattice.write_coordinates(f)
+
+    if args.bondfile:
+        for nn in range(3):
+            with open("{}-{}.dat".format(args.bondfile, nn), "w") as f:
+                lattice.write_bonds(f, nn)

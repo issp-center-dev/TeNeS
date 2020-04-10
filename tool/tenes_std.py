@@ -43,15 +43,17 @@ Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
 
 
 def drop_comment(line: str) -> str:
-    last = line.find('#')
+    last = line.find("#")
     if last < 0:
         return line[:]
     else:
-        return line[:last+1]
+        return line[: last]
 
 
 def parse_bond(line: str) -> Bond:
     line = drop_comment(line)
+    if not line:
+        return None
     words = line.split()
     source_site = int(words[0])
     dx = int(words[1])
@@ -250,7 +252,7 @@ class Unitcell:
     def bond_direction(self, bond: Bond) -> int:
         dx, dy = self.bond_displacement(bond)
         nhop = abs(dx) + abs(dy)
-        assert nhop == 1, '{} {}'.format(dx, dy)
+        assert nhop == 1, "{} {}".format(dx, dy)
         if dx == 1:
             direction = 2
         elif dx == -1:
@@ -355,9 +357,24 @@ class LatticeGraph:
                         continue
                     if not offset_y_min <= oy + ioy <= offset_y_max:
                         continue
-                    source_site = self.graph_site(self.unitcell.source_site(bond), iox, ioy)
-                    target_site = self.graph_site(self.unitcell.target_site(bond), iox + ox, ioy + oy)
-                    weight = 1.0 / D / D
+                    source_site = self.graph_site(
+                        self.unitcell.source_site(bond), iox, ioy
+                    )
+                    target_site = self.graph_site(
+                        self.unitcell.target_site(bond), iox + ox, ioy + oy
+                    )
+
+                    source_x, source_y = self.unitcell.wan2coord(
+                        self.unitcell.source_site(bond), iox, ioy
+                    )
+                    target_x, target_y = self.unitcell.wan2coord(
+                        self.unitcell.target_site(bond), iox, ioy
+                    )
+                    bond_x = (source_x + target_x) * 0.5
+                    bond_y = (source_y + target_y) * 0.5
+                    epsilon = 1.0e-6
+
+                    weight = 1.0 / D / D - epsilon * (100 * bond_x - bond_y)
                     if ox == oy == 0:
                         A[source_site, target_site] = weight
                     else:
@@ -401,7 +418,7 @@ class LatticeGraph:
             oy = target_offset_y - source_offset_y
             x, y = self.unitcell.index2coord(source_site)
             X, Y = self.unitcell.wan2coord(target_site, ox, oy)
-            b = Bond(source_site, X-x, Y-y)
+            b = Bond(source_site, X - x, Y - y)
             bonds.append(b)
             source_site = target_site
             source_offset_x = target_offset_x
@@ -517,9 +534,7 @@ class TwositeObservable:
         ret.append("group = {}".format(self.group))
         ret.append('bonds = """')
         for b in self.bonds:
-            ret.append(
-                "{} {} {}".format(b.source_site, b.dx, b.dy)
-            )
+            ret.append("{} {} {}".format(b.source_site, b.dx, b.dy))
         ret.append('"""')
         if self.elements is not None:
             dims = list(self.elements.shape[0:2])
@@ -547,9 +562,7 @@ class TwositeObservable:
 
     def to_twosite_operators(self) -> List[NNOperator]:
         if self.elements is not None:
-            return [
-                NNOperator(bond, elements=self.elements) for bond in self.bonds
-            ]
+            return [NNOperator(bond, elements=self.elements) for bond in self.bonds]
         else:
             return [NNOperator(bond, ops=self.ops) for bond in self.bonds]
 
@@ -635,13 +648,21 @@ class Model:
             bonds = []
             for line in ham["bonds"].strip().splitlines():
                 b = parse_bond(line)
+                if b is None:
+                    continue
                 ox, oy = self.unitcell.target_offset(b)
                 offset_x_min = min(ox, offset_x_min)
                 offset_x_max = max(ox, offset_x_max)
                 offset_y_min = min(oy, offset_y_min)
                 offset_y_max = max(oy, offset_y_max)
-                assert self.unitcell.sites[self.unitcell.source_site(b)].phys_dim == elements.shape[0]
-                assert self.unitcell.sites[self.unitcell.target_site(b)].phys_dim == elements.shape[1]
+                assert (
+                    self.unitcell.sites[self.unitcell.source_site(b)].phys_dim
+                    == elements.shape[0]
+                )
+                assert (
+                    self.unitcell.sites[self.unitcell.target_site(b)].phys_dim
+                    == elements.shape[1]
+                )
                 bonds.append(b)
                 op = NNOperator(b, elements=elements)
                 self.hamiltonians.append(op)
@@ -659,14 +680,18 @@ class Model:
                 sites = onesite["sites"]
                 dim = onesite["dim"]
                 elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
-                obs = OnesiteObservable(group=group, elements=elements, sites=sites, name=name)
+                obs = OnesiteObservable(
+                    group=group, elements=elements, sites=sites, name=name
+                )
                 self.onesites.append(obs)
 
             for twosite in observable.get("twosite", []):
                 name = twosite["name"]
                 group = twosite["group"]
                 bonds = [
-                    parse_bond(line) for line in twosite["bonds"].strip().splitlines()
+                    parse_bond(line)
+                    for line in twosite["bonds"].strip().splitlines()
+                    if parse_bond(line) is not None
                 ]
                 if "elements" in twosite:
                     dim = twosite["dim"]
