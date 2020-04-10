@@ -2,7 +2,7 @@
 
 .. _sec-simple-format:
 
-Input file for ``tense_simple`` 
+Input file for ``tenes_simple`` 
 ---------------------------------
 
 -  File format is
