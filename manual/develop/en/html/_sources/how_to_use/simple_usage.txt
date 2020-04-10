@@ -13,26 +13,42 @@ Usage of ``tenes_simple``
 - Takes a file as an argument
 - Output an input file for ``tenes_std``
 - Command line options are as follows
+
    - ``--help``
+
       - Show help message
+
    - ``--version``
+     
       - Show version number
+
    - ``--output=filename``
+
       - Specify the output file name ``filename``
       - Default is ``std.toml``
       - File name cannot be the same as the input file name
 
+   - ``--coordinatefile=coordfile``
+
+      - Specify the output coordinate file name ``coordfile``
+      - Default is ``coordinates.dat``
+      - In a coordinate file, the first, second, and third columns denote site index, x coordinate, and y coordinate (in Cartesian), respectively.
+
 The currently defined models and lattices are as follows:
 
 - Model
+
    - Spin system
+
 - Lattice
+
    - Square lattice
    - Triangular lattice
    - Honeycomb lattice
 
 See :ref:`sec-simple-format` for details of the input file.
 ::
+
    [lattice]
    type = "square lattice" # type of lattice
    L = 2                   # size of unitcell

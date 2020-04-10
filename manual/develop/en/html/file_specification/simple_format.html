@@ -54,7 +54,7 @@ format.</li>
 <div class="section" id="model-section">
 <h2>5.2.1. <code class="docutils literal"><span class="pre">model</span></code> section<a class="headerlink" href="#model-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the model to calculate.
-In this version, spin system (spin) is defined.</p>
+In this version, spin system (<code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code>) is defined.</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="25%" />
@@ -79,7 +79,7 @@ In this version, spin system (spin) is defined.</p>
 </table>
 <p>The parameter names such as interactions depend on the model type.</p>
 <div class="section" id="spin-system-spin">
-<h3>Spin system: spin<a class="headerlink" href="#spin-system-spin" title="Permalink to this headline">¶</a></h3>
+<h3>Spin system: <code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code><a class="headerlink" href="#spin-system-spin" title="Permalink to this headline">¶</a></h3>
 <p>Hamiltonian is described as</p>
 <div class="math">
 \[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]\]</div>
@@ -284,7 +284,7 @@ Square, honeycomb, and triangular lattice are defined.</p>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
-<td>lattice name (square, triangular or honeycomb lattice)</td>
+<td>lattice name (square,                triangular or honeycomb lattice)</td>
 <td>String</td>
 <td>&#8211;</td>
 </tr>
@@ -298,93 +298,123 @@ Square, honeycomb, and triangular lattice are defined.</p>
 <td>Integer</td>
 <td><code class="docutils literal"><span class="pre">L</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">virtual_dim</span></code></td>
+<td>Bond dimension</td>
+<td>Integer</td>
+<td>&#8211;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
 <td>Inital state</td>
 <td>String</td>
 <td>random</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
 <td>Noise for elements in initial tensor</td>
 <td>Real</td>
 <td>1e-2</td>
 </tr>
 </tbody>
 </table>
-<p>The unit cell has a rectangular shape with the size of <code class="docutils literal"><span class="pre">L</span></code> times <code class="docutils literal"><span class="pre">W</span></code>.
-Sites in a unit cell are numbered sequentially from 0. They are arranged in order from the x direction.</p>
-<p><code class="docutils literal"><span class="pre">ex.)</span> <span class="pre">L</span> <span class="pre">=</span> <span class="pre">2,</span> <span class="pre">W</span> <span class="pre">=</span> <span class="pre">3</span></code>:</p>
-<div class="highlight-none"><div class="highlight"><pre>y
-^     4 5
-|     2 3
-.-&gt;x  0 1
-</pre></div>
-</div>
 <p><code class="docutils literal"><span class="pre">initial</span></code> and <code class="docutils literal"><span class="pre">noise</span></code> are parameters that determine the initial state of the wave function.
-In <code class="docutils literal"><span class="pre">initial</span></code>, <code class="docutils literal"><span class="pre">&quot;ferro&quot;,</span> <span class="pre">&quot;antiferro&quot;,</span> <span class="pre">&quot;random&quot;</span></code> can be specified.
-<code class="docutils literal"><span class="pre">noise</span></code> is the amount of fluctuation given to the elements of the tensor.
 If <code class="docutils literal"><span class="pre">tensor_load</span></code> is set in <code class="docutils literal"><span class="pre">parameter.general</span></code>, <code class="docutils literal"><span class="pre">initial</span></code> is ignored.</p>
+<ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">initial</span></code></p>
+<blockquote>
+<div><ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code></p>
+<blockquote>
+<div><ul class="simple">
+<li>Ferromagnetic state with <span class="math">\(S^z = S\)</span></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code></p>
+<blockquote>
+<div><ul class="simple">
+<li>Antiferromagnetic state.
+For square lattice and honeycomb lattice, the Neel order state (<span class="math">\(S^z = S\)</span> for the A sublattice and <span class="math">\(S^z = -S\)</span> for the B sublattice.)
+For triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to <span class="math">\((\theta, \phi) = (0,0), (2\pi/3, 0)\)</span> and <span class="math">\((2\pi/3, \pi)\)</span> direction, respectively.)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code></p>
+<blockquote>
+<div><ul class="simple">
+<li>Random state.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">noise</span></code></p>
+<ul class="simple">
+<li>The amount of fluctuation in the elements of the initial tensor</li>
+</ul>
+</li>
+</ul>
 <div class="section" id="square-lattice">
 <h3>Square lattice<a class="headerlink" href="#square-lattice" title="Permalink to this headline">¶</a></h3>
-<p>As an example of the <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">square</span> <span class="pre">lattice</span></code>, we show the simple case of <code class="docutils literal"><span class="pre">L=2</span></code>.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in <a class="reference internal" href="#fig-square-1st"><span>Fig. 5.1</span></a>, <a class="reference internal" href="#fig-square-2nd"><span>Fig. 5.2</span></a>, <a class="reference internal" href="#fig-square-3rd"><span>Fig. 5.3</span></a>.
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.</p>
+<p>A square lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> consists of <code class="docutils literal"><span class="pre">L</span></code> sites in the <span class="math">\((1,0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> sites in the <span class="math">\((0,1)\)</span> direction.
+As a concrete example, <a class="reference internal" href="#fig-square-lattice"><span>Fig. 5.1</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+<a class="reference internal" href="#fig-square-lattice"><span>Fig. 5.1</span></a> (b), (c), and (d), respectively.
+The blue line represents a bond of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> and the red line represents a bond of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p>
 <div class="figure align-center" id="id1">
-<a class="reference internal image-reference" href="../_images/Square_1st.png" id="fig-square-1st"><img alt="../_images/Square_1st.png" id="fig-square-1st" src="../_images/Square_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">The nearest neighbor bond of the square lattice.</span><a class="headerlink" href="#fig-square-1st" title="Permalink to this image">¶</a></p>
-</div>
-<div class="figure align-center" id="id2">
-<a class="reference internal image-reference" href="../_images/Square_2nd.png" id="fig-square-2nd"><img alt="../_images/Square_2nd.png" id="fig-square-2nd" src="../_images/Square_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">The 2nd nearest neighbor bond of the square lattice.</span><a class="headerlink" href="#fig-square-2nd" title="Permalink to this image">¶</a></p>
-</div>
-<div class="figure align-center" id="id3">
-<a class="reference internal image-reference" href="../_images/Square_3rd.png" id="fig-square-3rd"><img alt="../_images/Square_3rd.png" id="fig-square-3rd" src="../_images/Square_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.3 </span><span class="caption-text">The 3rd nearest neighbor bond of the square lattice.</span><a class="headerlink" href="#fig-square-3rd" title="Permalink to this image">¶</a></p>
+<a class="reference internal image-reference" href="../_images/SquareLattice.png" id="fig-square-lattice"><img alt="../_images/SquareLattice.png" id="fig-square-lattice" src="../_images/SquareLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Square lattice.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
+(b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 90 degree direction.
+(c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 45 degree direction and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -45 degree direction.
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 90 degree direction.</span><a class="headerlink" href="#fig-square-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="triangular-lattice">
 <h3>Triangular lattice<a class="headerlink" href="#triangular-lattice" title="Permalink to this headline">¶</a></h3>
-<p>As an example of the <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">triangular</span> <span class="pre">lattice</span></code>, we show the simple case of <code class="docutils literal"><span class="pre">L=2</span></code>.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in <a class="reference internal" href="#fig-triangular-1st"><span>Fig. 5.4</span></a>, <a class="reference internal" href="#fig-triangular-2nd"><span>Fig. 5.5</span></a>, <a class="reference internal" href="#fig-triangular-3rd"><span>Fig. 5.6</span></a>.
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.</p>
-<div class="figure align-center" id="id4">
-<a class="reference internal image-reference" href="../_images/Triangular_1st.png" id="fig-triangular-1st"><img alt="../_images/Triangular_1st.png" id="fig-triangular-1st" src="../_images/Triangular_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.4 </span><span class="caption-text">The nearest neighbor bond of the triangular lattice.</span><a class="headerlink" href="#fig-triangular-1st" title="Permalink to this image">¶</a></p>
-</div>
-<div class="figure align-center" id="id5">
-<a class="reference internal image-reference" href="../_images/Triangular_2nd.png" id="fig-triangular-2nd"><img alt="../_images/Triangular_2nd.png" id="fig-triangular-2nd" src="../_images/Triangular_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.5 </span><span class="caption-text">The 2nd nearest neighbor bond of the triangular lattice.</span><a class="headerlink" href="#fig-triangular-2nd" title="Permalink to this image">¶</a></p>
-</div>
-<div class="figure align-center" id="id6">
-<a class="reference internal image-reference" href="../_images/Triangular_3rd.png" id="fig-triangular-3rd"><img alt="../_images/Triangular_3rd.png" id="fig-triangular-3rd" src="../_images/Triangular_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.6 </span><span class="caption-text">The 3rd neighbor bond of the triangular lattice.</span><a class="headerlink" href="#fig-triangular-3rd" title="Permalink to this image">¶</a></p>
+<p>A triangular lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> consists of <code class="docutils literal"><span class="pre">L</span></code> sites in the <span class="math">\((1,0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> sites in the <span class="math">\((1/2, \sqrt{3}/2)\)</span> direction.
+As a concrete example, <a class="reference internal" href="#fig-triangular-lattice"><span>Fig. 5.2</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+<a class="reference internal" href="#fig-triangular-lattice"><span>Fig. 5.2</span></a> (b), (c), and (d), respectively.
+The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.</p>
+<div class="figure align-center" id="id2">
+<a class="reference internal image-reference" href="../_images/TriangularLattice.png" id="fig-triangular-lattice"><img alt="../_images/TriangularLattice.png" id="fig-triangular-lattice" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Triangular lattice.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
+(b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
+(c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 90 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 60 degree direction.
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.</span><a class="headerlink" href="#fig-triangular-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="honeycomb-lattice">
 <h3>Honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Permalink to this headline">¶</a></h3>
-<p>As an example of the <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">honeycomb</span> <span class="pre">lattice</span></code>, we show the simple case of <code class="docutils literal"><span class="pre">L=2</span></code>.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in <a class="reference internal" href="#fig-honeycomb-1st"><span>Fig. 5.7</span></a>, <a class="reference internal" href="#fig-honeycomb-2nd"><span>Fig. 5.8</span></a>, <a class="reference internal" href="#fig-honeycomb-3rd"><span>Fig. 5.9</span></a>.
-In a honeycomb lattice, the unit cell size <code class="docutils literal"><span class="pre">L</span></code> in the x direction must be even number.
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.</p>
-<div class="figure align-center" id="id7">
-<a class="reference internal image-reference" href="../_images/Honeycomb_1st.png" id="fig-honeycomb-1st"><img alt="../_images/Honeycomb_1st.png" id="fig-honeycomb-1st" src="../_images/Honeycomb_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.7 </span><span class="caption-text">The nearest neighbor bond of the honeycomb lattice.</span><a class="headerlink" href="#fig-honeycomb-1st" title="Permalink to this image">¶</a></p>
+<p>In a honeycomb lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code>, units consisting of two sites of coordinates <span class="math">\((0, 0)\)</span> and <span class="math">\((\sqrt{3}/2, 1/2)\)</span> are arranged with <code class="docutils literal"><span class="pre">L</span></code> units in the <span class="math">\((\sqrt{3},0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> units in the <span class="math">\((1/2, 3/2)\)</span> direction.
+As a concrete example, <a class="reference internal" href="#fig-honeycomb-lattice"><span>Fig. 5.3</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+<a class="reference internal" href="#fig-honeycomb-lattice"><span>Fig. 5.3</span></a> (b), (c), and (d), respectively.
+The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.</p>
+<div class="figure align-center" id="id3">
+<a class="reference internal image-reference" href="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice"><img alt="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 5.3 </span><span class="caption-text">Honeycomb lattice.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>. The dashed ellipse denotes one unit.
+(b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 30 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 150 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the -90 degree direction.
+(c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 120 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 0 degree direction.
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the -30 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -150 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 90 degree direction.</span><a class="headerlink" href="#fig-honeycomb-lattice" title="Permalink to this image">¶</a></p>
 </div>
-<div class="figure align-center" id="id8">
-<a class="reference internal image-reference" href="../_images/Honeycomb_2nd.png" id="fig-honeycomb-2nd"><img alt="../_images/Honeycomb_2nd.png" id="fig-honeycomb-2nd" src="../_images/Honeycomb_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.8 </span><span class="caption-text">The 2nd nearest neighbor bond of the honeycomb lattice.</span><a class="headerlink" href="#fig-honeycomb-2nd" title="Permalink to this image">¶</a></p>
 </div>
-<div class="figure align-center" id="id9">
-<a class="reference internal image-reference" href="../_images/Honeycomb_3rd.png" id="fig-honeycomb-3rd"><img alt="../_images/Honeycomb_3rd.png" id="fig-honeycomb-3rd" src="../_images/Honeycomb_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5.9 </span><span class="caption-text">The 3rd nearest neighbor bond of the honeycomb lattice.</span><a class="headerlink" href="#fig-honeycomb-3rd" title="Permalink to this image">¶</a></p>
+<div class="section" id="kagome-lattice">
+<h3>Kagome lattice<a class="headerlink" href="#kagome-lattice" title="Permalink to this headline">¶</a></h3>
+<p>In a kagome lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code>, units consisting of three sites of coordinates <span class="math">\((0, 0)\)</span>, <span class="math">\((1, 0)\)</span>, and <span class="math">\((1/2, \sqrt{3}/2)\)</span> are arranged with <code class="docutils literal"><span class="pre">L</span></code> units in the <span class="math">\((2,0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> units in the <span class="math">\((1,\sqrt{3})\)</span> direction.
+As a concrete example, <a class="reference internal" href="#fig-kagome-lattice"><span>Fig. 5.4</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+<a class="reference internal" href="#fig-kagome-lattice"><span>Fig. 5.4</span></a> (b), (c), and (d), respectively.
+The blue and the red lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code>, and <code class="docutils literal"><span class="pre">1</span></code>, respectively.</p>
+<div class="figure align-center" id="id4">
+<a class="reference internal image-reference" href="../_images/KagomeLattice.png" id="fig-kagome-lattice"><img alt="../_images/KagomeLattice.png" id="fig-kagome-lattice" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 5.4 </span><span class="caption-text">Kagome lattice.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>. The dashed circle denotes one unit.
+(b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bonds form upper triangle and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) bonds form lowertriangle.
+(c) Second nearest neighbor bonds.
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond passes over a site and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one does not.</span><a class="headerlink" href="#fig-kagome-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>

@@ -190,7 +190,7 @@
 方向を示す番号を省略することで、すべての方向について一度に指定できます。
 また、最後に <cite>xyz</cite> のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。</p>
-<a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" /></a>
 <p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -265,7 +265,7 @@
 <div class="section" id="lattice">
 <h2>5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算する格子を指定します。
-正方格子 (square lattice) と 蜂の巣格子 (honeycomb lattice) , 三角格子 (triangular lattice) が定義されています。</p>
+正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="38%" />
@@ -282,7 +282,7 @@
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
-<td>格子名 (square, triangular, もしくは honeycomb lattice)</td>
+<td>格子名 (square, triangular, honeycomb, もしくは kagome)</td>
 <td>文字列</td>
 <td>&#8211;</td>
 </tr>
@@ -296,92 +296,116 @@
 <td>整数</td>
 <td><code class="docutils literal"><span class="pre">L</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
-<td>初期テンソル</td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">virtural_dim</span></code></td>
+<td>ボンド次元</td>
+<td>整数</td>
+<td>&#8211;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">initial</span></code></td>
+<td>初期状態</td>
 <td>文字列</td>
 <td>random</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
 <td>初期テンソルの揺らぎ</td>
 <td>実数</td>
 <td>1e-2</td>
 </tr>
 </tbody>
 </table>
-<p>ユニットセルは <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> の大きさをもつ長方形の形をしています。
-ユニットセル内のサイトは0から順番に番号付けされます。 x 方向から順に並びます。</p>
-<p><code class="docutils literal"><span class="pre">L</span> <span class="pre">=</span> <span class="pre">2,</span> <span class="pre">W</span> <span class="pre">=</span> <span class="pre">3</span></code> としたときの例:</p>
-<div class="highlight-none"><div class="highlight"><pre>y
-^     4 5
-|     2 3
-.-&gt;x  0 1
-</pre></div>
-</div>
 <p><code class="docutils literal"><span class="pre">initial</span></code> と <code class="docutils literal"><span class="pre">noise</span></code> は波動関数の初期状態を決めるパラメータです。
-<code class="docutils literal"><span class="pre">initial</span></code> としては <code class="docutils literal"><span class="pre">&quot;ferro&quot;,</span> <span class="pre">&quot;antiferro&quot;,</span> <span class="pre">&quot;random&quot;</span></code> が指定可能です。
-<code class="docutils literal"><span class="pre">noise</span></code> はテンソルの要素に付与されるゆらぎの大きさです。なお、 <code class="docutils literal"><span class="pre">parameter.general</span></code> で <code class="docutils literal"><span class="pre">tensor_load</span></code> が設定されている場合には、そちらが優先されます。</p>
+なお、 <code class="docutils literal"><span class="pre">parameter.general</span></code> で <code class="docutils literal"><span class="pre">tensor_load</span></code> が設定されている場合には、そちらが優先され、テンソルをファイルから読み込みます。</p>
+<ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">initial</span></code></p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code><ul>
+<li>強磁性状態。 各サイトで <span class="math">\(S^z=S`\)</span> となる状態。</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code><ul>
+<li>反強磁性状態。
+正方格子、蜂の巣格子では <span class="math">\(S^z = S\)</span> と <span class="math">\(S^z = -S\)</span> が互いに並んだNeel 秩序。
+三角格子、かごめ格子では スピンが <span class="math">\((\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)\)</span> 方向に向いた120 度秩序。</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code><ul>
+<li>各サイトバラバラなランダム状態。</li>
+</ul>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">noise</span></code></p>
+<ul class="simple">
+<li>テンソルの要素に付与されるゆらぎの大きさ。</li>
+</ul>
+</li>
+</ul>
 <div class="section" id="square-lattice">
 <h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<p>正方格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> で <code class="docutils literal"><span class="pre">L=2</span></code> のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-<a class="reference internal" href="#fig-square-1st"><span>図 5.1</span></a>, <a class="reference internal" href="#fig-square-2nd"><span>図 5.2</span></a>, <a class="reference internal" href="#fig-square-3rd"><span>図 5.3</span></a> に示します。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は2種類のボンドを表します。
-破線はひとつのユニットセルを表します。</p>
+<p>正方格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math">\((1,0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((0,1)\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
+具体例として、 <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-square-lattice"><span>図 5.1</span></a> (a) に示します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+<a class="reference internal" href="#fig-square-lattice"><span>図 5.1</span></a> (b), (c), (d) にそれぞれ示します。
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを, 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを表します。</p>
 <div class="figure align-center" id="id2">
-<a class="reference internal image-reference" href="../_images/Square_1st.png" id="fig-square-1st"><img alt="../_images/Square_1st.png" id="fig-square-1st" src="../_images/Square_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.1 </span><span class="caption-text">正方格子の最近接ボンド。</span><a class="headerlink" href="#fig-square-1st" title="この画像へのパーマリンク">¶</a></p>
-</div>
-<div class="figure align-center" id="id3">
-<a class="reference internal image-reference" href="../_images/Square_2nd.png" id="fig-square-2nd"><img alt="../_images/Square_2nd.png" id="fig-square-2nd" src="../_images/Square_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.2 </span><span class="caption-text">正方格子の次近接ボンド。</span><a class="headerlink" href="#fig-square-2nd" title="この画像へのパーマリンク">¶</a></p>
-</div>
-<div class="figure align-center" id="id4">
-<a class="reference internal image-reference" href="../_images/Square_3rd.png" id="fig-square-3rd"><img alt="../_images/Square_3rd.png" id="fig-square-3rd" src="../_images/Square_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.3 </span><span class="caption-text">正方格子の三次近接ボンド。</span><a class="headerlink" href="#fig-square-3rd" title="この画像へのパーマリンク">¶</a></p>
+<a class="reference internal image-reference" href="../_images/SquareLattice.png" id="fig-square-lattice"><img alt="../_images/SquareLattice.png" id="fig-square-lattice" src="../_images/SquareLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">図 5.1 </span><span class="caption-text">正方格子 (square) のサイト・ボンド。
+(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
+(b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 90度方向に伸びる。
+(c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 45 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -45度方向に伸びる。
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 90度方向に伸びる。</span><a class="headerlink" href="#fig-square-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 <div class="section" id="triangular-lattice">
 <h3>三角格子 triangular lattice<a class="headerlink" href="#triangular-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<p>三角格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> で <code class="docutils literal"><span class="pre">L=2</span></code> のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-<a class="reference internal" href="#fig-triangular-1st"><span>図 5.4</span></a>, <a class="reference internal" href="#fig-triangular-2nd"><span>図 5.5</span></a>, <a class="reference internal" href="#fig-triangular-3rd"><span>図 5.6</span></a> に示します。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。</p>
-<div class="figure align-center" id="id5">
-<a class="reference internal image-reference" href="../_images/Triangular_1st.png" id="fig-triangular-1st"><img alt="../_images/Triangular_1st.png" id="fig-triangular-1st" src="../_images/Triangular_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.4 </span><span class="caption-text">三角格子の最近接ボンド。</span><a class="headerlink" href="#fig-triangular-1st" title="この画像へのパーマリンク">¶</a></p>
-</div>
-<div class="figure align-center" id="id6">
-<a class="reference internal image-reference" href="../_images/Triangular_2nd.png" id="fig-triangular-2nd"><img alt="../_images/Triangular_2nd.png" id="fig-triangular-2nd" src="../_images/Triangular_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.5 </span><span class="caption-text">三角格子の次近接ボンド。</span><a class="headerlink" href="#fig-triangular-2nd" title="この画像へのパーマリンク">¶</a></p>
-</div>
-<div class="figure align-center" id="id7">
-<a class="reference internal image-reference" href="../_images/Triangular_3rd.png" id="fig-triangular-3rd"><img alt="../_images/Triangular_3rd.png" id="fig-triangular-3rd" src="../_images/Triangular_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.6 </span><span class="caption-text">三角格子の三次近接ボンド。</span><a class="headerlink" href="#fig-triangular-3rd" title="この画像へのパーマリンク">¶</a></p>
+<p>三角格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math">\((1,0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((1/2, \sqrt{3}/2)\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
+具体例として、 <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-triangular-lattice"><span>図 5.2</span></a> (a) に示します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+<a class="reference internal" href="#fig-triangular-lattice"><span>図 5.2</span></a> (b), (c), (d) にそれぞれ示します。
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。</p>
+<div class="figure align-center" id="id3">
+<a class="reference internal image-reference" href="../_images/TriangularLattice.png" id="fig-triangular-lattice"><img alt="../_images/TriangularLattice.png" id="fig-triangular-lattice" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">図 5.2 </span><span class="caption-text">三角格子 (triangular) のサイト・ボンド。
+(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
+(b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
+(c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 90 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 60度方向にそれぞれ伸びる。
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。</span><a class="headerlink" href="#fig-triangular-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 <div class="section" id="honeycomb-lattice">
 <h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<p>蜂の巣格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code> で <code class="docutils literal"><span class="pre">L=2</span></code> のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-<a class="reference internal" href="#fig-honeycomb-1st"><span>図 5.7</span></a>, <a class="reference internal" href="#fig-honeycomb-2nd"><span>図 5.8</span></a>, <a class="reference internal" href="#fig-honeycomb-3rd"><span>図 5.9</span></a> に示します。
-蜂の巣格子ではx 方向のユニットセルの大きさ <code class="docutils literal"><span class="pre">L</span></code> は偶数でなければいけません。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。</p>
-<div class="figure align-center" id="id8">
-<a class="reference internal image-reference" href="../_images/Honeycomb_1st.png" id="fig-honeycomb-1st"><img alt="../_images/Honeycomb_1st.png" id="fig-honeycomb-1st" src="../_images/Honeycomb_1st.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.7 </span><span class="caption-text">蜂の巣格子の最近接ボンド。</span><a class="headerlink" href="#fig-honeycomb-1st" title="この画像へのパーマリンク">¶</a></p>
+<p>蜂の巣格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math">\((0, 0)\)</span> と <span class="math">\((\sqrt{3}/2, 1/2)\)</span> の2つのサイトからなるユニットが、 <span class="math">\((\sqrt{3},0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((1/2, 3/2)\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
+具体例として、<code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (a) に示します。
+破線はユニットを表します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+<a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (b), (c), (d) にそれぞれ示します。
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。</p>
+<div class="figure align-center" id="id4">
+<a class="reference internal image-reference" href="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice"><img alt="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">図 5.3 </span><span class="caption-text">蜂の巣格子 (honeycomb) のサイト・ボンド。
+(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
+(b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 30 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 150度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は -90度方向にそれぞれ伸びる。
+(c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 120 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 0度方向にそれぞれ伸びる。
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は -30 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -150度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 90度方向にそれぞれ伸びる。</span><a class="headerlink" href="#fig-honeycomb-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
-<div class="figure align-center" id="id9">
-<a class="reference internal image-reference" href="../_images/Honeycomb_2nd.png" id="fig-honeycomb-2nd"><img alt="../_images/Honeycomb_2nd.png" id="fig-honeycomb-2nd" src="../_images/Honeycomb_2nd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.8 </span><span class="caption-text">蜂の巣格子の次近接ボンド。</span><a class="headerlink" href="#fig-honeycomb-2nd" title="この画像へのパーマリンク">¶</a></p>
 </div>
-<div class="figure align-center" id="id10">
-<a class="reference internal image-reference" href="../_images/Honeycomb_3rd.png" id="fig-honeycomb-3rd"><img alt="../_images/Honeycomb_3rd.png" id="fig-honeycomb-3rd" src="../_images/Honeycomb_3rd.png" style="width: 200px;" /></a>
-<p class="caption"><span class="caption-number">図 5.9 </span><span class="caption-text">蜂の巣格子の三次近接ボンド。</span><a class="headerlink" href="#fig-honeycomb-3rd" title="この画像へのパーマリンク">¶</a></p>
+<div class="section" id="kagome-lattice">
+<h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>かごめ格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math">\((0, 0)\)</span>, <span class="math">\((1, 0)\)</span>, <span class="math">\((1/2, \sqrt{3}/2)\)</span> の3つのサイトからなるユニット（上向き三角）が、 <span class="math">\((2,0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((1, \sqrt{3})\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
+具体例として、<code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-kagome-lattice"><span>図 5.4</span></a> (a) に示します。
+破線はユニットは破線を表します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+<a class="reference internal" href="#fig-kagome-lattice"><span>図 5.4</span></a> (b), (c), (d) にそれぞれ示します。
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを表します。</p>
+<div class="figure align-center" id="id5">
+<a class="reference internal image-reference" href="../_images/KagomeLattice.png" id="fig-kagome-lattice"><img alt="../_images/KagomeLattice.png" id="fig-kagome-lattice" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
+<p class="caption"><span class="caption-number">図 5.4 </span><span class="caption-text">かごめ格子 (kagome) のサイト・ボンド。
+(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
+(b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 上向き三角形を、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 下向き三角形を作る。
+(c) 次近接ボンド。
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) はサイトを横切り、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は横切らない。</span><a class="headerlink" href="#fig-kagome-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 </div>
