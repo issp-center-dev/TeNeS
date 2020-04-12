@@ -475,8 +475,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
       const int target = lattice.neighbor(source, source_leg);
       // const int target_leg = (source_leg + 2) % 4;
 
-      switch (source_leg) {
-      case 0:
+      if (source_leg == 0) {
         /*
          *  C1' t' t C3
          *  l'  T' T r
@@ -494,8 +493,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[source], eTb[target], eTl[target], eTt[target],
                          eTt[source], eTr[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-        break;
-      case 1:
+      }else if(source_leg == 1){
         /*
          * C1' t' C2'
          *  l' T'  r'
@@ -514,8 +512,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTl[source], eTl[target], eTt[target], eTr[target],
                          eTr[source], eTb[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-        break;
-      case 2:
+      }else if(source_leg == 2){
         /*
          *  C1 t t' C2'
          *  l  T T' r'
@@ -526,8 +523,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[target], eTb[source], eTl[source], // b' b  l
                          Tn[source], Tn[target], up.op, source_leg,
                          peps_parameters, Tn1_new, Tn2_new);
-        break;
-      case 3:
+      }else{
         /*
          * C1  t C2
          *  l  T  r
@@ -546,23 +542,33 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTr[source], eTr[target], eTb[target], eTl[target],
                          eTl[source], eTt[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-        break;
-
-      default:
-        break;
-      } // end of switch
+      }
       Tn[source] = Tn1_new;
       Tn[target] = Tn2_new;
 
       if (peps_parameters.Full_Use_FastFullUpdate) {
-        if (up.is_horizontal()) {
+        if(source_leg == 0){
+          const int source_x = source % LX;
+          const int target_x = target % LX;
+          Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
+                     peps_parameters, lattice);
+          Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
+                    peps_parameters, lattice);
+        }else if(source_leg == 1){
+          const int source_y = source / LX;
+          const int target_y = target / LX;
+          Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
+                      peps_parameters, lattice);
+          Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
+                   peps_parameters, lattice);
+        }else if(source_leg == 2){
           const int source_x = source % LX;
           const int target_x = target % LX;
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
                     peps_parameters, lattice);
           Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
                      peps_parameters, lattice);
-        } else {
+        }else{
           const int source_y = source / LX;
           const int target_y = target / LX;
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
