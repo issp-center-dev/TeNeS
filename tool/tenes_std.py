@@ -39,6 +39,26 @@ def all_positive(xs, v=0):
     return all(map(lambda x: x > v, xs))
 
 
+def float_to_str(v: float) -> str:
+    if np.isnan(v):
+        return "nan"
+    ret = ""
+    if v < 0.0:
+        ret += "-"
+        v *= -1
+    if np.isinf(v):
+        ret += "inf"
+        return ret
+    if v == 0.0:
+        return "0.0"
+    exponent = int(np.floor(np.log10(v)))
+    if -4 <= exponent <= 4:
+        ret += str(v)
+    else:
+        ret += "{}e{}".format(v * 10 ** (-exponent), exponent)
+    return ret
+
+
 Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
 
 
@@ -47,7 +67,7 @@ def drop_comment(line: str) -> str:
     if last < 0:
         return line[:]
     else:
-        return line[: last]
+        return line[:last]
 
 
 def parse_bond(line: str) -> Bond:
@@ -720,6 +740,8 @@ class Model:
                     f.write("{} = '{}'\n".format(k, v))
                 elif isinstance(v, bool):
                     f.write("{} = {}\n".format(k, "true" if v else "false"))
+                elif isinstance(v, float):
+                    f.write("{} = {}\n".format(k, float_to_str(v)))
                 else:
                     f.write("{} = {}\n".format(k, v))
         f.write("\n")

@@ -29,6 +29,26 @@ import toml
 TeNeSInput = namedtuple("TeNeSInput", "param tensor ham obs")
 
 
+def float_to_str(v: float) -> str:
+    if np.isnan(v):
+        return "nan"
+    ret = ""
+    if v < 0.0:
+        ret += "-"
+        v *= -1
+    if np.isinf(v):
+        ret += "inf"
+        return ret
+    if v == 0.0:
+        return "0.0"
+    exponent = int(np.floor(np.log10(v)))
+    if -4 <= exponent <= 4:
+        ret += str(v)
+    else:
+        ret += "{}e{}".format(v * 10 ** (-exponent), exponent)
+    return ret
+
+
 def lower_dict(d: dict) -> dict:
     ks = list(d.keys())
     for k in ks:
@@ -806,6 +826,8 @@ def tenes_simple(param: Dict[str, Any]) -> str:
                     ret.append('{} = "{}"'.format(k, v))
                 elif isinstance(v, bool):
                     ret.append("{} = {}".format(k, "true" if v else "false"))
+                elif isinstance(v, float):
+                    ret.append("{} = {}".format(k, float_to_str(v)))
                 else:
                     ret.append("{} = {}".format(k, v))
     ret.append("")
