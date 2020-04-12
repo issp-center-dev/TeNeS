@@ -103,6 +103,7 @@ public:
 
   void optimize();
   void measure();
+  void summary() const;
   std::vector<std::vector<tensor_type>> measure_onesite();
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
   std::vector<Correlation> measure_correlation();
@@ -1115,19 +1116,6 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
                   << std::endl;
       }
     }
-    const double time_all = timer_all.elapsed();
-    {
-      std::string filename = outdir + "/time.dat";
-      std::ofstream ofs(filename.c_str());
-      ofs << "time all           = " << time_all << std::endl;
-      ofs << "time simple update = " << time_simple_update << std::endl;
-      ofs << "time full update   = " << time_full_update << std::endl;
-      ofs << "time environmnent  = " << time_environment << std::endl;
-      ofs << "time observable    = " << time_observable << std::endl;
-      if (peps_parameters.print_level >= PrintLevel::info) {
-        std::clog << "    Save elapsed times to " << filename << std::endl;
-      }
-    }
     {
       std::string filename = outdir + "/parameters.dat";
       std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::app);
@@ -1151,7 +1139,26 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
         std::cout << "  " << twosite_operator_names[ilops] << " = "
                   << std::real(v) << " " << std::imag(v) << std::endl;
       }
+    }
+  } // end of if(mpirank == 0)
+}
 
+template <class ptensor> void TeNeS<ptensor>::summary() const {
+  if(mpirank == 0){
+    const double time_all = timer_all.elapsed();
+    {
+      std::string filename = outdir + "/time.dat";
+      std::ofstream ofs(filename.c_str());
+      ofs << "time all           = " << time_all << std::endl;
+      ofs << "time simple update = " << time_simple_update << std::endl;
+      ofs << "time full update   = " << time_full_update << std::endl;
+      ofs << "time environmnent  = " << time_environment << std::endl;
+      ofs << "time observable    = " << time_observable << std::endl;
+      if (peps_parameters.print_level >= PrintLevel::info) {
+        std::clog << "    Save elapsed times to " << filename << std::endl;
+      }
+    }
+    if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "Wall times [sec.]:" << std::endl;
       std::cout << "  all           = " << time_all << std::endl;
       std::cout << "  simple update = " << time_simple_update << std::endl;
@@ -1160,7 +1167,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
       std::cout << "  observable    = " << time_observable << std::endl;
       std::cout << std::endl << "Done." << std::endl;
     }
-  } // end of if(mpirank == 0)
+  }
 }
 
 template <class ptensor> void TeNeS<ptensor>::save_tensors() const {
@@ -1444,7 +1451,10 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
                     corparam);
   tns.optimize();
   tns.save_tensors();
-  tns.measure();
+  if(peps_parameters.to_measure){
+    tns.measure();
+  }
+  tns.summary();
   return 0;
 }
 
