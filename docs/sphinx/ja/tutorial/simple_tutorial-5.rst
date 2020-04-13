@@ -134,27 +134,23 @@
 
 では正方格子でも同じことをやってみましょう。 ``sample/05_magnetization`` のディレクトリ中にある toml ファイル ``basic_square.toml`` と、pythonスクリプト ``tutorial_magnetization_square.py`` を利用します。
 ``basic_square.toml`` は、 ``lattice`` セクションが以下のように変更されているほかは ``basic.toml`` と同じ内容です。
-
 ::
 
     [lattice]
     type = "square lattice"
     L = 2
     W = 2
-    \begin{lstlisting}
 
-    実際に計算を行うには、
-    \begin{lstlisting}
-    python tutorial_magnetization.py
+実際に計算を行うには、 ::
+
+   python tutorial_magnetization.py
 
 とします。計算が終了したら、gnuplotを起動し、
-
 ::
 
     load 'plot_square.gp'
 
 とすれば、 :numref:`fig_tutorial5_square` の右図のような磁化カーブが得られます。同様に
-
 ::
 
     load 'plot_ene_square.gp'
@@ -169,5 +165,3 @@
 
 ステップ数2000でほぼ収束しており、三角格子ハイゼンベルク模型と異なり、プラトー構造は現れないことがわかります。
 エネルギーは概ね、ステップ数を増加させると減少するため、ある程度計算精度がでていると推測されます。
-
-
