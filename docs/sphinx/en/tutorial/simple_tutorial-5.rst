@@ -12,8 +12,8 @@ triangular lattice. The Hamiltonian looks like this:
    \begin{aligned}
    H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}
 
-Here, :math:`\langle i, j \rangle` represents the pair of adjacent lattices, and :math:`h` represents the magnitude of the external magnetic field applied in the :math:`z` direction. 
-Let’s calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, use the toml file ``basic.toml`` in the ``sample/05_magnetization`` directory and the python script ``tutorial_magnetization.py``. 
+Here, :math:`\langle i, j \rangle` represents the pair of nearest neighbor sites, and :math:`h` represents the magnitude of the external magnetic field applied in the :math:`z` direction. 
+Let's calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, use the toml file ``basic.toml`` in the ``sample/05_magnetization`` directory and the python script ``tutorial_magnetization.py``. 
 The ``basic.toml`` file contains model settings and parameters.
 
 ::
@@ -49,7 +49,7 @@ The lattice section specifies a triangular lattice, and the unit cell
 size specifies :math:`3\times 3`. Here, in order to make the calculation
 lighter, only ``simple update`` is performed, and the imaginary time
 interval :math:`\tau` is assumed to be :math:`\tau = 0.01`. For
-simplicity, :math:`J =1`. Using this basic setting file,
+simplicity, :math:`J=1`. Using this basic setting file,
 tutorial_magnetization.py calculates the magnetization when the magnetic
 field is swept.
 
@@ -116,7 +116,7 @@ function at the end of the calculation of the number of steps 100. The
 script consequently reduce the amount of the calculation by 100 steps
 for the latter.
 
-Let’s actually run it. After passing through a path to tenes in advance,
+Let's actually run it. After passing through a path to tenes in advance,
 execute calculation by typing as follows.
 
 ::
@@ -162,7 +162,7 @@ necessary to increase the bond dimension.
 
    Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.
 
-Next, let’s perform the calculation for a model on a square lattice. Use the toml file ``basic_square.toml`` and the python script ``tutorial_magnetization_square.py`` in the ``sample/05_magnetization`` directory.
+Next, let's perform the calculation for a model on a square lattice. Use the toml file ``basic_square.toml`` and the python script ``tutorial_magnetization_square.py`` in the ``sample/05_magnetization`` directory.
 The content of ``basic_square.toml`` is the same as ``basic.toml`` except that the ``lattice`` section has been changed as follows.
 
 ::
@@ -173,8 +173,8 @@ The content of ``basic_square.toml`` is the same as ``basic.toml`` except that t
     W = 2
     \begin{lstlisting}
 
-    To perform the calculation, type
-    \begin{lstlisting}
+To perform the calculation, type::
+
     python tutorial_magnetization.py
 
 After the calculation is completed, start up gnuplot and type

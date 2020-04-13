@@ -11,7 +11,7 @@
    \begin{aligned}
    H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}
 
-ここで\ :math:`\langle i, j\rangle`\ は隣接格子の組を表し、\ :math:`h`\ は\ :math:`z`\ 方向にかけられた外部磁場の大きさを表します。
+ここで\ :math:`\langle i, j\rangle`\ は隣接サイトの組を表し、\ :math:`h`\ は\ :math:`z`\ 方向にかけられた外部磁場の大きさを表します。
 この模型の基底状態を計算し、ユニットセルの平均磁化 \ :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`\ を磁場\ :math:`h`\ の関数として求めてみましょう ( :math:`N_u` はユニットセル内のサイト数)。
 
 この計算を行うには、 ``sample/05_magnetization`` のディレクトリ中にある toml ファイル ``basic.toml`` と、pythonスクリプト ``tutorial_magnetization.py`` を利用します。 ``basic.toml`` ファイルには、模型の設定やパラメータなどが記述されています。
