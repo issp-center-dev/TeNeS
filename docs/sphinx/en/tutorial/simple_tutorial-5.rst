@@ -171,7 +171,6 @@ The content of ``basic_square.toml`` is the same as ``basic.toml`` except that t
     type = "square lattice"
     L = 2
     W = 2
-    \begin{lstlisting}
 
 To perform the calculation, type::
 
