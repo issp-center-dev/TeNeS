@@ -7,3 +7,4 @@
    :maxdepth: 2
 
    simple_tutorial-1
+   simple_tutorial-5
