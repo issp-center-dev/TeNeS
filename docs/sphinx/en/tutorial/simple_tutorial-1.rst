@@ -119,7 +119,7 @@ By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are outputted 
    $ python tutorial_read.py
 
 
-.. figure:: ../../img/tutorial_1_Sz_vs_G.pdf
+.. figure:: ../../img/tutorial_1_Sz_vs_G.*
    :name: fig_transverse
    :width: 400px
    :align: center
@@ -325,7 +325,7 @@ unlike the triangular lattice Heisenberg model. Since the energy
 generally decreases as the number of steps is increased, it is assumed
 that the calculation accuracy is sufficiently high.
 
-.. figure:: ../../img/Fig_Square.pdf
+.. figure:: ../../img/Fig_Square.*
    :name: fig_square
    :width: 800px
 

@@ -120,7 +120,7 @@
 とすることで集計でき、 ``G``, エネルギー、 ``<Sz>`` 、 ``<Sx>`` が出力されます。
 
 
-.. figure:: ../../img/tutorial_1_Sz_vs_G.pdf
+.. figure:: ../../img/tutorial_1_Sz_vs_G.*
      :name: fig_transverse
      :width: 400px
      :align: center
@@ -256,7 +256,7 @@
 理想的にはステップ数を増やすほど基底エネルギーが下がるはずですが、一部の磁場領域では逆に基底エネルギーが増加します。これは計算精度があまりでていない兆候です。
 ボンド次元を増やすなどして、より計算精度を高める必要があると推測されます。
 
-.. figure:: ../../img/Fig_Triangular.pdf
+.. figure:: ../../img/Fig_Triangular.*
      :name: fig_triangular
      :width: 800px
 
@@ -291,7 +291,7 @@
 
 とすれば、:numref:`fig_square` の左図のような基底エネルギーのグラフが得られます。
 
-.. figure:: ../../img/Fig_square.pdf
+.. figure:: ../../img/Fig_Square.*
      :name: fig_square
      :width: 800px
 
