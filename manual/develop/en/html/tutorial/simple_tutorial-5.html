@@ -1,0 +1,304 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>4.2. Magnetization process of the Heisenberg model on triangular and square lattices &mdash; TeNeS 1.0-beta documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0-beta',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="up" title="4. Tutorial" href="index.html" />
+    <link rel="next" title="5. File format" href="../file_specification/index.html" />
+    <link rel="prev" title="4.1. Ising model with transverse magnetic field" href="simple_tutorial-1.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="magnetization-process-of-the-heisenberg-model-on-triangular-and-square-lattices">
+<h1>4.2. Magnetization process of the Heisenberg model on triangular and square lattices<a class="headerlink" href="#magnetization-process-of-the-heisenberg-model-on-triangular-and-square-lattices" title="Permalink to this headline">¶</a></h1>
+<p>Next, we introduce the calculation of the magnetization process of the
+quantum Heisenberg model with spin <span class="math">\(S = 1/2\)</span> defined on a
+triangular lattice. The Hamiltonian looks like this:</p>
+<div class="math">
+\[\begin{aligned}
+H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}\]</div>
+<p>Here, <span class="math">\(\langle i, j \rangle\)</span> represents the pair of nearest neighbor sites, and <span class="math">\(h\)</span> represents the magnitude of the external magnetic field applied in the <span class="math">\(z\)</span> direction.
+Let&#8217;s calculate the ground state of this model and find <span class="math">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>, where <span class="math">\(N_u\)</span> is the total number of sites in the unit cell, as a function of the magnetic field <span class="math">\(h\)</span>. To do this, use the toml file <code class="docutils literal"><span class="pre">basic.toml</span></code> in the <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> directory and the python script <code class="docutils literal"><span class="pre">tutorial_magnetization.py</span></code>.
+The <code class="docutils literal"><span class="pre">basic.toml</span></code> file contains model settings and parameters.</p>
+<div class="highlight-none"><div class="highlight"><pre>[parameter]
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 200
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;triangular lattice&quot;
+L = 3
+W = 3
+virtual_dim = 4
+initial = &quot;random&quot;
+
+[model]
+type = &quot;spin&quot;
+J = 1.0
+</pre></div>
+</div>
+<p>The lattice section specifies a triangular lattice, and the unit cell
+size specifies <span class="math">\(3\times 3\)</span>. Here, in order to make the calculation
+lighter, only <code class="docutils literal"><span class="pre">simple</span> <span class="pre">update</span></code> is performed, and the imaginary time
+interval <span class="math">\(\tau\)</span> is assumed to be <span class="math">\(\tau = 0.01\)</span>. For
+simplicity, <span class="math">\(J=1\)</span>. Using this basic setting file,
+tutorial_magnetization.py calculates the magnetization when the magnetic
+field is swept.</p>
+<div class="highlight-none"><div class="highlight"><pre>import subprocess
+from os.path import join
+import numpy as np
+import toml
+
+num_h = 21
+min_h = 0.0
+max_h = 5.0
+num_step_table = [100, 200, 500, 1000, 2000]
+
+fout = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
+for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_h))
+    inum = 0
+    num_pre = 0
+    fout.write(&quot;{} &quot;.format(h))
+    for num_step in num_step_table:
+        ns = num_step - num_pre
+        print(&quot;Step numter: {}&quot;.format(num_step))
+        with open(&quot;basic.toml&quot;) as f:
+            dict_toml = toml.load(f)
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_step)
+        dict_toml[&quot;model&quot;][&quot;H&quot;] = float(h)
+        dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
+        if inum &gt; 0:
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_pre)
+        with open(&quot;simple_{}_{}.toml&quot;.format(idx,num_step), &#39;w&#39;) as f:
+            toml.dump(dict_toml, f)
+        cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
+        subprocess.call(cmd.split())
+        cmd = &quot;tenes_std std_{}_{}.toml -o input_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
+        subprocess.call(cmd.split())
+        cmd = &quot;tenes input_{}_{}.toml&quot;.format(idx,num_step)
+        subprocess.call(cmd.split())
+        with open(join(&quot;output_{}_{}&quot;.format(idx,num_step), &quot;density.dat&quot;)) as f:
+            lines = f.readlines()
+            mag_sz = lines[0].split(&#39;=&#39;)[1].strip()
+        fout.write(&quot;{} &quot;.format(mag_sz))
+        inum = inum + 1
+        num_pre = num_step
+    fout.write(&quot;\n&quot;)
+fout.close()
+</pre></div>
+</div>
+<p>In this script, the magnetic field <span class="math">\(h\)</span> is changed in steps of
+<span class="math">\(0.25\)</span> from <span class="math">\(0\)</span> to <span class="math">\(5\)</span>, and the ground state energy
+and <span class="math">\(\langle S_z \rangle\)</span> are calculated and output to <code class="docutils literal"><span class="pre">energy.dat</span></code>
+and <code class="docutils literal"><span class="pre">magnetization.dat</span></code>. In order to see what happens when the number of
+time steps for simple update is changed, calculations are also performed
+with <span class="math">\(100\)</span>, <span class="math">\(200\)</span>, <span class="math">\(500\)</span>, <span class="math">\(1000\)</span>, and
+<span class="math">\(2000\)</span> steps for each magnetic field. In order to reduce the
+amount of calculation, the information of the wave function obtained
+with a small number of steps is stored in tensor_save, and this is used
+as the initial state for the calculation of a larger number of steps.
+For example, the python script first performs a calculation with the
+number of time steps set to 100, and output the result. Then, it perform
+a calculation with the number of time steps set to 200 using the wave
+function at the end of the calculation of the number of steps 100. The
+script consequently reduce the amount of the calculation by 100 steps
+for the latter.</p>
+<p>Let&#8217;s actually run it. After passing through a path to tenes in advance,
+execute calculation by typing as follows.</p>
+<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
+</pre></div>
+</div>
+<p>The calculation will finish within a few hours if you use a notebook PC
+using a single processor. After the calculation is completed, start up
+gnuplot and type</p>
+<div class="highlight-none"><div class="highlight"><pre>load &#39;plot.gp&#39;
+</pre></div>
+</div>
+<p>to obtain the magnetization curve as shown in the right panel of
+<a class="reference internal" href="#fig-tutorial5-triangular"><span>Fig. 4.2</span></a>. In a similar way,</p>
+<div class="highlight-none"><div class="highlight"><pre>load &#39;plot_ene.gp&#39;
+</pre></div>
+</div>
+<p>we obtain the ground-state energy as shown in the left panel of
+<a class="reference internal" href="#fig-tutorial5-triangular"><span>Fig. 4.2</span></a> .</p>
+<p>As can be seen from the result for a sufficiently large number of steps
+(for example, 2000 steps), a plateau structure occurs in the
+magnetization process at the magnetization of <span class="math">\(1/3\)</span> of the
+saturation magnetization <span class="math">\(\langle S_z \rangle = 0.5\)</span>. On this
+plateau, spins on the three lattices form a periodic magnetic structure
+with <span class="math">\(\uparrow\)</span>, <span class="math">\(\uparrow\)</span>, <span class="math">\(\downarrow\)</span>, and a spin
+gap is generated. This plateau structure is unique to triangular
+lattices. This plateau structure is unique to the triangular lattice. To
+see whether the accuracy of calculation is enough or not, it is helpful
+to chekc the step dependence of energy. In principle, the ground-state
+energy should decrease as the number of steps increases, but in some
+magnetic fields, the calculated energy increases. This is a sign that
+the calculation accuracy is not good. It is presumed that it is
+necessary to increase the bond dimension.</p>
+<div class="figure" id="id1">
+<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular"><img alt="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular" src="../_images/tutorial_5_triangular.png" style="width: 800px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Permalink to this image">¶</a></p>
+</div>
+<p>Next, let&#8217;s perform the calculation for a model on a square lattice. Use the toml file <code class="docutils literal"><span class="pre">basic_square.toml</span></code> and the python script <code class="docutils literal"><span class="pre">tutorial_magnetization_square.py</span></code> in the <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> directory.
+The content of <code class="docutils literal"><span class="pre">basic_square.toml</span></code> is the same as <code class="docutils literal"><span class="pre">basic.toml</span></code> except that the <code class="docutils literal"><span class="pre">lattice</span></code> section has been changed as follows.</p>
+<div class="highlight-none"><div class="highlight"><pre>[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+</pre></div>
+</div>
+<p>To perform the calculation, type:</p>
+<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
+</pre></div>
+</div>
+<p>After the calculation is completed, start up gnuplot and type</p>
+<div class="highlight-none"><div class="highlight"><pre>load &#39;plot_square.gp&#39;
+</pre></div>
+</div>
+<p>Then, the magnetization curve shown in the right panel of
+<a class="reference internal" href="#fig-tutorial5-square"><span>Fig. 4.3</span></a> is obtained. In a similar way, if you type</p>
+<div class="highlight-none"><div class="highlight"><pre>load &#39;plot_ene_square.gp&#39;
+</pre></div>
+</div>
+<p>we obtain the ground-state energy as shown in the left panel of
+<a class="reference internal" href="#fig-tutorial5-square"><span>Fig. 4.3</span></a>. The calculation is almost converged at 2000
+steps, and it can be seen that the plateau structure does not appear
+unlike the triangular lattice Heisenberg model. Since the energy
+generally decreases as the number of steps is increased, it is assumed
+that the calculation accuracy is sufficiently high.</p>
+<div class="figure" id="id2">
+<a class="reference internal image-reference" href="../_images/tutorial_5_square.png" id="fig-tutorial5-square"><img alt="../_images/tutorial_5_square.png" id="fig-tutorial5-square" src="../_images/tutorial_5_square.png" style="width: 800px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the square lattice.</span><a class="headerlink" href="#fig-tutorial5-square" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">4.2. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">4. Tutorial</a><ul>
+      <li>Previous: <a href="simple_tutorial-1.html" title="previous chapter">4.1. Ising model with transverse magnetic field</a></li>
+      <li>Next: <a href="../file_specification/index.html" title="next chapter">5. File format</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/tutorial/simple_tutorial-5.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -119,8 +119,11 @@ By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are outputted 
    $ python tutorial_read.py
 
 
-.. image:: ../../img/tutorial_1_Sz_vs_G.*
+.. figure:: ../../img/tutorial_1_Sz_vs_G.*
+   :name: fig_transverse
    :width: 400px
    :align: center
+   
+   ``G`` dependence of ``<Sz>`` and ``<Sx>``.
 
-As you can see from the figure, with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ``0.5``.
+As seen from :numref:`fig_transverse` , with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ``0.5``.
