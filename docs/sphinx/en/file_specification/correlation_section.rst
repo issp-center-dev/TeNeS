@@ -2,7 +2,7 @@
 
 In this section, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` is specified.
 TeNeS calculates the correlation function along :math:`x` and :math:`y` axis
-like :math:`\langle A(x,y) B(x+r, y) \rangle`, but not like :math:`\langle A(x,y) B(x+r_x, y+r_y)`.
+like :math:`\langle A(x,y) B(x+r, y) \rangle`, but not like :math:`\langle A(x,y) B(x+r_x, y+r_y)\rangle`.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
