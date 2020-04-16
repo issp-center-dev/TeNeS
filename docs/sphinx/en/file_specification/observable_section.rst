@@ -24,7 +24,7 @@ Define one-body operators that indicate physical quantities defined at each site
 ``group`` specifies an identification number of one-site operators.
 
 ``sites`` specifies a site number where an operater acts on.
-By using a list, multiple site the operators can be defined on site at the same time.
+By using a list, the operators can be defined on the multiple sites at the same time.
 An empty list ``[]`` means all sites.
 
 ``dim`` specifies a dimension of an operator.
@@ -105,7 +105,7 @@ One line consisting of three integers means one site pair.
 - The first integer is the number of the source site.
 - The last two integers are the coordinates (dx, dy) of the other site (target site) from the source site.
 
-    - Both dx and dy must be in the range :math:`-3 \ le dx \ le 3`.
+    - Both dx and dy must be in the range :math:`-3 \le dx \le 3`.
 
 ``dim`` specifies a dimension of an operator. 
 In other words, the number of possible states of the site where the operator acts on.

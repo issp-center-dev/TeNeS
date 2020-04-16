@@ -3,7 +3,7 @@ Overview
 TeNeS (**Te** nsor **Ne** twork **S** olver) is an open-source program package for calculation of two-dimensional many-body quantum states based on the tensor network method.
 This package calculates ground-state wavefunctions for user-defined Hamiltonian, and evaluates user-defined physical quantities such as magnetization and correlation functions.
 For predefined models and lattices, there is a tool that makes it easy for users to generate input files.
-TeNeS uses an OpenMP/MPI hybrid parallelized tensor operation library and thus can deal with a large problem by using massively parallel machines.
+TeNeS uses an OpenMP/MPI hybrid parallelized tensor operation library and thus can deal with large-scale calculation by using massively parallel machines.
 
 Developers
 ==================

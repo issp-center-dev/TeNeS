@@ -15,7 +15,7 @@ In a tensor network state, :math:`\Psi_{s_1,s_2,\dots,s_N}` is represented as a 
 .. math::
    \Psi_{s_1,s_2,\dots,s_N} = \mathrm{tTr}\left[T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N]\right],
 
-where :math:`\mathrm{tTr}[\dots]` represents tensor network contraction and :math:`T^{(i)}[s_i]` is a tensor. In the case of a matrix product state (MPS) :ref:`[MPS] <Ref-MPS>` , :math:`T^{(i)}[s_i]` becomes a matrix for a given :math: `s_i` and :math:`\mathrm{tTr}[\dots]` becomes usual matrix products as 
+where :math:`\mathrm{tTr}[\dots]` represents tensor network contraction and :math:`T^{(i)}[s_i]` is a tensor. In the case of a matrix product state (MPS) :ref:`[MPS] <Ref-MPS>` , :math:`T^{(i)}[s_i]` becomes a matrix for a given :math:`s_i` and :math:`\mathrm{tTr}[\dots]` becomes usual matrix products as 
 
 .. math::
    \Psi_{s_1,s_2,\dots,s_N}^{\mathrm{MPS}} = T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N],
@@ -47,7 +47,7 @@ In order to calculate expectation values over a TNS, :math:`\langle \Psi|O|\Psi\
 .. image:: ../../img/iTPS_braket.*
    :align: center
 
-which is often called as double layered tensor network. The contraction of a double layered tensor network often need huge computation cost. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, *e.g*, by considering a transfer matrix consist of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method :ref:`[CTMRG] <Ref-CTMRG>`, which expresses an infinitely extended double layered tensor network by using *corner transfer matrices* and *edge tensors*.
+which is often called as a double layered tensor network. The contraction of a double layered tensor network often needs huge computation cost. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, *e.g*, by considering a transfer matrix which consists of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method :ref:`[CTMRG] <Ref-CTMRG>`, which expresses an infinitely extended double layered tensor network by using *corner transfer matrices* and *edge tensors*.
 
 When we simplify the double layered tensor network by using a locally contracted tensor,
 
@@ -73,7 +73,7 @@ In the CTMRG algorithm, we iteratively optimise corner transfer matrices and edg
 
 The projectors in the above diagram is calculated in several ways :ref:`[CTMRG] <Ref-CTMRG>` and they reduces the degree of freedoms to :math:`\chi`.
 
-When we consider iTPS with the bond dimension :math:`D` and CTMs with the bond dimension :math:`\chi`, the leading computation cost of CTMRG scales as :math:`O(\chi^2 D^6)` and :math:`O(\chi^3 D^4)`. Notice that the bond dimension of double layered tensor network becomes :math:`D^2` by using locally contracted tensors. Thus, typically we increase :math:`\chi` as :math:`\chi \propto O(D^2)`. In this setup, the leading computation cost of CTMRG algorithm is reduced to :math:`O(D^{10})`, while the memory usage scales :math:`O(D^{8})`. In order to achive the computation cost discussed abobe, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD insted of the partial SVD, the computation cost becomes :math:`O(D^{12})`. 
+When we consider iTPS with the bond dimension :math:`D` and CTMs with the bond dimension :math:`\chi`, the leading computation cost of CTMRG scales as :math:`O(\chi^2 D^6)` and :math:`O(\chi^3 D^4)`. Notice that the bond dimension of the double layered tensor network becomes :math:`D^2` by using locally contracted tensors. Thus, typically we increase :math:`\chi` as :math:`\chi \propto O(D^2)`. In this setup, the leading computation cost of CTMRG algorithm is reduced to :math:`O(D^{10})`, while the memory usage scales :math:`O(D^{8})`. In order to achive the computation cost discussed above, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD insted of the partial SVD, the computation cost becomes :math:`O(D^{12})`. 
 
 Once we obtain the corner transfer matrices and edge tensors, we can also calculate :math:`\langle \Psi|O|\Psi\rangle` efficiently. For example, a local magnetization :math:`\langle \Psi|S^z_i|\Psi\rangle` is represented as
 
@@ -149,7 +149,7 @@ In the case of the nearest-neighbor interaction on the one-dimensional chain, th
 .. image:: ../../img/iMPS_ITE_local.*
    :align: center
 
-The squared norm :math:`\left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2` can be calculated by using, *e.g.*, CTMRG and we can solve the minimization problem easily :ref:`[ITE] <Ref-ITE>` Although this new iTPS breaks translational symmetry, we make translationally symmetric iTPS by *copying* updated local tensors to other parts so that the obtained iTPS can be considered as an approximated solution of the original minimization problem:
+The squared norm :math:`\left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2` can be calculated by using, *e.g.*, CTMRG and we can solve the minimization problem easily :ref:`[ITE]  <Ref-ITE>`. Although this new iTPS breaks translational symmetry, we make translationally symmetric iTPS by *copying* updated local tensors to other parts so that the obtained iTPS can be considered as an approximated solution of the original minimization problem:
 
 .. image:: ../../img/Copy.*
    :align: center

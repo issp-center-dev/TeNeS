@@ -13,7 +13,7 @@ Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
 
 When a list of two integers is passed as ``L_sub``, the first element gives the value of ``Lx`` and the second one does ``Ly``.
 A list of three or more elements causes an error.
-If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
+If ``L_sub`` is an integer, both ``Lx`` and ``Ly`` will have the same value.
 
 Sites in a unit cell are indexed starting from 0.
 These are arranged in order from the x direction.
@@ -35,7 +35,7 @@ These are arranged in order from the x direction.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The information of site tensors :math:`T_{ijkl\alpha}^{(n)}` is specified.
-Here, :math:`i, j, k, l` indicates the index of the virtual bond, 
+Here, :math:`i, j, k, l` indicate the index of the virtual bond, 
 :math:`\alpha` indicates the index of the physical bond, 
 and :math:`n` indicates the site number.
 
@@ -57,7 +57,7 @@ By setting a list to ``virtual_dim``, individual bond dimensions in four directi
 The order is left (-x), top (+y), right (+x), and bottom (-y).
 
 An initial state of a system :math:`|\Psi\rangle` is represented as
-the direct product state of the initial states at each site :math:`i` :math:`|\Psi_i\rangle`:
+the direct product state of the initial states at each site :math:`i`, :math:`|\Psi_i\rangle`:
 
 .. math::
    |\Psi\rangle = \otimes_i |\Psi_i\rangle,

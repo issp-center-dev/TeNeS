@@ -41,7 +41,7 @@ For example, when the transverse magnetic field is 0, the input file is
    G  = 0.0
 
 
-In this case, since ``Jz = -1.0`` , the ferro magnetic state manifests itself as the ground state at ``G=0``. 
+In this case, since ``Jz = -1.0`` , the ferromagnetic state manifests itself as the ground state at ``G=0``. 
 When the input file name is ``simple.toml`` , type the following commands to execute ``tenes``
 (before typing them, please install TeNeS and set PATH properly.):
   

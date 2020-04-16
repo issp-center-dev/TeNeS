@@ -74,7 +74,7 @@ Parameters in the full update procedure.
    ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-12
    ``iteration_max``,       "Maximum iteration number for truncation optimization on full updates",                                        Integer, 1000
    ``gauge_fix``,           "Whether the tensor gauge is fixed",                                                                           Boolean, true
-   ``fastfullupdate``,      "Whether the Fast full update is adopted",                                                                     Boolean, true
+   ``fastfullupdate``,      "Whether the fast full update is adopted",                                                                     Boolean, true
 
 ``parameter.ctm``
 ~~~~~~~~~~~~~~~~~
@@ -90,8 +90,8 @@ Parameters for corner transfer matrices, CTM.
    ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
    ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
    ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
-   ``use_rsvd``,                 "Whether to replace SVD with Random SVD",                                                                    Boolean, false
-   ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method", Real,    2.0
+   ``use_rsvd``,                 "Whether to replace SVD with random SVD",                                                                    Boolean, false
+   ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method", Real,    2.0
 
 For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ .
 

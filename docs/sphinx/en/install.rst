@@ -81,7 +81,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 
 .. admonition:: Specify compiler
 
-   CMake detects your compiler automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,
+   CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler by the following way,
 
    ::
 
