@@ -63,12 +63,12 @@
 
 サイトテンソルはこの直積状態を表現するように初期化されます。
 ``initial_state`` では各サイト :math:`i` の初期状態
-:math:`|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i` における展開係数 :math:`A_\alpha` の値を指定します。
+:math:`|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i` における実展開係数 :math:`A_\alpha` の値を指定します。
 係数は自動的に規格化されます。
-ゼロのみからなる配列を渡した場合、乱数初期化します。
 テンソル自体は、 すべてのvirtual ボンドインデックスが0 である要素が、 :math:`T_{0000\alpha} = A_\alpha` のように初期化されます。
 他の要素には ``[-noise, noise)`` の一様乱数が互いに独立に入力されます。
-
 たとえば、 :math:`S=1/2` のとき、 :math:`S^z` 方向に向いた状態 :math:`|\Psi_i\rangle = |\uparrow\rangle = |0\rangle` を初期値にしたい場合には ``initial_state = [1.0, 0.0]`` に、
 :math:`S^x` 方向に向いた状態 :math:`|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}` を初期値にしたい場合には ``initial_state = [1.0, 1.0]`` とします。
+
+``initial_state`` にゼロのみからなる配列を渡した場合、テンソルのすべての要素が独立に ``[-noise, noise)`` で乱数初期化されます。
 

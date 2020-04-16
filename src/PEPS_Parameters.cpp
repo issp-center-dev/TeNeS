@@ -38,9 +38,9 @@ PEPS_Parameters::PEPS_Parameters() {
 
   // Environment
   Inverse_projector_cut = 1e-12;
-  CTM_Convergence_Epsilon = 1e-10;
+  CTM_Convergence_Epsilon = 1e-6;
   Max_CTM_Iteration = 100;
-  CTM_Projector_corner = false;
+  CTM_Projector_corner = true;
   Use_RSVD = false;
   RSVD_Oversampling_factor = 2.0;
 
@@ -48,8 +48,8 @@ PEPS_Parameters::PEPS_Parameters() {
   num_full_step = 0;
   Inverse_Env_cut = 1e-12;
   Full_Inverse_precision = 1e-12;
-  Full_Convergence_Epsilon = 1e-12;
-  Full_max_iteration = 1000;
+  Full_Convergence_Epsilon = 1e-6;
+  Full_max_iteration = 100;
   Full_Gauge_Fix = true;
   Full_Use_FastFullUpdate = true;
 
@@ -61,6 +61,7 @@ PEPS_Parameters::PEPS_Parameters() {
   // general
   is_real = false;
   iszero_tol = 0.0;
+  to_measure = true;
   tensor_load_dir = "";
   tensor_save_dir = "";
   outdir = "output";
@@ -86,6 +87,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Lcor,
     I_seed,
     I_is_real,
+    I_to_measure,
 
     N_PARAMS_INT_INDEX,
   };
@@ -140,6 +142,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
 
     SAVE_PARAM(is_real, int);
     SAVE_PARAM(iszero_tol, double);
+    SAVE_PARAM(to_measure, int);
     SAVE_PARAM(tensor_load_dir, string);
     SAVE_PARAM(tensor_save_dir, string);
     SAVE_PARAM(outdir, string);
@@ -180,6 +183,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
 
     LOAD_PARAM(is_real, int);
     LOAD_PARAM(iszero_tol, double);
+    LOAD_PARAM(to_measure, int);
     LOAD_PARAM(tensor_load_dir, string);
     LOAD_PARAM(tensor_save_dir, string);
     LOAD_PARAM(outdir, string);
@@ -232,6 +236,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;
+  ofs << "measure = " << to_measure << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;
   ofs << "tensor_save_dir = " << tensor_save_dir << std::endl;
   ofs << "outdir = " << outdir << std::endl;

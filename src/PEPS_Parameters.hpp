@@ -62,6 +62,7 @@ class PEPS_Parameters {
   // general
   bool is_real;
   double iszero_tol;
+  bool to_measure;
   std::string tensor_load_dir;
   std::string tensor_save_dir;
   std::string outdir;

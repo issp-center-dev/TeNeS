@@ -1,8 +1,9 @@
 .. highlight:: none
 
-In this section, the parameters about the correlation function :math:`C = \langle A(0)B(r) \rangle` is specified.
+In this section, the parameters about the site-site correlation function :math:`C = \langle A(0)B(r) \rangle` is specified.
 TeNeS calculates the correlation function along :math:`x` and :math:`y` axis
 like :math:`\langle A(x,y) B(x+r, y) \rangle`, but not like :math:`\langle A(x,y) B(x+r_x, y+r_y)\rangle`.
+If you omit this section, no correlation functions will be calculated.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
@@ -16,8 +17,8 @@ The operators defined in the ``observable.onesite`` section are used.
 Example
 ~~~~~~~~
 
-For example, if :math:`S^z` is defined as 0 and :math:`S^x` is defined as 1, 
-then :math:`S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)` 
+For example, if :math:`S^z` is defined as 0th operator and :math:`S^x` is defined as 1st one,
+then :math:`S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)` for :math:`0 \le r \le 5`
 are measured by the following definition:
 
 ::

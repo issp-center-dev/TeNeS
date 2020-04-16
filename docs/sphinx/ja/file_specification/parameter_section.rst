@@ -18,6 +18,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
    ``is_real``,     "すべてのテンソルを実数に制限するかどうか",                     真偽値, false
    ``iszero_tol``,  "演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数,   0.0
+   ``measure``,     "物理量測定をするかどうか",                                     真偽値, true
    ``output``,      "物理量などを書き込むディレクトリ",                             文字列, \"output\"
    ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ",                     文字列, \"\"
    ``tensor_load``, "初期テンソルを読み込むディレクトリ",                           文字列, \"\"
@@ -26,16 +27,21 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 - ``is_real``
 
   - ``true`` にするとテンソルの要素を実数に制限して計算を行います
-  - 一つでも複素演算子があると計算が始まりません
+  - 一つでも複素演算子があるとエラー終了します
 
 - ``iszero_tol``
 
   - 各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が ``iszero_tol`` 以下はゼロとみなします
 
+- ``measure``
+
+  - ``false`` にすると物理量計算・保存をスキップします
+  - 実行時間 ``time.dat`` は常に保存されます
+
 - ``output``
 
   - 物理量などの計算結果をこのディレクトリ以下に保存します
-  - 空文字列の場合はカレントディレクトリ以下に保存します
+  - 空文字列の場合はカレントディレクトリに保存します
 
 - ``tensor_save``
 
@@ -76,8 +82,8 @@ full update に関するパラメータ
    ``num_step``,            "full update の回数",                                                 整数,   0
    ``env_cutoff``,          "full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff", 実数,   1e-12
    ``inverse_precision``,   "full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff",   実数,   1e-12
-   ``convergence_epsilon``, "full update でtruncationの最適化を行う際の収束判定値",               実数,   1e-12
-   ``iteration_max``,       "full update でtruncationの最適化を行う際のiterationの最大回数",      整数,   1000
+   ``convergence_epsilon``, "full update でtruncationの最適化を行う際の収束判定値",               実数,   1e-6
+   ``iteration_max``,       "full update でtruncationの最適化を行う際のiterationの最大回数",      整数,   100
    ``gauge_fix``,           "テンソルのゲージを固定するかどうか",                                 真偽値, true
    ``fastfullupdate``,      "Fast full update にするかどうか",                                    真偽値, true
 
@@ -92,7 +98,7 @@ full update に関するパラメータ
 
    ``dimension``,                "CTM のボンド次元 :math:`\chi`",                                  整数,   4
    ``projector_cutoff``,         "CTMのprojectorを計算する際にゼロとみなす特異値のcutoff",         実数,   1e-12
-   ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-10
+   ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-6
    ``iteration_max``,            "CTMの収束iterationの最大回数",                                   整数,   100
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
