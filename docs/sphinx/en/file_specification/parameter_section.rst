@@ -78,8 +78,8 @@ Parameters in the full update procedure.
    ``num_step``,            "Number of full updates",                                                                                      Integer, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
    ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
-   ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-12
-   ``iteration_max``,       "Maximum iteration number for truncation optimization on full updates",                                        Integer, 1000
+   ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-6
+   ``iteration_max``,       "Maximum iteration number for truncation optimization on full updates",                                        Integer, 100
    ``gauge_fix``,           "Whether the tensor gauge is fixed",                                                                           Boolean, true
    ``fastfullupdate``,      "Whether the Fast full update is adopted",                                                                     Boolean, true
 
@@ -94,7 +94,7 @@ Parameters for corner transfer matrices, CTM.
 
    ``dimension``,                "Bond Dimension of CTM :math:`\chi`",                                                             Integer, 4
    ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
-   ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-10
+   ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-6
    ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
    ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
    ``use_rsvd``,                 "Whether to replace SVD with Random SVD",                                                                    Boolean, false

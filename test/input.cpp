@@ -43,6 +43,36 @@ TEST_CASE("input") {
   using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
 #endif
 
+
+  SUBCASE("parameter_default") {
+    INFO("parameter_default");
+    auto toml = parse_str(R"([parameter])");
+
+    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+
+    CHECK(peps_parameters.CHI == 2);
+
+    CHECK(peps_parameters.num_simple_step == 0);
+    CHECK(peps_parameters.Inverse_lambda_cut == 1e-12);
+
+    CHECK(peps_parameters.num_full_step == 0);
+    CHECK(peps_parameters.Inverse_Env_cut == 1e-12);
+    CHECK(peps_parameters.Full_Inverse_precision == 1e-12);
+    CHECK(peps_parameters.Full_Convergence_Epsilon == 1e-6);
+    CHECK(peps_parameters.Full_max_iteration == 100);
+    CHECK(peps_parameters.Full_Gauge_Fix == true);
+    CHECK(peps_parameters.Full_Use_FastFullUpdate == true);
+
+    CHECK(peps_parameters.Inverse_projector_cut == 1e-12);
+    CHECK(peps_parameters.CTM_Convergence_Epsilon == 1e-6);
+    CHECK(peps_parameters.Max_CTM_Iteration == 100);
+    CHECK(peps_parameters.CTM_Projector_corner == true);
+    CHECK(peps_parameters.Use_RSVD == false);
+    CHECK(peps_parameters.RSVD_Oversampling_factor == 2.0);
+
+    CHECK(peps_parameters.seed == 11);
+  }
+
   SUBCASE("parameter") {
     INFO("parameter");
     auto toml = parse_str(R"(
@@ -69,7 +99,7 @@ dimension = 16
 projector_cutoff = 1e-10
 convergence_epsilon = 1e-8
 iteration_max = 10
-projector_corner = true
+projector_corner = false
 use_rsvd = true
 rsvd_oversampling_factor = 3.0
 
@@ -94,7 +124,7 @@ seed = 42)");
     CHECK(peps_parameters.Inverse_projector_cut == 1e-10);
     CHECK(peps_parameters.CTM_Convergence_Epsilon == 1e-8);
     CHECK(peps_parameters.Max_CTM_Iteration == 10);
-    CHECK(peps_parameters.CTM_Projector_corner == true);
+    CHECK(peps_parameters.CTM_Projector_corner == false);
     CHECK(peps_parameters.Use_RSVD == true);
     CHECK(peps_parameters.RSVD_Oversampling_factor == 3.0);
 

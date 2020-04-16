@@ -82,8 +82,8 @@ full update に関するパラメータ
    ``num_step``,            "full update の回数",                                                 整数,   0
    ``env_cutoff``,          "full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff", 実数,   1e-12
    ``inverse_precision``,   "full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff",   実数,   1e-12
-   ``convergence_epsilon``, "full update でtruncationの最適化を行う際の収束判定値",               実数,   1e-12
-   ``iteration_max``,       "full update でtruncationの最適化を行う際のiterationの最大回数",      整数,   1000
+   ``convergence_epsilon``, "full update でtruncationの最適化を行う際の収束判定値",               実数,   1e-6
+   ``iteration_max``,       "full update でtruncationの最適化を行う際のiterationの最大回数",      整数,   100
    ``gauge_fix``,           "テンソルのゲージを固定するかどうか",                                 真偽値, true
    ``fastfullupdate``,      "Fast full update にするかどうか",                                    真偽値, true
 
@@ -98,7 +98,7 @@ full update に関するパラメータ
 
    ``dimension``,                "CTM のボンド次元 :math:`\chi`",                                  整数,   4
    ``projector_cutoff``,         "CTMのprojectorを計算する際にゼロとみなす特異値のcutoff",         実数,   1e-12
-   ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-10
+   ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-6
    ``iteration_max``,            "CTMの収束iterationの最大回数",                                   整数,   100
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false

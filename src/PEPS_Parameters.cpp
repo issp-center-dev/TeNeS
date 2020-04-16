@@ -38,9 +38,9 @@ PEPS_Parameters::PEPS_Parameters() {
 
   // Environment
   Inverse_projector_cut = 1e-12;
-  CTM_Convergence_Epsilon = 1e-10;
+  CTM_Convergence_Epsilon = 1e-6;
   Max_CTM_Iteration = 100;
-  CTM_Projector_corner = false;
+  CTM_Projector_corner = true;
   Use_RSVD = false;
   RSVD_Oversampling_factor = 2.0;
 
@@ -48,8 +48,8 @@ PEPS_Parameters::PEPS_Parameters() {
   num_full_step = 0;
   Inverse_Env_cut = 1e-12;
   Full_Inverse_precision = 1e-12;
-  Full_Convergence_Epsilon = 1e-12;
-  Full_max_iteration = 1000;
+  Full_Convergence_Epsilon = 1e-6;
+  Full_max_iteration = 100;
   Full_Gauge_Fix = true;
   Full_Use_FastFullUpdate = true;
 
