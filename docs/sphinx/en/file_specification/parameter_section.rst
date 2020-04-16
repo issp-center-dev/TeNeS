@@ -25,7 +25,7 @@ General parameters for ``tenes``.
 - ``is_real``
 
   - When set to ``true``, the type of elements of the tensor becomes real. 
-  - If one complex operator is defined at least,  calculation does not start. 
+  - If one complex operator is defined at least,  calculation will end in errors before starting.
 
 - ``iszero_tol``
 

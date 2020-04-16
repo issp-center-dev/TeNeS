@@ -26,7 +26,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 - ``is_real``
 
   - ``true`` にするとテンソルの要素を実数に制限して計算を行います
-  - 一つでも複素演算子があると計算が始まりません
+  - 一つでも複素演算子があるとエラー終了します
 
 - ``iszero_tol``
 
