@@ -453,17 +453,22 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">output</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">measure</span></code></td>
+<td>Whether to calculate and save observables</td>
+<td>Boolean</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">output</span></code></td>
 <td>Directory for saving result such as physical quantities</td>
 <td>String</td>
 <td>&#8220;output&#8221;</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
 <td>Directory for saving optimized tensors</td>
 <td>String</td>
 <td>&#8220;&#8221;</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
 <td>Directory for loading initial tensors</td>
 <td>String</td>
 <td>&#8220;&#8221;</td>
@@ -480,8 +485,14 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <li>When the absolute value of operator elements loaded is less than <code class="docutils literal"><span class="pre">iszero_tol</span></code>, it is regarded as zero</li>
 </ul>
 </li>
+<li><code class="docutils literal"><span class="pre">meaure</span></code><ul>
+<li>When set to <code class="docutils literal"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</li>
+<li>Elapsed time <code class="docutils literal"><span class="pre">time.dat</span></code> is always saved</li>
+</ul>
+</li>
 <li><code class="docutils literal"><span class="pre">output</span></code><ul>
 <li>Save numerical results such as physical quantities to files in this directory</li>
+<li>Empty means <code class="docutils literal"><span class="pre">&quot;.&quot;</span></code> (current directory)</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">tensor_save</span></code><ul>

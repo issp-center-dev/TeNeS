@@ -444,17 +444,22 @@
 <td>実数</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">output</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">measure</span></code></td>
+<td>物理量測定をするかどうか</td>
+<td>真偽値</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">output</span></code></td>
 <td>物理量などを書き込むディレクトリ</td>
 <td>文字列</td>
 <td>&#8220;output&#8221;</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
 <td>最適化後のテンソルを書き込むディレクトリ</td>
 <td>文字列</td>
 <td>&#8220;&#8221;</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
 <td>初期テンソルを読み込むディレクトリ</td>
 <td>文字列</td>
 <td>&#8220;&#8221;</td>
@@ -471,9 +476,14 @@
 <li>各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が <code class="docutils literal"><span class="pre">iszero_tol</span></code> 以下はゼロとみなします</li>
 </ul>
 </li>
+<li><code class="docutils literal"><span class="pre">measure</span></code><ul>
+<li><code class="docutils literal"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</li>
+<li>実行時間 <code class="docutils literal"><span class="pre">time.dat</span></code> は常に保存されます</li>
+</ul>
+</li>
 <li><code class="docutils literal"><span class="pre">output</span></code><ul>
 <li>物理量などの計算結果をこのディレクトリ以下に保存します</li>
-<li>空文字列の場合はカレントディレクトリ以下に保存します</li>
+<li>空文字列の場合はカレントディレクトリに保存します</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">tensor_save</span></code><ul>

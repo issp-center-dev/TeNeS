@@ -18,6 +18,7 @@ General parameters for ``tenes``.
 
    ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
    ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
+   ``measure``,     "Whether to calculate and save observables",               Boolean, true
    ``output``,      "Directory for saving result such as physical quantities", String,  \"output\"
    ``tensor_save``, "Directory for saving optimized tensors",                  String,  \"\"
    ``tensor_load``, "Directory for loading initial tensors",                   String,  \"\"
@@ -31,9 +32,15 @@ General parameters for ``tenes``.
 
   - When the absolute value of operator elements loaded is less than ``iszero_tol``, it is regarded as zero
 
+- ``meaure``
+
+  - When set to ``false``, the stages for measuring and saving observables will be skipped
+  - Elapsed time ``time.dat`` is always saved
+
 - ``output``
 
   - Save numerical results such as physical quantities to files in this directory
+  - Empty means ``"."`` (current directory)
 
 - ``tensor_save``
 
