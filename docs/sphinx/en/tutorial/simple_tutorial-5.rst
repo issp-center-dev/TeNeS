@@ -10,7 +10,7 @@ triangular lattice. The Hamiltonian looks like this:
 .. math::
 
    \begin{aligned}
-   H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}
+   H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}
 
 Here, :math:`\langle i, j \rangle` represents the pair of nearest neighbor sites, and :math:`h` represents the magnitude of the external magnetic field applied in the :math:`z` direction. 
 Let's calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, use the toml file ``basic.toml`` in the ``sample/05_magnetization`` directory and the python script ``tutorial_magnetization.py``. 

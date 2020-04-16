@@ -93,6 +93,8 @@ Parameters for corner transfer matrices, CTM.
    ``use_rsvd``,                 "Whether to replace SVD with Random SVD",                                                                    Boolean, false
    ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method", Real,    2.0
 
+For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ .
+
 
 ``parameter.random``
 ~~~~~~~~~~~~~~~~~~~~~

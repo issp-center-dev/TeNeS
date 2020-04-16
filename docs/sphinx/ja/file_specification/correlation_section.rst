@@ -3,7 +3,7 @@
 相関関数 ``C = <A(0)B(r)>`` に関する情報を指定するセクションです。
 TeNeS は x ないし y 軸に平行な方向にのみ相関関数を計算します。
 つまり、 :math:`\langle A(x,y) B(x+r, y) \rangle` という形式のみ計算し、
-斜め方向 :math:`\langle A(x,y) B(x+r_x, y+r_y)` は計算しません。
+斜め方向 :math:`\langle A(x,y) B(x+r_x, y+r_y) \rangle` は計算しません。
 
 .. csv-table::
    :header: "名前", "説明", "型"

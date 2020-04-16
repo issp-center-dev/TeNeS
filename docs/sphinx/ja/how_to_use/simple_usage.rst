@@ -33,9 +33,13 @@
    - 正方格子
    - 三角格子
    - 蜂の巣格子
+   - かごめ格子
 
 模型・格子や入力ファイルの詳細は :ref:`sec-simple-format` を参照してください。
+以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。
+
 ::
+
    [lattice]
    type = "square lattice" # type of lattice
    L = 2                   # size of unitcell

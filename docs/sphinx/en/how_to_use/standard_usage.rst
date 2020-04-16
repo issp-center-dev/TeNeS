@@ -24,6 +24,8 @@ Usage of ``tenes_std``
 
 By making and editing input files, users can simulate on other models and lattices than predefined ones.	
 See :ref:`sec-std-format` for details of the input file.
+Below, a sample file for the S=1/2 Heisenberg model on the square lattice is shown.
+
 ::
    [parameter]
    [parameter.general]

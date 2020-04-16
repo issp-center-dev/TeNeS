@@ -1,6 +1,6 @@
 .. highlight:: none
 
-Specify the unit cell information.
+Specify the unit cell information (Information of bonds is given in the ``hamiltonian`` (``tenes_std``) and ``evolution`` (``tenes``)  sections.).
 Unit cell has a shape of a rectangular with the size of ``Lx`` times ``Ly``.
 ``lattice`` section has an array of subsections ``unitcell`` .
 
@@ -17,26 +17,18 @@ If ``L_sub`` is an integer, Both ``Lx`` and ``Ly`` will have the same value.
 
 Sites in a unit cell are indexed starting from 0.
 These are arranged in order from the x direction.
-Sites in a unit cell of ``L_sub = [2,3]`` are arranged as follows::
 
- y
- ^     4 5
- |     2 3
- .->x  0 1
+.. figure:: ../../img/tensor_sec_fig1.*
+   :width: 150px
+
+   An example for ``L_sub = [2,3]``.
 
 ``skew`` is the shift value in the x direction when moving one unit cell in the y direction.
 
-Example when ``L_sub = [3,2], skew = 1`` (ruled line is a separator for unit cell)::
+.. figure:: ../../img/tensor_sec_fig2.*
+   :width: 400px
 
- y    ---------
- ^     5|3 4 5|
- |     2|0 1 2|
- |    ---------
- |    |3 4 5|
- .->x |0 1 2| 
-      -------
-
-Information of bonds is given in the ``hamiltonian`` (``tenes_std``) and ``evolution`` (``tenes``)  sections.
+   An example for ``L_sub = [3,2], skew = 1`` (ruled line is a separator for unit cell).
 
 
 ``tensor.unitcell`` subsection

@@ -53,14 +53,23 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
   $ cmake -DCMAKE_INSTALL_PREFIX=<path to install to> ../
   $ make
 
-上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tests`` が作成されます。
 ``<path to install to>`` のデフォルト値は ``/usr/local`` です。
 
 （ CentOS など、環境によっては ``cmake3`` とする必要があります。）
 
+なお、上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tests`` が作成されます。
+
+::
+
+  $ make test
+
+と打つとテストを実行することができます。
+
+
 2. 次にインストールします。
 
 ::
+
   $ make install
  
 実行ファイル ``tenes``, ``tenes_std``, ``tenes_simple`` が ``<path to install to>/bin`` にインストールされます。 

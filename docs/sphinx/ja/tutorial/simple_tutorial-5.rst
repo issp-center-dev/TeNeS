@@ -9,12 +9,12 @@
 .. math::
 
    \begin{aligned}
-   H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}
+   H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}
 
 ここで\ :math:`\langle i, j\rangle`\ は隣接サイトの組を表し、\ :math:`h`\ は\ :math:`z`\ 方向にかけられた外部磁場の大きさを表します。
 この模型の基底状態を計算し、ユニットセルの平均磁化 \ :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`\ を磁場\ :math:`h`\ の関数として求めてみましょう ( :math:`N_u` はユニットセル内のサイト数)。
 
-この計算を行うには、 ``sample/05_magnetization`` のディレクトリ中にある toml ファイル ``basic.toml`` と、pythonスクリプト ``tutorial_magnetization.py`` を利用します。 ``basic.toml`` ファイルには、模型の設定やパラメータなどが記述されています。
+この計算を行うには、 ``sample/05_magnetization`` のディレクトリ内にある toml ファイル ``basic.toml`` と、pythonスクリプト ``tutorial_magnetization.py`` を利用します。 ``basic.toml`` ファイルには、模型の設定やパラメータなどが記述されています。
 
 ::
 
@@ -94,7 +94,7 @@
         fout.write("\n")
     fout.close()
 
-ここスクリプトでは、磁場\ :math:`h`\ を0から5まで0.25刻みで変化させ、基底状態のエネルギーと\ :math:`\langle S_z \rangle`\ を計算して、 ``energy.dat`` および ``magnetization.dat`` に出力します。 ``simple update`` の時間ステップ数を\ :math:`100`, :math:`200`, :math:`500`, :math:`1000`, :math:`2000`\ と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
+このスクリプトでは、磁場\ :math:`h`\ を0から5まで0.25刻みで変化させ、基底状態のエネルギーと\ :math:`\langle S_z \rangle`\ を計算して、 ``energy.dat`` および ``magnetization.dat`` に出力します。 ``simple update`` の時間ステップ数を\ :math:`100`, :math:`200`, :math:`500`, :math:`1000`, :math:`2000`\ と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
 計算量を減らすために、少ないステップ数で得られた波動関数の情報を ``tensor_save`` に保存し、それをより多いステップ数の計算の初期状態としてとっています。例えば、最初に時間ステップ数を100とした計算を行って結果を出力したあと、ステップ数100の計算終了時の波動関数からさらにステップ数100の計算を行って、結果的にステップ数200の計算結果を得ます。
 
 実際に実行してみましょう。あらかじめ ``tenes`` などにパスを通した上で

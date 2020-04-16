@@ -70,7 +70,7 @@
 
 ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定できます。
+方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
 また、最後に `xyz` のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。
 
@@ -78,7 +78,7 @@
    :width: 300px
    :align: center
 
-双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせられます。
+双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせらることもできます。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
@@ -103,7 +103,7 @@
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-および最近接ボンド上の :math:`S^z`、 :math:`S^x`、 :math:`S^y` 相関 :math:`S_i^\alpha S_j^\alpha` が自動的に定義されます。
+および最近接ボンド上の相関 :math:`S_i^\alpha S_j^\alpha` ( :math:`\alpha=x, y, z` )が自動的に定義されます。
 
 ``lattice`` セクション
 ==========================
