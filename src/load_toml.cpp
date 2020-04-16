@@ -158,6 +158,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   if (general != nullptr) {
     load_if(pparam.is_real, general, "is_real");
     load_if(pparam.iszero_tol, general, "iszero_tol");
+    load_if(pparam.to_measure, general, "measure");
     load_if(pparam.outdir, general, "output");
     load_if(pparam.tensor_load_dir, general, "tensor_load");
     load_if(pparam.tensor_save_dir, general, "tensor_save");
