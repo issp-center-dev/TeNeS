@@ -27,6 +27,7 @@ See :ref:`sec-std-format` for details of the input file.
 Below, a sample file for the S=1/2 Heisenberg model on the square lattice is shown.
 
 ::
+
    [parameter]
    [parameter.general]
    is_real = true   # limit tensors as real-valued ones

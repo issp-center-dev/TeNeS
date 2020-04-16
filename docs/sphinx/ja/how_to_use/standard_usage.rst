@@ -27,6 +27,7 @@
 以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。
 
 ::
+
    [parameter]
    [parameter.general]
    is_real = true   # limit tensors as real-valued ones
