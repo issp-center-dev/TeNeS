@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tensor.unitcell subsection &mdash; TeNeS 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p>Specify the unit cell information (Information of bonds is given in the <code class="docutils literal"><span class="pre">hamiltonian</span></code> (<code class="docutils literal"><span class="pre">tenes_std</span></code>) and <code class="docutils literal"><span class="pre">evolution</span></code> (<code class="docutils literal"><span class="pre">tenes</span></code>)  sections.).
+Unit cell has a shape of a rectangular with the size of <code class="docutils literal"><span class="pre">Lx</span></code> times <code class="docutils literal"><span class="pre">Ly</span></code>.
+<code class="docutils literal"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal"><span class="pre">unitcell</span></code> .</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="29%" />
+<col width="29%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">L_sub</span></code></td>
+<td>Unit cell size</td>
+<td>Integer or a list of integer</td>
+<td>&#8211;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">skew</span></code></td>
+<td>Shift value in skew boundary condition</td>
+<td>Integer</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>When a list of two integers is passed as <code class="docutils literal"><span class="pre">L_sub</span></code>, the first element gives the value of <code class="docutils literal"><span class="pre">Lx</span></code> and the second one does <code class="docutils literal"><span class="pre">Ly</span></code>.
+A list of three or more elements causes an error.
+If <code class="docutils literal"><span class="pre">L_sub</span></code> is an integer, both <code class="docutils literal"><span class="pre">Lx</span></code> and <code class="docutils literal"><span class="pre">Ly</span></code> will have the same value.</p>
+<p>Sites in a unit cell are indexed starting from 0.
+These are arranged in order from the x direction.</p>
+<div class="figure" id="id1">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig1.png"><img alt="../_images/tensor_sec_fig1.png" src="../_images/tensor_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-text">An example for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code>.</span></p>
+</div>
+<p><code class="docutils literal"><span class="pre">skew</span></code> is the shift value in the x direction when moving one unit cell in the y direction.</p>
+<div class="figure" id="id2">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-text">An example for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> (ruled line is a separator for unit cell).</span></p>
+</div>
+<div class="section" id="tensor-unitcell-subsection">
+<h1><code class="docutils literal"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this headline">¶</a></h1>
+<p>The information of site tensors <span class="math">\(T_{ijkl\alpha}^{(n)}\)</span> is specified.
+Here, <span class="math">\(i, j, k, l\)</span> indicate the index of the virtual bond,
+<span class="math">\(\alpha\)</span> indicates the index of the physical bond,
+and <span class="math">\(n\)</span> indicates the site number.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="36%" />
+<col width="36%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">index</span></code></td>
+<td>Site number</td>
+<td>Integer or a list of integer</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">physical_dim</span></code></td>
+<td>Dimension of physical bond for a site tensor</td>
+<td>Integer</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">virtual_dim</span></code></td>
+<td>Dimension of virtual bonds <span class="math">\(D\)</span> for a site tensor</td>
+<td>Integer or a list of integer</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">initial_state</span></code></td>
+<td>Initial tensor</td>
+<td>a list of real</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">noise</span></code></td>
+<td>Noise for initial tensor</td>
+<td>Real</td>
+</tr>
+</tbody>
+</table>
+<p>Multiple sites can be specified at once by setting a list to <code class="docutils literal"><span class="pre">index</span></code>.
+An empty list <code class="docutils literal"><span class="pre">[]</span></code> means all sites.</p>
+<p>By setting a list to <code class="docutils literal"><span class="pre">virtual_dim</span></code>, individual bond dimensions in four directions can be specified.
+The order is left (-x), top (+y), right (+x), and bottom (-y).</p>
+<p>An initial state of a system <span class="math">\(|\Psi\rangle\)</span> is represented as
+the direct product state of the initial states at each site <span class="math">\(i\)</span>, <span class="math">\(|\Psi_i\rangle\)</span>:</p>
+<div class="math">
+\[|\Psi\rangle = \otimes_i |\Psi_i\rangle,\]</div>
+<p>where <span class="math">\(|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> is the initial state at <span class="math">\(i\)</span> site.
+Site tensors are initialized to realize this product state with some noise.
+<code class="docutils literal"><span class="pre">initial_state</span></code> specifies (real) values of expansion coefficient <span class="math">\(A_\alpha\)</span>, which will be automatically normalized.
+The tensor itself is initialized such that all elements with a virtual bond index of 0 are <span class="math">\(T_{0000\alpha} = A_\alpha\)</span>.
+The other elements are independently initialized by a uniform random number of <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code>.
+For example, in the case of <span class="math">\(S=1/2\)</span> ,
+set <code class="docutils literal"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">0.0]</span></code> when you want to set the initial state as the state <span class="math">\(|\Psi_i\rangle = |\uparrow\rangle = |0\rangle\)</span>.
+When you want to set the initial state as the state <span class="math">\(|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}\)</span>, set <code class="docutils literal"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">1.0]</span></code>.</p>
+<p>When an array consisting of only zeros is passed as <code class="docutils literal"><span class="pre">initil_state</span></code>, all the elements of the initial tensor will be initialized independently by uniform random value <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> .</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/tensor_section.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

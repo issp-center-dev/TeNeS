@@ -1,0 +1,403 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>parameter.general &mdash; TeNeS 1.0.0 ドキュメント</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.0.0 ドキュメント" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p>更新回数など、 計算にあらわれる種々のパラメータを記述します。
+サブセクションとして <code class="docutils literal"><span class="pre">general</span></code>, <code class="docutils literal"><span class="pre">simple_update</span></code>, <code class="docutils literal"><span class="pre">full_update</span></code>,
+<code class="docutils literal"><span class="pre">ctm</span></code>, <code class="docutils literal"><span class="pre">random</span></code> を持ちます。</p>
+<p>simple update およびfull updateの虚時間刻み <code class="docutils literal"><span class="pre">parameter.simple_update.tau</span></code> と <code class="docutils literal"><span class="pre">parameter.full_update.tau</span></code> のみ、 <code class="docutils literal"><span class="pre">tenes</span></code> 本体ではなくスタンダードモード <code class="docutils literal"><span class="pre">tenes_std</span></code> で使われるパラメータです。</p>
+<div class="section" id="parameter-general">
+<h1><code class="docutils literal"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p><code class="docutils literal"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="29%" />
+<col width="43%" />
+<col width="14%" />
+<col width="14%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">is_real</span></code></td>
+<td>すべてのテンソルを実数に制限するかどうか</td>
+<td>真偽値</td>
+<td>false</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iszero_tol</span></code></td>
+<td>演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">measure</span></code></td>
+<td>物理量測定をするかどうか</td>
+<td>真偽値</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">output</span></code></td>
+<td>物理量などを書き込むディレクトリ</td>
+<td>文字列</td>
+<td>&#8220;output&#8221;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
+<td>最適化後のテンソルを書き込むディレクトリ</td>
+<td>文字列</td>
+<td>&#8220;&#8221;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
+<td>初期テンソルを読み込むディレクトリ</td>
+<td>文字列</td>
+<td>&#8220;&#8221;</td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
+<li><code class="docutils literal"><span class="pre">true</span></code> にするとテンソルの要素を実数に制限して計算を行います</li>
+<li>一つでも複素演算子があるとエラー終了します</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
+<li>各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が <code class="docutils literal"><span class="pre">iszero_tol</span></code> 以下はゼロとみなします</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">measure</span></code><ul>
+<li><code class="docutils literal"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</li>
+<li>実行時間 <code class="docutils literal"><span class="pre">time.dat</span></code> は常に保存されます</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">output</span></code><ul>
+<li>物理量などの計算結果をこのディレクトリ以下に保存します</li>
+<li>空文字列の場合はカレントディレクトリに保存します</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">tensor_save</span></code><ul>
+<li>最適化後のテンソルをこのディレクトリ以下に保存します</li>
+<li>空文字列の場合は保存しません</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">tensor_load</span></code><ul>
+<li>各種テンソルをこのディレクトリ以下から読み込みます</li>
+<li>空文字列の場合は読み込みません</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="parameter-simple-update">
+<h1><code class="docutils literal"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>simple update に関するパラメータ</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tau</span></code></td>
+<td>虚時間発展演算子における虚時間刻み <span class="math">\(\tau\)</span></td>
+<td>実数</td>
+<td>0.01</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
+<td>simple update の回数</td>
+<td>整数</td>
+<td>0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">lambda_cutoff</span></code></td>
+<td>simple update において平均場 <span class="math">\(\lambda\)</span> の切り捨て閾値</td>
+<td>実数</td>
+<td>1e-12</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameter-full-update">
+<h1><code class="docutils literal"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>full update に関するパラメータ</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tau</span></code></td>
+<td>虚時間発展演算子における虚時間刻み <span class="math">\(\tau\)</span></td>
+<td>実数</td>
+<td>0.01</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
+<td>full update の回数</td>
+<td>整数</td>
+<td>0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">env_cutoff</span></code></td>
+<td>full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff</td>
+<td>実数</td>
+<td>1e-12</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">inverse_precision</span></code></td>
+<td>full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff</td>
+<td>実数</td>
+<td>1e-12</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
+<td>full update でtruncationの最適化を行う際の収束判定値</td>
+<td>実数</td>
+<td>1e-6</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
+<td>full update でtruncationの最適化を行う際のiterationの最大回数</td>
+<td>整数</td>
+<td>100</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">gauge_fix</span></code></td>
+<td>テンソルのゲージを固定するかどうか</td>
+<td>真偽値</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
+<td>Fast full update にするかどうか</td>
+<td>真偽値</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameter-ctm">
+<h1><code class="docutils literal"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>角転送行列 (CTM) に関するパラメータ</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">dimension</span></code></td>
+<td>CTM のボンド次元 <span class="math">\(\chi\)</span></td>
+<td>整数</td>
+<td>4</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">projector_cutoff</span></code></td>
+<td>CTMのprojectorを計算する際にゼロとみなす特異値のcutoff</td>
+<td>実数</td>
+<td>1e-12</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
+<td>CTMの収束判定値</td>
+<td>実数</td>
+<td>1e-6</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
+<td>CTMの収束iterationの最大回数</td>
+<td>整数</td>
+<td>100</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">projector_corner</span></code></td>
+<td>CTMのprojector計算で1/4角のテンソルのみを使う</td>
+<td>真偽値</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
+<td>SVD を 乱択SVD で置き換えるかどうか</td>
+<td>真偽値</td>
+<td>false</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
+<td>乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率</td>
+<td>実数</td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
+</div>
+<div class="section" id="parameter-random">
+<h1><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>疑似乱数生成器に関するパラメータ</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="38%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">seed</span></code></td>
+<td>テンソルの初期化や乱択SVD に用いる疑似乱数生成器のシード</td>
+<td>整数</td>
+<td>11</td>
+</tr>
+</tbody>
+</table>
+<p>MPI 並列において、各プロセスは <code class="docutils literal"><span class="pre">seed</span></code> にプロセス番号を足した数を実際のシードとして持ちます。</p>
+</div>
+<div class="section" id="id1">
+<h1>例<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<div class="highlight-none"><div class="highlight"><pre>[parameter]
+[parameter.general]
+is_real = true
+[parameter.simple_update]
+num_step = 100
+tau = 0.01
+[parameter.full_update]
+num_step = 0  # No full update
+tau = 0.01
+[parameter.ctm]
+iteration_max = 10
+dimension = 9 # CHI
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/parameter_section.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
