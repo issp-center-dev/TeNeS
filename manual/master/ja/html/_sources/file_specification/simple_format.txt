@@ -2,7 +2,7 @@
 
 .. _sec-simple-format:
 
-``tense_simple`` の入力ファイル
+``tenes_simple`` の入力ファイル
 ---------------------------------
 
 -  ファイルフォーマットは
@@ -70,15 +70,15 @@
 
 ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定できます。
+方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
 また、最後に `xyz` のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。
 
 .. image:: ../../img/J.*
-   :width: 400px
+   :width: 300px
    :align: center
 
-双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせられます。
+双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせらることもできます。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
@@ -103,135 +103,135 @@
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-および最近接ボンド上の :math:`S^z`、 :math:`S^x`、 :math:`S^y` 相関 :math:`S_i^\alpha S_j^\alpha` が自動的に定義されます。
+および最近接ボンド上の相関 :math:`S_i^\alpha S_j^\alpha` ( :math:`\alpha=x, y, z` )が自動的に定義されます。
 
 ``lattice`` セクション
 ==========================
 
 計算する格子を指定します。
-正方格子 (square lattice) と 蜂の巣格子 (honeycomb lattice) , 三角格子 (triangular lattice) が定義されています。
+正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``type``, "格子名 (square, triangular, もしくは honeycomb lattice)", 文字列, --
+   ``type``, "格子名 (square, triangular, honeycomb, もしくは kagome)", 文字列, --
    ``L``, ユニットセルのx 方向の大きさ, 整数, --
    ``W``, ユニットセルのy 方向の大きさ, 整数, ``L``
-   ``initial``, 初期テンソル, 文字列, "random"
+   ``virtural_dim``, ボンド次元, 整数, --
+   ``initial``, 初期状態, 文字列, "random"
    ``noise``, 初期テンソルの揺らぎ, 実数, 1e-2
 
 
-ユニットセルは ``L`` かける ``W`` の大きさをもつ長方形の形をしています。
-ユニットセル内のサイトは0から順番に番号付けされます。 x 方向から順に並びます。
-
-``L = 2, W = 3`` としたときの例::
-
- y
- ^     4 5
- |     2 3
- .->x  0 1
-
-
 ``initial`` と ``noise`` は波動関数の初期状態を決めるパラメータです。
-``initial`` としては ``"ferro", "antiferro", "random"`` が指定可能です。
-``noise`` はテンソルの要素に付与されるゆらぎの大きさです。なお、 ``parameter.general`` で ``tensor_load`` が設定されている場合には、そちらが優先されます。
+なお、 ``parameter.general`` で ``tensor_load`` が設定されている場合には、そちらが優先され、テンソルをファイルから読み込みます。
+
+- ``initial``
+
+   - ``"ferro"``
+
+     - 強磁性状態。 各サイトで :math:`S^z=S`` となる状態。
+
+   - ``"antiferro"``
+
+     - 反強磁性状態。
+       正方格子、蜂の巣格子では :math:`S^z = S` と :math:`S^z = -S` が互いに並んだNeel 秩序。
+       三角格子、かごめ格子では スピンが :math:`(\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)` 方向に向いた120 度秩序。
+
+   - ``"random"``
+
+     - 各サイトバラバラなランダム状態。
+
+- ``noise``
+
+  - テンソルの要素に付与されるゆらぎの大きさ。
 
 正方格子 square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-正方格子 ``type = "square lattice"`` で ``L=2`` のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-:numref:`fig_square_1st`, :numref:`fig_square_2nd`, :numref:`fig_square_3rd` に示します。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は2種類のボンドを表します。
-破線はひとつのユニットセルを表します。
+正方格子 ``type = "square lattice"`` では、 サイトが :math:`(1,0)` 方向に ``L`` 個、 :math:`(0,1)` 方向に ``W`` 個並びます。
+具体例として、 ``L=3, W=3`` のときのサイトの並びを :numref:`fig_square_lattice` (a) に示します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_square_lattice` (b), (c), (d) にそれぞれ示します。
+青線は ``bondtype = 0`` のボンドを, 赤線は ``bondtype = 1`` のボンドを表します。
 
-.. figure:: ../../img/Square_1st.*
-   :width: 200px
+
+.. figure:: ../../img/SquareLattice.*
+   :width: 550px
    :align: center
-   :name: fig_square_1st
+   :name: fig_square_lattice
 
-   正方格子の最近接ボンド。
+   正方格子 (square) のサイト・ボンド。
+   (a) ``L=3, W=3`` としたときのサイトの並び。
+   (b) 最近接ボンド。 ``bondtype=0`` (青) は 0 度方向に、 ``bondtype=1`` (赤) は 90度方向に伸びる。
+   (c) 次近接ボンド。 ``bondtype=0`` (青) は 45 度方向に、 ``bondtype=1`` (赤) は -45度方向に伸びる。
+   (d) 三次近接ボンド。 ``bondtype=0`` (青) は 0 度方向に、 ``bondtype=1`` (赤) は 90度方向に伸びる。
 
-.. figure:: ../../img/Square_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_square_2nd
-
-   正方格子の次近接ボンド。
-
-.. figure:: ../../img/Square_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_square_3rd
-
-   正方格子の三次近接ボンド。
 
 三角格子 triangular lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-三角格子 ``type = "triangular lattice"`` で ``L=2`` のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-:numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd` に示します。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。
+三角格子 ``type = "triangular lattice"`` では、 サイトが :math:`(1,0)` 方向に ``L`` 個、 :math:`(1/2, \sqrt{3}/2)` 方向に ``W`` 個並びます。
+具体例として、 ``L=3, W=3`` のときのサイトの並びを :numref:`fig_triangular_lattice` (a) に示します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_triangular_lattice` (b), (c), (d) にそれぞれ示します。
+青線は ``bondtype = 0`` のボンドを、 赤線は ``bondtype = 1`` のボンドを、 緑線は ``bondtype = 2`` のボンドを、それぞれ表します。
 
-.. figure:: ../../img/Triangular_1st.*
-   :width: 200px
+.. figure:: ../../img/TriangularLattice.*
+   :width: 550px
    :align: center
-   :name: fig_triangular_1st
+   :name: fig_triangular_lattice
 
-   三角格子の最近接ボンド。
+   三角格子 (triangular) のサイト・ボンド。
+   (a) ``L=3, W=3`` としたときのサイトの並び。
+   (b) 最近接ボンド。 ``bondtype=0`` (青) は 0 度方向に、 ``bondtype=1`` (赤) は 60度方向に、 ``bondtype=2`` (緑)は 120度方向にそれぞれ伸びる。
+   (c) 次近接ボンド。 ``bondtype=0`` (青) は 90 度方向に、 ``bondtype=1`` (赤) は -30度方向に、 ``bondtype=2`` (緑)は 30度方向にそれぞれ伸びる。
+   (d) 三次近接ボンド。 ``bondtype=0`` (青) は 0 度方向に、 ``bondtype=1`` (赤) は 60度方向に、 ``bondtype=2`` (緑)は 120度方向にそれぞれ伸びる。
 
-.. figure:: ../../img/Triangular_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_2nd
 
-   三角格子の次近接ボンド。
-
-.. figure:: ../../img/Triangular_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_3rd
-
-   三角格子の三次近接ボンド。
-
-   
 蜂の巣格子 honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-蜂の巣格子 ``type = "honeycomb lattice"`` で ``L=2`` のときの
-テンソルの並びと最近接、次近接、三次近接のボンドタイプの定義を
-:numref:`fig_honeycomb_1st`, :numref:`fig_honeycomb_2nd`, :numref:`fig_honeycomb_3rd` に示します。
-蜂の巣格子ではx 方向のユニットセルの大きさ ``L`` は偶数でなければいけません。
-四角はテンソルを表し、細線が最近接ボンドを表します。
-太矢印と数字は3種類のボンドを表します。
-破線はひとつのユニットセルを表します。
+蜂の巣格子 ``type = "honeycomb lattice"`` では、 座標 :math:`(0, 0)` と :math:`(\sqrt{3}/2, 1/2)` の2つのサイトからなるユニットが、 :math:`(\sqrt{3},0)` 方向に ``L`` 個、 :math:`(1/2, 3/2)` 方向に ``W`` 個並びます。
+具体例として、``L=3, W=3`` のときのサイトの並びを :numref:`fig_honeycomb_lattice` (a) に示します。
+破線はユニットを表します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_honeycomb_lattice` (b), (c), (d) にそれぞれ示します。
+青線は ``bondtype = 0`` のボンドを、 赤線は ``bondtype = 1`` のボンドを、 緑線は ``bondtype = 2`` のボンドを、それぞれ表します。
 
-.. figure:: ../../img/Honeycomb_1st.*
-   :width: 200px
+.. figure:: ../../img/HoneycombLattice.*
+   :width: 550px
    :align: center
-   :name: fig_honeycomb_1st
+   :name: fig_honeycomb_lattice
 
-   蜂の巣格子の最近接ボンド。
+   蜂の巣格子 (honeycomb) のサイト・ボンド。
+   (a) ``L=3, W=3`` としたときのサイトの並び。 破線で表されるユニットが ``L`` かける ``W`` 個並ぶ。
+   (b) 最近接ボンド。 ``bondtype=0`` (青) は 30 度方向に、 ``bondtype=1`` (赤) は 150度方向に、 ``bondtype=2`` (緑)は -90度方向にそれぞれ伸びる。
+   (c) 次近接ボンド。 ``bondtype=0`` (青) は 120 度方向に、 ``bondtype=1`` (赤) は 60度方向に、 ``bondtype=2`` (緑)は 0度方向にそれぞれ伸びる。
+   (d) 三次近接ボンド。 ``bondtype=0`` (青) は -30 度方向に、 ``bondtype=1`` (赤) は -150度方向に、 ``bondtype=2`` (緑)は 90度方向にそれぞれ伸びる。
 
-.. figure:: ../../img/Honeycomb_2nd.*
-   :width: 200px
+
+かごめ格子 kagome lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+かごめ格子 ``type = "kagome lattice"`` では、 座標 :math:`(0, 0)`, :math:`(1, 0)`, :math:`(1/2, \sqrt{3}/2)` の3つのサイトからなるユニット（上向き三角）が、 :math:`(2,0)` 方向に ``L`` 個、 :math:`(1, \sqrt{3})` 方向に ``W`` 個並びます。
+具体例として、``L=3, W=3`` のときのサイトの並びを :numref:`fig_kagome_lattice` (a) に示します。
+破線はユニットは破線を表します。
+また、最近接、次近接、三次近接のボンドタイプの定義を
+:numref:`fig_kagome_lattice` (b), (c), (d) にそれぞれ示します。
+青線は ``bondtype = 0`` のボンドを、 赤線は ``bondtype = 1`` のボンドを表します。
+
+
+.. figure:: ../../img/KagomeLattice.*
+   :width: 550px
    :align: center
-   :name: fig_honeycomb_2nd
+   :name: fig_kagome_lattice
 
-   蜂の巣格子の次近接ボンド。
-
-.. figure:: ../../img/Honeycomb_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_honeycomb_3rd
-
-   蜂の巣格子の三次近接ボンド。
-
+   かごめ格子 (kagome) のサイト・ボンド。
+   (a) ``L=3, W=3`` としたときのサイトの並び。 破線で表されるユニットが ``L`` かける ``W`` 個並ぶ。
+   (b) 最近接ボンド。 ``bondtype=0`` (青) は 上向き三角形を、 ``bondtype=1`` (赤) は 下向き三角形を作る。
+   (c) 次近接ボンド。
+   (d) 三次近接ボンド。 ``bondtype=0`` (青) はサイトを横切り、 ``bondtype=1`` (赤) は横切らない。
 
 ``parameter`` セクション
 =========================

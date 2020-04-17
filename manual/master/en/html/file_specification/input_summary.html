@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>5.1. Short summary for input files of TeNeS &mdash; TeNeS 1.0-beta documentation</title>
+    <title>5.1. Short summary for input files of TeNeS &mdash; TeNeS 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
     <link rel="up" title="5. File format" href="index.html" />
-    <link rel="next" title="5.2. Input file for tense_simple" href="simple_format.html" />
+    <link rel="next" title="5.2. Input file for tenes_simple" href="simple_format.html" />
     <link rel="prev" title="5. File format" href="index.html" />
    
   
@@ -49,6 +49,63 @@ and each file has some sections.
 <p>For example, <code class="docutils literal"><span class="pre">tenes_simple</span></code> reads <code class="docutils literal"><span class="pre">model</span></code> and <code class="docutils literal"><span class="pre">lattice</span></code> sections and generates <code class="docutils literal"><span class="pre">tensor</span></code>, <code class="docutils literal"><span class="pre">observable</span></code>, and <code class="docutils literal"><span class="pre">hamiltonian</span></code> ones.
 Additionary, this copies <code class="docutils literal"><span class="pre">parameter</span></code> and <code class="docutils literal"><span class="pre">correlation</span></code> sections.</p>
 <p>The following table summarizes how each tool deal with sections.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="27%" />
+<col width="27%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Section</th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_simple</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes_std</span></code></th>
+<th class="head"><code class="docutils literal"><span class="pre">tenes</span></code></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">parameter</span></code></td>
+<td>copy</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">model</span></code></td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">lattice</span></code></td>
+<td>in</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor</span></code></td>
+<td>out</td>
+<td>in / copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">observable</span></code></td>
+<td>out</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">correlation</span></code></td>
+<td>copy</td>
+<td>copy</td>
+<td>in</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hamiltonian</span></code></td>
+<td>out</td>
+<td>in</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">evolution</span></code></td>
+<td>&nbsp;</td>
+<td>out</td>
+<td>in</td>
+</tr>
+</tbody>
+</table>
 <ul class="simple">
 <li>&#8220;in&#8221;<ul>
 <li>Tool uses this section as input</li>
@@ -98,7 +155,7 @@ Additionary, this copies <code class="docutils literal"><span class="pre">parame
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="">5.1. Short summary for input files of TeNeS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal"><span class="pre">tense_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal"><span class="pre">tenes_std</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal"><span class="pre">tenes</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. Output files</a></li>
@@ -115,7 +172,7 @@ Additionary, this copies <code class="docutils literal"><span class="pre">parame
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">5. File format</a><ul>
       <li>Previous: <a href="index.html" title="previous chapter">5. File format</a></li>
-      <li>Next: <a href="simple_format.html" title="next chapter">5.2. Input file for <code class="docutils literal"><span class="pre">tense_simple</span></code></a></li>
+      <li>Next: <a href="simple_format.html" title="next chapter">5.2. Input file for <code class="docutils literal"><span class="pre">tenes_simple</span></code></a></li>
   </ul></li>
   </ul></li>
 </ul>

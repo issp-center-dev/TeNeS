@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3.2. Usage of tenes_std &mdash; TeNeS 1.0-beta documentation</title>
+    <title>3.2. Usage of tenes_std &mdash; TeNeS 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
     <link rel="up" title="3. Usage" href="index.html" />
     <link rel="next" title="3.3. Usage of tenes" href="expert_usage.html" />
     <link rel="prev" title="3.1. Usage of tenes_simple" href="simple_usage.html" />
@@ -42,7 +42,7 @@
             
   <div class="section" id="usage-of-tenes-std">
 <h1>3.2. Usage of <code class="docutils literal"><span class="pre">tenes_std</span></code><a class="headerlink" href="#usage-of-tenes-std" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">tenes_std</span></code> is a tool to calculate imaginary time evolution operators from a given Hamiltonian and generate an input file for <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
+<p><code class="docutils literal"><span class="pre">tenes_std</span></code> is a tool to calculate imaginary time evolution operators <span class="math">\(\exp \left( -\tau \mathcal{H}_{ij} \right)\)</span> from a given Hamiltonian <span class="math">\(\mathcal{H}\)</span> and an imaginary time step <span class="math">\(\tau\)</span>, and to generate an input file for <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
 <div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_std std.toml
 </pre></div>
 </div>
@@ -86,7 +86,8 @@
 </li>
 </ul>
 <p>By making and editing input files, users can simulate on other models and lattices than predefined ones.
-See <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span>Input file for tenes_std</span></a> for details of the input file.</p>
+See <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span>Input file for tenes_std</span></a> for details of the input file.
+Below, a sample file for the S=1/2 Heisenberg model on the square lattice is shown.</p>
 <div class="highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.general]
 is_real = true   # limit tensors as real-valued ones

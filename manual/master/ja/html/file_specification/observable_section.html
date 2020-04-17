@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>observable.onesite &mdash; TeNeS 1.0-beta ドキュメント</title>
+    <title>observable.onesite &mdash; TeNeS 1.0.0 ドキュメント</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta ドキュメント" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 ドキュメント" href="../index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -193,21 +193,21 @@ elements = &quot;&quot;&quot;
 <p><code class="docutils literal"><span class="pre">elements</span></code> と <code class="docutils literal"><span class="pre">ops</span></code> を同時に定義した場合にはエラー終了します。</p>
 <div class="section" id="id2">
 <h2>例<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
-<p><code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のボンドハミルトニアン</p>
+<p>ここでは具体例として、<code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のボンドハミルトニアンのエネルギーを求めるため、
+ハミルトニアン</p>
 <div class="math">
 \[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
-<p>を具体例として説明します。</p>
+<p>を2体演算子として設定する例を説明します。</p>
 <p>まず、名前と識別番号はそれぞれ <code class="docutils literal"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;hamiltonian&quot;</span></code> と <code class="docutils literal"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> としておきます。
 それぞれのサイトの状態は <span class="math">\(|\uparrow\rangle\)</span> と <span class="math">\(|\downarrow\rangle\)</span> の2状態の重ね合わせとなるため、次元は 2 となり、
 <code class="docutils literal"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> となります。</p>
-<p>次にボンドです。サイトは</p>
-<div class="highlight-none"><div class="highlight"><pre>2 3
-0 1
-</pre></div>
-</div>
-<p>のように並んでいます。
+<p>次にボンドです。サイトは <a class="reference internal" href="standard_format.html#bond-22"><span>図 5.7</span></a> のように並んでいます。
 0 番と 1 番をつなぐボンドは、 1番は 0 番から見て (1,0) の位置にあるので <code class="docutils literal"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> と表現されます。
 同様に 1 番と 3 番をつなぐボンドは、 3 番が 1 番から見て (0,1) の位置にあるので <code class="docutils literal"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> と表現されます。</p>
+<div class="figure" id="id3">
+<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png" id="bond-22"><img alt="../_images/obs_sec_fig1.png" id="bond-22" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-text"><code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のサイトの並び順</span><a class="headerlink" href="#bond-22" title="この画像へのパーマリンク">¶</a></p>
+</div>
 <p>最後に演算子の要素です。
 まずはサイトの基底を番号付ける必要がありますが、ここでは <span class="math">\(|\uparrow\rangle\)</span> を0, <span class="math">\(|\downarrow\rangle\)</span> を 1 とします。
 この基底と番号を用いると、

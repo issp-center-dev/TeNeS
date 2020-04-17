@@ -54,10 +54,16 @@ Install
   $ cmake  -DCMAKE_INSTALL_PREFIX=<path to install to> ..
   $ make
 
-The executable file ``tests``  will be generated in  ``build/src`` directory.
 The default value of the ``<path to install to>`` is ``/usr/local``. 
 
 (Some environment such as CentOS provides CMake3 as ``cmake3`` .)
+
+The executable file ``tests``  will be generated in  ``build/src`` directory.
+By typing the following command, tests for ``tenes`` can be done.
+
+::
+ 
+  $ make tests
 
 2. Install TeNeS by typing the following commands:
 
@@ -75,7 +81,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 
 .. admonition:: Specify compiler
 
-   CMake detects your compiler automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,
+   CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler by the following way,
 
    ::
 

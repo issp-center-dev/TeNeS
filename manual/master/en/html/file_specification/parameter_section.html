@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>parameter.general &mdash; TeNeS 1.0-beta documentation</title>
+    <title>parameter.general &mdash; TeNeS 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -69,17 +69,22 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">output</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">measure</span></code></td>
+<td>Whether to calculate and save observables</td>
+<td>Boolean</td>
+<td>true</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">output</span></code></td>
 <td>Directory for saving result such as physical quantities</td>
 <td>String</td>
 <td>&#8220;output&#8221;</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
 <td>Directory for saving optimized tensors</td>
 <td>String</td>
 <td>&#8220;&#8221;</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
 <td>Directory for loading initial tensors</td>
 <td>String</td>
 <td>&#8220;&#8221;</td>
@@ -89,15 +94,21 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
 <li>When set to <code class="docutils literal"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</li>
-<li>If one complex operator is defined at least,  calculation does not start.</li>
+<li>If one complex operator is defined at least,  calculation will end in errors before starting.</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
 <li>When the absolute value of operator elements loaded is less than <code class="docutils literal"><span class="pre">iszero_tol</span></code>, it is regarded as zero</li>
 </ul>
 </li>
+<li><code class="docutils literal"><span class="pre">meaure</span></code><ul>
+<li>When set to <code class="docutils literal"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</li>
+<li>Elapsed time <code class="docutils literal"><span class="pre">time.dat</span></code> is always saved</li>
+</ul>
+</li>
 <li><code class="docutils literal"><span class="pre">output</span></code><ul>
 <li>Save numerical results such as physical quantities to files in this directory</li>
+<li>Empty means <code class="docutils literal"><span class="pre">&quot;.&quot;</span></code> (current directory)</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">tensor_save</span></code><ul>
@@ -189,12 +200,12 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
 <td>Convergence criteria for truncation optimization with full update</td>
 <td>Real</td>
-<td>1e-12</td>
+<td>1e-6</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
 <td>Maximum iteration number for truncation optimization on full updates</td>
 <td>Integer</td>
-<td>1000</td>
+<td>100</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">gauge_fix</span></code></td>
 <td>Whether the tensor gauge is fixed</td>
@@ -202,7 +213,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
-<td>Whether the Fast full update is adopted</td>
+<td>Whether the fast full update is adopted</td>
 <td>Boolean</td>
 <td>true</td>
 </tr>
@@ -240,7 +251,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
 <td>CTM convergence criteria</td>
 <td>Real</td>
-<td>1e-10</td>
+<td>1e-6</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
 <td>Maximum iteration number of convergence for CTM</td>
@@ -253,17 +264,18 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
-<td>Whether to replace SVD with Random SVD</td>
+<td>Whether to replace SVD with random SVD</td>
 <td>Boolean</td>
 <td>false</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
-<td>Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method</td>
+<td>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</td>
 <td>Real</td>
 <td>2.0</td>
 </tr>
 </tbody>
 </table>
+<p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </div>
 <div class="section" id="parameter-random">
 <h1><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>

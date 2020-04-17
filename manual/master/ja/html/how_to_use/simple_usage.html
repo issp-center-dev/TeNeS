@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3.1. tenes_simple の使用方法 &mdash; TeNeS 1.0-beta ドキュメント</title>
+    <title>3.1. tenes_simple の使用方法 &mdash; TeNeS 1.0.0 ドキュメント</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta ドキュメント" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 ドキュメント" href="../index.html" />
     <link rel="up" title="3. 使用方法" href="index.html" />
     <link rel="next" title="3.2. tenes_std の使用方法" href="standard_usage.html" />
     <link rel="prev" title="3. 使用方法" href="index.html" />
@@ -81,6 +81,16 @@
 </dd>
 </dl>
 </li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">--coordinatefile=coordfile</span></code></dt>
+<dd><ul class="first last simple">
+<li>サイトの座標情報を出力するファイル名 <code class="docutils literal"><span class="pre">coordfile</span></code> を指定します</li>
+<li>デフォルトは <code class="docutils literal"><span class="pre">coordinates.dat</span></code></li>
+<li>座標ファイルは1列目にサイト番号を、 2, 3列目に x, y 座標（デカルト座標系）を含みます</li>
+</ul>
+</dd>
+</dl>
+</li>
 </ul>
 </dd>
 </dl>
@@ -102,12 +112,14 @@
 <li>正方格子</li>
 <li>三角格子</li>
 <li>蜂の巣格子</li>
+<li>かごめ格子</li>
 </ul>
 </dd>
 </dl>
 </li>
 </ul>
-<p>模型・格子や入力ファイルの詳細は <a class="reference internal" href="../file_specification/simple_format.html#sec-simple-format"><span>tense_simple の入力ファイル</span></a> を参照してください。</p>
+<p>模型・格子や入力ファイルの詳細は <a class="reference internal" href="../file_specification/simple_format.html#sec-simple-format"><span>tenes_simple の入力ファイル</span></a> を参照してください。
+以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。</p>
 <div class="highlight-none"><div class="highlight"><pre>[lattice]
 type = &quot;square lattice&quot; # type of lattice
 L = 2                   # size of unitcell

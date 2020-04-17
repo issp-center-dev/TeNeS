@@ -2,7 +2,7 @@
 
 .. _sec-simple-format:
 
-Input file for ``tense_simple`` 
+Input file for ``tenes_simple`` 
 ---------------------------------
 
 -  File format is
@@ -16,7 +16,7 @@ Input file for ``tense_simple``
 ==========================
 
 Specify the model to calculate.
-In this version, spin system (spin) is defined.
+In this version, spin system (``"spin"``) is defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -26,8 +26,8 @@ In this version, spin system (spin) is defined.
 
 The parameter names such as interactions depend on the model type.
 
-Spin system: spin
-~~~~~~~~~~~~~~~~~~~~~
+Spin system: ``"spin"``
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Hamiltonian is described as
 
@@ -72,7 +72,7 @@ To summarize,
    :width: 400px
    :align: center
 
-Biquadratic interaction  :math:`B` can also have a bond dependency like as :math:`J`.
+The biquadratic interaction :math:`B` can also have a bond dependency like as :math:`J`.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -97,134 +97,128 @@ In addition, bond hamiltonian
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-and :math:`S^z` ,  :math:`S^x`,  :math:`S^y` correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` are automatically defined
-as two-site operators.
+and spin correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
 
 ``lattice`` section
 ==========================
 
 Specify the lattices to calculate.
-Square, honeycomb, and triangular lattice are defined.
+Square, triangular, honeycomb, and Kagome lattices are defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
 
-   ``type``, "lattice name (square, triangular or honeycomb lattice)", String, --
-   ``L``, Unit cell size in x direction, Integer, --
-   ``W``, Unit cell size in y direction, Integer, ``L``
-   ``initial``, Inital state, String, "random"
-   ``noise``, Noise for elements in initial tensor, Real, 1e-2
-
-The unit cell has a rectangular shape with the size of ``L`` times ``W``.
-Sites in a unit cell are numbered sequentially from 0. They are arranged in order from the x direction.
-
-
-``ex.) L = 2, W = 3``::
-
- y
- ^     4 5
- |     2 3
- .->x  0 1
+   ``type``,        "lattice name (square,                triangular or honeycomb lattice)", String, --
+   ``L``,           Unit cell size in x direction,        Integer,                           --
+   ``W``,           Unit cell size in y direction,        Integer,                           ``L``
+   ``virtual_dim``, Bond dimension,                       Integer,                           --
+   ``initial``,     Inital state,                         String,                            "random"
+   ``noise``,       Noise for elements in initial tensor, Real,                              1e-2
 
 ``initial`` and ``noise`` are parameters that determine the initial state of the wave function.
-In ``initial``, ``"ferro", "antiferro", "random"`` can be specified.
-``noise`` is the amount of fluctuation given to the elements of the tensor.
 If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
+
+- ``initial``
+
+   - ``"ferro"`` 
+
+      - Ferromagnetic state with :math:`S^z = S`
+
+   - ``"antiferro"``
+
+      - Antiferromagnetic state.
+        For square lattice and honeycomb lattice, the Neel order state (:math:`S^z = S` for the A sublattice and :math:`S^z = -S` for the B sublattice.)
+        For triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to :math:`(\theta, \phi) = (0,0), (2\pi/3, 0)` and :math:`(2\pi/3, \pi)` direction, respectively.)
+
+   - ``"random"``
+
+      - Random state.
+
+- ``noise``
+
+  - The amount of fluctuation in the elements of the initial tensor
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As an example of the ``type = square lattice``, we show the simple case of ``L=2``.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in :numref:`fig_square_1st`, :numref:`fig_square_2nd`, :numref:`fig_square_3rd`. 
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.
+A square lattice ``type = "square lattice"`` consists of ``L`` sites in the :math:`(1,0)` direction and ``W`` sites in the :math:`(0,1)` direction.
+As a concrete example, :numref:`fig_square_lattice` (a) shows the structure for ``L=3, W=3``.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+:numref:`fig_square_lattice` (b), (c), and (d), respectively.
+The blue line represents a bond of ``bondtype = 0`` and the red line represents a bond of ``bondtype = 1``.
 
-.. figure:: ../../img/Square_1st.*
-   :width: 200px
+.. figure:: ../../img/SquareLattice.*
+   :width: 550px
    :align: center
-   :name: fig_square_1st
+   :name: fig_square_lattice
 
-   The nearest neighbor bond of the square lattice.
+   Square lattice.
+   (a) Site structure with ``L=3, W=3``
+   (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction and ``bondtype=1`` (red) one in the 90 degree direction.
+   (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 45 degree direction and ``bondtype=1`` (red) one in the -45 degree direction.
+   (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction and ``bondtype=1`` (red) one in the 90 degree direction.
 
-.. figure:: ../../img/Square_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_square_2nd
-
-   The 2nd nearest neighbor bond of the square lattice.
-
-.. figure:: ../../img/Square_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_square_3rd
-
-   The 3rd nearest neighbor bond of the square lattice.
 
 Triangular lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As an example of the ``type = triangular lattice``, we show the simple case of ``L=2``.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in :numref:`fig_triangular_1st`, :numref:`fig_triangular_2nd`, :numref:`fig_triangular_3rd`.
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.
+A triangular lattice ``type = "triangular lattice"`` consists of ``L`` sites in the :math:`(1,0)` direction and ``W`` sites in the :math:`(1/2, \sqrt{3}/2)` direction.
+As a concrete example, :numref:`fig_triangular_lattice` (a) shows the structure for ``L=3, W=3``.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+:numref:`fig_triangular_lattice` (b), (c), and (d), respectively.
+The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
 
-.. figure:: ../../img/Triangular_1st.*
-   :width: 200px
+.. figure:: ../../img/TriangularLattice.*
+   :width: 550px
    :align: center
-   :name: fig_triangular_1st
+   :name: fig_triangular_lattice
 
-   The nearest neighbor bond of the triangular lattice.
-
-.. figure:: ../../img/Triangular_2nd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_2nd
-
-   The 2nd nearest neighbor bond of the triangular lattice.
-
-.. figure:: ../../img/Triangular_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_triangular_3rd
-
-   The 3rd neighbor bond of the triangular lattice.
+   Triangular lattice.
+   (a) Site structure with ``L=3, W=3``
+   (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
+   (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 90 degree direction, ``bondtype=1`` (red) one in the -30 degree direction, and ``bondtype=2`` (green) one in the 30 degree direction.
+   (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
 
 Honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As an example of the ``type = honeycomb lattice``, we show the simple case of ``L=2``.
-The definition of tensor alignment and nearest, next, and 3rd nearest neighbor bonds
-is shown in :numref:`fig_honeycomb_1st`, :numref:`fig_honeycomb_2nd`, :numref:`fig_honeycomb_3rd`.
-In a honeycomb lattice, the unit cell size ``L`` in the x direction must be even number.
-The square represents the tensor, and the thin line represents the nearest neighbor bond.
-Bold arrows and numbers represent two types of bonds.
-The broken line represents one unit cell.
+In a honeycomb lattice ``type = "honeycomb lattice"``, units consisting of two sites of coordinates :math:`(0, 0)` and :math:`(\sqrt{3}/2, 1/2)` are arranged with ``L`` units in the :math:`(\sqrt{3},0)` direction and ``W`` units in the :math:`(1/2, 3/2)` direction.
+As a concrete example, :numref:`fig_honeycomb_lattice` (a) shows the structure for ``L=3, W=3``.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+:numref:`fig_honeycomb_lattice` (b), (c), and (d), respectively.
+The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
 
-.. figure:: ../../img/Honeycomb_1st.*
-   :width: 200px
+.. figure:: ../../img/HoneycombLattice.*
+   :width: 550px
    :align: center
-   :name: fig_honeycomb_1st
-	  
-   The nearest neighbor bond of the honeycomb lattice.
+   :name: fig_honeycomb_lattice
 
-.. figure:: ../../img/Honeycomb_2nd.*
-   :width: 200px
+   Honeycomb lattice.
+   (a) Site structure with ``L=3, W=3``. The dashed ellipse denotes one unit.
+   (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 30 degree direction, ``bondtype=1`` (red) one in the 150 degree direction, and ``bondtype=2`` (green) one in the -90 degree direction.
+   (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 120 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 0 degree direction.
+   (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the -30 degree direction, ``bondtype=1`` (red) one in the -150 degree direction, and ``bondtype=2`` (green) one in the 90 degree direction.
+
+
+Kagome lattice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In a kagome lattice ``type = "kagome lattice"``, units consisting of three sites of coordinates :math:`(0, 0)`, :math:`(1, 0)`, and :math:`(1/2, \sqrt{3}/2)` are arranged with ``L`` units in the :math:`(2,0)` direction and ``W`` units in the :math:`(1,\sqrt{3})` direction.
+As a concrete example, :numref:`fig_kagome_lattice` (a) shows the structure for ``L=3, W=3``.
+In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
+:numref:`fig_kagome_lattice` (b), (c), and (d), respectively.
+The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respectively.
+
+.. figure:: ../../img/KagomeLattice.*
+   :width: 550px
    :align: center
-   :name: fig_honeycomb_2nd
+   :name: fig_kagome_lattice
 
-   The 2nd nearest neighbor bond of the honeycomb lattice.
-
-.. figure:: ../../img/Honeycomb_3rd.*
-   :width: 200px
-   :align: center
-   :name: fig_honeycomb_3rd
-
-   The 3rd nearest neighbor bond of the honeycomb lattice.
-
+   Kagome lattice.
+   (a) Site structure with ``L=3, W=3``. The dashed circle denotes one unit.
+   (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bonds form upper triangle and ``bondtype=1`` (red) bonds form lowertriangle.
+   (c) Second nearest neighbor bonds.
+   (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond passes over a site and ``bondtype=1`` (red) one does not.
 
  
 ``parameter`` section

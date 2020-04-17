@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4.1. Ising model with transverse magnetic field &mdash; TeNeS 1.0-beta documentation</title>
+    <title>4.1. Ising model with transverse magnetic field &mdash; TeNeS 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0-beta',
+        VERSION:     '1.0.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0-beta documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
     <link rel="up" title="4. Tutorial" href="index.html" />
-    <link rel="next" title="5. File format" href="../file_specification/index.html" />
+    <link rel="next" title="4.2. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
     <link rel="prev" title="4. Tutorial" href="index.html" />
    
   
@@ -77,7 +77,7 @@ Jy = 0.0
 G  = 0.0
 </pre></div>
 </div>
-<p>In this case, since <code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferro magnetic state manifests itself as the ground state at <code class="docutils literal"><span class="pre">G=0</span></code>.
+<p>In this case, since <code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferromagnetic state manifests itself as the ground state at <code class="docutils literal"><span class="pre">G=0</span></code>.
 When the input file name is <code class="docutils literal"><span class="pre">simple.toml</span></code> , type the following commands to execute <code class="docutils literal"><span class="pre">tenes</span></code>
 (before typing them, please install TeNeS and set PATH properly.):</p>
 <div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_simple simple.toml
@@ -134,8 +134,73 @@ Finally, the calculation time for each process is output in units of seconds.
 For details on each output file, see <a class="reference internal" href="../file_specification/output_format.html#sec-output-format"><span>Output files</span></a>.
 For example, the value of <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> can be read from <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code>.
 By changing <code class="docutils literal"><span class="pre">G</span></code> in increments of 0.2 from 0 to 3.0 and running <code class="docutils literal"><span class="pre">tenes_simple</span></code> and <code class="docutils literal"><span class="pre">tenes</span></code>, the following result is obtained.
-As an example of the sample script, <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code> are prepared in the <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> directory.
-The calculation will be done by typing the following command:</p>
+As an example of the sample script, <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code> are prepared in the <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> directory.</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">tutorial_example.py</span></code></li>
+</ul>
+<div class="highlight-none"><div class="highlight"><pre>import subprocess
+
+import numpy as np
+
+import toml
+
+
+num_g = 16
+min_g = 0.0
+max_g = 3.0
+
+total = 0
+for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_g))
+    with open(&quot;simple.toml&quot;) as f:
+        dict_toml = toml.load(f)
+    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
+    dict_toml[&quot;model&quot;][&quot;G&quot;] = float(g)
+    with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
+        toml.dump(dict_toml, f)
+    cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;tenes input_{}.toml&quot;.format(idx)
+    subprocess.call(cmd.split())
+</pre></div>
+</div>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">tutorial_read.py</span></code></li>
+</ul>
+<div class="highlight-none"><div class="highlight"><pre>from os.path import join
+
+import numpy as np
+
+import toml
+
+
+num_g = 16
+
+for idx in range(num_g):
+    try:
+        with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
+            dict_toml = toml.load(f)
+        g = dict_toml[&quot;model&quot;][&quot;G&quot;]
+        ene = 0.0
+        mag_sz = 0.0
+        mag_sx = 0.0
+        with open(join(&quot;output_{}&quot;.format(idx), &quot;density.dat&quot;)) as f:
+            for line in f:
+                words = line.split()
+                if words[0] == &#39;hamiltonian&#39;:
+                    ene = words[2]
+                elif words[0] == &#39;Sz&#39;:
+                    mag_sz = words[2]
+                elif words[0] == &#39;Sx&#39;:
+                    mag_sx = words[2]
+        print(&quot;{} {} {} {}&quot;.format(g, ene, mag_sz, mag_sx))
+    except:
+        continue
+</pre></div>
+</div>
+<p>The calculation will be done by typing the following command:</p>
 <div class="code highlight-none"><div class="highlight"><pre>$ python tutorial_example.py
 </pre></div>
 </div>
@@ -144,8 +209,11 @@ By typing the following command, G, energy, <code class="docutils literal"><span
 <div class="code highlight-none"><div class="highlight"><pre>$ python tutorial_read.py
 </pre></div>
 </div>
-<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" class="align-center" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
-<p>As you can see from the figure, with increasing <code class="docutils literal"><span class="pre">G</span></code>, the <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> decreases from <code class="docutils literal"><span class="pre">0.5</span></code> to <code class="docutils literal"><span class="pre">0</span></code>, while the <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> increases from <code class="docutils literal"><span class="pre">0</span></code> to <code class="docutils literal"><span class="pre">0.5</span></code>.</p>
+<div class="figure align-center" id="id1">
+<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse"><img alt="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 4.1 </span><span class="caption-text"><code class="docutils literal"><span class="pre">G</span></code> dependence of <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code>.</span><a class="headerlink" href="#fig-transverse" title="Permalink to this image">¶</a></p>
+</div>
+<p>As seen from <a class="reference internal" href="#fig-transverse"><span>Fig. 4.1</span></a> , with increasing <code class="docutils literal"><span class="pre">G</span></code>, the <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> decreases from <code class="docutils literal"><span class="pre">0.5</span></code> to <code class="docutils literal"><span class="pre">0</span></code>, while the <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> increases from <code class="docutils literal"><span class="pre">0</span></code> to <code class="docutils literal"><span class="pre">0.5</span></code>.</p>
 </div>
 
 
@@ -180,6 +248,7 @@ By typing the following command, G, energy, <code class="docutils literal"><span
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.2. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
@@ -194,7 +263,7 @@ By typing the following command, G, energy, <code class="docutils literal"><span
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html">4. Tutorial</a><ul>
       <li>Previous: <a href="index.html" title="previous chapter">4. Tutorial</a></li>
-      <li>Next: <a href="../file_specification/index.html" title="next chapter">5. File format</a></li>
+      <li>Next: <a href="simple_tutorial-5.html" title="next chapter">4.2. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
   </ul></li>
   </ul></li>
 </ul>

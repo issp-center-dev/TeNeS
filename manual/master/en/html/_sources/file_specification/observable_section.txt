@@ -24,7 +24,7 @@ Define one-body operators that indicate physical quantities defined at each site
 ``group`` specifies an identification number of one-site operators.
 
 ``sites`` specifies a site number where an operater acts on.
-By using a list, multiple site the operators can be defined on site at the same time.
+By using a list, the operators can be defined on the multiple sites at the same time.
 An empty list ``[]`` means all sites.
 
 ``dim`` specifies a dimension of an operator.
@@ -105,7 +105,7 @@ One line consisting of three integers means one site pair.
 - The first integer is the number of the source site.
 - The last two integers are the coordinates (dx, dy) of the other site (target site) from the source site.
 
-    - Both dx and dy must be in the range :math:`-3 \ le dx \ le 3`.
+    - Both dx and dy must be in the range :math:`-3 \le dx \le 3`.
 
 ``dim`` specifies a dimension of an operator. 
 In other words, the number of possible states of the site where the operator acts on.
@@ -126,24 +126,26 @@ If both ``elements`` and ``ops`` are defined, the process will end in error.
 Example
 .......
 
-As an example, the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at ``Lsub=[2,2]`` 
+As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at ``Lsub=[2,2]`` , the way to define two site operators (equal to the Hamiltonian)
 
 .. math::
   \mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]
 
-is explained.
+is explained below.
 
 First, the name and identification number is set as ``name = "hamiltonian"`` and ``group = 0``.
 ``dim = [2,2]`` because the state of each site is a superposition of the two states 
 :math:`|\uparrow\rangle` and :math:`|\downarrow\rangle`.
 
-Next, let's define the bonds. In this case, the site numbers are assigned as  ::
-
-  2 3
-  0 1
-
+Next, let's define the bonds. In this case, site indecies are given as shown in :numref:`bond_22` .
 The bond connecting 0 and 1 is represented as ``0 1 0`` because 1 is located at (1,0) from 0.
 Similarly, The bond connecting 1 and 3 is represented as ``1 0 1`` because 3 is located at (0,1) from 1.
+
+.. figure:: ../../img/obs_sec_fig1.*
+   :width: 150px
+
+   Site indecies of the S=1/2 Heisenberg model on square lattice at ``Lsub=[2,2]`` .
+
 
 Finally, how to define the elements of the operator is explained.
 First, the basis of the site is needed to be labeled. Here, we label :math:`|\uparrow\rangle` as 0 and :math:`|\downarrow\rangle` as 1.
