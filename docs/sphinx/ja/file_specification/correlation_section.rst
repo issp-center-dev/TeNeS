@@ -1,9 +1,16 @@
 .. highlight:: none
 
-相関関数 ``C = <A(0)B(r)>`` に関する情報を指定するセクションです。
-TeNeS は x ないし y 軸に平行な方向にのみ相関関数を計算します。
-つまり、 :math:`\langle A(x,y) B(x+r, y) \rangle` という形式のみ計算し、
-斜め方向 :math:`\langle A(x,y) B(x+r_x, y+r_y)` は計算しません。
+サイト演算子の相関関数 :math:`C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0+\boldsymbol{r})\right\rangle` に関する情報を指定するセクションです。
+本セクションを省略した場合、相関関数は計算されません。
+
+座標は正方格子TNS の座標系で測られます。すなわち、右隣のテンソルは :math:`\boldsymbol{r} = (1,0)` で、真上は :math:`\boldsymbol{r} = (0,1)` です。 
+中心座標 :math:`\boldsymbol{r}_0` として、ユニットセル内のすべてのサイトが用いられます。
+また、:math:`\boldsymbol{r}` は :math:`x` ないし :math:`y` 軸に平行な方向に、正の向きにのみ動きます。すなわち、
+
+.. math::
+   \boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})
+
+です。
 
 .. csv-table::
    :header: "名前", "説明", "型"
@@ -25,4 +32,4 @@ TeNeS は x ないし y 軸に平行な方向にのみ相関関数を計算し�
     r_max = 5
     operators = [[0,0], [0,1], [1,1]]
 
-では :math:`S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)` が測定されます。
+では相関関数 :math:`S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)` が、 :math:`0 \le r \le 5` の範囲で測定されます。

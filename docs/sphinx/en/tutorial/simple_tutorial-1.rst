@@ -41,7 +41,7 @@ For example, when the transverse magnetic field is 0, the input file is
    G  = 0.0
 
 
-In this case, since ``Jz = -1.0`` , the ferro magnetic state manifests itself as the ground state at ``G=0``. 
+In this case, since ``Jz = -1.0`` , the ferromagnetic state manifests itself as the ground state at ``G=0``. 
 When the input file name is ``simple.toml`` , type the following commands to execute ``tenes``
 (before typing them, please install TeNeS and set PATH properly.):
   
@@ -105,6 +105,17 @@ For details on each output file, see :ref:`sec-output-format`.
 For example, the value of ``<Sz>`` can be read from ``onesite_obs.dat``.
 By changing ``G`` in increments of 0.2 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
 As an example of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
+
+- ``tutorial_example.py``
+
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/tutorial_example.py
+
+
+- ``tutorial_read.py``
+
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/tutorial_read.py
+
+
 The calculation will be done by typing the following command:
 
 .. code::

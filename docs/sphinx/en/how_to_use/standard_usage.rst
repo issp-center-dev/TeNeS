@@ -3,7 +3,7 @@
 Usage of ``tenes_std``
 --------------------------------
 
-``tenes_std`` is a tool to calculate imaginary time evolution operators from a given Hamiltonian and generate an input file for ``tenes``.
+``tenes_std`` is a tool to calculate imaginary time evolution operators :math:`\exp \left( -\tau \mathcal{H}_{ij} \right)` from a given Hamiltonian :math:`\mathcal{H}` and an imaginary time step :math:`\tau`, and to generate an input file for ``tenes``.
 
 .. code:: bash
 
@@ -24,7 +24,10 @@ Usage of ``tenes_std``
 
 By making and editing input files, users can simulate on other models and lattices than predefined ones.	
 See :ref:`sec-std-format` for details of the input file.
+Below, a sample file for the S=1/2 Heisenberg model on the square lattice is shown.
+
 ::
+
    [parameter]
    [parameter.general]
    is_real = true   # limit tensors as real-valued ones
