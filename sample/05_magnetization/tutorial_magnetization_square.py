@@ -19,7 +19,7 @@ for idx in range(num_h):
     fmag.write("{} ".format(h))
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print("Step numter: {}".format(num_step))
+        print("Step number: {}".format(num_step))
         with open("basic_square.toml") as f:
             dict_toml = toml.load(f)
         dict_toml["parameter"]["general"]["output"] = "output_square_{}_{}".format(idx,num_step)
