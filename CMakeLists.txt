@@ -66,6 +66,8 @@ if (USE_SANITIZER)
     find_package(Sanitizers)
 endif()
 
+set(BUNDLED_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/bundled")
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp.cmake)
 openmp()
 
