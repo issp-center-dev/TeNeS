@@ -3,7 +3,7 @@
 ``tenes_std`` の使用方法
 ----------------------------
 
-``tenes_std`` は与えられたハミルトニアンから虚時間刻み :math:`\tau` の虚時間発展演算子 :math:`\exp -\tau \mathcal{H}_{ij}` を導出し、 ``tenes`` の入力ファイルを生成するツールです。
+``tenes_std`` は与えられたハミルトニアンから虚時間刻み :math:`\tau` の虚時間発展演算子 :math:`\exp\left(-\tau \mathcal{H}_{ij}\right)` を導出し、 ``tenes`` の入力ファイルを生成するツールです。
 
 .. code:: bash
 

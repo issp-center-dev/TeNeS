@@ -3,7 +3,7 @@
 Usage of ``tenes_std``
 --------------------------------
 
-``tenes_std`` is a tool to calculate imaginary time evolution operators :math:`\exp -\tau \mathcal{H}_{ij}` from a given Hamiltonian :math:`\mathcal{H}` and an imaginary time step :math:`\tau`, and to generate an input file for ``tenes``.
+``tenes_std`` is a tool to calculate imaginary time evolution operators :math:`\exp \left( -\tau \mathcal{H}_{ij} \right)` from a given Hamiltonian :math:`\mathcal{H}` and an imaginary time step :math:`\tau`, and to generate an input file for ``tenes``.
 
 .. code:: bash
 
