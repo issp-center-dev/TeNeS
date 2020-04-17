@@ -11,15 +11,15 @@ num_step = 0
 tau = 0.01
 
 [parameter.ctm]
-iteration_max = 10
+iteration_max = 100
 dimension = 10
 
 [lattice]
 type = "square lattice"
 L = 3
 W = 3
-virtual_dim = 4
-initial = "random"
+virtual_dim = 3
+initial = "antiferro"
 
 [model]
 type = "spin"

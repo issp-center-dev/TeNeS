@@ -72,7 +72,7 @@
 
 実際に計算を行うには、 ::
 
-   python tutorial_magnetization.py
+   python tutorial_magnetization_square.py
 
 とします。計算が終了したら、gnuplotを起動し、
 ::

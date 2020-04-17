@@ -94,7 +94,7 @@ The content of ``basic_square.toml`` is the same as ``basic.toml`` except that t
 
 To perform the calculation, type::
 
-    python tutorial_magnetization.py
+    python tutorial_magnetization_square.py
 
 After the calculation is completed, start up gnuplot and type
 

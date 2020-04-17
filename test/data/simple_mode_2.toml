@@ -1,0 +1,30 @@
+[model]
+type = 'spin'
+S = 0.5
+J0x = 1.0
+J0y = 1.0
+J1y = 1.0
+J1z = 1.0
+"J0'x" = 0.5
+"J0'y" = 0.5
+"J1'y" = 0.5
+"J1'z" = 0.5
+"J0''x" = 0.25
+"J0''y" = 0.25
+"J1''y" = 0.25
+"J1''z" = 0.25
+
+[lattice]
+type = 'triangular lattice'
+L = 3
+W = 3
+initial = 'random'
+virtual_dim = 3
+
+[parameter]
+[parameter.simple_update]
+tau = 0.01
+num_step = 100
+[parameter.full_update]
+tau = 0.01
+num_step = 1

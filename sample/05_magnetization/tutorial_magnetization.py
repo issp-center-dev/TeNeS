@@ -18,7 +18,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
     fene.write("{} ".format(h))
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print("Step number: {}".format(num_step))
+        print("Steps: {}".format(num_step))
         with open("basic.toml") as f:
             dict_toml = toml.load(f)
         dict_toml["parameter"]["general"]["output"] = "output_{}_{}".format(idx,num_step)

@@ -19,7 +19,7 @@ for idx in range(num_h):
     fmag.write("{} ".format(h))
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print("Step number: {}".format(num_step))
+        print("Steps: {}".format(num_step))
         with open("basic_square.toml") as f:
             dict_toml = toml.load(f)
         dict_toml["parameter"]["general"]["output"] = "output_square_{}_{}".format(idx,num_step)
@@ -36,6 +36,7 @@ for idx in range(num_h):
         subprocess.call(cmd.split())
         cmd = "tenes input_square_{}_{}.toml".format(idx,num_step)
         subprocess.call(cmd.split())
+
         with open(join("output_square_{}_{}".format(idx,num_step), "density.dat")) as f:
             lines = f.readlines()
             ene = lines[2].split('=')[1].strip()
