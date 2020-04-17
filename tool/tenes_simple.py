@@ -205,6 +205,8 @@ class SquareLattice(Lattice):
             self.sublattice = [SubLattice([self.vdim] * 4)]
         elif self.initial_states == "antiferro":
             self.sublattice = [SubLattice([self.vdim] * 4), SubLattice([self.vdim] * 4)]
+        elif self.initial_states == "random":
+            self.sublattice = [SubLattice([self.vdim] * 4)]
 
         for source in range(L * W):
             x, y = index2coord(source, L)
@@ -336,6 +338,8 @@ class TriangularLattice(Lattice):
             self.sublattice.append(SubLattice([vdim] * 4))
             nhops = np.ones((L + 1, W + 1), dtype=np.int) * 100000000
             nhops[0, 0] = 0
+        elif self.initial_states == "random":
+            self.sublattice.append(SubLattice([vdim] * 4))
 
         for source in range(L * W):
             x, y = index2coord(source, L)
