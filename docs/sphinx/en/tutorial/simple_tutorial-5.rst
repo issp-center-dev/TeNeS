@@ -16,34 +16,7 @@ Here, :math:`\langle i, j \rangle` represents the pair of nearest neighbor sites
 Let's calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, the toml file ``basic.toml`` and the python script ``tutorial_magnetization.py`` are prepared in the ``sample/05_magnetization`` directory. 
 The ``basic.toml`` file contains model settings and parameters.
 
-::
-
-    [parameter]
-    [parameter.general]
-    is_real = true
-
-    [parameter.simple_update]
-    num_step = 200
-    tau = 0.01
-
-    [parameter.full_update]
-    num_step = 0
-    tau = 0.01
-
-    [parameter.ctm]
-    iteration_max = 10
-    dimension = 10
-
-    [lattice]
-    type = "triangular lattice"
-    L = 3
-    W = 3
-    virtual_dim = 4
-    initial = "random"
-
-    [model]
-    type = "spin"
-    J = 1.0
+.. literalinclude:: ../../../../sample/05_magnetization/basic.toml
 
 The ``lattice`` section specifies a triangular lattice with the unit cell
 size of :math:`3\times 3`. Here, in order to make the calculation
@@ -53,51 +26,7 @@ simplicity, :math:`J=1`. Using this basic setting file,
 tutorial_magnetization.py calculates the magnetization when the magnetic
 field is swept.
 
-::
-
-    import subprocess
-    from os.path import join
-    import numpy as np
-    import toml
-
-    num_h = 21
-    min_h = 0.0
-    max_h = 5.0
-    num_step_table = [100, 200, 500, 1000, 2000]
-
-    fout = open("magnetization.dat","w")
-    for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-        print("Caclulation Process: {}/{}".format(idx+1, num_h))
-        inum = 0
-        num_pre = 0
-        fout.write("{} ".format(h))
-        for num_step in num_step_table:
-            ns = num_step - num_pre
-            print("Step numter: {}".format(num_step))
-            with open("basic.toml") as f:
-                dict_toml = toml.load(f)
-            dict_toml["parameter"]["general"]["output"] = "output_{}_{}".format(idx,num_step)
-            dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save_{}_{}".format(idx,num_step)
-            dict_toml["model"]["H"] = float(h)
-            dict_toml["parameter"]["simple_update"]["num_step"] = ns
-            if inum > 0:
-                dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save_{}_{}".format(idx,num_pre)
-            with open("simple_{}_{}.toml".format(idx,num_step), 'w') as f:
-                toml.dump(dict_toml, f)
-            cmd = "tenes_simple simple_{}_{}.toml -o std_{}_{}.toml".format(idx,num_step,idx,num_step)
-            subprocess.call(cmd.split())
-            cmd = "tenes_std std_{}_{}.toml -o input_{}_{}.toml".format(idx,num_step,idx,num_step)
-            subprocess.call(cmd.split())
-            cmd = "tenes input_{}_{}.toml".format(idx,num_step)
-            subprocess.call(cmd.split())
-            with open(join("output_{}_{}".format(idx,num_step), "density.dat")) as f:
-                lines = f.readlines()
-                mag_sz = lines[0].split('=')[1].strip()
-            fout.write("{} ".format(mag_sz))
-            inum = inum + 1
-            num_pre = num_step
-        fout.write("\n")
-    fout.close()
+.. literalinclude:: ../../../../sample/05_magnetization/tutorial_magnetization.py
 
 In this script, the magnetic field :math:`h` is changed in steps of
 :math:`0.25` from :math:`0` to :math:`5`, and the ground state energy

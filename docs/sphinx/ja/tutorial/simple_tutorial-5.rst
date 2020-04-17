@@ -16,83 +16,12 @@
 
 この計算を行うには、 ``sample/05_magnetization`` のディレクトリ内にある toml ファイル ``basic.toml`` と、pythonスクリプト ``tutorial_magnetization.py`` を利用します。 ``basic.toml`` ファイルには、模型の設定やパラメータなどが記述されています。
 
-::
-
-    [parameter]
-    [parameter.general]
-    is_real = true
-
-    [parameter.simple_update]
-    num_step = 200
-    tau = 0.01
-
-    [parameter.full_update]
-    num_step = 0
-    tau = 0.01
-
-    [parameter.ctm]
-    iteration_max = 10
-    dimension = 10
-
-    [lattice]
-    type = "triangular lattice"
-    L = 3
-    W = 3
-    virtual_dim = 4
-    initial = "random"
-
-    [model]
-    type = "spin"
-    J = 1.0
+.. literalinclude:: ../../../../sample/05_magnetization/basic.toml
 
 ``lattice`` セクションで三角格子を指定しており、ユニットセルの大きさは\ :math:`3\times 3`\ を指定しています。
 ここでは計算を軽くするために、 ``simple update`` だけを行っており、虚時間の刻み幅\ :math:`\tau`\ は\ :math:`\tau = 0.01`\ としています。また簡単のため、\ :math:`J=1`\ としています。この基本設定ファイルを用いて、 ``tutorial_magnetization.py`` では磁場を掃引したときの磁化を計算します。
 
-::
-
-    import subprocess
-    from os.path import join
-    import numpy as np
-    import toml
-
-    num_h = 21
-    min_h = 0.0
-    max_h = 5.0
-    num_step_table = [100, 200, 500, 1000, 2000]
-
-    fout = open("magnetization.dat","w")
-    for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-        print("Caclulation Process: {}/{}".format(idx+1, num_h))
-        inum = 0
-        num_pre = 0
-        fout.write("{} ".format(h))
-        for num_step in num_step_table:
-            ns = num_step - num_pre
-            print("Step numter: {}".format(num_step))
-            with open("basic.toml") as f:
-                dict_toml = toml.load(f)
-            dict_toml["parameter"]["general"]["output"] = "output_{}_{}".format(idx,num_step)
-            dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save_{}_{}".format(idx,num_step)
-            dict_toml["model"]["H"] = float(h)
-            dict_toml["parameter"]["simple_update"]["num_step"] = ns
-            if inum > 0:
-                dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save_{}_{}".format(idx,num_pre)
-            with open("simple_{}_{}.toml".format(idx,num_step), 'w') as f:
-                toml.dump(dict_toml, f)
-            cmd = "tenes_simple simple_{}_{}.toml -o std_{}_{}.toml".format(idx,num_step,idx,num_step)
-            subprocess.call(cmd.split())
-            cmd = "tenes_std std_{}_{}.toml -o input_{}_{}.toml".format(idx,num_step,idx,num_step)
-            subprocess.call(cmd.split())
-            cmd = "tenes input_{}_{}.toml".format(idx,num_step)
-            subprocess.call(cmd.split())
-            with open(join("output_{}_{}".format(idx,num_step), "density.dat")) as f:
-                lines = f.readlines()
-                mag_sz = lines[0].split('=')[1].strip()
-            fout.write("{} ".format(mag_sz))
-            inum = inum + 1
-            num_pre = num_step
-        fout.write("\n")
-    fout.close()
+.. literalinclude:: ../../../../sample/05_magnetization/tutorial_magnetization.py
 
 このスクリプトでは、磁場\ :math:`h`\ を0から5まで0.25刻みで変化させ、基底状態のエネルギーと\ :math:`\langle S_z \rangle`\ を計算して、 ``energy.dat`` および ``magnetization.dat`` に出力します。 ``simple update`` の時間ステップ数を\ :math:`100`, :math:`200`, :math:`500`, :math:`1000`, :math:`2000`\ と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
 計算量を減らすために、少ないステップ数で得られた波動関数の情報を ``tensor_save`` に保存し、それをより多いステップ数の計算の初期状態としてとっています。例えば、最初に時間ステップ数を100とした計算を行って結果を出力したあと、ステップ数100の計算終了時の波動関数からさらにステップ数100の計算を行って、結果的にステップ数200の計算結果を得ます。

@@ -103,7 +103,18 @@
 例えば ``<Sz>`` の値は、 ``onesite_obs.dat`` から読み取ることが可能です。
 ``G`` をパラメータとして0.2刻みで0-3.0まで振ったときの結果を下図に表示します。
 
-なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` フォルダ内に ``tutorial_example.py`` , ``tutorial_read.py`` があります。
+なお、サンプルスクリプトの例として、 ``sample/01_transverse_field_ising`` フォルダ内に ``tutorial_example.py`` , ``tutorial_read.py``  があります。
+
+- ``tutorial_example.py`` の中身
+
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/tutorial_example.py
+
+
+- ``tutorial_read.py`` の中身
+
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/tutorial_read.py
+
+
 あらかじめ ``tenes`` などにパスを通した上で
 
 .. code::
