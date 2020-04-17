@@ -39,6 +39,7 @@ target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${DEPS_DIR}/cpptoml/include)
+target_include_directories(tenes PRIVATE ${BUNDLED_DEPS_DIR})
 
 target_link_libraries(tenes mptensor)
 target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
