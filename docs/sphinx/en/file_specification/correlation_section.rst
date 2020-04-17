@@ -1,9 +1,16 @@
 .. highlight:: none
 
-In this section, the parameters about the site-site correlation function :math:`C = \langle A(0)B(r) \rangle` is specified.
-TeNeS calculates the correlation function along :math:`x` and :math:`y` axis
-like :math:`\langle A(x,y) B(x+r, y) \rangle`, but not like :math:`\langle A(x,y) B(x+r_x, y+r_y)\rangle`.
+In this section, the parameters about the site-site correlation function :math:`C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0 + \boldsymbol{r}) \right\rangle` is specified.
 If you omit this section, no correlation functions will be calculated.
+
+Coordinates :math:`\boldsymbol{r}, \boldsymbol{r}_0` measured in the system of square lattice TNS.
+For example, the coordinate of the right neighbor tensor is :math:`\boldsymbol{r} = (1,0)` and that of the top neighbor one is :math:`\boldsymbol{r} = (0,1)`.
+TeNeS calculates the correlation functions along the positive direction of :math:`x` and :math:`y` axis, that is,
+
+.. math::
+   \boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})
+
+The coordinate of each site of the unitcell is used as the center coordinate, :math:`\boldsymbol{r}_0`.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
