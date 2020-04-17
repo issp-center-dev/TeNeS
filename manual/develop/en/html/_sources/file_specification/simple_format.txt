@@ -72,7 +72,7 @@ To summarize,
    :width: 400px
    :align: center
 
-Biquadratic interaction  :math:`B` can also have a bond dependency like as :math:`J`.
+The biquadratic interaction :math:`B` can also have a bond dependency like as :math:`J`.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -97,14 +97,13 @@ In addition, bond hamiltonian
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-and :math:`S^z` ,  :math:`S^x`,  :math:`S^y` correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` are automatically defined
-as two-site operators.
+and spin correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
 
 ``lattice`` section
 ==========================
 
 Specify the lattices to calculate.
-Square, honeycomb, and triangular lattice are defined.
+Square, triangular, honeycomb, and Kagome lattices are defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -177,7 +176,7 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    Triangular lattice.
    (a) Site structure with ``L=3, W=3``
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
-   (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 90 degree direction, ``bondtype=1`` (red) one in the -60 degree direction, and ``bondtype=2`` (green) one in the 60 degree direction.
+   (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 90 degree direction, ``bondtype=1`` (red) one in the -30 degree direction, and ``bondtype=2`` (green) one in the 30 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
 
 Honeycomb lattice

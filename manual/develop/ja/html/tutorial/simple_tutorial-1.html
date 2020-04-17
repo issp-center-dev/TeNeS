@@ -135,8 +135,73 @@ Done.
 がそれぞれ出力されます。各出力ファイルの詳細は、 <a class="reference internal" href="../file_specification/output_format.html#sec-output-format"><span>出力ファイル</span></a> をご覧ください。
 例えば <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> の値は、 <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code> から読み取ることが可能です。
 <code class="docutils literal"><span class="pre">G</span></code> をパラメータとして0.2刻みで0-3.0まで振ったときの結果を下図に表示します。</p>
-<p>なお、サンプルスクリプトの例として、 <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> の <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code> があります。
-あらかじめ <code class="docutils literal"><span class="pre">tenes</span></code> などにパスを通した上で</p>
+<p>なお、サンプルスクリプトの例として、 <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> フォルダ内に <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code>  があります。</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">tutorial_example.py</span></code> の中身</li>
+</ul>
+<div class="highlight-none"><div class="highlight"><pre>import subprocess
+
+import numpy as np
+
+import toml
+
+
+num_g = 16
+min_g = 0.0
+max_g = 3.0
+
+total = 0
+for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_g))
+    with open(&quot;simple.toml&quot;) as f:
+        dict_toml = toml.load(f)
+    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
+    dict_toml[&quot;model&quot;][&quot;G&quot;] = float(g)
+    with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
+        toml.dump(dict_toml, f)
+    cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;tenes input_{}.toml&quot;.format(idx)
+    subprocess.call(cmd.split())
+</pre></div>
+</div>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">tutorial_read.py</span></code> の中身</li>
+</ul>
+<div class="highlight-none"><div class="highlight"><pre>from os.path import join
+
+import numpy as np
+
+import toml
+
+
+num_g = 16
+
+for idx in range(num_g):
+    try:
+        with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
+            dict_toml = toml.load(f)
+        g = dict_toml[&quot;model&quot;][&quot;G&quot;]
+        ene = 0.0
+        mag_sz = 0.0
+        mag_sx = 0.0
+        with open(join(&quot;output_{}&quot;.format(idx), &quot;density.dat&quot;)) as f:
+            for line in f:
+                words = line.split()
+                if words[0] == &#39;hamiltonian&#39;:
+                    ene = words[2]
+                elif words[0] == &#39;Sz&#39;:
+                    mag_sz = words[2]
+                elif words[0] == &#39;Sx&#39;:
+                    mag_sx = words[2]
+        print(&quot;{} {} {} {}&quot;.format(g, ene, mag_sz, mag_sx))
+    except:
+        continue
+</pre></div>
+</div>
+<p>あらかじめ <code class="docutils literal"><span class="pre">tenes</span></code> などにパスを通した上で</p>
 <div class="code highlight-none"><div class="highlight"><pre>$ python tutorial_example.py
 </pre></div>
 </div>

@@ -86,16 +86,19 @@ $ cmake -DCMAKE_INSTALL_PREFIX=&lt;path to install to&gt; ../
 $ make
 </pre></div>
 </div>
-<p>上記のコマンドで <code class="docutils literal"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal"><span class="pre">tests</span></code> が作成されます。
-<code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> のデフォルト値は <code class="docutils literal"><span class="pre">/usr/local</span></code> です。</p>
+<p><code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> のデフォルト値は <code class="docutils literal"><span class="pre">/usr/local</span></code> です。</p>
 <p>（ CentOS など、環境によっては <code class="docutils literal"><span class="pre">cmake3</span></code> とする必要があります。）</p>
+<p>なお、上記のコマンドで <code class="docutils literal"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal"><span class="pre">tests</span></code> が作成されます。</p>
+<div class="highlight-python"><div class="highlight"><pre>$ make test
+</pre></div>
+</div>
+<p>と打つとテストを実行することができます。</p>
 <ol class="arabic simple" start="2">
 <li>次にインストールします。</li>
 </ol>
-<dl class="docutils">
-<dt>::</dt>
-<dd>$ make install</dd>
-</dl>
+<div class="highlight-python"><div class="highlight"><pre>$ make install
+</pre></div>
+</div>
 <p>実行ファイル <code class="docutils literal"><span class="pre">tenes</span></code>, <code class="docutils literal"><span class="pre">tenes_std</span></code>, <code class="docutils literal"><span class="pre">tenes_simple</span></code> が <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;/bin</span></code> にインストールされます。</p>
 <div class="admonition-mpi-scalapack admonition">
 <p class="first admonition-title">MPI/ScaLAPACK 並列化の無効化</p>

@@ -187,11 +187,11 @@
 </table>
 <p>ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定できます。
+方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
 また、最後に <cite>xyz</cite> のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。</p>
 <a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" /></a>
-<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
+<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせらることもできます。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="38%" />
@@ -259,7 +259,7 @@
 <div class="math">
 \[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
 - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>および最近接ボンド上の <span class="math">\(S^z\)</span>、 <span class="math">\(S^x\)</span>、 <span class="math">\(S^y\)</span> 相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> が自動的に定義されます。</p>
+<p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。</p>
 </div>
 </div>
 <div class="section" id="lattice">
@@ -370,7 +370,7 @@
 <p class="caption"><span class="caption-number">図 5.2 </span><span class="caption-text">三角格子 (triangular) のサイト・ボンド。
 (a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
 (b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
-(c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 90 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 60度方向にそれぞれ伸びる。
+(c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 90 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -30度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 30度方向にそれぞれ伸びる。
 (d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。</span><a class="headerlink" href="#fig-triangular-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
@@ -469,7 +469,7 @@
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
 <li><code class="docutils literal"><span class="pre">true</span></code> にするとテンソルの要素を実数に制限して計算を行います</li>
-<li>一つでも複素演算子があると計算が始まりません</li>
+<li>一つでも複素演算子があるとエラー終了します</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
@@ -650,6 +650,7 @@
 </tr>
 </tbody>
 </table>
+<p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
 </div>
 <div class="section" id="parameter-random">
 <h3><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="このヘッドラインへのパーマリンク">¶</a></h3>

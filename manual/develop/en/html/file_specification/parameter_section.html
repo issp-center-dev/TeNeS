@@ -94,7 +94,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
 <li>When set to <code class="docutils literal"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</li>
-<li>If one complex operator is defined at least,  calculation does not start.</li>
+<li>If one complex operator is defined at least,  calculation will end in errors before starting.</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
@@ -213,7 +213,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
-<td>Whether the Fast full update is adopted</td>
+<td>Whether the fast full update is adopted</td>
 <td>Boolean</td>
 <td>true</td>
 </tr>
@@ -264,17 +264,18 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
-<td>Whether to replace SVD with Random SVD</td>
+<td>Whether to replace SVD with random SVD</td>
 <td>Boolean</td>
 <td>false</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
-<td>Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method</td>
+<td>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</td>
 <td>Real</td>
 <td>2.0</td>
 </tr>
 </tbody>
 </table>
+<p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </div>
 <div class="section" id="parameter-random">
 <h1><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>

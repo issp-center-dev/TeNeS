@@ -47,10 +47,10 @@
 ハミルトニアンは以下のようになります:</p>
 <div class="math">
 \[\begin{aligned}
-H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}\]</div>
+H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}\]</div>
 <p>ここで<span class="math">\(\langle i, j\rangle\)</span>は隣接サイトの組を表し、<span class="math">\(h\)</span>は<span class="math">\(z\)</span>方向にかけられた外部磁場の大きさを表します。
 この模型の基底状態を計算し、ユニットセルの平均磁化 <span class="math">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>を磁場<span class="math">\(h\)</span>の関数として求めてみましょう ( <span class="math">\(N_u\)</span> はユニットセル内のサイト数)。</p>
-<p>この計算を行うには、 <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal"><span class="pre">basic.toml</span></code> と、pythonスクリプト <code class="docutils literal"><span class="pre">tutorial_magnetization.py</span></code> を利用します。 <code class="docutils literal"><span class="pre">basic.toml</span></code> ファイルには、模型の設定やパラメータなどが記述されています。</p>
+<p>この計算を行うには、 <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> のディレクトリ内にある toml ファイル <code class="docutils literal"><span class="pre">basic.toml</span></code> と、pythonスクリプト <code class="docutils literal"><span class="pre">tutorial_magnetization.py</span></code> を利用します。 <code class="docutils literal"><span class="pre">basic.toml</span></code> ファイルには、模型の設定やパラメータなどが記述されています。</p>
 <div class="highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.general]
 is_real = true
@@ -64,15 +64,15 @@ num_step = 0
 tau = 0.01
 
 [parameter.ctm]
-iteration_max = 10
+iteration_max = 100
 dimension = 10
 
 [lattice]
 type = &quot;triangular lattice&quot;
 L = 3
 W = 3
-virtual_dim = 4
-initial = &quot;random&quot;
+virtual_dim = 3
+initial = &quot;antiferro&quot;
 
 [model]
 type = &quot;spin&quot;
@@ -91,23 +91,25 @@ min_h = 0.0
 max_h = 5.0
 num_step_table = [100, 200, 500, 1000, 2000]
 
-fout = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
+fmag = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
+fene = open(&quot;energy.dat&quot;,&quot;w&quot;)
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
     print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_h))
     inum = 0
     num_pre = 0
-    fout.write(&quot;{} &quot;.format(h))
+    fmag.write(&quot;{} &quot;.format(h))
+    fene.write(&quot;{} &quot;.format(h))
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print(&quot;Step numter: {}&quot;.format(num_step))
+        print(&quot;Steps: {}&quot;.format(num_step))
         with open(&quot;basic.toml&quot;) as f:
             dict_toml = toml.load(f)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_step)
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(idx,num_step)
         dict_toml[&quot;model&quot;][&quot;H&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
-            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_pre)
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(idx,num_pre)
         with open(&quot;simple_{}_{}.toml&quot;.format(idx,num_step), &#39;w&#39;) as f:
             toml.dump(dict_toml, f)
         cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
@@ -119,14 +121,18 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         with open(join(&quot;output_{}_{}&quot;.format(idx,num_step), &quot;density.dat&quot;)) as f:
             lines = f.readlines()
             mag_sz = lines[0].split(&#39;=&#39;)[1].strip()
-        fout.write(&quot;{} &quot;.format(mag_sz))
+            ene = lines[2].split(&#39;=&#39;)[1].strip()
+        fene.write(&quot;{} &quot;.format(ene))
+        fmag.write(&quot;{} &quot;.format(mag_sz))
         inum = inum + 1
         num_pre = num_step
-    fout.write(&quot;\n&quot;)
-fout.close()
+    fene.write(&quot;\n&quot;)
+    fmag.write(&quot;\n&quot;)
+fene.close()
+fmag.close()
 </pre></div>
 </div>
-<p>ここスクリプトでは、磁場<span class="math">\(h\)</span>を0から5まで0.25刻みで変化させ、基底状態のエネルギーと<span class="math">\(\langle S_z \rangle\)</span>を計算して、 <code class="docutils literal"><span class="pre">energy.dat</span></code> および <code class="docutils literal"><span class="pre">magnetization.dat</span></code> に出力します。 <code class="docutils literal"><span class="pre">simple</span> <span class="pre">update</span></code> の時間ステップ数を<span class="math">\(100\)</span>, <span class="math">\(200\)</span>, <span class="math">\(500\)</span>, <span class="math">\(1000\)</span>, <span class="math">\(2000\)</span>と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
+<p>このスクリプトでは、磁場<span class="math">\(h\)</span>を0から5まで0.25刻みで変化させ、基底状態のエネルギーと<span class="math">\(\langle S_z \rangle\)</span>を計算して、 <code class="docutils literal"><span class="pre">energy.dat</span></code> および <code class="docutils literal"><span class="pre">magnetization.dat</span></code> に出力します。 <code class="docutils literal"><span class="pre">simple</span> <span class="pre">update</span></code> の時間ステップ数を<span class="math">\(100\)</span>, <span class="math">\(200\)</span>, <span class="math">\(500\)</span>, <span class="math">\(1000\)</span>, <span class="math">\(2000\)</span>と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
 計算量を減らすために、少ないステップ数で得られた波動関数の情報を <code class="docutils literal"><span class="pre">tensor_save</span></code> に保存し、それをより多いステップ数の計算の初期状態としてとっています。例えば、最初に時間ステップ数を100とした計算を行って結果を出力したあと、ステップ数100の計算終了時の波動関数からさらにステップ数100の計算を行って、結果的にステップ数200の計算結果を得ます。</p>
 <p>実際に実行してみましょう。あらかじめ <code class="docutils literal"><span class="pre">tenes</span></code> などにパスを通した上で</p>
 <div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
@@ -162,7 +168,7 @@ W = 2
 </pre></div>
 </div>
 <p>実際に計算を行うには、</p>
-<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
+<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization_square.py
 </pre></div>
 </div>
 <p>とします。計算が終了したら、gnuplotを起動し、</p>

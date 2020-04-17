@@ -87,9 +87,13 @@ $ cmake  -DCMAKE_INSTALL_PREFIX=&lt;path to install to&gt; ..
 $ make
 </pre></div>
 </div>
-<p>The executable file <code class="docutils literal"><span class="pre">tests</span></code>  will be generated in  <code class="docutils literal"><span class="pre">build/src</span></code> directory.
-The default value of the <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> is <code class="docutils literal"><span class="pre">/usr/local</span></code>.</p>
+<p>The default value of the <code class="docutils literal"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> is <code class="docutils literal"><span class="pre">/usr/local</span></code>.</p>
 <p>(Some environment such as CentOS provides CMake3 as <code class="docutils literal"><span class="pre">cmake3</span></code> .)</p>
+<p>The executable file <code class="docutils literal"><span class="pre">tests</span></code>  will be generated in  <code class="docutils literal"><span class="pre">build/src</span></code> directory.
+By typing the following command, tests for <code class="docutils literal"><span class="pre">tenes</span></code> can be done.</p>
+<div class="highlight-python"><div class="highlight"><pre>$ make tests
+</pre></div>
+</div>
 <ol class="arabic simple" start="2">
 <li>Install TeNeS by typing the following commands:</li>
 </ol>
@@ -105,7 +109,7 @@ and TeNeS ends in error. It is recommended to disable MPI parallel.</p>
 </div>
 <div class="admonition-specify-compiler admonition">
 <p class="first admonition-title">Specify compiler</p>
-<p>CMake detects your compiler automatically but sometimes this is not what you want. In this case, you can specify the compiler by the following way,</p>
+<p>CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler by the following way,</p>
 <div class="last highlight-python"><div class="highlight"><pre>$ cmake -DCMAKE_CXX_COMPILER=&lt;path to your compiler&gt; ../
 </pre></div>
 </div>

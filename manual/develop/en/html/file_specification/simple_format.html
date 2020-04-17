@@ -191,7 +191,7 @@ You can also specify Ising-like interaction by adding one character of <cite>xyz
 If the same bond or component is specified twice or more, an error will occur.</p>
 <p>To summarize,</p>
 <a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 400px;" /></a>
-<p>Biquadratic interaction  <span class="math">\(B\)</span> can also have a bond dependency like as <span class="math">\(J\)</span>.</p>
+<p>The biquadratic interaction <span class="math">\(B\)</span> can also have a bond dependency like as <span class="math">\(J\)</span>.</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="25%" />
@@ -260,14 +260,13 @@ In addition, bond hamiltonian</p>
 <div class="math">
 \[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
 - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>and <span class="math">\(S^z\)</span> ,  <span class="math">\(S^x\)</span>,  <span class="math">\(S^y\)</span> correlations with nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> are automatically defined
-as two-site operators.</p>
+<p>and spin correlations with nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.</p>
 </div>
 </div>
 <div class="section" id="lattice-section">
 <h2>5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> section<a class="headerlink" href="#lattice-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the lattices to calculate.
-Square, honeycomb, and triangular lattice are defined.</p>
+Square, triangular, honeycomb, and Kagome lattices are defined.</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="25%" />
@@ -381,7 +380,7 @@ The blue, red, and green lines represent bonds of <code class="docutils literal"
 <p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Triangular lattice.
 (a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
 (b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
-(c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 90 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 60 degree direction.
+(c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 90 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -30 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 30 degree direction.
 (d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.</span><a class="headerlink" href="#fig-triangular-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
@@ -478,7 +477,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
 <li>When set to <code class="docutils literal"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</li>
-<li>If one complex operator is defined at least,  calculation does not start.</li>
+<li>If one complex operator is defined at least,  calculation will end in errors before starting.</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
@@ -597,7 +596,7 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
-<td>Whether the Fast full update is adopted</td>
+<td>Whether the fast full update is adopted</td>
 <td>Boolean</td>
 <td>true</td>
 </tr>
@@ -648,17 +647,18 @@ This section has five subsections: <code class="docutils literal"><span class="p
 <td>true</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
-<td>Whether to replace SVD with Random SVD</td>
+<td>Whether to replace SVD with random SVD</td>
 <td>Boolean</td>
 <td>false</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
-<td>Ratio of the number of the oversampled elements to that of the obtained elements in the Random SVD method</td>
+<td>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</td>
 <td>Real</td>
 <td>2.0</td>
 </tr>
 </tbody>
 </table>
+<p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </div>
 <div class="section" id="parameter-random">
 <h3><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h3>

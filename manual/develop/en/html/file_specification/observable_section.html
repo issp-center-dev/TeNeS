@@ -80,7 +80,7 @@ This section has two types of subsections, <code class="docutils literal"><span 
 <p><code class="docutils literal"><span class="pre">name</span></code>  specifies an operator name.</p>
 <p><code class="docutils literal"><span class="pre">group</span></code> specifies an identification number of one-site operators.</p>
 <p><code class="docutils literal"><span class="pre">sites</span></code> specifies a site number where an operater acts on.
-By using a list, multiple site the operators can be defined on site at the same time.
+By using a list, the operators can be defined on the multiple sites at the same time.
 An empty list <code class="docutils literal"><span class="pre">[]</span></code> means all sites.</p>
 <p><code class="docutils literal"><span class="pre">dim</span></code> specifies a dimension of an operator.</p>
 <p><code class="docutils literal"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
@@ -174,7 +174,7 @@ One line consisting of three integers means one site pair.</p>
 <li><p class="first">The last two integers are the coordinates (dx, dy) of the other site (target site) from the source site.</p>
 <blockquote>
 <div><ul class="simple">
-<li>Both dx and dy must be in the range <span class="math">\(-3 \ le dx \ le 3\)</span>.</li>
+<li>Both dx and dy must be in the range <span class="math">\(-3 \le dx \le 3\)</span>.</li>
 </ul>
 </div></blockquote>
 </li>
@@ -194,20 +194,20 @@ For example, if <span class="math">\(S^z\)</span> is defined as <code class="doc
 <p>If both <code class="docutils literal"><span class="pre">elements</span></code> and <code class="docutils literal"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
 <div class="section" id="id1">
 <h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<p>As an example, the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code></p>
+<p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
 <div class="math">
 \[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
-<p>is explained.</p>
+<p>is explained below.</p>
 <p>First, the name and identification number is set as <code class="docutils literal"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;hamiltonian&quot;</span></code> and <code class="docutils literal"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code>.
 <code class="docutils literal"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> because the state of each site is a superposition of the two states
 <span class="math">\(|\uparrow\rangle\)</span> and <span class="math">\(|\downarrow\rangle\)</span>.</p>
-<p>Next, let&#8217;s define the bonds. In this case, the site numbers are assigned as</p>
-<div class="highlight-none"><div class="highlight"><pre>2 3
-0 1
-</pre></div>
-</div>
-<p>The bond connecting 0 and 1 is represented as <code class="docutils literal"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
+<p>Next, let&#8217;s define the bonds. In this case, site indecies are given as shown in <code class="xref std std-numref docutils literal"><span class="pre">bond_22</span></code> .
+The bond connecting 0 and 1 is represented as <code class="docutils literal"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
 Similarly, The bond connecting 1 and 3 is represented as <code class="docutils literal"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> because 3 is located at (0,1) from 1.</p>
+<div class="figure" id="id2">
+<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal"><span class="pre">Lsub=[2,2]</span></code> .</span></p>
+</div>
 <p>Finally, how to define the elements of the operator is explained.
 First, the basis of the site is needed to be labeled. Here, we label <span class="math">\(|\uparrow\rangle\)</span> as 0 and <span class="math">\(|\downarrow\rangle\)</span> as 1.
 Using this basis and label number, for example, one of diagonal elements <span class="math">\(\left\langle \uparrow_i \uparrow_j | \mathcal{H}_{ij} | \uparrow_i \uparrow_j \right\rangle = 1/4\)</span> is specified by <code class="docutils literal"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0.25</span> <span class="pre">0.0</span></code>.

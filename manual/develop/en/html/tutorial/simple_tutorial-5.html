@@ -47,9 +47,9 @@ quantum Heisenberg model with spin <span class="math">\(S = 1/2\)</span> defined
 triangular lattice. The Hamiltonian looks like this:</p>
 <div class="math">
 \[\begin{aligned}
-H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - \sum_i h S_i^z\end{aligned}\]</div>
+H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}\]</div>
 <p>Here, <span class="math">\(\langle i, j \rangle\)</span> represents the pair of nearest neighbor sites, and <span class="math">\(h\)</span> represents the magnitude of the external magnetic field applied in the <span class="math">\(z\)</span> direction.
-Let&#8217;s calculate the ground state of this model and find <span class="math">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>, where <span class="math">\(N_u\)</span> is the total number of sites in the unit cell, as a function of the magnetic field <span class="math">\(h\)</span>. To do this, use the toml file <code class="docutils literal"><span class="pre">basic.toml</span></code> in the <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> directory and the python script <code class="docutils literal"><span class="pre">tutorial_magnetization.py</span></code>.
+Let&#8217;s calculate the ground state of this model and find <span class="math">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>, where <span class="math">\(N_u\)</span> is the total number of sites in the unit cell, as a function of the magnetic field <span class="math">\(h\)</span>. To do this, the toml file <code class="docutils literal"><span class="pre">basic.toml</span></code> and the python script <code class="docutils literal"><span class="pre">tutorial_magnetization.py</span></code> are prepared in the <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> directory.
 The <code class="docutils literal"><span class="pre">basic.toml</span></code> file contains model settings and parameters.</p>
 <div class="highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.general]
@@ -64,23 +64,23 @@ num_step = 0
 tau = 0.01
 
 [parameter.ctm]
-iteration_max = 10
+iteration_max = 100
 dimension = 10
 
 [lattice]
 type = &quot;triangular lattice&quot;
 L = 3
 W = 3
-virtual_dim = 4
-initial = &quot;random&quot;
+virtual_dim = 3
+initial = &quot;antiferro&quot;
 
 [model]
 type = &quot;spin&quot;
 J = 1.0
 </pre></div>
 </div>
-<p>The lattice section specifies a triangular lattice, and the unit cell
-size specifies <span class="math">\(3\times 3\)</span>. Here, in order to make the calculation
+<p>The <code class="docutils literal"><span class="pre">lattice</span></code> section specifies a triangular lattice with the unit cell
+size of <span class="math">\(3\times 3\)</span>. Here, in order to make the calculation
 lighter, only <code class="docutils literal"><span class="pre">simple</span> <span class="pre">update</span></code> is performed, and the imaginary time
 interval <span class="math">\(\tau\)</span> is assumed to be <span class="math">\(\tau = 0.01\)</span>. For
 simplicity, <span class="math">\(J=1\)</span>. Using this basic setting file,
@@ -96,23 +96,25 @@ min_h = 0.0
 max_h = 5.0
 num_step_table = [100, 200, 500, 1000, 2000]
 
-fout = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
+fmag = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
+fene = open(&quot;energy.dat&quot;,&quot;w&quot;)
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
     print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_h))
     inum = 0
     num_pre = 0
-    fout.write(&quot;{} &quot;.format(h))
+    fmag.write(&quot;{} &quot;.format(h))
+    fene.write(&quot;{} &quot;.format(h))
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print(&quot;Step numter: {}&quot;.format(num_step))
+        print(&quot;Steps: {}&quot;.format(num_step))
         with open(&quot;basic.toml&quot;) as f:
             dict_toml = toml.load(f)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_step)
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(idx,num_step)
         dict_toml[&quot;model&quot;][&quot;H&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
-            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save_{}_{}&quot;.format(idx,num_pre)
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(idx,num_pre)
         with open(&quot;simple_{}_{}.toml&quot;.format(idx,num_step), &#39;w&#39;) as f:
             toml.dump(dict_toml, f)
         cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
@@ -124,29 +126,26 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         with open(join(&quot;output_{}_{}&quot;.format(idx,num_step), &quot;density.dat&quot;)) as f:
             lines = f.readlines()
             mag_sz = lines[0].split(&#39;=&#39;)[1].strip()
-        fout.write(&quot;{} &quot;.format(mag_sz))
+            ene = lines[2].split(&#39;=&#39;)[1].strip()
+        fene.write(&quot;{} &quot;.format(ene))
+        fmag.write(&quot;{} &quot;.format(mag_sz))
         inum = inum + 1
         num_pre = num_step
-    fout.write(&quot;\n&quot;)
-fout.close()
+    fene.write(&quot;\n&quot;)
+    fmag.write(&quot;\n&quot;)
+fene.close()
+fmag.close()
 </pre></div>
 </div>
 <p>In this script, the magnetic field <span class="math">\(h\)</span> is changed in steps of
 <span class="math">\(0.25\)</span> from <span class="math">\(0\)</span> to <span class="math">\(5\)</span>, and the ground state energy
 and <span class="math">\(\langle S_z \rangle\)</span> are calculated and output to <code class="docutils literal"><span class="pre">energy.dat</span></code>
-and <code class="docutils literal"><span class="pre">magnetization.dat</span></code>. In order to see what happens when the number of
-time steps for simple update is changed, calculations are also performed
-with <span class="math">\(100\)</span>, <span class="math">\(200\)</span>, <span class="math">\(500\)</span>, <span class="math">\(1000\)</span>, and
-<span class="math">\(2000\)</span> steps for each magnetic field. In order to reduce the
-amount of calculation, the information of the wave function obtained
-with a small number of steps is stored in tensor_save, and this is used
-as the initial state for the calculation of a larger number of steps.
-For example, the python script first performs a calculation with the
-number of time steps set to 100, and output the result. Then, it perform
-a calculation with the number of time steps set to 200 using the wave
-function at the end of the calculation of the number of steps 100. The
-script consequently reduce the amount of the calculation by 100 steps
-for the latter.</p>
+and <code class="docutils literal"><span class="pre">magnetization.dat</span></code>, respectively. In order to see what happens when the number of time steps for simple update is changed, calculations are also performed with <span class="math">\(100\)</span>, <span class="math">\(200\)</span>, <span class="math">\(500\)</span>, <span class="math">\(1000\)</span>, and
+<span class="math">\(2000\)</span> steps for each magnetic field.
+In order to reduce the amount of calculation, the information of the wave function obtained with a small number of steps is stored in <code class="docutils literal"><span class="pre">tensor_save</span></code>, and this is used as the initial state for the calculation of a larger number of steps.
+For example, the python script first performs a calculation with the number of time steps set to 100, and output the result.
+Then, it perform a calculation with the number of time steps set to 200 using the wave function at the end of the calculation of the number of steps 100. The
+script consequently reduce the amount of the calculation by 100 steps for the latter in the directory.</p>
 <p>Let&#8217;s actually run it. After passing through a path to tenes in advance,
 execute calculation by typing as follows.</p>
 <div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
@@ -171,10 +170,8 @@ magnetization process at the magnetization of <span class="math">\(1/3\)</span> 
 saturation magnetization <span class="math">\(\langle S_z \rangle = 0.5\)</span>. On this
 plateau, spins on the three lattices form a periodic magnetic structure
 with <span class="math">\(\uparrow\)</span>, <span class="math">\(\uparrow\)</span>, <span class="math">\(\downarrow\)</span>, and a spin
-gap is generated. This plateau structure is unique to triangular
-lattices. This plateau structure is unique to the triangular lattice. To
-see whether the accuracy of calculation is enough or not, it is helpful
-to chekc the step dependence of energy. In principle, the ground-state
+gap is generated.  This plateau structure is unique to the triangular lattice. To see whether the accuracy of calculation is enough or not, it is helpful
+to check the step dependence of energy. In principle, the ground-state
 energy should decrease as the number of steps increases, but in some
 magnetic fields, the calculated energy increases. This is a sign that
 the calculation accuracy is not good. It is presumed that it is
@@ -192,7 +189,7 @@ W = 2
 </pre></div>
 </div>
 <p>To perform the calculation, type:</p>
-<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization.py
+<div class="highlight-none"><div class="highlight"><pre>python tutorial_magnetization_square.py
 </pre></div>
 </div>
 <p>After the calculation is completed, start up gnuplot and type</p>
@@ -200,11 +197,11 @@ W = 2
 </pre></div>
 </div>
 <p>Then, the magnetization curve shown in the right panel of
-<a class="reference internal" href="#fig-tutorial5-square"><span>Fig. 4.3</span></a> is obtained. In a similar way, if you type</p>
+<a class="reference internal" href="#fig-tutorial5-square"><span>Fig. 4.3</span></a> is obtained. In a similar way, by typing the following command,</p>
 <div class="highlight-none"><div class="highlight"><pre>load &#39;plot_ene_square.gp&#39;
 </pre></div>
 </div>
-<p>we obtain the ground-state energy as shown in the left panel of
+<p>you will obtain the ground-state energy as shown in the left panel of
 <a class="reference internal" href="#fig-tutorial5-square"><span>Fig. 4.3</span></a>. The calculation is almost converged at 2000
 steps, and it can be seen that the plateau structure does not appear
 unlike the triangular lattice Heisenberg model. Since the energy

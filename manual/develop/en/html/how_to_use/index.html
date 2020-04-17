@@ -41,14 +41,18 @@
             
   <div class="section" id="usage">
 <h1>3. Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">tenes</span></code>, the main program of TeNeS, needs to create input file to define the model, order of operations, etc.
-You can create the input file directly, but the following script is provided for ease of use:</p>
+<p><code class="docutils literal"><span class="pre">tenes</span></code>, the main program of TeNeS, needs an input file to define the model, order of operations, etc.
+For ease of use to make the input file, the following script is provided (the schematic flow is shown <a class="reference internal" href="#fig-tenes-flow"><span>Fig. 3.1</span></a>):</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">tenes_std</span></code> : A tool that generates an input file to execute <code class="docutils literal"><span class="pre">tenes</span></code>. An input file of <code class="docutils literal"><span class="pre">tenes_std</span></code> defines a lattice model etc. by yourself according to a predetermined format.</li>
 <li><code class="docutils literal"><span class="pre">tenes_simple</span></code>: A tool that generates input files for <code class="docutils literal"><span class="pre">tenes_std</span></code> from another simpler input file which specifies lattice model predefined.</li>
 </ul>
 <p>In order to simulate other models and/or lattices than predefined ones, you should create the input file of <code class="docutils literal"><span class="pre">tenes_std</span></code> and convert it.
 Please see <a class="reference internal" href="../file_specification/index.html"><em>File format</em></a> for details on the input files of TeNeS.</p>
+<div class="figure" id="id1">
+<a class="reference internal image-reference" href="../_images/tenes_flow.png" id="fig-tenes-flow"><img alt="../_images/tenes_flow.png" id="fig-tenes-flow" src="../_images/tenes_flow.png" style="width: 800px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 3.1 </span><span class="caption-text">Schematic calculation flow of TeNeS</span><a class="headerlink" href="#fig-tenes-flow" title="Permalink to this image">¶</a></p>
+</div>
 <p>The following sections describe how to use each script, and finally how to use <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
 <div class="toctree-wrapper compound">
 <ul>

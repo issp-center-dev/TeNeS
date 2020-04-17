@@ -37,9 +37,14 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <p>In this section, the parameters about the correlation function <span class="math">\(C = \langle A(0)B(r) \rangle\)</span> is specified.
-TeNeS calculates the correlation function along <span class="math">\(x\)</span> and <span class="math">\(y\)</span> axis
-like <span class="math">\(\langle A(x,y) B(x+r, y) \rangle\)</span>, but not like <span class="math">\(\langle A(x,y) B(x+r_x, y+r_y)\)</span>.</p>
+  <p>In this section, the parameters about the site-site correlation function <span class="math">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0 + \boldsymbol{r}) \right\rangle\)</span> is specified.
+If you omit this section, no correlation functions will be calculated.</p>
+<p>Coordinates <span class="math">\(\boldsymbol{r}, \boldsymbol{r}_0\)</span> measured in the system of square lattice TNS.
+For example, the coordinate of the right neighbor tensor is <span class="math">\(\boldsymbol{r} = (1,0)\)</span> and that of the top neighbor one is <span class="math">\(\boldsymbol{r} = (0,1)\)</span>.
+TeNeS calculates the correlation functions along the positive direction of <span class="math">\(x\)</span> and <span class="math">\(y\)</span> axis, that is,</p>
+<div class="math">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>The coordinate of each site of the unitcell is used as the center coordinate, <span class="math">\(\boldsymbol{r}_0\)</span>.</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="23%" />
@@ -66,8 +71,8 @@ like <span class="math">\(\langle A(x,y) B(x+r, y) \rangle\)</span>, but not lik
 <p>The operators defined in the <code class="docutils literal"><span class="pre">observable.onesite</span></code> section are used.</p>
 <div class="section" id="example">
 <h1>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
-<p>For example, if <span class="math">\(S^z\)</span> is defined as 0 and <span class="math">\(S^x\)</span> is defined as 1,
-then <span class="math">\(S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)\)</span>
+<p>For example, if <span class="math">\(S^z\)</span> is defined as 0th operator and <span class="math">\(S^x\)</span> is defined as 1st one,
+then <span class="math">\(S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)\)</span> for <span class="math">\(0 \le r \le 5\)</span>
 are measured by the following definition:</p>
 <div class="highlight-none"><div class="highlight"><pre>[correlation]
 r_max = 5

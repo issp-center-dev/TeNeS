@@ -43,7 +43,7 @@
             
   <div class="section" id="tenes-std">
 <h1>3.2. <code class="docutils literal"><span class="pre">tenes_std</span></code> の使用方法<a class="headerlink" href="#tenes-std" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">tenes_std</span></code> は与えられたハミルトニアンから虚時間発展演算子を導出し、 <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを生成するツールです。</p>
+<p><code class="docutils literal"><span class="pre">tenes_std</span></code> は与えられたハミルトニアンから虚時間刻み <span class="math">\(\tau\)</span> の虚時間発展演算子 <span class="math">\(\exp\left(-\tau \mathcal{H}_{ij}\right)\)</span> を導出し、 <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを生成するツールです。</p>
 <div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_std std.toml
 </pre></div>
 </div>
@@ -86,8 +86,10 @@
 </dl>
 </li>
 </ul>
-<p>入力ファイルを生成・編集することで、定義されていない模型・格子での計算が行なえます。
-入力ファイルの詳細は <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span>tenes_std の入力ファイル</span></a> を参照してください。</p>
+<p>入力ファイルは <code class="docutils literal"><span class="pre">tenes_simple</span></code> を用いて生成できます。
+さらに、入力ファイルを編集することで、定義されていない模型・格子での計算が行なえます。
+入力ファイルの詳細は <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span>tenes_std の入力ファイル</span></a> を参照してください。
+以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。</p>
 <div class="highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.general]
 is_real = true   # limit tensors as real-valued ones

@@ -27,7 +27,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 - ``is_real``
 
   - ``true`` にするとテンソルの要素を実数に制限して計算を行います
-  - 一つでも複素演算子があると計算が始まりません
+  - 一つでも複素演算子があるとエラー終了します
 
 - ``iszero_tol``
 
@@ -103,6 +103,8 @@ full update に関するパラメータ
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
+
+乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ を参照してください。
 
 
 ``parameter.random``

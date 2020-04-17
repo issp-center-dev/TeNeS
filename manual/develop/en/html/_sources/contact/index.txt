@@ -17,7 +17,6 @@ Contacts
       
 - Others
 
-  If you have any questions about topics related to your research that are difficult to consult in public (e.g., at Issue page on GitHub), 
-please send an e-mail to the following address:
+  If you have any questions about topics related to your research that are difficult to consult in public (e.g., at Issue page on GitHub), please send an e-mail to the following address:
 
   E-mail: ``tenes-dev__at__issp.u-tokyo.ac.jp`` (replace ``__at__`` by ``@``). 

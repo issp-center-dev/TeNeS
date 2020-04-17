@@ -37,7 +37,7 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <p>Specify the unit cell information.
+  <p>Specify the unit cell information (Information of bonds is given in the <code class="docutils literal"><span class="pre">hamiltonian</span></code> (<code class="docutils literal"><span class="pre">tenes_std</span></code>) and <code class="docutils literal"><span class="pre">evolution</span></code> (<code class="docutils literal"><span class="pre">tenes</span></code>)  sections.).
 Unit cell has a shape of a rectangular with the size of <code class="docutils literal"><span class="pre">Lx</span></code> times <code class="docutils literal"><span class="pre">Ly</span></code>.
 <code class="docutils literal"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal"><span class="pre">unitcell</span></code> .</p>
 <table border="1" class="docutils">
@@ -69,32 +69,22 @@ Unit cell has a shape of a rectangular with the size of <code class="docutils li
 </table>
 <p>When a list of two integers is passed as <code class="docutils literal"><span class="pre">L_sub</span></code>, the first element gives the value of <code class="docutils literal"><span class="pre">Lx</span></code> and the second one does <code class="docutils literal"><span class="pre">Ly</span></code>.
 A list of three or more elements causes an error.
-If <code class="docutils literal"><span class="pre">L_sub</span></code> is an integer, Both <code class="docutils literal"><span class="pre">Lx</span></code> and <code class="docutils literal"><span class="pre">Ly</span></code> will have the same value.</p>
+If <code class="docutils literal"><span class="pre">L_sub</span></code> is an integer, both <code class="docutils literal"><span class="pre">Lx</span></code> and <code class="docutils literal"><span class="pre">Ly</span></code> will have the same value.</p>
 <p>Sites in a unit cell are indexed starting from 0.
-These are arranged in order from the x direction.
-Sites in a unit cell of <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> are arranged as follows:</p>
-<div class="highlight-none"><div class="highlight"><pre>y
-^     4 5
-|     2 3
-.-&gt;x  0 1
-</pre></div>
+These are arranged in order from the x direction.</p>
+<div class="figure" id="id1">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig1.png"><img alt="../_images/tensor_sec_fig1.png" src="../_images/tensor_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-text">An example for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code>.</span></p>
 </div>
 <p><code class="docutils literal"><span class="pre">skew</span></code> is the shift value in the x direction when moving one unit cell in the y direction.</p>
-<p>Example when <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> (ruled line is a separator for unit cell):</p>
-<div class="highlight-none"><div class="highlight"><pre>y    ---------
-^     5|3 4 5|
-|     2|0 1 2|
-|    ---------
-|    |3 4 5|
-.-&gt;x |0 1 2|
-     -------
-</pre></div>
+<div class="figure" id="id2">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-text">An example for <code class="docutils literal"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> (ruled line is a separator for unit cell).</span></p>
 </div>
-<p>Information of bonds is given in the <code class="docutils literal"><span class="pre">hamiltonian</span></code> (<code class="docutils literal"><span class="pre">tenes_std</span></code>) and <code class="docutils literal"><span class="pre">evolution</span></code> (<code class="docutils literal"><span class="pre">tenes</span></code>)  sections.</p>
 <div class="section" id="tensor-unitcell-subsection">
 <h1><code class="docutils literal"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this headline">¶</a></h1>
 <p>The information of site tensors <span class="math">\(T_{ijkl\alpha}^{(n)}\)</span> is specified.
-Here, <span class="math">\(i, j, k, l\)</span> indicates the index of the virtual bond,
+Here, <span class="math">\(i, j, k, l\)</span> indicate the index of the virtual bond,
 <span class="math">\(\alpha\)</span> indicates the index of the physical bond,
 and <span class="math">\(n\)</span> indicates the site number.</p>
 <table border="1" class="docutils">
@@ -137,18 +127,18 @@ An empty list <code class="docutils literal"><span class="pre">[]</span></code> 
 <p>By setting a list to <code class="docutils literal"><span class="pre">virtual_dim</span></code>, individual bond dimensions in four directions can be specified.
 The order is left (-x), top (+y), right (+x), and bottom (-y).</p>
 <p>An initial state of a system <span class="math">\(|\Psi\rangle\)</span> is represented as
-the direct product state of the initial states at each site <span class="math">\(i\)</span> <span class="math">\(|\Psi_i\rangle\)</span>:</p>
+the direct product state of the initial states at each site <span class="math">\(i\)</span>, <span class="math">\(|\Psi_i\rangle\)</span>:</p>
 <div class="math">
 \[|\Psi\rangle = \otimes_i |\Psi_i\rangle,\]</div>
 <p>where <span class="math">\(|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> is the initial state at <span class="math">\(i\)</span> site.
 Site tensors are initialized to realize this product state with some noise.
-<code class="docutils literal"><span class="pre">initial_state</span></code> specifies values of expansion coefficient <span class="math">\(A_\alpha\)</span>, which will be automatically normalized.
-If an array consisting of only zeros is given, the initial state becomes random state.
+<code class="docutils literal"><span class="pre">initial_state</span></code> specifies (real) values of expansion coefficient <span class="math">\(A_\alpha\)</span>, which will be automatically normalized.
 The tensor itself is initialized such that all elements with a virtual bond index of 0 are <span class="math">\(T_{0000\alpha} = A_\alpha\)</span>.
 The other elements are independently initialized by a uniform random number of <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code>.
 For example, in the case of <span class="math">\(S=1/2\)</span> ,
 set <code class="docutils literal"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">0.0]</span></code> when you want to set the initial state as the state <span class="math">\(|\Psi_i\rangle = |\uparrow\rangle = |0\rangle\)</span>.
 When you want to set the initial state as the state <span class="math">\(|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}\)</span>, set <code class="docutils literal"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">1.0]</span></code>.</p>
+<p>When an array consisting of only zeros is passed as <code class="docutils literal"><span class="pre">initil_state</span></code>, all the elements of the initial tensor will be initialized independently by uniform random value <code class="docutils literal"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> .</p>
 </div>
 
 

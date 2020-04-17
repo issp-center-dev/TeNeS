@@ -45,8 +45,11 @@ The currently defined models and lattices are as follows:
    - Square lattice
    - Triangular lattice
    - Honeycomb lattice
+   - Kagome lattice
 
 See :ref:`sec-simple-format` for details of the input file.
+Below, a sample file for the S=1/2 Heisenberg model on the square lattice is shown.
+
 ::
 
    [lattice]

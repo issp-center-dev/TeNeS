@@ -2,8 +2,8 @@
 Usage
 ***************************
 
-``tenes``, the main program of TeNeS, needs to create input file to define the model, order of operations, etc.
-You can create the input file directly, but the following script is provided for ease of use:
+``tenes``, the main program of TeNeS, needs an input file to define the model, order of operations, etc.
+For ease of use to make the input file, the following script is provided (the schematic flow is shown :numref:`fig_tenes_flow`):
 
 - ``tenes_std`` : A tool that generates an input file to execute ``tenes``. An input file of ``tenes_std`` defines a lattice model etc. by yourself according to a predetermined format.
 
@@ -11,6 +11,14 @@ You can create the input file directly, but the following script is provided for
   
 In order to simulate other models and/or lattices than predefined ones, you should create the input file of ``tenes_std`` and convert it.
 Please see :doc:`../file_specification/index` for details on the input files of TeNeS.
+
+
+.. figure:: ../../img/tenes_flow.*
+     :name: fig_tenes_flow
+     :width: 800px
+
+     Schematic calculation flow of TeNeS
+   
 
 The following sections describe how to use each script, and finally how to use ``tenes``.
   

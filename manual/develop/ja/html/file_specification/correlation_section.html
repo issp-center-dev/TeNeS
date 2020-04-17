@@ -38,10 +38,14 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <p>相関関数 <code class="docutils literal"><span class="pre">C</span> <span class="pre">=</span> <span class="pre">&lt;A(0)B(r)&gt;</span></code> に関する情報を指定するセクションです。
-TeNeS は x ないし y 軸に平行な方向にのみ相関関数を計算します。
-つまり、 <span class="math">\(\langle A(x,y) B(x+r, y) \rangle\)</span> という形式のみ計算し、
-斜め方向 <span class="math">\(\langle A(x,y) B(x+r_x, y+r_y)\)</span> は計算しません。</p>
+  <p>サイト演算子の相関関数 <span class="math">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0+\boldsymbol{r})\right\rangle\)</span> に関する情報を指定するセクションです。
+本セクションを省略した場合、相関関数は計算されません。</p>
+<p>座標は正方格子TNS の座標系で測られます。すなわち、右隣のテンソルは <span class="math">\(\boldsymbol{r} = (1,0)\)</span> で、真上は <span class="math">\(\boldsymbol{r} = (0,1)\)</span> です。
+中心座標 <span class="math">\(\boldsymbol{r}_0\)</span> として、ユニットセル内のすべてのサイトが用いられます。
+また、<span class="math">\(\boldsymbol{r}\)</span> は <span class="math">\(x\)</span> ないし <span class="math">\(y\)</span> 軸に平行な方向に、正の向きにのみ動きます。すなわち、</p>
+<div class="math">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>です。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="23%" />
@@ -74,7 +78,7 @@ r_max = 5
 operators = [[0,0], [0,1], [1,1]]
 </pre></div>
 </div>
-<p>では <span class="math">\(S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)\)</span> が測定されます。</p>
+<p>では相関関数 <span class="math">\(S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)\)</span> が、 <span class="math">\(0 \le r \le 5\)</span> の範囲で測定されます。</p>
 </div>
 
 
