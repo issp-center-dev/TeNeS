@@ -78,7 +78,7 @@ necessary to increase the bond dimension.
 
 .. figure:: ../../img/tutorial_5_triangular.*
    :name: fig_tutorial5_triangular
-   :width: 800px
+   :width: 600px
 
    Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.
 
@@ -118,7 +118,7 @@ that the calculation accuracy is sufficiently high.
 
 .. figure:: ../../img/tutorial_5_square.*
    :name: fig_tutorial5_square
-   :width: 800px
+   :width: 600px
 
    Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the square lattice.
 
