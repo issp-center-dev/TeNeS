@@ -57,7 +57,7 @@
 
 .. figure:: ../../img/tutorial_5_triangular.*
      :name: fig_tutorial5_triangular
-     :width: 800px
+     :width: 600px
 
      三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)
 
@@ -88,7 +88,7 @@
 
 .. figure:: ../../img/tutorial_5_square.*
      :name: fig_tutorial5_square
-     :width: 800px
+     :width: 600px
 
      正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)
 

@@ -156,7 +156,7 @@ fmag.close()
 理想的にはステップ数を増やすほど基底エネルギーが下がるはずですが、一部の磁場領域では逆に基底エネルギーが増加します。これは計算精度があまりでていない兆候です。
 ボンド次元を増やすなどして、より計算精度を高める必要があると推測されます。</p>
 <div class="figure" id="id2">
-<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular"><img alt="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular" src="../_images/tutorial_5_triangular.png" style="width: 800px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular"><img alt="../_images/tutorial_5_triangular.png" id="fig-tutorial5-triangular" src="../_images/tutorial_5_triangular.png" style="width: 600px;" /></a>
 <p class="caption"><span class="caption-number">図 4.2 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="この画像へのパーマリンク">¶</a></p>
 </div>
 <p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal"><span class="pre">sample/05_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
@@ -181,7 +181,7 @@ W = 2
 </div>
 <p>とすれば、<a class="reference internal" href="#fig-tutorial5-square"><span>図 4.3</span></a> の左図のような基底エネルギーのグラフが得られます。</p>
 <div class="figure" id="id3">
-<a class="reference internal image-reference" href="../_images/tutorial_5_square.png" id="fig-tutorial5-square"><img alt="../_images/tutorial_5_square.png" id="fig-tutorial5-square" src="../_images/tutorial_5_square.png" style="width: 800px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_5_square.png" id="fig-tutorial5-square"><img alt="../_images/tutorial_5_square.png" id="fig-tutorial5-square" src="../_images/tutorial_5_square.png" style="width: 600px;" /></a>
 <p class="caption"><span class="caption-number">図 4.3 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="この画像へのパーマリンク">¶</a></p>
 </div>
 <p>ステップ数2000でほぼ収束しており、三角格子ハイゼンベルク模型と異なり、プラトー構造は現れないことがわかります。
