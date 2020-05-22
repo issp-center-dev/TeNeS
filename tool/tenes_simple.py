@@ -760,6 +760,7 @@ class SpinModel(Model):
         else:
             update(range(3), ["hx"], 0, "hx")
 
+        update(range(3), ["hy"], 0, "hy")
         update(range(3), ["d"], 0, "d")
         self.params = ret
 
