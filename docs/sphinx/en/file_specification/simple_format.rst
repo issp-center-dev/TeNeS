@@ -20,6 +20,7 @@ In this version, spin system (``"spin"``) is defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``type``, Model type, String, --
 
@@ -33,22 +34,25 @@ Hamiltonian is described as
 
 .. math ::
 
- \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]
+ \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - \sum_i D \left(S^z_i\right)^2
 
 The parameters of the one-body terms are defined as follows.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``S``, Magnituide of the local spin, Real (integer or half integer), 0.5
-   ``H``, "longitudinal magnetic field :math:`H`", Real, 0.0
-   ``G``, "Transverse magnetic field :math:`\Gamma` ", Real, 0.0
+   ``hx``, "Magnetic field along :math:`S^x`, :math:`h^x`", Real, 0.0
+   ``hy``, "Magnetic field along :math:`S^y`, :math:`h^y`", Real, 0.0
+   ``hz``, "Magnetic field along :math:`S^z`, :math:`h^z`", Real, 0.0
    ``D``, "On-site spin anisotropy :math:`D`", Real, 0.0
 
 The exchange interaction :math:`J` can have a bond dependency.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``J0``, "Exchange interaction of **0th** direction **nearest neighbor** bond", Real, 0.0
    ``J1``, "Exchange interaction of **1st** direction **nearest neighbor** bond", Real, 0.0
@@ -76,6 +80,7 @@ The biquadratic interaction :math:`B` can also have a bond dependency like as :m
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``B0``, "Biquadratic interaction of **0th** direction **nearest neighbor** bond", Real, 0.0
    ``B1``, "Biquadratic interaction of **1st** direction **nearest neighbor** bond", Real, 0.0
@@ -90,14 +95,15 @@ The biquadratic interaction :math:`B` can also have a bond dependency like as :m
 
 One-site operators :math:`S ^ z` and :math:`S ^ x` are automatically defined.
 If ``parameter.general.is_real = false``, :math:`S ^ y` is also defined.
-In addition, bond hamiltonian
+In addition, bond Hamiltonian
 
 .. math ::
 
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
- - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
+ - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
 and spin correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (:math:`h^\alpha` and :math:`D` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
 
 ``lattice`` section
 ==========================

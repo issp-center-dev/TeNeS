@@ -641,10 +641,13 @@ class SpinModel(Model):
             SzSz interaction
         B: float
             Bilinear-Biquadratic inteaction
-        H: float
-            Longitudinal magnetic field
-        G: float
-            Transverse magnetic field
+        Hx: float
+            Magnetic field along Sx
+        Hy: float
+            Magnetic field along Sy
+        Hz: float
+            Magnetic field along Sz
+            (longitudinal field)
         D: float
             Onsite spin anisotropy
 
@@ -659,8 +662,11 @@ class SpinModel(Model):
         Jx = args.get("jx", 0.0)
         Jy = args.get("jy", 0.0)
         B = args.get("b", 0.0)
-        h = args.get("h", 0.0) / z
-        g = args.get("g", 0.0) / z
+
+        hx = args.get("hx", 0.0) / z
+        hy = args.get("hy", 0.0) / z
+        hz = args.get("hz", 0.0) / z
+
         D = args.get("d", 0.0) / z
 
         E = np.eye(self.N)
@@ -674,11 +680,12 @@ class SpinModel(Model):
             val += Jz * Sz[in1, out1] * Sz[in2, out2]
             val += Jx * Sx[in1, out1] * Sx[in2, out2]
             val += Jy * np.real(Sy[in1, out1] * Sy[in2, out2])
-            val -= h * (Sz[in1, out1] * E[in2, out2] + E[in1, out1] * Sz[in2, out2])
+            val -= hz * (Sz[in1, out1] * E[in2, out2] + E[in1, out1] * Sz[in2, out2])
+            val -= hx * (Sx[in1, out1] * E[in2, out2] + E[in1, out1] * Sx[in2, out2])
+            val -= hy * (Sy[in1, out1] * E[in2, out2] + E[in1, out1] * Sy[in2, out2])
             val -= D * (
                 Sz[in1, out1] ** 2 * E[in2, out2] + E[in1, out1] * Sz[in2, out2] ** 2
             )
-            val -= g * (Sx[in1, out1] * E[in2, out2] + E[in1, out1] * Sx[in2, out2])
 
             SS[in1, in2, out1, out2] = (
                 Sz[in1, out1] * Sz[in2, out2]
@@ -732,8 +739,28 @@ class SpinModel(Model):
                 types = [int(gr[0])] if gr[0] else [0, 1, 2]
                 n = len(gr[1])
                 update(types, ["b"], n, key)
-        for name in ("h", "g", "d"):
-            update(range(3), [name], 0, name)
+
+        if "h" in modelparam:
+            print('WARNING: "h" for the longitudial field is deprecated, and will be removed in future.')
+            print('         Use "hz" instead.')
+            if "hz" in modelparam:
+                print('ERROR: Both "hz" and "h" are specified. Use "hz".')
+                sys.exit(1)
+            update(range(3), ["hz"], 0, "h")
+        else:
+            update(range(3), ["hz"], 0, "hz")
+
+        if "g" in modelparam:
+            print('WARNING: "g" for the transverse field is deprecated, and will be removed in future.')
+            print('         Use "hx" instead.')
+            if "hx" in modelparam:
+                print('ERROR: Both "hx" and "g" are specified. Use "hx".')
+                sys.exit(1)
+            update(range(3), ["hx"], 0, "g")
+        else:
+            update(range(3), ["hx"], 0, "hx")
+
+        update(range(3), ["d"], 0, "d")
         self.params = ret
 
 
