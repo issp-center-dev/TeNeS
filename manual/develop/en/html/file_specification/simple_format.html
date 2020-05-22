@@ -57,10 +57,10 @@ format.</li>
 In this version, spin system (<code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code>) is defined.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -82,14 +82,14 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 <h3>Spin system: <code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code><a class="headerlink" href="#spin-system-spin" title="Permalink to this headline">¶</a></h3>
 <p>Hamiltonian is described as</p>
 <div class="math">
-\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i + D \left(S^z_i\right)^2 \right]\]</div>
+\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - \sum_i D \left(S^z_i\right)^2\]</div>
 <p>The parameters of the one-body terms are defined as follows.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -104,17 +104,22 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 <td>Real (integer or half integer)</td>
 <td>0.5</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">H</span></code></td>
-<td>longitudinal magnetic field <span class="math">\(H\)</span></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hx</span></code></td>
+<td>Magnetic field along <span class="math">\(S^x\)</span>, <span class="math">\(h^x\)</span></td>
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">G</span></code></td>
-<td>Transverse magnetic field <span class="math">\(\Gamma\)</span></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hy</span></code></td>
+<td>Magnetic field along <span class="math">\(S^y\)</span>, <span class="math">\(h^y\)</span></td>
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hz</span></code></td>
+<td>Magnetic field along <span class="math">\(S^z\)</span>, <span class="math">\(h^z\)</span></td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
 <td>On-site spin anisotropy <span class="math">\(D\)</span></td>
 <td>Real</td>
 <td>0.0</td>
@@ -124,10 +129,10 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 <p>The exchange interaction <span class="math">\(J\)</span> can have a bond dependency.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -194,10 +199,10 @@ If the same bond or component is specified twice or more, an error will occur.</
 <p>The biquadratic interaction <span class="math">\(B\)</span> can also have a bond dependency like as <span class="math">\(J\)</span>.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -256,11 +261,12 @@ If the same bond or component is specified twice or more, an error will occur.</
 </table>
 <p>One-site operators <span class="math">\(S ^ z\)</span> and <span class="math">\(S ^ x\)</span> are automatically defined.
 If <code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code>, <span class="math">\(S ^ y\)</span> is also defined.
-In addition, bond hamiltonian</p>
+In addition, bond Hamiltonian</p>
 <div class="math">
 \[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
-- \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>and spin correlations with nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.</p>
+- \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
+<p>and spin correlations with nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (<span class="math">\(h^\alpha\)</span> and <span class="math">\(D\)</span> term) appear only in the nearest neighbor bonds, and <span class="math">\(z\)</span> is the number of the coodinate number.</p>
 </div>
 </div>
 <div class="section" id="lattice-section">

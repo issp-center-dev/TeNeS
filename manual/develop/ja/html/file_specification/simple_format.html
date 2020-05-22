@@ -58,10 +58,10 @@
 スピン系 (spin) が定義済みです。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -83,14 +83,14 @@
 <h3>スピン系 spin<a class="headerlink" href="#spin" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>スピン系</p>
 <div class="math">
-\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i + D \left(S^z_i\right)^2 \right]\]</div>
+\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\]</div>
 <p>一体項のパラメータは次の通り。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -105,17 +105,22 @@
 <td>実数（整数もしくは半整数）</td>
 <td>0.5</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">h</span></code></td>
-<td>縦磁場 h</td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hx</span></code></td>
+<td><span class="math">\(S^x\)</span> 方向の磁場 <span class="math">\(h^x\)</span></td>
 <td>実数</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">G</span></code></td>
-<td>横磁場 <span class="math">\(\Gamma\)</span></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hy</span></code></td>
+<td><span class="math">\(S^y\)</span> 方向の磁場 <span class="math">\(h^y\)</span></td>
 <td>実数</td>
 <td>0.0</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hz</span></code></td>
+<td><span class="math">\(S^z\)</span> 方向の磁場 <span class="math">\(h^z\)</span></td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
 <td>オンサイトスピン異方性 D</td>
 <td>実数</td>
 <td>0.0</td>
@@ -125,10 +130,10 @@
 <p>交換相互作用 <span class="math">\(J\)</span> にはボンド依存性をもたせることができます。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -187,17 +192,17 @@
 </table>
 <p>ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。
 また、最後に <cite>xyz</cite> のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。</p>
 <a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" /></a>
-<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせらることもできます。</p>
+<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -254,12 +259,13 @@
 </tr>
 </tbody>
 </table>
-<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(S^z\)</span> と <span class="math">\(S^x\)</span> 、(<code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code> ならば) <span class="math">\(S^y\)</span> を自動的に定義されます。
+<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(S^z\)</span> と <span class="math">\(S^x\)</span> 、(<code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code> ならば) <span class="math">\(S^y\)</span> が自動的に定義されます。
 また、2サイト物理量として、ボンドハミルトニアン</p>
 <div class="math">
 \[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
-- \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。</p>
+- \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
+<p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 <span class="math">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
 </div>
 </div>
 <div class="section" id="lattice">

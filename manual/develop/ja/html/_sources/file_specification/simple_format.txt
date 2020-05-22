@@ -22,7 +22,7 @@
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 30, 30, 10, 10
+   :widths: 5, 30, 10, 10
 
    ``type``, 模型の種類, 文字列, --
 
@@ -36,26 +36,27 @@
 
 .. math ::
 
- \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i + D \left(S^z_i\right)^2 \right]
+ \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2
 
 
 一体項のパラメータは次の通り。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 30, 30, 10, 10
+   :widths: 5, 30, 10, 10
 
-   ``S``, "局所スピンの大きさ",       実数（整数もしくは半整数）, 0.5
-   ``h``, "縦磁場 h",                 実数, 0.0
-   ``G``, "横磁場 :math:`\Gamma` ",   実数, 0.0
-   ``D``, "オンサイトスピン異方性 D", 実数, 0.0
+   ``S``,  "局所スピンの大きさ",                 実数（整数もしくは半整数）, 0.5
+   ``hx``, ":math:`S^x` 方向の磁場 :math:`h^x`", 実数,                       0.0
+   ``hy``, ":math:`S^y` 方向の磁場 :math:`h^y`", 実数,                       0.0
+   ``hz``, ":math:`S^z` 方向の磁場 :math:`h^z`", 実数,                       0.0
+   ``D``,  "オンサイトスピン異方性 D",           実数,                       0.0
 
 
 交換相互作用 :math:`J` にはボンド依存性をもたせることができます。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 30, 30, 10, 10
+   :widths: 5, 30, 10, 10
 
    ``J0``, "最近接・第0方向ボンドの交換相互作用", 実数, 0.0
    ``J1``, "最近接・第1方向ボンドの交換相互作用", 実数, 0.0
@@ -70,7 +71,7 @@
 
 ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。
 また、最後に `xyz` のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。
 
@@ -78,11 +79,11 @@
    :width: 300px
    :align: center
 
-双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせらることもできます。
+双二次相互作用 :math:`B` も :math:`J` と同様にボンド依存性をもたせられます。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
-   :widths: 30, 30, 10, 10
+   :widths: 5, 30, 10, 10
 
    ``B0``, "最近接・第0方向ボンドの双二次相互作用", 実数, 0.0
    ``B1``, "最近接・第1方向ボンドの双二次相互作用", 実数, 0.0
@@ -95,15 +96,16 @@
    ``B2''``, "三次近接・第2方向ボンドの双二次相互作用", 実数, 0.0
 
 
-物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば) :math:`S^y` を自動的に定義されます。
+物理量測定に使われる1サイト物理量として、 :math:`S^z` と :math:`S^x` 、(``parameter.general.is_real = false`` ならば) :math:`S^y` が自動的に定義されます。
 また、2サイト物理量として、ボンドハミルトニアン
 
 .. math ::
 
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
- - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
+ - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
 および最近接ボンド上の相関 :math:`S_i^\alpha S_j^\alpha` ( :math:`\alpha=x, y, z` )が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 :math:`z` はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。
 
 ``lattice`` セクション
 ==========================
