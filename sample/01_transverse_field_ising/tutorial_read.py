@@ -5,13 +5,13 @@ import numpy as np
 import toml
 
 
-num_g = 16
+num_hx = 16
 
-for idx in range(num_g):
+for idx in range(num_hx):
     try:
         with open("simple_{}.toml".format(idx)) as f:
             dict_toml = toml.load(f)
-        g = dict_toml["model"]["G"]
+        hx = dict_toml["model"]["hx"]
         ene = 0.0
         mag_sz = 0.0
         mag_sx = 0.0
@@ -24,6 +24,6 @@ for idx in range(num_g):
                     mag_sz = words[2]
                 elif words[0] == 'Sx':
                     mag_sx = words[2]
-        print("{} {} {} {}".format(g, ene, mag_sz, mag_sx))
+        print("{} {} {} {}".format(hx, ene, mag_sz, mag_sx))
     except:
         continue
