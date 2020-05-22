@@ -106,7 +106,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
             dict_toml = toml.load(f)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(idx,num_step)
-        dict_toml[&quot;model&quot;][&quot;H&quot;] = float(h)
+        dict_toml[&quot;model&quot;][&quot;hz&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
             dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(idx,num_pre)

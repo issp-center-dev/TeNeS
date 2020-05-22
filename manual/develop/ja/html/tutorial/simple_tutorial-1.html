@@ -146,17 +146,17 @@ import numpy as np
 import toml
 
 
-num_g = 16
-min_g = 0.0
-max_g = 3.0
+num_hx = 16
+min_hx = 0.0
+max_hx = 3.0
 
 total = 0
-for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_g))
+for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_hx))
     with open(&quot;simple.toml&quot;) as f:
         dict_toml = toml.load(f)
     dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
-    dict_toml[&quot;model&quot;][&quot;G&quot;] = float(g)
+    dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
     with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
         toml.dump(dict_toml, f)
     cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
@@ -177,13 +177,13 @@ import numpy as np
 import toml
 
 
-num_g = 16
+num_hx = 16
 
-for idx in range(num_g):
+for idx in range(num_hx):
     try:
         with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
             dict_toml = toml.load(f)
-        g = dict_toml[&quot;model&quot;][&quot;G&quot;]
+        hx = dict_toml[&quot;model&quot;][&quot;hx&quot;]
         ene = 0.0
         mag_sz = 0.0
         mag_sx = 0.0
@@ -196,7 +196,7 @@ for idx in range(num_g):
                     mag_sz = words[2]
                 elif words[0] == &#39;Sx&#39;:
                     mag_sx = words[2]
-        print(&quot;{} {} {} {}&quot;.format(g, ene, mag_sz, mag_sx))
+        print(&quot;{} {} {} {}&quot;.format(hx, ene, mag_sz, mag_sx))
     except:
         continue
 </pre></div>
