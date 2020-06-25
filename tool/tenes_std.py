@@ -237,7 +237,7 @@ class Unitcell:
 
     def wan2coord(self, site: int, ox: int, oy: int) -> Tuple[int, int]:
         x, y = self.index2coord(site)
-        x -= oy * self.skew
+        x += oy * self.skew
         x += ox * self.L[0]
         y += oy * self.L[1]
         return x, y
@@ -827,4 +827,3 @@ if __name__ == "__main__":
 
     with open(args.output, "w") as f:
         model.to_toml(f)
-
