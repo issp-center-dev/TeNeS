@@ -18,14 +18,13 @@
 ==========================
 
 計算する模型を指定します。
-スピン系 (spin) が定義済みです。
+スピン系 (spin) および ボソン系 (boson) が定義済みです。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 5, 30, 10, 10
 
-   ``type``, 模型の種類, 文字列, --
-
+   ``type``, 模型の種類 ("spin" もしくは "boson"), 文字列, --
 
 模型の種類によって相互作用などのパラメータ名が変わります。
 
@@ -36,7 +35,7 @@
 
 .. math ::
 
- \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2
+ \mathcal{H} = \sum_{i < j}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2
 
 
 一体項のパラメータは次の通り。
@@ -101,10 +100,73 @@
 
 .. math ::
 
- \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
+ \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
 および最近接ボンド上の相関 :math:`S_i^\alpha S_j^\alpha` ( :math:`\alpha=x, y, z` )が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 :math:`z` はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。
+
+
+ボソン系 boson
+~~~~~~~~~~~~~~~~~~
+
+ボソン系
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right]
+
+ここで :math:`b` と :math:`b^\dagger` はボース粒子の生成消滅演算子で、 :math:`n = b^\dagger b` は数演算子。
+
+一体項のパラメータは次の通り。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``nmax``, "1サイトに入る粒子の最大数", 整数, 1
+   ``U``,    "オンサイト斥力",            実数, 0.0
+   ``mu``,   "化学ポテンシャル",          実数, 0.0
+
+
+ホッピング :math:`t` およびオフサイト斥力 :math:`V` にはボンド依存性をもたせることができます。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``t0``, "最近接・第0方向ボンドのホッピング", 実数, 0.0
+   ``t1``, "最近接・第1方向ボンドのホッピング", 実数, 0.0
+   ``t2``, "最近接・第2方向ボンドのホッピング", 実数, 0.0
+   ``t0'``, "次近接・第0方向ボンドのホッピング", 実数, 0.0
+   ``t1'``, "次近接・第1方向ボンドのホッピング", 実数, 0.0
+   ``t2'``, "次近接・第2方向ボンドのホッピング", 実数, 0.0
+   ``t0''``, "三次近接・第0方向ボンドのホッピング", 実数, 0.0
+   ``t1''``, "三次近接・第1方向ボンドのホッピング", 実数, 0.0
+   ``t2''``, "三次近接・第2方向ボンドのホッピング", 実数, 0.0
+   ``V0``, "最近接・第0方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V1``, "最近接・第1方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V2``, "最近接・第2方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V0'``, "次近接・第0方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V1'``, "次近接・第1方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V2'``, "次近接・第2方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V0''``, "三次近接・第0方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V1''``, "三次近接・第1方向ボンドのオフサイト斥力", 実数, 0.0
+   ``V2''``, "三次近接・第2方向ボンドのオフサイト斥力", 実数, 0.0
+
+
+ボンドの方向は lattice セクションで定義される格子に依存します。
+例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。
+
+物理量測定に使われる1サイト物理量として、 :math:`n` と :math:`b`, :math:`b^\dagger` が自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアン
+
+.. math ::
+
+ \mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
+ + \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]
+
+および最近接ボンド上の相関 :math:`n_i n_j`, :math:`b^\dagger_i b`, :math:`b_i b^\dagger_j` が自動的に定義されます。
 ここで、ボンドハミルトニアンのうち、 :math:`z` はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。
 
 ``lattice`` セクション
@@ -130,19 +192,19 @@
 
 - ``initial``
 
-   - ``"ferro"``
+   - ``"ferro"`` : 強磁性状態。
 
-     - 強磁性状態。 各サイトで :math:`S^z=S`` となる状態。
+        - スピン系では、各サイトで :math:`S^z=S`` となる状態。
+        - ボソン系では、各サイトで :math:`n=n_{\text{max}}`` となる状態。
 
-   - ``"antiferro"``
+   - ``"antiferro"`` : 反強磁性状態。
 
-     - 反強磁性状態。
-       正方格子、蜂の巣格子では :math:`S^z = S` と :math:`S^z = -S` が互いに並んだNeel 秩序。
-       三角格子、かごめ格子では スピンが :math:`(\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)` 方向に向いた120 度秩序。
+       - スピン系では、
+         正方格子、蜂の巣格子で :math:`S^z = S` と :math:`S^z = -S` が互いに並んだNeel 秩序。
+         三角格子、かごめ格子で スピンが :math:`(\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)` 方向に向いた120 度秩序。
+       - ボソン系では、一つの副格子で :math:`n=n_{\text{max}}` となり、他の副格子では :math:`n=0` となる状態。
 
-   - ``"random"``
-
-     - 各サイトバラバラなランダム状態。
+   - ``"random"`` : 各サイトバラバラなランダム状態。
 
 - ``noise``
 
