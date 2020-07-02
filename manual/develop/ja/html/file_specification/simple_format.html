@@ -55,7 +55,7 @@
 <div class="section" id="model">
 <h2>5.2.1. <code class="docutils literal"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算する模型を指定します。
-スピン系 (spin) が定義済みです。</p>
+スピン系 (spin) および ボソン系 (boson) が定義済みです。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="9%" />
@@ -72,7 +72,7 @@
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
-<td>模型の種類</td>
+<td>模型の種類 (&#8220;spin&#8221; もしくは &#8220;boson&#8221;)</td>
 <td>文字列</td>
 <td>&#8211;</td>
 </tr>
@@ -83,7 +83,7 @@
 <h3>スピン系 spin<a class="headerlink" href="#spin" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>スピン系</p>
 <div class="math">
-\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\]</div>
+\[\begin{split}\mathcal{H} = \sum_{i &lt; j}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\end{split}\]</div>
 <p>一体項のパラメータは次の通り。</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -262,9 +262,167 @@
 <p>物理量測定に使われる1サイト物理量として、 <span class="math">\(S^z\)</span> と <span class="math">\(S^x\)</span> 、(<code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code> ならば) <span class="math">\(S^y\)</span> が自動的に定義されます。
 また、2サイト物理量として、ボンドハミルトニアン</p>
 <div class="math">
-\[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
+\[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
 - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
 <p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 <span class="math">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
+</div>
+<div class="section" id="boson">
+<h3>ボソン系 boson<a class="headerlink" href="#boson" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>ボソン系</p>
+<div class="math">
+\[\begin{split}\mathcal{H} = \sum_{i&lt;j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right]\end{split}\]</div>
+<p>ここで <span class="math">\(b\)</span> と <span class="math">\(b^\dagger\)</span> はボース粒子の生成消滅演算子で、 <span class="math">\(n = b^\dagger b\)</span> は数演算子。</p>
+<p>一体項のパラメータは次の通り。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">nmax</span></code></td>
+<td>1サイトに入る粒子の最大数</td>
+<td>整数</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">U</span></code></td>
+<td>オンサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">mu</span></code></td>
+<td>化学ポテンシャル</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>ホッピング <span class="math">\(t\)</span> およびオフサイト斥力 <span class="math">\(V\)</span> にはボンド依存性をもたせることができます。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0</span></code></td>
+<td>最近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1</span></code></td>
+<td>最近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2</span></code></td>
+<td>最近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t0'</span></code></td>
+<td>次近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t1'</span></code></td>
+<td>次近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t2'</span></code></td>
+<td>次近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0''</span></code></td>
+<td>三次近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1''</span></code></td>
+<td>三次近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2''</span></code></td>
+<td>三次近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0</span></code></td>
+<td>最近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1</span></code></td>
+<td>最近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2</span></code></td>
+<td>最近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V0'</span></code></td>
+<td>次近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V1'</span></code></td>
+<td>次近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V2'</span></code></td>
+<td>次近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0''</span></code></td>
+<td>三次近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1''</span></code></td>
+<td>三次近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2''</span></code></td>
+<td>三次近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>ボンドの方向は lattice セクションで定義される格子に依存します。
+例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。</p>
+<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(n\)</span> と <span class="math">\(b\)</span>, <span class="math">\(b^\dagger\)</span> が自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアン</p>
+<div class="math">
+\[\mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
++ \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]\]</div>
+<p>および最近接ボンド上の相関 <span class="math">\(n_i n_j\)</span>, <span class="math">\(b^\dagger_i b\)</span>, <span class="math">\(b_i b^\dagger_j\)</span> が自動的に定義されます。
 ここで、ボンドハミルトニアンのうち、 <span class="math">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
 </div>
 </div>
@@ -324,20 +482,26 @@
 <ul>
 <li><p class="first"><code class="docutils literal"><span class="pre">initial</span></code></p>
 <blockquote>
+<div><ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code> : 強磁性状態。</p>
+<blockquote>
 <div><ul class="simple">
-<li><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code><ul>
-<li>強磁性状態。 各サイトで <span class="math">\(S^z=S`\)</span> となる状態。</li>
+<li>スピン系では、各サイトで <span class="math">\(S^z=S`\)</span> となる状態。</li>
+<li>ボソン系では、各サイトで <span class="math">\(n=n_{\text{max}}`\)</span> となる状態。</li>
 </ul>
+</div></blockquote>
 </li>
-<li><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code><ul>
-<li>反強磁性状態。
-正方格子、蜂の巣格子では <span class="math">\(S^z = S\)</span> と <span class="math">\(S^z = -S\)</span> が互いに並んだNeel 秩序。
-三角格子、かごめ格子では スピンが <span class="math">\((\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)\)</span> 方向に向いた120 度秩序。</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code> : 反強磁性状態。</p>
+<blockquote>
+<div><ul class="simple">
+<li>スピン系では、
+正方格子、蜂の巣格子で <span class="math">\(S^z = S\)</span> と <span class="math">\(S^z = -S\)</span> が互いに並んだNeel 秩序。
+三角格子、かごめ格子で スピンが <span class="math">\((\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)\)</span> 方向に向いた120 度秩序。</li>
+<li>ボソン系では、一つの副格子で <span class="math">\(n=n_{\text{max}}\)</span> となり、他の副格子では <span class="math">\(n=0\)</span> となる状態。</li>
 </ul>
+</div></blockquote>
 </li>
-<li><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code><ul>
-<li>各サイトバラバラなランダム状態。</li>
-</ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code> : 各サイトバラバラなランダム状態。</p>
 </li>
 </ul>
 </div></blockquote>
