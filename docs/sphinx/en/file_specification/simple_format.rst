@@ -16,13 +16,13 @@ Input file for ``tenes_simple``
 ==========================
 
 Specify the model to calculate.
-In this version, spin system (``"spin"``) is defined.
+In this version, spin system (``"spin"``) and bosonic system (``"boson"``) are defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 5, 40, 10, 10
 
-   ``type``, Model type, String, --
+   ``type``, Model type ("spin" or "boson"), String, --
 
 
 The parameter names such as interactions depend on the model type.
@@ -42,11 +42,11 @@ The parameters of the one-body terms are defined as follows.
    :header: "Name", "Description", "Type", "Default"
    :widths: 5, 40, 10, 10
 
-   ``S``, Magnituide of the local spin, Real (integer or half integer), 0.5
-   ``hx``, "Magnetic field along :math:`S^x`, :math:`h^x`", Real, 0.0
-   ``hy``, "Magnetic field along :math:`S^y`, :math:`h^y`", Real, 0.0
-   ``hz``, "Magnetic field along :math:`S^z`, :math:`h^z`", Real, 0.0
-   ``D``, "On-site spin anisotropy :math:`D`", Real, 0.0
+   ``S``,  Magnitude of the local spin,         Real (integer or half integer), 0.5
+   ``hx``, "Magnetic field along :math:`S^x`,   :math:`h^x`",                   Real, 0.0
+   ``hy``, "Magnetic field along :math:`S^y`,   :math:`h^y`",                   Real, 0.0
+   ``hz``, "Magnetic field along :math:`S^z`,   :math:`h^z`",                   Real, 0.0
+   ``D``,  "On-site spin anisotropy :math:`D`", Real,                           0.0
 
 The exchange interaction :math:`J` can have a bond dependency.
 
@@ -102,8 +102,70 @@ In addition, bond Hamiltonian
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
  - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-and spin correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
+and spin correlations on nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
 In the bond Hamiltonian, one body terms (:math:`h^\alpha` and :math:`D` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+
+
+Bosonic system: ``"boson"``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hamiltonian is described as
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right],
+
+where :math:`b^\dagger` and :math:`b` are the creation and the annihilation operators of a boson, and :math:`n = b^\dagger b` is the number operator.
+
+The parameters of the one-body terms are defined as follows.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``nmax``, "Maximum number of particles on a site", Integer, 1
+   ``U``,    "Onsite repulsion",                      Real,    0.0
+   ``mu``,   "Chemical potential",                    Real,    0.0
+
+The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``t0``,   "Hopping of **0th** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t1``,   "Hopping of **1st** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t2``,   "Hopping of **2nd** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t0'``,  "Hopping of **0th** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t1'``,  "Hopping of **1st** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t2'``,  "Hopping of **2nd** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t0''``, "Hopping of **0th** direction **third nearest neighbor** bond",           Real, 0.0
+   ``t1''``, "Hopping of **1st** direction **third nearest neighbor** bond",           Real, 0.0
+   ``t2''``, "Hopping of **2nd** direction **third nearest neighbor** bond",           Real, 0.0
+   ``V0``,   "Offsite repulsion of **0th** direction **nearest neighbor** bond",       Real, 0.0
+   ``V1``,   "Offsite repulsion of **1st** direction **nearest neighbor** bond",       Real, 0.0
+   ``V2``,   "Offsite repulsion of **2nd** direction **nearest neighbor** bond",       Real, 0.0
+   ``V0'``,  "Offsite repulsion of **0th** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V1'``,  "Offsite repulsion of **1st** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V2'``,  "Offsite repulsion of **2nd** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V0''``, "Offsite repulsion of **0th** direction **third nearest neighbor** bond", Real, 0.0
+   ``V1''``, "Offsite repulsion of **1st** direction **third nearest neighbor** bond", Real, 0.0
+   ``V2''``, "Offsite repulsion of **2nd** direction **third nearest neighbor** bond", Real, 0.0
+
+The bond direction depends on the lattice defined in the ``lattice`` section.
+For a square lattice, for example, coupling constants along two bond directions can be defined, x-direction (0) and y-direction (1).
+By omitting the direction number, you can specify all directions at once.
+
+One-site operators :math:`n`, :math:`b`, and :math:`b^\dagger` are automatically defined.
+In addition, bond Hamiltonian
+
+.. math ::
+
+ \mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
+ + \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]
+
+and short range correlations on nearest neighbor bonds :math:`n_i n_j`, :math:`b^\dagger_i b_j`, and :math:`b_i b^\dagger_j`  are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (:math:`U` and :math:`\mu` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+
 
 ``lattice`` section
 ==========================
@@ -126,19 +188,18 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
 - ``initial``
 
-   - ``"ferro"`` 
+   - ``"ferro"`` : Ferromagnetic state
 
-      - Ferromagnetic state with :math:`S^z = S`
+      - In spin system, all sites has :math:`S^z = S`
+      - In bosonic system, all sites has :math:`n = n_{\text{max}}` particles
 
-   - ``"antiferro"``
+   - ``"antiferro"`` : Antiferromagnetic state
 
-      - Antiferromagnetic state.
-        For square lattice and honeycomb lattice, the Neel order state (:math:`S^z = S` for the A sublattice and :math:`S^z = -S` for the B sublattice.)
-        For triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to :math:`(\theta, \phi) = (0,0), (2\pi/3, 0)` and :math:`(2\pi/3, \pi)` direction, respectively.)
+      -  In spin system, for square lattice and honeycomb lattice, the Neel order state (:math:`S^z = S` for the A sublattice and :math:`S^z = -S` for the B sublattice),
+         and for triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to :math:`(\theta, \phi) = (0,0), (2\pi/3, 0)` and :math:`(2\pi/3, \pi)` direction, respectively.)
+      - In bosonic system, sites belonging to one sublattice have :math:`n_\text{max}` particles and the other sites have no particles.
 
-   - ``"random"``
-
-      - Random state.
+   - ``"random"`` : Random state
 
 - ``noise``
 
