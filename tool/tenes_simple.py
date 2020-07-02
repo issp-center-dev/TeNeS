@@ -820,7 +820,8 @@ class BoseHubbardModel(Model):
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
         ret = np.zeros((num_sublattice, self.N))
-        for i in range(num_sublattice):
+        ret[0, self.N-1] = 1.0
+        for i in range(1, num_sublattice):
             ret[i, 0] = 1.0
         return ret
 
@@ -872,7 +873,6 @@ class BoseHubbardModel(Model):
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]):
-        from pprint import pprint
         ret = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
@@ -895,7 +895,7 @@ class BoseHubbardModel(Model):
         for key in modelparam.keys():
             if key == "type":
                 continue
-            for prefix in ("t", "b"):
+            for prefix in ("t", "v"):
                 if key.startswith(prefix):
                     ma = repat[prefix].match(key)
                     if not ma:
