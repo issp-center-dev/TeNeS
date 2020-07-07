@@ -173,6 +173,7 @@ As a concrete example, :numref:`fig_triangular_lattice` (a) shows the structure 
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_triangular_lattice` (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
+(e) shows the corresponding square TPS with ``L=3, W=3``.
 
 .. figure:: ../../img/TriangularLattice.*
    :width: 550px
@@ -184,15 +185,17 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
    (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 90 degree direction, ``bondtype=1`` (red) one in the -30 degree direction, and ``bondtype=2`` (green) one in the 30 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
+   (e) Corrensponding square TPS of the triangular lattice with ``L=3, W=3``.
 
 Honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In a honeycomb lattice ``type = "honeycomb lattice"``, units consisting of two sites of coordinates :math:`(0, 0)` and :math:`(\sqrt{3}/2, 1/2)` are arranged with ``L`` units in the :math:`(\sqrt{3},0)` direction and ``W`` units in the :math:`(1/2, 3/2)` direction.
-As a concrete example, :numref:`fig_honeycomb_lattice` (a) shows the structure for ``L=3, W=3``.
+As a concrete example, :numref:`fig_honeycomb_lattice` (a) shows the structure for ``L=2, W=2``.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_honeycomb_lattice` (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
+(e) shows the corresponding square TPS with ``L=2, W=2``.
 
 .. figure:: ../../img/HoneycombLattice.*
    :width: 550px
@@ -200,20 +203,22 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    :name: fig_honeycomb_lattice
 
    Honeycomb lattice.
-   (a) Site structure with ``L=3, W=3``. The dashed ellipse denotes one unit.
+   (a) Site structure with ``L=2, W=2``. The dashed ellipse denotes one unit.
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 30 degree direction, ``bondtype=1`` (red) one in the 150 degree direction, and ``bondtype=2`` (green) one in the -90 degree direction.
    (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 120 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 0 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the -30 degree direction, ``bondtype=1`` (red) one in the -150 degree direction, and ``bondtype=2`` (green) one in the 90 degree direction.
+   (e) Corrensponding square TPS of the honeycomb lattice with ``L=2, W=2``. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.
 
 
 Kagome lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In a kagome lattice ``type = "kagome lattice"``, units consisting of three sites of coordinates :math:`(0, 0)`, :math:`(1, 0)`, and :math:`(1/2, \sqrt{3}/2)` are arranged with ``L`` units in the :math:`(2,0)` direction and ``W`` units in the :math:`(1,\sqrt{3})` direction.
-As a concrete example, :numref:`fig_kagome_lattice` (a) shows the structure for ``L=3, W=3``.
+As a concrete example, :numref:`fig_kagome_lattice` (a) shows the structure for ``L=2, W=2``.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_kagome_lattice` (b), (c), and (d), respectively.
 The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respectively.
+(e) shows the corresponding square TPS with ``L=2, W=2``.
 
 .. figure:: ../../img/KagomeLattice.*
    :width: 550px
@@ -221,10 +226,11 @@ The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respe
    :name: fig_kagome_lattice
 
    Kagome lattice.
-   (a) Site structure with ``L=3, W=3``. The dashed circle denotes one unit.
+   (a) Site structure with ``L=2, W=2``. The dashed circle denotes one unit.
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bonds form upper triangle and ``bondtype=1`` (red) bonds form lowertriangle.
    (c) Second nearest neighbor bonds.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond passes over a site and ``bondtype=1`` (red) one does not.
+   (e) Corresponding square TPS of the kagome lattice with ``L=2, W=2``. The white circles are the dummy tensors with bonds of dimension one.
 
  
 ``parameter`` section
