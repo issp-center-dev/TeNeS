@@ -9,18 +9,17 @@ Developers
 ==================
 TeNeS is developed by the following members.
 
-- ver 1.0
-
-  - Tsuyoshi Okubo (Graduate School of Science, Univ. of Tokyo)
-  - Satoshi Morita (Institute for Solid State Physics, Univ. of Tokyo)
-  - Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
-  - Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
-  - Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
-  - Naoki Kawashima (Institute for Solid State Physics, Univ. of Tokyo)
+- Tsuyoshi Okubo (Graduate School of Science, Univ. of Tokyo)
+- Satoshi Morita (Institute for Solid State Physics, Univ. of Tokyo)
+- Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
+- Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
+- Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
+- Naoki Kawashima (Institute for Solid State Physics, Univ. of Tokyo)
 
 Version information
 ======================
 
+- ver. 1.1.0: 2020-07-09.
 - ver. 1.0.0: 2020-04-17.
 - ver. 1.0-beta: 2020-03-30.
 - ver. 0.1: 2019-12-04.
