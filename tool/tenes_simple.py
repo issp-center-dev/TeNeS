@@ -1185,7 +1185,7 @@ if __name__ == "__main__":
         "-b", "--bondfile", dest="bondfile", default="", help="Bond Information file",
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.1-dev"
+        "-v", "--version", dest="version", action="version", version="1.1.0"
     )
 
     args = parser.parse_args()
