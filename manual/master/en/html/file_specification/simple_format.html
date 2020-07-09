@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>5.2. Input file for tenes_simple &mdash; TeNeS 1.0.0 documentation</title>
+    <title>5.2. Input file for tenes_simple &mdash; TeNeS 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.0',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.1.0 documentation" href="../index.html" />
     <link rel="up" title="5. File format" href="index.html" />
     <link rel="next" title="5.3. Input file for tenes_std" href="standard_format.html" />
     <link rel="prev" title="5.1. Short summary for input files of TeNeS" href="input_summary.html" />
@@ -54,13 +54,13 @@ format.</li>
 <div class="section" id="model-section">
 <h2>5.2.1. <code class="docutils literal"><span class="pre">model</span></code> section<a class="headerlink" href="#model-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the model to calculate.
-In this version, spin system (<code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code>) is defined.</p>
+In this version, spin system (<code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code>) and bosonic system (<code class="docutils literal"><span class="pre">&quot;boson&quot;</span></code>) are defined.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -71,7 +71,7 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
-<td>Model type</td>
+<td>Model type (&#8220;spin&#8221; or &#8220;boson&#8221;)</td>
 <td>String</td>
 <td>&#8211;</td>
 </tr>
@@ -82,14 +82,14 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 <h3>Spin system: <code class="docutils literal"><span class="pre">&quot;spin&quot;</span></code><a class="headerlink" href="#spin-system-spin" title="Permalink to this headline">¶</a></h3>
 <p>Hamiltonian is described as</p>
 <div class="math">
-\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]\]</div>
+\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - \sum_i D \left(S^z_i\right)^2\]</div>
 <p>The parameters of the one-body terms are defined as follows.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -100,21 +100,26 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">S</span></code></td>
-<td>Magnituide of the local spin</td>
+<td>Magnitude of the local spin</td>
 <td>Real (integer or half integer)</td>
 <td>0.5</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">H</span></code></td>
-<td>longitudinal magnetic field <span class="math">\(H\)</span></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hx</span></code></td>
+<td>Magnetic field along <span class="math">\(S^x\)</span>,   <span class="math">\(h^x\)</span></td>
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">G</span></code></td>
-<td>Transverse magnetic field <span class="math">\(\Gamma\)</span></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hy</span></code></td>
+<td>Magnetic field along <span class="math">\(S^y\)</span>,   <span class="math">\(h^y\)</span></td>
 <td>Real</td>
 <td>0.0</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hz</span></code></td>
+<td>Magnetic field along <span class="math">\(S^z\)</span>,   <span class="math">\(h^z\)</span></td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
 <td>On-site spin anisotropy <span class="math">\(D\)</span></td>
 <td>Real</td>
 <td>0.0</td>
@@ -124,10 +129,10 @@ In this version, spin system (<code class="docutils literal"><span class="pre">&
 <p>The exchange interaction <span class="math">\(J\)</span> can have a bond dependency.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -194,10 +199,10 @@ If the same bond or component is specified twice or more, an error will occur.</
 <p>The biquadratic interaction <span class="math">\(B\)</span> can also have a bond dependency like as <span class="math">\(J\)</span>.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
-<col width="25%" />
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Name</th>
@@ -256,11 +261,170 @@ If the same bond or component is specified twice or more, an error will occur.</
 </table>
 <p>One-site operators <span class="math">\(S ^ z\)</span> and <span class="math">\(S ^ x\)</span> are automatically defined.
 If <code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code>, <span class="math">\(S ^ y\)</span> is also defined.
-In addition, bond hamiltonian</p>
+In addition, bond Hamiltonian</p>
 <div class="math">
 \[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
-- \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>and spin correlations with nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.</p>
+- \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
+<p>and spin correlations on nearest neighbor bonds <span class="math">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (<span class="math">\(h^\alpha\)</span> and <span class="math">\(D\)</span> term) appear only in the nearest neighbor bonds, and <span class="math">\(z\)</span> is the number of the coodinate number.</p>
+</div>
+<div class="section" id="bosonic-system-boson">
+<h3>Bosonic system: <code class="docutils literal"><span class="pre">&quot;boson&quot;</span></code><a class="headerlink" href="#bosonic-system-boson" title="Permalink to this headline">¶</a></h3>
+<p>Hamiltonian is described as</p>
+<div class="math">
+\[\begin{split}\mathcal{H} = \sum_{i&lt;j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right],\end{split}\]</div>
+<p>where <span class="math">\(b^\dagger\)</span> and <span class="math">\(b\)</span> are the creation and the annihilation operators of a boson, and <span class="math">\(n = b^\dagger b\)</span> is the number operator.</p>
+<p>The parameters of the one-body terms are defined as follows.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">nmax</span></code></td>
+<td>Maximum number of particles on a site</td>
+<td>Integer</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">U</span></code></td>
+<td>Onsite repulsion</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">mu</span></code></td>
+<td>Chemical potential</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>The hopping constant <span class="math">\(t\)</span> and the offsite repulsion <span class="math">\(V\)</span> can have a bond dependency.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="8%" />
+<col width="62%" />
+<col width="15%" />
+<col width="15%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0</span></code></td>
+<td>Hopping of <strong>0th</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1</span></code></td>
+<td>Hopping of <strong>1st</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2</span></code></td>
+<td>Hopping of <strong>2nd</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t0'</span></code></td>
+<td>Hopping of <strong>0th</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t1'</span></code></td>
+<td>Hopping of <strong>1st</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t2'</span></code></td>
+<td>Hopping of <strong>2nd</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0''</span></code></td>
+<td>Hopping of <strong>0th</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1''</span></code></td>
+<td>Hopping of <strong>1st</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2''</span></code></td>
+<td>Hopping of <strong>2nd</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0</span></code></td>
+<td>Offsite repulsion of <strong>0th</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1</span></code></td>
+<td>Offsite repulsion of <strong>1st</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2</span></code></td>
+<td>Offsite repulsion of <strong>2nd</strong> direction <strong>nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V0'</span></code></td>
+<td>Offsite repulsion of <strong>0th</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V1'</span></code></td>
+<td>Offsite repulsion of <strong>1st</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V2'</span></code></td>
+<td>Offsite repulsion of <strong>2nd</strong> direction <strong>next nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0''</span></code></td>
+<td>Offsite repulsion of <strong>0th</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1''</span></code></td>
+<td>Offsite repulsion of <strong>1st</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2''</span></code></td>
+<td>Offsite repulsion of <strong>2nd</strong> direction <strong>third nearest neighbor</strong> bond</td>
+<td>Real</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>The bond direction depends on the lattice defined in the <code class="docutils literal"><span class="pre">lattice</span></code> section.
+For a square lattice, for example, coupling constants along two bond directions can be defined, x-direction (0) and y-direction (1).
+By omitting the direction number, you can specify all directions at once.</p>
+<p>One-site operators <span class="math">\(n\)</span>, <span class="math">\(b\)</span>, and <span class="math">\(b^\dagger\)</span> are automatically defined.
+In addition, bond Hamiltonian</p>
+<div class="math">
+\[\mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
++ \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]\]</div>
+<p>and short range correlations on nearest neighbor bonds <span class="math">\(n_i n_j\)</span>, <span class="math">\(b^\dagger_i b_j\)</span>, and <span class="math">\(b_i b^\dagger_j\)</span>  are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (<span class="math">\(U\)</span> and <span class="math">\(\mu\)</span> term) appear only in the nearest neighbor bonds, and <span class="math">\(z\)</span> is the number of the coodinate number.</p>
 </div>
 </div>
 <div class="section" id="lattice-section">
@@ -320,28 +484,24 @@ If <code class="docutils literal"><span class="pre">tensor_load</span></code> is
 <li><p class="first"><code class="docutils literal"><span class="pre">initial</span></code></p>
 <blockquote>
 <div><ul>
-<li><p class="first"><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code></p>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code> : Ferromagnetic state</p>
 <blockquote>
 <div><ul class="simple">
-<li>Ferromagnetic state with <span class="math">\(S^z = S\)</span></li>
+<li>In spin system, all sites has <span class="math">\(S^z = S\)</span></li>
+<li>In bosonic system, all sites has <span class="math">\(n = n_{\text{max}}\)</span> particles</li>
 </ul>
 </div></blockquote>
 </li>
-<li><p class="first"><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code></p>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code> : Antiferromagnetic state</p>
 <blockquote>
 <div><ul class="simple">
-<li>Antiferromagnetic state.
-For square lattice and honeycomb lattice, the Neel order state (<span class="math">\(S^z = S\)</span> for the A sublattice and <span class="math">\(S^z = -S\)</span> for the B sublattice.)
-For triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to <span class="math">\((\theta, \phi) = (0,0), (2\pi/3, 0)\)</span> and <span class="math">\((2\pi/3, \pi)\)</span> direction, respectively.)</li>
+<li>In spin system, for square lattice and honeycomb lattice, the Neel order state (<span class="math">\(S^z = S\)</span> for the A sublattice and <span class="math">\(S^z = -S\)</span> for the B sublattice),
+and for triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to <span class="math">\((\theta, \phi) = (0,0), (2\pi/3, 0)\)</span> and <span class="math">\((2\pi/3, \pi)\)</span> direction, respectively.)</li>
+<li>In bosonic system, sites belonging to one sublattice have <span class="math">\(n_\text{max}\)</span> particles and the other sites have no particles.</li>
 </ul>
 </div></blockquote>
 </li>
-<li><p class="first"><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code></p>
-<blockquote>
-<div><ul class="simple">
-<li>Random state.</li>
-</ul>
-</div></blockquote>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code> : Random state</p>
 </li>
 </ul>
 </div></blockquote>
@@ -374,46 +534,52 @@ The blue line represents a bond of <code class="docutils literal"><span class="p
 As a concrete example, <a class="reference internal" href="#fig-triangular-lattice"><span>Fig. 5.2</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 <a class="reference internal" href="#fig-triangular-lattice"><span>Fig. 5.2</span></a> (b), (c), and (d), respectively.
-The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.</p>
+The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.
+(e) shows the corresponding square TPS with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.</p>
 <div class="figure align-center" id="id2">
 <a class="reference internal image-reference" href="../_images/TriangularLattice.png" id="fig-triangular-lattice"><img alt="../_images/TriangularLattice.png" id="fig-triangular-lattice" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Triangular lattice.
 (a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
 (b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
 (c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 90 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -30 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 30 degree direction.
-(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.</span><a class="headerlink" href="#fig-triangular-lattice" title="Permalink to this image">¶</a></p>
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
+(e) Corrensponding square TPS of the triangular lattice with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.</span><a class="headerlink" href="#fig-triangular-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="honeycomb-lattice">
 <h3>Honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Permalink to this headline">¶</a></h3>
 <p>In a honeycomb lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code>, units consisting of two sites of coordinates <span class="math">\((0, 0)\)</span> and <span class="math">\((\sqrt{3}/2, 1/2)\)</span> are arranged with <code class="docutils literal"><span class="pre">L</span></code> units in the <span class="math">\((\sqrt{3},0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> units in the <span class="math">\((1/2, 3/2)\)</span> direction.
-As a concrete example, <a class="reference internal" href="#fig-honeycomb-lattice"><span>Fig. 5.3</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+As a concrete example, <a class="reference internal" href="#fig-honeycomb-lattice"><span>Fig. 5.3</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 <a class="reference internal" href="#fig-honeycomb-lattice"><span>Fig. 5.3</span></a> (b), (c), and (d), respectively.
-The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.</p>
+The blue, red, and green lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal"><span class="pre">2</span></code>, respectively.
+(e) shows the corresponding square TPS with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.</p>
 <div class="figure align-center" id="id3">
 <a class="reference internal image-reference" href="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice"><img alt="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">Fig. 5.3 </span><span class="caption-text">Honeycomb lattice.
-(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>. The dashed ellipse denotes one unit.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The dashed ellipse denotes one unit.
 (b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 30 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 150 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the -90 degree direction.
 (c) Second nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 120 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 0 degree direction.
-(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the -30 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -150 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 90 degree direction.</span><a class="headerlink" href="#fig-honeycomb-lattice" title="Permalink to this image">¶</a></p>
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond extends in the -30 degree direction, <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one in the -150 degree direction, and <code class="docutils literal"><span class="pre">bondtype=2</span></code> (green) one in the 90 degree direction.
+(e) Corrensponding square TPS of the honeycomb lattice with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.</span><a class="headerlink" href="#fig-honeycomb-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="kagome-lattice">
 <h3>Kagome lattice<a class="headerlink" href="#kagome-lattice" title="Permalink to this headline">¶</a></h3>
 <p>In a kagome lattice <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code>, units consisting of three sites of coordinates <span class="math">\((0, 0)\)</span>, <span class="math">\((1, 0)\)</span>, and <span class="math">\((1/2, \sqrt{3}/2)\)</span> are arranged with <code class="docutils literal"><span class="pre">L</span></code> units in the <span class="math">\((2,0)\)</span> direction and <code class="docutils literal"><span class="pre">W</span></code> units in the <span class="math">\((1,\sqrt{3})\)</span> direction.
-As a concrete example, <a class="reference internal" href="#fig-kagome-lattice"><span>Fig. 5.4</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
+As a concrete example, <a class="reference internal" href="#fig-kagome-lattice"><span>Fig. 5.4</span></a> (a) shows the structure for <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 <a class="reference internal" href="#fig-kagome-lattice"><span>Fig. 5.4</span></a> (b), (c), and (d), respectively.
-The blue and the red lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code>, and <code class="docutils literal"><span class="pre">1</span></code>, respectively.</p>
+The blue and the red lines represent bonds of <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code>, and <code class="docutils literal"><span class="pre">1</span></code>, respectively.
+(e) shows the corresponding square TPS with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.</p>
 <div class="figure align-center" id="id4">
 <a class="reference internal image-reference" href="../_images/KagomeLattice.png" id="fig-kagome-lattice"><img alt="../_images/KagomeLattice.png" id="fig-kagome-lattice" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">Fig. 5.4 </span><span class="caption-text">Kagome lattice.
-(a) Site structure with <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>. The dashed circle denotes one unit.
+(a) Site structure with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The dashed circle denotes one unit.
 (b) Nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bonds form upper triangle and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) bonds form lowertriangle.
 (c) Second nearest neighbor bonds.
-(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond passes over a site and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one does not.</span><a class="headerlink" href="#fig-kagome-lattice" title="Permalink to this image">¶</a></p>
+(d) Third nearest neighbor bonds. <code class="docutils literal"><span class="pre">bondtype=0</span></code> (blue) bond passes over a site and <code class="docutils literal"><span class="pre">bondtype=1</span></code> (red) one does not.
+(e) Corresponding square TPS of the kagome lattice with <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The white circles are the dummy tensors with bonds of dimension one.</span><a class="headerlink" href="#fig-kagome-lattice" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>

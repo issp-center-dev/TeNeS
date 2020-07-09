@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4.2. Magnetization process of the Heisenberg model on triangular and square lattices &mdash; TeNeS 1.0.0 documentation</title>
+    <title>4.2. Magnetization process of the Heisenberg model on triangular and square lattices &mdash; TeNeS 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.0',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.1.0 documentation" href="../index.html" />
     <link rel="up" title="4. Tutorial" href="index.html" />
     <link rel="next" title="5. File format" href="../file_specification/index.html" />
     <link rel="prev" title="4.1. Ising model with transverse magnetic field" href="simple_tutorial-1.html" />
@@ -111,7 +111,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
             dict_toml = toml.load(f)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
         dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(idx,num_step)
-        dict_toml[&quot;model&quot;][&quot;H&quot;] = float(h)
+        dict_toml[&quot;model&quot;][&quot;hz&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
             dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(idx,num_pre)

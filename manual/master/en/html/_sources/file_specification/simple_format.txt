@@ -16,12 +16,13 @@ Input file for ``tenes_simple``
 ==========================
 
 Specify the model to calculate.
-In this version, spin system (``"spin"``) is defined.
+In this version, spin system (``"spin"``) and bosonic system (``"boson"``) are defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
-   ``type``, Model type, String, --
+   ``type``, Model type ("spin" or "boson"), String, --
 
 
 The parameter names such as interactions depend on the model type.
@@ -33,22 +34,25 @@ Hamiltonian is described as
 
 .. math ::
 
- \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ H S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]
+ \mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - \sum_i D \left(S^z_i\right)^2
 
 The parameters of the one-body terms are defined as follows.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
-   ``S``, Magnituide of the local spin, Real (integer or half integer), 0.5
-   ``H``, "longitudinal magnetic field :math:`H`", Real, 0.0
-   ``G``, "Transverse magnetic field :math:`\Gamma` ", Real, 0.0
-   ``D``, "On-site spin anisotropy :math:`D`", Real, 0.0
+   ``S``,  Magnitude of the local spin,         Real (integer or half integer), 0.5
+   ``hx``, "Magnetic field along :math:`S^x`,   :math:`h^x`",                   Real, 0.0
+   ``hy``, "Magnetic field along :math:`S^y`,   :math:`h^y`",                   Real, 0.0
+   ``hz``, "Magnetic field along :math:`S^z`,   :math:`h^z`",                   Real, 0.0
+   ``D``,  "On-site spin anisotropy :math:`D`", Real,                           0.0
 
 The exchange interaction :math:`J` can have a bond dependency.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``J0``, "Exchange interaction of **0th** direction **nearest neighbor** bond", Real, 0.0
    ``J1``, "Exchange interaction of **1st** direction **nearest neighbor** bond", Real, 0.0
@@ -76,6 +80,7 @@ The biquadratic interaction :math:`B` can also have a bond dependency like as :m
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
 
    ``B0``, "Biquadratic interaction of **0th** direction **nearest neighbor** bond", Real, 0.0
    ``B1``, "Biquadratic interaction of **1st** direction **nearest neighbor** bond", Real, 0.0
@@ -90,14 +95,77 @@ The biquadratic interaction :math:`B` can also have a bond dependency like as :m
 
 One-site operators :math:`S ^ z` and :math:`S ^ x` are automatically defined.
 If ``parameter.general.is_real = false``, :math:`S ^ y` is also defined.
-In addition, bond hamiltonian
+In addition, bond Hamiltonian
 
 .. math ::
 
  \mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] 
- - \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
+ - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
-and spin correlations with nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
+and spin correlations on nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (:math:`h^\alpha` and :math:`D` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+
+
+Bosonic system: ``"boson"``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hamiltonian is described as
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right],
+
+where :math:`b^\dagger` and :math:`b` are the creation and the annihilation operators of a boson, and :math:`n = b^\dagger b` is the number operator.
+
+The parameters of the one-body terms are defined as follows.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``nmax``, "Maximum number of particles on a site", Integer, 1
+   ``U``,    "Onsite repulsion",                      Real,    0.0
+   ``mu``,   "Chemical potential",                    Real,    0.0
+
+The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``t0``,   "Hopping of **0th** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t1``,   "Hopping of **1st** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t2``,   "Hopping of **2nd** direction **nearest neighbor** bond",                 Real, 0.0
+   ``t0'``,  "Hopping of **0th** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t1'``,  "Hopping of **1st** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t2'``,  "Hopping of **2nd** direction **next nearest neighbor** bond",            Real, 0.0
+   ``t0''``, "Hopping of **0th** direction **third nearest neighbor** bond",           Real, 0.0
+   ``t1''``, "Hopping of **1st** direction **third nearest neighbor** bond",           Real, 0.0
+   ``t2''``, "Hopping of **2nd** direction **third nearest neighbor** bond",           Real, 0.0
+   ``V0``,   "Offsite repulsion of **0th** direction **nearest neighbor** bond",       Real, 0.0
+   ``V1``,   "Offsite repulsion of **1st** direction **nearest neighbor** bond",       Real, 0.0
+   ``V2``,   "Offsite repulsion of **2nd** direction **nearest neighbor** bond",       Real, 0.0
+   ``V0'``,  "Offsite repulsion of **0th** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V1'``,  "Offsite repulsion of **1st** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V2'``,  "Offsite repulsion of **2nd** direction **next nearest neighbor** bond",  Real, 0.0
+   ``V0''``, "Offsite repulsion of **0th** direction **third nearest neighbor** bond", Real, 0.0
+   ``V1''``, "Offsite repulsion of **1st** direction **third nearest neighbor** bond", Real, 0.0
+   ``V2''``, "Offsite repulsion of **2nd** direction **third nearest neighbor** bond", Real, 0.0
+
+The bond direction depends on the lattice defined in the ``lattice`` section.
+For a square lattice, for example, coupling constants along two bond directions can be defined, x-direction (0) and y-direction (1).
+By omitting the direction number, you can specify all directions at once.
+
+One-site operators :math:`n`, :math:`b`, and :math:`b^\dagger` are automatically defined.
+In addition, bond Hamiltonian
+
+.. math ::
+
+ \mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
+ + \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]
+
+and short range correlations on nearest neighbor bonds :math:`n_i n_j`, :math:`b^\dagger_i b_j`, and :math:`b_i b^\dagger_j`  are automatically defined as two-site operators.
+In the bond Hamiltonian, one body terms (:math:`U` and :math:`\mu` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+
 
 ``lattice`` section
 ==========================
@@ -120,19 +188,18 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
 - ``initial``
 
-   - ``"ferro"`` 
+   - ``"ferro"`` : Ferromagnetic state
 
-      - Ferromagnetic state with :math:`S^z = S`
+      - In spin system, all sites has :math:`S^z = S`
+      - In bosonic system, all sites has :math:`n = n_{\text{max}}` particles
 
-   - ``"antiferro"``
+   - ``"antiferro"`` : Antiferromagnetic state
 
-      - Antiferromagnetic state.
-        For square lattice and honeycomb lattice, the Neel order state (:math:`S^z = S` for the A sublattice and :math:`S^z = -S` for the B sublattice.)
-        For triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to :math:`(\theta, \phi) = (0,0), (2\pi/3, 0)` and :math:`(2\pi/3, \pi)` direction, respectively.)
+      -  In spin system, for square lattice and honeycomb lattice, the Neel order state (:math:`S^z = S` for the A sublattice and :math:`S^z = -S` for the B sublattice),
+         and for triangular lattice and kagome lattice, the 120 degree order state (spins on sites belonging to the A, B, and C sublattice are pointing to :math:`(\theta, \phi) = (0,0), (2\pi/3, 0)` and :math:`(2\pi/3, \pi)` direction, respectively.)
+      - In bosonic system, sites belonging to one sublattice have :math:`n_\text{max}` particles and the other sites have no particles.
 
-   - ``"random"``
-
-      - Random state.
+   - ``"random"`` : Random state
 
 - ``noise``
 
@@ -167,6 +234,7 @@ As a concrete example, :numref:`fig_triangular_lattice` (a) shows the structure 
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_triangular_lattice` (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
+(e) shows the corresponding square TPS with ``L=3, W=3``.
 
 .. figure:: ../../img/TriangularLattice.*
    :width: 550px
@@ -178,15 +246,17 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
    (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 90 degree direction, ``bondtype=1`` (red) one in the -30 degree direction, and ``bondtype=2`` (green) one in the 30 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 0 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 120 degree direction.
+   (e) Corrensponding square TPS of the triangular lattice with ``L=3, W=3``.
 
 Honeycomb lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In a honeycomb lattice ``type = "honeycomb lattice"``, units consisting of two sites of coordinates :math:`(0, 0)` and :math:`(\sqrt{3}/2, 1/2)` are arranged with ``L`` units in the :math:`(\sqrt{3},0)` direction and ``W`` units in the :math:`(1/2, 3/2)` direction.
-As a concrete example, :numref:`fig_honeycomb_lattice` (a) shows the structure for ``L=3, W=3``.
+As a concrete example, :numref:`fig_honeycomb_lattice` (a) shows the structure for ``L=2, W=2``.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_honeycomb_lattice` (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``, respectively.
+(e) shows the corresponding square TPS with ``L=2, W=2``.
 
 .. figure:: ../../img/HoneycombLattice.*
    :width: 550px
@@ -194,20 +264,22 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    :name: fig_honeycomb_lattice
 
    Honeycomb lattice.
-   (a) Site structure with ``L=3, W=3``. The dashed ellipse denotes one unit.
+   (a) Site structure with ``L=2, W=2``. The dashed ellipse denotes one unit.
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 30 degree direction, ``bondtype=1`` (red) one in the 150 degree direction, and ``bondtype=2`` (green) one in the -90 degree direction.
    (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 120 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 0 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the -30 degree direction, ``bondtype=1`` (red) one in the -150 degree direction, and ``bondtype=2`` (green) one in the 90 degree direction.
+   (e) Corrensponding square TPS of the honeycomb lattice with ``L=2, W=2``. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.
 
 
 Kagome lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In a kagome lattice ``type = "kagome lattice"``, units consisting of three sites of coordinates :math:`(0, 0)`, :math:`(1, 0)`, and :math:`(1/2, \sqrt{3}/2)` are arranged with ``L`` units in the :math:`(2,0)` direction and ``W`` units in the :math:`(1,\sqrt{3})` direction.
-As a concrete example, :numref:`fig_kagome_lattice` (a) shows the structure for ``L=3, W=3``.
+As a concrete example, :numref:`fig_kagome_lattice` (a) shows the structure for ``L=2, W=2``.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 :numref:`fig_kagome_lattice` (b), (c), and (d), respectively.
 The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respectively.
+(e) shows the corresponding square TPS with ``L=2, W=2``.
 
 .. figure:: ../../img/KagomeLattice.*
    :width: 550px
@@ -215,10 +287,11 @@ The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respe
    :name: fig_kagome_lattice
 
    Kagome lattice.
-   (a) Site structure with ``L=3, W=3``. The dashed circle denotes one unit.
+   (a) Site structure with ``L=2, W=2``. The dashed circle denotes one unit.
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bonds form upper triangle and ``bondtype=1`` (red) bonds form lowertriangle.
    (c) Second nearest neighbor bonds.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond passes over a site and ``bondtype=1`` (red) one does not.
+   (e) Corresponding square TPS of the kagome lattice with ``L=2, W=2``. The white circles are the dummy tensors with bonds of dimension one.
 
  
 ``parameter`` section

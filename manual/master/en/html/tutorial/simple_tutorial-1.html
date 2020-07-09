@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4.1. Ising model with transverse magnetic field &mdash; TeNeS 1.0.0 documentation</title>
+    <title>4.1. Ising model with transverse magnetic field &mdash; TeNeS 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.0',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0.0 documentation" href="../index.html" />
+    <link rel="top" title="TeNeS 1.1.0 documentation" href="../index.html" />
     <link rel="up" title="4. Tutorial" href="index.html" />
     <link rel="next" title="4.2. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
     <link rel="prev" title="4. Tutorial" href="index.html" />
@@ -145,17 +145,17 @@ import numpy as np
 import toml
 
 
-num_g = 16
-min_g = 0.0
-max_g = 3.0
+num_hx = 16
+min_hx = 0.0
+max_hx = 3.0
 
 total = 0
-for idx, g in enumerate(np.linspace(min_g, max_g, num=num_g)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_g))
+for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_hx))
     with open(&quot;simple.toml&quot;) as f:
         dict_toml = toml.load(f)
     dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
-    dict_toml[&quot;model&quot;][&quot;G&quot;] = float(g)
+    dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
     with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
         toml.dump(dict_toml, f)
     cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
@@ -176,13 +176,13 @@ import numpy as np
 import toml
 
 
-num_g = 16
+num_hx = 16
 
-for idx in range(num_g):
+for idx in range(num_hx):
     try:
         with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
             dict_toml = toml.load(f)
-        g = dict_toml[&quot;model&quot;][&quot;G&quot;]
+        hx = dict_toml[&quot;model&quot;][&quot;hx&quot;]
         ene = 0.0
         mag_sz = 0.0
         mag_sx = 0.0
@@ -195,7 +195,7 @@ for idx in range(num_g):
                     mag_sz = words[2]
                 elif words[0] == &#39;Sx&#39;:
                     mag_sx = words[2]
-        print(&quot;{} {} {} {}&quot;.format(g, ene, mag_sz, mag_sx))
+        print(&quot;{} {} {} {}&quot;.format(hx, ene, mag_sz, mag_sx))
     except:
         continue
 </pre></div>

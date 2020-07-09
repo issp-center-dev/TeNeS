@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>5.2. tenes_simple の入力ファイル &mdash; TeNeS 1.0.0 ドキュメント</title>
+    <title>5.2. tenes_simple の入力ファイル &mdash; TeNeS 1.1.0 ドキュメント</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.0',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="../_static/translations.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.0.0 ドキュメント" href="../index.html" />
+    <link rel="top" title="TeNeS 1.1.0 ドキュメント" href="../index.html" />
     <link rel="up" title="5. ファイルフォーマット" href="index.html" />
     <link rel="next" title="5.3. tenes_std の入力ファイル" href="standard_format.html" />
     <link rel="prev" title="5.1. TeNeS の入力ファイルの簡易まとめ" href="input_summary.html" />
@@ -55,13 +55,13 @@
 <div class="section" id="model">
 <h2>5.2.1. <code class="docutils literal"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算する模型を指定します。
-スピン系 (spin) が定義済みです。</p>
+スピン系 (spin) および ボソン系 (boson) が定義済みです。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -72,7 +72,7 @@
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">type</span></code></td>
-<td>模型の種類</td>
+<td>模型の種類 (&#8220;spin&#8221; もしくは &#8220;boson&#8221;)</td>
 <td>文字列</td>
 <td>&#8211;</td>
 </tr>
@@ -83,14 +83,14 @@
 <h3>スピン系 spin<a class="headerlink" href="#spin" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>スピン系</p>
 <div class="math">
-\[\mathcal{H} = \sum_{\langle ij \rangle}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \left[ h S^z_i + \Gamma S^x_i - D \left(S^z_i\right)^2 \right]\]</div>
+\[\begin{split}\mathcal{H} = \sum_{i &lt; j}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\end{split}\]</div>
 <p>一体項のパラメータは次の通り。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -105,17 +105,22 @@
 <td>実数（整数もしくは半整数）</td>
 <td>0.5</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">h</span></code></td>
-<td>縦磁場 h</td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hx</span></code></td>
+<td><span class="math">\(S^x\)</span> 方向の磁場 <span class="math">\(h^x\)</span></td>
 <td>実数</td>
 <td>0.0</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">G</span></code></td>
-<td>横磁場 <span class="math">\(\Gamma\)</span></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">hy</span></code></td>
+<td><span class="math">\(S^y\)</span> 方向の磁場 <span class="math">\(h^y\)</span></td>
 <td>実数</td>
 <td>0.0</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">D</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">hz</span></code></td>
+<td><span class="math">\(S^z\)</span> 方向の磁場 <span class="math">\(h^z\)</span></td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">D</span></code></td>
 <td>オンサイトスピン異方性 D</td>
 <td>実数</td>
 <td>0.0</td>
@@ -125,10 +130,10 @@
 <p>交換相互作用 <span class="math">\(J\)</span> にはボンド依存性をもたせることができます。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -187,17 +192,17 @@
 </table>
 <p>ボンドの方向は lattice セクションで定義される格子に依存します。
 例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
-方向を示す番号を省略することで、すべての方向について一度に指定することもできます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。
 また、最後に <cite>xyz</cite> のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。</p>
 <a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" /></a>
-<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせらることもできます。</p>
+<p>双二次相互作用 <span class="math">\(B\)</span> も <span class="math">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">名前</th>
@@ -254,18 +259,179 @@
 </tr>
 </tbody>
 </table>
-<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(S^z\)</span> と <span class="math">\(S^x\)</span> 、(<code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code> ならば) <span class="math">\(S^y\)</span> を自動的に定義されます。
+<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(S^z\)</span> と <span class="math">\(S^x\)</span> 、(<code class="docutils literal"><span class="pre">parameter.general.is_real</span> <span class="pre">=</span> <span class="pre">false</span></code> ならば) <span class="math">\(S^y\)</span> が自動的に定義されます。
 また、2サイト物理量として、ボンドハミルトニアン</p>
 <div class="math">
-\[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
-- \frac{1}{z} \left[ H \left(S^z_i + S^z_j \right) + \Gamma \left(S^x_i + S^x_j\right) - D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
-<p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。</p>
+\[\mathcal{H}_{ij} = \left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right]
+- \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
+<p>および最近接ボンド上の相関 <span class="math">\(S_i^\alpha S_j^\alpha\)</span> ( <span class="math">\(\alpha=x, y, z\)</span> )が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 <span class="math">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
+</div>
+<div class="section" id="boson">
+<h3>ボソン系 boson<a class="headerlink" href="#boson" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>ボソン系</p>
+<div class="math">
+\[\begin{split}\mathcal{H} = \sum_{i&lt;j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right]\end{split}\]</div>
+<p>ここで <span class="math">\(b\)</span> と <span class="math">\(b^\dagger\)</span> はボース粒子の生成消滅演算子で、 <span class="math">\(n = b^\dagger b\)</span> は数演算子。</p>
+<p>一体項のパラメータは次の通り。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">nmax</span></code></td>
+<td>1サイトに入る粒子の最大数</td>
+<td>整数</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">U</span></code></td>
+<td>オンサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">mu</span></code></td>
+<td>化学ポテンシャル</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>ホッピング <span class="math">\(t\)</span> およびオフサイト斥力 <span class="math">\(V\)</span> にはボンド依存性をもたせることができます。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="55%" />
+<col width="18%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+<th class="head">デフォルト</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0</span></code></td>
+<td>最近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1</span></code></td>
+<td>最近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2</span></code></td>
+<td>最近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t0'</span></code></td>
+<td>次近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t1'</span></code></td>
+<td>次近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t2'</span></code></td>
+<td>次近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t0''</span></code></td>
+<td>三次近接・第0方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">t1''</span></code></td>
+<td>三次近接・第1方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">t2''</span></code></td>
+<td>三次近接・第2方向ボンドのホッピング</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0</span></code></td>
+<td>最近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1</span></code></td>
+<td>最近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2</span></code></td>
+<td>最近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V0'</span></code></td>
+<td>次近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V1'</span></code></td>
+<td>次近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V2'</span></code></td>
+<td>次近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V0''</span></code></td>
+<td>三次近接・第0方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">V1''</span></code></td>
+<td>三次近接・第1方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">V2''</span></code></td>
+<td>三次近接・第2方向ボンドのオフサイト斥力</td>
+<td>実数</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<p>ボンドの方向は lattice セクションで定義される格子に依存します。
+例えば正方格子では x方向 (0) と y方向 (1) の2種類のボンド方向ごとに定義できます。
+方向を示す番号を省略することで、すべての方向について一度に指定できます。</p>
+<p>物理量測定に使われる1サイト物理量として、 <span class="math">\(n\)</span> と <span class="math">\(b\)</span>, <span class="math">\(b^\dagger\)</span> が自動的に定義されます。
+また、2サイト物理量として、ボンドハミルトニアン</p>
+<div class="math">
+\[\mathcal{H}_{ij} = \left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right]
++ \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]\]</div>
+<p>および最近接ボンド上の相関 <span class="math">\(n_i n_j\)</span>, <span class="math">\(b^\dagger_i b\)</span>, <span class="math">\(b_i b^\dagger_j\)</span> が自動的に定義されます。
+ここで、ボンドハミルトニアンのうち、 <span class="math">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
 </div>
 </div>
 <div class="section" id="lattice">
 <h2>5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算する格子を指定します。
-正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。</p>
+正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。
+TeNeS では波動関数を正方格子状に並べられたテンソルによるテンソル積状態で表現し、計算を行います。
+そのため、これらの格子（物理格子）と、計算される正方格子との対応についても記述します。</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="38%" />
@@ -318,20 +484,26 @@
 <ul>
 <li><p class="first"><code class="docutils literal"><span class="pre">initial</span></code></p>
 <blockquote>
+<div><ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code> : 強磁性状態。</p>
+<blockquote>
 <div><ul class="simple">
-<li><code class="docutils literal"><span class="pre">&quot;ferro&quot;</span></code><ul>
-<li>強磁性状態。 各サイトで <span class="math">\(S^z=S`\)</span> となる状態。</li>
+<li>スピン系では、各サイトで <span class="math">\(S^z=S`\)</span> となる状態。</li>
+<li>ボソン系では、各サイトで <span class="math">\(n=n_{\text{max}}`\)</span> となる状態。</li>
 </ul>
+</div></blockquote>
 </li>
-<li><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code><ul>
-<li>反強磁性状態。
-正方格子、蜂の巣格子では <span class="math">\(S^z = S\)</span> と <span class="math">\(S^z = -S\)</span> が互いに並んだNeel 秩序。
-三角格子、かごめ格子では スピンが <span class="math">\((\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)\)</span> 方向に向いた120 度秩序。</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;antiferro&quot;</span></code> : 反強磁性状態。</p>
+<blockquote>
+<div><ul class="simple">
+<li>スピン系では、
+正方格子、蜂の巣格子で <span class="math">\(S^z = S\)</span> と <span class="math">\(S^z = -S\)</span> が互いに並んだNeel 秩序。
+三角格子、かごめ格子で スピンが <span class="math">\((\theta, \phi) = (0, 0), (2\pi/3, 0), (2\pi/3, \pi)\)</span> 方向に向いた120 度秩序。</li>
+<li>ボソン系では、一つの副格子で <span class="math">\(n=n_{\text{max}}\)</span> となり、他の副格子では <span class="math">\(n=0\)</span> となる状態。</li>
 </ul>
+</div></blockquote>
 </li>
-<li><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code><ul>
-<li>各サイトバラバラなランダム状態。</li>
-</ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">&quot;random&quot;</span></code> : 各サイトバラバラなランダム状態。</p>
 </li>
 </ul>
 </div></blockquote>
@@ -364,37 +536,43 @@
 具体例として、 <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-triangular-lattice"><span>図 5.2</span></a> (a) に示します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
 <a class="reference internal" href="#fig-triangular-lattice"><span>図 5.2</span></a> (b), (c), (d) にそれぞれ示します。
-青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。</p>
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。
+<a class="reference internal" href="#fig-triangular-lattice"><span>図 5.2</span></a> (e) 図は (a) に等価な正方格子をあらわしています。</p>
 <div class="figure align-center" id="id3">
 <a class="reference internal image-reference" href="../_images/TriangularLattice.png" id="fig-triangular-lattice"><img alt="../_images/TriangularLattice.png" id="fig-triangular-lattice" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">図 5.2 </span><span class="caption-text">三角格子 (triangular) のサイト・ボンド。
 (a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
 (b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
 (c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 90 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -30度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 30度方向にそれぞれ伸びる。
-(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。</span><a class="headerlink" href="#fig-triangular-lattice" title="この画像へのパーマリンク">¶</a></p>
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
+(e) 正方格子テンソル積状態との対応。</span><a class="headerlink" href="#fig-triangular-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 <div class="section" id="honeycomb-lattice">
 <h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>蜂の巣格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math">\((0, 0)\)</span> と <span class="math">\((\sqrt{3}/2, 1/2)\)</span> の2つのサイトからなるユニットが、 <span class="math">\((\sqrt{3},0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((1/2, 3/2)\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
-具体例として、<code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (a) に示します。
+具体例として、<code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (a) に示します。
 破線はユニットを表します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
 <a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (b), (c), (d) にそれぞれ示します。
-青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。</p>
+青線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。
+<a class="reference internal" href="#fig-honeycomb-lattice"><span>図 5.3</span></a> (e) 図は (a) に等価な正方格子をあらわしています。
+青サイトから上に伸びるボンドなど、正方格子にはあるものの蜂の巣格子には存在しないものは、ボンド次元が 1 のボンドとして表現されます。</p>
 <div class="figure align-center" id="id4">
 <a class="reference internal image-reference" href="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice"><img alt="../_images/HoneycombLattice.png" id="fig-honeycomb-lattice" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">図 5.3 </span><span class="caption-text">蜂の巣格子 (honeycomb) のサイト・ボンド。
-(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
+(a) <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
 (b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 30 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 150度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は -90度方向にそれぞれ伸びる。
 (c) 次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 120 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 0度方向にそれぞれ伸びる。
-(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は -30 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -150度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 90度方向にそれぞれ伸びる。</span><a class="headerlink" href="#fig-honeycomb-lattice" title="この画像へのパーマリンク">¶</a></p>
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は -30 度方向に、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は -150度方向に、 <code class="docutils literal"><span class="pre">bondtype=2</span></code> (緑)は 90度方向にそれぞれ伸びる。
+(e) 正方格子テンソル積状態との対応。大きな破線はユニットセルの境界を表し、周りにある薄いユニットセルは中心にあるユニットセルのコピーである。
+ユニットセルの並びが少しずれていること、また、 (a) で一番右上にあった赤いサイトが (e) では等価な左上に移動することに注意。</span><a class="headerlink" href="#fig-honeycomb-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 <div class="section" id="kagome-lattice">
 <h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>かごめ格子 <code class="docutils literal"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math">\((0, 0)\)</span>, <span class="math">\((1, 0)\)</span>, <span class="math">\((1/2, \sqrt{3}/2)\)</span> の3つのサイトからなるユニット（上向き三角）が、 <span class="math">\((2,0)\)</span> 方向に <code class="docutils literal"><span class="pre">L</span></code> 個、 <span class="math">\((1, \sqrt{3})\)</span> 方向に <code class="docutils literal"><span class="pre">W</span></code> 個並びます。
-具体例として、<code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-kagome-lattice"><span>図 5.4</span></a> (a) に示します。
+具体例として、<code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-kagome-lattice"><span>図 5.4</span></a> (a) に示します。
 破線はユニットは破線を表します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
 <a class="reference internal" href="#fig-kagome-lattice"><span>図 5.4</span></a> (b), (c), (d) にそれぞれ示します。
@@ -402,10 +580,11 @@
 <div class="figure align-center" id="id5">
 <a class="reference internal image-reference" href="../_images/KagomeLattice.png" id="fig-kagome-lattice"><img alt="../_images/KagomeLattice.png" id="fig-kagome-lattice" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
 <p class="caption"><span class="caption-number">図 5.4 </span><span class="caption-text">かごめ格子 (kagome) のサイト・ボンド。
-(a) <code class="docutils literal"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
+(a) <code class="docutils literal"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal"><span class="pre">L</span></code> かける <code class="docutils literal"><span class="pre">W</span></code> 個並ぶ。
 (b) 最近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) は 上向き三角形を、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は 下向き三角形を作る。
 (c) 次近接ボンド。
-(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) はサイトを横切り、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は横切らない。</span><a class="headerlink" href="#fig-kagome-lattice" title="この画像へのパーマリンク">¶</a></p>
+(d) 三次近接ボンド。 <code class="docutils literal"><span class="pre">bondtype=0</span></code> (青) はサイトを横切り、 <code class="docutils literal"><span class="pre">bondtype=1</span></code> (赤) は横切らない。
+(e) 正方格子テンソル積状態との対応。点線で描かれた白丸はすべての次元が1のダミーサイト。</span><a class="headerlink" href="#fig-kagome-lattice" title="この画像へのパーマリンク">¶</a></p>
 </div>
 </div>
 </div>
