@@ -237,7 +237,7 @@ class Unitcell:
 
     def wan2coord(self, site: int, ox: int, oy: int) -> Tuple[int, int]:
         x, y = self.index2coord(site)
-        x -= oy * self.skew
+        x += oy * self.skew
         x += ox * self.L[0]
         y += oy * self.L[1]
         return x, y
@@ -813,7 +813,7 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.0.0"
+        "-v", "--version", dest="version", action="version", version="1.1.0"
     )
 
     args = parser.parse_args()
@@ -827,4 +827,3 @@ if __name__ == "__main__":
 
     with open(args.output, "w") as f:
         model.to_toml(f)
-

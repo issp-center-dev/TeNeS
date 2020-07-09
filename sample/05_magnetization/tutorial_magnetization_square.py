@@ -24,7 +24,7 @@ for idx in range(num_h):
             dict_toml = toml.load(f)
         dict_toml["parameter"]["general"]["output"] = "output_square_{}_{}".format(idx,num_step)
         dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save_square"
-        dict_toml["model"]["H"] = float(h)
+        dict_toml["model"]["hz"] = float(h)
         dict_toml["parameter"]["simple_update"]["num_step"] = ns
         if inum > 0:
             dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save_square"

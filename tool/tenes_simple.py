@@ -595,8 +595,8 @@ class SpinModel(Model):
 
         self.twosite_ops = []
         self.twosite_ops_name = []
-        for name, op in zip(self.onesite_ops_name, self.onesite_ops):
-            self.twosite_ops.append(np.einsum("ij,kl -> ikjl", op, op))
+        for i, name in enumerate(self.onesite_ops_name):
+            self.twosite_ops.append((i, i))
             self.twosite_ops_name.append("{}{}".format(name, name))
         self.read_params(param)
         super()._sort_ham_groups()
@@ -641,10 +641,13 @@ class SpinModel(Model):
             SzSz interaction
         B: float
             Bilinear-Biquadratic inteaction
-        H: float
-            Longitudinal magnetic field
-        G: float
-            Transverse magnetic field
+        Hx: float
+            Magnetic field along Sx
+        Hy: float
+            Magnetic field along Sy
+        Hz: float
+            Magnetic field along Sz
+            (longitudinal field)
         D: float
             Onsite spin anisotropy
 
@@ -652,15 +655,17 @@ class SpinModel(Model):
         -------
         ham: np.ndarray
             bond Hamiltonian
-
         """
 
         Jz = args.get("jz", 0.0)
         Jx = args.get("jx", 0.0)
         Jy = args.get("jy", 0.0)
         B = args.get("b", 0.0)
-        h = args.get("h", 0.0) / z
-        g = args.get("g", 0.0) / z
+
+        hx = args.get("hx", 0.0) / z
+        hy = args.get("hy", 0.0) / z
+        hz = args.get("hz", 0.0) / z
+
         D = args.get("d", 0.0) / z
 
         E = np.eye(self.N)
@@ -674,11 +679,12 @@ class SpinModel(Model):
             val += Jz * Sz[in1, out1] * Sz[in2, out2]
             val += Jx * Sx[in1, out1] * Sx[in2, out2]
             val += Jy * np.real(Sy[in1, out1] * Sy[in2, out2])
-            val -= h * (Sz[in1, out1] * E[in2, out2] + E[in1, out1] * Sz[in2, out2])
+            val -= hz * (Sz[in1, out1] * E[in2, out2] + E[in1, out1] * Sz[in2, out2])
+            val -= hx * (Sx[in1, out1] * E[in2, out2] + E[in1, out1] * Sx[in2, out2])
+            val -= hy * (Sy[in1, out1] * E[in2, out2] + E[in1, out1] * Sy[in2, out2])
             val -= D * (
                 Sz[in1, out1] ** 2 * E[in2, out2] + E[in1, out1] * Sz[in2, out2] ** 2
             )
-            val -= g * (Sx[in1, out1] * E[in2, out2] + E[in1, out1] * Sx[in2, out2])
 
             SS[in1, in2, out1, out2] = (
                 Sz[in1, out1] * Sz[in2, out2]
@@ -732,8 +738,175 @@ class SpinModel(Model):
                 types = [int(gr[0])] if gr[0] else [0, 1, 2]
                 n = len(gr[1])
                 update(types, ["b"], n, key)
-        for name in ("h", "g", "d"):
-            update(range(3), [name], 0, name)
+
+        if "h" in modelparam:
+            print(
+                'WARNING: "h" for the longitudial field is deprecated, and will be removed in future.'
+            )
+            print('         Use "hz" instead.')
+            if "hz" in modelparam:
+                print('ERROR: Both "hz" and "h" are specified. Use "hz".')
+                sys.exit(1)
+            update(range(3), ["hz"], 0, "h")
+        else:
+            update(range(3), ["hz"], 0, "hz")
+
+        if "g" in modelparam:
+            print(
+                'WARNING: "g" for the transverse field is deprecated, and will be removed in future.'
+            )
+            print('         Use "hx" instead.')
+            if "hx" in modelparam:
+                print('ERROR: Both "hx" and "g" are specified. Use "hx".')
+                sys.exit(1)
+            update(range(3), ["hx"], 0, "g")
+        else:
+            update(range(3), ["hx"], 0, "hx")
+
+        update(range(3), ["hy"], 0, "hy")
+        update(range(3), ["d"], 0, "d")
+        self.params = ret
+
+
+def bose_creator(nmax: int) -> np.ndarray:
+    N = nmax + 1
+    ret = np.zeros((N, N))
+    for i in range(N - 1):
+        ret[i, i + 1] = np.sqrt(i + 1)
+    return ret
+
+
+def bose_annihilator(nmax: int) -> np.ndarray:
+    N = nmax + 1
+    ret = np.zeros((N, N))
+    for i in range(N - 1):
+        ret[i + 1, i] = np.sqrt(i + 1)
+    return ret
+
+
+def bose_number(nmax: int) -> np.ndarray:
+    N = nmax + 1
+    ret = np.zeros((N, N))
+    for i in range(N):
+        ret[i, i] = i
+    return ret
+
+
+class BoseHubbardModel(Model):
+    def __init__(self, param: Dict[str, Any]):
+        super().__init__()
+
+        self.nmax = param.get("nmax", 1)
+        nmax = self.nmax
+        assert self.nmax > 0
+        self.N = self.nmax + 1
+
+        self.onesite_ops = [
+            bose_number(nmax),
+            bose_creator(nmax),
+            bose_annihilator(nmax),
+        ]
+        self.onesite_ops_name = ["N", "Bdagger", "B"]
+
+        self.twosite_ops = []
+        self.twosite_ops_name = []
+        for i, j in [(0, 0), (1, 2), (2, 1)]:
+            self.twosite_ops.append((i, j))
+            self.twosite_ops_name.append(
+                "{}{}".format(self.onesite_ops_name[i], self.onesite_ops[j])
+            )
+        self.read_params(param)
+        super()._sort_ham_groups()
+
+    def initial_states(self, num_sublattice: int) -> np.ndarray:
+        ret = np.zeros((num_sublattice, self.N))
+        ret[0, self.N-1] = 1.0
+        for i in range(1, num_sublattice):
+            ret[i, 0] = 1.0
+        return ret
+
+    def model_hamiltonian(self, z: int, **args) -> np.ndarray:
+        """
+        Generate bond Hamiltonian of bosonic system
+        
+        Parameters
+        ----------
+        z: int 
+            coordinate number
+        t: float
+            hopping constant, -t bi^d bj
+        mu: float
+            chemical potential, -mu ni
+        U: float
+            onsite repulsion, U/2 ni(ni-1)
+        V: float
+            offsite repulsion, V ninj
+
+        Returns
+        -------
+        ham: np.ndarray
+            bond Hamiltonian
+        """
+
+        t = args.get("t", 0.0)
+        mu = args.get("mu", 0.0) / z
+        U = args.get("u", 0.0) / z
+        V = args.get("v", 0.0)
+
+        E = np.eye(self.N)
+        N, C, A = self.onesite_ops
+        ham = np.zeros([self.N] * 4, dtype=np.complex)
+        it = np.nditer(ham, flags=["multi_index"], order="F")
+        while not it.finished:
+            in1, in2, out1, out2 = it.multi_index
+            val = 0.0
+            val -= t * A[in1, out1] * C[in2, out2]
+            val -= t * C[in1, out1] * A[in2, out2]
+            val -= mu * N[in1, out1] * E[in2, out2]
+            val -= mu * E[in1, out1] * N[in2, out2]
+            val += 0.5 * U * N[in1, out1] * (N[in1, out1] - 1) * E[in2, out2]
+            val += 0.5 * U * N[in2, out2] * (N[in2, out2] - 1) * E[in1, out1]
+            val += V * N[in1, out1] * N[in2, out2]
+
+            ham[in1, in2, out1, out2] = val
+            it.iternext()
+        return ham
+
+    def read_params(self, modelparam: Dict[str, Any]):
+        ret = [
+            [{}, {}, {}],  # 1st neighbors
+            [{}, {}, {}],  # 2nd neighbors
+            [{}, {}, {}],  # 3rd neighbors
+        ]
+
+        def update(types, names, n, key):
+            for typ in types:
+                for name in names:
+                    if name in ret[n][typ]:
+                        msg = "{} is defined twice".format(key)
+                        raise RuntimeError(msg)
+                    ret[n][typ][name] = modelparam.get(key, 0.0)
+
+        repat = {
+            "t": re.compile("^t([012]?)('{0,2})$"),
+            "v": re.compile("^v([012]?)('{0,2})$"),
+        }
+
+        for key in modelparam.keys():
+            if key == "type":
+                continue
+            for prefix in ("t", "v"):
+                if key.startswith(prefix):
+                    ma = repat[prefix].match(key)
+                    if not ma:
+                        msg = "Unknown keyname {}".format(key)
+                        raise RuntimeError(msg)
+                    gr = ma.groups()
+                    types = [int(gr[0])] if gr[0] else [0, 1, 2]
+                    n = len(gr[1])
+                    update(types, [prefix], n, key)
+        for typ in ("mu", "u"):
+            update(range(3), [typ], 0, typ)
         self.params = ret
 
 
@@ -789,6 +962,8 @@ def make_model(param: Dict[str, Any]) -> Model:
     modelparam = param["model"]
     if modelparam["type"] == "spin":
         model = SpinModel(modelparam)
+    elif modelparam["type"] == "boson":
+        model = BoseHubbardModel(modelparam)
     else:
         msg = "Unknown model type: {}".format(modelparam["type"])
         raise RuntimeError(msg)
@@ -860,7 +1035,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             if lattice.initial_states == "random":
                 ret.append("initial_state = [0.0]")
             else:
-                v = ', '.join(map(str, st[i, :]))
+                v = ", ".join(map(str, st[i, :]))
                 ret.append("initial_state = [{}]".format(v))
         ret.append("noise = {}".format(lattice.noise))
         ret.append("")
@@ -918,30 +1093,55 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         ret.append('"""')
         ret.append("")
 
-    for i in range(len(model.onesite_ops)):
-        oo = model.onesite_ops[i]
-        if not is_complex:
-            if not np.all(np.isreal(oo)):
-                v = np.einsum("ij,kl -> ikjl", oo, oo)
-                if not np.all(np.isreal(v)):
-                    continue
+    # for i in range(len(model.onesite_ops)):
+    #     oo = model.onesite_ops[i]
+    #     if not is_complex:
+    #         if not np.all(np.isreal(oo)):
+    #             v = np.einsum("ij,kl -> ikjl", oo, oo)
+    #             if not np.all(np.isreal(v)):
+    #                 continue
+    #     ret.append("[[observable.twosite]]")
+    #     ret.append('name = "{name}{name}"'.format(name=model.onesite_ops_name[i]))
+    #     ret.append("group = {}".format(i + 1))
+    #     ret.append("dim = {}".format([model.N] * 2))
+    #     ret.append('bonds = """')
+    #     for bond in chain(*lattice.bonds[0]):
+    #         ret.append(dumpbond(bond))
+    #     ret.append('"""')
+    #     if is_complex or np.all(np.isreal(oo)):
+    #         ret.append("ops = {}".format([i] * 2))
+    #     else:
+    #         v = np.einsum("ij,kl -> ikjl", oo, oo)
+    #         if is_complex or np.all(np.isreal(v)):
+    #             ret.append('elements = """')
+    #             for line in dump_op(v):
+    #                 ret.append(line)
+    #             ret.append('"""')
+    #     ret.append("")
+    k = 1
+    for i, j in model.twosite_ops:
+        oi = model.onesite_ops[i]
+        oj = model.onesite_ops[j]
+        v = np.einsum("ij,kl -> ikjl", oi, oj)
+        if not (is_complex or np.all(np.isreal(v))):
+            continue
         ret.append("[[observable.twosite]]")
-        ret.append('name = "{name}{name}"'.format(name=model.onesite_ops_name[i]))
-        ret.append("group = {}".format(i + 1))
+        ret.append('name = "{}{}"'.format(model.onesite_ops_name[i], model.onesite_ops_name[j]))
+        ret.append("group = {}".format(k))
+        k += 1
         ret.append("dim = {}".format([model.N] * 2))
         ret.append('bonds = """')
         for bond in chain(*lattice.bonds[0]):
             ret.append(dumpbond(bond))
         ret.append('"""')
-        if is_complex or np.all(np.isreal(oo)):
-            ret.append("ops = {}".format([i] * 2))
+        if is_complex or (np.all(np.isreal(oi)) and np.all(np.isreal(oj))):
+            ret.append("ops = {}".format([i, j]))
         else:
-            v = np.einsum("ij,kl -> ikjl", oo, oo)
-            if is_complex or np.all(np.isreal(v)):
-                ret.append('elements = """')
-                for line in dump_op(v):
-                    ret.append(line)
-                ret.append('"""')
+            v = np.einsum("ij,kl -> ikjl", oi, oj)
+            ret.append('elements = """')
+            for line in dump_op(v):
+                ret.append(line)
+            ret.append('"""')
         ret.append("")
 
     if "correlation" in param:
@@ -985,7 +1185,7 @@ if __name__ == "__main__":
         "-b", "--bondfile", dest="bondfile", default="", help="Bond Information file",
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.0.0"
+        "-v", "--version", dest="version", action="version", version="1.1.0"
     )
 
     args = parser.parse_args()

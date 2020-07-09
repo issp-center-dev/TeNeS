@@ -13,6 +13,9 @@ J1z = 1.0
 "J0''y" = 0.25
 "J1''y" = 0.25
 "J1''z" = 0.25
+hx = 0.1
+hy = 0.01
+hz = 1.0
 
 [lattice]
 type = 'square lattice'
