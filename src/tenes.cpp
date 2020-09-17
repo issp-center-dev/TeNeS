@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <tuple>
 #include <type_traits>
+#include <array>
 
 #ifdef _NO_OMP
 int omp_get_max_threads() { return 1; }
@@ -42,11 +43,11 @@ int omp_get_max_threads() { return 1; }
 #include "PEPS_Parameters.hpp"
 #include "Square_lattice_CTM.hpp"
 #include "correlation.hpp"
-#include "timer.hpp"
 #include "printlevel.hpp"
-#include "util/type_traits.hpp"
+#include "timer.hpp"
 #include "util/file.hpp"
 #include "util/string.hpp"
+#include "util/type_traits.hpp"
 
 #include "tenes.hpp"
 
@@ -90,6 +91,9 @@ public:
   static constexpr bool is_tensor_real =
       std::is_floating_point<tensor_type>::value;
 
+  using transfer_matrix_eigenvalues_type =
+      std::tuple<int, int, double, double, double>;
+
   TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
         NNOperators<ptensor> simple_updates_,
         NNOperators<ptensor> full_updates_,
@@ -107,10 +111,16 @@ public:
   std::vector<std::vector<tensor_type>> measure_onesite();
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
   std::vector<Correlation> measure_correlation();
+  void transfer_matvec_horizontal(ptensor &vec, int y);
+  void transfer_matvec_vertical(ptensor &vec, int x);
+  std::vector<transfer_matrix_eigenvalues_type>
+  measure_transfer_matrix_eigenvalues();
   void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs);
   void
   save_twosite(std::vector<std::map<Bond, tensor_type>> const &twosite_obs);
   void save_correlation(std::vector<Correlation> const &correlations);
+  void save_correlation_length(
+      std::vector<transfer_matrix_eigenvalues_type> const &xi);
   void save_tensors() const;
   void load_tensors();
 
@@ -406,7 +416,8 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   } else {
     load_tensors();
     if (peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "Tensors loaded from " << peps_parameters.tensor_load_dir << std::endl;
+      std::cout << "Tensors loaded from " << peps_parameters.tensor_load_dir
+                << std::endl;
     }
   } // end of else part of if(load_dir.empty())
 }
@@ -494,7 +505,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[source], eTb[target], eTl[target], eTt[target],
                          eTt[source], eTr[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-      }else if(source_leg == 1){
+      } else if (source_leg == 1) {
         /*
          * C1' t' C2'
          *  l' T'  r'
@@ -513,7 +524,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTl[source], eTl[target], eTt[target], eTr[target],
                          eTr[source], eTb[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-      }else if(source_leg == 2){
+      } else if (source_leg == 2) {
         /*
          *  C1 t t' C2'
          *  l  T T' r'
@@ -524,7 +535,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[target], eTb[source], eTl[source], // b' b  l
                          Tn[source], Tn[target], up.op, source_leg,
                          peps_parameters, Tn1_new, Tn2_new);
-      }else{
+      } else {
         /*
          * C1  t C2
          *  l  T  r
@@ -548,28 +559,28 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
       Tn[target] = Tn2_new;
 
       if (peps_parameters.Full_Use_FastFullUpdate) {
-        if(source_leg == 0){
+        if (source_leg == 0) {
           const int source_x = source % LX;
           const int target_x = target % LX;
           Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
                      peps_parameters, lattice);
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
                     peps_parameters, lattice);
-        }else if(source_leg == 1){
+        } else if (source_leg == 1) {
           const int source_y = source / LX;
           const int target_y = target / LX;
           Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
                       peps_parameters, lattice);
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
                    peps_parameters, lattice);
-        }else if(source_leg == 2){
+        } else if (source_leg == 2) {
           const int source_x = source % LX;
           const int target_x = target % LX;
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
                     peps_parameters, lattice);
           Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
                      peps_parameters, lattice);
-        }else{
+        } else {
           const int source_y = source / LX;
           const int target_y = target / LX;
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
@@ -1007,6 +1018,123 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation() {
 }
 
 template <class ptensor>
+void TeNeS<ptensor>::transfer_matvec_horizontal(ptensor &vec, int y) {
+  for (int x = 0; lattice.LX; ++x) {
+    const int site = x + lattice.LX * y;
+    ////////////////////////////////////////////////////////////
+    // ./transfer_matvec.dat
+    ////////////////////////////////////////////////////////////
+    // (eTt[site]*(vec*eTb[site]))
+    // cpu_cost= 131072  memory= 12544
+    // final_bond_order (et_r, eb_r)
+    ////////////////////////////////////////////////////////////
+    vec = tensordot(eTt[site], tensordot(vec, eTb[site], Axes(1), Axes(1)),
+                    Axes(0, 2, 3), Axes(0, 2, 3));
+  }
+}
+
+template <class ptensor>
+void TeNeS<ptensor>::transfer_matvec_vertical(ptensor &vec, int x) {
+  for (int y = 0; lattice.LY; ++y) {
+    const int site = x + lattice.LX * y;
+    ////////////////////////////////////////////////////////////
+    // ./transfer_matvec.dat
+    ////////////////////////////////////////////////////////////
+    // (eTt[site]*(vec*eTb[site]))
+    // cpu_cost= 131072  memory= 12544
+    // final_bond_order (et_r, eb_r)
+    ////////////////////////////////////////////////////////////
+    vec = tensordot(eTl[site], tensordot(vec, eTr[site], Axes(1), Axes(1)),
+                    Axes(0, 2, 3), Axes(0, 2, 3));
+  }
+}
+
+template <class ptensor>
+std::vector<typename TeNeS<ptensor>::transfer_matrix_eigenvalues_type>
+TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
+  // res[id][0]: direction
+  // res[id][1]: coord
+  // res[id][2]: value
+  // res[id][3]: eigval 0
+  // res[id][4]: eigval 1
+  // res[id][5]: eigval 2
+  std::vector<transfer_matrix_eigenvalues_type> res;
+
+  std::array<std::function<const ptensor(int, int)>, 2> topedge{
+      [&](int run, int fixed) { return eTt[lattice.index(run, fixed)]; },
+      [&](int run, int fixed) { return eTl[lattice.index(fixed, run)]; },
+  };
+
+  std::array<std::function<const ptensor(int, int)>, 2> bottomedge{
+      [&](int run, int fixed) { return eTb[lattice.index(run, fixed - 1)]; },
+      [&](int run, int fixed) { return eTr[lattice.index(fixed + 1, run)]; },
+  };
+
+  ptensor T;
+  std::vector<double> lambda;
+  for (int dir = 0; dir < 2; ++dir) {
+    int L = dir == 0 ? LX : LY;
+    int W = dir == 0 ? LY : LX;
+    for (int fixed = 0; fixed < W; ++fixed) {
+      int run = 0;
+      T = tensordot(topedge[dir](run, fixed), bottomedge[dir](run, fixed),
+                    Axes(2, 3), Axes(2, 3));
+      for (run = 1; run < L; ++run) {
+        T = tensordot(T,
+                      tensordot(topedge[dir](run, fixed),
+                                bottomedge[dir](run, fixed), Axes(2, 3),
+                                Axes(2, 3)),
+                      Axes(1, 2), Axes(0, 3));
+      }
+      psvd(T, Axes(0, 3), Axes(1, 2), lambda, 3);
+      for (int i = 0; i < 3; ++i) {
+        lambda[i] = std::sqrt(lambda[i]);
+      }
+      res.push_back(std::make_tuple(0, fixed, lambda[0], lambda[1], lambda[2]));
+    }
+  }
+
+  return res;
+}
+
+template <class ptensor>
+void TeNeS<ptensor>::save_correlation_length(
+    std::vector<typename TeNeS<ptensor>::transfer_matrix_eigenvalues_type> const
+        &lambdas) {
+  if (mpirank != 0) {
+    return;
+  }
+  std::string filename = outdir + "/correlation_length.dat";
+  if (peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "    Save correlation length to " << filename << std::endl;
+  }
+  std::ofstream ofs(filename.c_str());
+  ofs << std::scientific
+      << std::setprecision(std::numeric_limits<double>::max_digits10);
+  ofs << "# $1: direction\n";
+  ofs << "# $2: col or row index\n";
+  ofs << "# $3: value\n";
+  ofs << "# $4: correction x (log(l1/l2))\n";
+  ofs << std::endl;
+
+  for (const auto &lambda : lambdas) {
+    int dir, x;
+    double l0, l1, l2;
+    std::tie(dir, x, l0, l1, l2) = lambda;
+
+    int L = dir == 0 ? LX : LY;
+    double correlation_length = L / std::log(l0/l1);
+    double correction_x = std::log(l1/l2);
+
+    ofs << dir << " ";
+    ofs << x << " ";
+    ofs << correlation_length << " ";
+    ofs << correction_x << " ";
+    ofs << std::endl;
+  }
+}
+
+template <class ptensor>
 void TeNeS<ptensor>::save_correlation(
     std::vector<Correlation> const &correlations) {
   if (mpirank != 0) {
@@ -1062,11 +1190,14 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     save_correlation(correlations);
   }
 
+  auto correlation_length = measure_transfer_matrix_eigenvalues();
+  save_correlation_length(correlation_length);
+
   if (mpirank == 0) {
     std::vector<tensor_type> loc_obs(num_onesite_operators);
     int numsites = 0;
     for (int i = 0; i < N_UNIT; ++i) {
-      if(lattice.physical_dims[i] > 1){
+      if (lattice.physical_dims[i] > 1) {
         ++numsites;
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
           loc_obs[ilops] += onesite_obs[ilops][i];
@@ -1150,7 +1281,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 }
 
 template <class ptensor> void TeNeS<ptensor>::summary() const {
-  if(mpirank == 0){
+  if (mpirank == 0) {
     const double time_all = timer_all.elapsed();
     {
       std::string filename = outdir + "/time.dat";
@@ -1259,7 +1390,8 @@ template <class ptensor> void TeNeS<ptensor>::load_tensors_v1() {
   std::string const &load_dir = peps_parameters.tensor_load_dir;
 
   int loaded_CHI = 1;
-  std::vector<std::vector<int>> loaded_shape(N_UNIT, std::vector<int>(nleg+1));
+  std::vector<std::vector<int>> loaded_shape(N_UNIT,
+                                             std::vector<int>(nleg + 1));
   if (mpirank == 0) {
     std::string filename = load_dir + "/params.dat";
     std::string line;
@@ -1305,22 +1437,22 @@ template <class ptensor> void TeNeS<ptensor>::load_tensors_v1() {
       if (pdim != loaded_shape[i][nleg]) {
         std::stringstream ss;
         ss << "ERROR: dimension of the physical bond of the tensor " << i
-           << " is " << pdim << " but loaded tensor has " << loaded_shape[i][nleg]
-           << std::endl;
+           << " is " << pdim << " but loaded tensor has "
+           << loaded_shape[i][nleg] << std::endl;
         throw tenes::load_error(ss.str());
       }
     }
   }
-  for(int i=0; i<N_UNIT; ++i){
+  for (int i = 0; i < N_UNIT; ++i) {
     bcast(loaded_shape[i], 0, comm);
   }
 
-#define LOAD_TENSOR_(A, name) \
-  do{\
-    ptensor temp; \
-    temp.load((filename + name + suffix).c_str()); \
-    A = resize_tensor(temp, A.shape()); \
-  }while(false)
+#define LOAD_TENSOR_(A, name)                                                  \
+  do {                                                                         \
+    ptensor temp;                                                              \
+    temp.load((filename + name + suffix).c_str());                             \
+    A = resize_tensor(temp, A.shape());                                        \
+  } while (false)
 
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = load_dir + "/";
@@ -1457,7 +1589,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
                     corparam);
   tns.optimize();
   tns.save_tensors();
-  if(peps_parameters.to_measure){
+  if (peps_parameters.to_measure) {
     tns.measure();
   }
   tns.summary();
@@ -1473,7 +1605,8 @@ template int tenes<real_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                                 Operators<real_tensor> twosite_operators,
                                 CorrelationParameter corparam);
 
-template int tenes<complex_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
+template int tenes<complex_tensor>(MPI_Comm comm,
+                                   PEPS_Parameters peps_parameters,
                                    Lattice lattice,
                                    NNOperators<complex_tensor> simple_updates,
                                    NNOperators<complex_tensor> full_updates,
