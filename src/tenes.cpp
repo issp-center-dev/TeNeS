@@ -25,6 +25,7 @@
 #include <tuple>
 #include <type_traits>
 #include <array>
+#include <functional>
 
 #ifdef _NO_OMP
 int omp_get_max_threads() { return 1; }
