@@ -114,10 +114,17 @@ and TeNeS ends in error. It is recommended to disable MPI parallel.</p>
 </pre></div>
 </div>
 </div>
+<div class="admonition-specify-scalapack admonition">
+<p class="first admonition-title">Specify ScaLAPACK</p>
+<p>CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (<code class="docutils literal"><span class="pre">&lt;path&gt;/lib/libscalapack.so</span></code>) by the following way,</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DSCALAPACK_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
 <div class="admonition-use-the-pre-built-mptensor admonition">
 <p class="first admonition-title">Use the pre-built mptensor</p>
-<p>TeNeS is based on the parallerized tensor library <code class="docutils literal"><span class="pre">mptensor</span></code>. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.</p>
-<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path to mptensor&gt; ../
+<p>TeNeS is based on the parallerized tensor library <code class="docutils literal"><span class="pre">mptensor</span></code>. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor (<code class="docutils literal"><span class="pre">&lt;path&gt;/lib/libmptensor.a</span></code>), please add the following option in cmake.</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path&gt; ../
 </pre></div>
 </div>
 </div>

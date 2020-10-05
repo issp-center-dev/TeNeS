@@ -113,12 +113,21 @@ MPI 並列の無効化を推奨しています。</p>
 </pre></div>
 </div>
 </div>
+<div class="admonition-scalapack admonition">
+<p class="first admonition-title">ScaLAPACK ライブラリの指定</p>
+<blockquote>
+<div>CMake では自動で ScaLAPACK ライブラリを検出しますが、見つけられなかった場合などに、
+<code class="docutils literal"><span class="pre">&lt;path&gt;/lib/libscalapack.so</span></code> を利用したい場合には以下のようにオプションを追加してください。</div></blockquote>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DSCALAPACK_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
 <div class="admonition-mptensor admonition">
 <p class="first admonition-title">mptensor の指定</p>
 <p>TeNeS は並列テンソル演算ライブラリ mptensor を利用しています。
 CMake は自動で mptensor をダウンロード・ビルドしますが、
-ユーザーが事前にインストールした mptensor を使用したい場合には、以下のようにオプションを追加してください。</p>
-<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path to mptensor&gt; ../
+ユーザーが事前にインストールした mptensor (<code class="docutils literal"><span class="pre">&lt;path&gt;/lib/mptensor.a</span></code>)を使用したい場合には、以下のようにオプションを追加してください。</p>
+<div class="last highlight-python"><div class="highlight"><pre>$ cmake -DMPTENSOR_ROOT=&lt;path&gt; ../
 </pre></div>
 </div>
 </div>

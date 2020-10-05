@@ -88,12 +88,20 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
+.. admonition:: Specify ScaLAPACK
+
+  CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (``<path>/lib/libscalapack.so``) by the following way,
+
+  ::
+
+    $ cmake -DSCALAPACK_ROOT=<path> ../
+
 .. admonition:: Use the pre-built mptensor
 
-   TeNeS is based on the parallerized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor, please add the following option in cmake.
+   TeNeS is based on the parallerized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor (``<path>/lib/libmptensor.a``), please add the following option in cmake.
    ::
 
-      $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
+      $ cmake -DMPTENSOR_ROOT=<path> ../
 
 
 .. admonition:: Specify Python interpreter
