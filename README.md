@@ -26,6 +26,7 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
     - [Install binaries and samples](#install-binaries-and-samples)
     - [Specify compiler](#specify-compiler)
     - [Disable MPI/ScaLAPACK parallelization](#disable-mpi/scalapack-parallelization)
+    - [Specify ScaLAPACK](#specify-scalapack)
     - [Use the pre-built mptensor](#use-the-pre-built-mptensor)
     - [Specify Python interpreter](#specify-python-interpreter)
 - [Usage](#usage)
@@ -100,6 +101,11 @@ $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 To disable parallelization, pass the `-DENABLE_MPI=OFF` option to `cmake` commands.
 
 If you use macos, MPI/ScaLAPACK parallelization is disabled by default because the combination of Apple Accelerate BLAS/LAPACK library with ScaLAPACK seems to have some troubles.
+
+### Specify ScaLAPACK
+
+TeNeS finds ScaLAPACK automatically, but may fail.
+In such a case, `-DSCALAPACK_ROOT=<path>` option specifies the path to the ScaLAPACK library file, `<path>/lib/libscalapack.so`.
 
 ### Use the pre-built mptensor
 
