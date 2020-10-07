@@ -89,14 +89,23 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
       $ cmake -DCMAKE_CXX_COMPILER=<path to your compiler> ../
 
 
+.. admonition:: ScaLAPACK ライブラリの指定
+
+    CMake では自動で ScaLAPACK ライブラリを検出しますが、見つけられなかった場合などに、
+    ``<path>/lib/libscalapack.so`` を利用したい場合には以下のようにオプションを追加してください。
+  ::
+
+    $ cmake -DSCALAPACK_ROOT=<path> ../
+
+
 .. admonition:: mptensor の指定
 
    TeNeS は並列テンソル演算ライブラリ mptensor を利用しています。
    CMake は自動で mptensor をダウンロード・ビルドしますが、
-   ユーザーが事前にインストールした mptensor を使用したい場合には、以下のようにオプションを追加してください。
+   ユーザーが事前にインストールした mptensor (``<path>/lib/mptensor.a``)を使用したい場合には、以下のようにオプションを追加してください。
    ::
 
-      $ cmake -DMPTENSOR_ROOT=<path to mptensor> ../
+      $ cmake -DMPTENSOR_ROOT=<path> ../
 
 
 .. admonition:: Python インタープリタの指定

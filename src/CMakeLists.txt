@@ -38,7 +38,7 @@ target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-unused-para
 target_include_directories(tenes PRIVATE ${MPTENSOR_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
-target_include_directories(tenes PRIVATE ${DEPS_DIR}/cpptoml/include)
+target_include_directories(tenes PRIVATE ${CPPTOML_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${BUNDLED_DEPS_DIR})
 
 target_link_libraries(tenes mptensor)
