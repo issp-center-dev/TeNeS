@@ -149,9 +149,7 @@ if(Document)
 endif()
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sample
-    DESTINATION share/tenes/${TENES_VERSION}
+    DESTINATION share/tenes
     FILES_MATCHING
-    PATTERN "simple.toml"
-    PATTERN "*.py"
     PATTERN "output*" EXCLUDE
 )
