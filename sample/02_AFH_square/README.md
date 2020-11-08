@@ -1,0 +1,17 @@
+- model
+    - S=1/2 antiferromagnetic Heisenberg model on the square lattice
+- Parameter
+    - simple.toml
+        - J = 1
+        - Neel phase
+    - run.py + basic.toml
+        - J = 1
+        - D = [2,3] or [2,3,4,5,6]
+        - nsteps for full-update = [0, 10] or [0,10,100,1000]
+- Observables
+    - Energy
+- Unitcell
+    - 2x2
+- References
+    - A.W. Sandvik, AIP Conf. Proc. 1297, 135 (2010)
+    - P. Corboz, PRB 94, 035133 (2016)
