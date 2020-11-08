@@ -148,8 +148,12 @@ if(Document)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/docs/sphinx)
 endif()
 
+<<<<<<< HEAD
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sample
     DESTINATION share/tenes
     FILES_MATCHING
     PATTERN "output*" EXCLUDE
 )
+=======
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sample DESTINATION share/tenes)
+>>>>>>> release-v1.1

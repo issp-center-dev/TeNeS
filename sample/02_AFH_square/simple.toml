@@ -1,6 +1,5 @@
 [parameter]
 [parameter.general]
-is_real = true
 
 [parameter.simple_update]
 num_step = 1000
@@ -11,19 +10,15 @@ num_step = 0
 tau = 0.01
 
 [parameter.ctm]
-iteration_max = 10
-dimension = 10
+iteration_max = 100
 
 [lattice]
 type = "square lattice"
 L = 2
 W = 2
+initial = "antiferro"
 virtual_dim = 2
-initial = "ferro"
 
 [model]
 type = "spin"
-Jz = -1.0
-Jx = 0.0
-Jy = 0.0
-hx = 0.0
+J = 1.0

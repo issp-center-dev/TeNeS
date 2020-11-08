@@ -8,5 +8,6 @@ exact = -0.6694422
 plot [0:] \
  'energy.dat' u (1/$1):($2-exact)/-exact w lp title "FU = 0",\
  '' u (1/$1):($3-exact)/-exact w lp title "FU = 10",\
- '' u (1/$1):($4-exact)/-exact w lp title "FU = 100",\
+#  '' u (1/$1):($4-exact)/-exact w lp title "FU = 100",\
 # '' u (1/$1):($4-exact)/-exact w lp title "FU = 1000",\
+
