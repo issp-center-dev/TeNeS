@@ -43,7 +43,7 @@
   <div class="section" id="ising-model-with-transverse-magnetic-field">
 <h1>4.1. Ising model with transverse magnetic field<a class="headerlink" href="#ising-model-with-transverse-magnetic-field" title="Permalink to this headline">¶</a></h1>
 <p>This section presents a calculation of the transverse magnetic field Ising model as an example.
-By changing the variable <code class="docutils literal"><span class="pre">G</span></code> in the input file,
+By changing the variable <code class="docutils literal"><span class="pre">hx</span></code> in the input file,
 the magnitude of the transverse magnetic field will be modified.
 For example, when the transverse magnetic field is 0, the input file is</p>
 <div class="code highlight-none"><div class="highlight"><pre>[parameter]
@@ -74,10 +74,10 @@ type = &quot;spin&quot;
 Jz = -1.0
 Jx = 0.0
 Jy = 0.0
-G  = 0.0
+hx = 0.0
 </pre></div>
 </div>
-<p>In this case, since <code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferromagnetic state manifests itself as the ground state at <code class="docutils literal"><span class="pre">G=0</span></code>.
+<p>In this case, since <code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferromagnetic state manifests itself as the ground state at <code class="docutils literal"><span class="pre">hx=0</span></code>.
 When the input file name is <code class="docutils literal"><span class="pre">simple.toml</span></code> , type the following commands to execute <code class="docutils literal"><span class="pre">tenes</span></code>
 (before typing them, please install TeNeS and set PATH properly.):</p>
 <div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_simple simple.toml
@@ -133,7 +133,7 @@ Finally, the calculation time for each process is output in units of seconds.
 <code class="docutils literal"><span class="pre">density.dat</span></code>, <code class="docutils literal"><span class="pre">parameters.dat</span></code>, <code class="docutils literal"><span class="pre">time.dat</span></code>, <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code>, and <code class="docutils literal"><span class="pre">twosite_obs.dat</span></code> are saved to the output directory.
 For details on each output file, see <a class="reference internal" href="../file_specification/output_format.html#sec-output-format"><span>Output files</span></a>.
 For example, the value of <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> can be read from <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code>.
-By changing <code class="docutils literal"><span class="pre">G</span></code> in increments of 0.2 from 0 to 3.0 and running <code class="docutils literal"><span class="pre">tenes_simple</span></code> and <code class="docutils literal"><span class="pre">tenes</span></code>, the following result is obtained.
+By changing <code class="docutils literal"><span class="pre">hx</span></code> in increments of 0.2 from 0 to 3.0 and running <code class="docutils literal"><span class="pre">tenes_simple</span></code> and <code class="docutils literal"><span class="pre">tenes</span></code>, the following result is obtained.
 As an example of the sample script, <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code> are prepared in the <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> directory.</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">tutorial_example.py</span></code></li>
@@ -141,9 +141,9 @@ As an example of the sample script, <code class="docutils literal"><span class="
 <div class="highlight-none"><div class="highlight"><pre>import subprocess
 
 import numpy as np
-
 import toml
 
+MPI_cmd = &quot;mpiexec -np 2&quot;  # e.g., &quot;mpiexec -np 1&quot;
 
 num_hx = 16
 min_hx = 0.0
@@ -151,18 +151,18 @@ max_hx = 3.0
 
 total = 0
 for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_hx))
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_hx))
     with open(&quot;simple.toml&quot;) as f:
         dict_toml = toml.load(f)
     dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
     dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
-    with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
+    with open(&quot;simple_{}.toml&quot;.format(idx), &quot;w&quot;) as f:
         toml.dump(dict_toml, f)
     cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
     subprocess.call(cmd.split())
     cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
     subprocess.call(cmd.split())
-    cmd = &quot;tenes input_{}.toml&quot;.format(idx)
+    cmd = &quot;{} tenes input_{}.toml&quot;.format(MPI_cmd, idx)
     subprocess.call(cmd.split())
 </pre></div>
 </div>
@@ -205,15 +205,15 @@ for idx in range(num_hx):
 </pre></div>
 </div>
 <p>For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in a few minutes.
-By typing the following command, G, energy, <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> are outputted in the standard output:</p>
+By typing the following command, <code class="docutils literal"><span class="pre">hx</span></code>, energy, <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> are outputted in the standard output:</p>
 <div class="code highlight-none"><div class="highlight"><pre>$ python tutorial_read.py
 </pre></div>
 </div>
 <div class="figure align-center" id="id1">
 <a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse"><img alt="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 4.1 </span><span class="caption-text"><code class="docutils literal"><span class="pre">G</span></code> dependence of <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code>.</span><a class="headerlink" href="#fig-transverse" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 4.1 </span><span class="caption-text"><code class="docutils literal"><span class="pre">hx</span></code> dependence of <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code>.</span><a class="headerlink" href="#fig-transverse" title="Permalink to this image">¶</a></p>
 </div>
-<p>As seen from <a class="reference internal" href="#fig-transverse"><span>Fig. 4.1</span></a> , with increasing <code class="docutils literal"><span class="pre">G</span></code>, the <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> decreases from <code class="docutils literal"><span class="pre">0.5</span></code> to <code class="docutils literal"><span class="pre">0</span></code>, while the <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> increases from <code class="docutils literal"><span class="pre">0</span></code> to <code class="docutils literal"><span class="pre">0.5</span></code>.</p>
+<p>As seen from <a class="reference internal" href="#fig-transverse"><span>Fig. 4.1</span></a> , with increasing <code class="docutils literal"><span class="pre">hx</span></code>, the <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> decreases from <code class="docutils literal"><span class="pre">0.5</span></code> to <code class="docutils literal"><span class="pre">0</span></code>, while the <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> increases from <code class="docutils literal"><span class="pre">0</span></code> to <code class="docutils literal"><span class="pre">0.5</span></code>.</p>
 </div>
 
 

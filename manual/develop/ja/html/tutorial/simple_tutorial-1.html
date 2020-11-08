@@ -44,7 +44,7 @@
   <div class="section" id="id1">
 <h1>4.1. 横磁場イジングモデル<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <p>ここでは横磁場イジングモデルに対して、横磁場を変化させた場合の計算例について紹介します。
-入力ファイルの変数 <code class="docutils literal"><span class="pre">G</span></code> を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
+入力ファイルの変数 <code class="docutils literal"><span class="pre">hx</span></code> を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
 <div class="code highlight-none"><div class="highlight"><pre>[parameter]
 [parameter.general]
 is_real = true
@@ -73,10 +73,10 @@ type = &quot;spin&quot;
 Jz = -1.0
 Jx = 0.0
 Jy = 0.0
-G  = 0.0
+hx  = 0.0
 </pre></div>
 </div>
-<p>とします(<code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 <code class="docutils literal"><span class="pre">G=0</span></code> では強磁性状態になります)。入力ファイルを <code class="docutils literal"><span class="pre">simple.toml</span></code> とした場合、</p>
+<p>とします(<code class="docutils literal"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 <code class="docutils literal"><span class="pre">hx=0</span></code> では強磁性状態になります)。入力ファイルを <code class="docutils literal"><span class="pre">simple.toml</span></code> とした場合、</p>
 <div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_simple simple.toml
 $ tenes_std std.toml
 $ tenes input.toml
@@ -134,7 +134,7 @@ Done.
 <code class="docutils literal"><span class="pre">density.dat,</span> <span class="pre">parameters.dat,</span> <span class="pre">time.dat,</span> <span class="pre">onesite_obs.dat,</span> <span class="pre">twosite_obs.dat</span></code>
 がそれぞれ出力されます。各出力ファイルの詳細は、 <a class="reference internal" href="../file_specification/output_format.html#sec-output-format"><span>出力ファイル</span></a> をご覧ください。
 例えば <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> の値は、 <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code> から読み取ることが可能です。
-<code class="docutils literal"><span class="pre">G</span></code> をパラメータとして0.2刻みで0-3.0まで振ったときの結果を下図に表示します。</p>
+<code class="docutils literal"><span class="pre">hx</span></code> をパラメータとして0.2刻みで0-3.0まで振ったときの結果を下図に表示します。</p>
 <p>なお、サンプルスクリプトの例として、 <code class="docutils literal"><span class="pre">sample/01_transverse_field_ising</span></code> フォルダ内に <code class="docutils literal"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal"><span class="pre">tutorial_read.py</span></code>  があります。</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">tutorial_example.py</span></code> の中身</li>
@@ -142,9 +142,9 @@ Done.
 <div class="highlight-none"><div class="highlight"><pre>import subprocess
 
 import numpy as np
-
 import toml
 
+MPI_cmd = &quot;mpiexec -np 2&quot;  # e.g., &quot;mpiexec -np 1&quot;
 
 num_hx = 16
 min_hx = 0.0
@@ -152,18 +152,18 @@ max_hx = 3.0
 
 total = 0
 for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_hx))
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_hx))
     with open(&quot;simple.toml&quot;) as f:
         dict_toml = toml.load(f)
     dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
     dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
-    with open(&quot;simple_{}.toml&quot;.format(idx), &#39;w&#39;) as f:
+    with open(&quot;simple_{}.toml&quot;.format(idx), &quot;w&quot;) as f:
         toml.dump(dict_toml, f)
     cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
     subprocess.call(cmd.split())
     cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
     subprocess.call(cmd.split())
-    cmd = &quot;tenes input_{}.toml&quot;.format(idx)
+    cmd = &quot;{} tenes input_{}.toml&quot;.format(MPI_cmd, idx)
     subprocess.call(cmd.split())
 </pre></div>
 </div>
@@ -210,12 +210,12 @@ for idx in range(num_hx):
 <div class="code highlight-none"><div class="highlight"><pre>$ python tutorial_read.py
 </pre></div>
 </div>
-<p>とすることで集計でき、 <code class="docutils literal"><span class="pre">G</span></code>, エネルギー、 <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> 、 <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> が出力されます。</p>
+<p>とすることで集計でき、 <code class="docutils literal"><span class="pre">hx</span></code>, エネルギー、 <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> 、 <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> が出力されます。</p>
 <div class="figure align-center" id="id2">
 <a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse"><img alt="../_images/tutorial_1_Sz_vs_G.png" id="fig-transverse" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
-<p class="caption"><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal"><span class="pre">G</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="この画像へのパーマリンク">¶</a></p>
+<p class="caption"><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal"><span class="pre">hx</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="この画像へのパーマリンク">¶</a></p>
 </div>
-<p><a class="reference internal" href="#fig-transverse"><span>図 4.1</span></a> から <code class="docutils literal"><span class="pre">G</span></code> が大きくなるにつれ、 <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> が <code class="docutils literal"><span class="pre">0.5</span></code> から徐々に小さくなり最終的には0になる一方、 <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> は <code class="docutils literal"><span class="pre">0</span></code> から大きくなり最終的には <code class="docutils literal"><span class="pre">0.5</span></code> になることが分かります。</p>
+<p><a class="reference internal" href="#fig-transverse"><span>図 4.1</span></a> から <code class="docutils literal"><span class="pre">hx</span></code> が大きくなるにつれ、 <code class="docutils literal"><span class="pre">&lt;Sz&gt;</span></code> が <code class="docutils literal"><span class="pre">0.5</span></code> から徐々に小さくなり最終的には0になる一方、 <code class="docutils literal"><span class="pre">&lt;Sx&gt;</span></code> は <code class="docutils literal"><span class="pre">0</span></code> から大きくなり最終的には <code class="docutils literal"><span class="pre">0.5</span></code> になることが分かります。</p>
 </div>
 
 

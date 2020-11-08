@@ -86,15 +86,17 @@ from os.path import join
 import numpy as np
 import toml
 
+MPI_cmd = &quot;&quot;  # e.g., &quot;mpiexec -np 1&quot;
+
 num_h = 21
 min_h = 0.0
 max_h = 5.0
 num_step_table = [100, 200, 500, 1000, 2000]
 
-fmag = open(&quot;magnetization.dat&quot;,&quot;w&quot;)
-fene = open(&quot;energy.dat&quot;,&quot;w&quot;)
+fmag = open(&quot;magnetization.dat&quot;, &quot;w&quot;)
+fene = open(&quot;energy.dat&quot;, &quot;w&quot;)
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx+1, num_h))
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_h))
     inum = 0
     num_pre = 0
     fmag.write(&quot;{} &quot;.format(h))
@@ -104,24 +106,34 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         print(&quot;Steps: {}&quot;.format(num_step))
         with open(&quot;basic.toml&quot;) as f:
             dict_toml = toml.load(f)
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(idx,num_step)
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(idx,num_step)
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(
+            idx, num_step
+        )
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(
+            idx, num_step
+        )
         dict_toml[&quot;model&quot;][&quot;hz&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
-            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(idx,num_pre)
-        with open(&quot;simple_{}_{}.toml&quot;.format(idx,num_step), &#39;w&#39;) as f:
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(
+                idx, num_pre
+            )
+        with open(&quot;simple_{}_{}.toml&quot;.format(idx, num_step), &quot;w&quot;) as f:
             toml.dump(dict_toml, f)
-        cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
+        cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(
+            idx, num_step, idx, num_step
+        )
         subprocess.call(cmd.split())
-        cmd = &quot;tenes_std std_{}_{}.toml -o input_{}_{}.toml&quot;.format(idx,num_step,idx,num_step)
+        cmd = &quot;tenes_std std_{}_{}.toml -o input_{}_{}.toml&quot;.format(
+            idx, num_step, idx, num_step
+        )
         subprocess.call(cmd.split())
-        cmd = &quot;tenes input_{}_{}.toml&quot;.format(idx,num_step)
+        cmd = &quot;{} tenes input_{}_{}.toml&quot;.format(MPI_cmd, idx, num_step)
         subprocess.call(cmd.split())
-        with open(join(&quot;output_{}_{}&quot;.format(idx,num_step), &quot;density.dat&quot;)) as f:
+        with open(join(&quot;output_{}_{}&quot;.format(idx, num_step), &quot;density.dat&quot;)) as f:
             lines = f.readlines()
-            mag_sz = lines[0].split(&#39;=&#39;)[1].strip()
-            ene = lines[2].split(&#39;=&#39;)[1].strip()
+            mag_sz = lines[0].split(&quot;=&quot;)[1].strip()
+            ene = lines[2].split(&quot;=&quot;)[1].strip()
         fene.write(&quot;{} &quot;.format(ene))
         fmag.write(&quot;{} &quot;.format(mag_sz))
         inum = inum + 1
