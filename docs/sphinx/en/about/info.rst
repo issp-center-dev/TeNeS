@@ -19,6 +19,7 @@ TeNeS is developed by the following members.
 Version information
 ======================
 
+- ver. 1.1.1: 2020-11-09.
 - ver. 1.1.0: 2020-07-09.
 - ver. 1.0.0: 2020-04-17.
 - ver. 1.0-beta: 2020-03-30.
