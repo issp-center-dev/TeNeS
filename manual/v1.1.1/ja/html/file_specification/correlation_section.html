@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>例 &mdash; TeNeS 1.1.1 ドキュメント</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.1.1 ドキュメント" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p>サイト演算子の相関関数 <span class="math">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0+\boldsymbol{r})\right\rangle\)</span> に関する情報を指定するセクションです。
+本セクションを省略した場合、相関関数は計算されません。</p>
+<p>座標は正方格子TNS の座標系で測られます。すなわち、右隣のテンソルは <span class="math">\(\boldsymbol{r} = (1,0)\)</span> で、真上は <span class="math">\(\boldsymbol{r} = (0,1)\)</span> です。
+中心座標 <span class="math">\(\boldsymbol{r}_0\)</span> として、ユニットセル内のすべてのサイトが用いられます。
+また、<span class="math">\(\boldsymbol{r}\)</span> は <span class="math">\(x\)</span> ないし <span class="math">\(y\)</span> 軸に平行な方向に、正の向きにのみ動きます。すなわち、</p>
+<div class="math">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>です。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="46%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">名前</th>
+<th class="head">説明</th>
+<th class="head">型</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">r_max</span></code></td>
+<td>相関関数の距離 <span class="math">\(r\)</span> の最大値</td>
+<td>整数</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">operators</span></code></td>
+<td>相関関数を測る1体演算子 A, B を表す番号</td>
+<td>整数のリストのリスト</td>
+</tr>
+</tbody>
+</table>
+<p>演算子は <code class="docutils literal"><span class="pre">observable.onesite</span></code> セクションで指定したものが用いられます。</p>
+<div class="section" id="id1">
+<h1>例<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>例えば <span class="math">\(S^z\)</span> が0 番で、 <span class="math">\(S^x\)</span> が1 番として定義されている場合、</p>
+<div class="highlight-none"><div class="highlight"><pre>[correlation]
+r_max = 5
+operators = [[0,0], [0,1], [1,1]]
+</pre></div>
+</div>
+<p>では相関関数 <span class="math">\(S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)\)</span> が、 <span class="math">\(0 \le r \le 5\)</span> の範囲で測定されます。</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/file_specification/correlation_section.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6. アルゴリズム &mdash; TeNeS 1.1.1 ドキュメント</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.1.1 ドキュメント" href="../index.html" />
+    <link rel="up" title="&lt;no title&gt;" href="index.html" />
+    <link rel="next" title="7. 謝辞" href="../acknowledge/index.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>6. アルゴリズム<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<div class="section" id="id2">
+<h2>6.1. テンソルネットワーク状態<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>テンソルネットワーク状態 (Tensor network states (TNS)) とは小さなテンソルの積、繋がりで表現された変分波動関数です <a class="reference internal" href="#ref-tns"><span>[TNS]</span></a> 。例えば、<span class="math">\(N\)</span> 個の <span class="math">\(S=1/2\)</span> 量子スピン系では、その波動関数は直積状態の基底を用いて、</p>
+<div class="math">
+\[|\Psi\rangle = \sum_{s_i = \uparrow,\downarrow} \Psi_{s_1,s_2,\dots,s_N} |s_1,s_2,\dots,s_N\rangle\]</div>
+<p>と表せます。テンソルネットワーク状態では、この展開係数 <span class="math">\(\Psi_{s_1,s_2,\dots,s_N}\)</span> はテンソルのネットワークで表現され、例えば</p>
+<div class="math">
+\[\Psi_{s_1,s_2,\dots,s_N} = \mathrm{tTr}\left[T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N]\right],\]</div>
+<p>と書くことができます。ここで、 <span class="math">\(\mathrm{tTr}[\dots]\)</span> はテンソルネットワークの縮約を表し、 <span class="math">\(T^{(i)}[s_i]\)</span> はテンソルを表しています。 行列積状態 (matrix product state (MPS)) と呼ばれるテンソルネットワーク状態の場合 <a class="reference internal" href="#ref-mps"><span>[MPS]</span></a> , <span class="math">\(T^{(i)}[s_i]\)</span> は <span class="math">\(s_i\)</span> が与えられると行列になっていて、 <span class="math">\(\mathrm{tTr}[\dots]\)</span> はこの場合、通常の行列積になります：</p>
+<div class="math">
+\[\Psi_{s_1,s_2,\dots,s_N}^{\mathrm{MPS}} = T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N],\]</div>
+<p>ここで、 <span class="math">\(T^{(1)}[s_1]\)</span> 、 <span class="math">\(T^{(i)}[s_i] (i\neq 1, N)\)</span> 、  <span class="math">\(T^{(N)}[s_N]\)</span> の形状はそれぞれ、 <span class="math">\(1 \times D_1\)</span> 、 <span class="math">\(D_{i-1} \times D_{i}\)</span> 、 <span class="math">\(D_{N-1} \times 1\)</span> であると仮定しました。</p>
+<p>このようなTNSを基底状態波動関数の近似に用いる場合、その精度は <span class="math">\(D_i\)</span> によって制限されます。 <span class="math">\(D_i\)</span> は <em>ボンド次元</em> と呼ばれています。テンソルネットワークのダイアグラム表記を用いると、 MPSは</p>
+<img alt="../_images/MPS.png" class="align-center" src="../_images/MPS.png" />
+<p>のように描くことができます。このMPSは有限系の波動関数を表していますが、同様にして、無限系の波動関数を表わす、無限に長いMPSを考えることもできます。特に、波動関数が格子の（ある長さの）並進に対して対称性を持っている場合、少数の独立なテンソルを繰り返すことで、無限系のMPS (infinite MPS (iMPS)) を作ることができます。 ２サイトの並進対称性の場合、このような iMPS は</p>
+<img alt="../_images/iMPS.png" class="align-center" src="../_images/iMPS.png" />
+<p>と表せます。ここで、同じ色のテンソルは、同じ要素を持つテンソルです。</p>
+<p>TeNeS では、2次元の無限に広がったテンソル積状態 (infinite tensor product states (iTNS)) を取り扱います。この iTPS は iMPS の高次元への自然な拡張になっています。 TeNeSでは、並進対称性をもった正方格子テンソルネットワークを仮定しており、ダイヤグラムでは、</p>
+<img alt="../_images/iTPS.png" class="align-center" src="../_images/iTPS.png" />
+<p>のように描けます。TeNeSではこのiTPSを用いて、2次元量子多体系の基底状態を近似的に計算します。なお、正方格子テンソルネットワークは、正方格子模型だけでなく、適切なマッピングにより、ハニカム格子模型、三角格子模型など様々な2次元格子模型に適用できます。</p>
+</div>
+<div class="section" id="itps">
+<h2>6.2. iTPS の縮約<a class="headerlink" href="#itps" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>あるTNSが与えられた時に、そのTNSでの期待値、 <span class="math">\(\langle \Psi|O|\Psi\rangle/\langle \Psi|\Psi\rangle\)</span> を計算するためには、
+一般に、 <span class="math">\(\langle \Psi|O|\Psi\rangle\)</span> と <span class="math">\(\langle \Psi|\Psi\rangle\)</span> という二つの量に対応するテンソルネットワークの縮約計算が必要になります。
+例えば、 <span class="math">\(\langle \Psi|\Psi\rangle\)</span> に対応するテンソルネットワークは</p>
+<img alt="../_images/iTPS_braket.png" class="align-center" src="../_images/iTPS_braket.png" />
+<p>で与えられます。この形のテンソルネットワークは、しばしば、ダブルレイヤー（double layered）テンソルネットワークと呼ばれます。 ダブルレイヤーテンソルネットワークの縮約計算は、通常、非常に大きな計算コストが必要です。MPS（や iMPS）の場合には、幸いにも、局所的なテンソルで構成される転送行列を考えることなどによって、効率的に計算することができます。しかし、TPS（や iTPS）の場合、厳密な縮約計算は小さいクラスター（又は小さい半径の無限シリンダー）を除いてほぼ不可能で、通常、近似的な縮約計算法を用います。TeNeSでは、角転送行列繰り込み群法（corner transfer matrix renormalization group (CTMRG) <a class="reference internal" href="#ref-ctmrg"><span>[CTMRG]</span></a> と呼ばれる、無限に広がったダブルレイヤーテンソルネットワークを <em>角転送行列</em> と <em>エッジテンソル</em> を用いて近似する方法を採用しています。</p>
+<p>ダブルレイヤーテンソルネットワークを局所的に縮約したテンソル</p>
+<img alt="../_images/double_tensor.png" class="align-center" src="../_images/double_tensor.png" />
+<p>を使って単純化すると、角転送行列表現に対応するテンソルネットワークダイアグラムは、</p>
+<img alt="../_images/CTM.png" class="align-center" src="../_images/CTM.png" />
+<p>と表されます。角転送行列とエッジテンソルは、</p>
+<img alt="../_images/CandE.png" class="align-center" src="../_images/CandE.png" />
+<p>のように定義されています。角転送行列表現の精度は、ダイアグラム中で太線で表現した、角転送行列のボンド次元 <span class="math">\(\chi\)</span> によって制限されます。</p>
+<p>CTMRGのアルゴリズムでは、 角転送行列とエッジテンソルに局所的なテンソルを <em>吸収</em> していくことでそれらをアップデートし、結果が収束するまで繰り返します。例えば、 <em>left move</em> と呼ばれる吸収手続きは、ダイアグラムでは</p>
+<img alt="../_images/LeftMove.png" class="align-center" src="../_images/LeftMove.png" />
+<p>と表されます。このダイアグラムに現れる <em>プロジェクター</em> は、いくつかの方法で計算することができ <a class="reference internal" href="#ref-ctmrg"><span>[CTMRG]</span></a> 、自由度を <span class="math">\(\chi\)</span> に減らす働きをします。</p>
+<p>ボンド次元 <span class="math">\(D\)</span> のiTPSを用いて、ボンド次元 <span class="math">\(\chi\)</span> の角転送行列表現を考える場合、CTMRGの計算コストは、 <span class="math">\(O(\chi^2 D^6)\)</span> と <span class="math">\(O(\chi^3 D^4)\)</span> の大きな方でスケールします。 ここで、ダブルレイヤーテンソルネットワークのボンド次元は、局所縮約したテンソルを用いる表現では、 <span class="math">\(D^2\)</span> になっていることに注意してください。このため、通常、 <span class="math">\(\chi\)</span> は <span class="math">\(\chi \propto O(D^2)\)</span> のように <span class="math">\(D^2\)</span> に比例して増やします。この条件では、CTMRGの計算コストは <span class="math">\(O(D^{10})\)</span> になり、メモリ量は <span class="math">\(O(D^{8})\)</span> になります。 なお、ここで述べた計算コストを得るためには、疎行列の特異値分解（SVD）を用いる必要があります、代わりに、密行列のSVDを用いる場合、計算コストは <span class="math">\(O(D^{12})\)</span> となります。</p>
+<p>いったん収束した角転送行列とエッジテンソルを得れば、 <span class="math">\(\langle \Psi|O|\Psi\rangle\)</span> も効率的に計算することができます。例えば、局所磁化 <span class="math">\(\langle \Psi|S^z_i|\Psi\rangle\)</span> は、</p>
+<img alt="../_images/Sz.png" class="align-center" src="../_images/Sz.png" />
+<p>のように表わされ、同様に最近接相関 <span class="math">\(\langle \Psi|S^z_iS^z_{i+1}|\Psi\rangle\)</span> は</p>
+<img alt="../_images/SzSz.png" class="align-center" src="../_images/SzSz.png" />
+<p>と表現することができます。また、ダイアグラムの２番目の表記を用いることで、任意の２サイト演算子の期待値も計算できることがわかります。このようなダイグラムを任意の演算子に対して描くことは可能ですが、クラスターが大きくなるとその縮約計算に必要となる計算コストが莫大になることに注意してください。</p>
+</div>
+<div class="section" id="id3">
+<h2>6.3. iTPSの最適化<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>iTPSを基底状態の変分波動関数として用いる場合、iTPSが最小のエネルギー期待値</p>
+<div class="math">
+\[E = \frac{\langle \Psi|\mathcal{H}|\Psi\rangle}{\langle \Psi|\Psi\rangle},\]</div>
+<p>を与えるように、テンソルを最適化する必要があります。ここで、 <span class="math">\(\mathcal{H}\)</span> は対象系のハミルトニアンを表しています。 TeNeSでは、虚時間発展（the imaginary evolution (ITE)）法と変分最適化（the variational optimization）法という二つの手法のうち、前者の ITE を採用しています。TeNeS では、iTPSの範囲での近似的な虚時間発展</p>
+<div class="math">
+\[|\Psi^{\mathrm{iTPS}} \rangle  \simeq e^{-T \mathcal{H}} |\Psi_0\rangle,\]</div>
+<p>を考えます。ここで、 <span class="math">\(|\Psi_0 \rangle\)</span> は任意の初期 iTPS です。. もし、 <span class="math">\(T\)</span> が十分に大きければ、左辺の <span class="math">\(|\Psi^{\mathrm{iTPS}}\rangle\)</span> は基底状態の良い近似になっていると考えることができます。</p>
+<p>TeNeSでは、ハミルトニアンは短距離の二体相互作用の和で</p>
+<div class="math">
+\[\mathcal{H} = \sum_{\{(i,j)\}}H_{ij},\]</div>
+<p>のように表されていると仮定し、小さな時間刻み <span class="math">\(\tau\)</span> の虚時間発展演算子に対してSuzuki-Trotter 分解</p>
+<div class="math">
+\[e^{-\tau \mathcal{H}} = \prod_{\{(i,j)\}} e^{-\tau H_{ij}} + O(\tau^2).\]</div>
+<p>を適用します。ここでは、一次の近似を考えましたが、より高次の分解を考えることもできます。Suzuki-Trotter 分解の形を用いることで、虚時間発展は</p>
+<div class="math">
+\[e^{-T \mathcal{H}} |\Psi_0\rangle = \left( \prod_{\{(i,j)\}} e^{-\tau H_{ij}}\right)^{N_{\tau}} |\Psi_0\rangle + O(\tau),\]</div>
+<p>のように書き下すことができます。ここで、 <span class="math">\(N_{\tau} = T/\tau\)</span> は十分に小さな <span class="math">\(\tau\)</span> での虚時間発展のステップ数です。 この式の右辺を計算するために、 <span class="math">\(\prod_{\{(i,j)\}}\)</span> の積をいくつかの部分集合に分解します。それぞれの部分集合内では, （局所的な）虚時間発展演算子はお互いに交換し、考えているiTPSと同じ並進対称性を持っているとします。例えば、２サイトの iMPS で、１元系の最近接相互作用ハミルトニアンを考えた場合、二つの部分集合を用いて、</p>
+<img alt="../_images/iMPS_ITE.png" class="align-center" src="../_images/iMPS_ITE.png" />
+<p>のように虚時間発展を分解することができます。</p>
+<p>次に、それぞれの虚時間発展演算子の部分集合を適用した波動関数を、ボンド次元 <span class="math">\(D\)</span>: の新しいiTPSとして</p>
+<div class="math">
+\[|\Psi_{\tau}^{\mathrm{iTPS}} \rangle  \simeq \prod_{\{(i,j) \in \mathrm{subset}_n \}}e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle,\]</div>
+<p>のように近似します。ここで <span class="math">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> は <span class="math">\(n\)</span> 番目の部分集合ないの演算子の積を表し、 <span class="math">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> は新しい iTPS です。ダイアグラムを用いるとこの式は、</p>
+<img alt="../_images/iMPS_ITE_iMPS.png" class="align-center" src="../_images/iMPS_ITE_iMPS.png" />
+<p>のように表現できます。一般に、 <span class="math">\(e^{-\tau H_{ij}}\)</span> をかけることで 厳密な iTPS 表現のボンド次元は増大してしまうことに注意してください。したがって、虚時間発展のシミュレーションを安定して継続するためには、ボンド次元をある一定値 <span class="math">\(D\)</span> まで毎回打ち切る （ <em>truncate</em> ） 必要があります。</p>
+<p>素朴には、効率的な打ち切りは、最小化問題</p>
+<div class="math">
+\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle -\prod_{\{(i,j) \in \mathrm{subset}_n \}} e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.\]</div>
+<p>を解くことで行えます。しかし、この最小化問題を解く計算コストは、主にiTPSの並進対称性で問題が非線形問題になっているために、非常に膨大になってしまいます。そこで、通常は、代わりの問題として、局所的な一つの虚時間発展演算子だけを適用して、それを近似する iTPS <span class="math">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> を探す問題を考えます。
+ここで、新しいiTPSでは、元の <span class="math">\(|\Psi^{\mathrm{iTPS}}\rangle\)</span> と比較して、数個のテンソルだけが変更されています。 この局所的な最小化問題は</p>
+<div class="math">
+\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2\]</div>
+<p>と書くことができます。一次元の最近接相互作用の場合、この最小化問題に対応するダイアグラムは、</p>
+<img alt="../_images/iMPS_ITE_local.png" class="align-center" src="../_images/iMPS_ITE_local.png" />
+<p>で与えられます。</p>
+<p>差の二乗ノルム <span class="math">\(\left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2\)</span> は、例えば CTMRG 等を使うことで効率的に計算できるため、この最適化問題は簡単に解くことができます <a class="reference internal" href="#ref-ite"><span>[ITE]</span></a>  。ここで新しく得られる iTPS は並進対称性を破っていますが、アップデートされたテンソルを他の場所に <em>コピー</em> することで、並進対称な iTPS を作ることができます。</p>
+<img alt="../_images/Copy.png" class="align-center" src="../_images/Copy.png" />
+<p>このiTPSは元の最小化問題の近似解だと考えることができます。このような虚時間発展の方法は、 <em>full update</em> 法と呼ばれます。 full update 法の計算の大部分は CTMRG であり、SVDの方法に応じて、計算コストは <span class="math">\(O(D^{10})\)</span> または <span class="math">\(O(D^{12})\)</span> でスケールします。</p>
+<p><em>Simple update</em> 法は虚時間発展を用いた、より計算コストの小さい最適化手法です。Simple update法では、CTMRGによる重い計算を避けるために, 波動関数全体ではなく、局所的なテンソルネットワークを考えます <a class="reference internal" href="#ref-simpleupdate"><span>[SimpleUpdate]</span></a> 。例えば 最近接相互作用の場合には、以下のような局所的な最適化問題を考えます。</p>
+<img alt="../_images/Simple_opt.png" class="align-center" src="../_images/Simple_opt.png" />
+<p>このダイアグラムでは、 <span class="math">\(\lambda_i\)</span> は非負の対角行列を表していて、これはボンド <span class="math">\(i\)</span> の先にある無視した環境を表わす平均場だと考えることができます。 <span class="math">\(\lambda_i\)</span> の具体的な定義は後で与えられます。 このダイアグラムが表わす最適化問題は、テンソル二つと虚時間発展演算子一つが一体となった行列の低ランク近似と見做すことができるため、SVDを用いて解くことができます。この手続きは、ダイアグラムを用いて、</p>
+<img alt="../_images/Simple_update.png" class="align-center" src="../_images/Simple_update.png" />
+<p>と表すことができます。計算途中のSVDで出てきた行列の特異値は、次のステップでの平均場 <span class="math">\(\lambda\)</span> として利用されます。Simple update法の計算コストは、行列を構成する前にQR分解を行うことで、 <span class="math">\(O(D^{5})\)</span> になります <a class="reference internal" href="#ref-qr"><span>[QR]</span></a> 。したがって、simple update法はfull update法よりもずっと計算コストが軽くなっています。</p>
+<p>ただし、simple update法はfull updateよりも計算コストが小さいですが、simple update法は初期状態依存性が強く、また、最終結果の局所磁化の大きさを過剰評価する問題が知られています。したがって、未知の問題に適用する場合には、得られた結果を慎重に検証する必要があります。</p>
+<p class="rubric">参考文献</p>
+<p id="ref-tns">[TNS]
+R. Orús, <em>A practical introduction to tensor networks: Matrix product states and projected entangled pair states</em>, Annals. of Physics <strong>349</strong>, 117 (2014). <a class="reference external" href="https://linkinghub.elsevier.com/retrieve/pii/S0003491614001596">link</a>; R. Orús, <em>Tensor networks for complex quantum systems</em>, Nature Review Physics <strong>1</strong>, 538 (2019). <a class="reference external" href="https://doi.org/10.1038/s42254-019-0086-7">link</a>; 西野友年、大久保毅 <em>テンソルネットワーク形式の進展と応用</em>, 日本物理学会誌 <strong>72</strong>, 702 (2017). <a class="reference external" href="https://doi.org/10.11316/butsuri.72.10_702">link</a>; 大久保毅 <em>テンソルネットワークによる情報圧縮とフラストレート磁性体への応用</em>, 物性研究・電子版 <strong>7</strong>, 072209 (2018) <a class="reference external" href="https://doi.org/10.14989/235546">link</a>.</p>
+<p id="ref-mps">[MPS]
+U. Schollwcök, <em>The density-matrix renormalization group in the age of matrix product states</em>, Annals. of Physics <strong>326</strong>, 96 (2011). <a class="reference external" href="https://linkinghub.elsevier.com/retrieve/pii/S0003491610001752">link</a></p>
+<p id="ref-ctmrg">[CTMRG]
+T. Nishino and K. Okunishi, <em>Corner Transfer Matrix Renormalization Group Method</em>, J. Phys. Soc. Jpn. <strong>65</strong>, 891 (1996).; R. Orús and G. Vidal, <em>Simulation of two-dimensional quantum systems on an infinite lattice revisited: Corner transfer matrix for tensor contraction</em>, Phys. Rev. B <strong>80</strong>, 094403 (2009). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.80.094403">link</a> ; P. Corboz <em>et al.</em>, <em>Competing States in the t-J Model: Uniform d-Wave State versus Stripe State</em>, Phys. Rev. Lett. <strong>113</strong>, 046402 (2014). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.113.046402">link</a></p>
+<p id="ref-ite">[ITE]
+J. Jordan <em>et al.</em>, <em>Classical Simulation of Infinite-Size Quantum Lattice Systems in Two Spatial Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 250602, (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.250602">link</a>; R. Orús and G. Vidal, <em>Simulation of two-dimensional quantum systems on an infinite lattice revisited: Corner transfer matrix for tensor contraction</em>, Phys. Rev. B <strong>80</strong>, 094403 (2009). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.80.094403">link</a></p>
+<p id="ref-simpleupdate">[SimpleUpdate]
+H. G. Jiang <em>et al.</em>, <em>Accurate Determination of Tensor Network State of Quantum Lattice Models in Two Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 090603 (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.090603">link</a></p>
+<p id="ref-qr">[QR]
+L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</em>, Phys. Rev. B <strong>83</strong>, 134421 (2011). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.134421">link</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">6. アルゴリズム</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">6.1. テンソルネットワーク状態</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#itps">6.2. iTPS の縮約</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">6.3. iTPSの最適化</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">&lt;no title&gt;</a><ul>
+      <li>Previous: <a href="index.html" title="前の章へ">&lt;no title&gt;</a></li>
+      <li>Next: <a href="../acknowledge/index.html" title="次の章へ">7. 謝辞</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    モジュール、クラス、または関数名を入力してください
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/algorithm/algorithms.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
