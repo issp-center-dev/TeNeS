@@ -17,6 +17,7 @@
         - mu/V = [-2, 3]
         - vacuum -> superfluid -> 1/3 solid -> supersolid
 - Observables
+    - number density
     - offdiag order parameter |b| as an indicator for the superfluid phase
     - Structure factor S(Q) with respect to sqrt(3) order as an indicator for the solid phase
         - calculated only by run.py
