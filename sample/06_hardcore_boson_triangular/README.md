@@ -1,3 +1,10 @@
+- how to run
+    - simple.toml
+        - `tenes_simple simple.toml`
+        - `tenes_std std.toml`
+        - `tenes input.toml`
+    - run.py + basic.toml
+        - `python3 run.py`
 - model
     - Hardcore Bose-Hubbard model on triangular lattice
 - Parameter
