@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6. Algorithm &mdash; TeNeS 1.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="TeNeS 1.1.2 documentation" href="../index.html" />
+    <link rel="up" title="&lt;no title&gt;" href="index.html" />
+    <link rel="next" title="7. Acknowledgement" href="../acknowledge/index.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="algorithm">
+<h1>6. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tensor-network-states">
+<h2>6.1. Tensor Network States<a class="headerlink" href="#tensor-network-states" title="Permalink to this headline">¶</a></h2>
+<p>Tensor network states (TNS) are variational wavefunctions represented as products of small tensors <a class="reference internal" href="#ref-tns"><span>[TNS]</span></a>. For example, in the case of <span class="math">\(S=1/2\)</span> spin system with <span class="math">\(N\)</span> sites, a wavefunction can be represented by using the product state basis as</p>
+<div class="math">
+\[|\Psi\rangle = \sum_{s_i \pm \uparrow,\downarrow} \Psi_{s_1,s_2,\dots,s_N} |s_1,s_2,\dots,s_N\rangle\]</div>
+<p>In a tensor network state, <span class="math">\(\Psi_{s_1,s_2,\dots,s_N}\)</span> is represented as a tensor network, e.g,</p>
+<div class="math">
+\[\Psi_{s_1,s_2,\dots,s_N} = \mathrm{tTr}\left[T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N]\right],\]</div>
+<p>where <span class="math">\(\mathrm{tTr}[\dots]\)</span> represents tensor network contraction and <span class="math">\(T^{(i)}[s_i]\)</span> is a tensor. In the case of a matrix product state (MPS) <a class="reference internal" href="#ref-mps"><span>[MPS]</span></a> , <span class="math">\(T^{(i)}[s_i]\)</span> becomes a matrix for a given <span class="math">\(s_i\)</span> and <span class="math">\(\mathrm{tTr}[\dots]\)</span> becomes usual matrix products as</p>
+<div class="math">
+\[\Psi_{s_1,s_2,\dots,s_N}^{\mathrm{MPS}} = T^{(1)}[s_1]T^{(2)}[s_2]\cdots T^{(N)}[s_N],\]</div>
+<p>where we assume that shapes of <span class="math">\(T^{(1)}[s_1]\)</span> , <span class="math">\(T^{(i)}[s_i] (i\neq 1, N)\)</span>, and  <span class="math">\(T^{(N)}[s_N]\)</span> are <span class="math">\(1 \times D_1\)</span> <span class="math">\(D_{i-1} \times D_{i}\)</span> ,and <span class="math">\(D_{N-1} \times 1\)</span>, respectively. When we use TNS in order to approximate the ground state wavefunction, the accuracy is determined by <span class="math">\(D_i\)</span>. <span class="math">\(D_i\)</span> is usually called as <em>bond dimension</em>.  By using a tensor network diagram, MPS is represented as follows:</p>
+<img alt="../_images/MPS.png" class="align-center" src="../_images/MPS.png" />
+<p>This MPS represents a wavefunction for a finite size system. Similarly, we can also consider an infinitely long MPS to represent an infinite system. Especially, when we assume a lattice transrational symmetry, with a certain period, we can construct an infinite MPS (iMPS) with a few independent tensors. In the case of two-site periodicity, an iMPS looks like as</p>
+<img alt="../_images/iMPS.png" class="align-center" src="../_images/iMPS.png" />
+<p>where tensors with the same color indicate identical tensors.</p>
+<p>In TeNeS, we consider two-dimensional infinite tensor product states (iTNS), which are natural extension of iMPS to higher dimensions. We assume a square lattice tensor network with a translational symmetry, whose diagram is shown as</p>
+<img alt="../_images/iTPS.png" class="align-center" src="../_images/iTPS.png" />
+<p>and try to find an approximate ground state wavefunction of two-dimensional quantum many-body systems. Notice that square lattice tensor networks can represent lattices other than the square lattice, such as the honeycomb and the triangular lattices, by considering proper mapping.</p>
+</div>
+<div class="section" id="contraction-of-itps">
+<h2>6.2. Contraction of iTPS<a class="headerlink" href="#contraction-of-itps" title="Permalink to this headline">¶</a></h2>
+<p>In order to calculate expectation values over a TNS, <span class="math">\(\langle \Psi|O|\Psi\rangle/\langle \Psi|\Psi\rangle\)</span>, generally we need to contract tensor networks corresponding to <span class="math">\(\langle \Psi|O|\Psi\rangle\)</span> and <span class="math">\(\langle \Psi|\Psi\rangle\)</span>. For example, a tensor network corresponding to <span class="math">\(\langle \Psi|\Psi\rangle\)</span> is given by</p>
+<img alt="../_images/iTPS_braket.png" class="align-center" src="../_images/iTPS_braket.png" />
+<p>which is often called as a double layered tensor network. The contraction of a double layered tensor network often needs huge computation cost. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, <em>e.g</em>, by considering a transfer matrix which consists of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method <a class="reference internal" href="#ref-ctmrg"><span>[CTMRG]</span></a>, which expresses an infinitely extended double layered tensor network by using <em>corner transfer matrices</em> and <em>edge tensors</em>.</p>
+<p>When we simplify the double layered tensor network by using a locally contracted tensor,</p>
+<img alt="../_images/double_tensor.png" class="align-center" src="../_images/double_tensor.png" />
+<p>a tensor network diagram for the corner transfer matrix representation is given as</p>
+<img alt="../_images/CTM.png" class="align-center" src="../_images/CTM.png" />
+<p>A corner transfer matrix and an edge tensor are defined as</p>
+<img alt="../_images/CandE.png" class="align-center" src="../_images/CandE.png" />
+<p>The accuracy of the corner transfer matrix representation is determined by the bond dimension <span class="math">\(\chi\)</span> of corner transfer matrices, which is indicated as thick lines in the diagrams.</p>
+<p>In the CTMRG algorithm, we iteratively optimise corner transfer matrices and edge tensors by <em>absorbing</em> local tensors until they converges. For example, an absorbing procedure, so called <em>left move</em>, is described as follows:</p>
+<img alt="../_images/LeftMove.png" class="align-center" src="../_images/LeftMove.png" />
+<p>The projectors in the above diagram is calculated in several ways <a class="reference internal" href="#ref-ctmrg"><span>[CTMRG]</span></a> and they reduces the degree of freedoms to <span class="math">\(\chi\)</span>.</p>
+<p>When we consider iTPS with the bond dimension <span class="math">\(D\)</span> and CTMs with the bond dimension <span class="math">\(\chi\)</span>, the leading computation cost of CTMRG scales as <span class="math">\(O(\chi^2 D^6)\)</span> and <span class="math">\(O(\chi^3 D^4)\)</span>. Notice that the bond dimension of the double layered tensor network becomes <span class="math">\(D^2\)</span> by using locally contracted tensors. Thus, typically we increase <span class="math">\(\chi\)</span> as <span class="math">\(\chi \propto O(D^2)\)</span>. In this setup, the leading computation cost of CTMRG algorithm is reduced to <span class="math">\(O(D^{10})\)</span>, while the memory usage scales <span class="math">\(O(D^{8})\)</span>. In order to achive the computation cost discussed above, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD insted of the partial SVD, the computation cost becomes <span class="math">\(O(D^{12})\)</span>.</p>
+<p>Once we obtain the corner transfer matrices and edge tensors, we can also calculate <span class="math">\(\langle \Psi|O|\Psi\rangle\)</span> efficiently. For example, a local magnetization <span class="math">\(\langle \Psi|S^z_i|\Psi\rangle\)</span> is represented as</p>
+<img alt="../_images/Sz.png" class="align-center" src="../_images/Sz.png" />
+<p>and similarly the nearest neighbor correlation <span class="math">\(\langle \Psi|S^z_iS^z_{i+1}|\Psi\rangle\)</span> is represented as</p>
+<img alt="../_images/SzSz.png" class="align-center" src="../_images/SzSz.png" />
+<p>Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operators, the computation cost to contract the tensor network becomes huge for larger clusters.</p>
+</div>
+<div class="section" id="optimization-of-itps">
+<h2>6.3. Optimization of iTPS<a class="headerlink" href="#optimization-of-itps" title="Permalink to this headline">¶</a></h2>
+<p>In order to use iTPS as variational wavefunctions for the ground state, we need to optimize it so that it give us the minimum energy expectation value,</p>
+<div class="math">
+\[E = \frac{\langle \Psi|\mathcal{H}|\Psi\rangle}{\langle \Psi|\Psi\rangle},\]</div>
+<p>where <span class="math">\(\mathcal{H}\)</span> represents the Hamiltonian of the target system. Among two types of popular optimization algorithms, the imaginary evolution (ITE) and the variational optimization, we support the ITE in TeNeS. In TeNeS, we consider approximate ITE within the iTPS ansatz:</p>
+<div class="math">
+\[|\Psi^{\mathrm{iTPS}} \rangle  \simeq e^{-T \mathcal{H}} |\Psi_0\rangle,\]</div>
+<p>where <span class="math">\(|\Psi_0 \rangle\)</span> is an arbitrary initial iTPS. If <span class="math">\(T\)</span> is sufficiently large, the left hand side, <span class="math">\(|\Psi^{\mathrm{iTPS}}\rangle\)</span>, is expected to be a good approximation of the ground state.</p>
+<p>In TeNeS, we assume that the Hamiltonian can be represented as a sum of short range two-body interactions as</p>
+<div class="math">
+\[\mathcal{H} = \sum_{\{(i,j)\}}H_{ij},\]</div>
+<p>and apply Suzuki-Trotter decomposition to the ITE operator with small time step <span class="math">\(\tau\)</span>:</p>
+<div class="math">
+\[e^{-\tau \mathcal{H}} = \prod_{\{(i,j)\}} e^{-\tau H_{ij}} + O(\tau^2).\]</div>
+<p>We can also consider higher order Suzuki-Trotter decomposition. By using the Suzuki-Trotter decomposition form, the ITE is represented as</p>
+<div class="math">
+\[e^{-T \mathcal{H}} |\Psi_0\rangle = \left( \prod_{\{(i,j)\}} e^{-\tau H_{ij}}\right)^{N_{\tau}} |\Psi_0\rangle + O(\tau),\]</div>
+<p>where <span class="math">\(N_{\tau} = T/\tau\)</span> is the number of ITEs with sufficiently small <span class="math">\(\tau\)</span>. In order to simulate the right hand side of the equation, we divide <span class="math">\(\prod_{\{(i,j)\}}\)</span> into several subsets. In each subset, (local) ITE operators satisfy two properties: they commute with each other and they have the same translation symmetry with the iTPS ansatz. For example, in the case of two-site iMPS for the one-dimensional nearest-neighbor interaction Hamiltonian, we have two subsets:</p>
+<img alt="../_images/iMPS_ITE.png" class="align-center" src="../_images/iMPS_ITE.png" />
+<p>Then, we approximate the wavefunction after multiplication of each ITE-operator subset as an iTPS with the bond dimension <span class="math">\(D\)</span>:</p>
+<div class="math">
+\[|\Psi_{\tau}^{\mathrm{iTPS}} \rangle  \simeq \prod_{\{(i,j) \in \mathrm{subset}_n \}}e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle,\]</div>
+<p>where <span class="math">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> means the product of operators in the <span class="math">\(n\mathrm{th}\)</span> subset, and <span class="math">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> is a new iTPS. By using a diagram, it is represented as follows:</p>
+<img alt="../_images/iMPS_ITE_iMPS.png" class="align-center" src="../_images/iMPS_ITE_iMPS.png" />
+<p>Notice that by applying <span class="math">\(e^{-\tau H_{ij}}\)</span> the bond dimension of the exact iTPS representation generally increases. In order to continue the simulation stably, we need to <em>truncate</em> the bond dimension to a constant <span class="math">\(D\)</span>.</p>
+<p>Naively, efficient truncation can be done by solving the minimization problem</p>
+<div class="math">
+\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle -\prod_{\{(i,j) \in \mathrm{subset}_n \}} e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.\]</div>
+<p>However, in practice, solving this minimization problem needs huge computation cost because it is a highly nonlinear problem due to the translational symmetry of iTPS. Thus, instead, we usually consider an alternative local problem where we apply only a local ITE operator and try to find optimal iTPS <span class="math">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> in which only a few local tensors are modified from the original <span class="math">\(|\Psi^{\mathrm{iTPS}}\rangle\)</span>. This minimization problem is written as</p>
+<div class="math">
+\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.\]</div>
+<p>In the case of the nearest-neighbor interaction on the one-dimensional chain, the diagrams corresponding to this minimization problems are</p>
+<img alt="../_images/iMPS_ITE_local.png" class="align-center" src="../_images/iMPS_ITE_local.png" />
+<p>The squared norm <span class="math">\(\left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2\)</span> can be calculated by using, <em>e.g.</em>, CTMRG and we can solve the minimization problem easily <a class="reference internal" href="#ref-ite"><span>[ITE]</span></a>. Although this new iTPS breaks translational symmetry, we make translationally symmetric iTPS by <em>copying</em> updated local tensors to other parts so that the obtained iTPS can be considered as an approximated solution of the original minimization problem:</p>
+<img alt="../_images/Copy.png" class="align-center" src="../_images/Copy.png" />
+<p>This ITE approach is often called as <em>full update</em>. The leading computation cost of the full update come from CTMRG and then it scales as <span class="math">\(O(D^{10})\)</span> or <span class="math">\(O(D^{12})\)</span> depending on SVD algorithms.</p>
+<p>The <em>simple update</em> (or <em>simplified update</em>) is a cheaper version of ITE optimization. In order to avoid expensive environment calculation by CTMRG, we consider a part of the tensor network instead to treat the whole <a class="reference internal" href="#ref-simpleupdate"><span>[SimpleUpdate]</span></a> in the simple update. For example, in the case of the nearest-neighbor interaction, we consider the following local optimization problem:</p>
+<img alt="../_images/Simple_opt.png" class="align-center" src="../_images/Simple_opt.png" />
+<p>In this diagram, <span class="math">\(\lambda_i\)</span> represents a non-negative diagonal matrix considered to be a mean field  corresponding to the neglected environment beyond the bond <span class="math">\(i\)</span>. The definition of <span class="math">\(\lambda_i\)</span> will be given later. This optimization problem can be viewed as the low rank approximation of a matrix consisting of two tensors and a ITE operator, and then we can solve it by SVD. The procedure of the simple update is given in the following diagram:</p>
+<img alt="../_images/Simple_update.png" class="align-center" src="../_images/Simple_update.png" />
+<p>The singular values obtained from the SVD of the matrix is used as the mean field <span class="math">\(\lambda\)</span> in the next step. The computation cost of the simple update is <span class="math">\(O(D^{5})\)</span>, if we use QR decomposition before we construct the matrix <a class="reference internal" href="#ref-qr"><span>[QR]</span></a>. Thus, it is much cheaper that that of the full update.</p>
+<p>Although the computation cost of the simple update is cheaper than that of the full update, it is known that the simple update shows strong initial state dependence and it tends to overestimate the local magnetization. Thus, for complicated problems, we need to carefully check results obtained by the simple update.</p>
+<p class="rubric">References</p>
+<p id="ref-tns">[TNS]
+R. Orús, <em>A practical introduction to tensor networks: Matrix product states and projected entangled pair states</em>, Annals. of Physics <strong>349</strong>, 117 (2014). <a class="reference external" href="https://linkinghub.elsevier.com/retrieve/pii/S0003491614001596">link</a>; R. Orús, <em>Tensor networks for complex quantum systems</em>, Nature Review Physics <strong>1</strong>, 538 (2019). <a class="reference external" href="https://doi.org/10.1038/s42254-019-0086-7">link</a>.</p>
+<p id="ref-mps">[MPS]
+U. Schollwcök, <em>The density-matrix renormalization group in the age of matrix product states</em>, Annals. of Physics <strong>326</strong>, 96 (2011). <a class="reference external" href="https://linkinghub.elsevier.com/retrieve/pii/S0003491610001752">link</a></p>
+<p id="ref-ctmrg">[CTMRG]
+T. Nishino and K. Okunishi, <em>Corner Transfer Matrix Renormalization Group Method</em>, J. Phys. Soc. Jpn. <strong>65</strong>, 891 (1996).; R. Orús and G. Vidal, <em>Simulation of two-dimensional quantum systems on an infinite lattice revisited: Corner transfer matrix for tensor contraction</em>, Phys. Rev. B <strong>80</strong>, 094403 (2009). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.80.094403">link</a> ; P. Corboz <em>et al.</em>, <em>Competing States in the t-J Model: Uniform d-Wave State versus Stripe State</em>, Phys. Rev. Lett. <strong>113</strong>, 046402 (2014). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.113.046402">link</a></p>
+<p id="ref-ite">[ITE]
+J. Jordan <em>et al.</em>, <em>Classical Simulation of Infinite-Size Quantum Lattice Systems in Two Spatial Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 250602, (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.250602">link</a>; R. Orús and G. Vidal, <em>Simulation of two-dimensional quantum systems on an infinite lattice revisited: Corner transfer matrix for tensor contraction</em>, Phys. Rev. B <strong>80</strong>, 094403 (2009). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.80.094403">link</a></p>
+<p id="ref-simpleupdate">[SimpleUpdate]
+H. G. Jiang <em>et al.</em>, <em>Accurate Determination of Tensor Network State of Quantum Lattice Models in Two Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 090603 (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.090603">link</a></p>
+<p id="ref-qr">[QR]
+L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</em>, Phys. Rev. B <strong>83</strong>, 134421 (2011). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.134421">link</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">6. Algorithm</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tensor-network-states">6.1. Tensor Network States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contraction-of-itps">6.2. Contraction of iTPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optimization-of-itps">6.3. Optimization of iTPS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">&lt;no title&gt;</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">&lt;no title&gt;</a></li>
+      <li>Next: <a href="../acknowledge/index.html" title="next chapter">7. Acknowledgement</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/algorithm/algorithms.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
