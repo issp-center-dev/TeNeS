@@ -1,3 +1,10 @@
+- how to run
+    - simple.toml
+        - `tenes_simple simple.toml`
+        - `tenes_std std.toml`
+        - `tenes input.toml`
+    - run.py + basic.toml
+        - `python3 run.py`
 - model
     - S=1/2 antiferromagnetic Heisenberg model on the square lattice
 - Parameter
@@ -6,7 +13,7 @@
         - Neel phase
     - run.py + basic.toml
         - J = 1
-        - D = [2,3] or [2,3,4,5,6]
+        - D = [2,3,4] or [2,3,4,5,6]
         - nsteps for full-update = [0, 10] or [0,10,100,1000]
 - Observables
     - Energy

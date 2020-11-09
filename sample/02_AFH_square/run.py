@@ -6,7 +6,7 @@ import toml
 
 MPI_cmd = ""  # e.g., "mpiexec -np 1"
 
-Ds = [2, 3]
+Ds = [2, 3, 4]
 num_step_table = [0, 10]
 
 # Note that D >= 5 takes a few hours (maybe the order of days in a single core)

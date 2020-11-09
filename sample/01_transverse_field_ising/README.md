@@ -1,3 +1,11 @@
+- how to run
+    - simple.toml
+        - `tenes_simple simple.toml`
+        - `tenes_std std.toml`
+        - `tenes input.toml`
+    - tutorial-example.py + simple.toml
+        - `python3 tutorial-example.py`
+        - `python3 tutorial-read.py > result.dat`
 - model
     - Transverse field Ferromagnetic Ising model on the square lattice
 - Parameter

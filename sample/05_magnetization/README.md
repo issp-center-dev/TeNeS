@@ -1,3 +1,8 @@
+- how to run
+    - triangular
+        - `python3 tutorial_magnetization.py`
+    - square
+        - `python3 tutorial_magnetization_square.py`
 - model
     - Magnetization process of S=1/2 antiferro Heisenberg model on the triangular lattice and the square lattice
 - Parameter
