@@ -5,7 +5,7 @@ num_step = 1000
 
 [parameter.full_update]
 tau = 0.01
-num_step = 1
+num_step = 0
 
 [parameter.ctm]
 iteration_max = 5
