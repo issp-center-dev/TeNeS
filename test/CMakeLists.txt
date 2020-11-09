@@ -47,3 +47,7 @@ foreach(name AntiferroHeisenberg_real AntiferroHeisenberg_complex J1J2_AFH)
     add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
 
+foreach(name Kitaev)
+    add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py --simple ${name})
+endforeach()
+

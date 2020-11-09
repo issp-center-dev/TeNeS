@@ -86,17 +86,41 @@ def check(filename, resdir, refdir, *, rtol, atol):
     return fl
 
 
-testname = sys.argv[1]
-inputfile = join("data", "{}.toml".format(testname))
-cmd = []
-if "@MPIEXEC@":
-    cmd.append("@MPIEXEC@")
-    cmd.append("@MPIEXEC_NUMPROC_FLAG@")
-    cmd.append("1")
-cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
-cmd.append(inputfile)
+simplemode = sys.argv[1] == "--simple"
+if simplemode:
+    testname = sys.argv[2]
+else:
+    testname = sys.argv[1]
 
-subprocess.call(cmd)
+inputfile = join("data", "{}.toml".format(testname))
+if simplemode:
+    cmd = []
+    cmd.append(join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple"))
+    cmd.append(inputfile)
+    subprocess.call(cmd)
+
+    cmd = []
+    cmd.append(join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"))
+    cmd.append("std.toml")
+    subprocess.call(cmd)
+
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append("input.toml")
+    subprocess.call(cmd)
+else:
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    subprocess.call(cmd)
 
 with open(inputfile) as f:
     param = toml.load(f)
