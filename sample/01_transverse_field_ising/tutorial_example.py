@@ -3,7 +3,7 @@ import subprocess
 import numpy as np
 import toml
 
-MPI_cmd = "mpiexec -np 2"  # e.g., "mpiexec -np 1"
+MPI_cmd = ""  # e.g., "mpiexec -np 1"
 
 num_hx = 16
 min_hx = 0.0
