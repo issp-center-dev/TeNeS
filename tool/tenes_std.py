@@ -339,7 +339,14 @@ class Unitcell:
 
     def neighbor(self, index: int, direction: int) -> int:
         x, y = self.index2coord(index)
-        X, Y, _, _ = self.coord2supercoord(x, y)
+        if direction == 0:
+            X, Y, _, _ = self.coord2supercoord(x-1, y)
+        elif direction == 1:
+            X, Y, _, _ = self.coord2supercoord(x, y+1)
+        elif direction == 2:
+            X, Y, _, _ = self.coord2supercoord(x+1, y)
+        else: # elif direction == 3:
+            X, Y, _, _ = self.coord2supercoord(x, y-1)
         return self.coord2index(X, Y)
 
 
