@@ -1,24 +1,24 @@
 [parameter]
+[parameter.general]
+
 [parameter.simple_update]
+num_step = 1000
 tau = 0.01
-num_step= 1000
 
 [parameter.full_update]
-tau = 0.01
 num_step = 0
+tau = 0.01
 
 [parameter.ctm]
-iteration_max = 5
-dimension = 16
+iteration_max = 100
 
 [lattice]
 type = "square lattice"
 L = 2
 W = 2
-virtual_dim = 4
 initial = "antiferro"
+virtual_dim = 2
 
 [model]
 type = "spin"
-S = 1.0
 J = 1.0

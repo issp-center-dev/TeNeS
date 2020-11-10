@@ -1,29 +1,24 @@
 [parameter]
 [parameter.general]
-is_real = true
-
+output = 'output_Kitaev'
 [parameter.simple_update]
-num_step = 1000
 tau = 0.01
-
+num_step = 100
 [parameter.full_update]
-num_step = 0
 tau = 0.01
-
+num_step = 1
 [parameter.ctm]
-iteration_max = 10
-dimension = 10
+dimension = 5
 
 [lattice]
-type = "square lattice"
+type = "honeycomb lattice"
 L = 2
 W = 2
+initial = "random"
 virtual_dim = 2
-initial = "ferro"
 
 [model]
 type = "spin"
-Jz = -1.0
-Jx = 0.0
-Jy = 0.0
-hx = 0.0
+J0x = -1.0
+J1y = -1.0
+J2z = -1.0

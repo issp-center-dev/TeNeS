@@ -1,0 +1,24 @@
+- how to run
+    - simple.toml
+        - `tenes_simple simple.toml`
+        - `tenes_std std.toml`
+        - `tenes input.toml`
+    - tutorial-example.py + simple.toml
+        - `python3 tutorial-example.py`
+        - `python3 tutorial-read.py > result.dat`
+- model
+    - Transverse field Ferromagnetic Ising model on the square lattice
+- Parameter
+    - simple.toml
+        - J = -1
+        - hx = 0
+        - Ferromagnetic phase with Sz > 0
+    - tutorial-example.py + simple.toml
+        - J = -1
+        - hx = [0, 3]
+        - FM with Sz>0 -> FM with Sx>0
+- Observables
+    - Energy
+    - Magnetization along Sz and Sx
+- Unitcell
+    - 2x2

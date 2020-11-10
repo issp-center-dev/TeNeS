@@ -4,7 +4,7 @@ Ising model with transverse magnetic field
 ---------------------------------------------
 
 This section presents a calculation of the transverse magnetic field Ising model as an example.
-By changing the variable ``G`` in the input file,
+By changing the variable ``hx`` in the input file,
 the magnitude of the transverse magnetic field will be modified.
 For example, when the transverse magnetic field is 0, the input file is
 
@@ -38,10 +38,10 @@ For example, when the transverse magnetic field is 0, the input file is
    Jz = -1.0
    Jx = 0.0
    Jy = 0.0
-   G  = 0.0
+   hx = 0.0
 
 
-In this case, since ``Jz = -1.0`` , the ferromagnetic state manifests itself as the ground state at ``G=0``. 
+In this case, since ``Jz = -1.0`` , the ferromagnetic state manifests itself as the ground state at ``hx=0``. 
 When the input file name is ``simple.toml`` , type the following commands to execute ``tenes``
 (before typing them, please install TeNeS and set PATH properly.):
   
@@ -103,7 +103,7 @@ Finally, the calculation time for each process is output in units of seconds.
 ``density.dat``, ``parameters.dat``, ``time.dat``, ``onesite_obs.dat``, and ``twosite_obs.dat`` are saved to the output directory.
 For details on each output file, see :ref:`sec-output-format`.
 For example, the value of ``<Sz>`` can be read from ``onesite_obs.dat``.
-By changing ``G`` in increments of 0.2 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
+By changing ``hx`` in increments of 0.2 from 0 to 3.0 and running ``tenes_simple`` and ``tenes``, the following result is obtained.
 As an example of the sample script, ``tutorial_example.py`` , ``tutorial_read.py`` are prepared in the ``sample/01_transverse_field_ising`` directory.
 
 - ``tutorial_example.py``
@@ -123,7 +123,7 @@ The calculation will be done by typing the following command:
    $ python tutorial_example.py
 
 For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in a few minutes.
-By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are outputted in the standard output:
+By typing the following command, ``hx``, energy, ``<Sz>`` and ``<Sx>`` are outputted in the standard output:
 
 .. code::
 
@@ -135,6 +135,6 @@ By typing the following command, G, energy, ``<Sz>`` and ``<Sx>`` are outputted 
    :width: 400px
    :align: center
    
-   ``G`` dependence of ``<Sz>`` and ``<Sx>``.
+   ``hx`` dependence of ``<Sz>`` and ``<Sx>``.
 
-As seen from :numref:`fig_transverse` , with increasing ``G``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ``0.5``.
+As seen from :numref:`fig_transverse` , with increasing ``hx``, the ``<Sz>`` decreases from ``0.5`` to ``0``, while the ``<Sx>`` increases from ``0`` to ``0.5``.
