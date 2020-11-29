@@ -1198,10 +1198,10 @@ void Full_update_bond_horizontal(
   R2 = transpose(VT, Axes(1, 0, 2));  // envR2 , D_connect, m2
 
   int count = 0;
-  C C_phi, Old_delta, delta;
-  C_phi = trace(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
+  C delta = 0;
+  C C_phi = trace(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
                 conj(Theta), Axes(0, 1, 2, 3), Axes(0, 1, 2, 3));
-  Old_delta =
+  C Old_delta =
       (-2.0 * trace(tensordot(
                         tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
                         conj(R2), Axes(1, 3), Axes(0, 2)),
