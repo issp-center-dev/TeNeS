@@ -1161,7 +1161,7 @@ template <class ptensor> void TeNeS<ptensor>::summary() const {
       ofs << "time environmnent  = " << time_environment << std::endl;
       ofs << "time observable    = " << time_observable << std::endl;
       if (peps_parameters.print_level >= PrintLevel::info) {
-        std::clog << "    Save elapsed times to " << filename << std::endl;
+        std::cout << "    Save elapsed times to " << filename << std::endl;
       }
     }
     if (peps_parameters.print_level >= PrintLevel::info) {
