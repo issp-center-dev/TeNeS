@@ -201,6 +201,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   if (simple != nullptr) {
     load_if(pparam.num_simple_step, simple, "num_step");
     load_if(pparam.Inverse_lambda_cut, simple, "lambda_cutoff");
+    load_if(pparam.Simple_Gauge_Fix, simple, "gauge_fix");
   }
 
   // Full update

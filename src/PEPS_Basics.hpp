@@ -862,6 +862,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
                         const PEPS_Parameters peps_parameters,
                         Tensor<Matrix, C> &Tn1_new, Tensor<Matrix, C> &Tn2_new,
                         std::vector<double> &lambda_c) {
+  using ptensor = Tensor<Matrix, C>;
   int connect2 = (connect1 + 2) % 4;
 
   std::vector<std::vector<double>> lambda1_inv(4);
@@ -889,8 +890,8 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   };
 
   int dc = Tn1.shape()[connect1];
-  Tensor<Matrix, C> Tn1_lambda = Tn1;
-  Tensor<Matrix, C> Tn2_lambda = Tn2;
+  ptensor Tn1_lambda = Tn1;
+  ptensor Tn2_lambda = Tn2;
 
   if (connect1 == 0) {
     Tn1_lambda.multiply_vector(lambda1[1], 1, lambda1[2], 2, lambda1[3], 3);
@@ -919,7 +920,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
   };
 
   // QR
-  Tensor<Matrix, C> Q1, R1, Q2, R2;
+  ptensor Q1, R1, Q2, R2;
   int info = qr(Tn1_lambda, Axes(0, 1, 2), Axes(3, 4), Q1, R1);
 
   info = qr(Tn2_lambda, Axes(0, 1, 2), Axes(3, 4), Q2, R2);
@@ -933,17 +934,17 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     # final_bond_order  (c1, c2, m1o, m2o)
     ##############################
   */
-  Tensor<Matrix, C> Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
+  ptensor Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
                                       Axes(1, 3), Axes(0, 1));
 
   // svd
-  Tensor<Matrix, C> U, VT;
+  ptensor U, VT;
   std::vector<double> s;
   info = svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
 
   lambda_c = std::vector<double>(s.begin(), s.begin() + dc);
-  Tensor<Matrix, C> Uc = slice(U, 2, 0, dc);
-  Tensor<Matrix, C> VTc = slice(VT, 0, 0, dc);
+  ptensor Uc = slice(U, 2, 0, dc);
+  ptensor VTc = slice(VT, 0, 0, dc);
 
   //  norm =
   //  std::inner_product(lambda_c.begin(),lambda_c.end(),lambda_c.begin(),0.0);
@@ -961,6 +962,84 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     Index index = VTc.global_index(i);
     std::cout<<"VTC[i,j]="<<index<<", "<<VTc[i]<<std::endl;
     }*/
+
+  if(peps_parameters.Simple_Gauge_Fix){
+    ////////////////////////////////////////////////////////////
+    // (Uc*(conj(Uc)*(Q1*conj(Q1))))
+    // cpu_cost= 1280  memory= 592
+    // final_bond_order (UcD, UcD')
+    ////////////////////////////////////////////////////////////
+    ptensor M1 = tensordot(
+      Uc, tensordot(
+        conj(Uc), tensordot(
+          Q1, conj(Q1), Axes(0, 1, 2), Axes(0, 1, 2)
+        ), Axes(0), Axes(1)
+      ), Axes(0, 1), Axes(2, 0)
+    );
+
+    ////////////////////////////////////////////////////////////
+    // (VTc*(conj(VTc)*(Q2*conj(Q2))))
+    // cpu_cost= 1280  memory= 592
+    // final_bond_order (VTcD, VTcD')
+    ////////////////////////////////////////////////////////////
+    ptensor M2 = tensordot(
+      VTc, tensordot(
+        conj(VTc), tensordot(
+          Q2, conj(Q2), Axes(0, 1, 2), Axes(0, 1, 2)
+        ), Axes(1), Axes(1)
+      ), Axes(1, 2), Axes(2, 1)
+    );
+
+    ptensor U1, U2;
+    std::vector<double> D1, D2;
+    eigh(M1, Axes(0), Axes(1), D1, U1);
+    eigh(M2, Axes(0), Axes(1), D2, U2);
+
+    std::vector<double> D1inv(dc), D2inv(dc), lcinv(dc);
+    for(int d=0; d<dc; ++d){
+      D1[d] = sqrt(D1[d]);
+      D1inv[d] = 1.0/D1[d];
+
+      D2[d] = sqrt(D2[d]);
+      D2inv[d] = 1.0/D2[d];
+
+      lcinv[d] = 1.0/lambda_c[d];
+    }
+
+    U1.multiply_vector(lambda_c, 0, D1, 1);
+    U2.multiply_vector(lambda_c, 0, D2, 1);
+    ptensor L = tensordot(U1, U2, Axes(0), Axes(0));
+
+    // revert U1, U2
+    U1.multiply_vector(lcinv, 0, D1inv, 1);
+    U2.multiply_vector(lcinv, 0, D2inv, 1);
+
+    ptensor W1, W2;
+    info = svd(L, Axes(0), Axes(1), W1, lambda_c, W2);
+
+    norm = 0.0;
+    for(int d=0; d<dc; ++d){
+      norm += lambda_c[d] * lambda_c[d];
+    }
+    norm = sqrt(norm);
+
+    for(int d=0; d<dc; ++d){
+      lambda_c[d] = sqrt(lambda_c[d] / norm);
+      if (lambda_c[d] > peps_parameters.Inverse_lambda_cut){
+        lcinv[d] = 1.0/lambda_c[d];
+      }else{
+        lcinv[d] = 0.0;
+      }
+    }
+
+    W1.multiply_vector(D1inv, 0);
+    W2.multiply_vector(D2inv, 1);
+    
+    ptensor X1inv = tensordot(conj(U1), W1, Axes(1), Axes(0));
+    ptensor X2inv = tensordot(conj(U2), W2, Axes(1), Axes(1));
+    Uc = tensordot(Uc, X1inv, Axes(2), Axes(0));
+    VTc = tensordot(X2inv, VTc, Axes(0), Axes(0));
+  } // end of local gauge fixing
 
   Uc.multiply_vector(lambda_c, 2);
   VTc.multiply_vector(lambda_c, 0);

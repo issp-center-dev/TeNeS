@@ -35,6 +35,7 @@ class PEPS_Parameters {
   // Simple update
   int num_simple_step;
   double Inverse_lambda_cut;
+  bool Simple_Gauge_Fix;
 
   // Environment
   double Inverse_projector_cut;
@@ -51,7 +52,7 @@ class PEPS_Parameters {
   double Full_Convergence_Epsilon;
   int Full_max_iteration;
   bool Full_Gauge_Fix;
-  bool Full_Use_FastFullUpdate;  // Fast Full Update
+  bool Full_Use_FastFullUpdate;
 
   // observable
   int Lcor;
