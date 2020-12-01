@@ -44,6 +44,7 @@ PEPS_Parameters::PEPS_Parameters() {
   CTM_Projector_corner = true;
   Use_RSVD = false;
   RSVD_Oversampling_factor = 2.0;
+  MeanField_Env = false;
 
   // Full update
   num_full_step = 0;
@@ -83,6 +84,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
     I_Use_RSVD,
+    I_MeanField_Env,
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
@@ -129,6 +131,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
     SAVE_PARAM(Use_RSVD, int);
+    SAVE_PARAM(MeanField_Env, int);
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
@@ -171,6 +174,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
     LOAD_PARAM(Use_RSVD, int);
+    LOAD_PARAM(MeanField_Env, int);
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
@@ -235,6 +239,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       << std::endl;
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
+  ofs << "meanfield_env = " << (MeanField_Env ? "true" : "false") << std::endl;
 
   ofs << std::endl;
 

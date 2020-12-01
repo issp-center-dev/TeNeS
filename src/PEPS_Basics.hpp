@@ -45,7 +45,8 @@
 #include "PEPS_Parameters.hpp"
 #include "mpi.hpp"
 
-#include "PEPS_Basics_impl.hpp"
+#include "PEPS_Contract_impl.hpp"
+#include "PEPS_Contract_MF_impl.hpp"
 
 namespace tenes {
 
@@ -95,6 +96,47 @@ Contract(const std::vector<const tensor*> &C,
   ss << "Contract_" << nrow << "_" << ncol << " is not implemented";
   throw std::runtime_error(ss.str());
 }
+
+
+template <class tensor>
+typename tensor::value_type
+Contract_MF(const std::vector<std::vector<const tensor*>> &Tn,
+            const std::vector<std::vector<const tensor*>> &op
+            ){
+  const size_t nrow = Tn.size();
+  const size_t ncol = Tn[0].size();
+
+#define CALL_CONTRACT_MF(NROW, NCOL) \
+  do{\
+    if(nrow == NROW && ncol == NCOL){\
+      return Contract_MF_ ## NROW ## x ## NCOL (Tn, op);\
+    }\
+  }while(false)
+
+  CALL_CONTRACT_MF(1, 1);
+  CALL_CONTRACT_MF(2, 1);
+  CALL_CONTRACT_MF(1, 2);
+  CALL_CONTRACT_MF(2, 2);
+  CALL_CONTRACT_MF(3, 1);
+  CALL_CONTRACT_MF(1, 3);
+  CALL_CONTRACT_MF(3, 2);
+  CALL_CONTRACT_MF(2, 3);
+  CALL_CONTRACT_MF(3, 3);
+  CALL_CONTRACT_MF(1, 4);
+  CALL_CONTRACT_MF(4, 1);
+  CALL_CONTRACT_MF(2, 4);
+  CALL_CONTRACT_MF(4, 2);
+  CALL_CONTRACT_MF(4, 3);
+  CALL_CONTRACT_MF(3, 4);
+  CALL_CONTRACT_MF(4, 4);
+
+#undef CALL_CONTRACT_MF
+
+  std::stringstream ss;
+  ss << "Contract_MF_" << nrow << "_" << ncol << " is not implemented";
+  throw std::runtime_error(ss.str());
+}
+
 
 template <template <typename> class Matrix, typename C>
 C Contract_one_site(const Tensor<Matrix, C> &C1, const Tensor<Matrix, C> &C2,
@@ -417,6 +459,189 @@ C Contract_four_sites(
                          Axes(0, 3, 5), Axes(0, 1, 2)),
                Axes(0, 1, 2, 3, 4, 5), Axes(0, 3, 1, 4, 2, 5));
 }
+
+template <class tensor>
+typename tensor::value_type
+Contract_one_site_MF(
+  const tensor &Tn_0_0,
+  const tensor &op_0_0
+)
+{
+  ////////////////////////////////////////////////////////////
+  // (op_0_0*(Tn_0_0*conj(Tn_0_0)))
+  // cpu_cost= 262208  memory= 65664
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op_0_0, tensordot(
+      Tn_0_0, conj(Tn_0_0), Axes(0, 1, 2, 3), Axes(0, 1, 2, 3)
+    ), Axes(0, 1), Axes(0, 1)
+  )
+  ;
+}
+
+template <class tensor>
+typename tensor::value_type
+Contract_two_sites_vertical_MF(
+  const tensor &Tn_0_0,
+  const tensor &Tn_1_0,
+  const tensor &op_0_0,
+  const tensor &op_1_0
+)
+{
+  ////////////////////////////////////////////////////////////
+  // (op_0_0*(Tn_0_0*(conj(Tn_0_0)*(Tn_1_0*(conj(Tn_1_0)*op_1_0)))))
+  // cpu_cost= 1.04864e+06  memory= 163968
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op_0_0, tensordot(
+      Tn_0_0, tensordot(
+        conj(Tn_0_0), tensordot(
+          Tn_1_0, tensordot(
+            conj(Tn_1_0), op_1_0, Axes(4), Axes(1)
+          ), Axes(0, 2, 3, 4), Axes(0, 2, 3, 4)
+        ), Axes(3), Axes(1)
+      ), Axes(0, 1, 2, 3), Axes(0, 1, 2, 4)
+    ), Axes(0, 1), Axes(0, 1)
+  )
+  ;
+}
+
+template <class tensor>
+typename tensor::value_type
+Contract_two_sites_horizontal_MF(
+  const tensor &Tn_0_0,
+  const tensor &Tn_0_1,
+  const tensor &op_0_0,
+  const tensor &op_0_1
+)
+{
+  ////////////////////////////////////////////////////////////
+  // (op_0_0*(Tn_0_0*(conj(Tn_0_0)*(Tn_0_1*(conj(Tn_0_1)*op_0_1)))))
+  // cpu_cost= 1.04864e+06  memory= 163968
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op_0_0, tensordot(
+      Tn_0_0, tensordot(
+        conj(Tn_0_0), tensordot(
+          Tn_0_1, tensordot(
+            conj(Tn_0_1), op_0_1, Axes(4), Axes(1)
+          ), Axes(1, 2, 3, 4), Axes(1, 2, 3, 4)
+        ), Axes(2), Axes(1)
+      ), Axes(0, 1, 2, 3), Axes(0, 1, 4, 2)
+    ), Axes(0, 1), Axes(0, 1)
+  )
+  ;
+}
+
+template <class tensor>
+typename tensor::value_type
+Contract_two_sites_vertical_op12_MF(
+  const tensor &Tn_0_0,
+  const tensor &Tn_0_1,
+  const tensor &op12
+)
+{
+  ////////////////////////////////////////////////////////////
+  // (op12*((Tn_0_0*conj(Tn_0_0))*(Tn_0_1*conj(Tn_0_1))))
+  // cpu_cost= 4.46054e+06  memory= 139264
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op12, tensordot(
+      tensordot(
+        Tn_0_0, conj(Tn_0_0), Axes(0, 1, 3), Axes(0, 1, 3)
+      ), tensordot(
+        Tn_0_1, conj(Tn_0_1), Axes(1, 2, 3), Axes(1, 2, 3)
+      ), Axes(0, 2), Axes(0, 2)
+    ), Axes(0, 1, 2, 3), Axes(0, 2, 1, 3)
+  );
+}
+
+template <class tensor>
+typename tensor::value_type
+Contract_two_sites_horizontal_op12_MF(
+  const tensor &Tn_0_0,
+  const tensor &Tn_1_0,
+  const tensor &op12
+)
+{
+  ////////////////////////////////////////////////////////////
+  // hoge.dat
+  ////////////////////////////////////////////////////////////
+  // (op12*((Tn_0_0*conj(Tn_0_0))*(Tn_1_0*conj(Tn_1_0))))
+  // cpu_cost= 4.46054e+06  memory= 139264
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op12, tensordot(
+      tensordot(
+        Tn_0_0, conj(Tn_0_0), Axes(0, 1, 2), Axes(0, 1, 2)
+      ), tensordot(
+        Tn_1_0, conj(Tn_1_0), Axes(0, 2, 3), Axes(0, 2, 3)
+      ), Axes(0, 2), Axes(0, 2)
+    ), Axes(0, 1, 2, 3), Axes(0, 2, 1, 3)
+  )
+  ;
+}
+
+
+
+template <class tensor>
+typename tensor::value_type
+Contract_four_sites_MF(
+  const tensor &Tn_0_0,
+  const tensor &Tn_0_1,
+  const tensor &Tn_1_0,
+  const tensor &Tn_1_1,
+  const tensor &op_0_0,
+  const tensor &op_0_1,
+  const tensor &op_1_0,
+  const tensor &op_1_1
+)
+{
+  ////////////////////////////////////////////////////////////
+  // hoge.dat
+  ////////////////////////////////////////////////////////////
+  // (op_0_0*(Tn_0_0*(conj(Tn_0_0)*((Tn_0_1*(conj(Tn_0_1)*op_0_1))*((Tn_1_0*(conj(Tn_1_0)*op_1_0))*(Tn_1_1*(conj(Tn_1_1)*op_1_1)))))))
+  // cpu_cost= 9.96154e+06  memory= 295168
+  // final_bond_order ()
+  ////////////////////////////////////////////////////////////
+  return
+  trace(
+    op_0_0, tensordot(
+      Tn_0_0, tensordot(
+        conj(Tn_0_0), tensordot(
+          tensordot(
+            Tn_0_1, tensordot(
+              conj(Tn_0_1), op_0_1, Axes(4), Axes(1)
+            ), Axes(1, 2, 4), Axes(1, 2, 4)
+          ), tensordot(
+            tensordot(
+              Tn_1_0, tensordot(
+                conj(Tn_1_0), op_1_0, Axes(4), Axes(1)
+              ), Axes(0, 3, 4), Axes(0, 3, 4)
+            ), tensordot(
+              Tn_1_1, tensordot(
+                conj(Tn_1_1), op_1_1, Axes(4), Axes(1)
+              ), Axes(2, 3, 4), Axes(2, 3, 4)
+            ), Axes(1, 3), Axes(0, 2)
+          ), Axes(1, 3), Axes(2, 3)
+        ), Axes(2, 3), Axes(1, 3)
+      ), Axes(0, 1, 2, 3), Axes(0, 1, 3, 4)
+    ), Axes(0, 1), Axes(0, 1)
+  )
+  ;
+}
+
+
 // environment
 
 template <template <typename> class Matrix, typename C>

@@ -44,6 +44,7 @@ class PEPS_Parameters {
   bool CTM_Projector_corner;
   bool Use_RSVD;
   double RSVD_Oversampling_factor;
+  bool MeanField_Env;
 
   // Full update
   int num_full_step;

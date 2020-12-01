@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef PEPS_BASICS_IMPL_HPP
-#define PEPS_BASICS_IMPL_HPP
+#ifndef PEPS_CONTRACT_IMPL_HPP
+#define PEPS_CONTRACT_IMPL_HPP
 
 #include <vector>
 #include <mptensor/tensor.hpp>
@@ -1618,4 +1618,4 @@ Contract_4x4(
 
 } // end of namespace tenes
 
-#endif // PEPS_BASICS_IMPL_HPP
+#endif // PEPS_CONTRACT_IMPL_HPP

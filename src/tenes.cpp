@@ -406,7 +406,8 @@ template <class ptensor> void TeNeS<ptensor>::initialize_tensors() {
   } else {
     load_tensors();
     if (peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "Tensors loaded from " << peps_parameters.tensor_load_dir << std::endl;
+      std::cout << "Tensors loaded from " << peps_parameters.tensor_load_dir
+                << std::endl;
     }
   } // end of else part of if(load_dir.empty())
 }
@@ -494,7 +495,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[source], eTb[target], eTl[target], eTt[target],
                          eTt[source], eTr[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-      }else if(source_leg == 1){
+      } else if (source_leg == 1) {
         /*
          * C1' t' C2'
          *  l' T'  r'
@@ -513,7 +514,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTl[source], eTl[target], eTt[target], eTr[target],
                          eTr[source], eTb[source], Tn[source], Tn[target],
                          up.op, source_leg, peps_parameters, Tn1_new, Tn2_new);
-      }else if(source_leg == 2){
+      } else if (source_leg == 2) {
         /*
          *  C1 t t' C2'
          *  l  T T' r'
@@ -524,7 +525,7 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
                          eTb[target], eTb[source], eTl[source], // b' b  l
                          Tn[source], Tn[target], up.op, source_leg,
                          peps_parameters, Tn1_new, Tn2_new);
-      }else{
+      } else {
         /*
          * C1  t C2
          *  l  T  r
@@ -548,28 +549,28 @@ template <class ptensor> void TeNeS<ptensor>::full_update() {
       Tn[target] = Tn2_new;
 
       if (peps_parameters.Full_Use_FastFullUpdate) {
-        if(source_leg == 0){
+        if (source_leg == 0) {
           const int source_x = source % LX;
           const int target_x = target % LX;
           Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
                      peps_parameters, lattice);
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
                     peps_parameters, lattice);
-        }else if(source_leg == 1){
+        } else if (source_leg == 1) {
           const int source_y = source / LX;
           const int target_y = target / LX;
           Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
                       peps_parameters, lattice);
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
                    peps_parameters, lattice);
-        }else if(source_leg == 2){
+        } else if (source_leg == 2) {
           const int source_x = source % LX;
           const int target_x = target % LX;
           Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
                     peps_parameters, lattice);
           Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
                      peps_parameters, lattice);
-        }else{
+        } else {
           const int source_y = source / LX;
           const int target_y = target / LX;
           Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
@@ -627,20 +628,50 @@ auto TeNeS<ptensor>::measure_onesite()
       nlops, std::vector<tensor_type>(
                  N_UNIT, std::numeric_limits<double>::quiet_NaN()));
 
-  std::vector<double> norm(N_UNIT);
-  for (int i = 0; i < N_UNIT; ++i) {
-    const auto n = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                     eTb[i], eTl[i], Tn[i], op_identity[i]);
-    norm[i] = std::real(n);
-  }
-  for (auto const &op : onesite_operators) {
-    const int i = op.source_site;
-    const auto val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i],
-                                       eTr[i], eTb[i], eTl[i], Tn[i], op.op);
-    local_obs[op.group][i] = val / norm[i];
-  }
-  time_observable += timer.elapsed();
+  if(peps_parameters.MeanField_Env){
+    for (int i=0; i<N_UNIT; ++i){
+      for (int leg=0; leg < nleg; ++leg){
+        const std::vector<double> mf = lambda_tensor[i][leg];
+        Tn[i].multiply_vector(mf, leg);
+      }
+    }
 
+    std::vector<double> norm(N_UNIT);
+    for (int i = 0; i < N_UNIT; ++i) {
+      const auto n = Contract_one_site_MF(Tn[i], op_identity[i]);
+      norm[i] = std::real(n);
+    }
+    for (auto const &op : onesite_operators) {
+      const int i = op.source_site;
+      const auto val = Contract_one_site_MF(Tn[i], op.op);
+      local_obs[op.group][i] = val / norm[i];
+    }
+
+    for (int i=0; i<N_UNIT; ++i){
+      for (int leg=0; leg < nleg; ++leg){
+        std::vector<double> mf = lambda_tensor[i][leg];
+        for(auto iter = mf.begin(); iter != mf.end(); ++iter){
+          *iter = 1.0/(*iter);
+        }
+        Tn[i].multiply_vector(mf, leg);
+      }
+    }
+  }else{
+    std::vector<double> norm(N_UNIT);
+    for (int i = 0; i < N_UNIT; ++i) {
+      const auto n = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                       eTb[i], eTl[i], Tn[i], op_identity[i]);
+      norm[i] = std::real(n);
+    }
+    for (auto const &op : onesite_operators) {
+      const int i = op.source_site;
+      const auto val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i],
+                                         eTr[i], eTb[i], eTl[i], Tn[i], op.op);
+      local_obs[op.group][i] = val / norm[i];
+    }
+  }
+
+  time_observable += timer.elapsed();
   return local_obs;
 }
 
@@ -768,32 +799,60 @@ auto TeNeS<ptensor>::measure_twosite()
       target_row = nrow - 1;
     }
 
-    for (int row = 0; row < nrow; ++row) {
-      for (int col = 0; col < ncol; ++col) {
-        const int index =
-            lattice.other(source, col - source_col, source_row - row);
-        indices[row][col] = index;
-        op_[row][col] = &(op_identity[index]);
-        Tn_[row][col] = &(Tn[index]);
+    if (peps_parameters.MeanField_Env) {
+      for (int row = 0; row < nrow; ++row) {
+        for (int col = 0; col < ncol; ++col) {
+          const int index =
+              lattice.other(source, col - source_col, source_row - row);
+          indices[row][col] = index;
+          op_[row][col] = &(op_identity[index]);
+          Tn_[row][col] = &(Tn[index]);
+        }
       }
-      eTl_[row] = &(eTl[indices[row][0]]);
-      eTr_[row] = &(eTr[indices[row][ncol - 1]]);
+
+      // absorb MF ENV into center tensors on boundary
+      for (int row = 0; row < nrow; ++row) {
+        const_cast<ptensor*>(Tn_[row][0])->multiply_vector(lambda_tensor[indices[row][0]][0], 0);
+        const_cast<ptensor*>(Tn_[row][ncol - 1])->multiply_vector(
+            lambda_tensor[indices[row][ncol - 1]][2], 2);
+      }
+      for (int col = 0; col < ncol; ++col) {
+        const_cast<ptensor*>(Tn_[0][col])->multiply_vector(lambda_tensor[indices[0][col]][1], 1);
+        const_cast<ptensor*>(Tn_[nrow - 1][col])->multiply_vector(
+            lambda_tensor[indices[nrow - 1][col]][3], 3);
+      }
+    } else {
+      for (int row = 0; row < nrow; ++row) {
+        for (int col = 0; col < ncol; ++col) {
+          const int index =
+              lattice.other(source, col - source_col, source_row - row);
+          indices[row][col] = index;
+          op_[row][col] = &(op_identity[index]);
+          Tn_[row][col] = &(Tn[index]);
+        }
+        eTl_[row] = &(eTl[indices[row][0]]);
+        eTr_[row] = &(eTr[indices[row][ncol - 1]]);
+      }
+      for (int col = 0; col < ncol; ++col) {
+        eTt_[col] = &(eTt[indices[0][col]]);
+        eTb_[col] = &(eTb[indices[nrow - 1][col]]);
+      }
+      C_[0] = &(C1[indices[0][0]]);
+      C_[1] = &(C2[indices[0][ncol - 1]]);
+      C_[2] = &(C3[indices[nrow - 1][ncol - 1]]);
+      C_[3] = &(C4[indices[nrow - 1][0]]);
     }
-    for (int col = 0; col < ncol; ++col) {
-      eTt_[col] = &(eTt[indices[0][col]]);
-      eTb_[col] = &(eTb[indices[nrow - 1][col]]);
-    }
-    C_[0] = &(C1[indices[0][0]]);
-    C_[1] = &(C2[indices[0][ncol - 1]]);
-    C_[2] = &(C3[indices[nrow - 1][ncol - 1]]);
-    C_[3] = &(C4[indices[nrow - 1][0]]);
 
     const auto norm_key = std::make_tuple(indices[0][0], nrow, ncol);
     auto norm =
         (norms.count(norm_key) ? norms[norm_key]
                                : std::numeric_limits<double>::quiet_NaN());
     if (std::isnan(norm)) {
-      norm = std::real(Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
+      if (peps_parameters.MeanField_Env) {
+        norm = std::real(Contract_MF(Tn_, op_));
+      } else {
+        norm = std::real(Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
+      }
       norms[norm_key] = norm;
     }
 
@@ -806,20 +865,25 @@ auto TeNeS<ptensor>::measure_twosite()
           ptensor o =
               (top == source ? op.op
                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = Contract_two_sites_vertical_op12(
-              C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
-              eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], Tn[top],
-              Tn[bottom], o);
+          value =
+              peps_parameters.MeanField_Env
+                  ? Contract_two_sites_vertical_op12_MF(Tn[top], Tn[bottom], o)
+                  : Contract_two_sites_vertical_op12(
+                        C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+                        eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
+                        eTl[top], Tn[top], Tn[bottom], o);
         } else {
           const int left = indices[0][0];
           const int right = indices[0][1];
           ptensor o =
               (left == source ? op.op
                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = Contract_two_sites_horizontal_op12(
-              C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
-              eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
-              o);
+          value = peps_parameters.MeanField_Env
+                      ? Contract_two_sites_horizontal_op12_MF(Tn[left], Tn[right], o)
+                      : Contract_two_sites_horizontal_op12(
+                            C1[left], C2[right], C3[right], C4[left], eTt[left],
+                            eTt[right], eTr[right], eTb[right], eTb[left],
+                            eTl[left], Tn[left], Tn[right], o);
         }
       } else {
         ptensor U, VT;
@@ -833,7 +897,10 @@ auto TeNeS<ptensor>::measure_twosite()
           ptensor target_op =
               reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
           op_[target_row][target_col] = &target_op;
-          auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+          auto localvalue =
+              peps_parameters.MeanField_Env
+                  ? Contract_MF(Tn_, op_)
+                  : Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
           value += localvalue * s[is];
         }
       }
@@ -846,10 +913,42 @@ auto TeNeS<ptensor>::measure_twosite()
       op_[target_row][target_col] = &(
           onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
               .op);
-      auto localvalue = Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      auto localvalue = peps_parameters.MeanField_Env
+                            ? Contract_MF(Tn_, op_)
+                            : Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
+
+    if (peps_parameters.MeanField_Env) {
+      // purge MF ENV into center tensors on boundary
+      for (int row = 0; row < nrow; ++row) {
+        std::vector<double> mf(lambda_tensor[indices[row][0]][0]);
+        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
+          *iter = 1.0 / (*iter);
+        }
+        const_cast<ptensor*>(Tn_[row][0])->multiply_vector(mf, 0);
+
+        mf = lambda_tensor[indices[row][ncol - 1]][2];
+        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
+          *iter = 1.0 / (*iter);
+        }
+        const_cast<ptensor*>(Tn_[row][ncol - 1])->multiply_vector(mf, 2);
+      }
+      for (int col = 0; col < ncol; ++col) {
+        std::vector<double> mf(lambda_tensor[indices[0][col]][1]);
+        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
+          *iter = 1.0 / (*iter);
+        }
+        const_cast<ptensor*>(Tn_[0][col])->multiply_vector(mf, 1);
+
+        mf = lambda_tensor[indices[nrow - 1][col]][3];
+        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
+          *iter = 1.0 / (*iter);
+        }
+        const_cast<ptensor*>(Tn_[nrow - 1][col])->multiply_vector(mf, 3);
+      }
+    }
   }
 
   time_observable += timer.elapsed();
@@ -1040,7 +1139,9 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     std::cout << "Start calculating observables" << std::endl;
     std::cout << "  Start updating environment" << std::endl;
   }
-  update_CTM();
+  if (!peps_parameters.MeanField_Env){
+    update_CTM();
+  }
 
   if (peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "  Start calculating onesite operators" << std::endl;
@@ -1066,7 +1167,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
     std::vector<tensor_type> loc_obs(num_onesite_operators);
     int numsites = 0;
     for (int i = 0; i < N_UNIT; ++i) {
-      if(lattice.physical_dims[i] > 1){
+      if (lattice.physical_dims[i] > 1) {
         ++numsites;
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
           loc_obs[ilops] += onesite_obs[ilops][i];
@@ -1150,7 +1251,7 @@ template <class ptensor> void TeNeS<ptensor>::measure() {
 }
 
 template <class ptensor> void TeNeS<ptensor>::summary() const {
-  if(mpirank == 0){
+  if (mpirank == 0) {
     const double time_all = timer_all.elapsed();
     {
       std::string filename = outdir + "/time.dat";
@@ -1259,7 +1360,8 @@ template <class ptensor> void TeNeS<ptensor>::load_tensors_v1() {
   std::string const &load_dir = peps_parameters.tensor_load_dir;
 
   int loaded_CHI = 1;
-  std::vector<std::vector<int>> loaded_shape(N_UNIT, std::vector<int>(nleg+1));
+  std::vector<std::vector<int>> loaded_shape(N_UNIT,
+                                             std::vector<int>(nleg + 1));
   if (mpirank == 0) {
     std::string filename = load_dir + "/params.dat";
     std::string line;
@@ -1305,22 +1407,22 @@ template <class ptensor> void TeNeS<ptensor>::load_tensors_v1() {
       if (pdim != loaded_shape[i][nleg]) {
         std::stringstream ss;
         ss << "ERROR: dimension of the physical bond of the tensor " << i
-           << " is " << pdim << " but loaded tensor has " << loaded_shape[i][nleg]
-           << std::endl;
+           << " is " << pdim << " but loaded tensor has "
+           << loaded_shape[i][nleg] << std::endl;
         throw tenes::load_error(ss.str());
       }
     }
   }
-  for(int i=0; i<N_UNIT; ++i){
+  for (int i = 0; i < N_UNIT; ++i) {
     bcast(loaded_shape[i], 0, comm);
   }
 
-#define LOAD_TENSOR_(A, name) \
-  do{\
-    ptensor temp; \
-    temp.load((filename + name + suffix).c_str()); \
-    A = resize_tensor(temp, A.shape()); \
-  }while(false)
+#define LOAD_TENSOR_(A, name)                                                  \
+  do {                                                                         \
+    ptensor temp;                                                              \
+    temp.load((filename + name + suffix).c_str());                             \
+    A = resize_tensor(temp, A.shape());                                        \
+  } while (false)
 
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = load_dir + "/";
@@ -1457,7 +1559,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
                     corparam);
   tns.optimize();
   tns.save_tensors();
-  if(peps_parameters.to_measure){
+  if (peps_parameters.to_measure) {
     tns.measure();
   }
   tns.summary();
@@ -1473,7 +1575,8 @@ template int tenes<real_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
                                 Operators<real_tensor> twosite_operators,
                                 CorrelationParameter corparam);
 
-template int tenes<complex_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
+template int tenes<complex_tensor>(MPI_Comm comm,
+                                   PEPS_Parameters peps_parameters,
                                    Lattice lattice,
                                    NNOperators<complex_tensor> simple_updates,
                                    NNOperators<complex_tensor> full_updates,

@@ -226,6 +226,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     load_if(pparam.CTM_Projector_corner, ctm, "projector_corner");
     load_if(pparam.Use_RSVD, ctm, "use_rsvd");
     load_if(pparam.RSVD_Oversampling_factor, ctm, "rsvd_oversampling_factor");
+    load_if(pparam.MeanField_Env, ctm, "meanfield_env");
 
     if (pparam.RSVD_Oversampling_factor < 1.0) {
       std::string msg = "rsvd_oversampling_factor must be >= 1.0";
