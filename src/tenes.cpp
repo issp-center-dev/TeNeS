@@ -629,32 +629,24 @@ auto TeNeS<ptensor>::measure_onesite()
                  N_UNIT, std::numeric_limits<double>::quiet_NaN()));
 
   if(peps_parameters.MeanField_Env){
+    std::vector<ptensor> Tn_(Tn);
     for (int i=0; i<N_UNIT; ++i){
       for (int leg=0; leg < nleg; ++leg){
         const std::vector<double> mf = lambda_tensor[i][leg];
-        Tn[i].multiply_vector(mf, leg);
+        Tn_[i].multiply_vector(mf, leg);
       }
     }
 
     std::vector<double> norm(N_UNIT);
     for (int i = 0; i < N_UNIT; ++i) {
-      const auto n = Contract_one_site_MF(Tn[i], op_identity[i]);
+      const auto n = Contract_one_site_MF(Tn_[i], op_identity[i]);
       norm[i] = std::real(n);
     }
+
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
-      const auto val = Contract_one_site_MF(Tn[i], op.op);
+      const auto val = Contract_one_site_MF(Tn_[i], op.op);
       local_obs[op.group][i] = val / norm[i];
-    }
-
-    for (int i=0; i<N_UNIT; ++i){
-      for (int leg=0; leg < nleg; ++leg){
-        std::vector<double> mf = lambda_tensor[i][leg];
-        for(auto iter = mf.begin(); iter != mf.end(); ++iter){
-          *iter = 1.0/(*iter);
-        }
-        Tn[i].multiply_vector(mf, leg);
-      }
     }
   }else{
     std::vector<double> norm(N_UNIT);
@@ -727,16 +719,6 @@ auto TeNeS<ptensor>::measure_twosite()
 
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
-    /*
-    const int x_source = lattice.x(source);
-    const int y_source = lattice.y(source);
-    const int target = op.target_site;
-    const int x_target =
-        lattice.x(target) + op.offset_x * lattice.LX + op.offset_y *
-    lattice.skew; const int y_target = lattice.y(target) + op.offset_y *
-    lattice.LY; const int dx = x_target - x_source; const int dy = y_target -
-    y_source;
-    */
     const int dx = op.dx[0];
     const int dy = op.dy[0];
 
@@ -781,6 +763,7 @@ auto TeNeS<ptensor>::measure_twosite()
         nrow, std::vector<const ptensor *>(ncol, nullptr));
 
     std::vector<std::vector<int>> indices(nrow, std::vector<int>(ncol));
+    std::vector<ptensor> boundaries;
 
     int source_col, source_row, target_col, target_row;
 
@@ -800,15 +783,25 @@ auto TeNeS<ptensor>::measure_twosite()
     }
 
     if (peps_parameters.MeanField_Env) {
+      int iboundary=0;
+      const int nboundary = 2*(ncol+nrow-2);
+      boundaries.reserve(nboundary);
+
       for (int row = 0; row < nrow; ++row) {
         for (int col = 0; col < ncol; ++col) {
           const int index =
               lattice.other(source, col - source_col, source_row - row);
           indices[row][col] = index;
           op_[row][col] = &(op_identity[index]);
-          Tn_[row][col] = &(Tn[index]);
+          if((0 < row && row < nrow-1) && (0 < col && col < ncol-1)){
+            Tn_[row][col] = &(Tn[index]);
+          }else{
+            boundaries.push_back(Tn[index]);
+            Tn_[row][col] = &(boundaries[iboundary++]);
+          }
         }
       }
+      assert(boundaries.size() == nboundary);
 
       // absorb MF ENV into center tensors on boundary
       for (int row = 0; row < nrow; ++row) {
@@ -821,7 +814,7 @@ auto TeNeS<ptensor>::measure_twosite()
         const_cast<ptensor*>(Tn_[nrow - 1][col])->multiply_vector(
             lambda_tensor[indices[nrow - 1][col]][3], 3);
       }
-    } else {
+    } else { // Use CTM
       for (int row = 0; row < nrow; ++row) {
         for (int col = 0; col < ncol; ++col) {
           const int index =
@@ -867,19 +860,19 @@ auto TeNeS<ptensor>::measure_twosite()
                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
           value =
               peps_parameters.MeanField_Env
-                  ? Contract_two_sites_vertical_op12_MF(Tn[top], Tn[bottom], o)
+                  ? Contract_two_sites_vertical_op12_MF(*(Tn_[0][0]), *(Tn_[1][0]), o)
                   : Contract_two_sites_vertical_op12(
                         C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
                         eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
                         eTl[top], Tn[top], Tn[bottom], o);
-        } else {
+        } else { // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
           ptensor o =
               (left == source ? op.op
                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
           value = peps_parameters.MeanField_Env
-                      ? Contract_two_sites_horizontal_op12_MF(Tn[left], Tn[right], o)
+                      ? Contract_two_sites_horizontal_op12_MF(*(Tn_[0][0]), *(Tn_[0][1]), o)
                       : Contract_two_sites_horizontal_op12(
                             C1[left], C2[right], C3[right], C4[left], eTt[left],
                             eTt[right], eTr[right], eTb[right], eTb[left],
@@ -919,36 +912,6 @@ auto TeNeS<ptensor>::measure_twosite()
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
-
-    if (peps_parameters.MeanField_Env) {
-      // purge MF ENV into center tensors on boundary
-      for (int row = 0; row < nrow; ++row) {
-        std::vector<double> mf(lambda_tensor[indices[row][0]][0]);
-        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
-          *iter = 1.0 / (*iter);
-        }
-        const_cast<ptensor*>(Tn_[row][0])->multiply_vector(mf, 0);
-
-        mf = lambda_tensor[indices[row][ncol - 1]][2];
-        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
-          *iter = 1.0 / (*iter);
-        }
-        const_cast<ptensor*>(Tn_[row][ncol - 1])->multiply_vector(mf, 2);
-      }
-      for (int col = 0; col < ncol; ++col) {
-        std::vector<double> mf(lambda_tensor[indices[0][col]][1]);
-        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
-          *iter = 1.0 / (*iter);
-        }
-        const_cast<ptensor*>(Tn_[0][col])->multiply_vector(mf, 1);
-
-        mf = lambda_tensor[indices[nrow - 1][col]][3];
-        for (auto iter = mf.begin(); iter != mf.end(); ++iter) {
-          *iter = 1.0 / (*iter);
-        }
-        const_cast<ptensor*>(Tn_[nrow - 1][col])->multiply_vector(mf, 3);
-      }
-    }
   }
 
   time_observable += timer.elapsed();

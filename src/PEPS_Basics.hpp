@@ -541,7 +541,7 @@ Contract_two_sites_horizontal_MF(
 
 template <class tensor>
 typename tensor::value_type
-Contract_two_sites_vertical_op12_MF(
+Contract_two_sites_horizontal_op12_MF(
   const tensor &Tn_0_0,
   const tensor &Tn_0_1,
   const tensor &op12
@@ -566,7 +566,7 @@ Contract_two_sites_vertical_op12_MF(
 
 template <class tensor>
 typename tensor::value_type
-Contract_two_sites_horizontal_op12_MF(
+Contract_two_sites_vertical_op12_MF(
   const tensor &Tn_0_0,
   const tensor &Tn_1_0,
   const tensor &op12
