@@ -64,6 +64,7 @@ Parameters in the simple update procedure.
    ``tau``,           "Imaginary time step :math:`\tau` in imaginary time evolution operator", Real,    0.01
    ``num_step``,      "Number of simple updates",                                              Integer, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
+   ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, true
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,6 +100,7 @@ Parameters for corner transfer matrices, CTM.
    ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
    ``use_rsvd``,                 "Whether to replace SVD with random SVD",                                                                    Boolean, false
    ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method", Real,    2.0
+   ``meanfield_env``,            "Use mean field environment obtained through simple update instead of CTM", Boolean, false
 
 For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ .
 

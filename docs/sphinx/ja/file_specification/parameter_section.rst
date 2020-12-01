@@ -66,6 +66,7 @@ simple update に関するパラメータ
    ``tau``,           "虚時間発展演算子における虚時間刻み :math:`\tau`", 実数, 0.01
    ``num_step``,      "simple update の回数",                            整数, 0
    ``lambda_cutoff``, "simple update において平均場 :math:`\lambda` の切り捨て閾値",      実数, 1e-12
+   ``gauge_fix``,     "テンソルのゲージを固定するかどうか",                               真偽値, true
 
 
 
@@ -103,6 +104,7 @@ full update に関するパラメータ
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
+   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる",        真偽値, false
 
 乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ を参照してください。
 
