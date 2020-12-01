@@ -106,31 +106,31 @@ Contract_MF(const std::vector<std::vector<const tensor*>> &Tn,
   const size_t nrow = Tn.size();
   const size_t ncol = Tn[0].size();
 
-#define CALL_CONTRACT_MF(NROW, NCOL) \
+#define CALL_CONTRACT(NROW, NCOL) \
   do{\
     if(nrow == NROW && ncol == NCOL){\
       return Contract_MF_ ## NROW ## x ## NCOL (Tn, op);\
     }\
   }while(false)
 
-  CALL_CONTRACT_MF(1, 1);
-  CALL_CONTRACT_MF(2, 1);
-  CALL_CONTRACT_MF(1, 2);
-  CALL_CONTRACT_MF(2, 2);
-  CALL_CONTRACT_MF(3, 1);
-  CALL_CONTRACT_MF(1, 3);
-  CALL_CONTRACT_MF(3, 2);
-  CALL_CONTRACT_MF(2, 3);
-  CALL_CONTRACT_MF(3, 3);
-  CALL_CONTRACT_MF(1, 4);
-  CALL_CONTRACT_MF(4, 1);
-  CALL_CONTRACT_MF(2, 4);
-  CALL_CONTRACT_MF(4, 2);
-  CALL_CONTRACT_MF(4, 3);
-  CALL_CONTRACT_MF(3, 4);
-  CALL_CONTRACT_MF(4, 4);
+  CALL_CONTRACT(1, 1);
+  CALL_CONTRACT(2, 1);
+  CALL_CONTRACT(1, 2);
+  CALL_CONTRACT(2, 2);
+  CALL_CONTRACT(3, 1);
+  CALL_CONTRACT(1, 3);
+  CALL_CONTRACT(3, 2);
+  CALL_CONTRACT(2, 3);
+  CALL_CONTRACT(3, 3);
+  CALL_CONTRACT(1, 4);
+  CALL_CONTRACT(4, 1);
+  CALL_CONTRACT(2, 4);
+  CALL_CONTRACT(4, 2);
+  CALL_CONTRACT(4, 3);
+  CALL_CONTRACT(3, 4);
+  CALL_CONTRACT(4, 4);
 
-#undef CALL_CONTRACT_MF
+#undef CALL_CONTRACT
 
   std::stringstream ss;
   ss << "Contract_MF_" << nrow << "_" << ncol << " is not implemented";
@@ -573,8 +573,6 @@ Contract_two_sites_horizontal_op12_MF(
 )
 {
   ////////////////////////////////////////////////////////////
-  // hoge.dat
-  ////////////////////////////////////////////////////////////
   // (op12*((Tn_0_0*conj(Tn_0_0))*(Tn_1_0*conj(Tn_1_0))))
   // cpu_cost= 4.46054e+06  memory= 139264
   // final_bond_order ()
@@ -607,8 +605,6 @@ Contract_four_sites_MF(
   const tensor &op_1_1
 )
 {
-  ////////////////////////////////////////////////////////////
-  // hoge.dat
   ////////////////////////////////////////////////////////////
   // (op_0_0*(Tn_0_0*(conj(Tn_0_0)*((Tn_0_1*(conj(Tn_0_1)*op_0_1))*((Tn_1_0*(conj(Tn_1_0)*op_1_0))*(Tn_1_1*(conj(Tn_1_1)*op_1_1)))))))
   // cpu_cost= 9.96154e+06  memory= 295168
