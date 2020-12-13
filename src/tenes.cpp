@@ -187,7 +187,10 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   MPI_Comm_size(comm, &mpisize);
   MPI_Comm_rank(comm, &mpirank);
 
+  peps_parameters.check();
+
   peps_parameters.Bcast(comm);
+
   // output debug or warning info only from process 0
   if (mpirank != 0) {
     peps_parameters.print_level = PrintLevel::none;

@@ -75,6 +75,8 @@ class PEPS_Parameters {
   void save_append(const char *filename) { save(filename, true); }
 
   void Bcast(MPI_Comm comm, int root = 0);
+
+  void check() const;  // may throw tenes::input_error
 };
 
 }  // end of namespace tenes

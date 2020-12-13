@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "mpi.hpp"
+#include "exception.hpp"
 
 namespace tenes {
 
@@ -252,6 +253,14 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "outdir = " << outdir << std::endl;
 
   ofs.close();
+}
+
+void PEPS_Parameters::check() const {
+  if(MeanField_Env && num_full_step > 0){
+    std::stringstream ss;
+    ss << "ERROR: Cannot enable full update and mean field environment simultaneously";
+    throw tenes::input_error(ss.str());
+  }
 }
 
 }  // end of namespace tenes
