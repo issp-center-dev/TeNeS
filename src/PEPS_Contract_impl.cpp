@@ -14,12 +14,9 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef PEPS_BASICS_IMPL_HPP
-#define PEPS_BASICS_IMPL_HPP
 
-#include <vector>
-#include <mptensor/tensor.hpp>
-#include <mptensor/complex.hpp>
+#include "tensor.hpp"
+#include "PEPS_Contract_impl.hpp"
 
 namespace tenes{
 using namespace mptensor;
@@ -1616,6 +1613,53 @@ Contract_4x4(
   ;
 }
 
-} // end of namespace tenes
+#define INSTANTIATE_CONTRACT(tensor_type, NROW, NCOL) \
+template \
+tensor_type::value_type \
+Contract_ ## NROW ## x ## NCOL ( \
+  const std::vector<const tensor_type*> &C, \
+  const std::vector<const tensor_type*> &eTt, \
+  const std::vector<const tensor_type*> &eTr, \
+  const std::vector<const tensor_type*> &eTb, \
+  const std::vector<const tensor_type*> &eTl, \
+  const std::vector<std::vector<const tensor_type*>> &Tn, \
+  const std::vector<std::vector<const tensor_type*>> &op \
+)
 
-#endif // PEPS_BASICS_IMPL_HPP
+INSTANTIATE_CONTRACT(real_tensor, 1, 1);
+INSTANTIATE_CONTRACT(real_tensor, 2, 1);
+INSTANTIATE_CONTRACT(real_tensor, 3, 1);
+INSTANTIATE_CONTRACT(real_tensor, 4, 1);
+INSTANTIATE_CONTRACT(real_tensor, 1, 2);
+INSTANTIATE_CONTRACT(real_tensor, 2, 2);
+INSTANTIATE_CONTRACT(real_tensor, 3, 2);
+INSTANTIATE_CONTRACT(real_tensor, 4, 2);
+INSTANTIATE_CONTRACT(real_tensor, 1, 3);
+INSTANTIATE_CONTRACT(real_tensor, 2, 3);
+INSTANTIATE_CONTRACT(real_tensor, 3, 3);
+INSTANTIATE_CONTRACT(real_tensor, 4, 3);
+INSTANTIATE_CONTRACT(real_tensor, 1, 4);
+INSTANTIATE_CONTRACT(real_tensor, 2, 4);
+INSTANTIATE_CONTRACT(real_tensor, 3, 4);
+INSTANTIATE_CONTRACT(real_tensor, 4, 4);
+
+INSTANTIATE_CONTRACT(complex_tensor, 1, 1);
+INSTANTIATE_CONTRACT(complex_tensor, 2, 1);
+INSTANTIATE_CONTRACT(complex_tensor, 3, 1);
+INSTANTIATE_CONTRACT(complex_tensor, 4, 1);
+INSTANTIATE_CONTRACT(complex_tensor, 1, 2);
+INSTANTIATE_CONTRACT(complex_tensor, 2, 2);
+INSTANTIATE_CONTRACT(complex_tensor, 3, 2);
+INSTANTIATE_CONTRACT(complex_tensor, 4, 2);
+INSTANTIATE_CONTRACT(complex_tensor, 1, 3);
+INSTANTIATE_CONTRACT(complex_tensor, 2, 3);
+INSTANTIATE_CONTRACT(complex_tensor, 3, 3);
+INSTANTIATE_CONTRACT(complex_tensor, 4, 3);
+INSTANTIATE_CONTRACT(complex_tensor, 1, 4);
+INSTANTIATE_CONTRACT(complex_tensor, 2, 4);
+INSTANTIATE_CONTRACT(complex_tensor, 3, 4);
+INSTANTIATE_CONTRACT(complex_tensor, 4, 4);
+
+#undef INSTANTIATE_CONTRACT
+
+} // end of namespace tenes

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "mpi.hpp"
+#include "exception.hpp"
 
 namespace tenes {
 
@@ -35,6 +36,7 @@ PEPS_Parameters::PEPS_Parameters() {
   // Simple update
   num_simple_step = 0;
   Inverse_lambda_cut = 1e-12;
+  // Simple_Gauge_Fix = true;
 
   // Environment
   Inverse_projector_cut = 1e-12;
@@ -43,6 +45,7 @@ PEPS_Parameters::PEPS_Parameters() {
   CTM_Projector_corner = true;
   Use_RSVD = false;
   RSVD_Oversampling_factor = 2.0;
+  MeanField_Env = false;
 
   // Full update
   num_full_step = 0;
@@ -78,9 +81,11 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_CHI,
     I_print_level,
     I_num_simple_step,
+    // I_Simple_Gauge_Fix,
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
     I_Use_RSVD,
+    I_MeanField_Env,
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
@@ -123,9 +128,11 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(CHI, int);
     SAVE_PARAM(print_level, int);
     SAVE_PARAM(num_simple_step, int);
+    // SAVE_PARAM(Simple_Gauge_Fix, int);
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
     SAVE_PARAM(Use_RSVD, int);
+    SAVE_PARAM(MeanField_Env, int);
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
@@ -164,9 +171,11 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(CHI, int);
     LOAD_PARAM(print_level, int);
     LOAD_PARAM(num_simple_step, int);
+    // LOAD_PARAM(Simple_Gauge_Fix, int);
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
     LOAD_PARAM(Use_RSVD, int);
+    LOAD_PARAM(MeanField_Env, int);
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
@@ -204,6 +213,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   // Simple update
   ofs << "simple_num_step = " << num_simple_step << std::endl;
   ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
+  // ofs << "simple_gauge_fix = " << Simple_Gauge_Fix << std::endl;
 
   ofs << std::endl;
 
@@ -230,6 +240,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       << std::endl;
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
+  ofs << "meanfield_env = " << (MeanField_Env ? "true" : "false") << std::endl;
 
   ofs << std::endl;
 
@@ -242,6 +253,14 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "outdir = " << outdir << std::endl;
 
   ofs.close();
+}
+
+void PEPS_Parameters::check() const {
+  if(MeanField_Env && num_full_step > 0){
+    std::stringstream ss;
+    ss << "ERROR: Cannot enable full update and mean field environment simultaneously";
+    throw tenes::input_error(ss.str());
+  }
 }
 
 }  // end of namespace tenes
