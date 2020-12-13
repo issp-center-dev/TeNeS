@@ -1814,6 +1814,57 @@ C FinishCorrelation(
       Axes(0, 1), Axes(0, 1));
 }
 
+/* Lambda tensors should be absorbed before entering */
+template <template <typename> class Matrix, typename C>
+void StartCorrelation_MF(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &Tn, const Tensor<Matrix, C> &op, size_t direction) {
+  Axes axes;
+  for(size_t dir=0; dir<direction; ++dir){
+    axes.push(dir);
+  }
+  for(size_t dir=direction+1; dir<4; ++dir){
+    axes.push(dir);
+  }
+  axes.push(4);
+
+  A = tensordot(Tn, tensordot(conj(Tn), op, Axes(4), Axes(1)), axes, axes);
+}
+
+/* Lambda tensors should be absorbed before entering */
+template <template <typename> class Matrix, typename C>
+void Transfer_MF(Tensor<Matrix, C> &A, const Tensor<Matrix, C> &Tn, size_t direction) {
+  size_t direction2 = (direction + 2) % 4;
+
+  Axes axes;
+  for(size_t d=0; d<4; ++d){
+    if(d == direction || d == direction2) continue;
+    axes.push(d);
+  }
+  axes.push(4);
+
+  Tensor<Matrix, C> transfer = tensordot(Tn, conj(Tn), axes, axes);
+  size_t leg = direction < direction2 ? 1 : 0;
+  A = tensordot(A, transfer, Axes(0,1), Axes(leg, leg+2));
+}
+
+/* Lambda tensors should be absorbed before entering */
+template <template <typename> class Matrix, typename C>
+C FinishCorrelation_MF(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &Tn, const Tensor<Matrix, C> &op, size_t direction) {
+  direction += 2;
+  direction %= 4;
+
+  Axes axes;
+  for(size_t dir=0; dir<direction; ++dir){
+    axes.push(dir);
+  }
+  for(size_t dir=direction+1; dir<4; ++dir){
+    axes.push(dir);
+  }
+  axes.push(4);
+
+  Tensor<Matrix, C> B = tensordot(Tn, tensordot(conj(Tn), op, Axes(4), Axes(1)), axes, axes);
+  return trace(tensordot(A, B, Axes(0,1), Axes(0,1)));
+}
+
 }  // end of namespace tenes
 
 #endif  // _PEPS_BASICS_HPP_
