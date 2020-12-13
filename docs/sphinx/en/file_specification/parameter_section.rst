@@ -64,7 +64,9 @@ Parameters in the simple update procedure.
    ``tau``,           "Imaginary time step :math:`\tau` in imaginary time evolution operator", Real,    0.01
    ``num_step``,      "Number of simple updates",                                              Integer, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
-   ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, true
+
+
+..   ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, true
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~

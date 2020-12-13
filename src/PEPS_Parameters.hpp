@@ -35,7 +35,7 @@ class PEPS_Parameters {
   // Simple update
   int num_simple_step;
   double Inverse_lambda_cut;
-  bool Simple_Gauge_Fix;
+  // bool Simple_Gauge_Fix;
 
   // Environment
   double Inverse_projector_cut;

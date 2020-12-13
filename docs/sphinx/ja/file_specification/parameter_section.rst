@@ -66,7 +66,9 @@ simple update に関するパラメータ
    ``tau``,           "虚時間発展演算子における虚時間刻み :math:`\tau`", 実数, 0.01
    ``num_step``,      "simple update の回数",                            整数, 0
    ``lambda_cutoff``, "simple update において平均場 :math:`\lambda` の切り捨て閾値",      実数, 1e-12
-   ``gauge_fix``,     "テンソルのゲージを固定するかどうか",                               真偽値, true
+
+
+.. ``gauge_fix``,     "テンソルのゲージを固定するかどうか",                               真偽値, true
 
 
 

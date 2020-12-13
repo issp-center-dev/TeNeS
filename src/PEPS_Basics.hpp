@@ -1184,6 +1184,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     std::cout<<"VTC[i,j]="<<index<<", "<<VTc[i]<<std::endl;
     }*/
 
+  /*
   if(peps_parameters.Simple_Gauge_Fix){
     ////////////////////////////////////////////////////////////
     // (Uc*(conj(Uc)*(Q1*conj(Q1))))
@@ -1261,6 +1262,7 @@ void Simple_update_bond(const Tensor<Matrix, C> &Tn1,
     Uc = tensordot(Uc, X1inv, Axes(2), Axes(0));
     VTc = tensordot(X2inv, VTc, Axes(0), Axes(0));
   } // end of local gauge fixing
+  */
 
   Uc.multiply_vector(lambda_c, 2);
   VTc.multiply_vector(lambda_c, 0);
