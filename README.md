@@ -12,8 +12,8 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 
 ## Online manual
 - develop (Latest, UNSTABLE)
-    - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
-    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
+    - [English](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html)
+    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html)
 - master (Latest, stable)
     - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
     - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
