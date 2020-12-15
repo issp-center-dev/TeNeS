@@ -3,26 +3,6 @@ dist: xenial
 language: cpp
 sudo: enabled
 
-env:
-  - ENABLE_MPI=OFF
-  - ENABLE_MPI=ON
-
-install:
-  - export ROOTDIR=`pwd`
-  - sudo apt-get update
-  - sudo apt-get install -y gcc gfortran cmake liblapack-dev
-  - sudo apt-get install -y libopenmpi-dev openmpi-bin
-  - sudo apt-get install -y libscalapack-mpi-dev
-  - sudo apt-get install -y python3
-  - sudo apt-get install -y python3-numpy python3-scipy python3-toml
-script:
-  - cd ${ROOTDIR}
-  - mkdir build
-  - cd build
-  - cmake -DENABLE_MPI=${ENABLE_MPI} -DTENES_PYTHON_EXECUTABLE=`which python3` ../
-  - VERBOSE=1 make
-  - ctest -VV
-
 jobs:
   include:
     - stage: deploy docs
