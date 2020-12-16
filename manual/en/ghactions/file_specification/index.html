@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5. File format &#8212; TeNeS 1.2-dev documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5.1. Short summary for input files of TeNeS" href="input_summary.html" />
+    <link rel="prev" title="4.2. Magnetization process of the Heisenberg model on triangular and square lattices" href="../tutorial/simple_tutorial-5.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="file-format">
+<h1><span class="section-number">5. </span>File format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="input_summary.html">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#model-section">5.2.1. <code class="docutils literal notranslate"><span class="pre">model</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#lattice-section">5.2.2. <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#parameter-section">5.2.3. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#correlation-section">5.2.4. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#parameter-section">5.3.1. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#tensor-section">5.3.2. <code class="docutils literal notranslate"><span class="pre">tensor</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#observable-section">5.3.3. <code class="docutils literal notranslate"><span class="pre">observable</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#hamiltonian-section">5.3.4. <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#correlation-section">5.3.5. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#parameter-section">5.4.1. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#tensor-section">5.4.2. <code class="docutils literal notranslate"><span class="pre">tensor</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#observable-section">5.4.3. <code class="docutils literal notranslate"><span class="pre">observable</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#evolution-section">5.4.4. <code class="docutils literal notranslate"><span class="pre">evolution</span></code> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#correlation-section">5.4.5. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output_format.html">5.5. Output files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#parameters-dat">5.5.1. <code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#energy-dat">5.5.2. <code class="docutils literal notranslate"><span class="pre">energy.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#site-obs-dat">5.5.3. <code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#neighbor-obs-dat">5.5.4. <code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#correlation-dat">5.5.5. <code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#time-dat">5.5.6. <code class="docutils literal notranslate"><span class="pre">time.dat</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">5. File format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. Output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../tutorial/simple_tutorial-5.html" title="previous chapter"><span class="section-number">4.2. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+      <li>Next: <a href="input_summary.html" title="next chapter"><span class="section-number">5.1. </span>Short summary for input files of TeNeS</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/file_specification/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
