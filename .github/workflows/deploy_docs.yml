@@ -61,6 +61,7 @@ jobs:
           cd ${GITHUB_WORKSPACE}
           for lang in ja en; do
             rm -rf "gh-pages/manual/${lang}/${TARGET_NAME}"
+            mkdir -p "gh-pages/manual/${lang}"
             cp -r "main/build/docs/sphinx/${lang}/html" "gh-pages/manual/${lang}/${TARGET_NAME}"
           done
           cd gh-pages
