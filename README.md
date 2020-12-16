@@ -3,7 +3,7 @@
 | Branch | Build status | Documentation |
 | :-: | :-: | :-: |
 | master (latest stable) | [![master](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) |
-| develop (latest) | [![develop/Test](https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop)]() | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
+| develop (latest) | [![develop/Test](https://github.com/issp-center-dev/TeNeS/workflows/Test/badge.svg?branch=develop)](https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
 
 # TeNeS
 
