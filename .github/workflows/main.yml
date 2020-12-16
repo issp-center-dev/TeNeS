@@ -1,4 +1,4 @@
-name: RunTest
+name: Test
 
 on: [push]
 
