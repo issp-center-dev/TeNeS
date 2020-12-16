@@ -1,134 +1,131 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="ja">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>5.1. TeNeS の入力ファイルの簡易まとめ &mdash; TeNeS 1.2-dev ドキュメント</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5.1. TeNeS の入力ファイルの簡易まとめ &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.2-dev',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/translations.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.2-dev ドキュメント" href="../index.html" />
-    <link rel="up" title="5. ファイルフォーマット" href="index.html" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../_static/translations.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="5.2. tenes_simple の入力ファイル" href="simple_format.html" />
     <link rel="prev" title="5. ファイルフォーマット" href="index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="tenes">
-<span id="sec-input-summary"></span><h1>5.1. TeNeS の入力ファイルの簡易まとめ<a class="headerlink" href="#tenes" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<span id="sec-input-summary"></span><h1><span class="section-number">5.1. </span>TeNeS の入力ファイルの簡易まとめ<a class="headerlink" href="#tenes" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <p>TeNeS の入力ファイルは <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a> 形式 で書かれており、
 入力ファイルはいくつかのセクションに分かれています。
-<code class="docutils literal"><span class="pre">tenes_simple</span></code> と <code class="docutils literal"><span class="pre">tenes_std</span></code> は自分が必要とするセクションの情報を入力として読み取り、
-それぞれ <code class="docutils literal"><span class="pre">tenes_std</span></code> と <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを生成します。
-<code class="docutils literal"><span class="pre">tenes</span></code> は入力ファイルの各セクションに書かれた情報を元に実際の計算を行います。</p>
-<p>例えば <code class="docutils literal"><span class="pre">tenes_simple</span></code> は <code class="docutils literal"><span class="pre">model</span></code> と <code class="docutils literal"><span class="pre">lattice</span></code> の情報から <code class="docutils literal"><span class="pre">tensor</span></code>, <code class="docutils literal"><span class="pre">observable</span></code>, <code class="docutils literal"><span class="pre">hamiltonian</span></code> の情報を生成し、
-さらに <code class="docutils literal"><span class="pre">parameter</span></code>, <code class="docutils literal"><span class="pre">correlation</span></code> はそのままコピーして、 <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイルとして出力します。</p>
+<code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> と <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は自分が必要とするセクションの情報を入力として読み取り、
+それぞれ <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> と <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを生成します。
+<code class="docutils literal notranslate"><span class="pre">tenes</span></code> は入力ファイルの各セクションに書かれた情報を元に実際の計算を行います。</p>
+<p>例えば <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> は <code class="docutils literal notranslate"><span class="pre">model</span></code> と <code class="docutils literal notranslate"><span class="pre">lattice</span></code> の情報から <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> の情報を生成し、
+さらに <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code> はそのままコピーして、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとして出力します。</p>
 <p>次表は各セクションの簡単な説明および各ツールがどう扱うかを示しています。</p>
-<table border="1" class="docutils">
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="21%" />
-<col width="21%" />
-<col width="21%" />
-<col width="21%" />
-<col width="14%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 14%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">セクション名</th>
-<th class="head">説明</th>
-<th class="head"><code class="docutils literal"><span class="pre">tenes_simple</span></code></th>
-<th class="head"><code class="docutils literal"><span class="pre">tenes_std</span></code></th>
-<th class="head"><code class="docutils literal"><span class="pre">tenes</span></code></th>
+<thead>
+<tr class="row-odd"><th class="head"><p>セクション名</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code></p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">parameter</span></code></td>
-<td>計算パラメータ</td>
-<td>copy</td>
-<td>in / copy</td>
-<td>in</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">parameter</span></code></p></td>
+<td><p>計算パラメータ</p></td>
+<td><p>copy</p></td>
+<td><p>in / copy</p></td>
+<td><p>in</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">model</span></code></td>
-<td>模型パラメータ</td>
-<td>in</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p></td>
+<td><p>模型パラメータ</p></td>
+<td><p>in</p></td>
+<td></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">lattice</span></code></td>
-<td>格子パラメータ</td>
-<td>in</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p></td>
+<td><p>格子パラメータ</p></td>
+<td><p>in</p></td>
+<td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor</span></code></td>
-<td>テンソル</td>
-<td>out</td>
-<td>in / copy</td>
-<td>in</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor</span></code></p></td>
+<td><p>テンソル</p></td>
+<td><p>out</p></td>
+<td><p>in / copy</p></td>
+<td><p>in</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">observable</span></code></td>
-<td>測定する演算子</td>
-<td>out</td>
-<td>copy</td>
-<td>in</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">observable</span></code></p></td>
+<td><p>測定する演算子</p></td>
+<td><p>out</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">correlation</span></code></td>
-<td>相関関数</td>
-<td>copy</td>
-<td>copy</td>
-<td>in</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">correlation</span></code></p></td>
+<td><p>相関関数</p></td>
+<td><p>copy</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">hamiltonian</span></code></td>
-<td>ハミルトニアン</td>
-<td>out</td>
-<td>in</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
+<td><p>ハミルトニアン</p></td>
+<td><p>out</p></td>
+<td><p>in</p></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">evolution</span></code></td>
-<td>虚時間発展演算子</td>
-<td>&nbsp;</td>
-<td>out</td>
-<td>in</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
+<td><p>虚時間発展演算子</p></td>
+<td></td>
+<td><p>out</p></td>
+<td><p>in</p></td>
 </tr>
 </tbody>
 </table>
 <ul class="simple">
-<li>&#8220;in&#8221;<ul>
-<li>ツールはこのセクションの情報を利用します</li>
+<li><p>&quot;in&quot;</p>
+<ul>
+<li><p>ツールはこのセクションの情報を利用します</p></li>
 </ul>
 </li>
-<li>&#8220;out&#8221;<ul>
-<li>ツールはこのセクションを新たに生成し、出力します</li>
+<li><p>&quot;out&quot;</p>
+<ul>
+<li><p>ツールはこのセクションを新たに生成し、出力します</p></li>
 </ul>
 </li>
-<li>&#8220;copy&#8221;<ul>
-<li>ツールはこのセクションを変更せずにそのまま出力します</li>
+<li><p>&quot;copy&quot;</p>
+<ul>
+<li><p>ツールはこのセクションを変更せずにそのまま出力します</p></li>
 </ul>
 </li>
 </ul>
@@ -136,6 +133,7 @@
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -151,25 +149,20 @@
 
 
 
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
 
 
 
-
-<h3>Navigation</h3>
+<h3>ナビゲーション</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">5. ファイルフォーマット</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. 出力ファイル</a></li>
 </ul>
 </li>
@@ -182,26 +175,31 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">5. ファイルフォーマット</a><ul>
-      <li>Previous: <a href="index.html" title="前の章へ">5. ファイルフォーマット</a></li>
-      <li>Next: <a href="simple_format.html" title="次の章へ">5.2. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
+  <li><a href="index.html"><span class="section-number">5. </span>ファイルフォーマット</a><ul>
+      <li>Previous: <a href="index.html" title="前の章へ"><span class="section-number">5. </span>ファイルフォーマット</a></li>
+      <li>Next: <a href="simple_format.html" title="次の章へ"><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
   </ul></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>クイック検索</h3>
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="検索" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    モジュール、クラス、または関数名を入力してください
-    </p>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
@@ -210,11 +208,11 @@
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/file_specification/input_summary.txt"
+      <a href="../_sources/file_specification/input_summary.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

@@ -1,80 +1,75 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="ja">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>5. ファイルフォーマット &mdash; TeNeS 1.2-dev ドキュメント</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5. ファイルフォーマット &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.2-dev',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/translations.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.2-dev ドキュメント" href="../index.html" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../_static/translations.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="5.1. TeNeS の入力ファイルの簡易まとめ" href="input_summary.html" />
     <link rel="prev" title="4.2. 三角格子・正方格子ハイゼンベルク模型の磁化過程" href="../tutorial/simple_tutorial-5.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="id1">
-<h1>5. ファイルフォーマット<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">5. </span>ファイルフォーマット<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="input_summary.html">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
-<li class="toctree-l1"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の入力ファイル</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html#model">5.2.1. <code class="docutils literal"><span class="pre">model</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html#lattice">5.2.2. <code class="docutils literal"><span class="pre">lattice</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html#parameter">5.2.3. <code class="docutils literal"><span class="pre">parameter</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html#correlation">5.2.4. <code class="docutils literal"><span class="pre">correlation</span></code> セクション</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#model">5.2.1. <code class="docutils literal notranslate"><span class="pre">model</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#lattice">5.2.2. <code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#parameter">5.2.3. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html#correlation">5.2.4. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイル</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html#parameter">5.3.1. <code class="docutils literal"><span class="pre">parameter</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html#tensor">5.3.2. <code class="docutils literal"><span class="pre">tensor</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html#observable">5.3.3. <code class="docutils literal"><span class="pre">observable</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html#hamiltonian">5.3.4. <code class="docutils literal"><span class="pre">hamiltonian</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html#correlation">5.3.5. <code class="docutils literal"><span class="pre">correlation</span></code> セクション</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#parameter">5.3.1. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#tensor">5.3.2. <code class="docutils literal notranslate"><span class="pre">tensor</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#observable">5.3.3. <code class="docutils literal notranslate"><span class="pre">observable</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#hamiltonian">5.3.4. <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html#correlation">5.3.5. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html#parameter">5.4.1. <code class="docutils literal"><span class="pre">parameter</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html#tensor">5.4.2. <code class="docutils literal"><span class="pre">tensor</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html#observable">5.4.3. <code class="docutils literal"><span class="pre">observable</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html#evolution">5.4.4. <code class="docutils literal"><span class="pre">evolution</span></code> セクション</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html#correlation">5.4.5. <code class="docutils literal"><span class="pre">correlation</span></code> セクション</a></li>
+<li class="toctree-l1"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#parameter">5.4.1. <code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#tensor">5.4.2. <code class="docutils literal notranslate"><span class="pre">tensor</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#observable">5.4.3. <code class="docutils literal notranslate"><span class="pre">observable</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#evolution">5.4.4. <code class="docutils literal notranslate"><span class="pre">evolution</span></code> セクション</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html#correlation">5.4.5. <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="output_format.html">5.5. 出力ファイル</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#parameters-dat">5.5.1. <code class="docutils literal"><span class="pre">parameters.dat</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#density-dat">5.5.2. <code class="docutils literal"><span class="pre">density.dat</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#onesite-obs-dat">5.5.3. <code class="docutils literal"><span class="pre">onesite_obs.dat</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#twosite-obs-dat">5.5.4. <code class="docutils literal"><span class="pre">twosite_obs.dat</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#correlation-dat">5.5.5. <code class="docutils literal"><span class="pre">correlation.dat</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="output_format.html#time-dat">5.5.6. <code class="docutils literal"><span class="pre">time.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#parameters-dat">5.5.1. <code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#density-dat">5.5.2. <code class="docutils literal notranslate"><span class="pre">density.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#onesite-obs-dat">5.5.3. <code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#twosite-obs-dat">5.5.4. <code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#correlation-dat">5.5.5. <code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html#time-dat">5.5.6. <code class="docutils literal notranslate"><span class="pre">time.dat</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -83,6 +78,7 @@
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -98,25 +94,20 @@
 
 
 
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
 
 
 
-
-<h3>Navigation</h3>
+<h3>ナビゲーション</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">5. ファイルフォーマット</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">5. ファイルフォーマット</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. 出力ファイル</a></li>
 </ul>
 </li>
@@ -129,24 +120,29 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../tutorial/simple_tutorial-5.html" title="前の章へ">4.2. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
-      <li>Next: <a href="input_summary.html" title="次の章へ">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
+      <li>Previous: <a href="../tutorial/simple_tutorial-5.html" title="前の章へ"><span class="section-number">4.2. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
+      <li>Next: <a href="input_summary.html" title="次の章へ"><span class="section-number">5.1. </span>TeNeS の入力ファイルの簡易まとめ</a></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>クイック検索</h3>
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="検索" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    モジュール、クラス、または関数名を入力してください
-    </p>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
@@ -155,11 +151,11 @@
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/file_specification/index.txt"
+      <a href="../_sources/file_specification/index.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
