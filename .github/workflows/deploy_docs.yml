@@ -59,9 +59,9 @@ jobs:
         TARGET_NAME: ${{ env.GITHUB_REF_SLUG }}
       run: |
           cd ${GITHUB_WORKSPACE}
-          rm -rf "gh-pages/manual/${TARGET_NAME}"
-          mkdir -p "gh-pages/manual/${TARGET_NAME}"
           for lang in ja en; do
+            rm -rf "gh-pages/manual/${TARGET_NAME}/${lang}"
+            mkdir -p "gh-pages/manual/${TARGET_NAME}/${lang}"
             cp -r "main/build/docs/sphinx/${lang}/html" "gh-pages/manual/${TARGET_NAME}/${lang}"
           done
           cd gh-pages
