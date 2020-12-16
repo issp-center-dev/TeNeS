@@ -40,5 +40,8 @@ jobs:
 
     - name: Build
       run: |
-        cd ${GITHUB_WORKSPACE}/main/docs
-        make html
+        cd ${GITHUB_WORKSPACE}/main/
+        cmake -E make_directory build
+        cd build
+        cmake -DDocument=ON -DENABLE_MPI=OFF ../
+        make doc-ja-html doc-en-html
