@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>4.1. Ising model with transverse magnetic field &#8212; TeNeS 1.2-dev documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="4.2. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
+    <link rel="prev" title="4. Tutorial" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="ising-model-with-transverse-magnetic-field">
+<h1><span class="section-number">4.1. </span>Ising model with transverse magnetic field<a class="headerlink" href="#ising-model-with-transverse-magnetic-field" title="Permalink to this headline">¶</a></h1>
+<p>This section presents a calculation of the transverse magnetic field Ising model as an example.
+By changing the variable <code class="docutils literal notranslate"><span class="pre">hx</span></code> in the input file,
+the magnitude of the transverse magnetic field will be modified.
+For example, when the transverse magnetic field is 0, the input file is</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 1000
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 2
+initial = &quot;ferro&quot;
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 0.0
+</pre></div>
+</div>
+<p>In this case, since <code class="docutils literal notranslate"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> , the ferromagnetic state manifests itself as the ground state at <code class="docutils literal notranslate"><span class="pre">hx=0</span></code>.
+When the input file name is <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> , type the following commands to execute <code class="docutils literal notranslate"><span class="pre">tenes</span></code>
+(before typing them, please install TeNeS and set PATH properly.):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes_simple simple.toml
+$ tenes_std std.toml
+$ tenes input.toml
+</pre></div>
+</div>
+<p>Then, the following logs are output:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Number of Processes: <span class="m">1</span>
+Number of Threads / Process: <span class="m">1</span>
+Tensor type: real
+Start simple update
+<span class="m">10</span>% <span class="o">[</span><span class="m">100</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">20</span>% <span class="o">[</span><span class="m">200</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">30</span>% <span class="o">[</span><span class="m">300</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">40</span>% <span class="o">[</span><span class="m">400</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">50</span>% <span class="o">[</span><span class="m">500</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">60</span>% <span class="o">[</span><span class="m">600</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">70</span>% <span class="o">[</span><span class="m">700</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">80</span>% <span class="o">[</span><span class="m">800</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">90</span>% <span class="o">[</span><span class="m">900</span>/1000<span class="o">]</span> <span class="k">done</span>
+<span class="m">100</span>% <span class="o">[</span><span class="m">1000</span>/1000<span class="o">]</span> <span class="k">done</span>
+Start calculating observables
+Start updating environment
+Start calculating onesite operators
+Save onesite observables to output_0/onesite_obs.dat
+Start calculating twosite operators
+Save twosite observables to output_0/twosite_obs.dat
+Save observable densities to output_0/density.dat
+Save elapsed <span class="nb">times</span> to output_0/time.dat
+
+Onesite observables per site:
+<span class="nv">Sz</span>          <span class="o">=</span> <span class="m">0</span>.5 <span class="m">0</span>
+<span class="nv">Sx</span>          <span class="o">=</span> -1.28526262482e-13 <span class="m">0</span>
+Twosite observables per site:
+<span class="nv">hamiltonian</span> <span class="o">=</span> -0.5 <span class="m">0</span>
+<span class="nv">SzSz</span>        <span class="o">=</span> <span class="m">0</span>.5 <span class="m">0</span>
+<span class="nv">SxSx</span>        <span class="o">=</span> -1.7374919982e-18 <span class="m">0</span>
+<span class="nv">SySy</span>        <span class="o">=</span> <span class="m">1</span>.73749202733e-18 <span class="m">0</span>
+Wall <span class="nb">times</span> <span class="o">[</span>sec.<span class="o">]</span>:
+simple <span class="nv">update</span> <span class="o">=</span> <span class="m">3</span>.545813509
+full <span class="nv">update</span>   <span class="o">=</span> <span class="m">0</span>
+<span class="nv">environmnent</span>  <span class="o">=</span> <span class="m">0</span>.123170523
+<span class="nv">observable</span>    <span class="o">=</span> <span class="m">0</span>.048149856
+
+Done.
+</pre></div>
+</div>
+<p>First, the information of parallelization and the tensors (complex or not) is displayed.
+Next, the execution status of the calculation process is displayed.
+After finishing the calculation, the expected values per site of the one-site operators <code class="docutils literal notranslate"><span class="pre">Sz</span></code>, <code class="docutils literal notranslate"><span class="pre">Sx</span></code> and two-site ones Hamiltonian, the nearest correlation <code class="docutils literal notranslate"><span class="pre">SzSz</span></code>, <code class="docutils literal notranslate"><span class="pre">SxSx</span></code>, <code class="docutils literal notranslate"><span class="pre">SySy</span></code> are output.
+Finally, the calculation time for each process is output in units of seconds.
+<code class="docutils literal notranslate"><span class="pre">density.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">time.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code>, and <code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code> are saved to the output directory.
+For details on each output file, see <a class="reference internal" href="../file_specification/output_format.html#sec-output-format"><span class="std std-ref">Output files</span></a>.
+For example, the value of <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> can be read from <code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code>.
+By changing <code class="docutils literal notranslate"><span class="pre">hx</span></code> in increments of 0.2 from 0 to 3.0 and running <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes</span></code>, the following result is obtained.
+As an example of the sample script, <code class="docutils literal notranslate"><span class="pre">tutorial_example.py</span></code> , <code class="docutils literal notranslate"><span class="pre">tutorial_read.py</span></code> are prepared in the <code class="docutils literal notranslate"><span class="pre">sample/01_transverse_field_ising</span></code> directory.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example.py</span></code></p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>import subprocess
+
+import numpy as np
+import toml
+
+MPI_cmd = &quot;&quot;  # e.g., &quot;mpiexec -np 1&quot;
+
+num_hx = 16
+min_hx = 0.0
+max_hx = 3.0
+
+total = 0
+for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
+    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_hx))
+    with open(&quot;simple.toml&quot;) as f:
+        dict_toml = toml.load(f)
+    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
+    dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
+    with open(&quot;simple_{}.toml&quot;.format(idx), &quot;w&quot;) as f:
+        toml.dump(dict_toml, f)
+    cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
+    subprocess.call(cmd.split())
+    cmd = &quot;{} tenes input_{}.toml&quot;.format(MPI_cmd, idx)
+    subprocess.call(cmd.split())
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_read.py</span></code></p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>from os.path import join
+
+import numpy as np
+
+import toml
+
+
+num_hx = 16
+
+for idx in range(num_hx):
+    try:
+        with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
+            dict_toml = toml.load(f)
+        hx = dict_toml[&quot;model&quot;][&quot;hx&quot;]
+        ene = 0.0
+        mag_sz = 0.0
+        mag_sx = 0.0
+        with open(join(&quot;output_{}&quot;.format(idx), &quot;density.dat&quot;)) as f:
+            for line in f:
+                words = line.split()
+                if words[0] == &#39;hamiltonian&#39;:
+                    ene = words[2]
+                elif words[0] == &#39;Sz&#39;:
+                    mag_sz = words[2]
+                elif words[0] == &#39;Sx&#39;:
+                    mag_sx = words[2]
+        print(&quot;{} {} {} {}&quot;.format(hx, ene, mag_sz, mag_sx))
+    except:
+        continue
+</pre></div>
+</div>
+<p>The calculation will be done by typing the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ python tutorial_example.py
+</pre></div>
+</div>
+<p>For MacBook2017 (1.4 GHz Intel Core i7), the calculation was finished in a few minutes.
+By typing the following command, <code class="docutils literal notranslate"><span class="pre">hx</span></code>, energy, <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> are outputted in the standard output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ python tutorial_read.py
+</pre></div>
+</div>
+<div class="figure align-center" id="fig-transverse">
+<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 4.1 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">hx</span></code> dependence of <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code>.</span><a class="headerlink" href="#fig-transverse" title="Permalink to this image">¶</a></p>
+</div>
+<p>As seen from <a class="reference internal" href="#fig-transverse"><span class="std std-numref">Fig. 4.1</span></a> , with increasing <code class="docutils literal notranslate"><span class="pre">hx</span></code>, the <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> decreases from <code class="docutils literal notranslate"><span class="pre">0.5</span></code> to <code class="docutils literal notranslate"><span class="pre">0</span></code>, while the <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> increases from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">0.5</span></code>.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.2. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter"><span class="section-number">4. </span>Tutorial</a></li>
+      <li>Next: <a href="simple_tutorial-5.html" title="next chapter"><span class="section-number">4.2. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/tutorial/simple_tutorial-1.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

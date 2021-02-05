@@ -1,0 +1,842 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5.3. tenes_std の入力ファイル &#8212; TeNeS 1.2-dev ドキュメント</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/translations.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="5.4. tenes の入力ファイル" href="expert_format.html" />
+    <link rel="prev" title="5.2. tenes_simple の入力ファイル" href="simple_format.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="tenes-std">
+<span id="sec-std-format"></span><h1><span class="section-number">5.3. </span><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル<a class="headerlink" href="#tenes-std" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<ul class="simple">
+<li><p>ファイルフォーマットは
+<a class="reference external" href="https://qiita.com/minoritea/items/c0de47b8beb813c655d4">TOML</a> 形式</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>
+の5つのセクションを持ちます。</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> 以外の4つは以下に挙げる例外を除き、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> および <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。</p></li>
+</ul>
+</li>
+</ul>
+<div class="section" id="parameter">
+<h2><span class="section-number">5.3.1. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>更新回数など、 計算にあらわれる種々のパラメータを記述します。
+サブセクションとして <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code> を持ちます。</p>
+<p>simple update およびfull updateの虚時間刻み <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> と <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> のみ、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> 本体ではなくスタンダードモード <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> で使われるパラメータです。</p>
+<div class="section" id="parameter-general">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 43%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
+<td><p>すべてのテンソルを実数に制限するかどうか</p></td>
+<td><p>真偽値</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<td><p>演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ</p></td>
+<td><p>実数</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<td><p>物理量測定をするかどうか</p></td>
+<td><p>真偽値</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<td><p>物理量などを書き込むディレクトリ</p></td>
+<td><p>文字列</p></td>
+<td><p>&quot;output&quot;</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
+<td><p>最適化後のテンソルを書き込むディレクトリ</p></td>
+<td><p>文字列</p></td>
+<td><p>&quot;&quot;</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
+<td><p>初期テンソルを読み込むディレクトリ</p></td>
+<td><p>文字列</p></td>
+<td><p>&quot;&quot;</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">true</span></code> にするとテンソルの要素を実数に制限して計算を行います</p></li>
+<li><p>一つでも複素演算子があるとエラー終了します</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<ul>
+<li><p>各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が <code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code> 以下はゼロとみなします</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</p></li>
+<li><p>実行時間 <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> は常に保存されます</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
+<ul>
+<li><p>物理量などの計算結果をこのディレクトリ以下に保存します</p></li>
+<li><p>空文字列の場合はカレントディレクトリに保存します</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p>
+<ul>
+<li><p>最適化後のテンソルをこのディレクトリ以下に保存します</p></li>
+<li><p>空文字列の場合は保存しません</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
+<ul>
+<li><p>各種テンソルをこのディレクトリ以下から読み込みます</p></li>
+<li><p>空文字列の場合は読み込みません</p></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="parameter-simple-update">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>simple update に関するパラメータ</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>虚時間発展演算子における虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
+<td><p>実数</p></td>
+<td><p>0.01</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>simple update の回数</p></td>
+<td><p>整数</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
+<td><p>simple update において平均場 <span class="math notranslate nohighlight">\(\lambda\)</span> の切り捨て閾値</p></td>
+<td><p>実数</p></td>
+<td><p>1e-12</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameter-full-update">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>full update に関するパラメータ</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>虚時間発展演算子における虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
+<td><p>実数</p></td>
+<td><p>0.01</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>full update の回数</p></td>
+<td><p>整数</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>
+<td><p>full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff</p></td>
+<td><p>実数</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inverse_precision</span></code></p></td>
+<td><p>full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff</p></td>
+<td><p>実数</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>full update でtruncationの最適化を行う際の収束判定値</p></td>
+<td><p>実数</p></td>
+<td><p>1e-6</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>full update でtruncationの最適化を行う際のiterationの最大回数</p></td>
+<td><p>整数</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
+<td><p>テンソルのゲージを固定するかどうか</p></td>
+<td><p>真偽値</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fastfullupdate</span></code></p></td>
+<td><p>Fast full update にするかどうか</p></td>
+<td><p>真偽値</p></td>
+<td><p>true</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameter-ctm">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>角転送行列 (CTM) に関するパラメータ</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dimension</span></code></p></td>
+<td><p>CTM のボンド次元 <span class="math notranslate nohighlight">\(\chi\)</span></p></td>
+<td><p>整数</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_cutoff</span></code></p></td>
+<td><p>CTMのprojectorを計算する際にゼロとみなす特異値のcutoff</p></td>
+<td><p>実数</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>CTMの収束判定値</p></td>
+<td><p>実数</p></td>
+<td><p>1e-6</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>CTMの収束iterationの最大回数</p></td>
+<td><p>整数</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
+<td><p>CTMのprojector計算で1/4角のテンソルのみを使う</p></td>
+<td><p>真偽値</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
+<td><p>SVD を 乱択SVD で置き換えるかどうか</p></td>
+<td><p>真偽値</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
+<td><p>乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率</p></td>
+<td><p>実数</p></td>
+<td><p>2.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
+<td><p>CTM ではなく simple update で得られる平均場環境を用いる</p></td>
+<td><p>真偽値</p></td>
+<td><p>false</p></td>
+</tr>
+</tbody>
+</table>
+<p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
+</div>
+<div class="section" id="parameter-random">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>疑似乱数生成器に関するパラメータ</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<td><p>テンソルの初期化や乱択SVD に用いる疑似乱数生成器のシード</p></td>
+<td><p>整数</p></td>
+<td><p>11</p></td>
+</tr>
+</tbody>
+</table>
+<p>MPI 並列において、各プロセスは <code class="docutils literal notranslate"><span class="pre">seed</span></code> にプロセス番号を足した数を実際のシードとして持ちます。</p>
+</div>
+<div class="section" id="id1">
+<h3>例<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+is_real = true
+[parameter.simple_update]
+num_step = 100
+tau = 0.01
+[parameter.full_update]
+num_step = 0  # No full update
+tau = 0.01
+[parameter.ctm]
+iteration_max = 10
+dimension = 9 # CHI
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="tensor">
+<h2><span class="section-number">5.3.2. </span><code class="docutils literal notranslate"><span class="pre">tensor</span></code> セクション<a class="headerlink" href="#tensor" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>「ユニットセル」の情報を記述します(ボンドの情報は <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) や <code class="docutils literal notranslate"><span class="pre">evolution</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes</span></code>) で与えます)。
+ユニットセルは <code class="docutils literal notranslate"><span class="pre">Lx</span></code> かける <code class="docutils literal notranslate"><span class="pre">Ly</span></code> の大きさをもつ長方形の形をしています。
+また、サブセクション <code class="docutils literal notranslate"><span class="pre">unitcell</span></code> を持ちます。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 40%" />
+<col style="width: 27%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code></p></td>
+<td><p>ユニットセルの大きさ</p></td>
+<td><p>整数または整数のリスト</p></td>
+<td><p>--</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">skew</span></code></p></td>
+<td><p>skew 境界条件におけるシフト値</p></td>
+<td><p>整数</p></td>
+<td><p>0</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code> として2つの整数からなるリストを渡した場合、はじめの要素が <code class="docutils literal notranslate"><span class="pre">Lx</span></code> に、もう片方が <code class="docutils literal notranslate"><span class="pre">Ly</span></code> になります。
+3つ以上の要素からなるリストを渡した場合にはエラー終了します。
+<code class="docutils literal notranslate"><span class="pre">L_sub</span></code> として整数を渡した場合、 <code class="docutils literal notranslate"><span class="pre">Lx</span></code> と <code class="docutils literal notranslate"><span class="pre">Ly</span></code> とが等しくなります。</p>
+<p>ユニットセル内のサイトは0から順番に番号付けされます。 x 方向から順に並びます。</p>
+<div class="figure align-default" id="id5">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig1.png"><img alt="../_images/tensor_sec_fig1.png" src="../_images/tensor_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-number">図 5.5 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> としたときの例</span><a class="headerlink" href="#id5" title="この画像へのパーマリンク">¶</a></p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。</p>
+<div class="figure align-default" id="id6">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-number">図 5.6 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> としたときの例 (罫線はユニットセルの区切り)</span><a class="headerlink" href="#id6" title="この画像へのパーマリンク">¶</a></p>
+</div>
+<div class="section" id="tensor-unitcell">
+<h3><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> サブセクション<a class="headerlink" href="#tensor-unitcell" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>サイトテンソル <span class="math notranslate nohighlight">\(T_{ijkl\alpha}^{(n)}\)</span> の情報を指定します。
+ここで <span class="math notranslate nohighlight">\(i,j,k,l\)</span> は virtual bond のインデックス、 <span class="math notranslate nohighlight">\(\alpha\)</span> は physical bond のインデックス、 <span class="math notranslate nohighlight">\(n\)</span> はサイト番号を意味します。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">index</span></code></p></td>
+<td><p>サイト番号</p></td>
+<td><p>整数 or 整数のリスト</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">physical_dim</span></code></p></td>
+<td><p>サイトテンソルの physical bond の次元</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code></p></td>
+<td><p>サイトテンソルの virtual bond の次元 <span class="math notranslate nohighlight">\(D\)</span></p></td>
+<td><p>整数 or 整数のリスト</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">initial_state</span></code></p></td>
+<td><p>初期状態</p></td>
+<td><p>実数のリスト</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">noise</span></code></p></td>
+<td><p>初期テンソルのゆらぎの大きさ</p></td>
+<td><p>実数</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">index</span></code> にリストを渡すことによって、複数のサイトを同時に指定できます。
+空のサイト <code class="docutils literal notranslate"><span class="pre">[]</span></code> は全サイトを意味します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code> にリストを渡すことで、4方向のボンド次元を個別に指定できます。
+順番は、左(-x)、上(+y)、右(+x)、下(-y) の順番です。</p>
+<p>系全体の初期状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> は、各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span> の直積で与えられます。</p>
+<div class="math notranslate nohighlight">
+\[|\Psi\rangle = \otimes_i |\Psi_i\rangle\]</div>
+<p>サイトテンソルはこの直積状態を表現するように初期化されます。
+<code class="docutils literal notranslate"><span class="pre">initial_state</span></code> では各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態
+<span class="math notranslate nohighlight">\(|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> における実展開係数 <span class="math notranslate nohighlight">\(A_\alpha\)</span> の値を指定します。
+係数は自動的に規格化されます。
+テンソル自体は、 すべてのvirtual ボンドインデックスが0 である要素が、 <span class="math notranslate nohighlight">\(T_{0000\alpha} = A_\alpha\)</span> のように初期化されます。
+他の要素には <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> の一様乱数が互いに独立に入力されます。
+たとえば、 <span class="math notranslate nohighlight">\(S=1/2\)</span> のとき、 <span class="math notranslate nohighlight">\(S^z\)</span> 方向に向いた状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle = |\uparrow\rangle = |0\rangle\)</span> を初期値にしたい場合には <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">0.0]</span></code> に、
+<span class="math notranslate nohighlight">\(S^x\)</span> 方向に向いた状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}\)</span> を初期値にしたい場合には <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">1.0]</span></code> とします。</p>
+<p><code class="docutils literal notranslate"><span class="pre">initial_state</span></code> にゼロのみからなる配列を渡した場合、テンソルのすべての要素が独立に <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> で乱数初期化されます。</p>
+</div>
+</div>
+<div class="section" id="observable">
+<h2><span class="section-number">5.3.3. </span><code class="docutils literal notranslate"><span class="pre">observable</span></code> セクション<a class="headerlink" href="#observable" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>物理量測定に関する諸々を記述します。
+<code class="docutils literal notranslate"><span class="pre">onesite</span></code> と <code class="docutils literal notranslate"><span class="pre">twosite</span></code> の2種類のサブセクションを持ちます。</p>
+<div class="section" id="observable-onesite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>ひとつのサイト上で定義される物理量を示す一体演算子を定義します。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>演算子の名前</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>演算子の識別番号</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sites</span></code></p></td>
+<td><p>サイト番号</p></td>
+<td><p>整数 or 整数のリスト</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>演算子の次元</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>演算子の非ゼロ要素</p></td>
+<td><p>文字列</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> はonesite 演算子の識別番号です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">sites</span></code> は演算子が作用するサイト番号です。
+リストを渡すことで複数同時に定義できます。
+空リスト <code class="docutils literal notranslate"><span class="pre">[]</span></code> は全サイトを意味します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> は演算子の次元です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> は演算子の非ゼロ要素を指定する文字列です。
+1つの要素は、空白で区切られた2つの整数と2つの浮動小数点数からなる1つの行で表されます。</p>
+<ul class="simple">
+<li><p>最初の2つはそれぞれ演算子が作用する前と後の状態番号を示します。</p></li>
+<li><p>あとの2つはそれぞれ演算子の要素の実部と虚部を示します。</p></li>
+</ul>
+<div class="section" id="id2">
+<h4>例<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h4>
+<p>S=1/2 のSz 演算子</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}S^z = \left(\begin{array}{cc} 0.5 &amp; 0.0 \\ 0.0 &amp; -0.5 \end{array}\right)\end{split}\]</div>
+<p>を具体例として説明します。</p>
+<p>まず、名前は <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;Sz&quot;</span></code> として、識別番号は <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> としておきます。</p>
+<p>次に、演算子の作用するサイトですが、すべてのサイトで同一の演算子を用いる場合には
+<code class="docutils literal notranslate"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[]</span></code> とします。
+そうではない場合、例えばスピンの大きさが異なるサイトがある場合には、
+<code class="docutils literal notranslate"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[0,1]</span></code> などと具体的なサイト番号を指定します。</p>
+<p>演算子の次元は、上に示した行列表示のサイズなので、 <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">2</span></code> です。</p>
+<p>最後に演算子の要素です。
+非ゼロ要素について、そのインデックス（ゼロ始まり）と要素を順番に並べれば良いので、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>elements = &quot;&quot;&quot;
+0 0   0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>となります。</p>
+<p>結果として、 S=1/2 の Sz 演算子は次のように定義されます。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]]
+name = &quot;Sz&quot;
+group = 0
+sites = []
+dim = 2
+elements = &quot;&quot;&quot;
+0 0  0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="observable-twosite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>ふたつのサイト上で定義される物理量を示す演算子を定義します。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>演算子の名前</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>演算子の識別番号</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bonds</span></code></p></td>
+<td><p>ボンド</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>演算子の次元</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>演算子の非ゼロ要素</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ops</span></code></p></td>
+<td><p>onesite 演算子の識別番号</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> は twosites 演算子の識別番号です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">bonds</span></code> は演算子が作用するサイト対の集合を表す文字列です。
+3つの整数からなる1行が1つのサイト対を意味します。</p>
+<ul class="simple">
+<li><p>最初の整数は 始点サイト (source) の番号です。</p></li>
+<li><p>あとの2つの整数は source site からみた終点サイト (target) の座標 (dx, dy) です。</p>
+<ul>
+<li><p>dx, dy ともに <span class="math notranslate nohighlight">\(-3 \le dx \le 3\)</span> の範囲に収まる必要があります。</p></li>
+</ul>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> は演算子の次元、すなわち作用するサイトの取りうる状態数です。
+例として、2つの <span class="math notranslate nohighlight">\(S=1/2\)</span> スピンの相互作用の場合は、 <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> は演算子の非ゼロ要素を指定する文字列です。
+1つの要素は4つの整数と2つの浮動小数点数を空白区切りからなる1つの行からなります。</p>
+<ul class="simple">
+<li><p>最初の2つは演算子が作用する <strong>前</strong> の source site, target site の状態番号を示します。</p></li>
+<li><p>つぎの2つは演算子が作用した <strong>後</strong> の source site, target site の状態番号を示します。</p></li>
+<li><p>最後の2つはそれぞれ演算子の要素の実部と虚部を示します。</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">ops</span></code> を使うと <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> で定義した1体演算子の直積として2体演算子を定義できます。
+例えば <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> の <code class="docutils literal notranslate"><span class="pre">group=0</span></code> として <span class="math notranslate nohighlight">\(S^z\)</span> を定義していた場合には、
+<code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code> として <span class="math notranslate nohighlight">\(S^z_iS^z_j\)</span> を表現できます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> と <code class="docutils literal notranslate"><span class="pre">ops</span></code> を同時に定義した場合にはエラー終了します。</p>
+<div class="section" id="id3">
+<h4>例<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h4>
+<p>ここでは具体例として、<code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のボンドハミルトニアンのエネルギーを求めるため、
+ハミルトニアン</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
+<p>を2体演算子として設定する例を説明します。</p>
+<p>まず、名前と識別番号はそれぞれ <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;hamiltonian&quot;</span></code> と <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> としておきます。
+それぞれのサイトの状態は <span class="math notranslate nohighlight">\(|\uparrow\rangle\)</span> と <span class="math notranslate nohighlight">\(|\downarrow\rangle\)</span> の2状態の重ね合わせとなるため、次元は 2 となり、
+<code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> となります。</p>
+<p>次にボンドです。サイトは <a class="reference internal" href="#bond-22"><span class="std std-numref">図 5.7</span></a> のように並んでいます。
+0 番と 1 番をつなぐボンドは、 1番は 0 番から見て (1,0) の位置にあるので <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> と表現されます。
+同様に 1 番と 3 番をつなぐボンドは、 3 番が 1 番から見て (0,1) の位置にあるので <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> と表現されます。</p>
+<div class="figure align-default" id="bond-22">
+<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
+<p class="caption"><span class="caption-number">図 5.7 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のサイトの並び順</span><a class="headerlink" href="#bond-22" title="この画像へのパーマリンク">¶</a></p>
+</div>
+<p>最後に演算子の要素です。
+まずはサイトの基底を番号付ける必要がありますが、ここでは <span class="math notranslate nohighlight">\(|\uparrow\rangle\)</span> を0, <span class="math notranslate nohighlight">\(|\downarrow\rangle\)</span> を 1 とします。
+この基底と番号を用いると、
+例えば対角項の1つ <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \uparrow_j | \mathcal{H}_{ij} | \uparrow_i \uparrow_j \right\rangle = 1/4\)</span> は
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0.25</span> <span class="pre">0.0</span></code> と表現されます。
+他に、非対角項の1つ <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \downarrow_j | \mathcal{H}_{ij} | \downarrow_i \uparrow_j \right\rangle = 1/2\)</span> は
+<code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0.5</span> <span class="pre">0.0</span></code> と表現されます。</p>
+<p>結果として、 S=1/2 のハイゼンベルグハミルトニアンは次のように定義されます。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.twosite]]
+name = &quot;hamiltonian&quot;
+group = 0
+dim = [2, 2]
+bonds = &quot;&quot;&quot;
+0 0 1
+0 1 0
+1 0 1
+1 1 0
+2 0 1
+2 1 0
+3 0 1
+3 1 0
+&quot;&quot;&quot;
+elements = &quot;&quot;&quot;
+0 0 0 0  0.25 0.0
+1 0 1 0  -0.25 0.0
+0 1 1 0  0.5 0.0
+1 0 0 1  0.5 0.0
+0 1 0 1  -0.25 0.0
+1 1 1 1  0.25 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="hamiltonian">
+<h2><span class="section-number">5.3.4. </span><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> セクション<a class="headerlink" href="#hamiltonian" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>ハミルトニアン全体をボンドハミルトニアン(2サイトハミルトニアン) の和</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H} = \sum_{i,j} \mathcal{H}_{ij}\]</div>
+<p>であると捉えて、個々のボンドハミルトニアンを定義します。
+定義のやりかたは <code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code> でなされる2サイト演算子と同様です。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bonds</span></code></p></td>
+<td><p>ボンド</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>演算子の次元</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>演算子の非ゼロ要素</p></td>
+<td><p>文字列</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">bonds</span></code> は演算子が作用するサイト対の集合を表す文字列です。
+3つの整数からなる1行が1つのサイト対を意味します。
+最初の整数は 始点サイト (source) の番号です。
+あとの2つの整数は source site からみた終点サイト (target) の座標 (dx, dy) です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> は演算子の次元、すなわち作用するサイトの取りうる状態数です。
+例として、2つの <span class="math notranslate nohighlight">\(S=1/2\)</span> スピンの相互作用の場合は、 <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> は演算子の非ゼロ要素を指定する文字列です。
+1つの要素は4つの整数と2つの浮動小数点数を空白区切りからなる1つの行からなります。</p>
+<ul class="simple">
+<li><p>最初の2つは演算子が作用する <strong>前</strong> の source site, target site の状態番号を示します。</p></li>
+<li><p>つぎの2つは演算子が作用した <strong>後</strong> の source site, target site の状態番号を示します。</p></li>
+<li><p>最後の2つはそれぞれ演算子の要素の実部と虚部を示します。</p></li>
+</ul>
+</div>
+<div class="section" id="correlation">
+<h2><span class="section-number">5.3.5. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>サイト演算子の相関関数 <span class="math notranslate nohighlight">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0+\boldsymbol{r})\right\rangle\)</span> に関する情報を指定するセクションです。
+本セクションを省略した場合、相関関数は計算されません。</p>
+<p>座標は正方格子TNS の座標系で測られます。すなわち、右隣のテンソルは <span class="math notranslate nohighlight">\(\boldsymbol{r} = (1,0)\)</span> で、真上は <span class="math notranslate nohighlight">\(\boldsymbol{r} = (0,1)\)</span> です。
+中心座標 <span class="math notranslate nohighlight">\(\boldsymbol{r}_0\)</span> として、ユニットセル内のすべてのサイトが用いられます。
+また、<span class="math notranslate nohighlight">\(\boldsymbol{r}\)</span> は <span class="math notranslate nohighlight">\(x\)</span> ないし <span class="math notranslate nohighlight">\(y\)</span> 軸に平行な方向に、正の向きにのみ動きます。すなわち、</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>です。</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">r_max</span></code></p></td>
+<td><p>相関関数の距離 <span class="math notranslate nohighlight">\(r\)</span> の最大値</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">operators</span></code></p></td>
+<td><p>相関関数を測る1体演算子 A, B を表す番号</p></td>
+<td><p>整数のリストのリスト</p></td>
+</tr>
+</tbody>
+</table>
+<p>演算子は <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> セクションで指定したものが用いられます。</p>
+<div class="section" id="id4">
+<h3>例<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>例えば <span class="math notranslate nohighlight">\(S^z\)</span> が0 番で、 <span class="math notranslate nohighlight">\(S^x\)</span> が1 番として定義されている場合、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[correlation]
+r_max = 5
+operators = [[0,0], [0,1], [1,1]]
+</pre></div>
+</div>
+<p>では相関関数 <span class="math notranslate nohighlight">\(S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)\)</span> が、 <span class="math notranslate nohighlight">\(0 \le r \le 5\)</span> の範囲で測定されます。</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. ファイルフォーマット</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. TeNeS の入力ファイルの簡易まとめ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">5.3. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. 出力ファイル</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">5. </span>ファイルフォーマット</a><ul>
+      <li>Previous: <a href="simple_format.html" title="前の章へ"><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル</a></li>
+      <li>Next: <a href="expert_format.html" title="次の章へ"><span class="section-number">5.4. </span><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイル</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/file_specification/standard_format.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
