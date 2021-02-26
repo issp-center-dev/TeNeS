@@ -162,7 +162,7 @@ type = "spin"
 Jz = -1.0 # negative for FM interaction
 Jx = 0.0
 Jy = 0.0
-G = 1.0   # transverse field
+hx = 1.0   # transverse field
 ```
 
 `tenes_simple` is a utility tool for converting this file to another file, `std.toml`, denoting the operator tensors including bond hamiltonian.
