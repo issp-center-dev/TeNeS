@@ -12,10 +12,11 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.6
 
       - name: apt
         run: |
+          sudo apt update
           sudo apt install openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
 
       - name: pip install
