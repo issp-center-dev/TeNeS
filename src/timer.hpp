@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_TIMER_HPP
-#define TENES_TIMER_HPP
+#ifndef SRC_TIMER_HPP_
+#define SRC_TIMER_HPP_
 
 #include <chrono>
 
@@ -30,7 +30,8 @@ class Timer {
   void reset() { start = clock_type::now(); }
   double elapsed() const {
     const auto elapsed_time =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(clock_type::now() - start);
+        std::chrono::duration_cast<std::chrono::nanoseconds>(clock_type::now() -
+                                                             start);
     return elapsed_time.count() * 1.0e-9;
   }
 
@@ -40,4 +41,4 @@ class Timer {
 
 }  // end of namespace tenes
 
-#endif  // TENES_TIMER_HPP
+#endif  // SRC_TIMER_HPP_

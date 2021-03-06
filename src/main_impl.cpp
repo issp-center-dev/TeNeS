@@ -15,7 +15,7 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include <complex>
-#include <numeric>
+#include <cstdlib>
 
 #include <cpptoml.h>
 
@@ -30,44 +30,50 @@
 #include "mpi.hpp"
 #include "util/file.hpp"
 
+using std::size_t;
+
 namespace {
-tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
-to_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops){
+tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
+    tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type,
+                                      std::complex<double>>> const& ops) {
   tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
-  for(auto const & op: ops){
-    if(op.is_onesite()){
+  for (auto const& op : ops) {
+    if (op.is_onesite()) {
       mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
-      for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+      for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
       ret.emplace_back(op.name, op.group, op.source_site, A);
-    }else if(op.ops_indices.empty()){
+    } else if (op.ops_indices.empty()) {
       mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
-      for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+      for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
       ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, A);
-      // ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, A);
-    }else{
-      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, op.ops_indices);
-      // ret.emplace_back(op.group, op.source_site, op.target_site, op.offset_x, op.offset_y, op.ops_indices);
+    } else {
+      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy,
+                       op.ops_indices);
     }
   }
   return ret;
 }
 
-bool is_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops, double tol){
-  for(auto const& op: ops){
-    if(!op.ops_indices.empty()){ continue; }
+bool is_real(tenes::Operators<mptensor::Tensor<
+                 tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
+             double tol) {
+  for (auto const& op : ops) {
+    if (!op.ops_indices.empty()) {
+      continue;
+    }
     int res = 0;
-    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
-      if(std::abs(op.op[lindex].imag()) > tol){
+    for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
+      if (std::abs(op.op[lindex].imag()) > tol) {
         res = 1;
         break;
       }
     }
     tenes::allreduce_sum(res, op.op.get_comm());
-    if(res>0){
+    if (res > 0) {
       return false;
     }
   }
@@ -75,11 +81,12 @@ bool is_real(tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, std:
 }
 
 tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
-to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops){
+to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
+                                            std::complex<double>>> const& ops) {
   tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
-  for(auto const & op: ops){
+  for (auto const& op : ops) {
     mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
-    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
+    for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
     }
     ret.emplace_back(op.source_site, op.source_leg, A);
@@ -87,30 +94,33 @@ to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, std::co
   return ret;
 }
 
-bool is_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, std::complex<double>>> const & ops, double tol){
-  for(auto const& op: ops){
+bool is_real(tenes::NNOperators<mptensor::Tensor<
+                 tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
+             double tol) {
+  for (auto const& op : ops) {
     int res = 0;
-    for(size_t lindex=0; lindex<op.op.local_size(); ++lindex){
-      if(std::abs(op.op[lindex].imag()) > tol){
+    for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
+      if (std::abs(op.op[lindex].imag()) > tol) {
         res = 1;
         break;
       }
     }
     tenes::allreduce_sum(res, op.op.get_comm());
-    if(res>0){
+    if (res > 0) {
       return false;
     }
   }
   return true;
 }
 
-} // end of unnamed namespace
-
+}  // end of unnamed namespace
 
 namespace tenes {
 
-int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=PrintLevel::info) {
-  using tensor_complex = mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
+int main_impl(std::string input_filename, MPI_Comm com,
+              PrintLevel print_level = PrintLevel::info) {
+  using tensor_complex =
+      mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
 
   int mpisize = 0, mpirank = 0;
   MPI_Comm_rank(com, &mpirank);
@@ -118,8 +128,7 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
 
   if (!util::path_exists(input_filename)) {
     std::stringstream ss;
-    ss << "ERROR: cannot find the input file: " << input_filename
-              << std::endl;
+    ss << "ERROR: cannot find the input file: " << input_filename << std::endl;
     throw tenes::input_error(ss.str());
   }
 
@@ -157,8 +166,10 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
   }
 
   // onesite observable
-  const auto onesite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 1, tol, "observable.onesite");
-  const auto twosite_obs = load_operators<tensor_complex>(input_toml, lattice.N_UNIT, 2, tol, "observable.twosite");
+  const auto onesite_obs = load_operators<tensor_complex>(
+      input_toml, lattice.N_UNIT, 1, tol, "observable.onesite");
+  const auto twosite_obs = load_operators<tensor_complex>(
+      input_toml, lattice.N_UNIT, 2, tol, "observable.twosite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -172,22 +183,24 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
   is_real = is_real && ::is_real(onesite_obs, tol);
   is_real = is_real && ::is_real(twosite_obs, tol);
 
-  if(peps_parameters.is_real && !is_real){
+  if (peps_parameters.is_real && !is_real) {
     std::stringstream ss;
-    ss << "TeNeS invoked in real tensor mode (parameter.general.is_real = true) but some operators are complex.\n";
-    ss << "Consider using larger parameter.general.iszero_tol (present: " << tol << ")";
+    ss << "TeNeS invoked in real tensor mode (parameter.general.is_real = "
+          "true) but some operators are complex.\n";
+    ss << "Consider using larger parameter.general.iszero_tol (present: " << tol
+       << ")";
     throw tenes::input_error(ss.str());
   }
 
   std::string outdir = peps_parameters.outdir;
   bool is_ok = true;
   if (mpirank == 0) {
-    if(!util::isdir(outdir)){
+    if (!util::isdir(outdir)) {
       is_ok = util::mkdir(outdir);
     }
   }
   bcast(is_ok, 0, com);
-  if(!is_ok){
+  if (!is_ok) {
     std::stringstream ss;
     ss << "Cannot mkdir " << outdir;
     throw tenes::runtime_error(ss.str());
@@ -199,20 +212,19 @@ int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level=P
     std::string dst_filename = outdir + "/" + basename;
     std::ofstream ofs(dst_filename.c_str());
     std::string line;
-    while (std::getline(ifs, line)){
+    while (std::getline(ifs, line)) {
       ofs << line << std::endl;
     }
   }
 
-  if(is_real){
-    return tenes(MPI_COMM_WORLD, peps_parameters, lattice, to_real(simple_updates),
-                 to_real(full_updates), to_real(onesite_obs), to_real(twosite_obs),
-                 corparam);
-  }else{
+  if (is_real) {
+    return tenes(MPI_COMM_WORLD, peps_parameters, lattice,
+                 to_real(simple_updates), to_real(full_updates),
+                 to_real(onesite_obs), to_real(twosite_obs), corparam);
+  } else {
     return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-                 full_updates, onesite_obs, twosite_obs,
-                 corparam);
+                 full_updates, onesite_obs, twosite_obs, corparam);
   }
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes

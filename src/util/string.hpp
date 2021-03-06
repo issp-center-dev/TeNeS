@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef UTIL_STRING_HPP
-#define UTIL_STRING_HPP
+#ifndef SRC_UTIL_STRING_HPP_
+#define SRC_UTIL_STRING_HPP_
 
 #include <string>
 #include <vector>
@@ -37,4 +37,4 @@ std::string drop_comment(std::string const &str);
 }  // namespace util
 }  // namespace tenes
 
-#endif  // UTIL_STRING_HPP
+#endif  // SRC_UTIL_STRING_HPP_

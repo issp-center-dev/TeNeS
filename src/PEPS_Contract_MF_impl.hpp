@@ -14,14 +14,14 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef PEPS_CONTRACT_MF_IMPL_HPP
-#define PEPS_CONTRACT_MF_IMPL_HPP
+#ifndef SRC_PEPS_CONTRACT_MF_IMPL_HPP_
+#define SRC_PEPS_CONTRACT_MF_IMPL_HPP_
 
 #include <vector>
 #include <mptensor/tensor.hpp>
 #include <mptensor/complex.hpp>
 
-namespace tenes{
+namespace tenes {
 using namespace mptensor;
 
 /*
@@ -35,13 +35,11 @@ Contract_MF_1x1 (
 )
 */
 
-#define DECLARE_CONTRACT(NROW, NCOL) \
-template <class tensor> \
-typename tensor::value_type \
-Contract_MF_ ## NROW ## x ## NCOL (\
-  const std::vector<std::vector<const tensor*>> &Tn, \
-  const std::vector<std::vector<const tensor*>> &op \
-)
+#define DECLARE_CONTRACT(NROW, NCOL)                       \
+  template <class tensor>                                  \
+  typename tensor::value_type Contract_MF_##NROW##x##NCOL( \
+      const std::vector<std::vector<const tensor *>> &Tn,  \
+      const std::vector<std::vector<const tensor *>> &op)
 
 DECLARE_CONTRACT(1, 1);
 DECLARE_CONTRACT(2, 1);
@@ -62,6 +60,6 @@ DECLARE_CONTRACT(4, 4);
 
 #undef DECLARE_CONTRACT
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // PEPS_CONTRACT_MF_IMPL_HPP
+#endif  // SRC_PEPS_CONTRACT_MF_IMPL_HPP_

@@ -14,14 +14,14 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef UTIL_FILE_HPP
-#define UTIL_FILE_HPP
+#ifndef SRC_UTIL_FILE_HPP_
+#define SRC_UTIL_FILE_HPP_
 
 #include <vector>
 #include <string>
 
 namespace tenes {
-namespace util{
+namespace util {
 
 bool path_exists(const std::string& path);
 bool isdir(const std::string& path);
@@ -32,4 +32,4 @@ std::string basename(const std::string& path);
 }  // end of namespace util
 }  // end of namespace tenes
 
-#endif  // UTIL_FILE_HPP
+#endif  // SRC_UTIL_FILE_HPP_

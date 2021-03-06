@@ -16,14 +16,14 @@
 
 from collections import namedtuple
 from itertools import product
-from typing import IO, List, Tuple
+from typing import TextIO, List, Tuple, Optional, cast, MutableMapping, Dict, Any
 
 import numpy as np
 
 import scipy.sparse as sparse
 
 
-def lower_dict(d: dict) -> dict:
+def lower_dict(d: MutableMapping) -> Dict[str, Any]:
     ks = list(d.keys())
     for k in ks:
         if isinstance(d[k], dict):
@@ -32,10 +32,10 @@ def lower_dict(d: dict) -> dict:
             continue
         d[k.lower()] = d[k]
         d.pop(k)
-    return d
+    return cast(Dict[str, Any], d)
 
 
-def all_positive(xs, v=0):
+def all_positive(xs, v=0) -> bool:
     return all(map(lambda x: x > v, xs))
 
 
@@ -114,8 +114,14 @@ def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.n
 
 def is_hermite(A: np.ndarray) -> bool:
     nsite = len(A.shape) // 2
-    Amat = A.reshape((np.prod(A.shape[:nsite]), np.prod(A.shape[nsite:])))
-    return np.all(Amat.conjugate().transpose() == Amat)
+    input_dirs = A.shape[:nsite]
+    output_dirs = A.shape[nsite:]
+    if input_dirs != output_dirs:
+        return False
+    idir = int(np.prod(input_dirs))
+    odir = int(np.prod(output_dirs))
+    Amat = A.reshape((idir, odir))
+    return bool(np.all(Amat.conjugate().transpose() == Amat))
 
 
 class LocalTensor:
@@ -131,9 +137,10 @@ class LocalTensor:
         Four bonds are ordered as [-x, +y, +x, -y].
     """
 
+    phys_dim: int
+    virtual_dim: List[int]
+
     def __init__(self, tensor_dict: dict = None):
-        self.phys_dim = None
-        self.virtual_dim = [None] * 4
         if tensor_dict is not None:
             self.load_dict(tensor_dict)
 
@@ -189,9 +196,12 @@ class Unitcell:
         Sites in a unit cell
     """
 
+    L: List[int]
+    sites: List[LocalTensor]
+
     def __init__(self, lat_dict: dict = None):
         self.L = [1] * 2
-        self.sites = [None]
+        self.sites = cast(List[LocalTensor], [None])
         if lat_dict is not None:
             self.load_dict(lat_dict)
 
@@ -205,7 +215,7 @@ class Unitcell:
         self.skew = lat_dict.get("skew", 0)
 
         N = self.L[0] * self.L[1]
-        self.sites = [None] * N
+        self.sites = cast(List[LocalTensor], [None] * N)
         for site in lat_dict["unitcell"]:
             index = site["index"]
             if isinstance(index, int):
@@ -266,7 +276,7 @@ class Unitcell:
         _, _, ox, oy = self.coord2supercoord(x, y)
         return ox, oy
 
-    def bond_displacement(self, bond: Bond) -> Tuple:
+    def bond_displacement(self, bond: Bond) -> Tuple[int, int]:
         return bond.dx, bond.dy
 
     def bond_direction(self, bond: Bond) -> int:
@@ -302,7 +312,7 @@ class Unitcell:
             raise RuntimeError()
         return Bond(source, dx, dy)
 
-    def check(self):
+    def check(self) -> None:
         """
         Check if self stores valid information
 
@@ -340,17 +350,28 @@ class Unitcell:
     def neighbor(self, index: int, direction: int) -> int:
         x, y = self.index2coord(index)
         if direction == 0:
-            X, Y, _, _ = self.coord2supercoord(x-1, y)
+            X, Y, _, _ = self.coord2supercoord(x - 1, y)
         elif direction == 1:
-            X, Y, _, _ = self.coord2supercoord(x, y+1)
+            X, Y, _, _ = self.coord2supercoord(x, y + 1)
         elif direction == 2:
-            X, Y, _, _ = self.coord2supercoord(x+1, y)
-        else: # elif direction == 3:
-            X, Y, _, _ = self.coord2supercoord(x, y-1)
+            X, Y, _, _ = self.coord2supercoord(x + 1, y)
+        else:  # elif direction == 3:
+            X, Y, _, _ = self.coord2supercoord(x, y - 1)
         return self.coord2index(X, Y)
 
 
 class LatticeGraph:
+    unitcell: Unitcell
+    offset_x_min: int
+    offset_y_min: int
+    offset_x_max: int
+    offset_y_max: int
+    offset_Lx: int
+    offset_Ly: int
+    N: int
+    path_pred: np.ndarray
+    path_weight: np.ndarray
+
     def __init__(
         self,
         unitcell: Unitcell,
@@ -418,7 +439,7 @@ class LatticeGraph:
         unitcell_index = offset_x + offset_y * self.offset_Lx
         return localsite + self.unitcell.numsites() * unitcell_index
 
-    def graph_coords(self, index: int):
+    def graph_coords(self, index: int) -> Tuple[int, int, int]:
         assert 0 <= index <= self.N
 
         index, localsite = divmod(index, self.unitcell.numsites())
@@ -435,7 +456,7 @@ class LatticeGraph:
             targets.append(target_index)
             target_index = path_pred[target_index]
 
-        bonds = []
+        bonds: List[Bond] = []
         source_site, source_offset_x, source_offset_y = self.graph_coords(targets.pop())
         while len(targets) > 0:
             target_site, target_offset_x, target_offset_y = self.graph_coords(
@@ -454,6 +475,10 @@ class LatticeGraph:
 
 
 class NNOperator:
+    bond: Bond
+    elements: Optional[np.ndarray]
+    ops: Optional[List[int]]
+
     def __init__(
         self, bond: Bond, *, elements: np.ndarray = None, ops: List[int] = None
     ):
@@ -494,6 +519,11 @@ class NNOperator:
 
 
 class OnesiteObservable:
+    group: int
+    elements: np.ndarray
+    sites: List[int]
+    name: str
+
     def __init__(self, group: int, elements: np.ndarray, sites: List[int], name: str):
         self.group = group
         assert elements.ndim == 2
@@ -530,6 +560,12 @@ class OnesiteObservable:
 
 
 class TwositeObservable:
+    group: int
+    bonds: List[Bond]
+    elements: Optional[np.ndarray]
+    ops: Optional[List[int]]
+    name: str
+
     def __init__(
         self,
         group: int,
@@ -600,6 +636,10 @@ def make_evolution(
     tau: float,
     result_cutoff: float = 1e-15,
 ) -> List[NNOperator]:
+    if hamiltonian.elements is None:
+        raise NotImplementedError(
+            "make_evolution for NNOperator with two onesite operators is not yet implemented."
+        )
     dims = hamiltonian.elements.shape[0:2]
     H = hamiltonian.elements.reshape((dims[0] * dims[1], dims[0] * dims[1]))
     D, V = np.linalg.eigh(H)
@@ -648,7 +688,20 @@ def make_evolution(
 
 
 class Model:
-    def __init__(self, param: dict, atol: float = 1e-15):
+    param: Dict[str, Dict[str, Any]]
+    parameter: Dict[str, Any]
+    simple_tau: float
+    full_tau: float
+    correlation: Dict[str, Any]
+    unitcell: Unitcell
+    hamiltonians: List[NNOperator]
+    graph: LatticeGraph
+    onesites: List[OnesiteObservable]
+    twobodies: List[TwositeObservable]
+    simple_updates: List[NNOperator]
+    full_updates: List[NNOperator]
+
+    def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
         self.param = param
         self.parameter = param["parameter"]
@@ -707,10 +760,10 @@ class Model:
                 sites = onesite["sites"]
                 dim = onesite["dim"]
                 elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
-                obs = OnesiteObservable(
+                one_obs = OnesiteObservable(
                     group=group, elements=elements, sites=sites, name=name
                 )
-                self.onesites.append(obs)
+                self.onesites.append(one_obs)
 
             for twosite in observable.get("twosite", []):
                 name = twosite["name"]
@@ -723,10 +776,14 @@ class Model:
                 if "elements" in twosite:
                     dim = twosite["dim"]
                     elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
-                    obs = TwositeObservable(group, bonds, elements=elements, name=name)
+                    two_obs = TwositeObservable(
+                        group, bonds, elements=elements, name=name
+                    )
                 else:
-                    obs = TwositeObservable(group, bonds, ops=twosite["ops"], name=name)
-                self.twobodies.append(obs)
+                    two_obs = TwositeObservable(
+                        group, bonds, ops=twosite["ops"], name=name
+                    )
+                self.twobodies.append(two_obs)
 
         self.simple_updates = []
         self.full_updates = []
@@ -737,7 +794,7 @@ class Model:
             for evo in make_evolution(ham, self.graph, self.full_tau):
                 self.full_updates.append(evo)
 
-    def to_toml(self, f: IO):
+    def to_toml(self, f: TextIO):
         # parameter
         f.write("[parameter]\n")
         for tablename, table in self.parameter.items():

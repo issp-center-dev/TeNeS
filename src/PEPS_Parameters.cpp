@@ -256,9 +256,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 }
 
 void PEPS_Parameters::check() const {
-  if(MeanField_Env && num_full_step > 0){
+  if (MeanField_Env && num_full_step > 0) {
     std::stringstream ss;
-    ss << "ERROR: Cannot enable full update and mean field environment simultaneously";
+    ss << "ERROR: Cannot enable full update and mean field environment "
+          "simultaneously";
     throw tenes::input_error(ss.str());
   }
 }

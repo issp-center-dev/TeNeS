@@ -14,15 +14,16 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_OPERATOR_HPP
-#define TENES_OPERATOR_HPP
+#ifndef SRC_OPERATOR_HPP_
+#define SRC_OPERATOR_HPP_
 
 #include <vector>
 #include <string>
 
 namespace tenes {
 
-template <class tensor> struct Operator {
+template <class tensor>
+struct Operator {
   std::string name;
   int group;
   int source_site;
@@ -32,22 +33,53 @@ template <class tensor> struct Operator {
   std::vector<int> ops_indices;
 
   // onesite
-  Operator(std::string const& name, int group, int site, tensor const &op): name(name), group(group), source_site(site), dx(0), dy(0), op(op){}
+  Operator(std::string const &name, int group, int site, tensor const &op)
+      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {}
 
   // twosite
-  Operator(std::string const& name, int group, int source_site, int dx, int dy, tensor const &op): name(name), group(group), source_site(source_site), dx(1, dx), dy(1, dy), op(op) {}
-  Operator(std::string const& name, int group, int source_site, std::vector<int> const &dx, std::vector<int> const &dy, tensor const &op): name(name), group(group), source_site(source_site), dx(dx), dy(dy), op(op) {}
-  Operator(std::string const& name, int group, int source_site, int dx, int dy, std::vector<int> const &ops_indices)
-      : name(name), group(group), source_site(source_site), dx(1, dx), dy(1, dy), ops_indices(ops_indices) {}
-  Operator(std::string const& name, int group, int source_site, std::vector<int> const &dx, std::vector<int> const &dy, std::vector<int> const &ops_indices)
-      : name(name), group(group), source_site(source_site), dx(dx), dy(dy), ops_indices(ops_indices) {}
+  Operator(std::string const &name, int group, int source_site, int dx, int dy,
+           tensor const &op)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(1, dx),
+        dy(1, dy),
+        op(op) {}
+  Operator(std::string const &name, int group, int source_site,
+           std::vector<int> const &dx, std::vector<int> const &dy,
+           tensor const &op)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(dx),
+        dy(dy),
+        op(op) {}
+  Operator(std::string const &name, int group, int source_site, int dx, int dy,
+           std::vector<int> const &ops_indices)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(1, dx),
+        dy(1, dy),
+        ops_indices(ops_indices) {}
+  Operator(std::string const &name, int group, int source_site,
+           std::vector<int> const &dx, std::vector<int> const &dy,
+           std::vector<int> const &ops_indices)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(dx),
+        dy(dy),
+        ops_indices(ops_indices) {}
 
-  bool is_onesite() const {return dx.empty();}
+  bool is_onesite() const { return dx.empty(); }
 };
 
-template <class tensor> using Operators = std::vector<Operator<tensor>>;
+template <class tensor>
+using Operators = std::vector<Operator<tensor>>;
 
-template <class tensor> struct NNOperator {
+template <class tensor>
+struct NNOperator {
   int source_site;
   int source_leg;
   tensor op;
@@ -59,8 +91,9 @@ template <class tensor> struct NNOperator {
   bool is_vertical() const { return !is_horizontal(); }
 };
 
-template <class tensor> using NNOperators = std::vector<NNOperator<tensor>>;
+template <class tensor>
+using NNOperators = std::vector<NNOperator<tensor>>;
 
-} // namespace tenes
+}  // namespace tenes
 
-#endif // TENES_OPERATOR_HPP
+#endif  // SRC_OPERATOR_HPP_
