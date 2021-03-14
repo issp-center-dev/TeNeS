@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_PEPS_CONTRACT_MF_IMPL_HPP_
-#define SRC_PEPS_CONTRACT_MF_IMPL_HPP_
+#ifndef TENES_SRC_PEPS_CONTRACT_MF_IMPL_HPP_
+#define TENES_SRC_PEPS_CONTRACT_MF_IMPL_HPP_
 
 #include <vector>
 #include <mptensor/tensor.hpp>
@@ -62,4 +62,4 @@ DECLARE_CONTRACT(4, 4);
 
 }  // end of namespace tenes
 
-#endif  // SRC_PEPS_CONTRACT_MF_IMPL_HPP_
+#endif  // TENES_SRC_PEPS_CONTRACT_MF_IMPL_HPP_

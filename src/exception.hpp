@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_EXCEPTION_HPP_
-#define SRC_EXCEPTION_HPP_
+#ifndef TENES_SRC_EXCEPTION_HPP_
+#define TENES_SRC_EXCEPTION_HPP_
 
 #include <stdexcept>
 
@@ -54,4 +54,4 @@ class load_error : public runtime_error {
 
 }  // end of namespace tenes
 
-#endif  // SRC_EXCEPTION_HPP_
+#endif  // TENES_SRC_EXCEPTION_HPP_

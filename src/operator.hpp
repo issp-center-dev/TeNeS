@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_OPERATOR_HPP_
-#define SRC_OPERATOR_HPP_
+#ifndef TENES_SRC_OPERATOR_HPP_
+#define TENES_SRC_OPERATOR_HPP_
 
 #include <vector>
 #include <string>
@@ -96,4 +96,4 @@ using NNOperators = std::vector<NNOperator<tensor>>;
 
 }  // namespace tenes
 
-#endif  // SRC_OPERATOR_HPP_
+#endif  // TENES_SRC_OPERATOR_HPP_

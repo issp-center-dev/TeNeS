@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_UTIL_TYPE_TRAITS_HPP_
-#define SRC_UTIL_TYPE_TRAITS_HPP_
+#ifndef TENES_SRC_UTIL_TYPE_TRAITS_HPP_
+#define TENES_SRC_UTIL_TYPE_TRAITS_HPP_
 
 #include <complex>
 #include <type_traits>
@@ -63,4 +63,4 @@ to convert_complex(from const &v) {
 
 }  // end of namespace tenes
 
-#endif  // SRC_UTIL_TYPE_TRAITS_HPP_
+#endif  // TENES_SRC_UTIL_TYPE_TRAITS_HPP_

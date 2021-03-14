@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_CORRELATION_HPP_
-#define SRC_CORRELATION_HPP_
+#ifndef TENES_SRC_CORRELATION_HPP_
+#define TENES_SRC_CORRELATION_HPP_
 
 #include <tuple>
 #include <vector>
@@ -39,4 +39,4 @@ struct CorrelationParameter {
 
 }  // end of namespace tenes
 
-#endif  // SRC_CORRELATION_HPP_
+#endif  // TENES_SRC_CORRELATION_HPP_

@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_TENSOR_HPP_
-#define SRC_TENSOR_HPP_
+#ifndef TENES_SRC_TENSOR_HPP_
+#define TENES_SRC_TENSOR_HPP_
 
 #include <sstream>
 
@@ -78,4 +78,4 @@ mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
 
 }  // end of namespace tenes
 
-#endif  // SRC_TENSOR_HPP_
+#endif  // TENES_SRC_TENSOR_HPP_

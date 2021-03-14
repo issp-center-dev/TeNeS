@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_UTIL_FILE_HPP_
-#define SRC_UTIL_FILE_HPP_
+#ifndef TENES_SRC_UTIL_FILE_HPP_
+#define TENES_SRC_UTIL_FILE_HPP_
 
 #include <vector>
 #include <string>
@@ -32,4 +32,4 @@ std::string basename(const std::string& path);
 }  // end of namespace util
 }  // end of namespace tenes
 
-#endif  // SRC_UTIL_FILE_HPP_
+#endif  // TENES_SRC_UTIL_FILE_HPP_

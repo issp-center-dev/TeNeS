@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_PEPS_PARAMETERS_HPP_
-#define SRC_PEPS_PARAMETERS_HPP_
+#ifndef TENES_SRC_PEPS_PARAMETERS_HPP_
+#define TENES_SRC_PEPS_PARAMETERS_HPP_
 
 #include <string>
 
@@ -80,4 +80,4 @@ class PEPS_Parameters {
 };
 
 }  // end of namespace tenes
-#endif  // SRC_PEPS_PARAMETERS_HPP_
+#endif  // TENES_SRC_PEPS_PARAMETERS_HPP_

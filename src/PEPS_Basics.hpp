@@ -22,8 +22,8 @@
  2015 Dec.  Tsuyoshi Okubo
 */
 
-#ifndef SRC_PEPS_BASICS_HPP_
-#define SRC_PEPS_BASICS_HPP_
+#ifndef TENES_SRC_PEPS_BASICS_HPP_
+#define TENES_SRC_PEPS_BASICS_HPP_
 
 #include <cmath>
 #include <cstdio>
@@ -1823,4 +1823,4 @@ C FinishCorrelation_MF(const Tensor<Matrix, C> &A, const Tensor<Matrix, C> &Tn,
 
 }  // end of namespace tenes
 
-#endif  // SRC_PEPS_BASICS_HPP_
+#endif  // TENES_SRC_PEPS_BASICS_HPP_

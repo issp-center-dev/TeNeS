@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_PRINTLEVEL_HPP_
-#define SRC_PRINTLEVEL_HPP_
+#ifndef TENES_SRC_PRINTLEVEL_HPP_
+#define TENES_SRC_PRINTLEVEL_HPP_
 
 namespace tenes {
 enum PrintLevel {
@@ -28,4 +28,4 @@ enum PrintLevel {
 };
 }
 
-#endif  // SRC_PRINTLEVEL_HPP_
+#endif  // TENES_SRC_PRINTLEVEL_HPP_

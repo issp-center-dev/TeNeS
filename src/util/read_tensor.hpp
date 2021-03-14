@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef SRC_UTIL_READ_TENSOR_HPP_
-#define SRC_UTIL_READ_TENSOR_HPP_
+#ifndef TENES_SRC_UTIL_READ_TENSOR_HPP_
+#define TENES_SRC_UTIL_READ_TENSOR_HPP_
 
 #include <algorithm>
 #include <sstream>
@@ -91,4 +91,4 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims,
 }  // namespace util
 }  // namespace tenes
 
-#endif  // SRC_UTIL_READ_TENSOR_HPP_
+#endif  // TENES_SRC_UTIL_READ_TENSOR_HPP_
