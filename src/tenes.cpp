@@ -551,14 +551,12 @@ void TeNeS<ptensor>::simple_update() {
 
 template <class ptensor>
 void TeNeS<ptensor>::full_update() {
-  if (peps_parameters.num_full_step == 0) {
-    return;
+  if (peps_parameters.num_full_step > 0) {
+  update_CTM();
   }
 
   Timer<> timer;
   ptensor Tn1_new, Tn2_new;
-  update_CTM();
-
   const int nsteps = peps_parameters.num_full_step;
   double next_report = 10.0;
 
