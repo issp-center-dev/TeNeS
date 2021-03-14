@@ -15,11 +15,10 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include <iostream>
+#include <string>
 
 #include "version.hpp"
-
 #include "mpi.hpp"
-
 #include "exception.hpp"
 #include "printlevel.hpp"
 
@@ -32,7 +31,7 @@ int main(int argc, char **argv) {
   int mpirank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   int status = 0;
-  try{
+  try {
     std::string usage =
         R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
     
@@ -48,16 +47,14 @@ int main(int argc, char **argv) {
     )";
 
     if (argc == 1) {
-      if (mpirank == 0)
-        std::cout << usage << std::endl;
+      if (mpirank == 0) std::cout << usage << std::endl;
       return 0;
     }
 
     for (int i = 1; i < argc; ++i) {
       std::string opt = argv[i];
       if (opt == "-h" || opt == "--help") {
-        if (mpirank == 0)
-          std::cout << usage << std::endl;
+        if (mpirank == 0) std::cout << usage << std::endl;
         return 0;
       }
     }
@@ -65,8 +62,7 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
       std::string opt = argv[i];
       if (opt == "-v" || opt == "--version") {
-        if (mpirank == 0)
-          std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+        if (mpirank == 0) std::cout << "TeNeS v" << TENES_VERSION << std::endl;
         return 0;
       }
     }
@@ -85,22 +81,22 @@ int main(int argc, char **argv) {
     }
 
     status = tenes::main_impl(input_filename, MPI_COMM_WORLD, print_level);
-  }catch(const tenes::input_error e){
-    if(mpirank==0){
+  } catch (const tenes::input_error e) {
+    if (mpirank == 0) {
       std::cerr << "[INPUT ERROR]" << std::endl;
-      std::cerr << e.what() << std::endl;;
+      std::cerr << e.what() << std::endl;
     }
     status = 1;
-  }catch(const tenes::load_error e){
-    if(mpirank==0){
+  } catch (const tenes::load_error e) {
+    if (mpirank == 0) {
       std::cerr << "[TENSOR LOAD ERROR]" << std::endl;
-      std::cerr << e.what() << std::endl;;
+      std::cerr << e.what() << std::endl;
     }
     status = 1;
-  }catch(const tenes::runtime_error e){
-    if(mpirank==0){
+  } catch (const tenes::runtime_error e) {
+    if (mpirank == 0) {
       std::cerr << "[ERROR]" << std::endl;
-      std::cerr << e.what() << std::endl;;
+      std::cerr << e.what() << std::endl;
     }
     status = 1;
   }

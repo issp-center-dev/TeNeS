@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_HPP
-#define TENES_HPP
+#ifndef TENES_SRC_TENES_HPP_
+#define TENES_SRC_TENES_HPP_
 
 #include <vector>
 
@@ -34,11 +34,12 @@ struct CorrelationParameter;
 template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-          Operators<tensor> onesite_operators, Operators<tensor> twosite_operators,
+          Operators<tensor> onesite_operators,
+          Operators<tensor> twosite_operators,
           // Edges ham_edges, std::vector<tensor> hamiltonians,
           // std::vector<tensor> local_operators,
           CorrelationParameter corparam);
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // TENES_HPP
+#endif  // TENES_SRC_TENES_HPP_

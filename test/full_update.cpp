@@ -15,7 +15,6 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
 
 #include <fstream>
 #include <vector>
@@ -23,6 +22,8 @@
 #include <PEPS_Basics.hpp>
 #include <PEPS_Parameters.cpp>
 #include <mpi.cpp>
+
+#include "doctest.h"
 
 TEST_CASE("testing full update") {
 #ifdef _NO_MPI

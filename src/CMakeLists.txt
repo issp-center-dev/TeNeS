@@ -13,6 +13,8 @@ Lattice.cpp
 util/string.cpp
 util/file.cpp
 mpi.cpp
+PEPS_Contract_impl.cpp
+PEPS_Contract_MF_impl.cpp
 )
 
 if (USE_SANITIZER)

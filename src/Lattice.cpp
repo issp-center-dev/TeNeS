@@ -31,13 +31,13 @@ Lattice::Lattice(int X, int Y, int skew)
       N_UNIT(LX * LY),
       skew(skew),
       physical_dims(N_UNIT, -1),
-      virtual_dims(N_UNIT, std::array<int, 4>{-1,-1,-1,-1}),
+      virtual_dims(N_UNIT, std::array<int, 4>{-1, -1, -1, -1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
       noises(N_UNIT, 0.0) {
-  if( X <= 0){
+  if (X <= 0) {
     throw tenes::input_error("Lattice.X should be positive");
   }
-  if( Y <= 0){
+  if (Y <= 0) {
     throw tenes::input_error("Lattice.Y should be positive");
   }
   calc_neighbors();
@@ -64,31 +64,31 @@ void Lattice::calc_neighbors() {
       NN_Tensor[i][3] = Tensor_list[ix][(iy - 1 + LY) % LY];
     }
   }
-  if(skew!=0){
-    for (int ix = 0; ix < LX; ++ix){
-      NN_Tensor[ix][3] = Tensor_list[(ix+LX+skew)%LX][LY-1];
-      NN_Tensor[N_UNIT+ix-LX][1] = Tensor_list[(ix+LX-skew)%LX][0];
+  if (skew != 0) {
+    for (int ix = 0; ix < LX; ++ix) {
+      NN_Tensor[ix][3] = Tensor_list[(ix + LX + skew) % LX][LY - 1];
+      NN_Tensor[N_UNIT + ix - LX][1] = Tensor_list[(ix + LX - skew) % LX][0];
     }
   }
   logical_check();
 }
 
 int Lattice::other(int index, int dx, int dy) const {
-  while(dx != 0){
-    if(dx>0){
+  while (dx != 0) {
+    if (dx > 0) {
       index = right(index);
       --dx;
-    }else{
+    } else {
       index = left(index);
       ++dx;
     }
   }
 
-  while(dy != 0){
-    if(dy>0){
+  while (dy != 0) {
+    if (dy > 0) {
       index = top(index);
       --dy;
-    }else{
+    } else {
       index = bottom(index);
       ++dy;
     }
@@ -96,19 +96,7 @@ int Lattice::other(int index, int dx, int dy) const {
   return index;
 }
 
-void Lattice::reset(int X, int Y) {
-  if( X <= 0){
-    throw tenes::input_error("Lattice.X should be positive");
-  }
-  if( Y <= 0){
-    throw tenes::input_error("Lattice.Y should be positive");
-  }
-  LX = X;
-  LY = Y;
-  calc_neighbors();
-}
-
-void Lattice::save(const char *filename, bool append) {
+void Lattice::save(const char* filename, bool append) {
   std::ofstream ofs;
   if (append) {
     ofs.open(filename, std::ios::out | std::ios::app);
@@ -151,7 +139,7 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
     std::vector<int> phys(physical_dims.begin(), physical_dims.end());
     MPI_Bcast(&phys.front(), N_UNIT, MPI_INT, 0, comm);
 
-    for(int i=0; i < N_UNIT; ++i){
+    for (int i = 0; i < N_UNIT; ++i) {
       std::array<int, 4> vs = virtual_dims[i];
       MPI_Bcast(vs.data(), 4, MPI_INT, 0, comm);
     }
@@ -174,7 +162,7 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
     std::vector<int> phys(N_UNIT);
     MPI_Bcast(&phys.front(), N_UNIT, MPI_INT, 0, comm);
     physical_dims.assign(phys.begin(), phys.end());
-    for(int i=0; i < N_UNIT; ++i){
+    for (int i = 0; i < N_UNIT; ++i) {
       std::array<int, 4> vs;
       MPI_Bcast(vs.data(), 4, MPI_INT, 0, comm);
       virtual_dims[i] = vs;
@@ -185,32 +173,33 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   noises.assign(ns.begin(), ns.end());
 }
 
-void Lattice::check_dims() const{
+void Lattice::check_dims() const {
   std::vector<std::tuple<int, int, int, int>> fails;
-  for(int i=0; i<N_UNIT; ++i){
-    if(virtual_dims[i][0] != virtual_dims[left(i)][2]){
+  for (int i = 0; i < N_UNIT; ++i) {
+    if (virtual_dims[i][0] != virtual_dims[left(i)][2]) {
       fails.push_back(std::make_tuple(i, 0, left(i), 2));
     }
-    if(virtual_dims[i][1] != virtual_dims[top(i)][3]){
+    if (virtual_dims[i][1] != virtual_dims[top(i)][3]) {
       fails.push_back(std::make_tuple(i, 1, top(i), 3));
     }
   }
-  if(!fails.empty()){
+  if (!fails.empty()) {
     int i, j;
     int i_leg, j_leg;
     std::stringstream ss;
     ss << "virtual dimension mismatch :\n";
-    for(auto const& tpl: fails){
+    for (auto const& tpl : fails) {
       std::tie(i, i_leg, j, j_leg) = tpl;
-      ss << "  " << i_leg << " bond of " << i << " site and " << j_leg << " bond of " << j << " site\n";
+      ss << "  " << i_leg << " bond of " << i << " site and " << j_leg
+         << " bond of " << j << " site\n";
     }
     throw tenes::input_error(ss.str());
   }
 }
 
-void Lattice::logical_check() const{
+void Lattice::logical_check() const {
 #ifndef NDEBUG
-  for(int i=0; i<N_UNIT; ++i){
+  for (int i = 0; i < N_UNIT; ++i) {
     // index <-> coords
     {
       int x = this->x(i);
@@ -240,12 +229,9 @@ void Lattice::logical_check() const{
     }
 
     // loops
-    {
-      assert(top(left(i)) == left(top(i)));
-    }
+    { assert(top(left(i)) == left(top(i))); }
   }
 #endif
 }
-
 
 }  // end of namespace tenes

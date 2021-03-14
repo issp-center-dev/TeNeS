@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef _SQUARE_LATTICE_HPP_
-#define _SQUARE_LATTICE_HPP_
+#ifndef TENES_SRC_SQUARE_LATTICE_HPP_
+#define TENES_SRC_SQUARE_LATTICE_HPP_
 
 #include <cmath>
 #include <cstdio>
@@ -64,10 +64,10 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LY);
   int i, j, k, l;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.Tensor_list[ix][iy];
-    j = lattice.NN_Tensor[i][2];
-    k = lattice.NN_Tensor[j][3];
-    l = lattice.NN_Tensor[k][0];
+    i = lattice.index_fast(ix, iy);
+    j = lattice.right(i);
+    k = lattice.bottom(j);
+    l = lattice.left(k);
 
     if (peps_parameters.CTM_Projector_corner) {
       Calc_projector_left_block(C1[i], C4[l], eTt[i], eTb[l], eTl[l], eTl[i],
@@ -78,20 +78,6 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
                                    eTr[j], eTr[k], eTb[k], eTb[l], eTl[l],
                                    eTl[i], Tn[i], Tn[j], Tn[k], Tn[l],
                                    peps_parameters, PUs[iy], PLs[iy]);
-      /*
-      Index index;
-      for (int i1=0; i1 < PUs[iy].local_size(); ++i1){
-        index = PUs[iy].global_index(i1);
-        if (index[0]==0 && index[1]==0 &&index[2]==0){
-          std::cout<<"PU left " << index << " "<< PUs[iy][i1]<<std::endl;
-        }
-      }
-      for (int i1=0; i1 < PLs[iy].local_size(); ++i1){
-        index = PLs[iy].global_index(i1);
-        if (index[0]==0 && index[1]==0 &&index[2]==0){
-          std::cout<<"PL left " << index << " "<< PLs[iy][i1]<<std::endl;
-        }
-        }*/
     }
   }
   // update
@@ -104,10 +90,10 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
   }
   int iy_up, iy_down;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.Tensor_list[ix][iy];
-    j = lattice.NN_Tensor[i][2];
-    k = lattice.NN_Tensor[j][3];
-    l = lattice.NN_Tensor[k][0];
+    i = lattice.index_fast(ix, iy);
+    j = lattice.right(i);
+    k = lattice.bottom(j);
+    l = lattice.left(k);
     iy_up = (iy + 1) % lattice.LY;
     iy_down = (iy - 1 + lattice.LY) % lattice.LY;
 
@@ -130,7 +116,7 @@ void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
                 const std::vector<Tensor<Matrix, C>> &Tn, const int ix,
                 const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
-    Do one step right move absobing X=ix column
+    Do one step right move absorbing X=ix column
     part of C2, C3, eTr will be modified
   */
   std::vector<Tensor<Matrix, C>> PUs, PLs;
@@ -138,10 +124,10 @@ void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LY);
   int i, j, k, l;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.Tensor_list[ix][iy];
-    l = lattice.NN_Tensor[k][0];
-    i = lattice.NN_Tensor[l][1];
-    j = lattice.NN_Tensor[i][2];
+    k = lattice.index_fast(ix, iy);
+    l = lattice.left(k);
+    i = lattice.top(l);
+    j = lattice.right(i);
 
     if (peps_parameters.CTM_Projector_corner) {
       Calc_projector_left_block(C3[k], C2[j], eTb[k], eTt[j], eTr[j], eTr[k],
@@ -168,10 +154,10 @@ void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
   }
   int iy_up, iy_down;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.Tensor_list[ix][iy];
-    l = lattice.NN_Tensor[k][0];
-    i = lattice.NN_Tensor[l][1];
-    j = lattice.NN_Tensor[i][2];
+    k = lattice.index_fast(ix, iy);
+    l = lattice.left(k);
+    i = lattice.top(l);
+    j = lattice.right(i);
 
     iy_up = (iy + 1) % lattice.LY;
     iy_down = (iy - 1 + lattice.LY) % lattice.LY;
@@ -198,7 +184,7 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
               const std::vector<Tensor<Matrix, C>> &Tn, const int iy,
               const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
-    ## Do one step top move absobing Y=iy row
+    ## Do one step top move absorbing Y=iy row
     ## part of C1, C2, eTt will be modified
   */
   std::vector<Tensor<Matrix, C>> PUs, PLs;
@@ -206,10 +192,10 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LX);
   int i, j, k, l;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.Tensor_list[ix][iy];
-    k = lattice.NN_Tensor[j][3];
-    l = lattice.NN_Tensor[k][0];
-    i = lattice.NN_Tensor[l][1];
+    j = lattice.index_fast(ix, iy);
+    k = lattice.bottom(j);
+    l = lattice.left(k);
+    i = lattice.top(l);
 
     if (peps_parameters.CTM_Projector_corner) {
       Calc_projector_left_block(C2[j], C1[i], eTr[j], eTl[i], eTt[i], eTt[j],
@@ -224,21 +210,6 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
           transpose(Tn[l], Axes(1, 2, 3, 0, 4)),
           transpose(Tn[i], Axes(1, 2, 3, 0, 4)), peps_parameters, PUs[ix],
           PLs[ix]);
-
-      /*
-      Index index;
-      for (int i1=0; i1 < PUs[ix].local_size(); ++i1){
-        index = PUs[ix].global_index(i1);
-        if (index[0]==0 && index[1]==0 &&index[2]==0){
-          std::cout<<"PU top " << index << " "<< PUs[ix][i1]<<std::endl;
-        }
-      }
-      for (int i1=0; i1 < PLs[ix].local_size(); ++i1){
-        index = PLs[ix].global_index(i1);
-        if (index[0]==0 && index[1]==0 &&index[2]==0){
-          std::cout<<"PL top " << index << " "<< PLs[ix][i1]<<std::endl;
-        }
-        }*/
     }
   }
   // update
@@ -251,10 +222,10 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
   }
   int ix_right, ix_left;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.Tensor_list[ix][iy];
-    k = lattice.NN_Tensor[j][3];
-    l = lattice.NN_Tensor[k][0];
-    i = lattice.NN_Tensor[l][1];
+    j = lattice.index_fast(ix, iy);
+    k = lattice.bottom(j);
+    l = lattice.left(k);
+    i = lattice.top(l);
 
     ix_right = (ix + 1) % lattice.LX;
     ix_left = (ix - 1 + lattice.LX) % lattice.LX;
@@ -280,7 +251,7 @@ void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
                  const std::vector<Tensor<Matrix, C>> &Tn, const int iy,
                  const PEPS_Parameters peps_parameters, const Lattice lattice) {
   /*
-    ## Do one step bottom move absobing Y=iy row
+    ## Do one step bottom move absorbing Y=iy row
     ## part of C3, C4, eTb will be modified
   */
 
@@ -289,10 +260,10 @@ void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LX);
   int i, j, k, l;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.Tensor_list[ix][iy];
-    i = lattice.NN_Tensor[l][1];
-    j = lattice.NN_Tensor[i][2];
-    k = lattice.NN_Tensor[j][3];
+    l = lattice.index_fast(ix, iy);
+    i = lattice.top(l);
+    j = lattice.right(i);
+    k = lattice.bottom(j);
 
     if (peps_parameters.CTM_Projector_corner) {
       Calc_projector_left_block(C4[l], C3[k], eTl[l], eTr[k], eTb[k], eTb[l],
@@ -320,10 +291,10 @@ void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
   }
   int ix_left, ix_right;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.Tensor_list[ix][iy];
-    i = lattice.NN_Tensor[l][1];
-    j = lattice.NN_Tensor[i][2];
-    k = lattice.NN_Tensor[j][3];
+    l = lattice.index_fast(ix, iy);
+    i = lattice.top(l);
+    j = lattice.right(i);
+    k = lattice.bottom(j);
 
     ix_right = (ix + 1) % lattice.LX;
     ix_left = (ix - 1 + lattice.LX) % lattice.LX;
@@ -517,7 +488,7 @@ int Calc_CTM_Environment(
     Tensor<Matrix, C> Projector;
 
     for (int i = 0; i < lattice.N_UNIT; ++i) {
-      num = lattice.NN_Tensor[lattice.NN_Tensor[i][0]][1];
+      num = lattice.top(lattice.left(i));
       d1 = Tn[num].shape()[3] * Tn[num].shape()[3];
       d2 = Tn[num].shape()[2] * Tn[num].shape()[2];
       C1[i] = reshape(
@@ -539,9 +510,9 @@ int Calc_CTM_Environment(
         // d2 < CHI
         C1[i] = extend(slice(C1[i], 0, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
-      };
+      }
 
-      num = lattice.NN_Tensor[lattice.NN_Tensor[i][2]][1];
+      num = lattice.top(lattice.right(i));
       d1 = Tn[num].shape()[0] * Tn[num].shape()[0];
       d2 = Tn[num].shape()[3] * Tn[num].shape()[3];
       C2[i] = reshape(
@@ -563,9 +534,9 @@ int Calc_CTM_Environment(
         // d2 < CHI
         C2[i] = extend(slice(C2[i], 0, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
-      };
+      }
 
-      num = lattice.NN_Tensor[lattice.NN_Tensor[i][2]][3];
+      num = lattice.bottom(lattice.right(i));
       d1 = Tn[num].shape()[1] * Tn[num].shape()[1];
       d2 = Tn[num].shape()[0] * Tn[num].shape()[0];
       C3[i] = reshape(
@@ -587,9 +558,9 @@ int Calc_CTM_Environment(
         // d2 < CHI
         C3[i] = extend(slice(C3[i], 0, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
-      };
+      }
 
-      num = lattice.NN_Tensor[lattice.NN_Tensor[i][0]][3];
+      num = lattice.bottom(lattice.left(i));
       d1 = Tn[num].shape()[2] * Tn[num].shape()[2];
       d2 = Tn[num].shape()[1] * Tn[num].shape()[1];
       C4[i] = reshape(
@@ -611,9 +582,9 @@ int Calc_CTM_Environment(
         // d2 < CHI
         C4[i] = extend(slice(C4[i], 0, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
-      };
+      }
 
-      num = lattice.NN_Tensor[i][1];
+      num = lattice.top(i);
       d1 = Tn[num].shape()[0] * Tn[num].shape()[0];
       d2 = Tn[num].shape()[2] * Tn[num].shape()[2];
       d34 = Tn[num].shape()[3];
@@ -638,9 +609,9 @@ int Calc_CTM_Environment(
         eTt[i] =
             extend(slice(eTt[i], 0, 0, peps_parameters.CHI),
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
-      };
+      }
 
-      num = lattice.NN_Tensor[i][2];
+      num = lattice.right(i);
       d1 = Tn[num].shape()[1] * Tn[num].shape()[1];
       d2 = Tn[num].shape()[3] * Tn[num].shape()[3];
       d34 = Tn[num].shape()[0];
@@ -665,9 +636,9 @@ int Calc_CTM_Environment(
         eTr[i] =
             extend(slice(eTr[i], 0, 0, peps_parameters.CHI),
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
-      };
+      }
 
-      num = lattice.NN_Tensor[i][3];
+      num = lattice.bottom(i);
       d1 = Tn[num].shape()[2] * Tn[num].shape()[2];
       d2 = Tn[num].shape()[0] * Tn[num].shape()[0];
       d34 = Tn[num].shape()[1];
@@ -692,9 +663,9 @@ int Calc_CTM_Environment(
         eTb[i] =
             extend(slice(eTb[i], 0, 0, peps_parameters.CHI),
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
-      };
+      }
 
-      num = lattice.NN_Tensor[i][0];
+      num = lattice.left(i);
       d1 = Tn[num].shape()[3] * Tn[num].shape()[3];
       d2 = Tn[num].shape()[1] * Tn[num].shape()[1];
       d34 = Tn[num].shape()[2];
@@ -718,9 +689,9 @@ int Calc_CTM_Environment(
         eTl[i] =
             extend(slice(eTl[i], 0, 0, peps_parameters.CHI),
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
-      };
-    };
-  };
+      }
+    }
+  }
   // Initialize done
 
   bool convergence = false;
@@ -736,26 +707,26 @@ int Calc_CTM_Environment(
     for (int ix = 0; ix < lattice.LX; ++ix) {
       Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
                 lattice);
-    };
+    }
 
     // right move
     for (int ix = 0; ix > -lattice.LX; --ix) {
       Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
                  (ix + 1 + lattice.LX) % lattice.LX, peps_parameters, lattice);
-    };
+    }
 
     // top move
     for (int iy = 0; iy > -lattice.LY; --iy) {
       Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
                (iy + 1 + lattice.LY) % lattice.LY, peps_parameters, lattice);
-    };
+    }
 
     // bottom move
 
     for (int iy = 0; iy < lattice.LY; ++iy) {
       Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy, peps_parameters,
                   lattice);
-    };
+    }
 
     convergence =
         Check_Convergence_CTM(C1, C2, C3, C4, C1_old, C2_old, C3_old, C4_old,
@@ -772,8 +743,7 @@ int Calc_CTM_Environment(
     }
   }
 
-  if (!convergence &&
-      peps_parameters.print_level >= PrintLevel::warn) {
+  if (!convergence && peps_parameters.print_level >= PrintLevel::warn) {
     std::cout << "Warning: CTM did not converge! count, sig_max = " << count
               << " " << sig_max << std::endl;
   }
@@ -785,4 +755,4 @@ int Calc_CTM_Environment(
 
 }  // end of namespace tenes
 
-#endif  // _SQUARE_LATTICE_HPP_
+#endif  // TENES_SRC_SQUARE_LATTICE_HPP_

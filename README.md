@@ -3,7 +3,7 @@
 | Branch | Build status | Documentation |
 | :-: | :-: | :-: |
 | master (latest stable) | [![master](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) |
-| develop (latest) | [![develop](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=develop)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
+| develop (latest) | [![develop/Test](https://github.com/issp-center-dev/TeNeS/workflows/Test/badge.svg?branch=develop)](https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
 
 # TeNeS
 
@@ -12,8 +12,8 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 
 ## Online manual
 - develop (Latest, UNSTABLE)
-    - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
-    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
+    - [English](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html)
+    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html)
 - master (Latest, stable)
     - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
     - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
@@ -162,7 +162,7 @@ type = "spin"
 Jz = -1.0 # negative for FM interaction
 Jx = 0.0
 Jy = 0.0
-G = 1.0   # transverse field
+hx = 1.0   # transverse field
 ```
 
 `tenes_simple` is a utility tool for converting this file to another file, `std.toml`, denoting the operator tensors including bond hamiltonian.

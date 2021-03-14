@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef _PEPS_PARAMETERS_HPP_
-#define _PEPS_PARAMETERS_HPP_
+#ifndef TENES_SRC_PEPS_PARAMETERS_HPP_
+#define TENES_SRC_PEPS_PARAMETERS_HPP_
 
 #include <string>
 
@@ -35,6 +35,7 @@ class PEPS_Parameters {
   // Simple update
   int num_simple_step;
   double Inverse_lambda_cut;
+  // bool Simple_Gauge_Fix;
 
   // Environment
   double Inverse_projector_cut;
@@ -43,6 +44,7 @@ class PEPS_Parameters {
   bool CTM_Projector_corner;
   bool Use_RSVD;
   double RSVD_Oversampling_factor;
+  bool MeanField_Env;
 
   // Full update
   int num_full_step;
@@ -51,7 +53,7 @@ class PEPS_Parameters {
   double Full_Convergence_Epsilon;
   int Full_max_iteration;
   bool Full_Gauge_Fix;
-  bool Full_Use_FastFullUpdate;  // Fast Full Update
+  bool Full_Use_FastFullUpdate;
 
   // observable
   int Lcor;
@@ -73,7 +75,9 @@ class PEPS_Parameters {
   void save_append(const char *filename) { save(filename, true); }
 
   void Bcast(MPI_Comm comm, int root = 0);
+
+  void check() const;  // may throw tenes::input_error
 };
 
 }  // end of namespace tenes
-#endif  // _PEPS_PARAMETERS_HPP_
+#endif  // TENES_SRC_PEPS_PARAMETERS_HPP_
