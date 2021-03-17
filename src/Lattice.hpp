@@ -91,6 +91,9 @@ class Lattice {
     y -= LY * y_offset;
     x -= skew * y_offset;
     x %= LX;
+    if (x < 0) {
+      x += LX;
+    }
 
     return Tensor_list[x][y];
   }

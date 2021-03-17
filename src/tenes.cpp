@@ -47,9 +47,11 @@ int omp_get_max_threads() { return 1; }
 #include "correlation.hpp"
 #include "printlevel.hpp"
 #include "timer.hpp"
+#include "util/abs.hpp"
 #include "util/file.hpp"
 #include "util/string.hpp"
 #include "util/type_traits.hpp"
+#include "arnoldi.hpp"
 
 #include "tenes.hpp"
 
@@ -137,8 +139,7 @@ class TeNeS {
 
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();
-  void transfer_matvec_horizontal(ptensor &vec, int y);
-  void transfer_matvec_vertical(ptensor &vec, int x);
+
   std::vector<transfer_matrix_eigenvalues_type>
   measure_transfer_matrix_eigenvalues();
 
@@ -189,6 +190,20 @@ class TeNeS {
 
   std::vector<Correlation> measure_correlation_ctm();
   std::vector<Correlation> measure_correlation_mf();
+
+  void transfer_matvec_horizontal_ctm(ptensor &outvec, ptensor const &invec,
+                                      int y);
+  void transfer_matvec_horizontal_mf(ptensor &outvec, ptensor const &invec,
+                                     int y);
+  void transfer_matvec_vertical_ctm(ptensor &outvec, ptensor const &invec,
+                                    int x);
+  void transfer_matvec_vertical_mf(ptensor &outvec, ptensor const &invec,
+                                   int x);
+
+  ptensor transfer_matrix_horizontal_ctm(int y);
+  ptensor transfer_matrix_horizontal_mf(int y);
+  ptensor transfer_matrix_vertical_ctm(int x);
+  ptensor transfer_matrix_vertical_mf(int x);
 
   static constexpr int nleg = 4;
 
@@ -247,7 +262,7 @@ class TeNeS {
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 
-  int CHI;     //!< Bond dimension of corner transfer matrices
+  size_t CHI;  //!< Bond dimension of corner transfer matrices
   int LX;      //!< Length of a unitcell along with X axes
   int LY;      //!< Length of a unitcell along with Y axes
   int N_UNIT;  //!< The number of sites in a unitcell
@@ -1189,35 +1204,209 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation_ctm() {
 }
 
 template <class ptensor>
-void TeNeS<ptensor>::transfer_matvec_horizontal(ptensor &vec, int y) {
-  for (int x = 0; lattice.LX; ++x) {
-    const int site = x + lattice.LX * y;
+void TeNeS<ptensor>::transfer_matvec_horizontal_mf(ptensor &outvec,
+                                                   ptensor const &invec,
+                                                   int y) {
+  auto dim = static_cast<size_t>(std::sqrt(invec.shape()[0]));
+  outvec = reshape(invec, {dim, dim});
+
+  for (int x = 0; x < lattice.LX; ++x) {
+    const int site = lattice.index(x, y);
+    ptensor center = Tn[site];
+    center.multiply_vector(lambda_tensor[site][1], 1);
+    center.multiply_vector(lambda_tensor[site][3], 3);
+
     ////////////////////////////////////////////////////////////
-    // ./transfer_matvec.dat
+    // transfer_matvec_horizontal_mf.dat
     ////////////////////////////////////////////////////////////
-    // (eTt[site]*(vec*eTb[site]))
-    // cpu_cost= 131072  memory= 12544
-    // final_bond_order (et_r, eb_r)
+    // (center*(vec*conj(center)))
+    // cpu_cost= 400000  memory= 60100
+    // final_bond_order (cr, ccr)
     ////////////////////////////////////////////////////////////
-    vec = tensordot(eTt[site], tensordot(vec, eTb[site], Axes(1), Axes(1)),
-                    Axes(0, 2, 3), Axes(0, 2, 3));
+    outvec =
+        tensordot(center, tensordot(outvec, conj(center), Axes(1), Axes(0)),
+                  Axes(0, 1, 3, 4), Axes(0, 1, 3, 4));
   }
+  dim = outvec.shape()[0];
+  outvec = reshape(outvec, {dim * dim});
 }
 
 template <class ptensor>
-void TeNeS<ptensor>::transfer_matvec_vertical(ptensor &vec, int x) {
-  for (int y = 0; lattice.LY; ++y) {
-    const int site = x + lattice.LX * y;
+void TeNeS<ptensor>::transfer_matvec_vertical_mf(ptensor &outvec,
+                                                 ptensor const &invec, int x) {
+  const auto x_orig = x;
+  auto dim = static_cast<size_t>(std::sqrt(invec.shape()[0]));
+  outvec = reshape(invec, {dim, dim});
+
+  do {
+    for (int y = 0; y < lattice.LY; ++y) {
+      const int site = lattice.index(x, y);
+      auto center = Tn[site];
+      center.multiply_vector(lambda_tensor[site][0], 0);
+      center.multiply_vector(lambda_tensor[site][2], 2);
+
+      ////////////////////////////////////////////////////////////
+      // transfer_matvec_vertical_mf.dat
+      ////////////////////////////////////////////////////////////
+      // (center*(vec*conj(center)))
+      // cpu_cost= 400000  memory= 60100
+      // final_bond_order (ct, cct)
+      ////////////////////////////////////////////////////////////
+      outvec =
+          tensordot(center, tensordot(outvec, conj(center), Axes(1), Axes(3)),
+                    Axes(0, 2, 3, 4), Axes(1, 3, 0, 4));
+    }
+
+    x -= lattice.skew;
+    x %= lattice.LX;
+    if (x < 0) {
+      x += lattice.LX;
+    }
+  } while (x != x_orig);
+  dim = outvec.shape()[0];
+  outvec = reshape(outvec, {dim * dim});
+}
+
+template <class ptensor>
+void TeNeS<ptensor>::transfer_matvec_horizontal_ctm(ptensor &outvec,
+                                                    ptensor const &invec,
+                                                    int y) {
+  outvec = reshape(invec, {CHI, CHI});
+
+  for (int x = 0; x < lattice.LX; ++x) {
+    int site = lattice.index(x, y);
+    ptensor top = eTt[site];
+    ptensor bottom = eTb[lattice.top(site)];
+
     ////////////////////////////////////////////////////////////
-    // ./transfer_matvec.dat
+    // transfer_matvec_horizontal_ctm.dat
     ////////////////////////////////////////////////////////////
-    // (eTt[site]*(vec*eTb[site]))
-    // cpu_cost= 131072  memory= 12544
-    // final_bond_order (et_r, eb_r)
+    // (top*(bottom*vec))
+    // cpu_cost= 1.35e+06  memory= 68400
+    // final_bond_order (top_right, bottom_right)
     ////////////////////////////////////////////////////////////
-    vec = tensordot(eTl[site], tensordot(vec, eTr[site], Axes(1), Axes(1)),
-                    Axes(0, 2, 3), Axes(0, 2, 3));
+    outvec = tensordot(top, tensordot(bottom, outvec, Axes(1), Axes(1)),
+                       Axes(0, 2, 3), Axes(3, 1, 2));
   }
+  outvec = reshape(outvec, {CHI * CHI});
+}
+
+template <class ptensor>
+void TeNeS<ptensor>::transfer_matvec_vertical_ctm(ptensor &outvec,
+                                                  ptensor const &invec, int x) {
+  const auto x_orig = x;
+  outvec = reshape(invec, {CHI, CHI});
+
+  do {
+    for (int y = 0; y < lattice.LY; ++y) {
+      const int site = lattice.index(x, y);
+      auto left = eTl[site];
+      auto right = eTr[lattice.left(site)];
+
+      ////////////////////////////////////////////////////////////
+      // transfer_matvec_vertical_ctm.dat
+      ////////////////////////////////////////////////////////////
+      // (left*(right*vec))
+      // cpu_cost= 1.35e+06  memory= 68400
+      // final_bond_order (left_top, right_top)
+      ////////////////////////////////////////////////////////////
+      outvec = tensordot(left, tensordot(right, outvec, Axes(1), Axes(1)),
+                         Axes(0, 2, 3), Axes(3, 1, 2));
+    }
+
+    x = (x + lattice.skew + lattice.LX) % LX;
+  } while (x != x_orig);
+  outvec = reshape(outvec, {CHI * CHI});
+}
+
+template <class ptensor>
+ptensor TeNeS<ptensor>::transfer_matrix_horizontal_ctm(int y) {
+  int site = lattice.index(0, y);
+  ptensor top = eTt[site];
+  ptensor bottom = eTb[lattice.top(site)];
+  ptensor res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
+                          Axes(0, 3, 1, 2));
+  for (int x = 1; x < lattice.LX; ++x) {
+    site = lattice.index(x, y);
+    top = eTt[site];
+    bottom = eTb[lattice.top(site)];
+    res = tensordot(res, tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
+                    Axes(2, 3), Axes(0, 3));
+  }
+  res = reshape(res, {CHI * CHI}, {CHI * CHI});
+  return res;
+}
+
+template <class ptensor>
+ptensor TeNeS<ptensor>::transfer_matrix_vertical_ctm(int x) {
+  const auto x_orig = x;
+  ptensor res{Shape(CHI * CHI, CHI * CHI)};
+  for (size_t i = 0; i < CHI * CHI; ++i) {
+    typename ptensor::value_type v = 1.0;
+    res.set_value({i, i}, v);
+  }
+  res = reshape(res, {CHI}, {CHI}, {CHI}, {CHI});
+
+  do {
+    for (int y = 0; y < lattice.LY; ++y) {
+      const int site = lattice.index(x, y);
+      auto left = eTl[site];
+      auto right = eTr[lattice.left(site)];
+      res = tensordot(res, tensordot(left, right, Axes(2, 3), Axes(2, 3)),
+                      Axes(2, 3), Axes(0, 3));
+    }
+    x = (x + lattice.skew + lattice.LX) % LX;
+  } while (x != x_orig);
+  res = reshape(res, {CHI * CHI}, {CHI * CHI});
+  return res;
+}
+
+template <class ptensor>
+ptensor TeNeS<ptensor>::transfer_matrix_horizontal_mf(int y) {
+  int site = lattice.index(0, y);
+  ptensor T = Tn[site];
+  T.multiply_vector(lambda_tensor[site][1], 1);
+  T.multiply_vector(lambda_tensor[site][3], 3);
+  size_t dim = T.shape()[0];
+  ptensor res = transpose(tensordot(T, conj(T), Axes(1, 3, 4), Axes(1, 3, 4)),
+                          Axes(0, 2, 1, 3));
+
+  for (int x = 0; x < lattice.LX; ++x) {
+    site = lattice.index(x, y);
+    T = Tn[site];
+    T.multiply_vector(lambda_tensor[site][1], 1);
+    T.multiply_vector(lambda_tensor[site][3], 3);
+    res = tensordot(res, tensordot(T, conj(T), Axes(1, 3, 4), Axes(1, 3, 4)),
+                    Axes(2, 3), Axes(0, 2));
+  }
+  res = reshape(res, {dim * dim}, {dim * dim});
+  return res;
+}
+
+template <class ptensor>
+ptensor TeNeS<ptensor>::transfer_matrix_vertical_mf(int x) {
+  size_t dim = Tn[lattice.index(x, 0)].shape()[3];
+  const auto x_orig = x;
+  ptensor res{Shape(dim * dim, dim * dim)};
+  for (size_t i = 0; i < CHI * CHI; ++i) {
+    typename ptensor::value_type v = 1.0;
+    res.set_value({i, i}, v);
+  }
+  res = reshape(res, {dim}, {dim}, {dim}, {dim});
+
+  do {
+    for (int y = 0; y < lattice.LY; ++y) {
+      const int site = lattice.index(x, y);
+      auto center = Tn[site];
+      center.multiply_vector(lambda_tensor[site][0], 0);
+      center.multiply_vector(lambda_tensor[site][2], 2);
+      res = tensordot(res, tensordot(center, conj(center), Axes(0, 2, 4), Axes(0, 2, 4)),
+                      Axes(2, 3), Axes(1, 3));
+    }
+    x = (x + lattice.skew + lattice.LX) % LX;
+  } while (x != x_orig);
+  res = reshape(res, {dim * dim}, {dim * dim});
+  return res;
 }
 
 template <class ptensor>
@@ -1231,37 +1420,74 @@ TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
   // res[id][5]: eigval 2
   std::vector<transfer_matrix_eigenvalues_type> res;
 
-  std::array<std::function<const ptensor(int, int)>, 2> topedge{
-      [&](int run, int fixed) { return eTt[lattice.index(run, fixed)]; },
-      [&](int run, int fixed) { return eTl[lattice.index(fixed, run)]; },
-  };
+  std::array<std::function<void(ptensor &, ptensor const &, int)>, 2> matvec;
 
-  std::array<std::function<const ptensor(int, int)>, 2> bottomedge{
-      [&](int run, int fixed) { return eTb[lattice.index(run, fixed - 1)]; },
-      [&](int run, int fixed) { return eTr[lattice.index(fixed + 1, run)]; },
-  };
+  if (peps_parameters.MeanField_Env) {
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    using std::placeholders::_3;
+    matvec[0] = std::bind(&TeNeS<ptensor>::transfer_matvec_horizontal_mf, this,
+                          _1, _2, _3);
+    matvec[1] = std::bind(&TeNeS<ptensor>::transfer_matvec_vertical_mf, this,
+                          _1, _2, _3);
+  } else {
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    using std::placeholders::_3;
+    matvec[0] = std::bind(&TeNeS<ptensor>::transfer_matvec_horizontal_ctm, this,
+                          _1, _2, _3);
+    matvec[1] = std::bind(&TeNeS<ptensor>::transfer_matvec_vertical_ctm, this,
+                          _1, _2, _3);
+  }
 
-  ptensor T;
-  std::vector<double> lambda;
+  std::mt19937 gen(peps_parameters.seed * 137 + 31415);
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
+
+  std::vector<double> eigvals;
   for (int dir = 0; dir < 2; ++dir) {
-    int L = dir == 0 ? LX : LY;
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
-      int run = 0;
-      T = tensordot(topedge[dir](run, fixed), bottomedge[dir](run, fixed),
-                    Axes(2, 3), Axes(2, 3));
-      for (run = 1; run < L; ++run) {
-        T = tensordot(
-            T,
-            tensordot(topedge[dir](run, fixed), bottomedge[dir](run, fixed),
-                      Axes(2, 3), Axes(2, 3)),
-            Axes(1, 2), Axes(0, 3));
+      // {
+      // int fixed = 0;
+      ptensor initial_vec;
+      if (peps_parameters.MeanField_Env) {
+        auto D = dir == 0 ? Tn[lattice.index_fast(0, fixed)].shape()[0]
+                          : Tn[lattice.index_fast(fixed, 0)].shape()[3];
+        auto N = D * D;
+        mptensor::Shape sp(N);
+        initial_vec = ptensor(sp);
+        for (size_t i = 0; i < N; ++i) {
+          double v = dist(gen);
+          initial_vec.set_value({i}, v);
+        }
+      } else {
+        if (dir == 0) {
+          int site = lattice.index(0, fixed);
+          ptensor left_top = C1[site];
+          ptensor left_bottom = C4[lattice.top(site)];
+          initial_vec = mptensor::tensordot(left_top, left_bottom, {0}, {1});
+        } else {
+          int site = lattice.index(fixed, 0);
+          auto left_bottom = C4[site];
+          auto right_bottom = C3[lattice.left(site)];
+          initial_vec =
+              mptensor::tensordot(left_bottom, right_bottom, {0}, {1});
+        }
       }
-      psvd(T, Axes(0, 3), Axes(1, 2), lambda, 3);
-      for (int i = 0; i < 3; ++i) {
-        lambda[i] = std::sqrt(lambda[i]);
-      }
-      res.push_back(std::make_tuple(0, fixed, lambda[0], lambda[1], lambda[2]));
+
+      const size_t N = initial_vec.shape()[0];
+      const size_t nev = 3;
+      const size_t maxvec = peps_parameters.correlation_length_arnoldi_maxdim;
+      const size_t maxiter = peps_parameters.correlation_length_arnoldi_maxiter;
+      using std::placeholders::_1;
+      using std::placeholders::_2;
+      Arnoldi<ptensor> arnoldi(N, maxvec);
+      arnoldi.initialize(initial_vec);
+      arnoldi.run(std::bind(matvec[dir], _1, _2, fixed), nev, maxiter);
+      auto eigvals = arnoldi.eigenvalues();
+      res.push_back(std::make_tuple(dir, fixed, util::abs2(eigvals[0]),
+                                    util::abs2(eigvals[1]),
+                                    util::abs2(eigvals[2])));
     }
   }
 
@@ -1293,7 +1519,18 @@ void TeNeS<ptensor>::save_correlation_length(
     double l0, l1, l2;
     std::tie(dir, x, l0, l1, l2) = lambda;
 
-    int L = dir == 0 ? LX : LY;
+    int L = 1;
+    if (dir == 0) {
+      L = LX;
+    } else {
+      L = 0;
+      int x = 0;
+      do {
+        L += LY;
+        x = (x + LX + lattice.skew) % LX;
+      } while (x != 0);
+    }
+
     double correlation_length = L / std::log(l0 / l1);
     double correction_x = std::log(l1 / l2);
 
@@ -1470,6 +1707,9 @@ void TeNeS<ptensor>::measure() {
     save_correlation(correlations);
   }
 
+  if (peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "  Start calculating correlation length" << std::endl;
+  }
   auto correlation_length = measure_transfer_matrix_eigenvalues();
   save_correlation_length(correlation_length);
 

@@ -77,6 +77,7 @@ endif()
 
 find_package(LAPACK REQUIRED)
 
+find_package(Eigen3 REQUIRED)
 
 if(ENABLE_MPI)
     if(APPLE)

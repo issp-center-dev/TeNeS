@@ -241,6 +241,15 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     load_if(pparam.seed, random, "seed");
   }
 
+  // correlation length
+  auto clength = param->get_table("correlation_length");
+  if (clength != nullptr) {
+    load_if(pparam.to_calculate_correlation_length, clength, "enable");
+    load_if(pparam.correlation_length_arnoldi_maxdim, clength, "maxdim");
+    load_if(pparam.correlation_length_arnoldi_maxiter, clength, "maxiter");
+    load_if(pparam.correlation_length_arnoldi_rtol, clength, "rtol");
+  }
+
   return pparam;
 }
 
