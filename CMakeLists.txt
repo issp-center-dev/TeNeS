@@ -76,6 +76,11 @@ if(NOT DEFINED OpenMP_CXX_LIBRARIES)
 endif()
 
 find_package(LAPACK REQUIRED)
+string(FIND "${LAPACK_LIBRARIES}" mkl _MKL_FOUND)
+if(NOT ${_MKL_FOUND} LESS 0)
+    message(STATUS "Intel MKL is detected")
+    set(MKL_FOUND)
+endif()
 
 find_package(Eigen3 REQUIRED)
 

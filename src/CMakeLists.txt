@@ -33,6 +33,12 @@ if (NOT ENABLE_MPI)
     target_compile_definitions(tenes PRIVATE -D_NO_MPI)
 endif()
 
+if (MKL_FOUND)
+    target_compile_definitions(tenes PRIVATE -DEIGEN_USE_MKL_ALL)
+else()
+    target_compile_definitions(tenes PRIVATE -DEIGEN_USE_BLAS)
+endif()
+
 target_compile_options(tenes PRIVATE ${OMP_FLAG})
 target_compile_options(tenes PRIVATE -Wall)
 target_compile_options(tenes PRIVATE $<$<CONFIG:Debug>: -Wextra -Wno-unused-parameter -Wno-sign-compare -Wpedantic >)
