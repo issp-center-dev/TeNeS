@@ -8,6 +8,7 @@ add_executable(tenes
 main.cpp
 main_impl.cpp
 tenes.cpp 
+correlation_length.cpp
 PEPS_Parameters.cpp
 Lattice.cpp
 util/string.cpp
