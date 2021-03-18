@@ -11,7 +11,7 @@ and each file has some sections.
 ``tenes`` reads some sections and performs simulation.
 
 For example, ``tenes_simple`` reads ``model`` and ``lattice`` sections and generates ``tensor``, ``observable``, and ``hamiltonian`` ones.
-Additionary, this copies ``parameter`` and ``correlation`` sections.
+Additionary, this copies ``parameter``, ``correlation``, and ``correlation_length`` sections.
 
 The following table summarizes how each tool deal with sections.
 
@@ -25,6 +25,7 @@ The following table summarizes how each tool deal with sections.
   ``tensor``,      "out",  "in / copy", "in"
   ``observable``,  "out",  "copy",    "in"
   ``correlation``, "copy", "copy",    "in"
+  ``correlation_length``, "copy", "copy",    "in"
   ``hamiltonian``, "out",  "in",      ""
   ``evolution``,   "",     "out",     "in"
 

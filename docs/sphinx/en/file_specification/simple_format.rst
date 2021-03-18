@@ -308,3 +308,11 @@ Parameters defined in this section is not used in ``tenes_simple`` but they are 
 For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
 For calculating correlation functions, they have to be specified in the same file format as the input file of ``tenes``.
 For details, See ``correlation`` section :doc:`expert_format`.
+
+
+``correlation_length`` section
+=================================
+
+Parameters defined in this section is not used in ``tenes_simple`` but they are copied to the input file of ``tenes_std``.
+
+.. include:: ./correlation_length_section.rst

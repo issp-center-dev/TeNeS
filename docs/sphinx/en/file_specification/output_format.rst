@@ -129,6 +129,34 @@ Example
     ...
     1 3 1 1 0 3 -1.65874245891461547e-01 0.00000000000000000e+00
 
+
+``correlation_length.dat``
+===========================
+
+- Correlation length :math`\xi` is outputted.
+- Each line has 4 fields:
+
+
+1. Direction  (``0: x, 1: y``)
+2. Column or Row ``x or y``
+3. Correlation length :math:`xi`
+4. Correction
+
+Example
+~~~~~~~
+
+::
+
+   # $1: direction
+   # $2: col or row index
+   # $3: value
+   # $4: correction x (log(l1/l2))
+
+   0 0 3.37791613946688440e-01 5.00142908955488515e-03
+   0 1 3.37852350766748522e-01 4.45319009446746954e-03
+   1 0 3.40787198459586105e-01 1.22174988003313756e-03
+   1 1 3.40818939432138035e-01 3.06195754545400501e-03
+
 ``time.dat``
 =====================
 
