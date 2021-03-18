@@ -58,12 +58,6 @@ PEPS_Parameters::PEPS_Parameters() {
 
   Lcor = 0;
 
-  // correlation length
-  to_calculate_correlation_length = false;
-  correlation_length_arnoldi_maxdim = 20;
-  correlation_length_arnoldi_maxiter = 10;
-  correlation_length_arnoldi_rtol = 1.0e-8;
-
   // random
   seed = 11;
 
@@ -96,9 +90,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
     I_Lcor,
-    I_to_calculate_correlation_length,
-    I_correlation_length_arnoldi_maxdim,
-    I_correlation_length_arnoldi_maxiter,
     I_seed,
     I_is_real,
     I_to_measure,
@@ -114,7 +105,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_Convergence_Epsilon,
     I_RSVD_Oversampling_factor,
     I_iszero_tol,
-    I_correlation_length_arnoldi_rtol,
 
     N_PARAMS_DOUBLE_INDEX,
   };
@@ -147,9 +137,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
     SAVE_PARAM(Lcor, int);
-    SAVE_PARAM(to_calculate_correlation_length, int);
-    SAVE_PARAM(correlation_length_arnoldi_maxdim, int);
-    SAVE_PARAM(correlation_length_arnoldi_maxiter, int);
     SAVE_PARAM(seed, int);
 
     SAVE_PARAM(Inverse_lambda_cut, double);
@@ -159,7 +146,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_Inverse_precision, double);
     SAVE_PARAM(Full_Convergence_Epsilon, double);
     SAVE_PARAM(RSVD_Oversampling_factor, double);
-    SAVE_PARAM(correlation_length_arnoldi_rtol, double);
 
     SAVE_PARAM(is_real, int);
     SAVE_PARAM(iszero_tol, double);
@@ -194,9 +180,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
     LOAD_PARAM(Lcor, int);
-    LOAD_PARAM(to_calculate_correlation_length, int);
-    LOAD_PARAM(correlation_length_arnoldi_maxdim, int);
-    LOAD_PARAM(correlation_length_arnoldi_maxiter, int);
     LOAD_PARAM(seed, int);
 
     LOAD_PARAM(Inverse_lambda_cut, double);
@@ -206,7 +189,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_Inverse_precision, double);
     LOAD_PARAM(Full_Convergence_Epsilon, double);
     LOAD_PARAM(RSVD_Oversampling_factor, double);
-    LOAD_PARAM(correlation_length_arnoldi_rtol, double);
 
     LOAD_PARAM(is_real, int);
     LOAD_PARAM(iszero_tol, double);
@@ -263,10 +245,6 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << std::endl;
 
   ofs << "Lcor = " << Lcor << std::endl;
-  ofs << "to_calculate_correlation_length = " << to_calculate_correlation_length << std::endl;
-  ofs << "correlation_length_arnoldi_maxdim = " << correlation_length_arnoldi_maxdim << std::endl;
-  ofs << "correlation_length_arnoldi_maxiter = " << correlation_length_arnoldi_maxiter << std::endl;
-  ofs << "correlation_length_arnoldi_rtol = " << correlation_length_arnoldi_rtol << std::endl;
 
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;

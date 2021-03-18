@@ -16,6 +16,7 @@ util/file.cpp
 mpi.cpp
 PEPS_Contract_impl.cpp
 PEPS_Contract_MF_impl.cpp
+arnoldi.cpp
 )
 
 if (USE_SANITIZER)

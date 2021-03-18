@@ -25,6 +25,24 @@
 
 namespace tenes {
 
+struct CorrelationLengthCalculator_Parameters {
+  bool to_calculate;
+  int maxdim_dense_eigensolver;
+  int arnoldi_maxdim;
+  int arnoldi_restartdim;
+  int arnoldi_maxiter;
+  double arnoldi_rtol;
+
+  CorrelationLengthCalculator_Parameters()
+      : to_calculate(true),
+        maxdim_dense_eigensolver(200),
+        arnoldi_maxdim(50),
+        arnoldi_restartdim(20),
+        arnoldi_maxiter(1),
+        arnoldi_rtol(1.0e-10) {}
+  void Bcast(MPI_Comm comm, int root = 0);
+};
+
 template <class ptensor>
 class CorrelationLengthCalculator {
  public:
@@ -32,8 +50,9 @@ class CorrelationLengthCalculator {
                               std::vector<ptensor> const &Tn)
       : lattice(lattice), Tn(Tn) {}
   virtual ~CorrelationLengthCalculator() {}
-  std::vector<std::complex<double>> eigenvalues(int dir, int fixed_coord, int maxvec,
-                                  int maxiter, std::mt19937 &rng) const;
+  std::vector<std::complex<double>> eigenvalues(int dir, int fixed_coord,
+                                                CorrelationLengthCalculator_Parameters const& param,
+                                                std::mt19937 &rng) const;
 
  private:
   virtual void matvec_horizontal(ptensor &outvec, ptensor const &invec,
@@ -46,6 +65,8 @@ class CorrelationLengthCalculator {
 
   virtual ptensor initial_vector(int dir, int fixed_coord,
                                  std::mt19937 &rng) const = 0;
+
+  virtual size_t dim(int dir, int fixed_coord) const = 0;
 
  protected:
   Lattice lattice;
@@ -91,6 +112,7 @@ class CorrelationLengthCalculator_ctm
   ptensor matrix_vertical(int x) const override;
   ptensor initial_vector(int dir, int fixed_coord,
                          std::mt19937 &gen) const override;
+  virtual size_t dim(int dir, int fixed_coord) const override;
 };
 
 template <class ptensor>
@@ -114,6 +136,7 @@ class CorrelationLengthCalculator_mf
   ptensor matrix_vertical(int x) const override;
   ptensor initial_vector(int dir, int fixed_coord,
                          std::mt19937 &rng) const override;
+  virtual size_t dim(int dir, int fixed_coord) const override;
 };
 
 }  // end of namespace tenes

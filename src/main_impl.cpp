@@ -177,6 +177,13 @@ int main_impl(std::string input_filename, MPI_Comm com,
                              ? gen_corparam(toml_correlation, "correlation")
                              : CorrelationParameter());
 
+  // correlation length
+  auto toml_clength = input_toml->get_table("correlation_length");
+  const auto clength_param =
+      (toml_clength != nullptr
+           ? gen_correlationlength_parameter(toml_clength, "correlation_length")
+           : CorrelationLengthCalculator_Parameters());
+
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);
   is_real = is_real && ::is_real(full_updates, tol);
@@ -220,10 +227,12 @@ int main_impl(std::string input_filename, MPI_Comm com,
   if (is_real) {
     return tenes(MPI_COMM_WORLD, peps_parameters, lattice,
                  to_real(simple_updates), to_real(full_updates),
-                 to_real(onesite_obs), to_real(twosite_obs), corparam);
+                 to_real(onesite_obs), to_real(twosite_obs), corparam,
+                 clength_param);
   } else {
     return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-                 full_updates, onesite_obs, twosite_obs, corparam);
+                 full_updates, onesite_obs, twosite_obs, corparam,
+                 clength_param);
   }
 }
 

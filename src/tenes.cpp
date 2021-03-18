@@ -116,7 +116,8 @@ class TeNeS {
         NNOperators<ptensor> simple_updates_,
         NNOperators<ptensor> full_updates_,
         Operators<ptensor> onesite_operators,
-        Operators<ptensor> twosite_operators, CorrelationParameter corparam_);
+        Operators<ptensor> twosite_operators, CorrelationParameter corparam_,
+        CorrelationLengthCalculator_Parameters clength_param_);
 
   void initialize_tensors();
   void update_CTM();
@@ -213,6 +214,7 @@ class TeNeS {
   std::vector<ptensor> op_identity;
 
   CorrelationParameter corparam;
+  CorrelationLengthCalculator_Parameters clength_param;
 
   /*! @name Tensors
    *  @brief Tensors of an iTPS
@@ -269,7 +271,8 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                       NNOperators<ptensor> full_updates_,
                       Operators<ptensor> onesite_operators_,
                       Operators<ptensor> twosite_operators_,
-                      CorrelationParameter corparam_)
+                      CorrelationParameter corparam_,
+                      CorrelationLengthCalculator_Parameters clength_param_)
     : comm(comm_),
       peps_parameters(peps_parameters_),
       lattice(lattice_),
@@ -278,6 +281,7 @@ TeNeS<ptensor>::TeNeS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       onesite_operators(onesite_operators_),
       twosite_operators(twosite_operators_),
       corparam(corparam_),
+      clength_param(clength_param_),
       outdir("output"),
       timer_all(),
       time_simple_update(),
@@ -1190,7 +1194,6 @@ std::vector<Correlation> TeNeS<ptensor>::measure_correlation_ctm() {
   return correlations;
 }
 
-
 template <class ptensor>
 std::vector<typename TeNeS<ptensor>::transfer_matrix_eigenvalues_type>
 TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
@@ -1218,9 +1221,7 @@ TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
   for (int dir = 0; dir < 2; ++dir) {
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
-      auto eigvals = clength->eigenvalues(
-          dir, fixed, peps_parameters.correlation_length_arnoldi_maxdim,
-          peps_parameters.correlation_length_arnoldi_maxiter, gen);
+      auto eigvals = clength->eigenvalues(dir, fixed, clength_param, gen);
       res.push_back(std::make_tuple(dir, fixed, util::abs2(eigvals[0]),
                                     util::abs2(eigvals[1]),
                                     util::abs2(eigvals[2])));
@@ -1443,11 +1444,13 @@ void TeNeS<ptensor>::measure() {
     save_correlation(correlations);
   }
 
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "  Start calculating correlation length" << std::endl;
+  if (clength_param.to_calculate) {
+    if (peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "  Start calculating correlation length" << std::endl;
+    }
+    auto correlation_length = measure_transfer_matrix_eigenvalues();
+    save_correlation_length(correlation_length);
   }
-  auto correlation_length = measure_transfer_matrix_eigenvalues();
-  save_correlation_length(correlation_length);
 
   if (mpirank == 0) {
     std::vector<tensor_type> loc_obs(num_onesite_operators);
@@ -1843,10 +1846,11 @@ template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
           Operators<tensor> onesite_operators,
-          Operators<tensor> twosite_operators, CorrelationParameter corparam) {
+          Operators<tensor> twosite_operators, CorrelationParameter corparam,
+          CorrelationLengthCalculator_Parameters clength_param) {
   TeNeS<tensor> tns(comm, peps_parameters, lattice, simple_updates,
                     full_updates, onesite_operators, twosite_operators,
-                    corparam);
+                    corparam, clength_param);
   tns.optimize();
   tns.save_tensors();
   if (peps_parameters.to_measure) {
@@ -1857,21 +1861,20 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
 }
 
 // template specialization
-template int tenes<real_tensor>(MPI_Comm comm, PEPS_Parameters peps_parameters,
-                                Lattice lattice,
-                                NNOperators<real_tensor> simple_updates,
-                                NNOperators<real_tensor> full_updates,
-                                Operators<real_tensor> onesite_operators,
-                                Operators<real_tensor> twosite_operators,
-                                CorrelationParameter corparam);
+template int tenes<real_tensor>(
+    MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+    NNOperators<real_tensor> simple_updates,
+    NNOperators<real_tensor> full_updates,
+    Operators<real_tensor> onesite_operators,
+    Operators<real_tensor> twosite_operators, CorrelationParameter corparam,
+    CorrelationLengthCalculator_Parameters clength_param);
 
-template int tenes<complex_tensor>(MPI_Comm comm,
-                                   PEPS_Parameters peps_parameters,
-                                   Lattice lattice,
-                                   NNOperators<complex_tensor> simple_updates,
-                                   NNOperators<complex_tensor> full_updates,
-                                   Operators<complex_tensor> onesite_operators,
-                                   Operators<complex_tensor> twosite_operators,
-                                   CorrelationParameter corparam);
+template int tenes<complex_tensor>(
+    MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+    NNOperators<complex_tensor> simple_updates,
+    NNOperators<complex_tensor> full_updates,
+    Operators<complex_tensor> onesite_operators,
+    Operators<complex_tensor> twosite_operators, CorrelationParameter corparam,
+    CorrelationLengthCalculator_Parameters clength_param);
 
 }  // end of namespace tenes

@@ -14,39 +14,128 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+#include <algorithm>
+
 #include <mptensor/tensor.hpp>
 
 #include "correlation_length.hpp"
 #include "arnoldi.hpp"
+#include "util/abs.hpp"
 
 namespace tenes {
+
+#define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
+#define LOAD_PARAM(name, type) \
+  name = static_cast<decltype(name)>(params_##type[I_##name])
+
+void CorrelationLengthCalculator_Parameters::Bcast(MPI_Comm comm, int root) {
+  enum PARAMS_INT_INDEX {
+    I_to_calculate,
+    I_maxdim_dense_eigensolver,
+    I_arnoldi_maxdim,
+    I_arnoldi_restartdim,
+    I_arnoldi_maxiter,
+
+    N_PARAMS_INT_INDEX,
+  };
+  enum PARAMS_DOUBLE_INDEX {
+    I_arnoldi_rtol,
+
+    N_PARAMS_DOUBLE_INDEX,
+  };
+
+  int irank;
+  MPI_Comm_rank(comm, &irank);
+
+  std::vector<int> params_int(N_PARAMS_INT_INDEX);
+  std::vector<double> params_double(N_PARAMS_DOUBLE_INDEX);
+
+  if (irank == root) {
+    SAVE_PARAM(to_calculate, int);
+    SAVE_PARAM(maxdim_dense_eigensolver, int);
+    SAVE_PARAM(arnoldi_maxdim, int);
+    SAVE_PARAM(arnoldi_restartdim, int);
+    SAVE_PARAM(arnoldi_maxiter, int);
+    SAVE_PARAM(arnoldi_rtol, double);
+
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+  } else {
+    bcast(params_int, 0, comm);
+    bcast(params_double, 0, comm);
+
+    LOAD_PARAM(to_calculate, int);
+    LOAD_PARAM(maxdim_dense_eigensolver, int);
+    LOAD_PARAM(arnoldi_maxdim, int);
+    LOAD_PARAM(arnoldi_restartdim, int);
+    LOAD_PARAM(arnoldi_maxiter, int);
+    LOAD_PARAM(arnoldi_rtol, double);
+  }
+}
+
+#undef SAVE_PARAM
+#undef LOAD_PARAM
 
 template <class ptensor>
 std::vector<std::complex<double>>
 CorrelationLengthCalculator<ptensor>::eigenvalues(int dir, int fixed_coord,
-                                                  int maxvec, int maxiter,
+                                                  CorrelationLengthCalculator_Parameters const& params,
                                                   std::mt19937 &rng) const {
-  ptensor initial_vec = initial_vector(dir, fixed_coord, rng);
-  const size_t N = initial_vec.shape()[0];
-  const size_t nev = 3;
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  Arnoldi<ptensor> arnoldi(N, maxvec);
-  arnoldi.initialize(initial_vec);
-  if (dir == 0) {
-    arnoldi.run(
-        [&](ptensor &out, ptensor const &in) {
-          matvec_horizontal(out, in, fixed_coord);
-        },
-        nev, maxiter);
-  } else {
-    arnoldi.run(
-        [&](ptensor &out, ptensor const &in) {
-          matvec_vertical(out, in, fixed_coord);
-        },
-        nev, maxiter);
+  const size_t N = dim(dir, fixed_coord);
+  const size_t nev = std::min(static_cast<size_t>(4), N);
+
+  if (N <= params.maxdim_dense_eigensolver) {
+    ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
+                              : matrix_vertical(fixed_coord);
+
+    Eigen::Matrix<typename ptensor::value_type, Eigen::Dynamic, Eigen::Dynamic>
+        matrix_eigen(N, N);
+    for (size_t row = 0; row < N; ++row) {
+      for (size_t col = 0; col < N; ++col) {
+        typename ptensor::value_type v;
+        matrix.get_value({row, col}, v);
+        matrix_eigen(row, col) = v;
+      }
+    }
+    auto eigvals = matrix_eigen.eigenvalues();
+    std::vector<std::complex<double>> ret(N);
+    for (size_t i = 0; i < N; ++i) {
+      ret[i] = eigvals[i];
+    }
+    std::partial_sort(ret.begin(), ret.begin() + nev, ret.end(),
+                      [](std::complex<double> a, std::complex<double> b) {
+                        return util::abs2(a) > util::abs2(b);
+                      });
+    ret.erase(ret.begin() + nev, ret.end());
+    return ret;
+  } else { // use Arnoldi
+    auto maxvec = params.arnoldi_maxdim;
+    auto maxiter = params.arnoldi_maxiter;
+    if (N < maxvec) {
+      maxvec = N;
+      maxiter = 1;
+    }
+    ptensor initial_vec = initial_vector(dir, fixed_coord, rng);
+    Arnoldi<ptensor> arnoldi(N, maxvec);
+    arnoldi.initialize(initial_vec);
+    if (dir == 0) {
+      arnoldi.run(
+          [&](ptensor &out, ptensor const &in) {
+            matvec_horizontal(out, in, fixed_coord);
+          },
+          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+    } else {
+      arnoldi.run(
+          [&](ptensor &out, ptensor const &in) {
+            matvec_vertical(out, in, fixed_coord);
+          },
+          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+    }
+    auto ret = arnoldi.eigenvalues();
+    return ret;
   }
-  return arnoldi.eigenvalues();
 }
 
 template <class ptensor>
@@ -70,6 +159,7 @@ template <class ptensor>
 ptensor CorrelationLengthCalculator_ctm<ptensor>::initial_vector(
     int dir, int fixed_coord, std::mt19937 &rng) const {
   const auto &lattice = this->lattice;
+
   ptensor initial_vec;
   if (dir == 0) {
     int site = lattice.index(0, fixed_coord);
@@ -82,6 +172,7 @@ ptensor CorrelationLengthCalculator_ctm<ptensor>::initial_vector(
     auto right_bottom = C3[lattice.left(site)];
     initial_vec = mptensor::tensordot(left_bottom, right_bottom, {0}, {1});
   }
+
   return initial_vec;
 }
 
@@ -239,6 +330,7 @@ ptensor CorrelationLengthCalculator_ctm<ptensor>::matrix_vertical(int x) const {
   const size_t CHI = C1[0].shape()[0];
   const auto x_orig = x;
   ptensor res{Shape(CHI * CHI, CHI * CHI)};
+#pragma omp parallel for shared(res)
   for (size_t i = 0; i < CHI * CHI; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
@@ -289,14 +381,15 @@ ptensor CorrelationLengthCalculator_mf<ptensor>::matrix_vertical(int x) const {
   using mptensor::Axes;
   using mptensor::Shape;
   const auto &lattice = this->lattice;
-  size_t dim = this->Tn[lattice.index(x, 0)].shape()[3];
+  const size_t N = dim(1, x);
+  const size_t Nsqrt = static_cast<size_t>(std::sqrt(N));
   const auto x_orig = x;
-  ptensor res{Shape(dim * dim, dim * dim)};
-  for (size_t i = 0; i < dim * dim; ++i) {
+  ptensor res{Shape(N, N)};
+  for (size_t i = 0; i < N; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
   }
-  res = reshape(res, {dim, dim, dim, dim});
+  res = reshape(res, {Nsqrt, Nsqrt});
 
   do {
     for (int y = 0; y < lattice.LY; ++y) {
@@ -310,8 +403,25 @@ ptensor CorrelationLengthCalculator_mf<ptensor>::matrix_vertical(int x) const {
     }
     x = (x + lattice.skew + lattice.LX) % lattice.LX;
   } while (x != x_orig);
-  res = reshape(res, {dim * dim, dim * dim});
+  res = reshape(res, {N, N});
   return res;
+}
+
+template <class ptensor>
+size_t CorrelationLengthCalculator_ctm<ptensor>::dim(int dir,
+                                                     int fixed_coord) const {
+  auto ret = C1[0].shape()[0];
+  return ret * ret;
+}
+
+template <class ptensor>
+size_t CorrelationLengthCalculator_mf<ptensor>::dim(int dir,
+                                                    int fixed_coord) const {
+  if (dir == 0) {
+    return this->Tn[this->lattice.index(0, fixed_coord)].shape()[0];
+  } else {
+    return this->Tn[this->lattice.index(fixed_coord, 0)].shape()[3];
+  }
 }
 
 template class CorrelationLengthCalculator<real_tensor>;

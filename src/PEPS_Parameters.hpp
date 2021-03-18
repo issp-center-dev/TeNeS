@@ -58,12 +58,6 @@ class PEPS_Parameters {
   // observable
   int Lcor;
 
-  // correlation length
-  bool to_calculate_correlation_length;
-  int correlation_length_arnoldi_maxdim;
-  int correlation_length_arnoldi_maxiter;
-  double correlation_length_arnoldi_rtol;
-
   // random
   int seed;
 

@@ -59,6 +59,17 @@ def float_to_str(v: float) -> str:
     return ret
 
 
+def value_to_str(v) -> str:
+    if isinstance(v, str):
+        return "'{}'".format(v)
+    elif isinstance(v, bool):
+        return "true" if v else "false"
+    elif isinstance(v, float):
+        return float_to_str(v)
+    else:
+        return "{}".format(v)
+
+
 Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
 
 
@@ -693,6 +704,7 @@ class Model:
     simple_tau: float
     full_tau: float
     correlation: Dict[str, Any]
+    clength: Dict[str, Any]
     unitcell: Unitcell
     hamiltonians: List[NNOperator]
     graph: LatticeGraph
@@ -708,6 +720,7 @@ class Model:
         self.simple_tau = self.parameter["simple_update"].get("tau", 0.01)
         self.full_tau = self.parameter["full_update"].get("tau", 0.01)
         self.correlation = param.get("correlation", None)
+        self.clength = param.get("correlation_length", None)
 
         self.unitcell = Unitcell(param["tensor"])
         offset_x_min = offset_x_max = offset_y_min = offset_y_max = 0
@@ -800,14 +813,7 @@ class Model:
         for tablename, table in self.parameter.items():
             f.write("[parameter.{}]\n".format(tablename))
             for k, v in table.items():
-                if isinstance(v, str):
-                    f.write("{} = '{}'\n".format(k, v))
-                elif isinstance(v, bool):
-                    f.write("{} = {}\n".format(k, "true" if v else "false"))
-                elif isinstance(v, float):
-                    f.write("{} = {}\n".format(k, float_to_str(v)))
-                else:
-                    f.write("{} = {}\n".format(k, v))
+                f.write("{} = {}\n".format(k, value_to_str(v)))
         f.write("\n")
 
         # tensor
@@ -849,6 +855,12 @@ class Model:
                 f.write("  {},\n".format(ops))
             f.write("]\n")
             f.write("\n")
+
+        # correlation length
+        if self.clength is not None:
+            f.write("[correlation_length]\n")
+            for k, v in self.clength.items():
+                f.write("{} = {}\n".format(k, value_to_str(v)))
 
         f.write("[evolution]\n")
         for update in self.simple_updates:
