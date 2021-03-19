@@ -8,6 +8,7 @@ add_executable(tenes
 main.cpp
 main_impl.cpp
 tenes.cpp 
+tensor.cpp
 correlation_length.cpp
 PEPS_Parameters.cpp
 Lattice.cpp
@@ -23,22 +24,12 @@ if (USE_SANITIZER)
     add_sanitizers(tenes)
 endif()
 
-# target_include_directories(tenes PUBLIC ${MPI_CXX_INCLUDE_DIRS})
-# target_link_libraries(tenes mptensor)
-# target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBS})
-
 if (NOT OPENMP_FOUND)
     target_compile_definitions(tenes PRIVATE -D_NO_OMP)
 endif()
 
 if (NOT ENABLE_MPI)
     target_compile_definitions(tenes PRIVATE -D_NO_MPI)
-endif()
-
-if (MKL_FOUND)
-    target_compile_definitions(tenes PRIVATE -DEIGEN_USE_MKL_ALL)
-else()
-    target_compile_definitions(tenes PRIVATE -DEIGEN_USE_BLAS)
 endif()
 
 target_compile_options(tenes PRIVATE ${OMP_FLAG})
@@ -50,7 +41,6 @@ target_include_directories(tenes PRIVATE ${MPI_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
 target_include_directories(tenes PRIVATE ${CPPTOML_INCLUDE_DIR})
 target_include_directories(tenes PRIVATE ${BUNDLED_DEPS_DIR})
-target_include_directories(tenes PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 target_link_libraries(tenes mptensor)
 target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})

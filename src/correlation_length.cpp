@@ -14,11 +14,9 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include <Eigen/Core>
-#include <Eigen/Eigenvalues>
 #include <algorithm>
 
-#include <mptensor/tensor.hpp>
+#include "tensor.hpp"
 
 #include "correlation_length.hpp"
 #include "arnoldi.hpp"
@@ -80,37 +78,37 @@ void CorrelationLengthCalculator_Parameters::Bcast(MPI_Comm comm, int root) {
 
 template <class ptensor>
 std::vector<std::complex<double>>
-CorrelationLengthCalculator<ptensor>::eigenvalues(int dir, int fixed_coord,
-                                                  CorrelationLengthCalculator_Parameters const& params,
-                                                  std::mt19937 &rng) const {
+CorrelationLengthCalculator<ptensor>::eigenvalues(
+    int dir, int fixed_coord,
+    CorrelationLengthCalculator_Parameters const &params,
+    std::mt19937 &rng) const {
+  using value_type = typename ptensor::value_type;
   const size_t N = dim(dir, fixed_coord);
   const size_t nev = std::min(static_cast<size_t>(4), N);
+
+  std::vector<std::complex<double>> eigvals;
+
+  if(N == 1){
+    eigvals.resize(nev);
+    eigvals[0] = 1.0;
+    return eigvals;
+  }
 
   if (N <= params.maxdim_dense_eigensolver) {
     ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
                               : matrix_vertical(fixed_coord);
 
-    Eigen::Matrix<typename ptensor::value_type, Eigen::Dynamic, Eigen::Dynamic>
-        matrix_eigen(N, N);
+    small_tensor<value_type> matrix_2{mptensor::Shape(N, N)};
     for (size_t row = 0; row < N; ++row) {
       for (size_t col = 0; col < N; ++col) {
         typename ptensor::value_type v;
         matrix.get_value({row, col}, v);
-        matrix_eigen(row, col) = v;
+        matrix_2.set_value({row, col}, v);
       }
     }
-    auto eigvals = matrix_eigen.eigenvalues();
-    std::vector<std::complex<double>> ret(N);
-    for (size_t i = 0; i < N; ++i) {
-      ret[i] = eigvals[i];
-    }
-    std::partial_sort(ret.begin(), ret.begin() + nev, ret.end(),
-                      [](std::complex<double> a, std::complex<double> b) {
-                        return util::abs2(a) > util::abs2(b);
-                      });
-    ret.erase(ret.begin() + nev, ret.end());
-    return ret;
-  } else { // use Arnoldi
+    std::vector<std::complex<double>> evecs;
+    eigen(matrix_2, eigvals, evecs, nev);
+  } else {  // use Arnoldi
     auto maxvec = params.arnoldi_maxdim;
     auto maxiter = params.arnoldi_maxiter;
     if (N < maxvec) {
@@ -133,9 +131,9 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(int dir, int fixed_coord,
           },
           nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
     }
-    auto ret = arnoldi.eigenvalues();
-    return ret;
+    eigvals = arnoldi.eigenvalues();
   }
+  return eigvals;
 }
 
 template <class ptensor>

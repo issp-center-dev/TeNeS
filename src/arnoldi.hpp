@@ -17,10 +17,9 @@
 #ifndef TENES_SRC_ARNOLDI_HPP_
 #define TENES_SRC_ARNOLDI_HPP_
 
-#include <Eigen/Core>
-
 #include <vector>
 #include <functional>
+#include "tensor.hpp"
 
 namespace tenes {
 
@@ -28,7 +27,6 @@ template <class ptensor>
 class Arnoldi {
  public:
   using value_type = typename ptensor::value_type;
-  using Eigenmatrix = Eigen::Matrix<value_type, Eigen::Dynamic, Eigen::Dynamic>;
 
   Arnoldi(size_t N, size_t maxvec);
   void initialize(ptensor const &initial);
@@ -46,7 +44,7 @@ class Arnoldi {
   size_t nev;
 
   std::vector<ptensor> Q;
-  Eigenmatrix H;
+  small_tensor<value_type> H;
 };
 
 }  // end of namespace tenes
