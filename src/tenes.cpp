@@ -56,6 +56,8 @@ int omp_get_max_threads() { return 1; }
 
 #include "tenes.hpp"
 
+#include "icecream.hpp"
+
 namespace tenes {
 // using namespace mptensor;
 

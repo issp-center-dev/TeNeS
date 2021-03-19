@@ -23,8 +23,12 @@
 #include <type_traits>
 #include <numeric>
 
+#include <string>
+
 #include "util/abs.hpp"
 #include "tensor.hpp"
+
+#include "icecream.hpp"
 
 using mptensor::Shape;
 using dcomplex = std::complex<double>;
@@ -47,7 +51,9 @@ void Arnoldi<ptensor>::initialize(ptensor const& initial) {
 
 template <class ptensor>
 double norm(ptensor const& A) {
-  return std::sqrt(std::real(trace(tensordot(conj(A), A, {0}, {0}), {}, {})));
+  auto x = tensordot(conj(A), A, {0}, {0});
+  return std::sqrt(std::real(trace(x, {}, {})));
+  // return std::sqrt(std::real(trace(tensordot(conj(A), A, {0}, {0}), {}, {})));
 }
 
 template <class ptensor>
@@ -91,7 +97,10 @@ std::vector<std::complex<double>> Arnoldi<ptensor>::eigenvalues() const {
 template <class ptensor>
 void Arnoldi<ptensor>::orthonormalize(size_t k) {
   for (size_t j = 0; j < k; ++j) {
-    auto x = trace(tensordot(conj(Q[j]), Q[k], {0}, {0}), {}, {});
+    auto xx = tensordot(conj(Q[j]), Q[k], {0}, {0});
+    // std::cout << xx << std::endl;
+    auto x = trace(xx, {}, {});
+    // auto x = trace(tensordot(conj(Q[j]), Q[k], {0}, {0}), {}, {});
     H.set_value({j, k - 1}, x);
     Q[k] -= Q[j] * x;
   }

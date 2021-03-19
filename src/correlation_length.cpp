@@ -22,6 +22,8 @@
 #include "arnoldi.hpp"
 #include "util/abs.hpp"
 
+#include "icecream.hpp"
+
 namespace tenes {
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -115,6 +117,7 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(
       maxvec = N;
       maxiter = 1;
     }
+
     ptensor initial_vec = initial_vector(dir, fixed_coord, rng);
     Arnoldi<ptensor> arnoldi(N, maxvec);
     arnoldi.initialize(initial_vec);
@@ -157,20 +160,20 @@ template <class ptensor>
 ptensor CorrelationLengthCalculator_ctm<ptensor>::initial_vector(
     int dir, int fixed_coord, std::mt19937 &rng) const {
   const auto &lattice = this->lattice;
+  const size_t N = C1[0].shape()[0];
 
   ptensor initial_vec;
   if (dir == 0) {
     int site = lattice.index(0, fixed_coord);
     ptensor left_top = C1[site];
     ptensor left_bottom = C4[lattice.top(site)];
-    initial_vec = mptensor::tensordot(left_top, left_bottom, {0}, {1});
+    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {N*N});
   } else {
     int site = lattice.index(fixed_coord, 0);
     auto left_bottom = C4[site];
     auto right_bottom = C3[lattice.left(site)];
-    initial_vec = mptensor::tensordot(left_bottom, right_bottom, {0}, {1});
+    initial_vec = reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {N*N});
   }
-
   return initial_vec;
 }
 
