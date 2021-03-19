@@ -28,8 +28,6 @@
 #include "util/abs.hpp"
 #include "tensor.hpp"
 
-#include "icecream.hpp"
-
 using mptensor::Shape;
 using dcomplex = std::complex<double>;
 

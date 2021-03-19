@@ -22,8 +22,6 @@
 #include "arnoldi.hpp"
 #include "util/abs.hpp"
 
-#include "icecream.hpp"
-
 namespace tenes {
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
