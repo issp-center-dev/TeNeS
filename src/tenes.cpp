@@ -48,7 +48,6 @@ int omp_get_max_threads() { return 1; }
 #include "correlation.hpp"
 #include "printlevel.hpp"
 #include "timer.hpp"
-#include "util/abs.hpp"
 #include "util/file.hpp"
 #include "util/string.hpp"
 #include "util/type_traits.hpp"
@@ -1222,9 +1221,9 @@ TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
       auto eigvals = clength->eigenvalues(dir, fixed, clength_param, gen);
-      res.push_back(std::make_tuple(dir, fixed, util::abs2(eigvals[0]),
-                                    util::abs2(eigvals[1]),
-                                    util::abs2(eigvals[2])));
+      res.push_back(std::make_tuple(dir, fixed, std::abs(eigvals[0]),
+                                    std::abs(eigvals[1]),
+                                    std::abs(eigvals[2])));
     }
   }
 
