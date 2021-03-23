@@ -22,6 +22,8 @@
 #include "arnoldi.hpp"
 #include "util/abs.hpp"
 
+#include "icecream.hpp"
+
 namespace tenes {
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -88,7 +90,7 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(
 
   std::vector<std::complex<double>> eigvals;
 
-  if(N == 1){
+  if (N == 1) {
     eigvals.resize(nev);
     eigvals[0] = 1.0;
     return eigvals;
@@ -134,6 +136,7 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(
     }
     eigvals = arnoldi.eigenvalues();
   }
+  IC(eigvals);
   return eigvals;
 }
 
@@ -165,12 +168,13 @@ ptensor CorrelationLengthCalculator_ctm<ptensor>::initial_vector(
     int site = lattice.index(0, fixed_coord);
     ptensor left_top = C1[site];
     ptensor left_bottom = C4[lattice.top(site)];
-    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {N*N});
+    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {N * N});
   } else {
     int site = lattice.index(fixed_coord, 0);
     auto left_bottom = C4[site];
     auto right_bottom = C3[lattice.left(site)];
-    initial_vec = reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {N*N});
+    initial_vec =
+        reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {N * N});
   }
   return initial_vec;
 }
@@ -363,7 +367,7 @@ ptensor CorrelationLengthCalculator_mf<ptensor>::matrix_horizontal(
   ptensor res = transpose(tensordot(T, conj(T), Axes(1, 3, 4), Axes(1, 3, 4)),
                           Axes(0, 2, 1, 3));
 
-  for (int x = 0; x < lattice.LX; ++x) {
+  for (int x = 1; x < lattice.LX; ++x) {
     site = lattice.index(x, y);
     T = this->Tn[site];
     T.multiply_vector(lambda_tensor[site][1], 1);
@@ -418,10 +422,10 @@ size_t CorrelationLengthCalculator_mf<ptensor>::dim(int dir,
                                                     int fixed_coord) const {
   if (dir == 0) {
     auto ret = this->Tn[this->lattice.index(0, fixed_coord)].shape()[0];
-    return ret*ret;
+    return ret * ret;
   } else {
     auto ret = this->Tn[this->lattice.index(fixed_coord, 0)].shape()[3];
-    return ret*ret;
+    return ret * ret;
   }
 }
 
