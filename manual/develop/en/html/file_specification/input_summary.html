@@ -39,7 +39,7 @@ and each file has some sections.
 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> read some sections and generate an input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes</span></code>, respectively.
 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> reads some sections and performs simulation.</p>
 <p>For example, <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> reads <code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">lattice</span></code> sections and generates <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, and <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> ones.
-Additionary, this copies <code class="docutils literal notranslate"><span class="pre">parameter</span></code> and <code class="docutils literal notranslate"><span class="pre">correlation</span></code> sections.</p>
+Additionary, this copies <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>, and <code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> sections.</p>
 <p>The following table summarizes how each tool deal with sections.</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -86,12 +86,17 @@ Additionary, this copies <code class="docutils literal notranslate"><span class=
 <td><p>copy</p></td>
 <td><p>in</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code></p></td>
+<td><p>copy</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
 <td><p>out</p></td>
 <td><p>in</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
 <td></td>
 <td><p>out</p></td>
 <td><p>in</p></td>
@@ -194,7 +199,7 @@ Additionary, this copies <code class="docutils literal notranslate"><span class=
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

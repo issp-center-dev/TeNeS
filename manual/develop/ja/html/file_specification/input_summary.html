@@ -41,7 +41,7 @@
 それぞれ <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> と <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを生成します。
 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> は入力ファイルの各セクションに書かれた情報を元に実際の計算を行います。</p>
 <p>例えば <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> は <code class="docutils literal notranslate"><span class="pre">model</span></code> と <code class="docutils literal notranslate"><span class="pre">lattice</span></code> の情報から <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> の情報を生成し、
-さらに <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code> はそのままコピーして、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとして出力します。</p>
+さらに <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> はそのままコピーして、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとして出力します。</p>
 <p>次表は各セクションの簡単な説明および各ツールがどう扱うかを示しています。</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -96,13 +96,19 @@
 <td><p>copy</p></td>
 <td><p>in</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code></p></td>
+<td><p>相関長</p></td>
+<td><p>copy</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
 <td><p>ハミルトニアン</p></td>
 <td><p>out</p></td>
 <td><p>in</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
 <td><p>虚時間発展演算子</p></td>
 <td></td>
 <td><p>out</p></td>
@@ -206,7 +212,7 @@
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

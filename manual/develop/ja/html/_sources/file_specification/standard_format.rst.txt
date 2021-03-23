@@ -72,3 +72,9 @@
 ===========================
 
 .. include:: ./correlation_section.rst
+
+
+``correlation_length`` セクション
+====================================
+
+.. include:: ./correlation_length_section.rst

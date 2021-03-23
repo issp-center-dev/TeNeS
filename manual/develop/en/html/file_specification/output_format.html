@@ -12,6 +12,7 @@
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="&lt;no title&gt;" href="../algorithm/index.html" />
@@ -159,8 +160,34 @@
 </div>
 </div>
 </div>
+<div class="section" id="correlation-length-dat">
+<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Direction (<code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">x,</span> <span class="pre">1:</span> <span class="pre">y</span></code>)</p></li>
+<li><p>When direction is <code class="docutils literal notranslate"><span class="pre">0</span></code> it is <span class="math notranslate nohighlight">\(y\)</span> coodinate, and otherwise <span class="math notranslate nohighlight">\(x\)</span> coordinate</p></li>
+<li><p>Correlation length <span class="math notranslate nohighlight">\(\xi = 1/e_1\)</span></p></li>
+</ol>
+<p>The 4th and the subsequent columns show the logarithm of the absolute value of the eigenvalues of the transfer matrix, <span class="math notranslate nohighlight">\(e_i = -\log\left|\lambda_i/\lambda_0\right|\)</span> (<span class="math notranslate nohighlight">\(i&gt;0\)</span>).
+This information may be used to estimate the bond dimension dependence of the correlation length.
+See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (2018) for more information.</p>
+<div class="section" id="id2">
+<h3>Example<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
+# $2: col or row index
+# $3: correlation length
+# $4-: eigenvalues e_i = -log|t_i/t_0|
+#      where i &gt; 0 and t_i is i-th largest eigenvalue of T
+
+0 0 7.19213553469021272e-01 1.39040761283856007e+00 1.44013584036962405e+00 1.53522220522654251e+00
+0 1 7.19303527237354912e-01 1.39023369430805133e+00 1.39042786247674610e+00 1.53457094348925005e+00
+1 0 7.26232546918431754e-01 1.37696940772377285e+00 1.39968879441491767e+00 1.51923157420858113e+00
+1 1 7.26095712518373015e-01 1.37722890076244076e+00 1.38699264750702023e+00 1.52016493301531241e+00
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="time-dat">
-<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this headline">¶</a></h2>
 <p>The calculation time is outputted.</p>
 </div>
 </div>
@@ -242,7 +269,7 @@
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

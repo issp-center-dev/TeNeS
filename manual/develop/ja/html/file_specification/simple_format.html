@@ -885,6 +885,17 @@ dimension = 9 # CHI
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では相関関数 <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">=</span> <span class="pre">&lt;A(0)B(r)&gt;</span></code> はデフォルトでは計算されません。
 相関関数を計算したい場合は、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルで指定する <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションと共通のフォーマットで指定することができます。詳細は、<a class="reference internal" href="expert_format.html"><span class="doc">tenes の入力ファイル</span></a> の <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションをご覧ください。</p>
 </div>
+<div class="section" id="correlation-length">
+<h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では使われず、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとしてそのままコピーされます。</p>
+<p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> の計算に関する情報を指定するセクションです。</p>
+<p>相関長は転送行列の固有値から計算されます。
+行列サイズが <code class="docutils literal notranslate"><span class="pre">maxdim_dense_eigensolver</span></code> 以下のときには密行列対角化(<code class="docutils literal notranslate"><span class="pre">?geev</span></code> ルーチン)による対角化を、
+そうでない場合は Implicit Restart Arnoldi (IRA)法による対角化を用いて固有値を計算します。</p>
+<p>IRA 法では、 Arnoldi 過程によって大きさ <code class="docutils literal notranslate"><span class="pre">arnoldi_maxdim</span></code> のHessenberg 行列を生成し、その固有値を計算します。
+収束していない場合は、新たに <code class="docutils literal notranslate"><span class="pre">arnoldi_restartdim</span></code> 本の初期ベクトルを作成し、 Arnodi 過程をやり直します (restart)。
+転送行列の場合は、多くの場合で restart をする必要はありません (<code class="docutils literal notranslate"><span class="pre">arnoldi_maxiterations</span> <span class="pre">=</span> <span class="pre">1</span></code>)。</p>
+</div>
 </div>
 
 
@@ -964,7 +975,7 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
