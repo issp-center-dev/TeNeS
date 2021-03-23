@@ -388,7 +388,7 @@ ptensor CorrelationLengthCalculator_mf<ptensor>::matrix_vertical(int x) const {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
   }
-  res = reshape(res, {Nsqrt, Nsqrt});
+  res = reshape(res, {Nsqrt, Nsqrt, Nsqrt, Nsqrt});
 
   do {
     for (int y = 0; y < lattice.LY; ++y) {
@@ -417,9 +417,11 @@ template <class ptensor>
 size_t CorrelationLengthCalculator_mf<ptensor>::dim(int dir,
                                                     int fixed_coord) const {
   if (dir == 0) {
-    return this->Tn[this->lattice.index(0, fixed_coord)].shape()[0];
+    auto ret = this->Tn[this->lattice.index(0, fixed_coord)].shape()[0];
+    return ret*ret;
   } else {
-    return this->Tn[this->lattice.index(fixed_coord, 0)].shape()[3];
+    auto ret = this->Tn[this->lattice.index(fixed_coord, 0)].shape()[3];
+    return ret*ret;
   }
 }
 
