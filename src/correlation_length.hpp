@@ -27,6 +27,7 @@ namespace tenes {
 
 struct CorrelationLengthCalculator_Parameters {
   bool to_calculate;
+  int num_eigvals;
   int maxdim_dense_eigensolver;
   int arnoldi_maxdim;
   int arnoldi_restartdim;
@@ -35,6 +36,7 @@ struct CorrelationLengthCalculator_Parameters {
 
   CorrelationLengthCalculator_Parameters()
       : to_calculate(true),
+        num_eigvals(4),
         maxdim_dense_eigensolver(200),
         arnoldi_maxdim(50),
         arnoldi_restartdim(20),

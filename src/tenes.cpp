@@ -98,7 +98,7 @@ class TeNeS {
       std::is_floating_point<tensor_type>::value;
 
   using transfer_matrix_eigenvalues_type =
-      std::tuple<int, int, double, double, double>;
+      std::tuple<int, int, std::vector<std::complex<double>>>;
 
   /*! @brief constructor
    *
@@ -1199,9 +1199,7 @@ TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
   // res[id][0]: direction
   // res[id][1]: coord
   // res[id][2]: value
-  // res[id][3]: eigval 0
-  // res[id][4]: eigval 1
-  // res[id][5]: eigval 2
+  // res[id][3]: eigvals
   std::vector<transfer_matrix_eigenvalues_type> res;
 
   std::array<std::function<void(ptensor &, ptensor const &, int)>, 2> matvec;
@@ -1221,9 +1219,7 @@ TeNeS<ptensor>::measure_transfer_matrix_eigenvalues() {
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
       auto eigvals = clength->eigenvalues(dir, fixed, clength_param, gen);
-      res.push_back(std::make_tuple(dir, fixed, std::abs(eigvals[0]),
-                                    std::abs(eigvals[1]),
-                                    std::abs(eigvals[2])));
+      res.push_back(std::make_tuple(dir, fixed, eigvals));
     }
   }
 
@@ -1244,16 +1240,17 @@ void TeNeS<ptensor>::save_correlation_length(
   std::ofstream ofs(filename.c_str());
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
-  ofs << "# $1: direction\n";
-  ofs << "# $2: col or row index\n";
-  ofs << "# $3: value\n";
-  ofs << "# $4: correction x (log(l1/l2))\n";
+  ofs << "#  $1: direction 0: +x, 1: +y\n";
+  ofs << "#  $2: y (dir=0) or x (dir=1) coorinates\n";
+  ofs << "#  $3: correlation length xi = 1/e_1 \n";
+  ofs << "# $4-: eigenvalues e_i = -log|t_i/t_0|\n";
+  ofs << "#      where i > 0 and t_i is i-th largest eigenvalue of T\n";
   ofs << std::endl;
 
   for (const auto &lambda : lambdas) {
     int dir, x;
-    double l0, l1, l2;
-    std::tie(dir, x, l0, l1, l2) = lambda;
+    std::vector<std::complex<double>> eigvals;
+    std::tie(dir, x, eigvals) = lambda;
 
     int L = 1;
     if (dir == 0) {
@@ -1267,13 +1264,15 @@ void TeNeS<ptensor>::save_correlation_length(
       } while (x != 0);
     }
 
-    double correlation_length = L / std::log(l0 / l1);
-    double correction_x = std::log(l1 / l2);
+    const double e0 = std::abs(eigvals[0]);
+    const double e1 = std::abs(eigvals[1]) / e0;
+    const double correlation_length = -L / std::log(e1);
+    ofs << dir << " " << x << " " << correlation_length;
 
-    ofs << dir << " ";
-    ofs << x << " ";
-    ofs << correlation_length << " ";
-    ofs << correction_x << " ";
+    for (size_t i = 1; i < eigvals.size(); ++i) {
+      const double e = std::abs(eigvals[i]) / e0;
+      ofs << " " << -std::log(e) / L;
+    }
     ofs << std::endl;
   }
 }

@@ -133,29 +133,30 @@ Example
 ``correlation_length.dat``
 ===========================
 
-- Correlation length :math`\xi` is outputted.
-- Each line has 4 fields:
 
+1. Direction (``0: x, 1: y``)
+2. When direction is ``0`` it is :math:`y` coodinate, and otherwise :math:`x` coordinate
+3. Correlation length :math:`\xi = 1/e_1`
 
-1. Direction  (``0: x, 1: y``)
-2. Column or Row ``x or y``
-3. Correlation length :math:`xi`
-4. Correction
+The 4th and the subsequent columns show the logarithm of the absolute value of the eigenvalues of the transfer matrix, :math:`e_i = -\log\left|\lambda_i/\lambda_0\right|` (:math:`i>0`).
+This information may be used to estimate the bond dimension dependence of the correlation length.
+See PRX **8**, 041033 (2018) and PRX **8**, 031030 (2018) for more information.
 
 Example
-~~~~~~~
+~~~~~~~~~~~~
 
 ::
 
    # $1: direction
    # $2: col or row index
-   # $3: value
-   # $4: correction x (log(l1/l2))
+   # $3: correlation length
+   # $4-: eigenvalues e_i = -log|t_i/t_0|
+   #      where i > 0 and t_i is i-th largest eigenvalue of T
 
-   0 0 3.37791613946688440e-01 5.00142908955488515e-03
-   0 1 3.37852350766748522e-01 4.45319009446746954e-03
-   1 0 3.40787198459586105e-01 1.22174988003313756e-03
-   1 1 3.40818939432138035e-01 3.06195754545400501e-03
+   0 0 7.19213553469021272e-01 1.39040761283856007e+00 1.44013584036962405e+00 1.53522220522654251e+00
+   0 1 7.19303527237354912e-01 1.39023369430805133e+00 1.39042786247674610e+00 1.53457094348925005e+00
+   1 0 7.26232546918431754e-01 1.37696940772377285e+00 1.39968879441491767e+00 1.51923157420858113e+00
+   1 1 7.26095712518373015e-01 1.37722890076244076e+00 1.38699264750702023e+00 1.52016493301531241e+00
 
 ``time.dat``
 =====================

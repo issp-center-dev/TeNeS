@@ -22,8 +22,6 @@
 #include "arnoldi.hpp"
 #include "util/abs.hpp"
 
-#include "icecream.hpp"
-
 namespace tenes {
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -33,6 +31,7 @@ namespace tenes {
 void CorrelationLengthCalculator_Parameters::Bcast(MPI_Comm comm, int root) {
   enum PARAMS_INT_INDEX {
     I_to_calculate,
+    I_num_eigvals,
     I_maxdim_dense_eigensolver,
     I_arnoldi_maxdim,
     I_arnoldi_restartdim,
@@ -54,6 +53,7 @@ void CorrelationLengthCalculator_Parameters::Bcast(MPI_Comm comm, int root) {
 
   if (irank == root) {
     SAVE_PARAM(to_calculate, int);
+    SAVE_PARAM(num_eigvals, int);
     SAVE_PARAM(maxdim_dense_eigensolver, int);
     SAVE_PARAM(arnoldi_maxdim, int);
     SAVE_PARAM(arnoldi_restartdim, int);
@@ -67,6 +67,7 @@ void CorrelationLengthCalculator_Parameters::Bcast(MPI_Comm comm, int root) {
     bcast(params_double, 0, comm);
 
     LOAD_PARAM(to_calculate, int);
+    LOAD_PARAM(num_eigvals, int);
     LOAD_PARAM(maxdim_dense_eigensolver, int);
     LOAD_PARAM(arnoldi_maxdim, int);
     LOAD_PARAM(arnoldi_restartdim, int);
@@ -86,7 +87,7 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(
     std::mt19937 &rng) const {
   using value_type = typename ptensor::value_type;
   const size_t N = dim(dir, fixed_coord);
-  const size_t nev = std::min(static_cast<size_t>(4), N);
+  const size_t nev = std::min(static_cast<size_t>(params.num_eigvals), N);
 
   std::vector<std::complex<double>> eigvals;
 
@@ -136,7 +137,6 @@ CorrelationLengthCalculator<ptensor>::eigenvalues(
     }
     eigvals = arnoldi.eigenvalues();
   }
-  IC(eigvals);
   return eigvals;
 }
 

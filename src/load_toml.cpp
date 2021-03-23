@@ -190,6 +190,7 @@ CorrelationLengthCalculator_Parameters gen_correlationlength_parameter(
   CorrelationLengthCalculator_Parameters clength;
 
   load_if(clength.to_calculate, toml, "measure");
+  load_if(clength.num_eigvals, toml, "num_eigvals");
   load_if(clength.maxdim_dense_eigensolver, toml, "maxdim_dense_eigensolver");
   load_if(clength.arnoldi_maxdim, toml, "arnoldi_maxdim");
   load_if(clength.arnoldi_restartdim, toml, "arnoldi_restartdim");
