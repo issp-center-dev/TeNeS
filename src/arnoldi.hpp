@@ -14,31 +14,39 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_TENES_HPP_
-#define TENES_SRC_TENES_HPP_
+#ifndef TENES_SRC_ARNOLDI_HPP_
+#define TENES_SRC_ARNOLDI_HPP_
 
 #include <vector>
-
-#include "mpi.hpp"
-
-#include "operator.hpp"
+#include <functional>
+#include "tensor.hpp"
 
 namespace tenes {
 
-class Lattice;
-class PEPS_Parameters;
-struct Edge;
-using Edges = std::vector<Edge>;
-struct CorrelationParameter;
-struct CorrelationLengthCalculator_Parameters;
+template <class ptensor>
+class Arnoldi {
+ public:
+  using value_type = typename ptensor::value_type;
 
-template <class tensor>
-int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
-          NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-          Operators<tensor> onesite_operators,
-          Operators<tensor> twosite_operators, CorrelationParameter corparam,
-          CorrelationLengthCalculator_Parameters clength_param);
+  Arnoldi(size_t N, size_t maxvec);
+  void initialize(ptensor const &initial);
+  void run(std::function<void(ptensor &, ptensor const &)> A, size_t nev,
+           int mindim = 20, int maxiter = 10, double rtol = 1.0e-8);
+  std::vector<std::complex<double>> eigenvalues() const;
+
+ private:
+  void orthonormalize(size_t k);
+  void restart(size_t minvec, double cutoff = 1.0e-12);
+  std::vector<double> residue(size_t k) const;
+
+  size_t N;
+  size_t maxvec;
+  size_t nev;
+
+  std::vector<ptensor> Q;
+  small_tensor<value_type> H;
+};
 
 }  // end of namespace tenes
 
-#endif  // TENES_SRC_TENES_HPP_
+#endif  // TENES_SRC_ARNOLDI_HPP_

@@ -50,6 +50,17 @@ def float_to_str(v: float) -> str:
     return ret
 
 
+def value_to_str(v) -> str:
+    if isinstance(v, str):
+        return "'{}'".format(v)
+    elif isinstance(v, bool):
+        return "true" if v else "false"
+    elif isinstance(v, float):
+        return float_to_str(v)
+    else:
+        return "{}".format(v)
+
+
 def lower_dict(d: dict) -> dict:
     """ makes all keys lowercase"""
     ks = list(d.keys())
@@ -1029,14 +1040,7 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():
-                if isinstance(v, str):
-                    ret.append('{} = "{}"'.format(k, v))
-                elif isinstance(v, bool):
-                    ret.append("{} = {}".format(k, "true" if v else "false"))
-                elif isinstance(v, float):
-                    ret.append("{} = {}".format(k, float_to_str(v)))
-                else:
-                    ret.append("{} = {}".format(k, v))
+                ret.append("{} = {}".format(k, value_to_str(v)))
     ret.append("")
 
     ret.append("[tensor]")
@@ -1162,6 +1166,13 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
         for ops in corparam["operators"]:
             ret.append("  {},".format(ops))
         ret.append("]")
+
+    if "correlation_length" in param:
+        clength = param["correlation_length"]
+        ret.append("[correlation_length]")
+        for k, v in clength.items():
+            ret.append("{} = {}".format(k, value_to_str(v)))
+        ret.append("")
 
     return "\n".join(ret), lattice
 

@@ -78,8 +78,25 @@ class Lattice {
   int x(int index) const { return index % LX; }
   //! y coordinate
   int y(int index) const { return index / LX; }
-  //! index
-  int index(int x, int y) const { return Tensor_list[x][y]; }
+  //! indexing w/o boundary calculation
+  int index_fast(int x, int y) const { return Tensor_list[x][y]; }
+  //! indexing w/ boundary calculation
+  int index(int x, int y) const {
+    int y_offset = 0;
+    if (y >= LY) {
+      y_offset = y / LY;
+    } else if (y < 0) {
+      y_offset = (y + 1) / LY - 1;
+    }
+    y -= LY * y_offset;
+    x -= skew * y_offset;
+    x %= LX;
+    if (x < 0) {
+      x += LX;
+    }
+
+    return Tensor_list[x][y];
+  }
 
   //! neighbor site
   int neighbor(int index, int direction) const {

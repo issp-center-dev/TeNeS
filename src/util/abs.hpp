@@ -14,31 +14,26 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_TENES_HPP_
-#define TENES_SRC_TENES_HPP_
+#ifndef TENES_SRC_UTIL_ABS_HPP_
+#define TENES_SRC_UTIL_ABS_HPP_
 
-#include <vector>
-
-#include "mpi.hpp"
-
-#include "operator.hpp"
+#include <complex>
 
 namespace tenes {
+namespace util {
 
-class Lattice;
-class PEPS_Parameters;
-struct Edge;
-using Edges = std::vector<Edge>;
-struct CorrelationParameter;
-struct CorrelationLengthCalculator_Parameters;
+template <class T>
+inline T abs2(T v) {
+  return v * v;
+}
+template <class T>
+inline T abs2(std::complex<T> const& v) {
+  T re = v.real();
+  T im = v.imag();
+  return re * re + im * im;
+}
 
-template <class tensor>
-int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
-          NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-          Operators<tensor> onesite_operators,
-          Operators<tensor> twosite_operators, CorrelationParameter corparam,
-          CorrelationLengthCalculator_Parameters clength_param);
+}  // namespace util
+}  // namespace tenes
 
-}  // end of namespace tenes
-
-#endif  // TENES_SRC_TENES_HPP_
+#endif  // TENES_SRC_UTIL_ABS_HPP_

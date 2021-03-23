@@ -64,7 +64,7 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LY);
   int i, j, k, l;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.index(ix, iy);
+    i = lattice.index_fast(ix, iy);
     j = lattice.right(i);
     k = lattice.bottom(j);
     l = lattice.left(k);
@@ -90,7 +90,7 @@ void Left_move(std::vector<Tensor<Matrix, C>> &C1,
   }
   int iy_up, iy_down;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.index(ix, iy);
+    i = lattice.index_fast(ix, iy);
     j = lattice.right(i);
     k = lattice.bottom(j);
     l = lattice.left(k);
@@ -124,7 +124,7 @@ void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LY);
   int i, j, k, l;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.index(ix, iy);
+    k = lattice.index_fast(ix, iy);
     l = lattice.left(k);
     i = lattice.top(l);
     j = lattice.right(i);
@@ -154,7 +154,7 @@ void Right_move(const std::vector<Tensor<Matrix, C>> &C1,
   }
   int iy_up, iy_down;
   for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.index(ix, iy);
+    k = lattice.index_fast(ix, iy);
     l = lattice.left(k);
     i = lattice.top(l);
     j = lattice.right(i);
@@ -192,7 +192,7 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LX);
   int i, j, k, l;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.index(ix, iy);
+    j = lattice.index_fast(ix, iy);
     k = lattice.bottom(j);
     l = lattice.left(k);
     i = lattice.top(l);
@@ -222,7 +222,7 @@ void Top_move(std::vector<Tensor<Matrix, C>> &C1,
   }
   int ix_right, ix_left;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.index(ix, iy);
+    j = lattice.index_fast(ix, iy);
     k = lattice.bottom(j);
     l = lattice.left(k);
     i = lattice.top(l);
@@ -260,7 +260,7 @@ void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
   PLs.resize(lattice.LX);
   int i, j, k, l;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.index(ix, iy);
+    l = lattice.index_fast(ix, iy);
     i = lattice.top(l);
     j = lattice.right(i);
     k = lattice.bottom(j);
@@ -291,7 +291,7 @@ void Bottom_move(const std::vector<Tensor<Matrix, C>> &C1,
   }
   int ix_left, ix_right;
   for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.index(ix, iy);
+    l = lattice.index_fast(ix, iy);
     i = lattice.top(l);
     j = lattice.right(i);
     k = lattice.bottom(j);

@@ -244,6 +244,8 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   ofs << std::endl;
 
+  ofs << "Lcor = " << Lcor << std::endl;
+
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;

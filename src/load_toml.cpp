@@ -29,6 +29,7 @@
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
+#include "correlation_length.hpp"
 #include "operator.hpp"
 #include "exception.hpp"
 #include "util/read_tensor.hpp"
@@ -181,6 +182,21 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
   }
 
   return CorrelationParameter{rmax, ops};
+}
+
+CorrelationLengthCalculator_Parameters gen_correlationlength_parameter(
+    decltype(cpptoml::parse_file("")) toml,
+    const char *tablename = "correlation_length") {
+  CorrelationLengthCalculator_Parameters clength;
+
+  load_if(clength.to_calculate, toml, "measure");
+  load_if(clength.num_eigvals, toml, "num_eigvals");
+  load_if(clength.maxdim_dense_eigensolver, toml, "maxdim_dense_eigensolver");
+  load_if(clength.arnoldi_maxdim, toml, "arnoldi_maxdim");
+  load_if(clength.arnoldi_restartdim, toml, "arnoldi_restartdim");
+  load_if(clength.arnoldi_maxiter, toml, "arnoldi_maxiterations");
+  load_if(clength.arnoldi_rtol, toml, "arnoldi_rtol");
+  return clength;
 }
 
 PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {

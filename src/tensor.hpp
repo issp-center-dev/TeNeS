@@ -17,7 +17,8 @@
 #ifndef TENES_SRC_TENSOR_HPP_
 #define TENES_SRC_TENSOR_HPP_
 
-#include <sstream>
+#include <vector>
+#include <complex>
 
 #include <mptensor/tensor.hpp>
 
@@ -35,45 +36,28 @@ using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
 
 template <class T>
 using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type, T>;
+
+template <class T>
+using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix, T>;
+
 using real_tensor = mptensor_tensor_type<double>;
 using complex_tensor = mptensor_tensor_type<std::complex<double>>;
 
 template <class T>
 mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
-                                      mptensor::Shape target_shape) {
-  mptensor::Shape shape = src.shape();
-  const size_t ndim = shape.size();
-  if (target_shape.size() != ndim) {
-    std::stringstream ss;
-    ss << "dimension mismatch in resize_tensor: source = " << ndim
-       << ", target = " << target_shape.size();
-    tenes::logic_error(ss.str());
-  }
-  mptensor::Shape zero = shape;
+                                      mptensor::Shape target_shape);
 
-  bool to_extend = false;
-  bool to_shrink = false;
+template <class T>
+void eigen(small_tensor<T> const& A, std::vector<std::complex<double>>& eigvals,
+           std::vector<std::complex<double>>& eigvecs_last, int nev);
 
-  for (size_t i = 0; i < ndim; ++i) {
-    if (shape[i] < target_shape[i]) {
-      to_extend = true;
-      shape[i] = target_shape[i];
-    } else if (shape[i] > target_shape[i]) {
-      to_shrink = true;
-    }
-    zero[i] = 0;
+template <class T>
+small_tensor<T> identity(size_t k, T v) {
+  small_tensor<T> ret{mptensor::Shape(k, k)};
+  for (size_t i = 0; i < k; ++i) {
+    ret.set_value({k, k}, v);
   }
-  mptensor_tensor_type<T> A;
-  if (to_extend) {
-    A = mptensor::extend(src, shape);
-  } else {
-    A = src;
-  }
-  if (to_shrink) {
-    return mptensor::slice(A, zero, target_shape);
-  } else {
-    return A;
-  }
+  return ret;
 }
 
 }  // end of namespace tenes

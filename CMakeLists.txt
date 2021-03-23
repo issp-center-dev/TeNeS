@@ -77,7 +77,6 @@ endif()
 
 find_package(LAPACK REQUIRED)
 
-
 if(ENABLE_MPI)
     if(APPLE)
         message(WARNING "Apple Accelerate BLAS/LAPACK + ScaLAPACK may fail. We STRONGLY recommend disabling MPI")

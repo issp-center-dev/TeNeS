@@ -8,6 +8,8 @@ add_executable(tenes
 main.cpp
 main_impl.cpp
 tenes.cpp 
+tensor.cpp
+correlation_length.cpp
 PEPS_Parameters.cpp
 Lattice.cpp
 util/string.cpp
@@ -15,15 +17,12 @@ util/file.cpp
 mpi.cpp
 PEPS_Contract_impl.cpp
 PEPS_Contract_MF_impl.cpp
+arnoldi.cpp
 )
 
 if (USE_SANITIZER)
     add_sanitizers(tenes)
 endif()
-
-# target_include_directories(tenes PUBLIC ${MPI_CXX_INCLUDE_DIRS})
-# target_link_libraries(tenes mptensor)
-# target_link_libraries(tenes ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBS})
 
 if (NOT OPENMP_FOUND)
     target_compile_definitions(tenes PRIVATE -D_NO_OMP)
