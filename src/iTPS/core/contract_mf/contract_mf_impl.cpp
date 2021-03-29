@@ -14,11 +14,11 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include "tensor.hpp"
-#include "PEPS_Contract_MF_impl.hpp"
+#include "../contract_mf.hpp"
+#include "instantiate.hpp"
 
 namespace tenes {
-using namespace mptensor;
+using mptensor::Axes;
 
 template <class tensor>
 typename tensor::value_type Contract_MF_1x1(

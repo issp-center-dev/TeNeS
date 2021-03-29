@@ -20,16 +20,13 @@
 #include <fstream>
 #include <vector>
 
-#include <PEPS_Basics.hpp>
-#include <PEPS_Parameters.cpp>
-#include <mpi.cpp>
+#include "../src/tensor.hpp"
+#include "../src/PEPS_Parameters.hpp"
+#include "../src/mpi.hpp"
+#include "../src/iTPS/core/simple_update.hpp"
 
 TEST_CASE("testing simple update") {
-#ifdef _NO_MPI
-  using tensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
-#else
-  using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-#endif
+  using tensor = tenes::real_tensor;
 
   using mptensor::Index;
   using mptensor::Shape;

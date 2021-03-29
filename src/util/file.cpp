@@ -14,10 +14,10 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include <sys/stat.h>
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <sys/stat.h>
 
 #include "../exception.hpp"
 #include "string.hpp"

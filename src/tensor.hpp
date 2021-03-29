@@ -43,9 +43,8 @@ using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix, T>;
 using real_tensor = mptensor_tensor_type<double>;
 using complex_tensor = mptensor_tensor_type<std::complex<double>>;
 
-template <class T>
-mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
-                                      mptensor::Shape target_shape);
+template <class tensor>
+tensor resize_tensor(tensor const& src, mptensor::Shape target_shape);
 
 template <class T>
 void eigen(small_tensor<T> const& A, std::vector<std::complex<double>>& eigvals,

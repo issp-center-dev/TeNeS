@@ -23,7 +23,7 @@
 #include "tensor.hpp"
 #include "Lattice.hpp"
 #include "PEPS_Parameters.hpp"
-#include "load_toml.cpp"
+#include "load_toml.hpp"
 #include "operator.hpp"
 #include "tenes.hpp"
 #include "exception.hpp"

@@ -14,9 +14,11 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include "load_toml.hpp"
+
 #define _USE_MATH_DEFINES
-#include <random>
 #include <sys/stat.h>
+#include <random>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -34,6 +36,8 @@
 #include "exception.hpp"
 #include "util/read_tensor.hpp"
 #include "util/string.hpp"
+
+#include "tensor.hpp"
 
 namespace tenes {
 
@@ -99,7 +103,7 @@ inline T find(decltype(cpptoml::parse_file("")) param, const char *key) {
 }
 
 Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
-                    const char *tablename = "tensor") {
+                    const char *tablename) {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
     throw input_error(detail::msg_cannot_find("L_sub", tablename));
@@ -167,7 +171,7 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
 }
 
 CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
-                                  const char *tablename = "correlation") {
+                                  const char *tablename) {
   int rmax = find<int>(toml, "r_max");
 
   auto oplist = toml->get_array_of<cpptoml::array>("operators");
@@ -185,8 +189,7 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
 }
 
 CorrelationLengthCalculator_Parameters gen_correlationlength_parameter(
-    decltype(cpptoml::parse_file("")) toml,
-    const char *tablename = "correlation_length") {
+    decltype(cpptoml::parse_file("")) toml, const char *tablename) {
   CorrelationLengthCalculator_Parameters clength;
 
   load_if(clength.to_calculate, toml, "measure");
@@ -285,8 +288,8 @@ std::vector<std::tuple<int, int, int>> read_bonds(std::string str) {
 
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                int nsites, int nbody, double atol = 0.0,
-                                const char *tablename = "observable.onesite") {
+                                int nsites, int nbody, double atol,
+                                const char *tablename) {
   assert(nbody == 1 || nbody == 2);
 
   auto elements = param->get_as<std::string>("elements");
@@ -391,9 +394,8 @@ Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
 }
 
 template <class tensor>
-NNOperator<tensor> load_nn_operator(
-    decltype(cpptoml::parse_file("")) param, double atol = 0.0,
-    const char *tablename = "evolution.simple") {
+NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
+                                    double atol, const char *tablename) {
   auto source_site = find<int>(param, "source_site");
   auto source_leg = find<int>(param, "source_leg");
   auto dimensions = param->get_array_of<int64_t>("dimensions");
@@ -426,13 +428,54 @@ NNOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
 }
 template <class tensor>
 NNOperators<tensor> load_simple_updates(decltype(cpptoml::parse_file("")) param,
-                                        double atol = 0.0) {
+                                        double atol) {
   return load_updates<tensor>(param, atol, "evolution.simple");
 }
 template <class tensor>
 NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param,
-                                      double atol = 0.0) {
+                                      double atol) {
   return load_updates<tensor>(param, atol, "evolution.full");
 }
+
+// template instantiations
+
+template Operators<real_tensor> load_operator(
+    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
+    const char *tablename);
+template Operators<complex_tensor> load_operator(
+    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
+    const char *tablename);
+
+template Operators<real_tensor> load_operators(
+    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
+    std::string const &key);
+
+template Operators<complex_tensor> load_operators(
+    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
+    std::string const &key);
+
+template NNOperator<real_tensor> load_nn_operator(
+    decltype(cpptoml::parse_file("")) param, double atol,
+    const char *tablename);
+template NNOperator<complex_tensor> load_nn_operator(
+    decltype(cpptoml::parse_file("")) param, double atol,
+    const char *tablename);
+
+template NNOperators<real_tensor> load_updates(
+    decltype(cpptoml::parse_file("")) param, double atol,
+    std::string const &key);
+template NNOperators<complex_tensor> load_updates(
+    decltype(cpptoml::parse_file("")) param, double atol,
+    std::string const &key);
+
+template NNOperators<real_tensor> load_simple_updates(
+    decltype(cpptoml::parse_file("")) param, double atol);
+template NNOperators<complex_tensor> load_simple_updates(
+    decltype(cpptoml::parse_file("")) param, double atol);
+
+template NNOperators<real_tensor> load_full_updates(
+    decltype(cpptoml::parse_file("")) param, double atol);
+template NNOperators<complex_tensor> load_full_updates(
+    decltype(cpptoml::parse_file("")) param, double atol);
 
 }  // end of namespace tenes
