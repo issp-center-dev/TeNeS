@@ -28,7 +28,7 @@
 
 #include <cpptoml.h>
 
-#include "Lattice.hpp"
+#include "SquareLattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
 #include "correlation_length.hpp"
@@ -102,7 +102,7 @@ inline T find(decltype(cpptoml::parse_file("")) param, const char *key) {
   return ret;
 }
 
-Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
+SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename) {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
@@ -111,7 +111,7 @@ Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
 
   auto skew = find_or<int>(toml, "skew", 0);
 
-  Lattice lat((*Lsub)[0], (*Lsub)[1], skew);
+  SquareLattice lat((*Lsub)[0], (*Lsub)[1], skew);
 
   auto sites = toml->get_table_array("unitcell");
   if (!sites) {

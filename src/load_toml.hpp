@@ -23,7 +23,7 @@
 #include <vector>
 #include <string>
 
-#include "Lattice.hpp"
+#include "SquareLattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "correlation.hpp"
 #include "correlation_length.hpp"
@@ -31,7 +31,7 @@
 
 namespace tenes {
 
-Lattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
+SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                     const char *tablename = "tensor");
 
 CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,

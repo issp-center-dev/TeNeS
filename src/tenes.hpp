@@ -25,7 +25,7 @@
 
 namespace tenes {
 
-class Lattice;
+class SquareLattice;
 class PEPS_Parameters;
 struct Edge;
 using Edges = std::vector<Edge>;
@@ -33,7 +33,7 @@ struct CorrelationParameter;
 struct CorrelationLengthCalculator_Parameters;
 
 template <class tensor>
-int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
           Operators<tensor> onesite_operators,
           Operators<tensor> twosite_operators, CorrelationParameter corparam,

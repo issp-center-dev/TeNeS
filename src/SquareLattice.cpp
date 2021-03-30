@@ -14,7 +14,7 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include "Lattice.hpp"
+#include "SquareLattice.hpp"
 
 #include <cassert>
 #include <fstream>
@@ -25,7 +25,7 @@
 
 namespace tenes {
 
-Lattice::Lattice(int X, int Y, int skew)
+SquareLattice::SquareLattice(int X, int Y, int skew)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
@@ -43,7 +43,7 @@ Lattice::Lattice(int X, int Y, int skew)
   calc_neighbors();
 }
 
-void Lattice::calc_neighbors() {
+void SquareLattice::calc_neighbors() {
   N_UNIT = LX * LY;
   Tensor_list.assign(LX, std::vector<int>(LY));
   initial_dirs.assign(N_UNIT, std::vector<double>(1));
@@ -73,7 +73,7 @@ void Lattice::calc_neighbors() {
   logical_check();
 }
 
-int Lattice::other(int index, int dx, int dy) const {
+int SquareLattice::other(int index, int dx, int dy) const {
   while (dx != 0) {
     if (dx > 0) {
       index = right(index);
@@ -96,7 +96,7 @@ int Lattice::other(int index, int dx, int dy) const {
   return index;
 }
 
-void Lattice::save(const char* filename, bool append) {
+void SquareLattice::save(const char* filename, bool append) {
   std::ofstream ofs;
   if (append) {
     ofs.open(filename, std::ios::out | std::ios::app);
@@ -109,7 +109,7 @@ void Lattice::save(const char* filename, bool append) {
   ofs << "skew = " << skew << std::endl;
 }
 
-void Lattice::Bcast(MPI_Comm comm, int root) {
+void SquareLattice::Bcast(MPI_Comm comm, int root) {
   int irank;
   MPI_Comm_rank(MPI_COMM_WORLD, &irank);
   std::vector<int> params_int(3);
@@ -173,7 +173,7 @@ void Lattice::Bcast(MPI_Comm comm, int root) {
   noises.assign(ns.begin(), ns.end());
 }
 
-void Lattice::check_dims() const {
+void SquareLattice::check_dims() const {
   std::vector<std::tuple<int, int, int, int>> fails;
   for (int i = 0; i < N_UNIT; ++i) {
     if (virtual_dims[i][0] != virtual_dims[left(i)][2]) {
@@ -197,7 +197,7 @@ void Lattice::check_dims() const {
   }
 }
 
-void Lattice::logical_check() const {
+void SquareLattice::logical_check() const {
 #ifndef NDEBUG
   for (int i = 0; i < N_UNIT; ++i) {
     // index <-> coords

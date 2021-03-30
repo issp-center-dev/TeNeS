@@ -32,7 +32,6 @@
 
 #include "../tensor.hpp"
 
-#include "../Lattice.hpp"
 #include "../operator.hpp"
 #include "../PEPS_Parameters.hpp"
 #include "../correlation.hpp"

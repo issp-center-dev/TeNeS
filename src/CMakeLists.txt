@@ -40,7 +40,7 @@ target_link_libraries(load_toml PUBLIC tensor)
 add_subdirectory(iTPS)
 
 add_library(tenes_impl STATIC main_impl.cpp tenes.cpp correlation_length.cpp
-                              PEPS_Parameters.cpp Lattice.cpp)
+                              PEPS_Parameters.cpp SquareLattice.cpp)
 
 target_link_libraries(tenes_impl PUBLIC tenes_util)
 target_link_libraries(tenes_impl PUBLIC load_toml)

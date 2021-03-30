@@ -144,7 +144,7 @@ virtual_dim = [4, 1, 4, 1]
 initial_state = [0.0, 1.0]
 noise = 0.01
     )");
-    Lattice lattice = gen_lattice(toml->get_table("tensor"));
+    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
     CHECK(lattice.LX == 4);
     CHECK(lattice.LY == 1);
     CHECK(lattice.skew == 2);

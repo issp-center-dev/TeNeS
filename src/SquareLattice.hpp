@@ -24,7 +24,7 @@
 
 namespace tenes {
 
-//! Lattice (unit cell)
+//! Square Lattice (unit cell)
 /*!
  * Geometries:
  *
@@ -53,7 +53,7 @@ namespace tenes {
   @endverbatim
  *
  */
-class Lattice {
+class SquareLattice {
  public:
   int LX;
   int LY;
@@ -72,7 +72,7 @@ class Lattice {
   std::vector<std::vector<double>> initial_dirs;
   std::vector<double> noises;
 
-  Lattice(int X, int Y, int skew = 0);
+  SquareLattice(int X, int Y, int skew = 0);
 
   //! x coordinate
   int x(int index) const { return index % LX; }

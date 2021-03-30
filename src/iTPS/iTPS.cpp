@@ -41,7 +41,6 @@ int omp_get_max_threads() { return 1; }
 
 #include "../tensor.hpp"
 
-#include "../Lattice.hpp"
 #include "../operator.hpp"
 #include "../PEPS_Parameters.hpp"
 #include "../printlevel.hpp"
@@ -57,7 +56,7 @@ namespace tenes {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                      Lattice lattice_, NNOperators<tensor> simple_updates_,
+                      SquareLattice lattice_, NNOperators<tensor> simple_updates_,
                       NNOperators<tensor> full_updates_,
                       Operators<tensor> onesite_operators_,
                       Operators<tensor> twosite_operators_,

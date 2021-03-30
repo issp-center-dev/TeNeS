@@ -28,7 +28,7 @@
 #include <mptensor/tensor.hpp>
 #include <mptensor/rsvd.hpp>
 
-#include "../../Lattice.hpp"
+#include "../../SquareLattice.hpp"
 #include "../../PEPS_Parameters.hpp"
 #include "../../tensor.hpp"
 
@@ -477,7 +477,7 @@ void Left_move(std::vector<tensor> &C1, const std::vector<tensor> &C2,
                const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
                const std::vector<tensor> &eTb, std::vector<tensor> &eTl,
                const std::vector<tensor> &Tn, const int ix,
-               const PEPS_Parameters peps_parameters, const Lattice lattice) {
+               const PEPS_Parameters peps_parameters, const SquareLattice lattice) {
   /* Do one step left move absoving X=ix column
      part of C1, C4, eTl will be modified */
 
@@ -532,7 +532,7 @@ void Right_move(const std::vector<tensor> &C1, std::vector<tensor> &C2,
                 const std::vector<tensor> &eTt, std::vector<tensor> &eTr,
                 const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
                 const std::vector<tensor> &Tn, const int ix,
-                const PEPS_Parameters peps_parameters, const Lattice lattice) {
+                const PEPS_Parameters peps_parameters, const SquareLattice lattice) {
   /*
     Do one step right move absorbing X=ix column
     part of C2, C3, eTr will be modified
@@ -596,7 +596,7 @@ void Top_move(std::vector<tensor> &C1, std::vector<tensor> &C2,
               std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
               const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
               const std::vector<tensor> &Tn, const int iy,
-              const PEPS_Parameters peps_parameters, const Lattice lattice) {
+              const PEPS_Parameters peps_parameters, const SquareLattice lattice) {
   /*
     ## Do one step top move absorbing Y=iy row
     ## part of C1, C2, eTt will be modified
@@ -660,7 +660,7 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
                  const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
                  std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
                  const std::vector<tensor> &Tn, const int iy,
-                 const PEPS_Parameters peps_parameters, const Lattice lattice) {
+                 const PEPS_Parameters peps_parameters, const SquareLattice lattice) {
   /*
     ## Do one step bottom move absorbing Y=iy row
     ## part of C3, C4, eTb will be modified
@@ -726,7 +726,7 @@ bool Check_Convergence_CTM(
     const std::vector<tensor> &C3, const std::vector<tensor> &C4,
     const std::vector<tensor> &C1_old, const std::vector<tensor> &C2_old,
     const std::vector<tensor> &C3_old, const std::vector<tensor> &C4_old,
-    const PEPS_Parameters peps_parameters, const Lattice lattice,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     double &sig_max) {
   sig_max = 0.0;
   bool convergence = true;
@@ -883,7 +883,7 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
                          std::vector<tensor> &eTb, std::vector<tensor> &eTl,
                          const std::vector<tensor> &Tn,
                          const PEPS_Parameters peps_parameters,
-                         const Lattice lattice, bool initialize) {
+                         const SquareLattice lattice, bool initialize) {
   /*
     ## Calc environment tensors
     ## C1,C2,C3,C4 and eTt,eTl,eTr,eTb will be modified
@@ -1218,7 +1218,7 @@ template void Left_move(
     const std::vector<real_tensor> &eTt, const std::vector<real_tensor> &eTr,
     const std::vector<real_tensor> &eTb, std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const int ix,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 template void Left_move(
     std::vector<complex_tensor> &C1, const std::vector<complex_tensor> &C2,
     const std::vector<complex_tensor> &C3, std::vector<complex_tensor> &C4,
@@ -1226,7 +1226,7 @@ template void Left_move(
     const std::vector<complex_tensor> &eTr,
     const std::vector<complex_tensor> &eTb, std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn, const int ix,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template void Right_move(
     const std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,
@@ -1234,7 +1234,7 @@ template void Right_move(
     const std::vector<real_tensor> &eTt, std::vector<real_tensor> &eTr,
     const std::vector<real_tensor> &eTb, const std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const int ix,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 template void Right_move(
     const std::vector<complex_tensor> &C1, std::vector<complex_tensor> &C2,
     std::vector<complex_tensor> &C3, const std::vector<complex_tensor> &C4,
@@ -1242,7 +1242,7 @@ template void Right_move(
     const std::vector<complex_tensor> &eTb,
     const std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn, const int ix,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template void Top_move(
     std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,
@@ -1250,7 +1250,7 @@ template void Top_move(
     std::vector<real_tensor> &eTt, const std::vector<real_tensor> &eTr,
     const std::vector<real_tensor> &eTb, const std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const int iy,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 template void Top_move(std::vector<complex_tensor> &C1,
                        std::vector<complex_tensor> &C2,
                        const std::vector<complex_tensor> &C3,
@@ -1261,7 +1261,7 @@ template void Top_move(std::vector<complex_tensor> &C1,
                        const std::vector<complex_tensor> &eTl,
                        const std::vector<complex_tensor> &Tn, const int iy,
                        const PEPS_Parameters peps_parameters,
-                       const Lattice lattice);
+                       const SquareLattice lattice);
 
 template void Bottom_move(
     const std::vector<real_tensor> &C1, const std::vector<real_tensor> &C2,
@@ -1269,7 +1269,7 @@ template void Bottom_move(
     const std::vector<real_tensor> &eTt, const std::vector<real_tensor> &eTr,
     std::vector<real_tensor> &eTb, const std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const int iy,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 template void Bottom_move(
     const std::vector<complex_tensor> &C1,
     const std::vector<complex_tensor> &C2, std::vector<complex_tensor> &C3,
@@ -1277,7 +1277,7 @@ template void Bottom_move(
     const std::vector<complex_tensor> &eTr, std::vector<complex_tensor> &eTb,
     const std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn, const int iy,
-    const PEPS_Parameters peps_parameters, const Lattice lattice);
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template bool Check_Convergence_CTM(const std::vector<real_tensor> &C1,
                                     const std::vector<real_tensor> &C2,
@@ -1288,7 +1288,7 @@ template bool Check_Convergence_CTM(const std::vector<real_tensor> &C1,
                                     const std::vector<real_tensor> &C3_old,
                                     const std::vector<real_tensor> &C4_old,
                                     const PEPS_Parameters peps_parameters,
-                                    const Lattice lattice, double &sig_max);
+                                    const SquareLattice lattice, double &sig_max);
 template bool Check_Convergence_CTM(const std::vector<complex_tensor> &C1,
                                     const std::vector<complex_tensor> &C2,
                                     const std::vector<complex_tensor> &C3,
@@ -1298,7 +1298,7 @@ template bool Check_Convergence_CTM(const std::vector<complex_tensor> &C1,
                                     const std::vector<complex_tensor> &C3_old,
                                     const std::vector<complex_tensor> &C4_old,
                                     const PEPS_Parameters peps_parameters,
-                                    const Lattice lattice, double &sig_max);
+                                    const SquareLattice lattice, double &sig_max);
 
 template int Calc_CTM_Environment(
     std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,
@@ -1306,7 +1306,7 @@ template int Calc_CTM_Environment(
     std::vector<real_tensor> &eTt, std::vector<real_tensor> &eTr,
     std::vector<real_tensor> &eTb, std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const PEPS_Parameters peps_parameters,
-    const Lattice lattice, bool initialize);
+    const SquareLattice lattice, bool initialize);
 
 template int Calc_CTM_Environment(
     std::vector<complex_tensor> &C1, std::vector<complex_tensor> &C2,
@@ -1314,7 +1314,7 @@ template int Calc_CTM_Environment(
     std::vector<complex_tensor> &eTt, std::vector<complex_tensor> &eTr,
     std::vector<complex_tensor> &eTb, std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn,
-    const PEPS_Parameters peps_parameters, const Lattice lattice,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     bool initialize);
 
 }  // end of namespace tenes

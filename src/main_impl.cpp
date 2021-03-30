@@ -21,7 +21,7 @@
 
 #include "printlevel.hpp"
 #include "tensor.hpp"
-#include "Lattice.hpp"
+#include "SquareLattice.hpp"
 #include "PEPS_Parameters.hpp"
 #include "load_toml.hpp"
 #include "operator.hpp"
@@ -145,7 +145,7 @@ int main_impl(std::string input_filename, MPI_Comm com,
   if (toml_lattice == nullptr) {
     throw tenes::input_error("[tensor] not found");
   }
-  Lattice lattice = gen_lattice(toml_lattice);
+  SquareLattice lattice = gen_lattice(toml_lattice);
   lattice.Bcast(MPI_COMM_WORLD);
 
   // time evolution

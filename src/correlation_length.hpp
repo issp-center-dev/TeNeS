@@ -21,7 +21,7 @@
 #include <random>
 
 #include "tensor.hpp"
-#include "Lattice.hpp"
+#include "SquareLattice.hpp"
 
 namespace tenes {
 
@@ -48,7 +48,7 @@ struct CorrelationLengthCalculator_Parameters {
 template <class ptensor>
 class CorrelationLengthCalculator {
  public:
-  CorrelationLengthCalculator(Lattice const &lattice,
+  CorrelationLengthCalculator(SquareLattice const &lattice,
                               std::vector<ptensor> const &Tn)
       : lattice(lattice), Tn(Tn) {}
   virtual ~CorrelationLengthCalculator() {}
@@ -71,7 +71,7 @@ class CorrelationLengthCalculator {
   virtual size_t dim(int dir, int fixed_coord) const = 0;
 
  protected:
-  Lattice lattice;
+  SquareLattice lattice;
   const std::vector<ptensor> &Tn;
 };
 
@@ -80,7 +80,7 @@ class CorrelationLengthCalculator_ctm
     : public CorrelationLengthCalculator<ptensor> {
  public:
   CorrelationLengthCalculator_ctm(
-      const Lattice &lattice, const std::vector<ptensor> &Tn,
+      const SquareLattice &lattice, const std::vector<ptensor> &Tn,
       const std::vector<ptensor> &C1, const std::vector<ptensor> &C2,
       const std::vector<ptensor> &C3, const std::vector<ptensor> &C4,
       const std::vector<ptensor> &eTl, const std::vector<ptensor> &eTt,
@@ -122,7 +122,7 @@ class CorrelationLengthCalculator_mf
     : public CorrelationLengthCalculator<ptensor> {
  public:
   CorrelationLengthCalculator_mf(
-      const Lattice &lattice, const std::vector<ptensor> &Tn,
+      const SquareLattice &lattice, const std::vector<ptensor> &Tn,
       const std::vector<std::vector<std::vector<double>>> lambda_tensor)
       : CorrelationLengthCalculator<ptensor>(lattice, Tn),
         lambda_tensor(lambda_tensor) {}

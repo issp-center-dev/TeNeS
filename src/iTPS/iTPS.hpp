@@ -29,7 +29,7 @@
 
 #include "../tensor.hpp"
 
-#include "../Lattice.hpp"
+#include "../SquareLattice.hpp"
 #include "../operator.hpp"
 #include "../PEPS_Parameters.hpp"
 #include "../correlation.hpp"
@@ -70,7 +70,7 @@ class iTPS {
    *  @param[in] twosite_operators
    *  @param[in] corparam_
    */
-  iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, Lattice lattice_,
+  iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, SquareLattice lattice_,
        NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
        Operators<tensor> onesite_operators,
        Operators<tensor> twosite_operators, CorrelationParameter corparam_,
@@ -156,7 +156,7 @@ class iTPS {
   int mpisize, mpirank;
 
   PEPS_Parameters peps_parameters;
-  Lattice lattice;
+  SquareLattice lattice;
 
   NNOperators<tensor> simple_updates;
   NNOperators<tensor> full_updates;

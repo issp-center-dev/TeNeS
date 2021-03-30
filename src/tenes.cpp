@@ -20,7 +20,7 @@
 namespace tenes {
 
 template <class tensor>
-int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
           NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
           Operators<tensor> onesite_operators,
           Operators<tensor> twosite_operators, CorrelationParameter corparam,
@@ -39,7 +39,7 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
 
 // template specialization
 template int tenes<real_tensor>(
-    MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+    MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
     NNOperators<real_tensor> simple_updates,
     NNOperators<real_tensor> full_updates,
     Operators<real_tensor> onesite_operators,
@@ -47,7 +47,7 @@ template int tenes<real_tensor>(
     CorrelationLengthCalculator_Parameters clength_param);
 
 template int tenes<complex_tensor>(
-    MPI_Comm comm, PEPS_Parameters peps_parameters, Lattice lattice,
+    MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
     NNOperators<complex_tensor> simple_updates,
     NNOperators<complex_tensor> full_updates,
     Operators<complex_tensor> onesite_operators,

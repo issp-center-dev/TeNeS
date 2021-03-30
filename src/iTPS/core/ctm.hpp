@@ -22,7 +22,7 @@
 namespace tenes {
 
 class PEPS_Parameters;
-class Lattice;
+class SquareLattice;
 
 template <class tensor>
 void Calc_projector_left_block(
@@ -67,7 +67,7 @@ void Left_move(std::vector<tensor> &C1,
                const std::vector<tensor> &eTb,
                std::vector<tensor> &eTl,
                const std::vector<tensor> &Tn, const int ix,
-               const PEPS_Parameters peps_parameters, const Lattice lattice);
+               const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template <class tensor>
 void Right_move(const std::vector<tensor> &C1,
@@ -79,7 +79,7 @@ void Right_move(const std::vector<tensor> &C1,
                 const std::vector<tensor> &eTb,
                 const std::vector<tensor> &eTl,
                 const std::vector<tensor> &Tn, const int ix,
-                const PEPS_Parameters peps_parameters, const Lattice lattice);
+                const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template <class tensor>
 void Top_move(std::vector<tensor> &C1,
@@ -91,7 +91,7 @@ void Top_move(std::vector<tensor> &C1,
               const std::vector<tensor> &eTb,
               const std::vector<tensor> &eTl,
               const std::vector<tensor> &Tn, const int iy,
-              const PEPS_Parameters peps_parameters, const Lattice lattice);
+              const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template <class tensor>
 void Bottom_move(const std::vector<tensor> &C1,
@@ -103,7 +103,7 @@ void Bottom_move(const std::vector<tensor> &C1,
                  std::vector<tensor> &eTb,
                  const std::vector<tensor> &eTl,
                  const std::vector<tensor> &Tn, const int iy,
-                 const PEPS_Parameters peps_parameters, const Lattice lattice);
+                 const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template <class tensor>
 bool Check_Convergence_CTM(const std::vector<tensor> &C1,
@@ -115,7 +115,7 @@ bool Check_Convergence_CTM(const std::vector<tensor> &C1,
                            const std::vector<tensor> &C3_old,
                            const std::vector<tensor> &C4_old,
                            const PEPS_Parameters peps_parameters,
-                           const Lattice lattice, double &sig_max);
+                           const SquareLattice lattice, double &sig_max);
 
 template <class tensor>
 int Calc_CTM_Environment(
@@ -124,7 +124,7 @@ int Calc_CTM_Environment(
     std::vector<tensor> &eTt, std::vector<tensor> &eTr,
     std::vector<tensor> &eTb, std::vector<tensor> &eTl,
     const std::vector<tensor> &Tn,
-    const PEPS_Parameters peps_parameters, const Lattice lattice,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     bool initialize = true);
 
 }  // end of namespace tenes
