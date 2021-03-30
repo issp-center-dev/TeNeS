@@ -28,7 +28,8 @@ target_link_libraries(tenes_mpi INTERFACE ${MPI_CXX_LIBRARIES}
 
 add_library(tensor STATIC tensor.cpp arnoldi.cpp)
 target_include_directories(tensor PUBLIC ${MPTENSOR_INCLUDE_DIR})
-target_link_libraries(tensor INTERFACE ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} mptensor)
+target_link_libraries(tensor INTERFACE ${SCALAPACK_LIBRARIES}
+                                       ${LAPACK_LIBRARIES} mptensor)
 target_link_libraries(tensor PUBLIC tenes_mpi)
 
 add_library(load_toml STATIC load_toml.cpp)
@@ -38,13 +39,8 @@ target_link_libraries(load_toml PUBLIC tensor)
 
 add_subdirectory(iTPS)
 
-add_library(
-  tenes_impl STATIC
-  main_impl.cpp
-  tenes.cpp
-  correlation_length.cpp
-  PEPS_Parameters.cpp
-  Lattice.cpp)
+add_library(tenes_impl STATIC main_impl.cpp tenes.cpp correlation_length.cpp
+                              PEPS_Parameters.cpp Lattice.cpp)
 
 target_link_libraries(tenes_impl PUBLIC tenes_util)
 target_link_libraries(tenes_impl PUBLIC load_toml)
@@ -52,9 +48,5 @@ target_link_libraries(tenes_impl PUBLIC iTPS)
 
 add_executable(tenes main.cpp)
 target_link_libraries(tenes PRIVATE tenes_impl)
-
-if(USE_SANITIZER)
-  add_sanitizers(tenes)
-endif()
 
 install(TARGETS tenes RUNTIME DESTINATION bin)

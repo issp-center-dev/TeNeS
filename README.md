@@ -48,7 +48,6 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 
 - [mptensor](https://github.com/smorita/mptensor)
 - [cpptoml](https://github.com/skystrife/cpptoml)
-- [sanitizers-cmake](https://github.com/arsenm/sanitizers-cmake)
 
 TeNeS can be parallerized by using MPI and ScaLAPACK.
 

@@ -18,7 +18,3 @@ endif ()
 if (NOT CPPTOML_ROOT)
     git_clone(https://github.com/skystrife/cpptoml cpptoml v0.1.1)
 endif ()
-
-if (USE_SANITIZER)
-    git_clone(https://github.com/arsenm/sanitizers-cmake sanitizers-cmake master)
-endif()

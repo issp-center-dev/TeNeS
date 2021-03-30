@@ -21,7 +21,6 @@ TeNeSは以下のライブラリに依存していますが、自動でダウン
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
-3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
 MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
 MPI, ScaLAPACKについては自身でインストールする必要があります。

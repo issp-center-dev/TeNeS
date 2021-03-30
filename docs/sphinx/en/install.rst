@@ -21,7 +21,6 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
-3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
 TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.
 MPI and ScaLAPACK must be installed by yourself.
