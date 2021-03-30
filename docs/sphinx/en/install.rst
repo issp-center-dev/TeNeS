@@ -44,7 +44,7 @@ Additionary, the following python packages are also required.
 Install
 ======================
 
-1. Build TeNeS by typing the following commands:
+1. Build TeNeS by typing the following commands (Some environment such as CentOS provides CMake3 as ``cmake3``)::
 
 ::
 
@@ -55,9 +55,12 @@ Install
 
 The default value of the ``<path to install to>`` is ``/usr/local``. 
 
-(Some environment such as CentOS provides CMake3 as ``cmake3`` .)
+.. admonition:: Parallel Build
 
-The executable file ``tests``  will be generated in  ``build/src`` directory.
+  The ``make`` command accepts ``-j <num>`` options and then uses ``<num>`` processes for a parallel building.
+  This reduces the time to build TeNeS drastically.
+
+The executable file ``tenes``  will be generated in  ``build/src`` directory.
 By typing the following command, tests for ``tenes`` can be done.
 
 ::

@@ -82,7 +82,9 @@ $ make
 $ make install
 ```
 
-The above installs `tenes`, `tenes_std`, and `tenes_simple` into the `<path to install to>/bin` .
+Noted that the parallel building `make -j <num_parallel>` can reduce the time to build.
+
+The `make install` command installs `tenes`, `tenes_std`, and `tenes_simple` into the `<path to install to>/bin` .
 Samples will be also installed into the `<path to install to>/share/tenes/<VERSION>/sample` .
 The default value of the `<path to install to>` is `/usr/local` .
 
