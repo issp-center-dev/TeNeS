@@ -37,10 +37,9 @@
 #include <numeric>
 #include <vector>
 
-#include "../../PEPS_Parameters.hpp"
 #include "../../mpi.hpp"
-
 #include "../../tensor.hpp"
+#include "../PEPS_Parameters.hpp"
 
 namespace tenes {
 

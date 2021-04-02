@@ -29,19 +29,7 @@
 #include <functional>
 
 #include "iTPS.hpp"
-
-#include "../tensor.hpp"
-
-#include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
-#include "../correlation.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-#include "../util/file.hpp"
-#include "../util/string.hpp"
-#include "../util/type_traits.hpp"
 #include "../util/datetime.hpp"
-#include "../correlation_length.hpp"
 
 namespace tenes {
 
@@ -75,7 +63,7 @@ void iTPS<ptensor>::measure() {
     save_correlation(correlations);
   }
 
-  if (clength_param.to_calculate) {
+  if (tmatrix_param.to_calculate) {
     if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "  Start calculating correlation length" << std::endl;
     }

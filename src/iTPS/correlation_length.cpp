@@ -14,25 +14,7 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#define _USE_MATH_DEFINES
-#include <algorithm>
-#include <complex>
-#include <limits>
-#include <memory>
-#include <random>
-#include <string>
-#include <tuple>
-#include <functional>
-
 #include "iTPS.hpp"
-
-#include "../tensor.hpp"
-
-#include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-#include "../correlation_length.hpp"
 
 namespace tenes {
 
@@ -50,18 +32,18 @@ iTPS<ptensor>::measure_transfer_matrix_eigenvalues() {
   std::mt19937 gen(peps_parameters.seed * 137 + 31415);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
 
-  std::shared_ptr<CorrelationLengthCalculator<ptensor>> clength;
+  std::shared_ptr<TransferMatrix<ptensor>> clength;
   if (peps_parameters.MeanField_Env) {
-    clength = std::make_shared<CorrelationLengthCalculator_mf<ptensor>>(
+    clength = std::make_shared<TransferMatrix_mf<ptensor>>(
         lattice, Tn, lambda_tensor);
   } else {
-    clength = std::make_shared<CorrelationLengthCalculator_ctm<ptensor>>(
+    clength = std::make_shared<TransferMatrix_ctm<ptensor>>(
         lattice, Tn, C1, C2, C3, C4, eTl, eTt, eTr, eTb);
   }
   for (int dir = 0; dir < 2; ++dir) {
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
-      auto eigvals = clength->eigenvalues(dir, fixed, clength_param, gen);
+      auto eigvals = clength->eigenvalues(dir, fixed, tmatrix_param, gen);
       res.push_back(std::make_tuple(dir, fixed, eigvals));
     }
   }

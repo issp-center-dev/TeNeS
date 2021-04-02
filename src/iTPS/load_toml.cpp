@@ -15,6 +15,7 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include "load_toml.hpp"
+#include <cpptoml.h>
 
 #define _USE_MATH_DEFINES
 #include <sys/stat.h>
@@ -26,18 +27,13 @@
 #include <typeinfo>
 #include <boost/core/demangle.hpp>
 
-#include <cpptoml.h>
 
-#include "SquareLattice.hpp"
+#include "../exception.hpp"
+#include "../util/read_tensor.hpp"
+#include "../util/string.hpp"
+#include "../tensor.hpp"
+
 #include "PEPS_Parameters.hpp"
-#include "correlation.hpp"
-#include "correlation_length.hpp"
-#include "operator.hpp"
-#include "exception.hpp"
-#include "util/read_tensor.hpp"
-#include "util/string.hpp"
-
-#include "tensor.hpp"
 
 namespace tenes {
 
@@ -188,9 +184,9 @@ CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
   return CorrelationParameter{rmax, ops};
 }
 
-CorrelationLengthCalculator_Parameters gen_correlationlength_parameter(
+TransferMatrix_Parameters gen_transfer_matrix_parameter(
     decltype(cpptoml::parse_file("")) toml, const char *tablename) {
-  CorrelationLengthCalculator_Parameters clength;
+  TransferMatrix_Parameters clength;
 
   load_if(clength.to_calculate, toml, "measure");
   load_if(clength.num_eigvals, toml, "num_eigvals");

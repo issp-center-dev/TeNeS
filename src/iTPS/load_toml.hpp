@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_LOAD_TOML_HPP_
-#define TENES_SRC_LOAD_TOML_HPP_
+#ifndef TENES_SRC_ITPS_LOAD_TOML_HPP_
+#define TENES_SRC_ITPS_LOAD_TOML_HPP_
 
 #define _USE_MATH_DEFINES
 #include <cpptoml.h>
@@ -23,21 +23,22 @@
 #include <vector>
 #include <string>
 
-#include "SquareLattice.hpp"
+#include "../SquareLattice.hpp"
+#include "../operator.hpp"
+
+#include "transfer_matrix.hpp"
+#include "correlation_function.hpp"
 #include "PEPS_Parameters.hpp"
-#include "correlation.hpp"
-#include "correlation_length.hpp"
-#include "operator.hpp"
 
 namespace tenes {
 
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
-                    const char *tablename = "tensor");
+                          const char *tablename = "tensor");
 
 CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
                                   const char *tablename = "correlation");
 
-CorrelationLengthCalculator_Parameters gen_correlationlength_parameter(
+TransferMatrix_Parameters gen_transfer_matrix_parameter(
     decltype(cpptoml::parse_file("")) toml,
     const char *tablename = "correlation_length");
 
@@ -73,4 +74,4 @@ NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param,
 
 }  // end of namespace tenes
 
-#endif  // TENES_SRC_LOAD_TOML_HPP_
+#endif  // TENES_SRC_ITPS_LOAD_TOML_HPP_

@@ -22,7 +22,7 @@ if(NOT ENABLE_MPI)
   target_compile_definitions(tenes_mpi PUBLIC -D_NO_MPI)
 endif()
 
-target_include_directories(tenes_mpi PUBLIC ${MPI_CXX_INCLUDE_DIRS})
+target_include_directories(tenes_mpi PUBLIC ${MPI_CXX_INCLUDE_DIRS} ${OpenMP_CXX_INCLUDE_DIRS})
 target_link_libraries(tenes_mpi INTERFACE ${MPI_CXX_LIBRARIES}
                                           ${OpenMP_CXX_LIBRARIES})
 
@@ -32,21 +32,12 @@ target_link_libraries(tensor INTERFACE ${SCALAPACK_LIBRARIES}
                                        ${LAPACK_LIBRARIES} mptensor)
 target_link_libraries(tensor PUBLIC tenes_mpi)
 
-add_library(load_toml STATIC load_toml.cpp)
-target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR})
-target_include_directories(load_toml PUBLIC ${BUNDLED_DEPS_DIR})
-target_link_libraries(load_toml PUBLIC tensor)
+add_library(SquareLattice STATIC SquareLattice.cpp)
+target_link_libraries(SquareLattice PUBLIC tenes_mpi)
 
 add_subdirectory(iTPS)
 
-add_library(tenes_impl STATIC main_impl.cpp tenes.cpp correlation_length.cpp
-                              PEPS_Parameters.cpp SquareLattice.cpp)
-
-target_link_libraries(tenes_impl PUBLIC tenes_util)
-target_link_libraries(tenes_impl PUBLIC load_toml)
-target_link_libraries(tenes_impl PUBLIC iTPS)
-
 add_executable(tenes main.cpp)
-target_link_libraries(tenes PRIVATE tenes_impl)
+target_link_libraries(tenes PRIVATE iTPS)
 
 install(TARGETS tenes RUNTIME DESTINATION bin)

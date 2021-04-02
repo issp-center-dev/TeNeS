@@ -32,14 +32,6 @@
 
 #include "../tensor.hpp"
 
-#include "../operator.hpp"
-#include "../correlation.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-#include "../util/file.hpp"
-#include "../util/string.hpp"
-#include "../util/type_traits.hpp"
-#include "../correlation_length.hpp"
 #include "core/contract_ctm.hpp"
 #include "core/contract_mf.hpp"
 

@@ -15,6 +15,7 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include "iTPS.hpp"
+#include "transfer_matrix.hpp"
 
 #define _USE_MATH_DEFINES
 #include <sys/stat.h>
@@ -42,7 +43,6 @@ int omp_get_max_threads() { return 1; }
 #include "../tensor.hpp"
 
 #include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 #include "../util/file.hpp"
@@ -50,6 +50,7 @@ int omp_get_max_threads() { return 1; }
 #include "../util/type_traits.hpp"
 #include "../util/datetime.hpp"
 
+#include "PEPS_Parameters.hpp"
 #include "core/ctm.hpp"
 
 namespace tenes {
@@ -61,7 +62,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                       Operators<tensor> onesite_operators_,
                       Operators<tensor> twosite_operators_,
                       CorrelationParameter corparam_,
-                      CorrelationLengthCalculator_Parameters clength_param_)
+                      TransferMatrix_Parameters clength_param_)
     : comm(comm_),
       peps_parameters(peps_parameters_),
       lattice(lattice_),
@@ -70,7 +71,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       onesite_operators(onesite_operators_),
       twosite_operators(twosite_operators_),
       corparam(corparam_),
-      clength_param(clength_param_),
+      tmatrix_param(clength_param_),
       outdir("output"),
       timer_all(),
       time_simple_update(),

@@ -21,8 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "mpi.hpp"
-#include "exception.hpp"
+#include "../exception.hpp"
 
 namespace tenes {
 

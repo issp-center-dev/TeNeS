@@ -19,8 +19,8 @@
 
 #include <string>
 
-#include "mpi.hpp"
-#include "printlevel.hpp"
+#include "../mpi.hpp"
+#include "../printlevel.hpp"
 
 namespace tenes {
 

@@ -30,15 +30,17 @@
 #include "../tensor.hpp"
 
 #include "../SquareLattice.hpp"
-#include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
-#include "../correlation.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 #include "../util/file.hpp"
 #include "../util/string.hpp"
 #include "../util/type_traits.hpp"
-#include "../correlation_length.hpp"
+#include "../operator.hpp"
+
+#include "transfer_matrix.hpp"
+#include "correlation_function.hpp"
+
+#include "PEPS_Parameters.hpp"
 
 namespace tenes {
 
@@ -74,7 +76,7 @@ class iTPS {
        NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
        Operators<tensor> onesite_operators,
        Operators<tensor> twosite_operators, CorrelationParameter corparam_,
-       CorrelationLengthCalculator_Parameters clength_param_);
+       TransferMatrix_Parameters tmatrix_param_);
 
   void initialize_tensors();
   void update_CTM();
@@ -171,7 +173,7 @@ class iTPS {
   std::vector<tensor> op_identity;
 
   CorrelationParameter corparam;
-  CorrelationLengthCalculator_Parameters clength_param;
+  TransferMatrix_Parameters tmatrix_param;
 
   /*! @name Tensors
    *  @brief Tensors of an iTPS

@@ -29,8 +29,8 @@
 #include <mptensor/rsvd.hpp>
 
 #include "../../SquareLattice.hpp"
-#include "../../PEPS_Parameters.hpp"
 #include "../../tensor.hpp"
+#include "../PEPS_Parameters.hpp"
 
 namespace tenes {
 

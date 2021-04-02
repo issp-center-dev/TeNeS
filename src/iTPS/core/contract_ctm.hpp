@@ -172,6 +172,9 @@ typename tensor::value_type FinishCorrelation(const tensor &A, const tensor &C2,
                     const tensor &eT2, const tensor &eT3,
                     const tensor &Tn1, const tensor &op);
 
+template <class tensor>
+void TransferMatrix_MatVec(tensor &inoutvec, const tensor &eT1);
+
 }  // end of namespace tenes
 
 #endif  // TENES_SRC_ITPS_CORE_CONTRACT_CTM_HPP_

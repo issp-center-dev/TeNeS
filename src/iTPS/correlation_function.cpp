@@ -20,17 +20,8 @@
 
 #include "iTPS.hpp"
 
-#include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
-#include "../correlation.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-#include "../util/string.hpp"
-
 #include "core/contract_ctm.hpp"
 #include "core/contract_mf.hpp"
-
-#include "../tensor.hpp"
 
 namespace tenes {
 

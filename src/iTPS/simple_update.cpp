@@ -16,15 +16,7 @@
 
 #include "iTPS.hpp"
 
-#include "../operator.hpp"
-#include "../PEPS_Parameters.hpp"
-#include "../correlation.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-
 #include "core/simple_update.hpp"
-
-#include "../tensor.hpp"
 
 namespace tenes {
 
