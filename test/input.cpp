@@ -23,9 +23,9 @@
 #include <vector>
 
 #include "../src/tensor.hpp"
-#include "../src/util/string.hpp"
-#include "../src/load_toml.hpp"
 #include "../src/mpi.hpp"
+#include "../src/util/string.hpp"
+#include "../src/iTPS/load_toml.hpp"
 
 auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
   std::stringstream ss;

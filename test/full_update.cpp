@@ -20,8 +20,8 @@
 #include <vector>
 
 #include "../src/tensor.hpp"
-#include "../src/PEPS_Parameters.hpp"
 #include "../src/mpi.hpp"
+#include "../src/iTPS/PEPS_Parameters.hpp"
 #include "../src/iTPS/core/full_update.hpp"
 
 #include "doctest.h"
@@ -35,7 +35,6 @@ TEST_CASE("testing full update") {
   const int ldof = 2;
   const int D = 2;
   const int chi = 4;
-  const int nleg = 4;
 
   const double tol = 1.0e-8;
 
@@ -82,7 +81,6 @@ TEST_CASE("testing full update") {
   // calculation
 
   tenes::PEPS_Parameters peps_parameters;
-  int connect = 2;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 

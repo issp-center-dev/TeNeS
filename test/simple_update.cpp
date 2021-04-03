@@ -21,8 +21,8 @@
 #include <vector>
 
 #include "../src/tensor.hpp"
-#include "../src/PEPS_Parameters.hpp"
 #include "../src/mpi.hpp"
+#include "../src/iTPS/PEPS_Parameters.hpp"
 #include "../src/iTPS/core/simple_update.hpp"
 
 TEST_CASE("testing simple update") {
