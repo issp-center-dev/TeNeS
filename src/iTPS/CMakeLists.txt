@@ -2,7 +2,7 @@ add_subdirectory(core)
 
 add_library(load_toml STATIC load_toml.cpp)
 target_link_libraries(load_toml PUBLIC tenes_mpi tensor)
-target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR})
+target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR} ${BUNDLED_DEPS_DIR})
 
 add_library(
   iTPS STATIC
