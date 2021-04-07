@@ -25,6 +25,10 @@
 
 namespace tenes {
 
+/*! @brief Eigenvalue calculator for mptensor::Tensor
+ *
+ * by using (implicit restart) Arnoldi method
+ */
 template <class ptensor>
 class Arnoldi {
  public:
@@ -32,8 +36,22 @@ class Arnoldi {
 
   Arnoldi(std::size_t N, std::size_t maxvec);
   void initialize(ptensor const &initial);
+
+  /*! @brief perform Arnoldi method
+   *
+   * @param[in] A "Matrix" as a function taking a "vector" `x` and returning another, `Ax`.
+   * The first [out] argument of `A` is for `Ax` and the second [in] argument is for `x`.
+   * @param[in] nev Number of eigenvalues to be calculated
+   * @param[in] mindim Number of vectors re-generated in restart
+   * @param[in] maxiter Maximum number of iterations
+   * @param[in] rtol Relative torelance for convergence check
+   *
+   */
   void run(std::function<void(ptensor &, ptensor const &)> A, std::size_t nev,
            int mindim = 20, int maxiter = 10, double rtol = 1.0e-8);
+
+  /*! @brief return eigenvalues as a vector
+   */
   std::vector<std::complex<double>> eigenvalues() const;
 
  private:

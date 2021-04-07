@@ -24,9 +24,7 @@
 
 namespace tenes {
 
-//! Square Lattice (unit cell)
-/*!
- * Geometries:
+/*! @brief Square Lattice (unit cell)
  *
  * axis:
  *
@@ -76,10 +74,13 @@ class SquareLattice {
 
   //! x coordinate
   int x(int index) const { return index % LX; }
+
   //! y coordinate
   int y(int index) const { return index / LX; }
+
   //! indexing w/o boundary calculation
   int index_fast(int x, int y) const { return Tensor_list[x][y]; }
+
   //! indexing w/ boundary calculation
   int index(int x, int y) const {
     int y_offset = 0;
@@ -105,10 +106,13 @@ class SquareLattice {
 
   //! left neighbor site
   int left(int index) const { return neighbor(index, 0); }
+
   //! right neighbor site
   int right(int index) const { return neighbor(index, 2); }
+
   //! top neighbor site
   int top(int index) const { return neighbor(index, 1); }
+
   //! bottom neighbor site
   int bottom(int index) const { return neighbor(index, 3); }
 
@@ -138,8 +142,8 @@ class SquareLattice {
   void check_dims() const;
 
  private:
-  std::vector<std::vector<int>> Tensor_list;
-  std::vector<std::array<int, 4>> NN_Tensor;
+  std::vector<std::vector<int>> Tensor_list;  //!< index of site [x][y]
+  std::vector<std::array<int, 4>> NN_Tensor;  //!< index of nearest neighbor site [site][bond]
   void logical_check() const;
   void calc_neighbors();
 };

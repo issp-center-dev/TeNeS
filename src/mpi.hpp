@@ -17,14 +17,17 @@
 #ifndef TENES_SRC_MPI_HPP_
 #define TENES_SRC_MPI_HPP_
 
-#include <cstddef>       // for size_t
+#include <type_traits>
+#include <cstddef>        // for size_t
 #include <array>          // for array
 #include <complex>        // for complex
-#include <iosfwd>         // for string
+#include <string>         // for string
 #include <vector>         // for vector
 #include "exception.hpp"  // for unimplemented_error
 
 #ifdef _NO_MPI
+
+// Mocks
 
 using MPI_Comm = int;
 using MPI_Datatype = int;
@@ -34,14 +37,14 @@ constexpr MPI_Datatype MPI_BYTE = 0;
 constexpr MPI_Datatype MPI_INT = 0;
 constexpr MPI_Datatype MPI_DOUBLE = 0;
 
+// Do nothing
 int MPI_Init(int *, char ***);
 int MPI_Barrier(MPI_Comm);
 int MPI_Finalize();
-
-int MPI_Comm_size(MPI_Comm, int *);
-int MPI_Comm_rank(MPI_Comm, int *);
-
 int MPI_Bcast(void *, int, MPI_Datatype, int, MPI_Comm);
+
+int MPI_Comm_size(MPI_Comm, int *);  // return 1 as size
+int MPI_Comm_rank(MPI_Comm, int *);  // return 0 as rank
 
 #else
 
@@ -52,13 +55,17 @@ int MPI_Bcast(void *, int, MPI_Datatype, int, MPI_Comm);
 namespace tenes {
 
 template <class T>
-MPI_Datatype get_MPI_Datatype();
-template <>
-MPI_Datatype get_MPI_Datatype<int>();
-template <>
-MPI_Datatype get_MPI_Datatype<double>();
-template <>
-MPI_Datatype get_MPI_Datatype<bool>();
+MPI_Datatype get_MPI_Datatype() {
+  if (std::is_same<T, int>::value) {
+    return MPI_INT;
+  } else if (std::is_same<T, bool>::value) {
+    return MPI_INT;
+  } else if (std::is_same<T, double>::value) {
+    return MPI_DOUBLE;
+  } else {
+    throw tenes::unimplemented_error("");
+  }
+}
 
 template <class T>
 int bcast(T &val, int root, MPI_Comm comm) {
@@ -73,7 +80,6 @@ int bcast(T &val, int root, MPI_Comm comm) {
 int bcast(bool &val, int root, MPI_Comm comm);
 int bcast(std::string &val, int root, MPI_Comm comm);
 int bcast(std::vector<std::string> &val, int root, MPI_Comm comm);
-
 
 template <class T>
 int bcast(std::complex<T> &val, int root, MPI_Comm comm) {

@@ -37,19 +37,6 @@ int MPI_Bcast(void*, int, MPI_Datatype, int, MPI_Comm) { return 0; }
 
 namespace tenes {
 
-template <>
-MPI_Datatype get_MPI_Datatype<int>() {
-  return MPI_INT;
-}
-template <>
-MPI_Datatype get_MPI_Datatype<double>() {
-  return MPI_DOUBLE;
-}
-template <>
-MPI_Datatype get_MPI_Datatype<bool>() {
-  return MPI_INT;
-}
-
 int bcast(bool& val, int root, MPI_Comm comm) {
   int ret = 0;
 #ifndef _NO_MPI

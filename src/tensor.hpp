@@ -25,6 +25,9 @@
 
 namespace tenes {
 
+/*! If in the MPI mode, this is just `mptensor::scalapack::Matrix`.
+ *  Otherwise (`_NO_MPI` is defined), this is `mptensor::lapack::Matrix`.
+ */
 #ifdef _NO_MPI
 template <class T>
 using mptensor_matrix_type = mptensor::lapack::Matrix<T>;
@@ -36,6 +39,8 @@ using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
 template <class T>
 using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type, T>;
 
+/*! @brief Non-distributed tensor even in the MPI mode
+ */
 template <class T>
 using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix, T>;
 

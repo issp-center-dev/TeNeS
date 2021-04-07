@@ -68,19 +68,28 @@ class iTPS {
    *  @param[in] lattice_
    *  @param[in] simple_updates ITE operators for simple updates
    *  @param[in] full_updates ITE operators for full updates
-   *  @param[in] onesite_operators
-   *  @param[in] twosite_operators
-   *  @param[in] corparam_
+   *  @param[in] onesite_operators_ onesite operators to be measured
+   *  @param[in] twosite_operators_ twosite operators to be measured
+   *  @param[in] corparam_  parameters for measuring correlation functions
+   *  @param[in] tmatrix_param_  parameters for measuring eigenvalues of
+   * transfer matrix
    */
   iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, SquareLattice lattice_,
        NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
-       Operators<tensor> onesite_operators, Operators<tensor> twosite_operators,
-       CorrelationParameter corparam_,
+       Operators<tensor> onesite_operators_,
+       Operators<tensor> twosite_operators_, CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
 
+  //! initialize tensors
   void initialize_tensors();
+
+  //! update corner transfer matrices
   void update_CTM();
+
+  //! perform simple update
   void simple_update();
+
+  //! perform full update
   void full_update();
 
   //! optimize tensors
@@ -101,34 +110,35 @@ class iTPS {
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();
 
+  //! measure eigenvalues of transfer matrix
   std::vector<transfer_matrix_eigenvalues_type>
   measure_transfer_matrix_eigenvalues();
 
   /*! @brief write measured onesite observables
    *
-   *  @params[in] onesite_obs
+   *  @param[in] onesite_obs
    */
   void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs);
 
   /*! @brief write measured twosite observables
    *
-   *  @params[in] twosite_obs
+   *  @param[in] twosite_obs
    */
   void save_twosite(
       std::vector<std::map<Bond, tensor_type>> const &twosite_obs);
 
   /*! @brief write measured correlation functions
    *
-   *  @params[in] correlations
+   *  @param[in] correlations
    */
   void save_correlation(std::vector<Correlation> const &correlations);
 
-  /*! @brief write measured correlation length
+  /*! @brief calculate and write correlation length
    *
-   *  @params[in] xi
+   *  @param [in] eigvals
    */
   void save_correlation_length(
-      std::vector<transfer_matrix_eigenvalues_type> const &xi);
+      std::vector<transfer_matrix_eigenvalues_type> const &eigvals);
 
   //! save optimized tensors into files
   void save_tensors() const;
