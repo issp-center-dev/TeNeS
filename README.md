@@ -208,7 +208,21 @@ The file format of input/output files is described in the manual page.
 
 Feel free to ask any question through an issue (public) or an e-mail (private) (`tenes-dev__at__issp.u-tokyo.ac.jp`, `__at__ -> @`).
 
+
+## Contibution
+
 Pull request is welcome (even for a small typo, of course!).
+Before send a PR, please make sure the following:
+
+- Rebase (or merge) `develop` branch into your feature branch
+- Check `make` and `ctest` processes pass
+- Format Codes by using `clang-format` (C++) and `black` (Python)
+
+(Incomplete) developer's document written in doxygen is available.
+
+1. Move to `docs/doxygen`
+2. Invoke `doxygen`
+3. Open `doxygen_out/html/index.html` in your browser
 
 ## License
 TeNeS is available under the GNU GPL v3.
