@@ -18,6 +18,7 @@
 #include "instantiate.hpp"
 
 namespace tenes {
+using std::size_t;
 using mptensor::Axes;
 
 template <class tensor>

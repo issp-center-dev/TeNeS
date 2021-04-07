@@ -26,6 +26,7 @@
 #define TENES_SRC_ITPS_CONTRACT_MF_HPP_
 
 #include <vector>
+#include <cstddef>
 
 namespace tenes {
 
