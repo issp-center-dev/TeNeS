@@ -25,6 +25,8 @@
 #include <vector>
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 /*! @brief contract tensors with mean field environment
  *
@@ -63,4 +65,6 @@ template TENSOR_TYPE::value_type Contract_four_sites_MF(
     const TENSOR_TYPE &op_0_0, const TENSOR_TYPE &op_0_1,
     const TENSOR_TYPE &op_1_0, const TENSOR_TYPE &op_1_1);
 
-}  // end of namespace tenes
+}  // namespace core
+}  // namespace itps
+}  // namespace tenes

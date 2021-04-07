@@ -22,13 +22,15 @@
  2015 Dec.  Tsuyoshi Okubo
 */
 
-#ifndef TENES_SRC_ITPS_CONTRACT_MF_HPP_
-#define TENES_SRC_ITPS_CONTRACT_MF_HPP_
+#ifndef TENES_SRC_ITPS_CORE_CONTRACT_MF_HPP_
+#define TENES_SRC_ITPS_CORE_CONTRACT_MF_HPP_
 
 #include <vector>
 #include <cstddef>
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 /*! @brief contract tensors with mean field environment
  *
@@ -123,6 +125,8 @@ typename tensor::value_type FinishCorrelation_MF(const tensor &A,
                                                  const tensor &op,
                                                  size_t direction);
 
-}  // end of namespace tenes
+}  // end of namespace core
+}  // namespace itps
+}  // namespace tenes
 
-#endif  // TENES_SRC_ITPS_CONTRACT_MF_HPP_
+#endif  // TENES_SRC_ITPS_CORE_CONTRACT_MF_HPP_

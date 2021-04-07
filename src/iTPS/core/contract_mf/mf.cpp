@@ -29,6 +29,8 @@
 #include "../../../tensor.hpp"
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 using mptensor::Axes;
 
@@ -203,7 +205,9 @@ typename tensor::value_type Contract_four_sites_MF(
       Axes(0, 1), Axes(0, 1));
 }
 
-}  // end of namespace tenes
+}  // namespace core
+}  // namespace itps
+}  // namespace tenes
 
 #undef TENSOR_TYPE
 #define TENSOR_TYPE real_tensor

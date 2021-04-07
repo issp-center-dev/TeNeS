@@ -14,6 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include "correlation_function.hpp"
+
 #include <algorithm>
 #include <string>
 #include <type_traits>
@@ -24,6 +26,7 @@
 #include "core/contract_mf.hpp"
 
 namespace tenes {
+namespace itps {
 
 using mptensor::Shape;
 
@@ -63,17 +66,18 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
           continue;
         }
         const auto left_op = onesite_operators[left_op_index].op;
-        StartCorrelation(correlation_T, C1[left_index], C4[left_index],
-                         eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], left_op);
-        StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
-                         eTt[left_index], eTb[left_index], eTl[left_index],
-                         Tn[left_index], op_identity[left_index]);
+        core::StartCorrelation(correlation_T, C1[left_index], C4[left_index],
+                               eTt[left_index], eTb[left_index],
+                               eTl[left_index], Tn[left_index], left_op);
+        core::StartCorrelation(correlation_norm, C1[left_index], C4[left_index],
+                               eTt[left_index], eTb[left_index],
+                               eTl[left_index], Tn[left_index],
+                               op_identity[left_index]);
 
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.right(right_index);
-          double norm = std::real(FinishCorrelation(
+          double norm = std::real(core::FinishCorrelation(
               correlation_norm, C2[right_index], C3[right_index],
               eTt[right_index], eTr[right_index], eTb[right_index],
               Tn[right_index], op_identity[right_index]));
@@ -83,20 +87,20 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
               continue;
             }
             const auto right_op = onesite_operators[right_op_index].op;
-            auto val = FinishCorrelation(correlation_T, C2[right_index],
-                                         C3[right_index], eTt[right_index],
-                                         eTr[right_index], eTb[right_index],
-                                         Tn[right_index], right_op) /
+            auto val = core::FinishCorrelation(
+                           correlation_T, C2[right_index], C3[right_index],
+                           eTt[right_index], eTr[right_index], eTb[right_index],
+                           Tn[right_index], right_op) /
                        norm;
             correlations.push_back(Correlation{left_index, r + 1, 0, left_ilop,
                                                right_ilop, std::real(val),
                                                std::imag(val)});
           }
 
-          Transfer(correlation_T, eTt[right_index], eTb[right_index],
-                   Tn[right_index]);
-          Transfer(correlation_norm, eTt[right_index], eTb[right_index],
-                   Tn[right_index]);
+          core::Transfer(correlation_T, eTt[right_index], eTb[right_index],
+                         Tn[right_index]);
+          core::Transfer(correlation_norm, eTt[right_index], eTb[right_index],
+                         Tn[right_index]);
         }
       }
       {  // vertical
@@ -106,18 +110,18 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
         }
         const auto left_op = onesite_operators[left_op_index].op;
         ptensor tn = transpose(Tn[left_index], mptensor::Axes(3, 0, 1, 2, 4));
-        StartCorrelation(correlation_T, C4[left_index], C3[left_index],
-                         eTl[left_index], eTr[left_index], eTb[left_index], tn,
-                         left_op);
-        StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
-                         eTl[left_index], eTr[left_index], eTb[left_index], tn,
-                         op_identity[left_index]);
+        core::StartCorrelation(correlation_T, C4[left_index], C3[left_index],
+                               eTl[left_index], eTr[left_index],
+                               eTb[left_index], tn, left_op);
+        core::StartCorrelation(correlation_norm, C4[left_index], C3[left_index],
+                               eTl[left_index], eTr[left_index],
+                               eTb[left_index], tn, op_identity[left_index]);
 
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.top(right_index);
           tn = transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4));
-          double norm = std::real(FinishCorrelation(
+          double norm = std::real(core::FinishCorrelation(
               correlation_norm, C1[right_index], C2[right_index],
               eTl[right_index], eTt[right_index], eTr[right_index], tn,
               op_identity[right_index]));
@@ -127,18 +131,19 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
               continue;
             }
             const auto right_op = onesite_operators[right_op_index].op;
-            auto val = FinishCorrelation(correlation_T, C1[right_index],
-                                         C2[right_index], eTl[right_index],
-                                         eTt[right_index], eTr[right_index], tn,
-                                         right_op) /
+            auto val = core::FinishCorrelation(
+                           correlation_T, C1[right_index], C2[right_index],
+                           eTl[right_index], eTt[right_index], eTr[right_index],
+                           tn, right_op) /
                        norm;
             correlations.push_back(Correlation{left_index, 0, r + 1, left_ilop,
                                                right_ilop, std::real(val),
                                                std::imag(val)});
           }
 
-          Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
-          Transfer(correlation_norm, eTl[right_index], eTr[right_index], tn);
+          core::Transfer(correlation_T, eTl[right_index], eTr[right_index], tn);
+          core::Transfer(correlation_norm, eTl[right_index], eTr[right_index],
+                         tn);
         }
       }
     }
@@ -185,15 +190,16 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
         ptensor T = Tn_horizontal[left_index];
         T.multiply_vector(lambda_tensor[left_index][0], 0);
         const auto left_op = onesite_operators[left_op_index].op;
-        StartCorrelation_MF(correlation_T, T, left_op, 2);
-        StartCorrelation_MF(correlation_norm, T, op_identity[left_index], 2);
+        core::StartCorrelation_MF(correlation_T, T, left_op, 2);
+        core::StartCorrelation_MF(correlation_norm, T, op_identity[left_index],
+                                  2);
 
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.right(right_index);
           T = Tn_horizontal[right_index];
           T.multiply_vector(lambda_tensor[right_index][2], 2);
-          double norm = std::real(FinishCorrelation_MF(
+          double norm = std::real(core::FinishCorrelation_MF(
               correlation_norm, T, op_identity[right_index], 2));
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
@@ -202,14 +208,15 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
             }
             const auto right_op = onesite_operators[right_op_index].op;
             auto val =
-                FinishCorrelation_MF(correlation_T, T, right_op, 2) / norm;
+                core::FinishCorrelation_MF(correlation_T, T, right_op, 2) /
+                norm;
             correlations.push_back(Correlation{left_index, r + 1, 0, left_ilop,
                                                right_ilop, std::real(val),
                                                std::imag(val)});
           }
 
-          Transfer_MF(correlation_T, Tn_horizontal[right_index], 2);
-          Transfer_MF(correlation_norm, Tn_horizontal[right_index], 2);
+          core::Transfer_MF(correlation_T, Tn_horizontal[right_index], 2);
+          core::Transfer_MF(correlation_norm, Tn_horizontal[right_index], 2);
         }
       }
       {  // vertical
@@ -220,15 +227,16 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
         ptensor T = Tn_vertical[left_index];
         T.multiply_vector(lambda_tensor[left_index][3], 3);
         const auto left_op = onesite_operators[left_op_index].op;
-        StartCorrelation_MF(correlation_T, T, left_op, 1);
-        StartCorrelation_MF(correlation_norm, T, op_identity[left_index], 1);
+        core::StartCorrelation_MF(correlation_T, T, left_op, 1);
+        core::StartCorrelation_MF(correlation_norm, T, op_identity[left_index],
+                                  1);
 
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.top(right_index);
           T = Tn_vertical[right_index];
           T.multiply_vector(lambda_tensor[right_index][1], 1);
-          double norm = std::real(FinishCorrelation_MF(
+          double norm = std::real(core::FinishCorrelation_MF(
               correlation_norm, T, op_identity[right_index], 1));
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
@@ -237,14 +245,15 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
             }
             const auto right_op = onesite_operators[right_op_index].op;
             auto val =
-                FinishCorrelation_MF(correlation_T, T, right_op, 1) / norm;
+                core::FinishCorrelation_MF(correlation_T, T, right_op, 1) /
+                norm;
             correlations.push_back(Correlation{left_index, 0, r + 1, left_ilop,
                                                right_ilop, std::real(val),
                                                std::imag(val)});
           }
 
-          Transfer_MF(correlation_T, Tn_vertical[right_index], 1);
-          Transfer_MF(correlation_norm, Tn_vertical[right_index], 1);
+          core::Transfer_MF(correlation_T, Tn_vertical[right_index], 1);
+          core::Transfer_MF(correlation_norm, Tn_vertical[right_index], 1);
         }
       }
     }
@@ -287,4 +296,5 @@ void iTPS<ptensor>::save_correlation(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

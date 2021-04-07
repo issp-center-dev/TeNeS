@@ -23,8 +23,10 @@
 #include "printlevel.hpp"
 
 namespace tenes {
+namespace itps {
 int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level);
 }
+}  // namespace tenes
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
@@ -80,7 +82,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    status = tenes::main_impl(input_filename, MPI_COMM_WORLD, print_level);
+    status = tenes::itps::main_impl(input_filename, MPI_COMM_WORLD, print_level);
   } catch (const tenes::input_error e) {
     if (mpirank == 0) {
       std::cerr << "[INPUT ERROR]" << std::endl;

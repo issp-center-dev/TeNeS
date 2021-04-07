@@ -36,6 +36,7 @@ auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
 
 TEST_CASE("input") {
   using namespace tenes;
+  using namespace tenes::itps;
   using ptensor = complex_tensor;
 
   SUBCASE("parameter_default") {
@@ -163,7 +164,7 @@ elements = """
 0 0 0 0 1.0 0.0
 """
       )");
-      const auto simple_updates = tenes::load_simple_updates<ptensor>(toml);
+      const auto simple_updates = tenes::itps::load_simple_updates<ptensor>(toml);
       CHECK(simple_updates[0].source_site == 0);
       CHECK(simple_updates[0].source_leg == 2);
       auto &op = simple_updates[0].op;
@@ -185,7 +186,7 @@ elements = """
 0 0 0 0 0.0 1.0
 """
       )");
-      const auto full_updates = tenes::load_full_updates<ptensor>(toml);
+      const auto full_updates = tenes::itps::load_full_updates<ptensor>(toml);
       CHECK(full_updates[0].source_site == 0);
       CHECK(full_updates[0].source_leg == 2);
       auto &op = full_updates[0].op;

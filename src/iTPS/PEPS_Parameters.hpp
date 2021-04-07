@@ -23,6 +23,7 @@
 #include "../printlevel.hpp"
 
 namespace tenes {
+namespace itps {
 
 class PEPS_Parameters {
  public:
@@ -79,5 +80,6 @@ class PEPS_Parameters {
   void check() const;  // may throw tenes::input_error
 };
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes
 #endif  // TENES_SRC_PEPS_PARAMETERS_HPP_

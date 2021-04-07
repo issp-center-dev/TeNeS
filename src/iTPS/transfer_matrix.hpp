@@ -24,6 +24,7 @@
 #include "../SquareLattice.hpp"
 
 namespace tenes {
+namespace itps {
 
 struct TransferMatrix_Parameters {
   bool to_calculate;
@@ -121,8 +122,7 @@ class TransferMatrix_mf : public TransferMatrix<ptensor> {
   TransferMatrix_mf(
       const SquareLattice &lattice, const std::vector<ptensor> &Tn,
       const std::vector<std::vector<std::vector<double>>> lambda_tensor)
-      : TransferMatrix<ptensor>(lattice, Tn),
-        lambda_tensor(lambda_tensor) {}
+      : TransferMatrix<ptensor>(lattice, Tn), lambda_tensor(lambda_tensor) {}
 
  private:
   const std::vector<std::vector<std::vector<double>>> lambda_tensor;
@@ -138,6 +138,7 @@ class TransferMatrix_mf : public TransferMatrix<ptensor> {
   size_t dim(int dir, int fixed_coord) const override;
 };
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes
 
 #endif  // TENES_SRC_ITPS_TRANSFER_MATRIX_HPP_

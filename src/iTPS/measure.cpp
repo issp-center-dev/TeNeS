@@ -25,6 +25,7 @@
 #include "../util/datetime.hpp"
 
 namespace tenes {
+namespace itps {
 
 template <class ptensor>
 void iTPS<ptensor>::measure() {
@@ -183,4 +184,5 @@ void iTPS<ptensor>::summary() const {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

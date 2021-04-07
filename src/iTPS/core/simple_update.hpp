@@ -28,18 +28,20 @@
 #include <vector>
 
 namespace tenes {
-
+namespace itps {
 class PEPS_Parameters;
 
+namespace core {
+
 template <class tensor>
-void Simple_update_bond(const tensor &Tn1,
-                        const tensor &Tn2,
+void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
                         const std::vector<std::vector<double>> &lambda1,
                         const std::vector<std::vector<double>> &lambda2,
                         const tensor &op12, const int connect1,
-                        const PEPS_Parameters peps_parameters,
-                        tensor &Tn1_new, tensor &Tn2_new,
-                        std::vector<double> &lambda_c);
-}  // end of namespace tenes
+                        const PEPS_Parameters peps_parameters, tensor &Tn1_new,
+                        tensor &Tn2_new, std::vector<double> &lambda_c);
+}  // end of namespace core
+}  // namespace itps
+}  // namespace tenes
 
 #endif  // TENES_SRC_ITPS_CORE_SIMPLE_UPDATE_HPP_

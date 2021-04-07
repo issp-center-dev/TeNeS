@@ -19,6 +19,7 @@
 #include "core/simple_update.hpp"
 
 namespace tenes {
+namespace itps {
 
 template <class tensor>
 void iTPS<tensor>::simple_update() {
@@ -35,9 +36,9 @@ void iTPS<tensor>::simple_update() {
       const int source_leg = up.source_leg;
       const int target = lattice.neighbor(source, source_leg);
       const int target_leg = (source_leg + 2) % 4;
-      Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
-                         lambda_tensor[target], up.op, source_leg,
-                         peps_parameters, Tn1_new, Tn2_new, lambda_c);
+      core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
+                               lambda_tensor[target], up.op, source_leg,
+                               peps_parameters, Tn1_new, Tn2_new, lambda_c);
       lambda_tensor[source][source_leg] = lambda_c;
       lambda_tensor[target][target_leg] = lambda_c;
       Tn[source] = Tn1_new;
@@ -64,4 +65,5 @@ void iTPS<tensor>::simple_update() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

@@ -24,6 +24,7 @@
 #include "../util/abs.hpp"
 
 namespace tenes {
+namespace itps {
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
 #define LOAD_PARAM(name, type) \
@@ -437,4 +438,5 @@ template class TransferMatrix_ctm<complex_tensor>;
 template class TransferMatrix_mf<real_tensor>;
 template class TransferMatrix_mf<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

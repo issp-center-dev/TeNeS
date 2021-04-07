@@ -31,6 +31,7 @@
 #include "core/contract_mf.hpp"
 
 namespace tenes {
+namespace itps {
 
 template <class tensor>
 auto iTPS<tensor>::measure_onesite()
@@ -52,27 +53,28 @@ auto iTPS<tensor>::measure_onesite()
 
     std::vector<double> norm(N_UNIT);
     for (int i = 0; i < N_UNIT; ++i) {
-      const auto n = Contract_one_site_MF(Tn_[i], op_identity[i]);
+      const auto n = core::Contract_one_site_MF(Tn_[i], op_identity[i]);
       norm[i] = std::real(n);
     }
 
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
-      const auto val = Contract_one_site_MF(Tn_[i], op.op);
+      const auto val = core::Contract_one_site_MF(Tn_[i], op.op);
       local_obs[op.group][i] = val / norm[i];
     }
   } else {
     std::vector<double> norm(N_UNIT);
     for (int i = 0; i < N_UNIT; ++i) {
       const auto n =
-          Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i],
-                            eTl[i], Tn[i], op_identity[i]);
+          core::Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                  eTb[i], eTl[i], Tn[i], op_identity[i]);
       norm[i] = std::real(n);
     }
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
-      const auto val = Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i],
-                                         eTr[i], eTb[i], eTl[i], Tn[i], op.op);
+      const auto val =
+          core::Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                  eTb[i], eTl[i], Tn[i], op.op);
       local_obs[op.group][i] = val / norm[i];
     }
   }
@@ -123,4 +125,5 @@ void iTPS<ptensor>::save_onesite(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

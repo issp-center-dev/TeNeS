@@ -18,6 +18,8 @@
 #include "instantiate.hpp"
 
 namespace tenes {
+namespace itps {
+namespace core {
 using mptensor::Axes;
 
 template <class tensor>
@@ -140,4 +142,6 @@ typename tensor::value_type Contract_3x2(
 INSTANTIATE_CONTRACT(real_tensor, 3, 2);
 INSTANTIATE_CONTRACT(complex_tensor, 3, 2);
 
-}  // end of namespace tenes
+}  // namespace core
+}  // namespace itps
+}  // namespace tenes

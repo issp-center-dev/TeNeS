@@ -26,32 +26,29 @@
 #define TENES_SRC_ITPS_CORE_FULL_UPDATE_HPP_
 
 namespace tenes {
-
+namespace itps {
 class PEPS_Parameters;
+namespace core {
 
 template <class tensor>
 void Full_update_bond_horizontal(
-    const tensor &C1, const tensor &C2,
-    const tensor &C3, const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
-    const tensor &op12, const PEPS_Parameters peps_parameters,
-    tensor &Tn1_new, tensor &Tn2_new);
-
-template <class tensor>
-void Full_update_bond(
-    const tensor &C1, const tensor &C2,
-    const tensor &C3, const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
-    const tensor &op12, const int connect1,
-    const PEPS_Parameters peps_parameters, tensor &Tn1_new,
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op12, const PEPS_Parameters peps_parameters, tensor &Tn1_new,
     tensor &Tn2_new);
 
-}  // end of namespace tenes
+template <class tensor>
+void Full_update_bond(const tensor &C1, const tensor &C2, const tensor &C3,
+                      const tensor &C4, const tensor &eT1, const tensor &eT2,
+                      const tensor &eT3, const tensor &eT4, const tensor &eT5,
+                      const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+                      const tensor &op12, const int connect1,
+                      const PEPS_Parameters peps_parameters, tensor &Tn1_new,
+                      tensor &Tn2_new);
+
+}  // end of namespace core
+}  // namespace itps
+}  // namespace tenes
 
 #endif  // TENES_SRC_ITPS_CORE_FULL_UPDATE_HPP_

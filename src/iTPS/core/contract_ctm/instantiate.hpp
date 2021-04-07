@@ -26,4 +26,4 @@
       const std::vector<const tensor_type *> &eTl,             \
       const std::vector<std::vector<const tensor_type *>> &Tn, \
       const std::vector<std::vector<const tensor_type *>> &op)
-#endif // INSTANTIATE_CONTRACT
+#endif  // INSTANTIATE_CONTRACT

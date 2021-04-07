@@ -18,8 +18,8 @@
 #include <memory>
 #include "iTPS.hpp"
 
-
 namespace tenes {
+namespace itps {
 
 template <class ptensor>
 std::vector<typename iTPS<ptensor>::transfer_matrix_eigenvalues_type>
@@ -37,8 +37,8 @@ iTPS<ptensor>::measure_transfer_matrix_eigenvalues() {
 
   std::shared_ptr<TransferMatrix<ptensor>> clength;
   if (peps_parameters.MeanField_Env) {
-    clength = std::make_shared<TransferMatrix_mf<ptensor>>(
-        lattice, Tn, lambda_tensor);
+    clength = std::make_shared<TransferMatrix_mf<ptensor>>(lattice, Tn,
+                                                           lambda_tensor);
   } else {
     clength = std::make_shared<TransferMatrix_ctm<ptensor>>(
         lattice, Tn, C1, C2, C3, C4, eTl, eTt, eTr, eTb);
@@ -109,4 +109,5 @@ void iTPS<ptensor>::save_correlation_length(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

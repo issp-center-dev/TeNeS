@@ -29,6 +29,8 @@
 #include <cstddef>
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 /*! @brief contract tensors with CTM
  *
@@ -103,79 +105,59 @@ typename tensor::value_type Contract_one_site(
 
 template <class tensor>
 typename tensor::value_type Contract_two_sites_horizontal(
-    const tensor &C1, const  tensor &C2,
-    const tensor &C3, const  tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
     const tensor &op1, const tensor &op2);
 
 template <class tensor>
 typename tensor::value_type Contract_two_sites_vertical(
-    const tensor &C1,  const tensor &C2,
-    const tensor &C3,  const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
     const tensor &op1, const tensor &op2);
 
 template <class tensor>
 typename tensor::value_type Contract_two_sites_horizontal_op12(
-    const tensor &C1,  const tensor &C2,
-    const tensor &C3,  const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
     const tensor &op12);
 
 template <class tensor>
 typename tensor::value_type Contract_two_sites_vertical_op12(
-    const tensor &C1,  const tensor &C2,
-    const tensor &C3,  const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &Tn1, const tensor &Tn2,
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
     const tensor &op12);
 
 template <class tensor>
 typename tensor::value_type Contract_four_sites(
-    const tensor &C1,  const tensor &C2,
-    const tensor &C3,  const tensor &C4,
-    const tensor &eT1, const tensor &eT2,
-    const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6,
-    const tensor &eT7, const tensor &eT8,
-    const tensor &Tn1, const tensor &Tn2,
-    const tensor &Tn3, const tensor &Tn4,
-    const tensor &op1, const tensor &op2,
-    const tensor &op3, const tensor &op4);
-
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &eT7, const tensor &eT8,
+    const tensor &Tn1, const tensor &Tn2, const tensor &Tn3, const tensor &Tn4,
+    const tensor &op1, const tensor &op2, const tensor &op3, const tensor &op4);
 
 template <class tensor>
-void StartCorrelation(tensor &A, const tensor &C1,
-                      const tensor &C4, const tensor &eT1,
-                      const tensor &eT3,
-                      const tensor &eT4,
-                      const tensor &Tn1,
-                      const tensor &op);
+void StartCorrelation(tensor &A, const tensor &C1, const tensor &C4,
+                      const tensor &eT1, const tensor &eT3, const tensor &eT4,
+                      const tensor &Tn1, const tensor &op);
 
 template <class tensor>
-void Transfer(tensor &A, const tensor &eT1,
-              const tensor &eT3, const tensor &Tn1);
+void Transfer(tensor &A, const tensor &eT1, const tensor &eT3,
+              const tensor &Tn1);
 
 template <class tensor>
-typename tensor::value_type FinishCorrelation(const tensor &A, const tensor &C2,
-                    const tensor &C3, const tensor &eT1,
-                    const tensor &eT2, const tensor &eT3,
-                    const tensor &Tn1, const tensor &op);
+typename tensor::value_type FinishCorrelation(
+    const tensor &A, const tensor &C2, const tensor &C3, const tensor &eT1,
+    const tensor &eT2, const tensor &eT3, const tensor &Tn1, const tensor &op);
 
 template <class tensor>
 void TransferMatrix_MatVec(tensor &inoutvec, const tensor &eT1);
 
-}  // end of namespace tenes
+}  // end of namespace core
+}  // namespace itps
+}  // namespace tenes
 
 #endif  // TENES_SRC_ITPS_CORE_CONTRACT_CTM_HPP_

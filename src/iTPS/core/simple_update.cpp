@@ -39,6 +39,8 @@
 #include "../PEPS_Parameters.hpp"
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 using mptensor::Axes;
 using mptensor::Shape;
@@ -292,4 +294,6 @@ template void Simple_update_bond(
     complex_tensor &Tn1_new, complex_tensor &Tn2_new,
     std::vector<double> &lambda_c);
 
-}  // end of namespace tenes
+}  // end of namespace core
+}  // namespace itps
+}  // namespace tenes

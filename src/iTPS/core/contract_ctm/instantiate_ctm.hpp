@@ -23,6 +23,8 @@
 */
 
 namespace tenes {
+namespace itps {
+namespace core {
 
 /*! @brief contract tensors with CTM
  *
@@ -34,8 +36,7 @@ namespace tenes {
  *  @param[in] Tn center tensors
  *  @param[in] op onesite operators
  */
-template
-TENSOR_TYPE::value_type Contract(
+template TENSOR_TYPE::value_type Contract(
     const std::vector<const TENSOR_TYPE *> &C,
     const std::vector<const TENSOR_TYPE *> &eTt,
     const std::vector<const TENSOR_TYPE *> &eTr,
@@ -44,63 +45,49 @@ TENSOR_TYPE::value_type Contract(
     const std::vector<std::vector<const TENSOR_TYPE *>> &Tn,
     const std::vector<std::vector<const TENSOR_TYPE *>> &op);
 
-template
-TENSOR_TYPE::value_type Contract_one_site(
-    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3, const TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2, const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &op1);
+template TENSOR_TYPE::value_type Contract_one_site(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &Tn1,
+    const TENSOR_TYPE &op1);
 
-template
-TENSOR_TYPE::value_type Contract_two_sites_horizontal(
-    const TENSOR_TYPE &C1, const  TENSOR_TYPE &C2,
-    const TENSOR_TYPE &C3, const  TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
-    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &eT5, const TENSOR_TYPE &eT6,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+template TENSOR_TYPE::value_type Contract_two_sites_horizontal(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
     const TENSOR_TYPE &op1, const TENSOR_TYPE &op2);
 
-template
-TENSOR_TYPE::value_type Contract_two_sites_vertical(
-    const TENSOR_TYPE &C1,  const TENSOR_TYPE &C2,
-    const TENSOR_TYPE &C3,  const TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
-    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &eT5, const TENSOR_TYPE &eT6,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+template TENSOR_TYPE::value_type Contract_two_sites_vertical(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
     const TENSOR_TYPE &op1, const TENSOR_TYPE &op2);
 
-template
-TENSOR_TYPE::value_type Contract_two_sites_horizontal_op12(
-    const TENSOR_TYPE &C1,  const TENSOR_TYPE &C2,
-    const TENSOR_TYPE &C3,  const TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
-    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &eT5, const TENSOR_TYPE &eT6,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+template TENSOR_TYPE::value_type Contract_two_sites_horizontal_op12(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
     const TENSOR_TYPE &op12);
 
-template
-TENSOR_TYPE::value_type Contract_two_sites_vertical_op12(
-    const TENSOR_TYPE &C1,  const TENSOR_TYPE &C2,
-    const TENSOR_TYPE &C3,  const TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
-    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &eT5, const TENSOR_TYPE &eT6,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+template TENSOR_TYPE::value_type Contract_two_sites_vertical_op12(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
     const TENSOR_TYPE &op12);
 
-template
-TENSOR_TYPE::value_type Contract_four_sites(
-    const TENSOR_TYPE &C1,  const TENSOR_TYPE &C2,
-    const TENSOR_TYPE &C3,  const TENSOR_TYPE &C4,
-    const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
-    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4,
-    const TENSOR_TYPE &eT5, const TENSOR_TYPE &eT6,
-    const TENSOR_TYPE &eT7, const TENSOR_TYPE &eT8,
-    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
-    const TENSOR_TYPE &Tn3, const TENSOR_TYPE &Tn4,
-    const TENSOR_TYPE &op1, const TENSOR_TYPE &op2,
+template TENSOR_TYPE::value_type Contract_four_sites(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &eT7, const TENSOR_TYPE &eT8,
+    const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2, const TENSOR_TYPE &Tn3,
+    const TENSOR_TYPE &Tn4, const TENSOR_TYPE &op1, const TENSOR_TYPE &op2,
     const TENSOR_TYPE &op3, const TENSOR_TYPE &op4);
 
-}  // end of namespace tenes
+}  // namespace core
+}  // namespace itps
+}  // namespace tenes

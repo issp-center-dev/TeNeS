@@ -34,6 +34,7 @@
 // IWYU pragma: end_exports
 
 namespace tenes {
+namespace itps {
 
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                           const char *tablename = "tensor");
@@ -75,6 +76,7 @@ template <class tensor>
 NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param,
                                       double atol = 0.0);
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes
 
 #endif  // TENES_SRC_ITPS_LOAD_TOML_HPP_

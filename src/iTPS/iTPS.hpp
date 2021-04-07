@@ -42,6 +42,7 @@
 // IWYU pragma end_exports
 
 namespace tenes {
+namespace itps {
 
 struct Bond {
   int source_site;
@@ -223,6 +224,7 @@ class iTPS {
   double time_observable;
 };
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes
 
 #endif  //  TENES_SRC_ITPS_ITPS_HPP_

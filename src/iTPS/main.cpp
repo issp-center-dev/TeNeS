@@ -110,6 +110,7 @@ bool is_real(tenes::NNOperators<mptensor::Tensor<
 }  // end of unnamed namespace
 
 namespace tenes {
+namespace itps {
 
 template <class tensor>
 int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
@@ -248,4 +249,5 @@ int main_impl(std::string input_filename, MPI_Comm com,
   }
 }
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

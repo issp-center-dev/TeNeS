@@ -80,13 +80,13 @@ TEST_CASE("testing full update") {
 
   // calculation
 
-  tenes::PEPS_Parameters peps_parameters;
+  tenes::itps::PEPS_Parameters peps_parameters;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 
-  tenes::Full_update_bond(C[0], C[1], C[2], C[3], E[0], E[1], E[2], E[3], E[4],
-                          E[5], T[0], T[1], op, 2, peps_parameters, new_T[0],
-                          new_T[1]);
+  tenes::itps::core::Full_update_bond(C[0], C[1], C[2], C[3], E[0], E[1], E[2],
+                                      E[3], E[4], E[5], T[0], T[1], op, 2,
+                                      peps_parameters, new_T[0], new_T[1]);
 
   // load answer
 

@@ -27,6 +27,7 @@
 #include "core/contract_mf.hpp"
 
 namespace tenes {
+namespace itps {
 
 bool operator<(const Bond &a, const Bond &b) {
   return std::tie(a.source_site, a.dx, a.dy) <
@@ -172,9 +173,9 @@ auto iTPS<ptensor>::measure_twosite()
                                : std::numeric_limits<double>::quiet_NaN());
     if (std::isnan(norm)) {
       if (peps_parameters.MeanField_Env) {
-        norm = std::real(Contract_MF(Tn_, op_));
+        norm = std::real(core::Contract_MF(Tn_, op_));
       } else {
-        norm = std::real(Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
+        norm = std::real(core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
       }
       norms[norm_key] = norm;
     }
@@ -189,9 +190,9 @@ auto iTPS<ptensor>::measure_twosite()
               (top == source ? op.op
                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
           value = peps_parameters.MeanField_Env
-                      ? Contract_two_sites_vertical_op12_MF(*(Tn_[0][0]),
-                                                            *(Tn_[1][0]), o)
-                      : Contract_two_sites_vertical_op12(
+                      ? core::Contract_two_sites_vertical_op12_MF(
+                            *(Tn_[0][0]), *(Tn_[1][0]), o)
+                      : core::Contract_two_sites_vertical_op12(
                             C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
                             eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
                             eTl[top], Tn[top], Tn[bottom], o);
@@ -202,9 +203,9 @@ auto iTPS<ptensor>::measure_twosite()
               (left == source ? op.op
                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
           value = peps_parameters.MeanField_Env
-                      ? Contract_two_sites_horizontal_op12_MF(*(Tn_[0][0]),
-                                                              *(Tn_[0][1]), o)
-                      : Contract_two_sites_horizontal_op12(
+                      ? core::Contract_two_sites_horizontal_op12_MF(
+                            *(Tn_[0][0]), *(Tn_[0][1]), o)
+                      : core::Contract_two_sites_horizontal_op12(
                             C1[left], C2[right], C3[right], C4[left], eTt[left],
                             eTt[right], eTr[right], eTb[right], eTb[left],
                             eTl[left], Tn[left], Tn[right], o);
@@ -223,8 +224,8 @@ auto iTPS<ptensor>::measure_twosite()
           op_[target_row][target_col] = &target_op;
           auto localvalue =
               peps_parameters.MeanField_Env
-                  ? Contract_MF(Tn_, op_)
-                  : Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+                  ? core::Contract_MF(Tn_, op_)
+                  : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
           value += localvalue * s[is];
         }
       }
@@ -237,9 +238,10 @@ auto iTPS<ptensor>::measure_twosite()
       op_[target_row][target_col] = &(
           onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
               .op);
-      auto localvalue = peps_parameters.MeanField_Env
-                            ? Contract_MF(Tn_, op_)
-                            : Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      auto localvalue =
+          peps_parameters.MeanField_Env
+              ? core::Contract_MF(Tn_, op_)
+              : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
@@ -291,4 +293,5 @@ void iTPS<ptensor>::save_twosite(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

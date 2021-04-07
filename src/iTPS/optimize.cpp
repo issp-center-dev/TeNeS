@@ -19,6 +19,7 @@
 #include "../tensor.hpp"
 
 namespace tenes {
+namespace itps {
 
 template <class ptensor>
 void iTPS<ptensor>::optimize() {
@@ -39,4 +40,5 @@ void iTPS<ptensor>::optimize() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

@@ -21,4 +21,4 @@
   template tensor_type::value_type Contract_MF_##NROW##x##NCOL( \
       const std::vector<std::vector<const tensor_type *>> &Tn,  \
       const std::vector<std::vector<const tensor_type *>> &op)
-#endif // INSTANTIATE_CONTRACT
+#endif  // INSTANTIATE_CONTRACT

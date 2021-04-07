@@ -34,6 +34,7 @@
 #include "PEPS_Parameters.hpp"
 
 namespace tenes {
+namespace itps {
 
 namespace detail {
 std::string msg_cannot_find(std::string key, std::string section = "") {
@@ -472,4 +473,5 @@ template NNOperators<real_tensor> load_full_updates(
 template NNOperators<complex_tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, double atol);
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes

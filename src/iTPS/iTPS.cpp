@@ -43,15 +43,16 @@ int omp_get_max_threads() { return 1; }
 #include "core/ctm.hpp"
 
 namespace tenes {
+namespace itps {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                      SquareLattice lattice_, NNOperators<tensor> simple_updates_,
-                      NNOperators<tensor> full_updates_,
-                      Operators<tensor> onesite_operators_,
-                      Operators<tensor> twosite_operators_,
-                      CorrelationParameter corparam_,
-                      TransferMatrix_Parameters clength_param_)
+                   SquareLattice lattice_, NNOperators<tensor> simple_updates_,
+                   NNOperators<tensor> full_updates_,
+                   Operators<tensor> onesite_operators_,
+                   Operators<tensor> twosite_operators_,
+                   CorrelationParameter corparam_,
+                   TransferMatrix_Parameters clength_param_)
     : comm(comm_),
       peps_parameters(peps_parameters_),
       lattice(lattice_),
@@ -207,8 +208,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 template <class ptensor>
 void iTPS<ptensor>::update_CTM() {
   Timer<> timer;
-  Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, peps_parameters,
-                       lattice);
+  core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                             peps_parameters, lattice);
   time_environment += timer.elapsed();
 }
 
@@ -216,4 +217,5 @@ void iTPS<ptensor>::update_CTM() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // end of namespace tenes
+}  // namespace itps
+}  // namespace tenes
