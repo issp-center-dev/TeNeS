@@ -16,10 +16,8 @@
 
 #include "SquareLattice.hpp"
 
-#include <cassert>
-#include <fstream>
-#include <sstream>
-#include <tuple>
+#include <fstream>      // for operator<<, basic_ostream, char_traits, endl
+#include <tuple>        // for tuple, make_tuple, tie
 
 #include "exception.hpp"
 

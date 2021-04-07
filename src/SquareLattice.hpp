@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_LATTICE_HPP_
-#define TENES_SRC_LATTICE_HPP_
+#ifndef TENES_SRC_SQUARELATTICE_HPP_
+#define TENES_SRC_SQUARELATTICE_HPP_
 
 #include <array>
 #include <vector>
@@ -146,4 +146,4 @@ class SquareLattice {
 
 }  // end of namespace tenes
 
-#endif  // TENES_SRC_LATTICE_HPP_
+#endif  // TENES_SRC_SQUARELATTICE_HPP_

@@ -17,12 +17,11 @@
 #ifndef TENES_SRC_TENSOR_HPP_
 #define TENES_SRC_TENSOR_HPP_
 
+#include <cstddef>
 #include <vector>
 #include <complex>
 
-#include <mptensor/tensor.hpp>
-
-#include "exception.hpp"
+#include "mptensor/tensor.hpp"  // IWYU pragma: export
 
 namespace tenes {
 
@@ -51,9 +50,9 @@ void eigen(small_tensor<T> const& A, std::vector<std::complex<double>>& eigvals,
            std::vector<std::complex<double>>& eigvecs_last, int nev);
 
 template <class T>
-small_tensor<T> identity(size_t k, T v) {
+small_tensor<T> identity(std::size_t k, T v) {
   small_tensor<T> ret{mptensor::Shape(k, k)};
-  for (size_t i = 0; i < k; ++i) {
+  for (std::size_t i = 0; i < k; ++i) {
     ret.set_value({k, k}, v);
   }
   return ret;

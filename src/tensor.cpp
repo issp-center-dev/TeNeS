@@ -1,8 +1,10 @@
 #include "tensor.hpp"
 
+#include <algorithm>
 #include <sstream>
 #include <numeric>
 #include "util/abs.hpp"
+#include "exception.hpp"
 
 using dcomplex = std::complex<double>;
 

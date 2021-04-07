@@ -18,17 +18,20 @@
 #define TENES_SRC_ITPS_LOAD_TOML_HPP_
 
 #define _USE_MATH_DEFINES
-#include <cpptoml.h>
 #include <tuple>
 #include <vector>
 #include <string>
 
+#include "cpptoml.h"  // IWYU pragma: export
+
+// IWYU pragma: begin_exports
 #include "../SquareLattice.hpp"
 #include "../operator.hpp"
 
 #include "transfer_matrix.hpp"
 #include "correlation_function.hpp"
 #include "PEPS_Parameters.hpp"
+// IWYU pragma: end_exports
 
 namespace tenes {
 

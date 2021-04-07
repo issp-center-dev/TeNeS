@@ -15,21 +15,22 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #define _USE_MATH_DEFINES
-#include <sys/stat.h>
 #include <algorithm>
 #include <complex>
 #include <random>
 #include <string>
 #include <array>
+#include <cstdlib>
 
 #include "iTPS.hpp"
 
 #include "../tensor.hpp"
 
 #include "../printlevel.hpp"
-#include "../timer.hpp"
 #include "../util/file.hpp"
 #include "../util/string.hpp"
+
+using std::size_t;
 
 namespace tenes {
 

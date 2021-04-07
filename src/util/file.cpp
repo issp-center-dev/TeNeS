@@ -14,15 +14,17 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include <sys/stat.h>
-#include <fstream>
-#include <string>
+#include <cstddef>    // for size_t
+#include <sys/stat.h>  // for stat, mkdir, S_ISDIR
+#include <fstream>     // for string, operator<<, stringstream, basic_ostream
+#include <string>      // for char_traits
 #include <sstream>
 
-#include "../exception.hpp"
 #include "string.hpp"
 
 #include "file.hpp"
+
+using std::size_t;
 
 namespace tenes {
 namespace util {

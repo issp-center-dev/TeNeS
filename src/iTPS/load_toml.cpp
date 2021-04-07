@@ -15,18 +15,16 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include "load_toml.hpp"
-#include <cpptoml.h>
 
 #define _USE_MATH_DEFINES
-#include <sys/stat.h>
-#include <random>
+#include <array>
+#include <iterator>
+#include <string>
 #include <tuple>
-#include <utility>
+#include <typeinfo>
 #include <vector>
 
-#include <typeinfo>
 #include <boost/core/demangle.hpp>
-
 
 #include "../exception.hpp"
 #include "../util/read_tensor.hpp"
@@ -99,7 +97,7 @@ inline T find(decltype(cpptoml::parse_file("")) param, const char *key) {
 }
 
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
-                    const char *tablename) {
+                          const char *tablename) {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
   if (!Lsub) {
     throw input_error(detail::msg_cannot_find("L_sub", tablename));

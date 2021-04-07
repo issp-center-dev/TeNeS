@@ -14,18 +14,13 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include <complex>
-#include <cstdlib>
+#include <complex>  // for complex
+#include <cstdlib>  // for abs, size_t
 
 #include "../printlevel.hpp"
-#include "../tensor.hpp"
-#include "../SquareLattice.hpp"
-#include "../operator.hpp"
-#include "../mpi.hpp"
 #include "../util/file.hpp"
 #include "../exception.hpp"
 
-#include "PEPS_Parameters.hpp"
 #include "load_toml.hpp"
 #include "iTPS.hpp"
 

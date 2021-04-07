@@ -17,8 +17,8 @@
 #ifndef TENES_SRC_UTIL_DATETIME_HPP_
 #define TENES_SRC_UTIL_DATETIME_HPP_
 
-#include <ctime>
-#include <string>
+#include <ctime>  // IWYU pragma: export
+#include <string> // IWYU pragma: export
 
 namespace tenes {
 namespace util {

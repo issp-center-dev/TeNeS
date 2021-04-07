@@ -15,28 +15,18 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #include "iTPS.hpp"
-#include "transfer_matrix.hpp"
-
-#define _USE_MATH_DEFINES
-#include <sys/stat.h>
-#include <algorithm>
-#include <complex>
-#include <ctime>
-#include <limits>
-#include <map>
-#include <memory>
-#include <random>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <array>
-#include <functional>
 
 #ifdef _NO_OMP
 int omp_get_max_threads() { return 1; }
 #else
 #include <omp.h>
 #endif
+
+#define _USE_MATH_DEFINES
+#include <algorithm>
+#include <ctime>
+#include <iostream>
+#include <string>
 
 #include <mptensor/rsvd.hpp>
 
@@ -46,11 +36,10 @@ int omp_get_max_threads() { return 1; }
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 #include "../util/file.hpp"
-#include "../util/string.hpp"
-#include "../util/type_traits.hpp"
 #include "../util/datetime.hpp"
 
 #include "PEPS_Parameters.hpp"
+#include "transfer_matrix.hpp"
 #include "core/ctm.hpp"
 
 namespace tenes {

@@ -15,18 +15,13 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #define _USE_MATH_DEFINES
-#include <algorithm>
+#include <cmath>
 #include <complex>
-#include <ctime>
+#include <iomanip>
+#include <iostream>
 #include <limits>
-#include <map>
-#include <memory>
-#include <random>
 #include <string>
-#include <tuple>
-#include <type_traits>
-#include <array>
-#include <functional>
+#include <vector>
 
 #include "iTPS.hpp"
 

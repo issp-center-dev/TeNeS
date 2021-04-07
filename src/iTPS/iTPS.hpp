@@ -17,30 +17,29 @@
 #ifndef TENES_SRC_ITPS_ITPS_HPP_
 #define TENES_SRC_ITPS_ITPS_HPP_
 
+#include <cstdlib>
 #include <complex>
-#include <ctime>
 #include <map>
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <array>
-#include <functional>
 #include <vector>
 
+// IWYU pragma begin_exports
+#include "../mpi.hpp"
 #include "../tensor.hpp"
 
-#include "../SquareLattice.hpp"
-#include "../printlevel.hpp"
-#include "../timer.hpp"
-#include "../util/file.hpp"
-#include "../util/string.hpp"
 #include "../util/type_traits.hpp"
+
+#include "../timer.hpp"
+#include "../SquareLattice.hpp"
 #include "../operator.hpp"
 
 #include "transfer_matrix.hpp"
 #include "correlation_function.hpp"
 
 #include "PEPS_Parameters.hpp"
+// IWYU pragma end_exports
 
 namespace tenes {
 
@@ -74,8 +73,8 @@ class iTPS {
    */
   iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, SquareLattice lattice_,
        NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
-       Operators<tensor> onesite_operators,
-       Operators<tensor> twosite_operators, CorrelationParameter corparam_,
+       Operators<tensor> onesite_operators, Operators<tensor> twosite_operators,
+       CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
 
   void initialize_tensors();
@@ -210,10 +209,10 @@ class iTPS {
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 
-  size_t CHI;  //!< Bond dimension of corner transfer matrices
-  int LX;      //!< Length of a unitcell along with X axes
-  int LY;      //!< Length of a unitcell along with Y axes
-  int N_UNIT;  //!< The number of sites in a unitcell
+  std::size_t CHI;  //!< Bond dimension of corner transfer matrices
+  int LX;           //!< Length of a unitcell along with X axes
+  int LY;           //!< Length of a unitcell along with Y axes
+  int N_UNIT;       //!< The number of sites in a unitcell
 
   std::string outdir;  //!< path to the directory where results will be written
 
