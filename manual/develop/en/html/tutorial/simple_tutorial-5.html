@@ -4,7 +4,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
     <title>4.2. Magnetization process of the Heisenberg model on triangular and square lattices &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -33,7 +34,7 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="magnetization-process-of-the-heisenberg-model-on-triangular-and-square-lattices">
+  <section id="magnetization-process-of-the-heisenberg-model-on-triangular-and-square-lattices">
 <h1><span class="section-number">4.2. </span>Magnetization process of the Heisenberg model on triangular and square lattices<a class="headerlink" href="#magnetization-process-of-the-heisenberg-model-on-triangular-and-square-lattices" title="Permalink to this headline">¶</a></h1>
 <p>Next, we introduce the calculation of the magnetization process of the
 quantum Heisenberg model with spin <span class="math notranslate nohighlight">\(S = 1/2\)</span> defined on a
@@ -181,10 +182,12 @@ energy should decrease as the number of steps increases, but in some
 magnetic fields, the calculated energy increases. This is a sign that
 the calculation accuracy is not good. It is presumed that it is
 necessary to increase the bond dimension.</p>
-<div class="figure align-default" id="fig-tutorial5-triangular">
+<figure class="align-default" id="fig-tutorial5-triangular">
 <a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png"><img alt="../_images/tutorial_5_triangular.png" src="../_images/tutorial_5_triangular.png" style="width: 600px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Next, let’s perform the calculation for a model on a square lattice. Use the toml file <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> and the python script <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> in the <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> directory.
 The content of <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> is the same as <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> except that the <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section has been changed as follows.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
@@ -212,11 +215,13 @@ steps, and it can be seen that the plateau structure does not appear
 unlike the triangular lattice Heisenberg model. Since the energy
 generally decreases as the number of steps is increased, it is assumed
 that the calculation accuracy is sufficiently high.</p>
-<div class="figure align-default" id="fig-tutorial5-square">
+<figure class="align-default" id="fig-tutorial5-square">
 <a class="reference internal image-reference" href="../_images/tutorial_5_square.png"><img alt="../_images/tutorial_5_square.png" src="../_images/tutorial_5_square.png" style="width: 600px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the square lattice.</span><a class="headerlink" href="#fig-tutorial5-square" title="Permalink to this image">¶</a></p>
-</div>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the square lattice.</span><a class="headerlink" href="#fig-tutorial5-square" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
 
 
           </div>

@@ -21,7 +21,6 @@ TeNeSは以下のライブラリに依存していますが、自動でダウン
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
-3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
 MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
 MPI, ScaLAPACKについては自身でインストールする必要があります。
@@ -44,7 +43,8 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
 インストール
 ======================
 
-1. TeNeS のディレクトリに移動したのち、以下の手順に従ってビルドを行います。
+1. TeNeS のディレクトリに移動したのち、以下の手順に従ってビルドを行います
+（ CentOS など、環境によっては ``cmake3`` とする必要があります）。
 
 ::
 
@@ -55,9 +55,11 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
 
 ``<path to install to>`` のデフォルト値は ``/usr/local`` です。
 
-（ CentOS など、環境によっては ``cmake3`` とする必要があります。）
+.. admonition:: 並列ビルド
+  
+  ``make`` コマンドに ``-j <num>`` オプションを追加し、 ``<num>`` 個のプロセスを用いた並列ビルドを行うと、 TeNeS を高速にビルド可能です。
 
-なお、上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tests`` が作成されます。
+なお、上記のコマンドで ``build/src`` ディレクトリに実行ファイル ``tenes`` が作成されます。
 
 ::
 

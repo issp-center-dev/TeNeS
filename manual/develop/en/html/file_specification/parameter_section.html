@@ -4,7 +4,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
     <title>parameter.general &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -35,7 +36,7 @@
 This section has five subsections: <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
 <p>Imaginary-time step <span class="math notranslate nohighlight">\(\tau\)</span> for simple update <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
-<div class="section" id="parameter-general">
+<section id="parameter-general">
 <h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h1>
 <p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
 <table class="colwidths-given docutils align-default">
@@ -122,8 +123,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="parameter-simple-update">
+</section>
+<section id="parameter-simple-update">
 <h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h1>
 <p>Parameters in the simple update procedure.</p>
 <table class="colwidths-given docutils align-default">
@@ -158,8 +159,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="parameter-full-update">
+</section>
+<section id="parameter-full-update">
 <h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h1>
 <p>Parameters in the full update procedure.</p>
 <table class="colwidths-given docutils align-default">
@@ -219,8 +220,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="parameter-ctm">
+</section>
+<section id="parameter-ctm">
 <h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h1>
 <p>Parameters for corner transfer matrices, CTM.</p>
 <table class="colwidths-given docutils align-default">
@@ -281,8 +282,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tbody>
 </table>
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
-</div>
-<div class="section" id="parameter-random">
+</section>
+<section id="parameter-random">
 <h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>
 <p>Parameters for random number generators.</p>
 <table class="colwidths-given docutils align-default">
@@ -308,8 +309,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tbody>
 </table>
 <p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
-</div>
-<div class="section" id="example">
+</section>
+<section id="example">
 <h1>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
@@ -325,7 +326,7 @@ iteration_max = 10
 dimension = 9 # CHI
 </pre></div>
 </div>
-</div>
+</section>
 
 
           </div>

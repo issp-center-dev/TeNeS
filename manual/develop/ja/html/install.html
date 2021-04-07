@@ -4,7 +4,8 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
     <title>2. インストール方法 &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
@@ -33,14 +34,14 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="id1">
+  <section id="id1">
 <h1><span class="section-number">2. </span>インストール方法<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<div class="section" id="id2">
+<section id="id2">
 <h2><span class="section-number">2.1. </span>ダウンロード<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>TeNeS のソースコードは <a class="reference external" href="https://github.com/issp-center-dev/TeNeS">GitHub page</a> からダウンロードできます。gitがインストールされている環境で、以下のコマンドを打つとダウンロードが開始されます。</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/issp-center-dev/TeNeS</span></code></p>
-</div>
-<div class="section" id="id3">
+</section>
+<section id="id3">
 <h2><span class="section-number">2.2. </span>必要なライブラリ・環境<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>TeNeSをコンパイルするには以下のライブラリ・環境が必要です。</p>
 <ol class="arabic simple">
@@ -51,7 +52,6 @@
 <ol class="arabic simple">
 <li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
 <li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
-<li><p><a class="reference external" href="https://github.com/arsenm/sanitizers-cmake">sanitizers-cmake</a></p></li>
 </ol>
 <p>MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
 MPI, ScaLAPACKについては自身でインストールする必要があります。
@@ -67,12 +67,11 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
 <li><p>scipy</p></li>
 <li><p>toml</p></li>
 </ol>
-</div>
-<div class="section" id="id4">
+</section>
+<section id="id4">
 <h2><span class="section-number">2.3. </span>インストール<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
-<ol class="arabic simple">
-<li><p>TeNeS のディレクトリに移動したのち、以下の手順に従ってビルドを行います。</p></li>
-</ol>
+<p>1. TeNeS のディレクトリに移動したのち、以下の手順に従ってビルドを行います
+（ CentOS など、環境によっては <code class="docutils literal notranslate"><span class="pre">cmake3</span></code> とする必要があります）。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir build
 $ cd build
 $ cmake -DCMAKE_INSTALL_PREFIX=&lt;path to install to&gt; ../
@@ -80,8 +79,11 @@ $ make
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> のデフォルト値は <code class="docutils literal notranslate"><span class="pre">/usr/local</span></code> です。</p>
-<p>（ CentOS など、環境によっては <code class="docutils literal notranslate"><span class="pre">cmake3</span></code> とする必要があります。）</p>
-<p>なお、上記のコマンドで <code class="docutils literal notranslate"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal notranslate"><span class="pre">tests</span></code> が作成されます。</p>
+<div class="admonition- admonition">
+<p class="admonition-title">並列ビルド</p>
+<p><code class="docutils literal notranslate"><span class="pre">make</span></code> コマンドに <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">&lt;num&gt;</span></code> オプションを追加し、 <code class="docutils literal notranslate"><span class="pre">&lt;num&gt;</span></code> 個のプロセスを用いた並列ビルドを行うと、 TeNeS を高速にビルド可能です。</p>
+</div>
+<p>なお、上記のコマンドで <code class="docutils literal notranslate"><span class="pre">build/src</span></code> ディレクトリに実行ファイル <code class="docutils literal notranslate"><span class="pre">tenes</span></code> が作成されます。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ make test
 </pre></div>
 </div>
@@ -134,8 +136,8 @@ CMake は自動で mptensor をダウンロード・ビルドしますが、
 </pre></div>
 </div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>

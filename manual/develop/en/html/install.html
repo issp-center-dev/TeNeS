@@ -4,7 +4,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
     <title>2. Install &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
@@ -32,15 +33,15 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="install">
+  <section id="install">
 <h1><span class="section-number">2. </span>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="download">
+<section id="download">
 <h2><span class="section-number">2.1. </span>Download<a class="headerlink" href="#download" title="Permalink to this headline">¶</a></h2>
 <p>You can download the source code for TeNeS from the <a class="reference external" href="https://github.com/issp-center-dev/TeNeS">GitHub page</a> .
 If you have git installed on your machine, type the following command to start download:</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/issp-center-dev/TeNeS</span></code></p>
-</div>
-<div class="section" id="prerequisites">
+</section>
+<section id="prerequisites">
 <h2><span class="section-number">2.2. </span>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
 <p>The following tools are required for building TeNeS.</p>
 <ol class="arabic simple">
@@ -51,7 +52,6 @@ If you have git installed on your machine, type the following command to start d
 <ol class="arabic simple">
 <li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
 <li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
-<li><p><a class="reference external" href="https://github.com/arsenm/sanitizers-cmake">sanitizers-cmake</a></p></li>
 </ol>
 <p>TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.
 MPI and ScaLAPACK must be installed by yourself.
@@ -68,11 +68,11 @@ Additionary, the following python packages are also required.</p>
 <li><p>scipy</p></li>
 <li><p>toml</p></li>
 </ol>
-</div>
-<div class="section" id="id1">
+</section>
+<section id="id1">
 <h2><span class="section-number">2.3. </span>Install<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic simple">
-<li><p>Build TeNeS by typing the following commands:</p></li>
+<li><p>Build TeNeS by typing the following commands (Some environment such as CentOS provides CMake3 as <code class="docutils literal notranslate"><span class="pre">cmake3</span></code>):</p></li>
 </ol>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir build
 $ cd build
@@ -81,8 +81,12 @@ $ make
 </pre></div>
 </div>
 <p>The default value of the <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> is <code class="docutils literal notranslate"><span class="pre">/usr/local</span></code>.</p>
-<p>(Some environment such as CentOS provides CMake3 as <code class="docutils literal notranslate"><span class="pre">cmake3</span></code> .)</p>
-<p>The executable file <code class="docutils literal notranslate"><span class="pre">tests</span></code>  will be generated in  <code class="docutils literal notranslate"><span class="pre">build/src</span></code> directory.
+<div class="admonition-parallel-build admonition">
+<p class="admonition-title">Parallel Build</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">make</span></code> command accepts <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">&lt;num&gt;</span></code> options and then uses <code class="docutils literal notranslate"><span class="pre">&lt;num&gt;</span></code> processes for a parallel building.
+This reduces the time to build TeNeS drastically.</p>
+</div>
+<p>The executable file <code class="docutils literal notranslate"><span class="pre">tenes</span></code>  will be generated in  <code class="docutils literal notranslate"><span class="pre">build/src</span></code> directory.
 By typing the following command, tests for <code class="docutils literal notranslate"><span class="pre">tenes</span></code> can be done.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ make tests
 </pre></div>
@@ -130,8 +134,8 @@ Please make sure that <code class="docutils literal notranslate"><span class="pr
 </pre></div>
 </div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
