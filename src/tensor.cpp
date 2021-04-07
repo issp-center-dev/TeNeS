@@ -1,8 +1,10 @@
 #include "tensor.hpp"
 
+#include <algorithm>
 #include <sstream>
 #include <numeric>
 #include "util/abs.hpp"
+#include "exception.hpp"
 
 using dcomplex = std::complex<double>;
 
@@ -109,9 +111,8 @@ void eigen(small_tensor<value_type> const& A, std::vector<dcomplex>& eigvals,
   eigvecs_last.swap(evecs_ret);
 }
 
-template <class T>
-mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
-                                      mptensor::Shape target_shape) {
+template <class tensor>
+tensor resize_tensor(tensor const& src, mptensor::Shape target_shape) {
   mptensor::Shape shape = src.shape();
   const size_t ndim = shape.size();
   if (target_shape.size() != ndim) {
@@ -134,7 +135,7 @@ mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
     }
     zero[i] = 0;
   }
-  mptensor_tensor_type<T> A;
+  tensor A;
   if (to_extend) {
     A = mptensor::extend(src, shape);
   } else {
@@ -147,20 +148,18 @@ mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src,
   }
 }
 
-template mptensor_tensor_type<double> resize_tensor(
-    mptensor_tensor_type<double> const& src, mptensor::Shape target_shape);
+template real_tensor resize_tensor(
+    real_tensor const& src, mptensor::Shape target_shape);
 
-template mptensor_tensor_type<dcomplex> resize_tensor(
-    mptensor_tensor_type<dcomplex> const& src, mptensor::Shape target_shape);
+template complex_tensor resize_tensor(
+    complex_tensor const& src, mptensor::Shape target_shape);
 
 template void eigen(small_tensor<double> const& A,
-                            std::vector<std::complex<double>>& eigvals,
-                            std::vector<std::complex<double>>& eigvecs_last,
-                            int nev);
+                    std::vector<std::complex<double>>& eigvals,
+                    std::vector<std::complex<double>>& eigvecs_last, int nev);
 
 template void eigen(small_tensor<dcomplex> const& A,
-                              std::vector<std::complex<double>>& eigvals,
-                              std::vector<std::complex<double>>& eigvecs_last,
-                              int nev);
+                    std::vector<std::complex<double>>& eigvals,
+                    std::vector<std::complex<double>>& eigvecs_last, int nev);
 
 }  // namespace tenes

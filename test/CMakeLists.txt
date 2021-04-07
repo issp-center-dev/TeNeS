@@ -10,21 +10,7 @@ foreach(basename input simple_update full_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
 
-    target_compile_options(${testname} PRIVATE ${OMP_FLAG})
-    if (NOT ENABLE_MPI)
-        target_compile_definitions(${testname} PRIVATE -D_NO_MPI)
-    endif()
-
-    target_include_directories(${testname} PRIVATE ${MPTENSOR_INCLUDE_DIR})
-    target_include_directories(${testname} PRIVATE ${MPI_CXX_INCLUDE_DIRS})
-    target_include_directories(${testname} PRIVATE ${PROJECT_SOURCE_DIR}/src)
-    target_include_directories(${testname} PRIVATE ${CPPTOML_INCLUDE_DIR})
-    target_include_directories(${testname} PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
-    target_include_directories(${testname} PRIVATE ${BUNDLED_DEPS_DIR})
-    target_include_directories(${testname} PRIVATE ${EIGEN3_INCLUDE_DIR})
-
-    target_link_libraries(${testname} mptensor)
-    target_link_libraries(${testname} ${MPI_CXX_LIBRARIES} ${SCALAPACK_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
+    target_link_libraries(${testname} PUBLIC iTPS)
 
     if(ENABLE_MPI)
         add_test(NAME ${testname} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:${testname}>)
@@ -47,8 +33,3 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/restart.py.in ${CMAKE_CURRENT_BINARY_
 foreach(name AntiferroHeisenberg_real AntiferroHeisenberg_complex J1J2_AFH)
     add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
-
-# foreach(name Kitaev)
-#     add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py --simple ${name})
-# endforeach()
-

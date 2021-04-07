@@ -29,11 +29,6 @@ if(Testing)
     enable_testing()
 endif()
 
-set(USE_SANITIZER OFF)
-if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
-    set(USE_SANITIZER ON)
-endif ()
-
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
@@ -59,11 +54,6 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
 else()
     set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
-endif()
-
-if (USE_SANITIZER)
-    set(CMAKE_MODULE_PATH "${DEPS_DIR}/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
-    find_package(Sanitizers)
 endif()
 
 set(BUNDLED_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/bundled")

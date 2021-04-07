@@ -16,14 +16,11 @@
 
 #include "arnoldi.hpp"
 
-#include <algorithm>
-#include <vector>
-#include <complex>
-#include <functional>
-#include <type_traits>
-#include <numeric>
-
-#include <string>
+#include <algorithm>   // for min
+#include <cmath>       // for sqrt
+#include <complex>     // for complex, ope...
+#include <functional>  // for function
+#include <vector>      // for __vector_bas...
 
 #include "util/abs.hpp"
 #include "tensor.hpp"
@@ -51,7 +48,6 @@ template <class ptensor>
 double norm(ptensor const& A) {
   auto x = tensordot(conj(A), A, {0}, {0});
   return std::sqrt(std::real(trace(x, {}, {})));
-  // return std::sqrt(std::real(trace(tensordot(conj(A), A, {0}, {0}), {}, {})));
 }
 
 template <class ptensor>
@@ -171,7 +167,7 @@ std::vector<double> Arnoldi<ptensor>::residue(size_t k) const {
   eigen(h, eigvals, eigvecs, nev);
   std::vector<double> res(nev);
   value_type hk;
-  H.get_value({k, k-1}, hk);
+  H.get_value({k, k - 1}, hk);
   for (size_t i = 0; i < nev; ++i) {
     res[i] = std::abs(hk * eigvecs[i]) / std::abs(eigvals[i]);
   }

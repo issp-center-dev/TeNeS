@@ -22,11 +22,10 @@
 #include <string>
 #include <vector>
 
-#include <util/string.cpp>
-#include <Lattice.cpp>
-#include <PEPS_Parameters.cpp>
-#include <load_toml.cpp>
-#include <mpi.cpp>
+#include "../src/tensor.hpp"
+#include "../src/mpi.hpp"
+#include "../src/util/string.hpp"
+#include "../src/iTPS/load_toml.hpp"
 
 auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
   std::stringstream ss;
@@ -37,12 +36,7 @@ auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
 
 TEST_CASE("input") {
   using namespace tenes;
-#ifdef _NO_MPI
-  using ptensor = mptensor::Tensor<mptensor::lapack::Matrix, std::complex<double>>;
-#else
-  using ptensor = mptensor::Tensor<mptensor::scalapack::Matrix, std::complex<double>>;
-#endif
-
+  using ptensor = complex_tensor;
 
   SUBCASE("parameter_default") {
     INFO("parameter_default");
@@ -150,7 +144,7 @@ virtual_dim = [4, 1, 4, 1]
 initial_state = [0.0, 1.0]
 noise = 0.01
     )");
-    Lattice lattice = gen_lattice(toml->get_table("tensor"));
+    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
     CHECK(lattice.LX == 4);
     CHECK(lattice.LY == 1);
     CHECK(lattice.skew == 2);
@@ -218,13 +212,14 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 1;
-      auto onesites = load_operators<ptensor>(toml, nsites, nbody, 0.0, "observable.onesite");
-      for(int i=0; i<2; ++i){
-        auto const& on = onesites[i];
+      auto onesites = load_operators<ptensor>(toml, nsites, nbody, 0.0,
+                                              "observable.onesite");
+      for (int i = 0; i < 2; ++i) {
+        auto const &on = onesites[i];
         CHECK(on.group == 0);
         CHECK(on.source_site == i);
         CHECK(on.is_onesite());
-        CHECK(on.op.shape() == mptensor::Shape{2,2});
+        CHECK(on.op.shape() == mptensor::Shape{2, 2});
         std::complex<double> v = 0.0;
         on.op.get_value({0, 0}, v);
         CHECK(std::real(v) == 1.0);
@@ -248,14 +243,15 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 2;
-      auto twosites = load_operators<ptensor>(toml, nsites, nbody, 0.0, "observable.twosite");
-      for(int i=0; i<2; ++i){
-        auto const& on = twosites[i];
+      auto twosites = load_operators<ptensor>(toml, nsites, nbody, 0.0,
+                                              "observable.twosite");
+      for (int i = 0; i < 2; ++i) {
+        auto const &on = twosites[i];
         CHECK(on.group == 0);
         CHECK(on.source_site == i);
-        CHECK(on.dx == std::vector<int>{i+1});
+        CHECK(on.dx == std::vector<int>{i + 1});
         CHECK(on.dy == std::vector<int>{i});
-        CHECK(on.op.shape() == mptensor::Shape{2,2,2,2});
+        CHECK(on.op.shape() == mptensor::Shape{2, 2, 2, 2});
         std::complex<double> v = 0.0;
         on.op.get_value({0, 0, 0, 0}, v);
         CHECK(std::real(v) == 0.0);

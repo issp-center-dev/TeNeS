@@ -17,9 +17,11 @@
 #ifndef TENES_SRC_ARNOLDI_HPP_
 #define TENES_SRC_ARNOLDI_HPP_
 
-#include <vector>
-#include <functional>
-#include "tensor.hpp"
+#include <cstddef>
+#include <complex>
+#include <vector>      // IWYU pragma: export
+#include <functional>  // IWYU pragma: export
+#include "tensor.hpp"  // IWYU pragma: export
 
 namespace tenes {
 
@@ -28,20 +30,20 @@ class Arnoldi {
  public:
   using value_type = typename ptensor::value_type;
 
-  Arnoldi(size_t N, size_t maxvec);
+  Arnoldi(std::size_t N, std::size_t maxvec);
   void initialize(ptensor const &initial);
-  void run(std::function<void(ptensor &, ptensor const &)> A, size_t nev,
+  void run(std::function<void(ptensor &, ptensor const &)> A, std::size_t nev,
            int mindim = 20, int maxiter = 10, double rtol = 1.0e-8);
   std::vector<std::complex<double>> eigenvalues() const;
 
  private:
-  void orthonormalize(size_t k);
-  void restart(size_t minvec, double cutoff = 1.0e-12);
-  std::vector<double> residue(size_t k) const;
+  void orthonormalize(std::size_t k);
+  void restart(std::size_t minvec, double cutoff = 1.0e-12);
+  std::vector<double> residue(std::size_t k) const;
 
-  size_t N;
-  size_t maxvec;
-  size_t nev;
+  std::size_t N;
+  std::size_t maxvec;
+  std::size_t nev;
 
   std::vector<ptensor> Q;
   small_tensor<value_type> H;

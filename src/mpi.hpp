@@ -17,12 +17,12 @@
 #ifndef TENES_SRC_MPI_HPP_
 #define TENES_SRC_MPI_HPP_
 
-#include <array>
-#include <complex>
-#include <vector>
-#include <string>
-
-#include "exception.hpp"
+#include <cstddef>       // for size_t
+#include <array>          // for array
+#include <complex>        // for complex
+#include <iosfwd>         // for string
+#include <vector>         // for vector
+#include "exception.hpp"  // for unimplemented_error
 
 #ifdef _NO_MPI
 
@@ -45,7 +45,7 @@ int MPI_Bcast(void *, int, MPI_Datatype, int, MPI_Comm);
 
 #else
 
-#include <mpi.h>
+#include <mpi.h>  // IWYU pragma: export
 
 #endif  // _NO_MPI
 
@@ -123,12 +123,12 @@ int bcast(std::vector<std::complex<T>> &val, int root, MPI_Comm comm) {
     val.resize(sz);
   }
   std::vector<T> reim(2 * sz);
-  for (size_t i = 0; i < sz; ++i) {
+  for (std::size_t i = 0; i < sz; ++i) {
     reim[2 * i] = val[i].real();
     reim[2 * i + 1] = val[i].imag();
   }
   ret = MPI_Bcast(&(reim[0]), 2 * sz, datatype, root, comm);
-  for (size_t i = 0; i < sz; ++i) {
+  for (std::size_t i = 0; i < sz; ++i) {
     val[i] = std::complex<T>(reim[2 * i], reim[2 * i + 1]);
   }
 #endif
