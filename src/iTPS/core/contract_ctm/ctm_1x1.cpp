@@ -71,8 +71,10 @@ typename tensor::value_type Contract_1x1(
       Axes(0, 1), Axes(0, 1));
 }
 
+//! @cond
 INSTANTIATE_CONTRACT(real_tensor, 1, 1);
 INSTANTIATE_CONTRACT(complex_tensor, 1, 1);
+//! @endcond
 
 }  // end of namespace core
 }  // namespace itps

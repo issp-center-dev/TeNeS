@@ -90,6 +90,7 @@ Contract_MF_1x1 (
       const std::vector<std::vector<const tensor *>> &Tn,  \
       const std::vector<std::vector<const tensor *>> &op)
 
+//! @cond
 DECLARE_CONTRACT(1, 1);
 DECLARE_CONTRACT(2, 1);
 DECLARE_CONTRACT(3, 1);
@@ -106,6 +107,7 @@ DECLARE_CONTRACT(1, 4);
 DECLARE_CONTRACT(2, 4);
 DECLARE_CONTRACT(3, 4);
 DECLARE_CONTRACT(4, 4);
+//! @endcond
 
 #undef DECLARE_CONTRACT
 

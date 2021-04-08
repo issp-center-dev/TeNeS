@@ -222,8 +222,11 @@ typename tensor::value_type Contract_2x4(
           Axes(0, 1, 2, 3), Axes(1, 0, 4, 3)),
       Axes(0, 1), Axes(0, 1));
 }
+
+//! @cond
 INSTANTIATE_CONTRACT(real_tensor, 2, 4);
 INSTANTIATE_CONTRACT(complex_tensor, 2, 4);
+//! @endcond
 
 }  // namespace core
 }  // namespace itps

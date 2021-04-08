@@ -24,18 +24,12 @@
 
 #include <vector>
 
+//! @cond
+
 namespace tenes {
 namespace itps {
 namespace core {
 
-/*! @brief contract tensors with mean field environment
- *
- *  @param[in] Tn center tensors
- *  @param[in] op onesite operators
- *
- *  @pre
- *  Tn should absorb MF environment
- */
 template TENSOR_TYPE::value_type Contract_MF(
     const std::vector<std::vector<const TENSOR_TYPE *>> &Tn,
     const std::vector<std::vector<const TENSOR_TYPE *>> &op);
@@ -68,3 +62,5 @@ template TENSOR_TYPE::value_type Contract_four_sites_MF(
 }  // namespace core
 }  // namespace itps
 }  // namespace tenes
+
+//! @endcond

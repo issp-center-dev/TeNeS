@@ -22,20 +22,12 @@
  2015 Dec.  Tsuyoshi Okubo
 */
 
+//! @cond
+
 namespace tenes {
 namespace itps {
 namespace core {
 
-/*! @brief contract tensors with CTM
- *
- *  @param[in] C corner transfer matrix
- *  @param[in] eTt top edge tensors
- *  @param[in] eTr right edge tensors
- *  @param[in] eTb bottom edge tensors
- *  @param[in] eTl left edge tensors
- *  @param[in] Tn center tensors
- *  @param[in] op onesite operators
- */
 template TENSOR_TYPE::value_type Contract(
     const std::vector<const TENSOR_TYPE *> &C,
     const std::vector<const TENSOR_TYPE *> &eTt,
@@ -91,3 +83,5 @@ template TENSOR_TYPE::value_type Contract_four_sites(
 }  // namespace core
 }  // namespace itps
 }  // namespace tenes
+
+//! @endcond

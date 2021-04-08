@@ -149,8 +149,11 @@ typename tensor::value_type Contract_MF_4x3(
           Axes(0, 1, 2, 3), Axes(0, 1, 3, 4)),
       Axes(0, 1), Axes(0, 1));
 }
+
+//! @cond
 INSTANTIATE_CONTRACT(real_tensor, 4, 3);
 INSTANTIATE_CONTRACT(complex_tensor, 4, 3);
+//! @endcond
 
 }  // namespace core
 }  // namespace itps

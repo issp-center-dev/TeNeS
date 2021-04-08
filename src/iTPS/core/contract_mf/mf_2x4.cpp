@@ -95,8 +95,10 @@ typename tensor::value_type Contract_MF_2x4(
       Axes(0, 1), Axes(0, 1));
 }
 
+//! @cond
 INSTANTIATE_CONTRACT(real_tensor, 2, 4);
 INSTANTIATE_CONTRACT(complex_tensor, 2, 4);
+//! @endcond
 
 #undef INSTANTIATE_CONTRACT
 

@@ -53,8 +53,11 @@ typename tensor::value_type Contract_MF_1x2(
       Axes(0, 1), Axes(0, 1));
 }
 
+//! @cond
 INSTANTIATE_CONTRACT(real_tensor, 1, 2);
 INSTANTIATE_CONTRACT(complex_tensor, 1, 2);
+//! @endcond
+
 }  // namespace core
 }  // namespace itps
 }  // namespace tenes
