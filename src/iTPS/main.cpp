@@ -135,11 +135,11 @@ namespace tenes {
 namespace itps {
 
 template <class tensor>
-int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
-          NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-          Operators<tensor> onesite_operators,
-          Operators<tensor> twosite_operators, CorrelationParameter corparam,
-          TransferMatrix_Parameters clength_param) {
+int run(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
+        NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
+        Operators<tensor> onesite_operators,
+        Operators<tensor> twosite_operators, CorrelationParameter corparam,
+        TransferMatrix_Parameters clength_param) {
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
                    onesite_operators, twosite_operators, corparam,
                    clength_param);
@@ -265,12 +265,12 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
 
   if (is_real) {
-    return tenes(comm, peps_parameters, lattice, to_real(simple_updates),
-                 to_real(full_updates), to_real(onesite_obs),
-                 to_real(twosite_obs), corparam, clength_param);
+    return run(comm, peps_parameters, lattice, to_real(simple_updates),
+               to_real(full_updates), to_real(onesite_obs),
+               to_real(twosite_obs), corparam, clength_param);
   } else {
-    return tenes(comm, peps_parameters, lattice, simple_updates, full_updates,
-                 onesite_obs, twosite_obs, corparam, clength_param);
+    return run(comm, peps_parameters, lattice, simple_updates, full_updates,
+               onesite_obs, twosite_obs, corparam, clength_param);
   }
 }
 
