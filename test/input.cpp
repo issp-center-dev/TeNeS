@@ -164,7 +164,7 @@ elements = """
 0 0 0 0 1.0 0.0
 """
       )");
-      const auto simple_updates = tenes::itps::load_simple_updates<ptensor>(toml);
+      const auto simple_updates = tenes::itps::load_simple_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(simple_updates[0].source_site == 0);
       CHECK(simple_updates[0].source_leg == 2);
       auto &op = simple_updates[0].op;
@@ -186,7 +186,7 @@ elements = """
 0 0 0 0 0.0 1.0
 """
       )");
-      const auto full_updates = tenes::itps::load_full_updates<ptensor>(toml);
+      const auto full_updates = tenes::itps::load_full_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(full_updates[0].source_site == 0);
       CHECK(full_updates[0].source_leg == 2);
       auto &op = full_updates[0].op;
@@ -213,7 +213,7 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 1;
-      auto onesites = load_operators<ptensor>(toml, nsites, nbody, 0.0,
+      auto onesites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites, nbody, 0.0,
                                               "observable.onesite");
       for (int i = 0; i < 2; ++i) {
         auto const &on = onesites[i];
@@ -244,7 +244,7 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 2;
-      auto twosites = load_operators<ptensor>(toml, nsites, nbody, 0.0,
+      auto twosites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites, nbody, 0.0,
                                               "observable.twosite");
       for (int i = 0; i < 2; ++i) {
         auto const &on = twosites[i];

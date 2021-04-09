@@ -33,6 +33,7 @@ using MPI_Comm = int;
 using MPI_Datatype = int;
 
 constexpr MPI_Comm MPI_COMM_WORLD = 0;
+constexpr MPI_Comm MPI_COMM_NULL = 0;
 constexpr MPI_Datatype MPI_BYTE = 0;
 constexpr MPI_Datatype MPI_INT = 0;
 constexpr MPI_Datatype MPI_DOUBLE = 0;
@@ -42,9 +43,13 @@ int MPI_Init(int *, char ***);
 int MPI_Barrier(MPI_Comm);
 int MPI_Finalize();
 int MPI_Bcast(void *, int, MPI_Datatype, int, MPI_Comm);
+int MPI_Send(const void *, int, MPI_Datatype, int, int, MPI_Comm);
+int MPI_Comm_disconnect(MPI_Comm*);
 
 int MPI_Comm_size(MPI_Comm, int *);  // return 1 as size
 int MPI_Comm_rank(MPI_Comm, int *);  // return 0 as rank
+int MPI_Comm_get_parent(MPI_Comm*);  // return MPI_COMM_NULL
+
 
 #else
 

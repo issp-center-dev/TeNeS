@@ -53,8 +53,8 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
   std::vector<Correlation> correlations;
   for (int left_index = 0; left_index < N_UNIT; ++left_index) {
     const auto vdim = lattice.virtual_dims[left_index];
-    ptensor correlation_T(Shape(CHI, CHI, vdim[0], vdim[0]));
-    ptensor correlation_norm(Shape(CHI, CHI, vdim[0], vdim[0]));
+    ptensor correlation_T(comm, Shape(CHI, CHI, vdim[0], vdim[0]));
+    ptensor correlation_norm(comm, Shape(CHI, CHI, vdim[0], vdim[0]));
     for (int left_ilop = 0; left_ilop < nlops; ++left_ilop) {
       if (r_ops[left_ilop].empty()) {
         continue;
@@ -175,8 +175,8 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
   std::vector<Correlation> correlations;
   for (int left_index = 0; left_index < N_UNIT; ++left_index) {
     const auto vdim = lattice.virtual_dims[left_index];
-    ptensor correlation_T(Shape(vdim[0], vdim[0]));
-    ptensor correlation_norm(Shape(vdim[0], vdim[0]));
+    ptensor correlation_T(comm, Shape(vdim[0], vdim[0]));
+    ptensor correlation_norm(comm, Shape(vdim[0], vdim[0]));
     for (int left_ilop = 0; left_ilop < nlops; ++left_ilop) {
       if (r_ops[left_ilop].empty()) {
         continue;

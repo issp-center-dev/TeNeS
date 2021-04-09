@@ -227,7 +227,8 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
                .transpose(Axes(1, 0, 2, 3));
     }
   } else {
-    tensor identity_matrix(Shape(e78, e78));
+    const auto comm = C1.get_comm();
+    tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
     for (int i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
@@ -389,7 +390,8 @@ void Calc_projector_updown_blocks(
                .transpose(Axes(1, 0, 2, 3));
     }
   } else {
-    tensor identity_matrix(Shape(e78, e78));
+    const MPI_Comm comm = C1.get_comm();
+    tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
     for (int i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);

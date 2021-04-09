@@ -283,8 +283,8 @@ std::vector<std::tuple<int, int, int>> read_bonds(std::string str) {
 
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                int nsites, int nbody, double atol,
-                                const char *tablename) {
+                                MPI_Comm comm, int nsites, int nbody,
+                                double atol, const char *tablename) {
   assert(nbody == 1 || nbody == 2);
 
   auto elements = param->get_as<std::string>("elements");
@@ -294,7 +294,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     ss << "Both elements and ops are defined in a section " << tablename;
     throw tenes::input_error(ss.str());
   }
-  tensor A;
+  tensor A(comm);
   std::vector<int> op_ind;
   if (nbody == 1 && !elements) {
     std::stringstream ss;
@@ -325,7 +325,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (int i = 0; i < nbody; ++i) {
       shape.push(shape[i]);
     }
-    A = util::read_tensor<tensor>(*elements, shape, atol);
+    A = util::read_tensor<tensor>(*elements, shape, comm, atol);
   } else if (ops) {
     op_ind.assign(ops->begin(), ops->end());
   } else {
@@ -376,12 +376,13 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
 
 template <class tensor>
 Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
-                                 int nsites, int nbody, double atol,
-                                 std::string const &key) {
+                                 MPI_Comm comm, int nsites, int nbody,
+                                 double atol, std::string const &key) {
   Operators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    auto obs = load_operator<tensor>(table, nsites, nbody, atol, key.c_str());
+    auto obs =
+        load_operator<tensor>(table, comm, nsites, nbody, atol, key.c_str());
     std::copy(obs.begin(), obs.end(), std::back_inserter(ret));
     // std::move(obs.begin(), obs.end(), std::back_inserter(ret));
   }
@@ -390,7 +391,8 @@ Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
 
 template <class tensor>
 NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
-                                    double atol, const char *tablename) {
+                                    MPI_Comm comm, double atol,
+                                    const char *tablename) {
   auto source_site = find<int>(param, "source_site");
   auto source_leg = find<int>(param, "source_leg");
   auto dimensions = param->get_array_of<int64_t>("dimensions");
@@ -407,71 +409,72 @@ NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
     ss << tablename << ".dimensions should have 4 integers";
     throw input_error(ss.str());
   }
-  tensor A = util::read_tensor<tensor>(elements, shape, atol);
+  tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
   return NNOperator<tensor>(source_site, source_leg, A);
 }
 
 template <class tensor>
 NNOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
-                                 double atol, std::string const &key) {
+                                 MPI_Comm comm, double atol,
+                                 std::string const &key) {
   NNOperators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
   for (const auto &table : *tables) {
-    ret.push_back(load_nn_operator<tensor>(table, atol, key.c_str()));
+    ret.push_back(load_nn_operator<tensor>(table, comm, atol, key.c_str()));
   }
   return ret;
 }
 template <class tensor>
 NNOperators<tensor> load_simple_updates(decltype(cpptoml::parse_file("")) param,
-                                        double atol) {
-  return load_updates<tensor>(param, atol, "evolution.simple");
+                                        MPI_Comm comm, double atol) {
+  return load_updates<tensor>(param, comm, atol, "evolution.simple");
 }
 template <class tensor>
 NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param,
-                                      double atol) {
-  return load_updates<tensor>(param, atol, "evolution.full");
+                                      MPI_Comm comm, double atol) {
+  return load_updates<tensor>(param, comm, atol, "evolution.full");
 }
 
 // template instantiations
 
 template Operators<real_tensor> load_operator(
-    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
-    const char *tablename);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, int nsites,
+    int nbody, double atol, const char *tablename);
 template Operators<complex_tensor> load_operator(
-    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
-    const char *tablename);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, int nsites,
+    int nbody, double atol, const char *tablename);
 
 template Operators<real_tensor> load_operators(
-    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
-    std::string const &key);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, int nsites,
+    int nbody, double atol, std::string const &key);
 
 template Operators<complex_tensor> load_operators(
-    decltype(cpptoml::parse_file("")) param, int nsites, int nbody, double atol,
-    std::string const &key);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, int nsites,
+    int nbody, double atol, std::string const &key);
 
 template NNOperator<real_tensor> load_nn_operator(
-    decltype(cpptoml::parse_file("")) param, double atol,
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol,
     const char *tablename);
 template NNOperator<complex_tensor> load_nn_operator(
-    decltype(cpptoml::parse_file("")) param, double atol,
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol,
     const char *tablename);
 
 template NNOperators<real_tensor> load_updates(
-    decltype(cpptoml::parse_file("")) param, double atol,
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol,
     std::string const &key);
 template NNOperators<complex_tensor> load_updates(
-    decltype(cpptoml::parse_file("")) param, double atol,
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol,
     std::string const &key);
 
 template NNOperators<real_tensor> load_simple_updates(
-    decltype(cpptoml::parse_file("")) param, double atol);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 template NNOperators<complex_tensor> load_simple_updates(
-    decltype(cpptoml::parse_file("")) param, double atol);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 
 template NNOperators<real_tensor> load_full_updates(
-    decltype(cpptoml::parse_file("")) param, double atol);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 template NNOperators<complex_tensor> load_full_updates(
-    decltype(cpptoml::parse_file("")) param, double atol);
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 
 }  // namespace itps
 }  // namespace tenes

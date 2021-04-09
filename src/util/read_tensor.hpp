@@ -26,16 +26,19 @@
 #include "string.hpp"
 #include "type_traits.hpp"
 #include "../exception.hpp"
+#include "../mpi.hpp"
 
 namespace tenes {
 
 namespace util {
 
 template <class ptensor>
-ptensor read_tensor(std::string const &str, mptensor::Shape dims,
+ptensor read_tensor(std::string const &str, 
+                    mptensor::Shape dims,
+                    MPI_Comm comm = MPI_COMM_WORLD,
                     double atol = 0.0) {
   using value_type = typename ptensor::value_type;
-  ptensor ret(dims);
+  ptensor ret(comm, dims);
   const size_t rank = ret.rank();
 
   static const std::string delim = " \t";

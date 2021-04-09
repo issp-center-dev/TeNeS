@@ -54,15 +54,15 @@ void iTPS<ptensor>::initialize_tensors() {
     const auto pdim = lattice.physical_dims[i];
     const auto vdim = lattice.virtual_dims[i];
 
-    Tn.push_back(ptensor(Shape(vdim[0], vdim[1], vdim[2], vdim[3], pdim)));
-    eTt.push_back(ptensor(Shape(CHI, CHI, vdim[1], vdim[1])));
-    eTr.push_back(ptensor(Shape(CHI, CHI, vdim[2], vdim[2])));
-    eTb.push_back(ptensor(Shape(CHI, CHI, vdim[3], vdim[3])));
-    eTl.push_back(ptensor(Shape(CHI, CHI, vdim[0], vdim[0])));
-    C1.push_back(ptensor(Shape(CHI, CHI)));
-    C2.push_back(ptensor(Shape(CHI, CHI)));
-    C3.push_back(ptensor(Shape(CHI, CHI)));
-    C4.push_back(ptensor(Shape(CHI, CHI)));
+    Tn.push_back(ptensor(comm, Shape(vdim[0], vdim[1], vdim[2], vdim[3], pdim)));
+    eTt.push_back(ptensor(comm, Shape(CHI, CHI, vdim[1], vdim[1])));
+    eTr.push_back(ptensor(comm, Shape(CHI, CHI, vdim[2], vdim[2])));
+    eTb.push_back(ptensor(comm, Shape(CHI, CHI, vdim[3], vdim[3])));
+    eTl.push_back(ptensor(comm, Shape(CHI, CHI, vdim[0], vdim[0])));
+    C1.push_back(ptensor(comm, Shape(CHI, CHI)));
+    C2.push_back(ptensor(comm, Shape(CHI, CHI)));
+    C3.push_back(ptensor(comm, Shape(CHI, CHI)));
+    C4.push_back(ptensor(comm, Shape(CHI, CHI)));
 
     std::vector<std::vector<double>> lambda(nleg);
     for (int j = 0; j < nleg; ++j) {
@@ -70,7 +70,7 @@ void iTPS<ptensor>::initialize_tensors() {
     }
     lambda_tensor.push_back(lambda);
 
-    ptensor id(mptensor::Shape(pdim, pdim));
+    ptensor id(comm, mptensor::Shape(pdim, pdim));
     for (int j = 0; j < pdim; ++j) {
       for (int k = 0; k < pdim; ++k) {
         id.set_value(mptensor::Index(j, k), (j == k ? 1.0 : 0.0));

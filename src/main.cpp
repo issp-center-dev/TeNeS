@@ -22,11 +22,7 @@
 #include "exception.hpp"
 #include "printlevel.hpp"
 
-namespace tenes {
-namespace itps {
-int main_impl(std::string input_filename, MPI_Comm com, PrintLevel print_level);
-}
-}  // namespace tenes
+#include "iTPS/main.hpp"
 
 int main2(int argc, char **argv) {
   int mpirank = 0;
@@ -83,7 +79,7 @@ int main2(int argc, char **argv) {
 
   try {
     status =
-        tenes::itps::main_impl(input_filename, MPI_COMM_WORLD, print_level);
+        tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, print_level);
   } catch (const tenes::input_error e) {
     if (mpirank == 0) {
       std::cerr << "[INPUT ERROR]" << std::endl;
@@ -111,6 +107,17 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int status = main2(argc, argv);
   MPI_Barrier(MPI_COMM_WORLD);
+
+  MPI_Comm parent;
+  MPI_Comm_get_parent(&parent);
+  if (parent != MPI_COMM_NULL) {
+    int mpirank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+    if (mpirank == 0) {
+      MPI_Send(&status, 1, MPI_INT, 0, 0, parent);
+    }
+    MPI_Comm_disconnect(&parent);
+  }
   MPI_Finalize();
   return status;
 }
@@ -119,20 +126,23 @@ int main(int argc, char **argv) {
  *
  * ## About TeNeS
  *
- * [TeNeS (TEnsor NEtwork Solver)](https://github.com/issp-center-dev/TeNeS) is a solver for 2D quantum lattice system based
- * on a PEPS wave function and the CTM method. TeNeS can make use of many
- * CPU/nodes through an OpenMP/MPI hybirid parallel tensor operation library,
+ * [TeNeS (TEnsor NEtwork Solver)](https://github.com/issp-center-dev/TeNeS) is
+ * a solver for 2D quantum lattice system based on a PEPS wave function and the
+ * CTM method. TeNeS can make use of many CPU/nodes through an OpenMP/MPI
+ * hybirid parallel tensor operation library,
  * [mptensor](https://github.com/smorita/mptensor).
  *
  * ## About this document
  *
  * This document, for developers, describes classes and functions in TeNeS.
- * For users, see the [user's manual](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html).
+ * For users, see the [user's
+ * manual](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html).
  *
  * ## Architecture
  *
  * \ref tenes is the main program written in C++.
  *
- * \ref tenes_simple and \ref tenes_std are the utility tools for generating input files written in Python.
+ * \ref tenes_simple and \ref tenes_std are the utility tools for generating
+ * input files written in Python.
  *
  */
