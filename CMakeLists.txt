@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
 option(CPPTOML_ROOT "External directory where cpptoml is download into" OFF)
