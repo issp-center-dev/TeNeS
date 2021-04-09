@@ -118,7 +118,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   };
 
   int irank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &irank);
+  MPI_Comm_rank(comm, &irank);
 
   std::vector<int> params_int(N_PARAMS_INT_INDEX);
   std::vector<double> params_double(N_PARAMS_DOUBLE_INDEX);

@@ -24,8 +24,8 @@ namespace itps {
 template <class tensor>
 void iTPS<tensor>::simple_update() {
   Timer<> timer;
-  tensor Tn1_new;
-  tensor Tn2_new;
+  tensor Tn1_new(comm);
+  tensor Tn2_new(comm);
   std::vector<double> lambda_c;
   const int nsteps = peps_parameters.num_simple_step;
   double next_report = 10.0;

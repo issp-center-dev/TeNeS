@@ -143,13 +143,14 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
 template <class ptensor>
 ptensor TransferMatrix_mf<ptensor>::initial_vector(int dir, int fixed_coord,
                                                    std::mt19937 &rng) const {
+  const MPI_Comm comm = this->Tn[0].get_comm();
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   auto D = dir == 0
                ? this->Tn[this->lattice.index_fast(0, fixed_coord)].shape()[0]
                : this->Tn[this->lattice.index_fast(fixed_coord, 0)].shape()[3];
   auto N = D * D;
   mptensor::Shape sp(N);
-  ptensor initial_vec = ptensor(sp);
+  ptensor initial_vec = ptensor(comm, sp);
   for (size_t i = 0; i < N; ++i) {
     double v = dist(rng);
     initial_vec.set_value({i}, v);
@@ -332,10 +333,11 @@ template <class ptensor>
 ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
   using mptensor::Axes;
   using mptensor::Shape;
+  const MPI_Comm comm = this->C1[0].get_comm();
   const auto &lattice = this->lattice;
   const size_t CHI = C1[0].shape()[0];
   const auto x_orig = x;
-  ptensor res{Shape(CHI * CHI, CHI * CHI)};
+  ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
 #pragma omp parallel for shared(res)
   for (size_t i = 0; i < CHI * CHI; ++i) {
     typename ptensor::value_type v = 1.0;
@@ -385,11 +387,12 @@ template <class ptensor>
 ptensor TransferMatrix_mf<ptensor>::matrix_vertical(int x) const {
   using mptensor::Axes;
   using mptensor::Shape;
+  const MPI_Comm comm = this->Tn[0].get_comm();
   const auto &lattice = this->lattice;
   const size_t N = dim(1, x);
   const size_t Nsqrt = static_cast<size_t>(std::sqrt(N));
   const auto x_orig = x;
-  ptensor res{Shape(N, N)};
+  ptensor res(comm, Shape(N, N));
   for (size_t i = 0; i < N; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);

@@ -33,7 +33,7 @@ void iTPS<ptensor>::full_update() {
   }
 
   Timer<> timer;
-  ptensor Tn1_new, Tn2_new;
+  ptensor Tn1_new(comm), Tn2_new(comm);
   const int nsteps = peps_parameters.num_full_step;
   double next_report = 10.0;
 

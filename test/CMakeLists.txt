@@ -10,7 +10,7 @@ foreach(basename input simple_update full_update)
     set(testname "test_${basename}")
     add_executable(${testname} "${basename}.cpp")
 
-    target_link_libraries(${testname} PUBLIC iTPS)
+    target_link_libraries(${testname} PUBLIC tenes_static)
 
     if(ENABLE_MPI)
         add_test(NAME ${testname} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:${testname}>)

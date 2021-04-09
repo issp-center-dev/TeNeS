@@ -8,8 +8,7 @@ target_link_libraries(load_toml PUBLIC tenes_mpi tensor SquareLattice PEPS_Param
 target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR} ${BUNDLED_DEPS_DIR})
 
 add_library(
-  iTPS STATIC
-  main.cpp
+  iTPS_impl STATIC
   iTPS.cpp
   tensors.cpp
   measure.cpp
@@ -22,4 +21,4 @@ add_library(
   correlation_length.cpp
   transfer_matrix.cpp)
 
-target_link_libraries(iTPS PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters)
+target_link_libraries(iTPS_impl PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters)

@@ -14,32 +14,49 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include "main.hpp"
+
 #include <complex>  // for complex
 #include <cstdlib>  // for abs, size_t
 
 #include "../printlevel.hpp"
 #include "../util/file.hpp"
 #include "../exception.hpp"
+#include "../mpi.hpp"
 
 #include "load_toml.hpp"
 #include "iTPS.hpp"
 
 using std::size_t;
 
+extern "C" {
+int tenes_itps_main(const char* input_filename, MPI_Comm comm,
+                    int print_level) {
+  return tenes::itps::itps_main(input_filename, comm,
+                                static_cast<tenes::PrintLevel>(print_level));
+}
+}
+
 namespace {
 tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
     tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type,
                                       std::complex<double>>> const& ops) {
   tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+  if (ops.empty()) {
+    return ret;
+  }
+  MPI_Comm comm = ops[0].op.get_comm();
   for (auto const& op : ops) {
     if (op.is_onesite()) {
-      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+                                                              op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
       ret.emplace_back(op.name, op.group, op.source_site, A);
     } else if (op.ops_indices.empty()) {
-      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+                                                              op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
@@ -78,8 +95,13 @@ tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
 to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
                                             std::complex<double>>> const& ops) {
   tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+  if (ops.empty()) {
+    return ret;
+  }
+  MPI_Comm comm = ops[0].op.get_comm();
   for (auto const& op : ops) {
-    mptensor::Tensor<tenes::mptensor_matrix_type, double> A(op.op.shape());
+    mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+                                                            op.op.shape());
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
     }
@@ -130,14 +152,19 @@ int tenes(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
   return 0;
 }
 
-int main_impl(std::string input_filename, MPI_Comm com,
-              PrintLevel print_level = PrintLevel::info) {
+int itps_main(const char* input_filename, MPI_Comm comm,
+              PrintLevel print_level) {
+  return itps_main(std::string(input_filename), comm, print_level);
+}
+
+int itps_main(std::string input_filename, MPI_Comm comm,
+              PrintLevel print_level) {
   using tensor_complex =
       mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
 
   int mpisize = 0, mpirank = 0;
-  MPI_Comm_rank(com, &mpirank);
-  MPI_Comm_size(com, &mpisize);
+  MPI_Comm_rank(comm, &mpirank);
+  MPI_Comm_size(comm, &mpisize);
 
   if (!util::path_exists(input_filename)) {
     std::stringstream ss;
@@ -152,14 +179,14 @@ int main_impl(std::string input_filename, MPI_Comm com,
   PEPS_Parameters peps_parameters =
       (toml_param != nullptr ? gen_param(toml_param) : PEPS_Parameters());
   peps_parameters.print_level = print_level;
-  peps_parameters.Bcast(MPI_COMM_WORLD);
+  peps_parameters.Bcast(comm);
 
   auto toml_lattice = input_toml->get_table("tensor");
   if (toml_lattice == nullptr) {
     throw tenes::input_error("[tensor] not found");
   }
   SquareLattice lattice = gen_lattice(toml_lattice);
-  lattice.Bcast(MPI_COMM_WORLD);
+  lattice.Bcast(comm);
 
   // time evolution
   auto toml_evolution = input_toml->get_table("evolution");
@@ -168,9 +195,9 @@ int main_impl(std::string input_filename, MPI_Comm com,
   }
 
   const double tol = peps_parameters.iszero_tol;
-
-  const auto simple_updates = load_simple_updates<tensor_complex>(input_toml);
-  const auto full_updates = load_full_updates<tensor_complex>(input_toml);
+  const auto simple_updates =
+      load_simple_updates<tensor_complex>(input_toml, comm);
+  const auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
 
   // observable
   auto toml_observable = input_toml->get_table("observable");
@@ -180,9 +207,9 @@ int main_impl(std::string input_filename, MPI_Comm com,
 
   // onesite observable
   const auto onesite_obs = load_operators<tensor_complex>(
-      input_toml, lattice.N_UNIT, 1, tol, "observable.onesite");
+      input_toml, comm, lattice.N_UNIT, 1, tol, "observable.onesite");
   const auto twosite_obs = load_operators<tensor_complex>(
-      input_toml, lattice.N_UNIT, 2, tol, "observable.twosite");
+      input_toml, comm, lattice.N_UNIT, 2, tol, "observable.twosite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -219,7 +246,7 @@ int main_impl(std::string input_filename, MPI_Comm com,
       is_ok = util::mkdir(outdir);
     }
   }
-  bcast(is_ok, 0, com);
+  bcast(is_ok, 0, comm);
   if (!is_ok) {
     std::stringstream ss;
     ss << "Cannot mkdir " << outdir;
@@ -238,14 +265,12 @@ int main_impl(std::string input_filename, MPI_Comm com,
   }
 
   if (is_real) {
-    return tenes(MPI_COMM_WORLD, peps_parameters, lattice,
-                 to_real(simple_updates), to_real(full_updates),
-                 to_real(onesite_obs), to_real(twosite_obs), corparam,
-                 clength_param);
+    return tenes(comm, peps_parameters, lattice, to_real(simple_updates),
+                 to_real(full_updates), to_real(onesite_obs),
+                 to_real(twosite_obs), corparam, clength_param);
   } else {
-    return tenes(MPI_COMM_WORLD, peps_parameters, lattice, simple_updates,
-                 full_updates, onesite_obs, twosite_obs, corparam,
-                 clength_param);
+    return tenes(comm, peps_parameters, lattice, simple_updates, full_updates,
+                 onesite_obs, twosite_obs, corparam, clength_param);
   }
 }
 
