@@ -109,7 +109,7 @@ void SquareLattice::save(const char* filename, bool append) {
 
 void SquareLattice::Bcast(MPI_Comm comm, int root) {
   int irank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &irank);
+  MPI_Comm_rank(comm, &irank);
   std::vector<int> params_int(3);
   std::vector<std::vector<double>> init_dirs(N_UNIT);
   std::vector<double> ns;

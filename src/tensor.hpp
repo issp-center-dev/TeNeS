@@ -63,6 +63,8 @@ small_tensor<T> identity(std::size_t k, T v) {
   return ret;
 }
 
+void initialize_mptensor();
+
 }  // end of namespace tenes
 
 #endif  // TENES_SRC_TENSOR_HPP_

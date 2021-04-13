@@ -148,6 +148,12 @@ tensor resize_tensor(tensor const& src, mptensor::Shape target_shape) {
   }
 }
 
+void initialize_mptensor(){
+#ifndef _NO_MPI
+  mptensor::scalapack::BlacsGrid::init();
+#endif
+}
+
 template real_tensor resize_tensor(
     real_tensor const& src, mptensor::Shape target_shape);
 

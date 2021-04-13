@@ -22,6 +22,7 @@
 #include "exception.hpp"
 #include "printlevel.hpp"
 
+#include "tensor.hpp"
 #include "iTPS/main.hpp"
 
 int main2(int argc, char **argv) {
@@ -105,6 +106,7 @@ int main2(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
+  tenes::initialize_mptensor();
   int status = main2(argc, argv);
   MPI_Barrier(MPI_COMM_WORLD);
 
