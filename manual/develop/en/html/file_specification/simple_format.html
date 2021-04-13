@@ -4,8 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>5.2. Input file for tenes_simple &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -34,7 +33,7 @@
 
           <div class="body" role="main">
             
-  <section id="input-file-for-tenes-simple">
+  <div class="section" id="input-file-for-tenes-simple">
 <span id="sec-simple-format"></span><h1><span class="section-number">5.2. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code><a class="headerlink" href="#input-file-for-tenes-simple" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
 <li><p>File format is
@@ -46,7 +45,7 @@ format.</p></li>
 </ul>
 </li>
 </ul>
-<section id="model-section">
+<div class="section" id="model-section">
 <h2><span class="section-number">5.2.1. </span><code class="docutils literal notranslate"><span class="pre">model</span></code> section<a class="headerlink" href="#model-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the model to calculate.
 In this version, spin system (<code class="docutils literal notranslate"><span class="pre">&quot;spin&quot;</span></code>) and bosonic system (<code class="docutils literal notranslate"><span class="pre">&quot;boson&quot;</span></code>) are defined.</p>
@@ -73,7 +72,7 @@ In this version, spin system (<code class="docutils literal notranslate"><span c
 </tbody>
 </table>
 <p>The parameter names such as interactions depend on the model type.</p>
-<section id="spin-system-spin">
+<div class="section" id="spin-system-spin">
 <h3>Spin system: <code class="docutils literal notranslate"><span class="pre">&quot;spin&quot;</span></code><a class="headerlink" href="#spin-system-spin" title="Permalink to this headline">¶</a></h3>
 <p>Hamiltonian is described as</p>
 <div class="math notranslate nohighlight">
@@ -262,8 +261,8 @@ In addition, bond Hamiltonian</p>
 - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],\]</div>
 <p>and spin correlations on nearest neighbor bonds <span class="math notranslate nohighlight">\(S^\alpha_iS^\alpha_j\)</span> ( <span class="math notranslate nohighlight">\(\alpha=x,y,z\)</span> ) are automatically defined as two-site operators.
 In the bond Hamiltonian, one body terms (<span class="math notranslate nohighlight">\(h^\alpha\)</span> and <span class="math notranslate nohighlight">\(D\)</span> term) appear only in the nearest neighbor bonds, and <span class="math notranslate nohighlight">\(z\)</span> is the number of the coodinate number.</p>
-</section>
-<section id="bosonic-system-boson">
+</div>
+<div class="section" id="bosonic-system-boson">
 <h3>Bosonic system: <code class="docutils literal notranslate"><span class="pre">&quot;boson&quot;</span></code><a class="headerlink" href="#bosonic-system-boson" title="Permalink to this headline">¶</a></h3>
 <p>Hamiltonian is described as</p>
 <div class="math notranslate nohighlight">
@@ -420,9 +419,9 @@ In addition, bond Hamiltonian</p>
 + \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]\]</div>
 <p>and short range correlations on nearest neighbor bonds <span class="math notranslate nohighlight">\(n_i n_j\)</span>, <span class="math notranslate nohighlight">\(b^\dagger_i b_j\)</span>, and <span class="math notranslate nohighlight">\(b_i b^\dagger_j\)</span>  are automatically defined as two-site operators.
 In the bond Hamiltonian, one body terms (<span class="math notranslate nohighlight">\(U\)</span> and <span class="math notranslate nohighlight">\(\mu\)</span> term) appear only in the nearest neighbor bonds, and <span class="math notranslate nohighlight">\(z\)</span> is the number of the coodinate number.</p>
-</section>
-</section>
-<section id="lattice-section">
+</div>
+</div>
+<div class="section" id="lattice-section">
 <h2><span class="section-number">5.2.2. </span><code class="docutils literal notranslate"><span class="pre">lattice</span></code> section<a class="headerlink" href="#lattice-section" title="Permalink to this headline">¶</a></h2>
 <p>Specify the lattices to calculate.
 Square, triangular, honeycomb, and Kagome lattices are defined.</p>
@@ -506,25 +505,23 @@ and for triangular lattice and kagome lattice, the 120 degree order state (spins
 </ul>
 </li>
 </ul>
-<section id="square-lattice">
+<div class="section" id="square-lattice">
 <h3>Square lattice<a class="headerlink" href="#square-lattice" title="Permalink to this headline">¶</a></h3>
 <p>A square lattice <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> consists of <code class="docutils literal notranslate"><span class="pre">L</span></code> sites in the <span class="math notranslate nohighlight">\((1,0)\)</span> direction and <code class="docutils literal notranslate"><span class="pre">W</span></code> sites in the <span class="math notranslate nohighlight">\((0,1)\)</span> direction.
 As a concrete example, <a class="reference internal" href="#fig-square-lattice"><span class="std std-numref">Fig. 5.1</span></a> (a) shows the structure for <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
 In addition, the definitions of the first, second and third nearest neighbor bonds are shown in
 <a class="reference internal" href="#fig-square-lattice"><span class="std std-numref">Fig. 5.1</span></a> (b), (c), and (d), respectively.
 The blue line represents a bond of <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> and the red line represents a bond of <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p>
-<figure class="align-center" id="fig-square-lattice">
+<div class="figure align-center" id="fig-square-lattice">
 <a class="reference internal image-reference" href="../_images/SquareLattice.png"><img alt="../_images/SquareLattice.png" src="../_images/SquareLattice.png" style="width: 550px;" /></a>
-<figcaption>
-<p><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Square lattice.
+<p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Square lattice.
 (a) Site structure with <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
 (b) Nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction and <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 90 degree direction.
 (c) Second nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 45 degree direction and <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the -45 degree direction.
 (d) Third nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction and <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 90 degree direction.</span><a class="headerlink" href="#fig-square-lattice" title="Permalink to this image">¶</a></p>
-</figcaption>
-</figure>
-</section>
-<section id="triangular-lattice">
+</div>
+</div>
+<div class="section" id="triangular-lattice">
 <h3>Triangular lattice<a class="headerlink" href="#triangular-lattice" title="Permalink to this headline">¶</a></h3>
 <p>A triangular lattice <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> consists of <code class="docutils literal notranslate"><span class="pre">L</span></code> sites in the <span class="math notranslate nohighlight">\((1,0)\)</span> direction and <code class="docutils literal notranslate"><span class="pre">W</span></code> sites in the <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> direction.
 As a concrete example, <a class="reference internal" href="#fig-triangular-lattice"><span class="std std-numref">Fig. 5.2</span></a> (a) shows the structure for <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.
@@ -532,19 +529,17 @@ In addition, the definitions of the first, second and third nearest neighbor bon
 <a class="reference internal" href="#fig-triangular-lattice"><span class="std std-numref">Fig. 5.2</span></a> (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">2</span></code>, respectively.
 (e) shows the corresponding square TPS with <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.</p>
-<figure class="align-center" id="fig-triangular-lattice">
+<div class="figure align-center" id="fig-triangular-lattice">
 <a class="reference internal image-reference" href="../_images/TriangularLattice.png"><img alt="../_images/TriangularLattice.png" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
-<figcaption>
-<p><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Triangular lattice.
+<p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Triangular lattice.
 (a) Site structure with <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>
 (b) Nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
 (c) Second nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 90 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the -30 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the 30 degree direction.
 (d) Third nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 0 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the 120 degree direction.
 (e) Corrensponding square TPS of the triangular lattice with <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code>.</span><a class="headerlink" href="#fig-triangular-lattice" title="Permalink to this image">¶</a></p>
-</figcaption>
-</figure>
-</section>
-<section id="honeycomb-lattice">
+</div>
+</div>
+<div class="section" id="honeycomb-lattice">
 <h3>Honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Permalink to this headline">¶</a></h3>
 <p>In a honeycomb lattice <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code>, units consisting of two sites of coordinates <span class="math notranslate nohighlight">\((0, 0)\)</span> and <span class="math notranslate nohighlight">\((\sqrt{3}/2, 1/2)\)</span> are arranged with <code class="docutils literal notranslate"><span class="pre">L</span></code> units in the <span class="math notranslate nohighlight">\((\sqrt{3},0)\)</span> direction and <code class="docutils literal notranslate"><span class="pre">W</span></code> units in the <span class="math notranslate nohighlight">\((1/2, 3/2)\)</span> direction.
 As a concrete example, <a class="reference internal" href="#fig-honeycomb-lattice"><span class="std std-numref">Fig. 5.3</span></a> (a) shows the structure for <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.
@@ -552,19 +547,17 @@ In addition, the definitions of the first, second and third nearest neighbor bon
 <a class="reference internal" href="#fig-honeycomb-lattice"><span class="std std-numref">Fig. 5.3</span></a> (b), (c), and (d), respectively.
 The blue, red, and green lines represent bonds of <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">2</span></code>, respectively.
 (e) shows the corresponding square TPS with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.</p>
-<figure class="align-center" id="fig-honeycomb-lattice">
+<div class="figure align-center" id="fig-honeycomb-lattice">
 <a class="reference internal image-reference" href="../_images/HoneycombLattice.png"><img alt="../_images/HoneycombLattice.png" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
-<figcaption>
-<p><span class="caption-number">Fig. 5.3 </span><span class="caption-text">Honeycomb lattice.
+<p class="caption"><span class="caption-number">Fig. 5.3 </span><span class="caption-text">Honeycomb lattice.
 (a) Site structure with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The dashed ellipse denotes one unit.
 (b) Nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 30 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 150 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the -90 degree direction.
 (c) Second nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the 120 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the 60 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the 0 degree direction.
 (d) Third nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond extends in the -30 degree direction, <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one in the -150 degree direction, and <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (green) one in the 90 degree direction.
 (e) Corrensponding square TPS of the honeycomb lattice with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.</span><a class="headerlink" href="#fig-honeycomb-lattice" title="Permalink to this image">¶</a></p>
-</figcaption>
-</figure>
-</section>
-<section id="kagome-lattice">
+</div>
+</div>
+<div class="section" id="kagome-lattice">
 <h3>Kagome lattice<a class="headerlink" href="#kagome-lattice" title="Permalink to this headline">¶</a></h3>
 <p>In a kagome lattice <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code>, units consisting of three sites of coordinates <span class="math notranslate nohighlight">\((0, 0)\)</span>, <span class="math notranslate nohighlight">\((1, 0)\)</span>, and <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> are arranged with <code class="docutils literal notranslate"><span class="pre">L</span></code> units in the <span class="math notranslate nohighlight">\((2,0)\)</span> direction and <code class="docutils literal notranslate"><span class="pre">W</span></code> units in the <span class="math notranslate nohighlight">\((1,\sqrt{3})\)</span> direction.
 As a concrete example, <a class="reference internal" href="#fig-kagome-lattice"><span class="std std-numref">Fig. 5.4</span></a> (a) shows the structure for <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.
@@ -572,27 +565,25 @@ In addition, the definitions of the first, second and third nearest neighbor bon
 <a class="reference internal" href="#fig-kagome-lattice"><span class="std std-numref">Fig. 5.4</span></a> (b), (c), and (d), respectively.
 The blue and the red lines represent bonds of <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code>, and <code class="docutils literal notranslate"><span class="pre">1</span></code>, respectively.
 (e) shows the corresponding square TPS with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>.</p>
-<figure class="align-center" id="fig-kagome-lattice">
+<div class="figure align-center" id="fig-kagome-lattice">
 <a class="reference internal image-reference" href="../_images/KagomeLattice.png"><img alt="../_images/KagomeLattice.png" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
-<figcaption>
-<p><span class="caption-number">Fig. 5.4 </span><span class="caption-text">Kagome lattice.
+<p class="caption"><span class="caption-number">Fig. 5.4 </span><span class="caption-text">Kagome lattice.
 (a) Site structure with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The dashed circle denotes one unit.
 (b) Nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bonds form upper triangle and <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) bonds form lowertriangle.
 (c) Second nearest neighbor bonds.
 (d) Third nearest neighbor bonds. <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (blue) bond passes over a site and <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (red) one does not.
 (e) Corresponding square TPS of the kagome lattice with <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code>. The white circles are the dummy tensors with bonds of dimension one.</span><a class="headerlink" href="#fig-kagome-lattice" title="Permalink to this image">¶</a></p>
-</figcaption>
-</figure>
-</section>
-</section>
-<section id="parameter-section">
+</div>
+</div>
+</div>
+<div class="section" id="parameter-section">
 <h2><span class="section-number">5.2.3. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this headline">¶</a></h2>
 <p>Parameters defined in this section is not used in <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> but they are copied to the input file of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>.</p>
 <p>Set various parameters that appear in the calculation, such as the number of updates.
 This section has five subsections: <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
 <p>Imaginary-time step <span class="math notranslate nohighlight">\(\tau\)</span> for simple update <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
-<section id="parameter-general">
+<div class="section" id="parameter-general">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h3>
 <p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
 <table class="colwidths-given docutils align-default">
@@ -679,8 +670,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </ul>
 </li>
 </ul>
-</section>
-<section id="parameter-simple-update">
+</div>
+<div class="section" id="parameter-simple-update">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h3>
 <p>Parameters in the simple update procedure.</p>
 <table class="colwidths-given docutils align-default">
@@ -715,8 +706,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
-</section>
-<section id="parameter-full-update">
+</div>
+<div class="section" id="parameter-full-update">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h3>
 <p>Parameters in the full update procedure.</p>
 <table class="colwidths-given docutils align-default">
@@ -776,8 +767,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
-</section>
-<section id="parameter-ctm">
+</div>
+<div class="section" id="parameter-ctm">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h3>
 <p>Parameters for corner transfer matrices, CTM.</p>
 <table class="colwidths-given docutils align-default">
@@ -838,8 +829,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tbody>
 </table>
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
-</section>
-<section id="parameter-random">
+</div>
+<div class="section" id="parameter-random">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h3>
 <p>Parameters for random number generators.</p>
 <table class="colwidths-given docutils align-default">
@@ -865,8 +856,8 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tbody>
 </table>
 <p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
-</section>
-<section id="example">
+</div>
+<div class="section" id="example">
 <h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
@@ -882,15 +873,15 @@ iteration_max = 10
 dimension = 9 # CHI
 </pre></div>
 </div>
-</section>
-</section>
-<section id="correlation-section">
+</div>
+</div>
+<div class="section" id="correlation-section">
 <h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this headline">¶</a></h2>
 <p>For <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> , correlation functions <span class="math notranslate nohighlight">\(C = \langle A(0)B(r)\rangle\)</span> are not calculated by default.
 For calculating correlation functions, they have to be specified in the same file format as the input file of <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.
 For details, See <code class="docutils literal notranslate"><span class="pre">correlation</span></code> section <a class="reference internal" href="expert_format.html"><span class="doc">Input file for tenes</span></a>.</p>
-</section>
-<section id="correlation-length-section">
+</div>
+<div class="section" id="correlation-length-section">
 <h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> section<a class="headerlink" href="#correlation-length-section" title="Permalink to this headline">¶</a></h2>
 <p>Parameters defined in this section is not used in <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> but they are copied to the input file of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>.</p>
 <p>This section describes how to calculate the correlation length <span class="math notranslate nohighlight">\(\xi\)</span>.</p>
@@ -953,8 +944,8 @@ If not, an iterative method, the implicit restart Arnoldi method (IRA method), w
 Its eigenvalues are approximants of the first <code class="docutils literal notranslate"><span class="pre">arnoldi_maxdim</span></code> eigenvalues of the original matrix.
 If not converged, the IRA method restarts the Arnoldi process with the newly generated <code class="docutils literal notranslate"><span class="pre">arnoldi_restartdim</span></code> initial vectors.
 In the many cases of the transfer matrices, such a process is not necessary (<code class="docutils literal notranslate"><span class="pre">arnoldi_maxiterations</span> <span class="pre">=</span> <span class="pre">1</span></code>).</p>
-</section>
-</section>
+</div>
+</div>
 
 
           </div>
@@ -1033,7 +1024,7 @@ In the many cases of the transfer matrices, such a process is not necessary (<co
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

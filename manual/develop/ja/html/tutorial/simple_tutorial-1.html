@@ -4,8 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>4.1. 横磁場イジングモデル &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -34,7 +33,7 @@
 
           <div class="body" role="main">
             
-  <section id="id1">
+  <div class="section" id="id1">
 <h1><span class="section-number">4.1. </span>横磁場イジングモデル<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <p>ここでは横磁場イジングモデルに対して、横磁場を変化させた場合の計算例について紹介します。
 入力ファイルの変数 <code class="docutils literal notranslate"><span class="pre">hx</span></code> を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
@@ -204,14 +203,12 @@ for idx in range(num_hx):
 </pre></div>
 </div>
 <p>とすることで集計でき、 <code class="docutils literal notranslate"><span class="pre">hx</span></code>, エネルギー、 <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> 、 <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> が出力されます。</p>
-<figure class="align-center" id="fig-transverse">
+<div class="figure align-center" id="fig-transverse">
 <a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
-<figcaption>
-<p><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal notranslate"><span class="pre">hx</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="この画像へのパーマリンク">¶</a></p>
-</figcaption>
-</figure>
+<p class="caption"><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal notranslate"><span class="pre">hx</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="この画像へのパーマリンク">¶</a></p>
+</div>
 <p><a class="reference internal" href="#fig-transverse"><span class="std std-numref">図 4.1</span></a> から <code class="docutils literal notranslate"><span class="pre">hx</span></code> が大きくなるにつれ、 <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> が <code class="docutils literal notranslate"><span class="pre">0.5</span></code> から徐々に小さくなり最終的には0になる一方、 <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> は <code class="docutils literal notranslate"><span class="pre">0</span></code> から大きくなり最終的には <code class="docutils literal notranslate"><span class="pre">0.5</span></code> になることが分かります。</p>
-</section>
+</div>
 
 
           </div>
@@ -287,7 +284,7 @@ for idx in range(num_hx):
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

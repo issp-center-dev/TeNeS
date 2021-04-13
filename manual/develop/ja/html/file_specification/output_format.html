@@ -4,8 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>5.5. 出力ファイル &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
@@ -35,14 +34,14 @@
 
           <div class="body" role="main">
             
-  <section id="sec-output-format">
+  <div class="section" id="sec-output-format">
 <span id="id1"></span><h1><span class="section-number">5.5. </span>出力ファイル<a class="headerlink" href="#sec-output-format" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <p>各種計算結果は <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリ以下に保存されます。
 また、入力ファイルとして使ったファイルがコピーされます。</p>
-<section id="parameters-dat">
+<div class="section" id="parameters-dat">
 <h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>実際に計算に使われたパラメータおよび実行日時が出力されます。</p>
-<section id="id2">
+<div class="section" id="id2">
 <h3>例<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>simple_num_step = 1000
 simple_inverse_lambda_cutoff = 1e-12
@@ -77,13 +76,13 @@ start_datetime =  2020-03-21T17:04:06+09:00
 finish_datetime = 2020-03-21T17:04:08+09:00
 </pre></div>
 </div>
-</section>
-</section>
-<section id="density-dat">
+</div>
+</div>
+<div class="section" id="density-dat">
 <h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
 各演算子の名前 <code class="docutils literal notranslate"><span class="pre">name</span></code> が空だった場合はかわりに演算子番号が出力されます。</p>
-<section id="id3">
+<div class="section" id="id3">
 <h3>例<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
 Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
@@ -93,9 +92,9 @@ SxSx        = -8.55704529153783616e-02  0.00000000000000000e+00
 SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </pre></div>
 </div>
-</section>
-</section>
-<section id="onesite-obs-dat">
+</div>
+</div>
+<div class="section" id="onesite-obs-dat">
 <h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>onesite 演算子の期待値 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i\rangle\)</span> が出力されます。
 各行4列からなります。</p>
@@ -105,7 +104,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 <li><p>期待値の実部 <span class="math notranslate nohighlight">\(\mathrm{Re}\langle\hat{A}^\alpha_i\rangle\)</span></p></li>
 <li><p>期待値の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}\langle\hat{A}^\alpha_i\rangle\)</span></p></li>
 </ol>
-<section id="id4">
+<div class="section" id="id4">
 <h3>例<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: site_index
@@ -126,9 +125,9 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 2 3 -5.10879957978090937e-05 -2.65547621655117576e-16
 </pre></div>
 </div>
-</section>
-</section>
-<section id="twosite-obs-dat">
+</div>
+</div>
+<div class="section" id="twosite-obs-dat">
 <h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>twosite 演算子の期待値が出力されます。
 各行6列からなります。</p>
@@ -140,7 +139,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 <li><p>期待値の実部</p></li>
 <li><p>期待値の虚部</p></li>
 </ol>
-<section id="id5">
+<div class="section" id="id5">
 <h3>例<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: source_site
@@ -159,9 +158,9 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 0 3 1 0 -3.32798142125971141e-01 2.64082512640410446e-14
 </pre></div>
 </div>
-</section>
-</section>
-<section id="correlation-dat">
+</div>
+</div>
+<div class="section" id="correlation-dat">
 <h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
 各行7列から構成されます。</p>
@@ -174,7 +173,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 <li><p>演算子の実部 <span class="math notranslate nohighlight">\(\mathrm{Re}C\)</span></p></li>
 <li><p>演算子の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}C\)</span></p></li>
 </ol>
-<section id="id6">
+<div class="section" id="id6">
 <h3>例<a class="headerlink" href="#id6" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
 # $2: left_site
@@ -200,9 +199,9 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16
 </pre></div>
 </div>
-</section>
-</section>
-<section id="correlation-length-dat">
+</div>
+</div>
+<div class="section" id="correlation-length-dat">
 <h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> が出力されます。
 各行3+n列から構成されます。</p>
@@ -214,7 +213,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 <p>4列目以降は転送行列の固有値の絶対値の対数 <span class="math notranslate nohighlight">\(e_i = -\log\left|\lambda_i/\lambda_0\right|\)</span> が出力されます (<span class="math notranslate nohighlight">\(i&gt;0\)</span>)。
 この情報を利用することで相関長のボンド次元依存性を見積もれるかもしれません。
 詳細は PRX <strong>8</strong>, 041033 (2018) と PRX <strong>8</strong>, 031030 (2018) を参照してください。</p>
-<section id="id7">
+<div class="section" id="id7">
 <h3>例<a class="headerlink" href="#id7" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
 # $2: col or row index
@@ -228,12 +227,12 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 1 1 7.26095712518373015e-01 1.37722890076244076e+00 1.38699264750702023e+00 1.52016493301531241e+00
 </pre></div>
 </div>
-</section>
-</section>
-<section id="time-dat">
+</div>
+</div>
+<div class="section" id="time-dat">
 <h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
 <p>計算時間が出力されます。</p>
-<section id="id8">
+<div class="section" id="id8">
 <h3>例<a class="headerlink" href="#id8" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>time simple update = 1.64429
 time full update   = 0
@@ -241,9 +240,9 @@ time environmnent  = 0.741858
 time observable    = 0.104487
 </pre></div>
 </div>
-</section>
-</section>
-</section>
+</div>
+</div>
+</div>
 
 
           </div>
@@ -322,7 +321,7 @@ time observable    = 0.104487
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
