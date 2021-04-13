@@ -160,10 +160,8 @@ void iTPS<ptensor>::full_update() {
         while (r_tau >= next_report) {
           next_report += 10.0;
         }
-        std::cout << "  " << next_report - 10.0
-                  << "% "
-                     "["
-                  << int_tau + 1 << "/" << nsteps << "] done" << std::endl;
+        std::cout << "  " << next_report - 10.0 << "% [" << int_tau + 1 << "/"
+                  << nsteps << "] done" << std::endl;
       }
     }
   }
