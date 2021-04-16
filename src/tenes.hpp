@@ -17,6 +17,7 @@
 #ifndef TENES_SRC_TENES_HPP_
 #define TENES_SRC_TENES_HPP_
 
+#include "initialize_mptensor.hpp"
 #include "iTPS/main.hpp"
 
 #endif // TENES_SRC_TENES_HPP_

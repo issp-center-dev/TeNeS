@@ -22,7 +22,7 @@
 #include "exception.hpp"
 #include "printlevel.hpp"
 
-#include "tensor.hpp"
+#include "initialize_mptensor.hpp"
 #include "iTPS/main.hpp"
 
 int main2(int argc, char **argv) {

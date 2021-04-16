@@ -128,6 +128,20 @@ message(STATUS "MPTENSOR_INCLUDE_DIR: ${MPTENSOR_INCLUDE_DIR}")
 message(STATUS "MPTENSOR_LIB_DIR: ${MPTENSOR_LIB_DIR}")
 message(STATUS "CPPTOML_INCLUDE_DIR: ${CPPTOML_INCLUDE_DIR}")
 
+
+set(TENES_COMPILE_OPTIONS)
+if(OPENMP_FOUND)
+    set(TENES_COMPILE_OPTIONS ${OMP_FLAG} ${TENES_COMPILE_OPTIONS})
+else()
+    set(TENES_COMPILE_OPTIONS -D_NO_OMP ${TENES_COMPILE_OPTIONS})
+endif()
+
+if(NOT ENABLE_MPI)
+    set(TENES_COMPILE_OPTIONS -D_NO_MPI ${TENES_COMPILE_OPTIONS})
+endif()
+
+message(STATUS "TENES_COMPILE_OPTIONS: ${TENES_COMPILE_OPTIONS}")
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tool)
 
@@ -139,4 +153,23 @@ if(Document)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/docs/sphinx)
 endif()
 
+# TeNeSConfig.cmake
+include(CMakePackageConfigHelpers)
+set(TENESCONFIG_INCLUDE_DIRS include)
+set(TENESCONFIG_LIBRARY_DIR lib)
+configure_package_config_file(config/TeNeSConfig.cmake.in 
+    ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfig.cmake
+    INSTALL_DESTINATION share/cmake/tenes
+    PATH_VARS TENESCONFIG_INCLUDE_DIRS TENESCONFIG_LIBRARY_DIR
+    )
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfigVersion.cmake
+    VERSION ${TENES_VERSION}
+    COMPATIBILITY SameMajorVersion
+    )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfigVersion.cmake
+    DESTINATION share/cmake/tenes
+    )
+
+# sample files
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sample DESTINATION share/tenes)
