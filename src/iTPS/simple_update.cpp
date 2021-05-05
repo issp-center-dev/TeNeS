@@ -51,8 +51,8 @@ void iTPS<tensor>::simple_update() {
     const double conv_tol_gauge =
         peps_parameters.Simple_Gauge_Convergence_Epsilon;
     if (peps_parameters.Simple_Gauge_Fix) {
-      for (int iter_gauge = 0; iter_gauge < maxiter_gauge; ++iter_gauge) {
-        double score = 0.0;
+      int iter_gauge = 0;
+      for (iter_gauge = 0; iter_gauge < maxiter_gauge; ++iter_gauge) {
         for (int source_leg = 0; source_leg < 2; ++source_leg) {
           int target_leg = (source_leg + 2) % 4;
           for (int source = 0; source < N_UNIT; ++source) {
@@ -60,26 +60,39 @@ void iTPS<tensor>::simple_update() {
               continue;
             }
             int target = lattice.neighbor(source, source_leg);
-            double score_local = core::fix_local_gauge(
-                Tn[source], Tn[target], lambda_tensor[source],
-                lambda_tensor[target], source_leg, peps_parameters, Tn1_new,
-                Tn2_new, lambda_c);
-            score_local = std::abs(score_local);
-            if (score_local > score) {
-              score = score_local;
-            }
-
+            core::fix_local_gauge(Tn[source], Tn[target], lambda_tensor[source],
+                                  lambda_tensor[target], source_leg,
+                                  peps_parameters, Tn1_new, Tn2_new, lambda_c);
             lambda_tensor[source][source_leg] = lambda_c;
             lambda_tensor[target][target_leg] = lambda_c;
             Tn[source] = Tn1_new;
             Tn[target] = Tn2_new;
           }  // end of for (source)
         }    // end of for (source_leg)
+
+        // convergence check
+        double score = 0.0;
+        for (int site = 0; site < N_UNIT; ++site) {
+          for (int leg = 0; leg < nleg; ++leg) {
+            if (lattice.virtual_dims[site][leg] <= 1) {
+              continue;
+            }
+            auto M = core::boundary_tensor(Tn[site], lambda_tensor[site], leg,
+                                           peps_parameters);
+            tensor U;
+            std::vector<double> D;
+            eigh(M, mptensor::Axes(0), mptensor::Axes(1), D, U);
+            for (auto d : D) {
+              score = std::max(score, std::abs(d - 1.0));
+            }
+          }
+        }  // end of for (source)
         if (score < conv_tol_gauge) {
           break;
         }
-      }  // end of if (iter_gauge)
-    }
+      }  // end of for (iter_gauge)
+
+    }  // end of if (Simple_Gauge_Fix)
 
     if (peps_parameters.print_level >= PrintLevel::info) {
       double r_tau = 100.0 * (int_tau + 1) / nsteps;

@@ -31,6 +31,9 @@
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
 
+#undef TENES_DEBUG_LOCAL_GAUGE_FIXING
+// #define TENES_DEBUG_LOCAL_GAUGE_FIXING
+
 namespace tenes {
 namespace itps {
 namespace core {
@@ -41,7 +44,7 @@ using mptensor::Shape;
 // environment
 
 template <class tensor>
-double fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
+void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
                        const std::vector<std::vector<double>> &lambda1,
                        const std::vector<std::vector<double>> &lambda2,
                        const int connect1,
@@ -50,6 +53,37 @@ double fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
   using ptensor = tensor;
   constexpr int NLEG = 4;
   int connect2 = (connect1 + 2) % NLEG;
+
+
+#ifdef TENES_DEBUG_LOCAL_GAUGE_FIXING
+  std::cout << "Before fixing" << std::endl;
+  {
+    auto lambda = lambda1;
+    lambda[connect1] = lambda_c;
+    auto M = boundary_tensor(Tn1, lambda, connect1, peps_parameters);
+    std::vector<double> D1;
+    ptensor U1;
+    eigh(M, Axes(0), Axes(1), D1, U1);
+    std::cout << "D1 = ";
+    for (auto d : D1) {
+      std::cout << d << " ";
+    }
+    std::cout << std::endl;
+  }
+  {
+    auto lambda = lambda2;
+    lambda[connect2] = lambda_c;
+    auto M = boundary_tensor(Tn2, lambda, connect2, peps_parameters);
+    std::vector<double> D2;
+    ptensor U2;
+    eigh(M, Axes(0), Axes(1), D2, U2);
+    std::cout << "D2 = ";
+    for (auto d : D2) {
+      std::cout << d << " ";
+    }
+    std::cout << std::endl;
+  }
+#endif
 
   std::vector<std::vector<double>> lambda1_inv(NLEG);
   std::vector<std::vector<double>> lambda2_inv(NLEG);
@@ -196,27 +230,96 @@ double fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
                             lambda2_inv[2], 2, lambda_c, 3);
   }
 
-  double rel_error =
-      (lambda_c[0] - lambda1[connect1][0]) / lambda1[connect1][0];
-  return rel_error;
+#ifdef TENES_DEBUG_LOCAL_GAUGE_FIXING
+  std::cout << "After fixing" << std::endl;
+  {
+    auto lambda = lambda1;
+    lambda[connect1] = lambda_c;
+    auto M = boundary_tensor(Tn1_new, lambda, connect1, peps_parameters);
+    eigh(M, Axes(0), Axes(1), D1, U1);
+    std::cout << "D1 = ";
+    for (auto d : D1) {
+      std::cout << d << " ";
+    }
+    std::cout << std::endl;
+  }
+  {
+    auto lambda = lambda2;
+    lambda[connect2] = lambda_c;
+    auto M = boundary_tensor(Tn2_new, lambda, connect2, peps_parameters);
+    eigh(M, Axes(0), Axes(1), D2, U2);
+    std::cout << "D2 = ";
+    for (auto d : D2) {
+      std::cout << d << " ";
+    }
+    std::cout << std::endl;
+  }
+#endif
+}
+
+template <class tensor>
+tensor boundary_tensor(const tensor &Tn,
+                       const std::vector<std::vector<double>> &lambda,
+                       const int connect,
+                       const PEPS_Parameters peps_parameters) {
+  tensor Tn_lambda = Tn;
+  const size_t dc = Tn.shape()[connect];
+  std::vector<double> lambda_inv(dc);
+  for (size_t i = 0; i < dc; ++i) {
+    if (lambda[connect][i] > peps_parameters.Inverse_lambda_cut) {
+      lambda_inv[i] = 1.0 / lambda[connect][i];
+    } else {
+      lambda_inv[i] = 0.0;
+    }
+  }
+
+  if (connect == 0) {
+    Tn_lambda.multiply_vector(lambda_inv, 0, lambda[1], 1, lambda[2], 2,
+                              lambda[3], 3);
+    Tn_lambda.transpose(Axes(1, 2, 3, 0, 4));
+  } else if (connect == 1) {
+    Tn_lambda.multiply_vector(lambda[0], 0, lambda_inv, 1, lambda[2], 2,
+                              lambda[3], 3);
+    Tn_lambda.transpose(Axes(0, 2, 3, 1, 4));
+  } else if (connect == 2) {
+    Tn_lambda.multiply_vector(lambda[0], 0, lambda[1], 1, lambda_inv, 2,
+                              lambda[3], 3);
+    Tn_lambda.transpose(Axes(0, 1, 3, 2, 4));
+  } else {
+    Tn_lambda.multiply_vector(lambda[0], 0, lambda[1], 1, lambda[2], 2,
+                              lambda_inv, 3);
+  }
+
+  return tensordot(conj(Tn_lambda), Tn_lambda, Axes(0, 1, 2, 4),
+                   Axes(0, 1, 2, 4));
 }
 
 // template instantiations
 
-template double fix_local_gauge(const real_tensor &Tn1, const real_tensor &Tn2,
-                                const std::vector<std::vector<double>> &lambda1,
-                                const std::vector<std::vector<double>> &lambda2,
-                                const int connect1,
-                                const PEPS_Parameters peps_parameters,
-                                real_tensor &Tn1_new, real_tensor &Tn2_new,
-                                std::vector<double> &lambda_c);
+template void fix_local_gauge(const real_tensor &Tn1, const real_tensor &Tn2,
+                              const std::vector<std::vector<double>> &lambda1,
+                              const std::vector<std::vector<double>> &lambda2,
+                              const int connect1,
+                              const PEPS_Parameters peps_parameters,
+                              real_tensor &Tn1_new, real_tensor &Tn2_new,
+                              std::vector<double> &lambda_c);
 
-template double fix_local_gauge(
-    const complex_tensor &Tn1, const complex_tensor &Tn2,
-    const std::vector<std::vector<double>> &lambda1,
-    const std::vector<std::vector<double>> &lambda2, const int connect1,
-    const PEPS_Parameters peps_parameters, complex_tensor &Tn1_new,
-    complex_tensor &Tn2_new, std::vector<double> &lambda_c);
+template void fix_local_gauge(const complex_tensor &Tn1,
+                              const complex_tensor &Tn2,
+                              const std::vector<std::vector<double>> &lambda1,
+                              const std::vector<std::vector<double>> &lambda2,
+                              const int connect1,
+                              const PEPS_Parameters peps_parameters,
+                              complex_tensor &Tn1_new, complex_tensor &Tn2_new,
+                              std::vector<double> &lambda_c);
+
+template real_tensor boundary_tensor(
+    const real_tensor &Tn, const std::vector<std::vector<double>> &lambda,
+    const int connect, const PEPS_Parameters peps_parameters);
+
+template complex_tensor boundary_tensor(
+    const complex_tensor &Tn, const std::vector<std::vector<double>> &lambda,
+    const int connect, const PEPS_Parameters peps_parameters);
 
 }  // end of namespace core
 }  // namespace itps

@@ -48,15 +48,21 @@ namespace core {
  *  @param[out] Tn2_new   new tensor 2
  *  @param[out] lambda_c  new meanfield env
  *
- *  @return relative error of the first component of MF env lambda before and after the operation
  */
 template <class tensor>
-double fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
+void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
                      const std::vector<std::vector<double>> &lambda1,
                      const std::vector<std::vector<double>> &lambda2,
-                     const int connect1,
-                     const PEPS_Parameters peps_parameters, tensor &Tn1_new,
-                     tensor &Tn2_new, std::vector<double> &lambda_c);
+                     const int connect1, const PEPS_Parameters peps_parameters,
+                     tensor &Tn1_new, tensor &Tn2_new,
+                     std::vector<double> &lambda_c);
+
+template <class tensor>
+tensor boundary_tensor(const tensor &Tn1,
+                       const std::vector<std::vector<double>> &lambda,
+                       const int connect,
+                       const PEPS_Parameters peps_parameters);
+
 }  // end of namespace core
 }  // namespace itps
 }  // namespace tenes
