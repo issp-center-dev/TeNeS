@@ -38,6 +38,37 @@ void Full_update_bond_horizontal(
     const tensor &op12, const PEPS_Parameters peps_parameters, tensor &Tn1_new,
     tensor &Tn2_new);
 
+/*! @brief full update on a bond
+ *
+ *  @tparam    tensor tensor class in mptensor
+ *  @param[in] C1
+ *  @param[in] C2
+ *  @param[in] C3
+ *  @param[in] C4
+ *  @param[in] eT1
+ *  @param[in] eT2
+ *  @param[in] eT3
+ *  @param[in] eT4
+ *  @param[in] Tn1
+ *  @param[in] Tn2
+ *  @param[in] op12 Imaginary time evolution operator
+ *  @param[in] connect1  leg index from Tn1
+ *  @param[in] peps_parameters  hyperparameters
+ *  @param[out] Tn1_new   new tensor 1
+ *  @param[out] Tn2_new   new tensor 2
+ *
+ * @par Tensors layout
+ * @verbatim
+  C1 eT1 eT2  C2
+ eT6 Tn1 Tn2 eT3
+  C4 eT5 eT6  C3
+ @endverbatim
+ *
+ *
+ *  @par Reference
+ *  H. N. Phien, J. A. Bengua, H. D. Tuan, P. Corboz, and R. Orus, Phys. Rev. B @b 92, 035142 (2015)
+ *
+ */
 template <class tensor>
 void Full_update_bond(const tensor &C1, const tensor &C2, const tensor &C3,
                       const tensor &C4, const tensor &eT1, const tensor &eT2,

@@ -22,8 +22,8 @@
  2015 Dec.  Tsuyoshi Okubo
 */
 
-#ifndef TENES_SRC_ITPS_CORE_SIMPLE_UPDATE_HPP_
-#define TENES_SRC_ITPS_CORE_SIMPLE_UPDATE_HPP_
+#ifndef TENES_SRC_ITPS_CORE_LOCAL_GAUGE_HPP_
+#define TENES_SRC_ITPS_CORE_LOCAL_GAUGE_HPP_
 
 #include <vector>
 
@@ -33,32 +33,32 @@ class PEPS_Parameters;
 
 namespace core {
 
-/*! @brief simple update on a bond
+/*! @brief locally fix the gauge DoF on a bond
  *
  *  @par Reference
- *  H. C. Jiang, Z. Y. Weng, and T. Xiang,  Phys. Rev. Lett. @b 101, 090603 (2008)
+ *  S. S. Jahromi and R. Orus, Phys. Rev. B @b 99, 195105 (2019)
  *
  *  @param[in] Tn1  tensor 1
  *  @param[in] Tn2  tensor 2
  *  @param[in] lambda1  meanfield env around tensor 1
  *  @param[in] lambda2  meanfield env around tensor 2
- *  @param[in] op12     imaginary time evolution operator
  *  @param[in] connect1 leg direction from tensor 1
  *  @param[in] peps_parameters  hyperparameters
  *  @param[out] Tn1_new   new tensor 1
  *  @param[out] Tn2_new   new tensor 2
  *  @param[out] lambda_c  new meanfield env
  *
+ *  @return relative error of the first component of MF env lambda before and after the operation
  */
 template <class tensor>
-void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
-                        const std::vector<std::vector<double>> &lambda1,
-                        const std::vector<std::vector<double>> &lambda2,
-                        const tensor &op12, const int connect1,
-                        const PEPS_Parameters peps_parameters, tensor &Tn1_new,
-                        tensor &Tn2_new, std::vector<double> &lambda_c);
+double fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
+                     const std::vector<std::vector<double>> &lambda1,
+                     const std::vector<std::vector<double>> &lambda2,
+                     const int connect1,
+                     const PEPS_Parameters peps_parameters, tensor &Tn1_new,
+                     tensor &Tn2_new, std::vector<double> &lambda_c);
 }  // end of namespace core
 }  // namespace itps
 }  // namespace tenes
 
-#endif  // TENES_SRC_ITPS_CORE_SIMPLE_UPDATE_HPP_
+#endif  // TENES_SRC_ITPS_CORE_LOCAL_GAUGE_HPP_
