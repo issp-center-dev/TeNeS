@@ -66,7 +66,7 @@ Parameters in the simple update procedure.
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
    ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, false
    ``gauge_maxiter``, "Maximum number of iterations for fixing gauge", Integer, 100
-   ``gauge_converge_epsilon``, "Convergence criteria of iterations for fixing gauge", Real, 1e-6
+   ``gauge_converge_epsilon``, "Convergence criteria of iterations for fixing gauge", Real, 1e-2
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~

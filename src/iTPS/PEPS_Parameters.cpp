@@ -38,7 +38,7 @@ PEPS_Parameters::PEPS_Parameters() {
   Inverse_lambda_cut = 1e-12;
   Simple_Gauge_Fix = false;
   Simple_Gauge_maxiter = 100;
-  Simple_Gauge_Convergence_Epsilon = 1.0e-6;
+  Simple_Gauge_Convergence_Epsilon = 1.0e-2;
 
   // Environment
   Inverse_projector_cut = 1e-12;

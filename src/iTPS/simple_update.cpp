@@ -93,6 +93,8 @@ void iTPS<tensor>::simple_update() {
             }
           }
         }  // end of for (source)
+        // std::cout << int_tau << " " << iter_gauge << " " << score
+        //           << std::endl;
         if (score < conv_tol_gauge) {
           // std::cout << int_tau << " " << iter_gauge << " " << score
           //           << std::endl;

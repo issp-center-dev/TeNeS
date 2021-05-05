@@ -68,7 +68,7 @@ simple update に関するパラメータ
    ``lambda_cutoff``,             "simple update において平均場 :math:`\lambda` の切り捨て閾値", 実数,   1e-12
    ``gauge_fix``,                 "テンソルのゲージを固定するかどうか",                          真偽値, false
    ``gauge_maxiter``,             "ゲージ固定操作のループ最大数",                                整数,   100
-   ``gauge_convergence_epsilon``, "ゲージ固定操作の収束判定値",                                  実数,   1e-6
+   ``gauge_convergence_epsilon``, "ゲージ固定操作の収束判定値",                                  実数,   1e-2
 
 
 
