@@ -36,7 +36,9 @@ PEPS_Parameters::PEPS_Parameters() {
   // Simple update
   num_simple_step = 0;
   Inverse_lambda_cut = 1e-12;
-  // Simple_Gauge_Fix = true;
+  Simple_Gauge_Fix = false;
+  Simple_Gauge_maxiter = 100;
+  Simple_Gauge_Convergence_Epsilon = 1.0e-2;
 
   // Environment
   Inverse_projector_cut = 1e-12;
@@ -81,7 +83,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_CHI,
     I_print_level,
     I_num_simple_step,
-    // I_Simple_Gauge_Fix,
+    I_Simple_Gauge_Fix,
+    I_Simple_Gauge_maxiter,
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
     I_Use_RSVD,
@@ -98,6 +101,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
   };
   enum PARAMS_DOUBLE_INDEX {
     I_Inverse_lambda_cut,
+    I_Simple_Gauge_Convergence_Epsilon,
     I_Inverse_projector_cut,
     I_CTM_Convergence_Epsilon,
     I_Inverse_Env_cut,
@@ -128,7 +132,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(CHI, int);
     SAVE_PARAM(print_level, int);
     SAVE_PARAM(num_simple_step, int);
-    // SAVE_PARAM(Simple_Gauge_Fix, int);
+    SAVE_PARAM(Simple_Gauge_Fix, int);
+    SAVE_PARAM(Simple_Gauge_maxiter, int);
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
     SAVE_PARAM(Use_RSVD, int);
@@ -140,6 +145,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(seed, int);
 
     SAVE_PARAM(Inverse_lambda_cut, double);
+    SAVE_PARAM(Simple_Gauge_Convergence_Epsilon, double);
     SAVE_PARAM(Inverse_projector_cut, double);
     SAVE_PARAM(CTM_Convergence_Epsilon, double);
     SAVE_PARAM(Inverse_Env_cut, double);
@@ -171,7 +177,8 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(CHI, int);
     LOAD_PARAM(print_level, int);
     LOAD_PARAM(num_simple_step, int);
-    // LOAD_PARAM(Simple_Gauge_Fix, int);
+    LOAD_PARAM(Simple_Gauge_Fix, int);
+    LOAD_PARAM(Simple_Gauge_maxiter, int);
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
     LOAD_PARAM(Use_RSVD, int);
@@ -183,6 +190,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(seed, int);
 
     LOAD_PARAM(Inverse_lambda_cut, double);
+    LOAD_PARAM(Simple_Gauge_Convergence_Epsilon, double);
     LOAD_PARAM(Inverse_projector_cut, double);
     LOAD_PARAM(CTM_Convergence_Epsilon, double);
     LOAD_PARAM(Inverse_Env_cut, double);
@@ -213,7 +221,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   // Simple update
   ofs << "simple_num_step = " << num_simple_step << std::endl;
   ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
-  // ofs << "simple_gauge_fix = " << Simple_Gauge_Fix << std::endl;
+  ofs << "simple_gauge_fix = " << Simple_Gauge_Fix << std::endl;
+  ofs << "simple_gauge_maxiter = " << Simple_Gauge_maxiter << std::endl;
+  ofs << "simple_gauge_convergence_epsilon = "
+      << Simple_Gauge_Convergence_Epsilon << std::endl;
 
   ofs << std::endl;
 
