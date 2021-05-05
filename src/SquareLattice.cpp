@@ -68,6 +68,18 @@ void SquareLattice::calc_neighbors() {
       NN_Tensor[N_UNIT + ix - LX][1] = Tensor_list[(ix + LX - skew) % LX][0];
     }
   }
+
+  parities.assign(N_UNIT, 0);
+  for (int ix = 0; ix < LX; ++ix) {
+    parities[ix] = (ix % 2 != 0 ? -1 : +1);
+  }
+  for (int iy = 1; iy < LY; ++iy) {
+    for (int ix = 0; ix < LX; ++ix) {
+      int site = index(ix, iy);
+      parities[site] = -parities[bottom(site)];
+    }
+  }
+
   logical_check();
 }
 

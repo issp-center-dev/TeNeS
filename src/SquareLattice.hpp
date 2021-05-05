@@ -124,6 +124,18 @@ class SquareLattice {
    */
   int other(int index, int dx, int dy) const;
 
+  /*! parity of site
+   *
+   *  @param[in] index site index
+   *
+   *  @return parity (1 or -1)
+   *
+   *  @note
+   *  parity of the site 0 is +1
+   *
+   */
+  int parity(int index) const { return parities[index]; }
+
   void save(const char *filename, bool append = false);
   void save_append(const char *filename) { save(filename, true); }
 
@@ -143,7 +155,9 @@ class SquareLattice {
 
  private:
   std::vector<std::vector<int>> Tensor_list;  //!< index of site [x][y]
-  std::vector<std::array<int, 4>> NN_Tensor;  //!< index of nearest neighbor site [site][bond]
+  std::vector<std::array<int, 4>>
+      NN_Tensor;  //!< index of nearest neighbor site [site][bond]
+  std::vector<int> parities;
   void logical_check() const;
   void calc_neighbors();
 };

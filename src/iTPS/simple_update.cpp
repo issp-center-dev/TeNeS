@@ -53,22 +53,28 @@ void iTPS<tensor>::simple_update() {
     if (peps_parameters.Simple_Gauge_Fix) {
       int iter_gauge = 0;
       for (iter_gauge = 0; iter_gauge < maxiter_gauge; ++iter_gauge) {
-        for (int source_leg = 0; source_leg < 2; ++source_leg) {
-          int target_leg = (source_leg + 2) % 4;
-          for (int source = 0; source < N_UNIT; ++source) {
-            if (lattice.virtual_dims[source][source_leg] <= 1) {
-              continue;
+        for (int parity : {1, -1}) {
+          for (int source_leg : {2, 1}) {
+            int target_leg = (source_leg + 2) % 4;
+            for (int source = 0; source < N_UNIT; ++source) {
+              if (lattice.parity(source) != parity) {
+                continue;
+              }
+              if (lattice.virtual_dims[source][source_leg] <= 1) {
+                continue;
+              }
+              int target = lattice.neighbor(source, source_leg);
+              core::fix_local_gauge(
+                  Tn[source], Tn[target], lambda_tensor[source],
+                  lambda_tensor[target], source_leg, peps_parameters, Tn1_new,
+                  Tn2_new, lambda_c);
+              lambda_tensor[source][source_leg] = lambda_c;
+              lambda_tensor[target][target_leg] = lambda_c;
+              Tn[source] = Tn1_new;
+              Tn[target] = Tn2_new;
             }
-            int target = lattice.neighbor(source, source_leg);
-            core::fix_local_gauge(Tn[source], Tn[target], lambda_tensor[source],
-                                  lambda_tensor[target], source_leg,
-                                  peps_parameters, Tn1_new, Tn2_new, lambda_c);
-            lambda_tensor[source][source_leg] = lambda_c;
-            lambda_tensor[target][target_leg] = lambda_c;
-            Tn[source] = Tn1_new;
-            Tn[target] = Tn2_new;
-          }  // end of for (source)
-        }    // end of for (source_leg)
+          }
+        }
 
         // convergence check
         double score = 0.0;
@@ -88,11 +94,12 @@ void iTPS<tensor>::simple_update() {
           }
         }  // end of for (source)
         if (score < conv_tol_gauge) {
+          // std::cout << int_tau << " " << iter_gauge << " " << score
+          //           << std::endl;
           break;
         }
       }  // end of for (iter_gauge)
-
-    }  // end of if (Simple_Gauge_Fix)
+    }    // end of if (Simple_Gauge_Fix)
 
     if (peps_parameters.print_level >= PrintLevel::info) {
       double r_tau = 100.0 * (int_tau + 1) / nsteps;
