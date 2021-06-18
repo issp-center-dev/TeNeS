@@ -4,15 +4,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>observable.onesite &#8212; TeNeS 1.2-dev documentation</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
    
@@ -33,7 +34,7 @@
             
   <p>Define various settings related to physical quantity measurement.
 This section has two types of subsections, <code class="docutils literal notranslate"><span class="pre">onesite</span></code> and <code class="docutils literal notranslate"><span class="pre">twosite</span></code>.</p>
-<div class="section" id="observable-onesite">
+<section id="observable-onesite">
 <h1><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this headline">¶</a></h1>
 <p>Define one-body operators that indicate physical quantities defined at each site <span class="math notranslate nohighlight">\(i\)</span>.</p>
 <table class="colwidths-given docutils align-default">
@@ -83,7 +84,7 @@ One element is specified by one line consisting of two integers and two floating
 <li><p>The first two integers are the state numbers before and after the act of the operator, respectively.</p></li>
 <li><p>The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.</p></li>
 </ul>
-<div class="section" id="example">
+<section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <p>As an example, the case of <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2</p>
 <div class="math notranslate nohighlight">
@@ -114,9 +115,9 @@ elements = &quot;&quot;&quot;
 &quot;&quot;&quot;
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="observable-twosite">
+</section>
+</section>
+<section id="observable-twosite">
 <h1><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this headline">¶</a></h1>
 <p>Define two-body operators that indicate physical quantities defined on two sites.</p>
 <table class="colwidths-given docutils align-default">
@@ -185,7 +186,7 @@ One element consists of one line consisting of four integers and two floating-po
 <p>Using <code class="docutils literal notranslate"><span class="pre">ops</span></code>, a two-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.
 For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S ^ z_iS ^ z_j\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code>.</p>
 <p>If both <code class="docutils literal notranslate"><span class="pre">elements</span></code> and <code class="docutils literal notranslate"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
-<div class="section" id="id1">
+<section id="id1">
 <h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
 <div class="math notranslate nohighlight">
@@ -197,10 +198,12 @@ For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is def
 <p>Next, let’s define the bonds. In this case, site indecies are given as shown in <code class="xref std std-numref docutils literal notranslate"><span class="pre">bond_22</span></code> .
 The bond connecting 0 and 1 is represented as <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
 Similarly, The bond connecting 1 and 3 is represented as <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> because 3 is located at (0,1) from 1.</p>
-<div class="figure align-default" id="id2">
+<figure class="align-default" id="id2">
 <a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
-<p class="caption"><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> .</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> .</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Finally, how to define the elements of the operator is explained.
 First, the basis of the site is needed to be labeled. Here, we label <span class="math notranslate nohighlight">\(|\uparrow\rangle\)</span> as 0 and <span class="math notranslate nohighlight">\(|\downarrow\rangle\)</span> as 1.
 Using this basis and label number, for example, one of diagonal elements <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \uparrow_j | \mathcal{H}_{ij} | \uparrow_i \uparrow_j \right\rangle = 1/4\)</span> is specified by <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0.25</span> <span class="pre">0.0</span></code>.
@@ -230,8 +233,8 @@ elements = &quot;&quot;&quot;
 &quot;&quot;&quot;
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -299,7 +302,7 @@ elements = &quot;&quot;&quot;
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

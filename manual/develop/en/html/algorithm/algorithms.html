@@ -4,15 +4,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>6. Algorithm &#8212; TeNeS 1.2-dev documentation</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="7. Acknowledgement" href="../acknowledge/index.html" />
@@ -33,9 +34,9 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="algorithm">
+  <section id="algorithm">
 <h1><span class="section-number">6. </span>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="tensor-network-states">
+<section id="tensor-network-states">
 <h2><span class="section-number">6.1. </span>Tensor Network States<a class="headerlink" href="#tensor-network-states" title="Permalink to this headline">¶</a></h2>
 <p>Tensor network states (TNS) are variational wavefunctions represented as products of small tensors <a class="reference internal" href="#ref-tns"><span class="std std-ref">[TNS]</span></a>. For example, in the case of <span class="math notranslate nohighlight">\(S=1/2\)</span> spin system with <span class="math notranslate nohighlight">\(N\)</span> sites, a wavefunction can be represented by using the product state basis as</p>
 <div class="math notranslate nohighlight">
@@ -54,8 +55,8 @@
 <p>In TeNeS, we consider two-dimensional infinite tensor product states (iTNS), which are natural extension of iMPS to higher dimensions. We assume a square lattice tensor network with a translational symmetry, whose diagram is shown as</p>
 <img alt="../_images/iTPS.png" class="align-center" src="../_images/iTPS.png" />
 <p>and try to find an approximate ground state wavefunction of two-dimensional quantum many-body systems. Notice that square lattice tensor networks can represent lattices other than the square lattice, such as the honeycomb and the triangular lattices, by considering proper mapping.</p>
-</div>
-<div class="section" id="contraction-of-itps">
+</section>
+<section id="contraction-of-itps">
 <h2><span class="section-number">6.2. </span>Contraction of iTPS<a class="headerlink" href="#contraction-of-itps" title="Permalink to this headline">¶</a></h2>
 <p>In order to calculate expectation values over a TNS, <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle/\langle \Psi|\Psi\rangle\)</span>, generally we need to contract tensor networks corresponding to <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle\)</span> and <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span>. For example, a tensor network corresponding to <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span> is given by</p>
 <img alt="../_images/iTPS_braket.png" class="align-center" src="../_images/iTPS_braket.png" />
@@ -76,8 +77,8 @@
 <p>and similarly the nearest neighbor correlation <span class="math notranslate nohighlight">\(\langle \Psi|S^z_iS^z_{i+1}|\Psi\rangle\)</span> is represented as</p>
 <img alt="../_images/SzSz.png" class="align-center" src="../_images/SzSz.png" />
 <p>Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operators, the computation cost to contract the tensor network becomes huge for larger clusters.</p>
-</div>
-<div class="section" id="optimization-of-itps">
+</section>
+<section id="optimization-of-itps">
 <h2><span class="section-number">6.3. </span>Optimization of iTPS<a class="headerlink" href="#optimization-of-itps" title="Permalink to this headline">¶</a></h2>
 <p>In order to use iTPS as variational wavefunctions for the ground state, we need to optimize it so that it give us the minimum energy expectation value,</p>
 <div class="math notranslate nohighlight">
@@ -133,8 +134,8 @@ J. Jordan <em>et al.</em>, <em>Classical Simulation of Infinite-Size Quantum Lat
 H. G. Jiang <em>et al.</em>, <em>Accurate Determination of Tensor Network State of Quantum Lattice Models in Two Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 090603 (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.090603">link</a></p>
 <p id="ref-qr">[QR]
 L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</em>, Phys. Rev. B <strong>83</strong>, 134421 (2011). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.134421">link</a></p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -211,7 +212,7 @@ L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

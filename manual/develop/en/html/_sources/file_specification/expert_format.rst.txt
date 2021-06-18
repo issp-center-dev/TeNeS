@@ -71,3 +71,8 @@ Example ::
 ==========================
 
 .. include:: ./correlation_section.rst
+
+``correlation_length`` section
+==========================
+
+.. include:: ./correlation_length_section.rst

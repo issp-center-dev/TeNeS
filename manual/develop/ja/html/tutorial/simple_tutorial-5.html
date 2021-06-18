@@ -4,16 +4,17 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>4.2. 三角格子・正方格子ハイゼンベルク模型の磁化過程 &#8212; TeNeS 1.2-dev ドキュメント</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/translations.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="5. ファイルフォーマット" href="../file_specification/index.html" />
@@ -34,7 +35,7 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="id1">
+  <section id="id1">
 <h1><span class="section-number">4.2. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <p>次に三角格子上で定義されたスピン<span class="math notranslate nohighlight">\(S=1/2\)</span>の量子ハイゼンベルク模型の磁化過程の計算を紹介します。
 ハミルトニアンは以下のようになります:</p>
@@ -160,10 +161,12 @@ fmag.close()
 実際に計算精度がでているかどうかをみるには、エネルギーのステップ依存性が参考になります。
 理想的にはステップ数を増やすほど基底エネルギーが下がるはずですが、一部の磁場領域では逆に基底エネルギーが増加します。これは計算精度があまりでていない兆候です。
 ボンド次元を増やすなどして、より計算精度を高める必要があると推測されます。</p>
-<div class="figure align-default" id="fig-tutorial5-triangular">
+<figure class="align-default" id="fig-tutorial5-triangular">
 <a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png"><img alt="../_images/tutorial_5_triangular.png" src="../_images/tutorial_5_triangular.png" style="width: 600px;" /></a>
-<p class="caption"><span class="caption-number">図 4.2 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="この画像へのパーマリンク">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">図 4.2 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
 <p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
 <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> は、 <code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクションが以下のように変更されているほかは <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と同じ内容です。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
@@ -185,13 +188,15 @@ W = 2
 </pre></div>
 </div>
 <p>とすれば、<a class="reference internal" href="#fig-tutorial5-square"><span class="std std-numref">図 4.3</span></a> の左図のような基底エネルギーのグラフが得られます。</p>
-<div class="figure align-default" id="fig-tutorial5-square">
+<figure class="align-default" id="fig-tutorial5-square">
 <a class="reference internal image-reference" href="../_images/tutorial_5_square.png"><img alt="../_images/tutorial_5_square.png" src="../_images/tutorial_5_square.png" style="width: 600px;" /></a>
-<p class="caption"><span class="caption-number">図 4.3 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="この画像へのパーマリンク">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">図 4.3 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
 <p>ステップ数2000でほぼ収束しており、三角格子ハイゼンベルク模型と異なり、プラトー構造は現れないことがわかります。
 エネルギーは概ね、ステップ数を増加させると減少するため、ある程度計算精度がでていると推測されます。</p>
-</div>
+</section>
 
 
           </div>
@@ -267,7 +272,7 @@ W = 2
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
