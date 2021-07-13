@@ -44,7 +44,7 @@ auto iTPS<ptensor>::measure_twosite()
 
   constexpr int nmax = 4;
 
-  std::map<std::tuple<int, int, int>, double> norms;
+  std::map<Bond, tensor_type> norms;
 
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
@@ -54,9 +54,10 @@ auto iTPS<ptensor>::measure_twosite()
     const int ncol = std::abs(dx) + 1;
     const int nrow = std::abs(dy) + 1;
     if (ncol > nmax || nrow > nmax) {
-      std::cerr << "Warning: now version of TeNeS does not support too long "
-                   "operator"
-                << std::endl;
+      std::cerr
+          << "Warning: now version of TeNeS does not support too long-ranged "
+             "operator"
+          << std::endl;
       std::cerr << "group = " << op.group << " (dx = " << dx << ", dy = " << dy
                 << ")" << std::endl;
       continue;
@@ -145,7 +146,7 @@ auto iTPS<ptensor>::measure_twosite()
         const_cast<ptensor *>(Tn_[nrow - 1][col])
             ->multiply_vector(lambda_tensor[indices[nrow - 1][col]][3], 3);
       }
-    } else {  // Use CTM
+    } else { // Use CTM
       for (int row = 0; row < nrow; ++row) {
         for (int col = 0; col < ncol; ++col) {
           const int index =
@@ -167,18 +168,15 @@ auto iTPS<ptensor>::measure_twosite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
-    const auto norm_key = std::make_tuple(indices[0][0], nrow, ncol);
-    auto norm =
-        (norms.count(norm_key) ? norms[norm_key]
-                               : std::numeric_limits<double>::quiet_NaN());
-    if (std::isnan(norm)) {
+    const auto norm_key = Bond{indices[nrow-1][0], nrow-1, ncol-1};
+    if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
-        norm = std::real(core::Contract_MF(Tn_, op_));
+        norms[norm_key] = core::Contract_MF(Tn_, op_);
       } else {
-        norm = std::real(core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_));
+        norms[norm_key] = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       }
-      norms[norm_key] = norm;
     }
+    auto norm = norms[norm_key];
 
     tensor_type value = 0.0;
     if (op.ops_indices.empty()) {
@@ -196,7 +194,7 @@ auto iTPS<ptensor>::measure_twosite()
                             C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
                             eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
                             eTl[top], Tn[top], Tn[bottom], o);
-        } else {  // ncol == 2
+        } else { // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
           ptensor o =
@@ -246,6 +244,17 @@ auto iTPS<ptensor>::measure_twosite()
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
   }
+  ret.push_back(norms);
+
+  double norm_imag_max = 0.0;
+  for(auto & r: norms){
+    double norm_im = std::imag(r.second);
+    norm_imag_max = std::max(std::abs(norm_im), norm_imag_max);
+  }
+  if(mpirank == 0 && norm_imag_max > 1.0e-6){
+    std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = " << norm_imag_max << " > 1e-6].\n";
+    std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
+  }
 
   time_observable += timer.elapsed();
   return ret;
@@ -275,23 +284,31 @@ void iTPS<ptensor>::save_twosite(
   ofs << "# $6: imag\n";
   ofs << std::endl;
   for (int ilops = 0; ilops < nlops; ++ilops) {
-    tensor_type sum = 0.0;
-    int num = 0;
     for (const auto &r : twosite_obs[ilops]) {
       auto bond = r.first;
       auto value = r.second;
-      sum += value;
-      num += 1;
       ofs << ilops << " " << bond.source_site << " " << bond.dx << " "
           << bond.dy << " " << std::real(value) << " " << std::imag(value)
           << std::endl;
     }
   }
+
+  if (twosite_obs.size() == nlops+1){
+    // includes norm
+    for (const auto &r : twosite_obs[nlops]) {
+      auto bond = r.first;
+      auto value = r.second;
+      ofs << "-1 " << bond.source_site << " " << bond.dx << " "
+          << bond.dy << " " << std::real(value) << " " << std::imag(value)
+          << std::endl;
+    }
+  }
+
 }
 
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+} // namespace itps
+} // namespace tenes

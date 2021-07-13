@@ -77,10 +77,10 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.right(right_index);
-          double norm = std::real(core::FinishCorrelation(
+          tensor_type norm = core::FinishCorrelation(
               correlation_norm, C2[right_index], C3[right_index],
               eTt[right_index], eTr[right_index], eTb[right_index],
-              Tn[right_index], op_identity[right_index]));
+              Tn[right_index], op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if (right_op_index < 0) {
@@ -121,10 +121,10 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.top(right_index);
           tn = transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4));
-          double norm = std::real(core::FinishCorrelation(
+          tensor_type norm = core::FinishCorrelation(
               correlation_norm, C1[right_index], C2[right_index],
               eTl[right_index], eTt[right_index], eTr[right_index], tn,
-              op_identity[right_index]));
+              op_identity[right_index]);
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if (right_op_index < 0) {
@@ -199,8 +199,8 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
           right_index = lattice.right(right_index);
           T = Tn_horizontal[right_index];
           T.multiply_vector(lambda_tensor[right_index][2], 2);
-          double norm = std::real(core::FinishCorrelation_MF(
-              correlation_norm, T, op_identity[right_index], 2));
+          tensor_type norm = core::FinishCorrelation_MF(
+              correlation_norm, T, op_identity[right_index], 2);
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if (right_op_index < 0) {
@@ -236,8 +236,8 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
           right_index = lattice.top(right_index);
           T = Tn_vertical[right_index];
           T.multiply_vector(lambda_tensor[right_index][1], 1);
-          double norm = std::real(core::FinishCorrelation_MF(
-              correlation_norm, T, op_identity[right_index], 1));
+          tensor_type norm = core::FinishCorrelation_MF(
+              correlation_norm, T, op_identity[right_index], 1);
           for (auto right_ilop : r_ops[left_ilop]) {
             int right_op_index = siteoperator_index(right_index, right_ilop);
             if (right_op_index < 0) {
