@@ -41,6 +41,7 @@ auto iTPS<tensor>::measure_onesite()
   std::vector<std::vector<tensor_type>> local_obs(
       nlops, std::vector<tensor_type>(
                  N_UNIT, std::numeric_limits<double>::quiet_NaN()));
+  std::vector<tensor_type> norm(N_UNIT);
 
   if (peps_parameters.MeanField_Env) {
     std::vector<tensor> Tn_(Tn);
@@ -51,10 +52,8 @@ auto iTPS<tensor>::measure_onesite()
       }
     }
 
-    std::vector<double> norm(N_UNIT);
     for (int i = 0; i < N_UNIT; ++i) {
-      const auto n = core::Contract_one_site_MF(Tn_[i], op_identity[i]);
-      norm[i] = std::real(n);
+      norm[i] = core::Contract_one_site_MF(Tn_[i], op_identity[i]);
     }
 
     for (auto const &op : onesite_operators) {
@@ -63,12 +62,10 @@ auto iTPS<tensor>::measure_onesite()
       local_obs[op.group][i] = val / norm[i];
     }
   } else {
-    std::vector<double> norm(N_UNIT);
     for (int i = 0; i < N_UNIT; ++i) {
-      const auto n =
+      norm[i] =
           core::Contract_one_site(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
                                   eTb[i], eTl[i], Tn[i], op_identity[i]);
-      norm[i] = std::real(n);
     }
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
@@ -78,6 +75,15 @@ auto iTPS<tensor>::measure_onesite()
       local_obs[op.group][i] = val / norm[i];
     }
   }
+  double norm_imag_max = 0.0;
+  for (int i = 0; i < N_UNIT; ++i) {
+    norm_imag_max = std::max(std::abs(std::imag(norm[i])), norm_imag_max);
+  }
+  if (mpirank == 0 && norm_imag_max > 1e-6) {
+    std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = " << norm_imag_max << " > 1e-6].\n";
+    std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
+  }
+  local_obs.push_back(norm);
 
   time_observable += timer.elapsed();
   return local_obs;
@@ -106,16 +112,23 @@ void iTPS<ptensor>::save_onesite(
   ofs << std::endl;
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
-    int num = 0;
-    tensor_type sum = 0.0;
     for (int i = 0; i < N_UNIT; ++i) {
-      if (std::isnan(std::real(onesite_obs[ilops][i]))) {
+      const auto v = onesite_obs[ilops][i];
+      if (std::isnan(std::real(v))) {
         continue;
       }
-      num += 1;
-      const auto v = onesite_obs[ilops][i];
-      sum += v;
       ofs << ilops << " " << i << " " << std::real(v) << " " << std::imag(v)
+          << std::endl;
+    }
+  }
+  if (onesite_obs.size() == nlops + 1) {
+    // includes norm
+    for (int i = 0; i < N_UNIT; ++i) {
+      const auto v = onesite_obs[nlops][i];
+      if (std::isnan(std::real(v))) {
+        continue;
+      }
+      ofs << "-1 " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
     }
   }
@@ -125,5 +138,5 @@ void iTPS<ptensor>::save_onesite(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+} // namespace itps
+} // namespace tenes
