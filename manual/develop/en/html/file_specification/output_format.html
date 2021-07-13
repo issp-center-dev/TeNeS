@@ -79,7 +79,7 @@
 </section>
 <section id="neighbor-obs-dat">
 <h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
+<ul>
 <li><p>Nearest neighbor correlations for site operations are outputted.</p></li>
 <li><p>Each row consists of five columns.</p>
 <ol class="arabic simple">
@@ -90,35 +90,42 @@
 <li><p>Imaginary part of the expected value</p></li>
 </ol>
 </li>
+<li><p>In addition, norm of the wave function <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> is outputted as an operator with index of -1.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.</p></li>
 </ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
-# $2: source_site
-# $3: target_site
-# $4: real
-# $5: imag
+</div></blockquote>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> # $1: op_index
+ # $2: source_site
+ # $3: target_site
+ # $4: real
+ # $5: imag
 
-0 0 1 -7.05927615064968900e-02 0.00000000000000000e+00
-0 0 2 -7.27068456430051274e-02 0.00000000000000000e+00
-0 1 0 -7.13284385957392297e-02 0.00000000000000000e+00
-0 1 3 -7.19523349256113581e-02 0.00000000000000000e+00
-0 2 3 -7.12610364895483045e-02 0.00000000000000000e+00
-0 2 0 -7.19731507561011952e-02 0.00000000000000000e+00
-0 3 2 -7.05633558230210067e-02 0.00000000000000000e+00
-0 3 1 -7.26803750807340498e-02 0.00000000000000000e+00
-1 0 1 -1.85942869237103348e-01 0.00000000000000000e+00
-1 0 2 -1.87164731677545187e-01 0.00000000000000000e+00
-1 1 0 -1.86360382550076586e-01 0.00000000000000000e+00
-1 1 3 -1.86768451086366694e-01 0.00000000000000000e+00
-1 2 3 -1.86384181909805935e-01 0.00000000000000000e+00
-1 2 0 -1.86747576732693515e-01 0.00000000000000000e+00
-1 3 2 -1.85975089525013598e-01 0.00000000000000000e+00
-1 3 1 -1.87196522916879049e-01 0.00000000000000000e+00
+0 0 4.08513219339284250e-01 -1.30821773764633317e-18
+0 1 -4.08513219339288636e-01 -6.09055344460395354e-20
+0 2 -4.08513219339289801e-01 -6.46773648122808868e-19
+0 3 4.08513219339286304e-01 -1.46983151052043956e-19
+1 0 -5.63321380968339106e-05 -1.06329584429579662e-18
+1 1 5.63321015724943072e-05 8.78344073011021613e-18
+1 2 5.63321015892866812e-05 4.36590453150828335e-18
+1 3 -5.63321381136249429e-05 -1.14509908259615756e-18
+2 0 7.95013947121512355e-06 -5.82669256660366468e-18
+2 1 -7.95019526521416614e-06 9.61281832688426906e-18
+2 2 -7.95019527785552810e-06 -9.34047696321987429e-18
+2 3 7.95013948581251836e-06 -6.49339357741872464e-19
+-1 0 1.04968851690174758e+00 7.97972798949331263e-17
+-1 1 1.04968851690174780e+00 7.65446733774766130e-17
+-1 2 1.04968851690174647e+00 8.32667268468867405e-17
+-1 3 1.04968851690174803e+00 7.41594285980085033e-17
 </pre></div>
 </div>
 </section>
 <section id="correlation-dat">
 <h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
+<ul>
 <li><p>Correlation functions are outputted.</p></li>
 <li><p>Each row consists of eight columns.</p>
 <ol class="arabic simple">
@@ -132,31 +139,34 @@
 <li><p>Imaginary part of the expected value</p></li>
 </ol>
 </li>
+<li><p>In addition, norm of the wave function <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> is outputted as an operator with index of -1.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.</p></li>
+</ul>
+</div></blockquote>
+</li>
 </ul>
 <section id="id1">
 <h3>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
-# $2: left_site
-# $3: right_op
-# $4: right_site
-# $5: offset_x
-# $6: offset_y
-# $7: real
-# $8: imag
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
+# $2: source_site
+# $3: dx
+# $4: dy
+# $5: real
+# $6: imag
 
-0 0 0 1 0 0 -7.05927615064967928e-02 0.00000000000000000e+00
-0 0 0 0 1 0 1.19668843226761017e-02 0.00000000000000000e+00
-0 0 0 1 1 0 -2.43086229320005863e-03 0.00000000000000000e+00
-0 0 0 0 2 0 7.42729194528496308e-04 0.00000000000000000e+00
-0 0 0 1 2 0 -4.38794819416885419e-04 0.00000000000000000e+00
-0 0 0 2 0 0 -7.27068456430051135e-02 0.00000000000000000e+00
-0 0 0 0 0 1 1.23339845746621279e-02 0.00000000000000000e+00
-0 0 0 2 0 1 -2.50111186244407349e-03 0.00000000000000000e+00
-0 0 0 0 0 2 7.54607806587391516e-04 0.00000000000000000e+00
-0 0 0 2 0 2 -4.47734559969679546e-04 0.00000000000000000e+00
-1 0 1 1 0 0 -1.85942869237103237e-01 0.00000000000000000e+00
-...
-1 3 1 1 0 3 -1.65874245891461547e-01 0.00000000000000000e+00
+0 0 0 1 -3.30408104727482554e-01 -3.63538996091175880e-19
+0 0 1 0 -3.26902334621655521e-01 -1.28557778331473411e-19
+0 1 0 1 -3.30408104727482110e-01 6.13195629489298286e-18
+0 1 1 0 -3.28820570518176758e-01 5.98724951760379135e-18
+0 2 0 1 -3.32375821733345012e-01 -5.42272048973129865e-18
+0 2 1 0 -3.26902334621652579e-01 9.69166076872613868e-20
+0 3 0 1 -3.32375821733344956e-01 5.07748884268378299e-18
+0 3 1 0 -3.28820570518176702e-01 4.86902738935337153e-18
+1 0 0 1 -1.87348767102901825e-01 4.90760305979372382e-19
+   ... skipped ...
+-1 3 1 0 1.07465536687797147e+00 7.74120351154650166e-17
 </pre></div>
 </div>
 </section>
@@ -248,7 +258,7 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -270,7 +280,7 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
