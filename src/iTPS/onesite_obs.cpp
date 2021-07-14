@@ -75,13 +75,23 @@ auto iTPS<tensor>::measure_onesite()
       local_obs[op.group][i] = val / norm[i];
     }
   }
-  double norm_imag_max = 0.0;
+  double norm_real_min = 1e100;
+  double norm_imag_abs_max = 0.0;
   for (int i = 0; i < N_UNIT; ++i) {
-    norm_imag_max = std::max(std::abs(std::imag(norm[i])), norm_imag_max);
+    norm_real_min = std::min(std::real(norm[i]), norm_real_min);
+    norm_imag_abs_max =
+        std::max(std::abs(std::imag(norm[i])), norm_imag_abs_max);
   }
-  if (mpirank == 0 && norm_imag_max > 1e-6) {
-    std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = " << norm_imag_max << " > 1e-6].\n";
-    std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
+  if (mpirank == 0) {
+    if (norm_real_min <= 0.0) {
+      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = " << norm_real_min <<"].\n";
+      std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
+    }
+    if (norm_imag_abs_max > 1e-6) {
+      std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = "
+                << norm_imag_abs_max << " > 1e-6].\n";
+      std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
+    }
   }
   local_obs.push_back(norm);
 
@@ -138,5 +148,5 @@ void iTPS<ptensor>::save_onesite(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-} // namespace itps
-} // namespace tenes
+}  // namespace itps
+}  // namespace tenes

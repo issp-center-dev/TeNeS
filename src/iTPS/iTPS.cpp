@@ -109,6 +109,21 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   bool is_ok = true;
 
   if (mpirank == 0) {
+    int Dmax = 0;
+    for (int site = 0; site < N_UNIT; ++site) {
+      for (int leg = 0; leg < 4; ++leg) {
+        Dmax = std::max(lattice.virtual_dims[site][leg], Dmax);
+      }
+    }
+    if (peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "Bond dimensions:\n";
+      std::cout << "   D  (Bulk): " << Dmax << "\n";
+      std::cout << "   chi (CTM): " << CHI << std::endl;
+      if (CHI < Dmax * Dmax) {
+        std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
+      }
+    }
+
     if (!util::isdir(outdir)) {
       is_ok = is_ok && util::mkdir(outdir);
     }
