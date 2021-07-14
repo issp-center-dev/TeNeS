@@ -118,7 +118,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "Bond dimensions:\n";
       std::cout << "   D  (Bulk): " << Dmax << "\n";
-      std::cout << "   chi (CTM):  " << CHI << std::endl;
+      std::cout << "   chi (CTM): " << CHI << std::endl;
       if (CHI < Dmax * Dmax) {
         std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
       }
