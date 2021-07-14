@@ -151,7 +151,8 @@ latex_documents = [
      u'東京大学物性研究所', 'manual', 'True'),
 ]
 
-latex_docclass =  {'manual': 'jsbook'}
+latex_engine = 'uplatex'
+# latex_docclass =  {'manual': 'jsbook'}
 latex_logo = "../img/TeNeS_logo.pdf"
 
 # -- Options for manual page output ---------------------------------------
