@@ -187,3 +187,7 @@ html_sidebars = {
 }
 
 numfig = True
+
+latex_elements = {
+    "extrapackages": "\\usepackage{bm}"
+}
