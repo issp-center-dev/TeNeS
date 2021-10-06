@@ -8,17 +8,23 @@ MPI_cmd = ""  # e.g., "mpiexec -np 4"
 
 do_calculation = True
 
-# num_h = 21
-num_h = 11
-min_h = -2.0
-max_h = 3.0
+num_h = 21
+min_h = 3.0
+max_h = -1.0
 num_step_table = [1000, 2000]
+D = 2
+chi = 4
+# Use the following lines if you hope to obtain accurate results
+# num_h = 41
+# num_step_table = [1500, 3000]
+# D = 5
+# chi = 25
 
 fsq = open("sq.dat", "w")
 fmag0 = open("offdiag.dat","w")
 fmag = open("density.dat","w")
 fene = open("energy.dat","w")
-for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
+for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)[::-1]):
     print("Caclulation Process: {}/{}".format(idx+1, num_h))
     inum = 0
     num_pre = 0
@@ -33,11 +39,13 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
             with open("basic.toml") as f:
                 dict_toml = toml.load(f)
             dict_toml["parameter"]["general"]["output"] = "output_{}_{}".format(idx,num_step)
-            dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save".format(idx,num_step)
+            dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save"
             dict_toml["model"]["mu"] = float(h)
+            dict_toml["lattice"]["virtual_dim"] = D
+            dict_toml["parameter"]["ctm"]["dimension"] = chi
             dict_toml["parameter"]["simple_update"]["num_step"] = ns
-            if inum > 0:
-                dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save".format(idx,num_pre)
+            if idx>0 or inum > 0:
+                dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save"
             with open("simple_{}_{}.toml".format(idx,num_step), 'w') as f:
                 toml.dump(dict_toml, f)
             cmd = "tenes_simple simple_{}_{}.toml -o std_{}_{}.toml".format(idx,num_step,idx,num_step)
