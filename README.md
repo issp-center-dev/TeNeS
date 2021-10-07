@@ -2,8 +2,8 @@
 
 | Branch | Build status | Documentation |
 | :-: | :-: | :-: |
-| master (latest stable) | [![master](https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master)](https://travis-ci.org/issp-center-dev/TeNeS) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html) |
-| develop (latest) | [![develop/Test](https://github.com/issp-center-dev/TeNeS/workflows/Test/badge.svg?branch=develop)](https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop) | [![doc_en](https://img.shields.io/badge/doc-English-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html) [![doc_ja](https://img.shields.io/badge/doc-Japanese-blue.svg)](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html) |
+| master (latest stable) | [![master][ci/master/badge]][ci/master/uri] | [![doc_en][doc/en/badge]][doc/master/en/uri] [![doc_ja][doc/ja/badge]][doc/master/ja/uri] |
+| develop (latest) | [![develop][ci/develop/badge]][ci/develop/uri] | [![doc_en][doc/en/badge]][doc/develop/en/uri] [![doc_ja][doc/ja/badge]][doc/develop/ja/uri] |
 
 # TeNeS
 
@@ -13,11 +13,11 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 ## Online manual
 
 - develop (Latest, UNSTABLE)
-    - [English](https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html)
-    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html)
+    - [English][doc/develop/en/uri]
+    - [日本語][doc/develop/ja/uri]
 - master (Latest, stable)
-    - [English](https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html)
-    - [日本語](https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html)
+    - [English][doc/master/en/uri]
+    - [日本語][doc/master/ja/uri]
 
 ## Getting started
 
@@ -233,3 +233,15 @@ TeNeS is available under the GNU GPL v3.
 
 TeNeS was supported by MEXT as "Exploratory Challenge on Post-K computer" (Frontiers of Basic Science: Challenging the Limits) and "Priority Issue on Post-K computer" (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
 We also would also like to express our thanks for the support of the "Project for advancement of software usability in materials science" of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
+
+[ci/master/badge]: https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master
+[ci/master/uri]: https://travis-ci.org/issp-center-dev/TeNeS
+[ci/develop/badge]: https://github.com/issp-center-dev/TeNeS/workflows/Test/badge.svg?branch=develop
+[ci/develop/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop
+
+[doc/en/badge]: https://img.shields.io/badge/doc-English-blue.svg
+[doc/ja/badge]: https://img.shields.io/badge/doc-Japanese-blue.svg
+[doc/master/en/uri]: https://issp-center-dev.github.io/TeNeS/manual/master/en/html/index.html
+[doc/master/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html
+[doc/develop/en/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html
+[doc/develop/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html

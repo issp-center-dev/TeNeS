@@ -35,7 +35,7 @@ endif()
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/submoduled")
+    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps")
     # Update submodules as needed
     if(GIT_SUBMODULE)
         message(STATUS "Submodule update")
@@ -52,13 +52,8 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
             message(FATAL_ERROR "The submodule ${submod} were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
         endif()
     endforeach()
-
-else()
-    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
 endif()
-
-set(BUNDLED_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/bundled")
+set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps")
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp.cmake)
 openmp()
@@ -123,6 +118,8 @@ if(CPPTOML_ROOT)
 else()
     set(CPPTOML_INCLUDE_DIR ${DEPS_DIR}/cpptoml/include)
 endif()
+
+set(BOOST_INCLUDE_DIR ${DEPS_DIR}/boost/include)
 
 message(STATUS "MPTENSOR_INCLUDE_DIR: ${MPTENSOR_INCLUDE_DIR}")
 message(STATUS "MPTENSOR_LIB_DIR: ${MPTENSOR_LIB_DIR}")
