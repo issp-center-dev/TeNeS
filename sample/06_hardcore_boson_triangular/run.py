@@ -3,22 +3,21 @@ from os.path import join
 import numpy as np
 import toml
 
-MPI_cmd = ""  # e.g., "mpiexec -np 4"
-
+MPI_cmd = ""  #mpiexec -np 4"
 
 do_calculation = True
 
-num_h = 21
-min_h = 3.0
-max_h = -1.0
+#num_h = 21
+min_h = -1.0
+max_h =  3.0
 num_step_table = [1000, 2000]
 D = 2
 chi = 4
-# Use the following lines if you hope to obtain accurate results
-# num_h = 41
-# num_step_table = [1500, 3000]
-# D = 5
-# chi = 25
+# Please uncomment the following lines if you hope to obtain accurate results
+#num_h = 41
+#num_step_table = [1500, 3000]
+#D = 5
+#chi = 25
 
 fsq = open("sq.dat", "w")
 fmag0 = open("offdiag.dat","w")
@@ -41,7 +40,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)[::-1]):
             dict_toml["parameter"]["general"]["output"] = "output_{}_{}".format(idx,num_step)
             dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save"
             dict_toml["model"]["mu"] = float(h)
-            dict_toml["lattice"]["virtual_dim"] = D
+            dict_toml["lattice"]["virtual_dim"] =D
             dict_toml["parameter"]["ctm"]["dimension"] = chi
             dict_toml["parameter"]["simple_update"]["num_step"] = ns
             if idx>0 or inum > 0:
