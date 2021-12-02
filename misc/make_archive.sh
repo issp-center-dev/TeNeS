@@ -10,7 +10,7 @@ if [ ! -d $ROOT_DIR/.git ]; then
 fi
 
 res=0
-type git-archive-all >/dev/null 2&>1 || res=1
+type git-archive-all >/dev/null 2>&1 || res=1
 if [ $res -eq 1 ]; then
   echo "ERROR: git-archive-all is not installed"
   exit 1
