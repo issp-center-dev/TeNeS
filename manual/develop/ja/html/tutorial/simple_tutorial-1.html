@@ -183,11 +183,11 @@ for idx in range(num_hx):
         with open(join(&quot;output_{}&quot;.format(idx), &quot;density.dat&quot;)) as f:
             for line in f:
                 words = line.split()
-                if words[0] == &#39;hamiltonian&#39;:
+                if words[0] == &quot;hamiltonian&quot;:
                     ene = words[2]
-                elif words[0] == &#39;Sz&#39;:
+                elif words[0] == &quot;Sz&quot;:
                     mag_sz = words[2]
-                elif words[0] == &#39;Sx&#39;:
+                elif words[0] == &quot;Sx&quot;:
                     mag_sx = words[2]
         print(&quot;{} {} {} {}&quot;.format(hx, ene, mag_sz, mag_sx))
     except:
@@ -289,7 +289,7 @@ for idx in range(num_hx):
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
