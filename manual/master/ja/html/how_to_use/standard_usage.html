@@ -1,82 +1,70 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="ja">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>3.2. tenes_std の使用方法 &mdash; TeNeS 1.1.2 ドキュメント</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.1.2',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/translations.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.1.2 ドキュメント" href="../index.html" />
-    <link rel="up" title="3. 使用方法" href="index.html" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>3.2. tenes_std の使用方法 &#8212; TeNeS 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/translations.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="3.3. tenes の使用方法" href="expert_usage.html" />
     <link rel="prev" title="3.1. tenes_simple の使用方法" href="simple_usage.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
-  <div class="section" id="tenes-std">
-<h1>3.2. <code class="docutils literal"><span class="pre">tenes_std</span></code> の使用方法<a class="headerlink" href="#tenes-std" title="このヘッドラインへのパーマリンク">¶</a></h1>
-<p><code class="docutils literal"><span class="pre">tenes_std</span></code> は与えられたハミルトニアンから虚時間刻み <span class="math">\(\tau\)</span> の虚時間発展演算子 <span class="math">\(\exp\left(-\tau \mathcal{H}_{ij}\right)\)</span> を導出し、 <code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを生成するツールです。</p>
-<div class="code bash highlight-none"><div class="highlight"><pre>$ tenes_std std.toml
+  <section id="tenes-std">
+<h1><span class="section-number">3.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の使用方法<a class="headerlink" href="#tenes-std" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は与えられたハミルトニアンから虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span> の虚時間発展演算子 <span class="math notranslate nohighlight">\(\exp\left(-\tau \mathcal{H}_{ij}\right)\)</span> を導出し、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを生成するツールです。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes_std std.toml
 </pre></div>
 </div>
-<ul>
-<li><p class="first">引数としてファイルを取ります</p>
-</li>
-<li><p class="first"><code class="docutils literal"><span class="pre">tenes</span></code> の入力ファイルを出力します</p>
-</li>
-<li><dl class="first docutils">
-<dt>コマンドラインオプションは以下の通りです</dt>
-<dd><ul class="first last">
-<li><dl class="first docutils">
-<dt><code class="docutils literal"><span class="pre">--help</span></code></dt>
-<dd><ul class="first last simple">
-<li>ヘルプメッセージの表示</li>
+<ul class="simple">
+<li><p>引数としてファイルを取ります</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを出力します</p></li>
+<li><dl class="simple">
+<dt>コマンドラインオプションは以下の通りです</dt><dd><ul>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--help</span></code></dt><dd><ul>
+<li><p>ヘルプメッセージの表示</p></li>
 </ul>
 </dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt><code class="docutils literal"><span class="pre">--version</span></code></dt>
-<dd><ul class="first last simple">
-<li>バージョン番号の表示</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--version</span></code></dt><dd><ul>
+<li><p>バージョン番号の表示</p></li>
 </ul>
 </dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt><code class="docutils literal"><span class="pre">--output=filename</span></code></dt>
-<dd><ul class="first last simple">
-<li>出力するファイルの名前 <code class="docutils literal"><span class="pre">filename</span></code> を指定します</li>
-<li>デフォルトは <code class="docutils literal"><span class="pre">input.toml</span></code></li>
-<li>入力ファイル名と同じファイル名にすることはできません</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--output=filename</span></code></dt><dd><ul>
+<li><p>出力するファイルの名前 <code class="docutils literal notranslate"><span class="pre">filename</span></code> を指定します</p></li>
+<li><p>デフォルトは <code class="docutils literal notranslate"><span class="pre">input.toml</span></code></p></li>
+<li><p>入力ファイル名と同じファイル名にすることはできません</p></li>
 </ul>
 </dd>
 </dl>
@@ -86,11 +74,11 @@
 </dl>
 </li>
 </ul>
-<p>入力ファイルは <code class="docutils literal"><span class="pre">tenes_simple</span></code> を用いて生成できます。
+<p>入力ファイルは <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> を用いて生成できます。
 さらに、入力ファイルを編集することで、定義されていない模型・格子での計算が行なえます。
-入力ファイルの詳細は <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span>tenes_std の入力ファイル</span></a> を参照してください。
+入力ファイルの詳細は <a class="reference internal" href="../file_specification/standard_format.html#sec-std-format"><span class="std std-ref">tenes_std の入力ファイル</span></a> を参照してください。
 以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。</p>
-<div class="highlight-none"><div class="highlight"><pre>[parameter]
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true   # limit tensors as real-valued ones
 [parameter.simple_update]
@@ -199,10 +187,11 @@ bonds = &quot;&quot;&quot;
 ops = [0, 0]  # index of onesite operators
 </pre></div>
 </div>
-</div>
+</section>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -218,55 +207,56 @@ ops = [0, 0]  # index of onesite operators
 
 
 
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
 
 
 
-
-<h3>Navigation</h3>
+<h3>ナビゲーション</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">3. 使用方法</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">3.2. <code class="docutils literal"><span class="pre">tenes_std</span></code> の使用方法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. 謝辞</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. お問い合わせ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">3. 使用方法</a><ul>
-      <li>Previous: <a href="simple_usage.html" title="前の章へ">3.1. <code class="docutils literal"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
-      <li>Next: <a href="expert_usage.html" title="次の章へ">3.3. <code class="docutils literal"><span class="pre">tenes</span></code> の使用方法</a></li>
+  <li><a href="index.html"><span class="section-number">3. </span>使用方法</a><ul>
+      <li>Previous: <a href="simple_usage.html" title="前の章へ"><span class="section-number">3.1. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+      <li>Next: <a href="expert_usage.html" title="次の章へ"><span class="section-number">3.3. </span><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
   </ul></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>クイック検索</h3>
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="検索" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    モジュール、クラス、または関数名を入力してください
-    </p>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
@@ -275,11 +265,11 @@ ops = [0, 0]  # index of onesite operators
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/how_to_use/standard_usage.txt"
+      <a href="../_sources/how_to_use/standard_usage.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

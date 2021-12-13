@@ -1,312 +1,333 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>parameter.general &mdash; TeNeS 1.1.2 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.1.2',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="TeNeS 1.1.2 documentation" href="../index.html" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>parameter.general &#8212; TeNeS 1.2.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <p>Set various parameters that appear in the calculation, such as the number of updates.
-This section has five subsections: <code class="docutils literal"><span class="pre">general</span></code>, <code class="docutils literal"><span class="pre">simple_update</span></code>, <code class="docutils literal"><span class="pre">full_update</span></code>,
-<code class="docutils literal"><span class="pre">ctm</span></code>, <code class="docutils literal"><span class="pre">random</span></code>.</p>
-<p>Imaginary-time step <span class="math">\(\tau\)</span> for simple update <code class="docutils literal"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
-<div class="section" id="parameter-general">
-<h1><code class="docutils literal"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h1>
-<p>General parameters for <code class="docutils literal"><span class="pre">tenes</span></code>.</p>
-<table border="1" class="docutils">
+This section has five subsections: <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
+<p>Imaginary-time step <span class="math notranslate nohighlight">\(\tau\)</span> for simple update <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
+<section id="parameter-general">
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h1>
+<p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="29%" />
-<col width="43%" />
-<col width="14%" />
-<col width="14%" />
+<col style="width: 29%" />
+<col style="width: 43%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Name</th>
-<th class="head">Description</th>
-<th class="head">Type</th>
-<th class="head">Default</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">is_real</span></code></td>
-<td>Whether to limit all tensors to real valued ones</td>
-<td>Boolean</td>
-<td>false</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
+<td><p>Whether to limit all tensors to real valued ones</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iszero_tol</span></code></td>
-<td>Absolute cutoff value for reading operators</td>
-<td>Real</td>
-<td>0.0</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<td><p>Absolute cutoff value for reading operators</p></td>
+<td><p>Real</p></td>
+<td><p>0.0</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">measure</span></code></td>
-<td>Whether to calculate and save observables</td>
-<td>Boolean</td>
-<td>true</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<td><p>Whether to calculate and save observables</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">output</span></code></td>
-<td>Directory for saving result such as physical quantities</td>
-<td>String</td>
-<td>&#8220;output&#8221;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<td><p>Directory for saving result such as physical quantities</p></td>
+<td><p>String</p></td>
+<td><p>&quot;output&quot;</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tensor_save</span></code></td>
-<td>Directory for saving optimized tensors</td>
-<td>String</td>
-<td>&#8220;&#8221;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
+<td><p>Directory for saving optimized tensors</p></td>
+<td><p>String</p></td>
+<td><p>&quot;&quot;</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">tensor_load</span></code></td>
-<td>Directory for loading initial tensors</td>
-<td>String</td>
-<td>&#8220;&#8221;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
+<td><p>Directory for loading initial tensors</p></td>
+<td><p>String</p></td>
+<td><p>&quot;&quot;</p></td>
 </tr>
 </tbody>
 </table>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">is_real</span></code><ul>
-<li>When set to <code class="docutils literal"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</li>
-<li>If one complex operator is defined at least,  calculation will end in errors before starting.</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
+<ul>
+<li><p>When set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</p></li>
+<li><p>If one complex operator is defined at least,  calculation will end in errors before starting.</p></li>
 </ul>
 </li>
-<li><code class="docutils literal"><span class="pre">iszero_tol</span></code><ul>
-<li>When the absolute value of operator elements loaded is less than <code class="docutils literal"><span class="pre">iszero_tol</span></code>, it is regarded as zero</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<ul>
+<li><p>When the absolute value of operator elements loaded is less than <code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code>, it is regarded as zero</p></li>
 </ul>
 </li>
-<li><code class="docutils literal"><span class="pre">meaure</span></code><ul>
-<li>When set to <code class="docutils literal"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</li>
-<li>Elapsed time <code class="docutils literal"><span class="pre">time.dat</span></code> is always saved</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">meaure</span></code></p>
+<ul>
+<li><p>When set to <code class="docutils literal notranslate"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</p></li>
+<li><p>Elapsed time <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> is always saved</p></li>
 </ul>
 </li>
-<li><code class="docutils literal"><span class="pre">output</span></code><ul>
-<li>Save numerical results such as physical quantities to files in this directory</li>
-<li>Empty means <code class="docutils literal"><span class="pre">&quot;.&quot;</span></code> (current directory)</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
+<ul>
+<li><p>Save numerical results such as physical quantities to files in this directory</p></li>
+<li><p>Empty means <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span></code> (current directory)</p></li>
 </ul>
 </li>
-<li><code class="docutils literal"><span class="pre">tensor_save</span></code><ul>
-<li>Save optimized tensors to files in this directory</li>
-<li>If empty no tensors will be saved</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p>
+<ul>
+<li><p>Save optimized tensors to files in this directory</p></li>
+<li><p>If empty no tensors will be saved</p></li>
 </ul>
 </li>
-<li><code class="docutils literal"><span class="pre">tensor_load</span></code><ul>
-<li>Read initial tensors from files in this directory</li>
-<li>If empty no tensors will be loaded</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
+<ul>
+<li><p>Read initial tensors from files in this directory</p></li>
+<li><p>If empty no tensors will be loaded</p></li>
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="parameter-simple-update">
-<h1><code class="docutils literal"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="parameter-simple-update">
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h1>
 <p>Parameters in the simple update procedure.</p>
-<table border="1" class="docutils">
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Name</th>
-<th class="head">Description</th>
-<th class="head">Type</th>
-<th class="head">Default</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tau</span></code></td>
-<td>Imaginary time step <span class="math">\(\tau\)</span> in imaginary time evolution operator</td>
-<td>Real</td>
-<td>0.01</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>Imaginary time step <span class="math notranslate nohighlight">\(\tau\)</span> in imaginary time evolution operator</p></td>
+<td><p>Real</p></td>
+<td><p>0.01</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
-<td>Number of simple updates</td>
-<td>Integer</td>
-<td>0</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>Number of simple updates</p></td>
+<td><p>Integer</p></td>
+<td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">lambda_cutoff</span></code></td>
-<td>cutoff of the mean field to be considered zero in the simple update</td>
-<td>Real</td>
-<td>1e-12</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
+<td><p>cutoff of the mean field to be considered zero in the simple update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
+<td><p>Whether the tensor gauge is fixed</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_maxiter</span></code></p></td>
+<td><p>Maximum number of iterations for fixing gauge</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_converge_epsilon</span></code></p></td>
+<td><p>Convergence criteria of iterations for fixing gauge</p></td>
+<td><p>Real</p></td>
+<td><p>1e-2</p></td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="parameter-full-update">
-<h1><code class="docutils literal"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="parameter-full-update">
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h1>
 <p>Parameters in the full update procedure.</p>
-<table border="1" class="docutils">
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Name</th>
-<th class="head">Description</th>
-<th class="head">Type</th>
-<th class="head">Default</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">tau</span></code></td>
-<td>Imaginary time step <span class="math">\(\tau\)</span> in imaginary time evolution operator</td>
-<td>Real</td>
-<td>0.01</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>Imaginary time step <span class="math notranslate nohighlight">\(\tau\)</span> in imaginary time evolution operator</p></td>
+<td><p>Real</p></td>
+<td><p>0.01</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">num_step</span></code></td>
-<td>Number of full updates</td>
-<td>Integer</td>
-<td>0</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>Number of full updates</p></td>
+<td><p>Integer</p></td>
+<td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">env_cutoff</span></code></td>
-<td>Cutoff of singular values to be considered as zero when computing environment through full updates</td>
-<td>Real</td>
-<td>1e-12</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing environment through full updates</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">inverse_precision</span></code></td>
-<td>Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update</td>
-<td>Real</td>
-<td>1e-12</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inverse_precision</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
-<td>Convergence criteria for truncation optimization with full update</td>
-<td>Real</td>
-<td>1e-6</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>Convergence criteria for truncation optimization with full update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-6</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
-<td>Maximum iteration number for truncation optimization on full updates</td>
-<td>Integer</td>
-<td>100</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>Maximum iteration number for truncation optimization on full updates</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">gauge_fix</span></code></td>
-<td>Whether the tensor gauge is fixed</td>
-<td>Boolean</td>
-<td>true</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
+<td><p>Whether the tensor gauge is fixed</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">fastfullupdate</span></code></td>
-<td>Whether the fast full update is adopted</td>
-<td>Boolean</td>
-<td>true</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fastfullupdate</span></code></p></td>
+<td><p>Whether the fast full update is adopted</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="parameter-ctm">
-<h1><code class="docutils literal"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="parameter-ctm">
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h1>
 <p>Parameters for corner transfer matrices, CTM.</p>
-<table border="1" class="docutils">
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Name</th>
-<th class="head">Description</th>
-<th class="head">Type</th>
-<th class="head">Default</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">dimension</span></code></td>
-<td>Bond Dimension of CTM <span class="math">\(\chi\)</span></td>
-<td>Integer</td>
-<td>4</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dimension</span></code></p></td>
+<td><p>Bond Dimension of CTM <span class="math notranslate nohighlight">\(\chi\)</span></p></td>
+<td><p>Integer</p></td>
+<td><p>4</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">projector_cutoff</span></code></td>
-<td>Cutoff of singular values to be considered as zero when computing CTM projectors</td>
-<td>Real</td>
-<td>1e-12</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_cutoff</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing CTM projectors</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">convergence_epsilon</span></code></td>
-<td>CTM convergence criteria</td>
-<td>Real</td>
-<td>1e-6</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>CTM convergence criteria</p></td>
+<td><p>Real</p></td>
+<td><p>1e-6</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">iteration_max</span></code></td>
-<td>Maximum iteration number of convergence for CTM</td>
-<td>Integer</td>
-<td>100</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>Maximum iteration number of convergence for CTM</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">projector_corner</span></code></td>
-<td>Whether to use only the 1/4 corner tensor in the CTM projector calculation</td>
-<td>Boolean</td>
-<td>true</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
+<td><p>Whether to use only the 1/4 corner tensor in the CTM projector calculation</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">use_rsvd</span></code></td>
-<td>Whether to replace SVD with random SVD</td>
-<td>Boolean</td>
-<td>false</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
+<td><p>Whether to replace SVD with random SVD</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">rsvd_oversampling_factor</span></code></td>
-<td>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</td>
-<td>Real</td>
-<td>2.0</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
+<td><p>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</p></td>
+<td><p>Real</p></td>
+<td><p>2.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
+<td><p>Use mean field environment obtained through simple update instead of CTM</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
 </tr>
 </tbody>
 </table>
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
-</div>
-<div class="section" id="parameter-random">
-<h1><code class="docutils literal"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="parameter-random">
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>
 <p>Parameters for random number generators.</p>
-<table border="1" class="docutils">
+<table class="colwidths-given docutils align-default">
 <colgroup>
-<col width="38%" />
-<col width="38%" />
-<col width="13%" />
-<col width="13%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Name</th>
-<th class="head">Description</th>
-<th class="head">Type</th>
-<th class="head">Default</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">seed</span></code></td>
-<td>Seed of the pseudo-random number generator used to initialize the tensor</td>
-<td>Integer</td>
-<td>11</td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<td><p>Seed of the pseudo-random number generator used to initialize the tensor</p></td>
+<td><p>Integer</p></td>
+<td><p>11</p></td>
 </tr>
 </tbody>
 </table>
-<p>Each MPI process has the own seed as <code class="docutils literal"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
-</div>
-<div class="section" id="example">
+<p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
+</section>
+<section id="example">
 <h1>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-none"><div class="highlight"><pre>[parameter]
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
 [parameter.simple_update]
@@ -320,10 +341,11 @@ iteration_max = 10
 dimension = 9 # CHI
 </pre></div>
 </div>
-</div>
+</section>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -339,11 +361,6 @@ dimension = 9 # CHI
 
 
 
-<p>
-<iframe src="https://ghbtns.com/github-btn.html?user=&repo=&type=watch&count=true&size=large"
-  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
-</p>
-
 
 
 
@@ -355,8 +372,9 @@ dimension = 9 # CHI
 <li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">5. File format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">7. Acknowledgement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">8. Contacts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
 </ul>
 
 <div class="relations">
@@ -367,18 +385,23 @@ dimension = 9 # CHI
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
@@ -387,11 +410,11 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/file_specification/parameter_section.txt"
+      <a href="../_sources/file_specification/parameter_section.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
