@@ -15,21 +15,19 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
 
 #include <fstream>
 #include <vector>
 
-#include <PEPS_Basics.hpp>
-#include <PEPS_Parameters.cpp>
-#include <mpi.cpp>
+#include "../src/tensor.hpp"
+#include "../src/mpi.hpp"
+#include "../src/iTPS/PEPS_Parameters.hpp"
+#include "../src/iTPS/core/full_update.hpp"
+
+#include "doctest.h"
 
 TEST_CASE("testing full update") {
-#ifdef _NO_MPI
-  using tensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
-#else
-  using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-#endif
+  using tensor = tenes::real_tensor;
 
   using mptensor::Index;
   using mptensor::Shape;
@@ -37,7 +35,6 @@ TEST_CASE("testing full update") {
   const int ldof = 2;
   const int D = 2;
   const int chi = 4;
-  const int nleg = 4;
 
   const double tol = 1.0e-8;
 
@@ -83,14 +80,13 @@ TEST_CASE("testing full update") {
 
   // calculation
 
-  tenes::PEPS_Parameters peps_parameters;
-  int connect = 2;
+  tenes::itps::PEPS_Parameters peps_parameters;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 
-  tenes::Full_update_bond(C[0], C[1], C[2], C[3], E[0], E[1], E[2], E[3], E[4],
-                          E[5], T[0], T[1], op, 2, peps_parameters, new_T[0],
-                          new_T[1]);
+  tenes::itps::core::Full_update_bond(C[0], C[1], C[2], C[3], E[0], E[1], E[2],
+                                      E[3], E[4], E[5], T[0], T[1], op, 2,
+                                      peps_parameters, new_T[0], new_T[1]);
 
   // load answer
 

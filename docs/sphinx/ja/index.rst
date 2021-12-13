@@ -19,6 +19,7 @@ Contents
    tutorial/index
    file_specification/index
    algorithm/index
+   faq
    acknowledge/index
    contact/index
    

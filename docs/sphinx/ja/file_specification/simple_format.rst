@@ -318,3 +318,11 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 
 ``tenes_simple`` では相関関数 ``C = <A(0)B(r)>`` はデフォルトでは計算されません。
 相関関数を計算したい場合は、 ``tenes`` の入力ファイルで指定する ``correlation`` セクションと共通のフォーマットで指定することができます。詳細は、:doc:`expert_format` の ``correlation`` セクションをご覧ください。
+
+``correlation_length`` セクション
+==================================
+
+``tenes_simple`` では使われず、 ``tenes_std`` の入力ファイルとしてそのままコピーされます。
+
+.. include:: ./correlation_length_section.rst
+

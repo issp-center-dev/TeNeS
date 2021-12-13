@@ -70,3 +70,8 @@ The last two indicate the real and imaginary parts of the elements of the operat
 ===========================
 
 .. include:: ./correlation_section.rst
+
+``correlation_length`` section
+==================================
+
+.. include:: ./correlation_length_section.rst

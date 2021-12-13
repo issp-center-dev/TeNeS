@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.6...3.14)
 message(STATUS "CMake version: " ${CMAKE_VERSION})
 project(TeNeS CXX)
-set(TENES_VERSION 1.1.2)
+set(TENES_VERSION 1.2.0)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
@@ -29,16 +31,11 @@ if(Testing)
     enable_testing()
 endif()
 
-set(USE_SANITIZER OFF)
-if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
-    set(USE_SANITIZER ON)
-endif ()
-
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/submoduled")
+    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps")
     # Update submodules as needed
     if(GIT_SUBMODULE)
         message(STATUS "Submodule update")
@@ -55,18 +52,8 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
             message(FATAL_ERROR "The submodule ${submod} were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
         endif()
     endforeach()
-
-else()
-    set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/deps/cloned")
 endif()
-
-if (USE_SANITIZER)
-    set(CMAKE_MODULE_PATH "${DEPS_DIR}/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
-    find_package(Sanitizers)
-endif()
-
-set(BUNDLED_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/bundled")
+set(DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps")
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp.cmake)
 openmp()
@@ -76,7 +63,6 @@ if(NOT DEFINED OpenMP_CXX_LIBRARIES)
 endif()
 
 find_package(LAPACK REQUIRED)
-
 
 if(ENABLE_MPI)
     if(APPLE)
@@ -133,9 +119,25 @@ else()
     set(CPPTOML_INCLUDE_DIR ${DEPS_DIR}/cpptoml/include)
 endif()
 
+set(BOOST_INCLUDE_DIR ${DEPS_DIR}/boost/include)
+
 message(STATUS "MPTENSOR_INCLUDE_DIR: ${MPTENSOR_INCLUDE_DIR}")
 message(STATUS "MPTENSOR_LIB_DIR: ${MPTENSOR_LIB_DIR}")
 message(STATUS "CPPTOML_INCLUDE_DIR: ${CPPTOML_INCLUDE_DIR}")
+
+
+set(TENES_COMPILE_OPTIONS)
+if(OPENMP_FOUND)
+    set(TENES_COMPILE_OPTIONS ${OMP_FLAG} ${TENES_COMPILE_OPTIONS})
+else()
+    set(TENES_COMPILE_OPTIONS -D_NO_OMP ${TENES_COMPILE_OPTIONS})
+endif()
+
+if(NOT ENABLE_MPI)
+    set(TENES_COMPILE_OPTIONS -D_NO_MPI ${TENES_COMPILE_OPTIONS})
+endif()
+
+message(STATUS "TENES_COMPILE_OPTIONS: ${TENES_COMPILE_OPTIONS}")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tool)
@@ -148,4 +150,23 @@ if(Document)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/docs/sphinx)
 endif()
 
+# TeNeSConfig.cmake
+include(CMakePackageConfigHelpers)
+set(TENESCONFIG_INCLUDE_DIRS include)
+set(TENESCONFIG_LIBRARY_DIR lib)
+configure_package_config_file(config/TeNeSConfig.cmake.in 
+    ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfig.cmake
+    INSTALL_DESTINATION share/cmake/tenes
+    PATH_VARS TENESCONFIG_INCLUDE_DIRS TENESCONFIG_LIBRARY_DIR
+    )
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfigVersion.cmake
+    VERSION ${TENES_VERSION}
+    COMPATIBILITY SameMajorVersion
+    )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/TeNeSConfigVersion.cmake
+    DESTINATION share/cmake/tenes
+    )
+
+# sample files
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sample DESTINATION share/tenes)

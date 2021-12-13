@@ -14,31 +14,34 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef UTIL_READ_TENSOR_HPP
-#define UTIL_READ_TENSOR_HPP
+#ifndef TENES_SRC_UTIL_READ_TENSOR_HPP_
+#define TENES_SRC_UTIL_READ_TENSOR_HPP_
 
 #include <algorithm>
-#include <mptensor/mptensor.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <mptensor/mptensor.hpp>
 
 #include "string.hpp"
 #include "type_traits.hpp"
 #include "../exception.hpp"
+#include "../mpi.hpp"
 
 namespace tenes {
 
 namespace util {
 
 template <class ptensor>
-ptensor read_tensor(std::string const &str, mptensor::Shape dims,
+ptensor read_tensor(std::string const &str, 
+                    mptensor::Shape dims,
+                    MPI_Comm comm = MPI_COMM_WORLD,
                     double atol = 0.0) {
   using value_type = typename ptensor::value_type;
-  ptensor ret(dims);
+  ptensor ret(comm, dims);
   const size_t rank = ret.rank();
 
-  const static std::string delim = " \t";
+  static const std::string delim = " \t";
   std::string line;
 
   std::stringstream ss(str);
@@ -88,7 +91,7 @@ ptensor read_tensor(std::string const &str, mptensor::Shape dims,
   return ret;
 }
 
-} // namespace util
-} // namespace tenes
+}  // namespace util
+}  // namespace tenes
 
-#endif // UTIL_READ_TENSOR_HPP
+#endif  // TENES_SRC_UTIL_READ_TENSOR_HPP_

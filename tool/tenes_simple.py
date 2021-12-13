@@ -18,7 +18,8 @@ import re
 
 from collections import namedtuple
 from itertools import chain, product
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, TextIO, MutableMapping
+import abc
 
 import numpy as np
 
@@ -49,7 +50,19 @@ def float_to_str(v: float) -> str:
     return ret
 
 
+def value_to_str(v) -> str:
+    if isinstance(v, str):
+        return "'{}'".format(v)
+    elif isinstance(v, bool):
+        return "true" if v else "false"
+    elif isinstance(v, float):
+        return float_to_str(v)
+    else:
+        return "{}".format(v)
+
+
 def lower_dict(d: dict) -> dict:
+    """ makes all keys lowercase"""
     ks = list(d.keys())
     for k in ks:
         if isinstance(d[k], dict):
@@ -81,16 +94,6 @@ def dump_op(op: np.ndarray) -> Iterable[str]:
         it.iternext()
 
 
-def getparam(param: dict, name: str, index: int, default):
-    P = param.get(name, default)
-    if isinstance(P, list):
-        if index > len(P):
-            msg = "parameter {} has too few elements.".format(name)
-            raise RuntimeError(msg)
-        return P[index]
-    return P
-
-
 Bond = namedtuple("Bond", "source dx dy")
 
 Hamiltonian = namedtuple("Hamiltonian", "elements bonds")
@@ -101,6 +104,10 @@ def dumpbond(bond: Bond) -> str:
 
 
 class SubLattice:
+    sites: List[int]
+    vdim: List[int]
+    is_vacancy: bool
+
     def __init__(self, vdim: List[int], is_vacancy: bool = False):
         self.sites = []
         self.vdim = vdim
@@ -110,7 +117,7 @@ class SubLattice:
         self.sites.append(site)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
-        ret = {}
+        ret: Dict[str, Any] = {}
         ret["index"] = self.sites
         if self.is_vacancy:
             ret["physical_dim"] = 1
@@ -121,6 +128,18 @@ class SubLattice:
 
 
 class Lattice(object):
+    type: str
+    z: int
+    skew: int
+    L: int
+    W: int
+    vdim: int
+    sublattice: List[SubLattice]
+    bonds: List[List[List[Bond]]]  # [neighbor_level][type][index]
+    initial_states: str
+    noise: float
+    latticevector: np.ndarray
+
     def __init__(self, param: Dict[str, Any]):
         self.type = ""
         self.z = 0
@@ -136,7 +155,7 @@ class Lattice(object):
         self.latticevector = np.eye(2)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
-        ret = {}
+        ret: Dict[str, Any] = {}
         ret["L_sub"] = [self.L, self.W]
         ret["skew"] = self.skew
         ret["unitcell"] = [sub.to_dict(physdim) for sub in self.sublattice]
@@ -145,7 +164,7 @@ class Lattice(object):
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
         return np.array([x, y])
 
-    def write_coordinates(self, f):
+    def write_coordinates(self, f: TextIO) -> None:
         f.write("# coord_version = 1\n")
         f.write("# name = {}\n".format(self.type))
         f.write(
@@ -160,12 +179,11 @@ class Lattice(object):
         f.write("\n")
         for i, c in enumerate(self.coords):
             if c is not None:
-                # f.write("{} {} {}\n".format(i, c[0], c[1]))
                 x, y = index2coord(i, self.L)
                 C = self.cartesian_coordinate(x, y)
                 f.write("{} {} {}\n".format(i, C[0], C[1]))
 
-    def write_bonds(self, f, nnlevel):
+    def write_bonds(self, f: TextIO, nnlevel: int) -> None:
         for i, bonds in enumerate(self.bonds[nnlevel]):
             for b in bonds:
                 source = b.source
@@ -176,10 +194,10 @@ class Lattice(object):
                 f.write("{} {} {}\n".format(c[0], c[1], i))
                 f.write("\n\n")
 
-    def numsites(self):
+    def numsites(self) -> int:
         return self.L * self.W
 
-    def valid_sites(self):
+    def valid_sites(self) -> List[int]:
         ret = []
         for sl in self.sublattice:
             if not sl.is_vacancy:
@@ -330,13 +348,14 @@ class TriangularLattice(Lattice):
 
         vdim = self.vdim
 
+        nhops = np.zeros((L + 1, W + 1), dtype=np.int64)
         if self.initial_states == "ferro":
             self.sublattice.append(SubLattice([vdim] * 4))
         elif self.initial_states == "antiferro":
             self.sublattice.append(SubLattice([vdim] * 4))
             self.sublattice.append(SubLattice([vdim] * 4))
             self.sublattice.append(SubLattice([vdim] * 4))
-            nhops = np.ones((L + 1, W + 1), dtype=np.int) * 100000000
+            nhops = np.ones((L + 1, W + 1), dtype=np.int64) * 100000000
             nhops[0, 0] = 0
         elif self.initial_states == "random":
             self.sublattice.append(SubLattice([vdim] * 4))
@@ -475,18 +494,24 @@ class KagomeLattice(Lattice):
 
 
 class Model(object):
+    N: int
+    onesite_ops: List[np.ndarray]
+    onesite_ops_name: List[str]
+    twosite_ops: List[Tuple[int, int]]
+    twosite_ops_name: List[str]
+    params: List[List[Dict[str, Any]]]  # [neighbor_level][bond_type]
+    ham_list: List[List[Tuple[int, int]]]
+
     def __init__(self):
         self.N = 0
         self.onesite_ops = []
         self.params = [[]]
         self.ham_list = [[]]
-        pass
 
     def onesite_observables_as_dict(self) -> List[Dict[str, Any]]:
         ret = []
-
         for i, (name, op) in enumerate(zip(self.onesite_ops_name, self.onesite_ops)):
-            dic = {}
+            dic: Dict[str, Any] = {}
             dic["group"] = i
             dic["name"] = name
             dic["sites"] = []
@@ -502,7 +527,7 @@ class Model(object):
         for i, (name, op) in enumerate(
             zip(self.twosite_ops_name, self.twosite_ops), start=1
         ):
-            dic = {}
+            dic: Dict[str, Any] = {}
             dic["group"] = i
             dic["name"] = name
             dic["dim"] = [self.N, self.N]
@@ -510,6 +535,14 @@ class Model(object):
             dic["is_real"] = np.all(np.isreal(op))
             ret.append(dic)
         return ret
+
+    @abc.abstractmethod
+    def model_hamiltonian(self, z: int, **kwargs) -> np.ndarray:
+        pass
+
+    @abc.abstractmethod
+    def initial_states(self, nlat: int) -> np.ndarray:
+        pass
 
     def bondhamiltonian(self, typ: int, z: int = 1) -> np.ndarray:
         n, t = self.ham_list[typ][0]
@@ -603,7 +636,7 @@ class SpinModel(Model):
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
         def coherent_state(theta, phi):
-            zeta = np.tan(0.5 * theta) * np.complex(np.cos(phi), np.sin(phi))
+            zeta = np.tan(0.5 * theta) * complex(np.cos(phi), np.sin(phi))
             sm = Sminus(self.S)
             U = expm(zeta * sm)
             ret = np.zeros(self.N)
@@ -670,7 +703,7 @@ class SpinModel(Model):
 
         E = np.eye(self.N)
         Sz, Sx, Sy = self.onesite_ops
-        ham = np.zeros([self.N] * 4, dtype=np.complex)
+        ham = np.zeros([self.N] * 4, dtype=complex)
         SS = np.zeros([self.N] * 4)
         it = np.nditer(ham, flags=["multi_index"], order="F")
         while not it.finished:
@@ -697,14 +730,16 @@ class SpinModel(Model):
         ham += B * SS ** 2
         return ham
 
-    def read_params(self, modelparam: Dict[str, Any]):
-        ret = [
+    def read_params(self, modelparam: Dict[str, Any]) -> None:
+        ret: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
             [{}, {}, {}],  # 3rd neighbors
         ]
 
-        def update(types, names, n, key):
+        def update(
+            types: Iterable[int], names: Iterable[str], n: int, key: str
+        ) -> None:
             for typ in types:
                 for name in names:
                     if name in ret[n][typ]:
@@ -820,7 +855,7 @@ class BoseHubbardModel(Model):
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
         ret = np.zeros((num_sublattice, self.N))
-        ret[0, self.N-1] = 1.0
+        ret[0, self.N - 1] = 1.0
         for i in range(1, num_sublattice):
             ret[i, 0] = 1.0
         return ret
@@ -828,10 +863,10 @@ class BoseHubbardModel(Model):
     def model_hamiltonian(self, z: int, **args) -> np.ndarray:
         """
         Generate bond Hamiltonian of bosonic system
-        
+
         Parameters
         ----------
-        z: int 
+        z: int
             coordinate number
         t: float
             hopping constant, -t bi^d bj
@@ -872,14 +907,16 @@ class BoseHubbardModel(Model):
             it.iternext()
         return ham
 
-    def read_params(self, modelparam: Dict[str, Any]):
-        ret = [
+    def read_params(self, modelparam: Dict[str, Any]) -> None:
+        ret: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
             [{}, {}, {}],  # 3rd neighbors
         ]
 
-        def update(types, names, n, key):
+        def update(
+            types: Iterable[int], names: Iterable[str], n: int, key: str
+        ) -> None:
             for typ in types:
                 for name in names:
                     if name in ret[n][typ]:
@@ -929,6 +966,7 @@ def make_lattice(param: Dict[str, Any]) -> Lattice:
 
     latparam = param["lattice"]
     latname = latparam["type"].strip('""')
+    lattice: Lattice
     if latname.startswith("square"):
         lattice = SquareLattice(latparam)
     elif latname.startswith("honeycomb"):
@@ -960,6 +998,7 @@ def make_model(param: Dict[str, Any]) -> Model:
         Raises RuntimeError when given model name is not registerered
     """
     modelparam = param["model"]
+    model: Model
     if modelparam["type"] == "spin":
         model = SpinModel(modelparam)
     elif modelparam["type"] == "boson":
@@ -981,7 +1020,7 @@ def hamiltonians(lattice: Lattice, model: Model) -> List[Hamiltonian]:
     return ret
 
 
-def tenes_simple(param: Dict[str, Any]) -> str:
+def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
     """
     Parameters
     ----------
@@ -1001,14 +1040,7 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():
-                if isinstance(v, str):
-                    ret.append('{} = "{}"'.format(k, v))
-                elif isinstance(v, bool):
-                    ret.append("{} = {}".format(k, "true" if v else "false"))
-                elif isinstance(v, float):
-                    ret.append("{} = {}".format(k, float_to_str(v)))
-                else:
-                    ret.append("{} = {}".format(k, v))
+                ret.append("{} = {}".format(k, value_to_str(v)))
     ret.append("")
 
     ret.append("[tensor]")
@@ -1093,31 +1125,6 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         ret.append('"""')
         ret.append("")
 
-    # for i in range(len(model.onesite_ops)):
-    #     oo = model.onesite_ops[i]
-    #     if not is_complex:
-    #         if not np.all(np.isreal(oo)):
-    #             v = np.einsum("ij,kl -> ikjl", oo, oo)
-    #             if not np.all(np.isreal(v)):
-    #                 continue
-    #     ret.append("[[observable.twosite]]")
-    #     ret.append('name = "{name}{name}"'.format(name=model.onesite_ops_name[i]))
-    #     ret.append("group = {}".format(i + 1))
-    #     ret.append("dim = {}".format([model.N] * 2))
-    #     ret.append('bonds = """')
-    #     for bond in chain(*lattice.bonds[0]):
-    #         ret.append(dumpbond(bond))
-    #     ret.append('"""')
-    #     if is_complex or np.all(np.isreal(oo)):
-    #         ret.append("ops = {}".format([i] * 2))
-    #     else:
-    #         v = np.einsum("ij,kl -> ikjl", oo, oo)
-    #         if is_complex or np.all(np.isreal(v)):
-    #             ret.append('elements = """')
-    #             for line in dump_op(v):
-    #                 ret.append(line)
-    #             ret.append('"""')
-    #     ret.append("")
     k = 1
     for i, j in model.twosite_ops:
         oi = model.onesite_ops[i]
@@ -1126,7 +1133,9 @@ def tenes_simple(param: Dict[str, Any]) -> str:
         if not (is_complex or np.all(np.isreal(v))):
             continue
         ret.append("[[observable.twosite]]")
-        ret.append('name = "{}{}"'.format(model.onesite_ops_name[i], model.onesite_ops_name[j]))
+        ret.append(
+            'name = "{}{}"'.format(model.onesite_ops_name[i], model.onesite_ops_name[j])
+        )
         ret.append("group = {}".format(k))
         k += 1
         ret.append("dim = {}".format([model.N] * 2))
@@ -1158,6 +1167,13 @@ def tenes_simple(param: Dict[str, Any]) -> str:
             ret.append("  {},".format(ops))
         ret.append("]")
 
+    if "correlation_length" in param:
+        clength = param["correlation_length"]
+        ret.append("[correlation_length]")
+        for k, v in clength.items():
+            ret.append("{} = {}".format(k, value_to_str(v)))
+        ret.append("")
+
     return "\n".join(ret), lattice
 
 
@@ -1182,10 +1198,14 @@ if __name__ == "__main__":
         help="Site Information file",
     )
     parser.add_argument(
-        "-b", "--bondfile", dest="bondfile", default="", help="Bond Information file",
+        "-b",
+        "--bondfile",
+        dest="bondfile",
+        default="",
+        help="Bond Information file",
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.1.2"
+        "-v", "--version", dest="version", action="version", version="1.2.0"
     )
 
     args = parser.parse_args()

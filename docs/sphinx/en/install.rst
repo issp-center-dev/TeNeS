@@ -21,7 +21,6 @@ TeNeS depends on the following libraries, but these are downloaded automatically
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ 
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
-3. `sanitizers-cmake <https://github.com/arsenm/sanitizers-cmake>`_
 
 TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.
 MPI and ScaLAPACK must be installed by yourself.
@@ -45,7 +44,7 @@ Additionary, the following python packages are also required.
 Install
 ======================
 
-1. Build TeNeS by typing the following commands:
+1. Build TeNeS by typing the following commands (Some environment such as CentOS provides CMake3 as ``cmake3``)::
 
 ::
 
@@ -56,9 +55,12 @@ Install
 
 The default value of the ``<path to install to>`` is ``/usr/local``. 
 
-(Some environment such as CentOS provides CMake3 as ``cmake3`` .)
+.. admonition:: Parallel Build
 
-The executable file ``tests``  will be generated in  ``build/src`` directory.
+  The ``make`` command accepts ``-j <num>`` options and then uses ``<num>`` processes for a parallel building.
+  This reduces the time to build TeNeS drastically.
+
+The executable file ``tenes``  will be generated in  ``build/src`` directory.
 By typing the following command, tests for ``tenes`` can be done.
 
 ::

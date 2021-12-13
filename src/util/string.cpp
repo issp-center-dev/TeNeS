@@ -14,9 +14,6 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef UTIL_STRING_HPP
-#define UTIL_STRING_HPP
-
 #include "string.hpp"
 
 #include <string>
@@ -26,13 +23,13 @@ namespace tenes {
 namespace util {
 
 std::vector<std::string> split(std::string const &str,
-                               std::string const &delim = " \t") {
+                               std::string const &delim) {
   std::vector<std::string> words;
   auto index = 0;
   auto last = str.size();
   while (index != std::string::npos) {
     auto next = str.find_first_of(delim, index);
-    if(next == std::string::npos){
+    if (next == std::string::npos) {
       words.push_back(str.substr(index, last - index + 1));
       break;
     }
@@ -42,7 +39,7 @@ std::vector<std::string> split(std::string const &str,
   return words;
 }
 
-std::string lstrip(std::string const &str, std::string const &delim = " \t\n") {
+std::string lstrip(std::string const &str, std::string const &delim) {
   std::string ret("");
   auto index = str.find_first_not_of(delim);
   if (index != std::string::npos) {
@@ -51,7 +48,7 @@ std::string lstrip(std::string const &str, std::string const &delim = " \t\n") {
   return ret;
 }
 
-std::string rstrip(std::string const &str, std::string const &delim = " \t\n") {
+std::string rstrip(std::string const &str, std::string const &delim) {
   std::string ret("");
   auto index = str.find_last_not_of(delim);
   if (index != std::string::npos) {
@@ -60,7 +57,7 @@ std::string rstrip(std::string const &str, std::string const &delim = " \t\n") {
   return ret;
 }
 
-std::string strip(std::string const &str, std::string const &delim = " \t\n") {
+std::string strip(std::string const &str, std::string const &delim) {
   return rstrip(lstrip(str, delim), delim);
 }
 
@@ -71,5 +68,3 @@ std::string drop_comment(std::string const &str) {
 
 }  // namespace util
 }  // namespace tenes
-
-#endif  // UTIL_STRING_HPP

@@ -71,3 +71,9 @@ simple update, full update で使う2サイト虚時間発展演算子を記述�
 ==========================
 
 .. include:: ./correlation_section.rst
+
+
+``correlation_length`` セクション
+======================================
+
+.. include:: ./correlation_length_section.rst

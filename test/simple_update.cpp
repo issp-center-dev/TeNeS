@@ -20,16 +20,13 @@
 #include <fstream>
 #include <vector>
 
-#include <PEPS_Basics.hpp>
-#include <PEPS_Parameters.cpp>
-#include <mpi.cpp>
+#include "../src/tensor.hpp"
+#include "../src/mpi.hpp"
+#include "../src/iTPS/PEPS_Parameters.hpp"
+#include "../src/iTPS/core/simple_update.hpp"
 
 TEST_CASE("testing simple update") {
-#ifdef _NO_MPI
-  using tensor = mptensor::Tensor<mptensor::lapack::Matrix, double>;
-#else
-  using tensor = mptensor::Tensor<mptensor::scalapack::Matrix, double>;
-#endif
+  using tensor = tenes::real_tensor;
 
   using mptensor::Index;
   using mptensor::Shape;
@@ -98,13 +95,14 @@ TEST_CASE("testing simple update") {
 
   // calculation
 
-  tenes::PEPS_Parameters peps_parameters;
+  tenes::itps::PEPS_Parameters peps_parameters;
   int connect = 2;
   std::vector<tensor> new_T(2);
   std::vector<double> new_lambda;
 
-  Simple_update_bond(T[0], T[1], lambda_1, lambda_2, op, connect,
-                     peps_parameters, new_T[0], new_T[1], new_lambda);
+  tenes::itps::core::Simple_update_bond(T[0], T[1], lambda_1, lambda_2, op,
+                                        connect, peps_parameters, new_T[0],
+                                        new_T[1], new_lambda);
 
   // check results
 
@@ -113,10 +111,10 @@ TEST_CASE("testing simple update") {
 
   int sign = 0;
   for (int a = 0; a < 2; ++a) {
-    for (int i = 0; i < D; ++i){
-      for (int j = 0; j < D; ++j){
-        for (int k = 0; k < D; ++k){
-          for (int l = 0; l < D; ++l){
+    for (int i = 0; i < D; ++i) {
+      for (int j = 0; j < D; ++j) {
+        for (int k = 0; k < D; ++k) {
+          for (int l = 0; l < D; ++l) {
             sign = 0;
             for (int m = 0; m < ldof; ++m) {
               double result, answer;
@@ -133,7 +131,11 @@ TEST_CASE("testing simple update") {
               }
               CHECK(result * sign == doctest::Approx(answer).epsilon(tol));
               ofs << result << " ";
-            }}}}}
+            }
+          }
+        }
+      }
+    }
     ofs << std::endl;
   }
 

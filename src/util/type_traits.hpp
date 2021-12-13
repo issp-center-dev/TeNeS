@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef UTIL_TYPE_TRAITS_HPP
-#define UTIL_TYPE_TRAITS_HPP
+#ifndef TENES_SRC_UTIL_TYPE_TRAITS_HPP_
+#define TENES_SRC_UTIL_TYPE_TRAITS_HPP_
 
 #include <complex>
 #include <type_traits>
@@ -29,7 +29,8 @@ namespace traits {
 struct get_value_type {
   template <class T>
   static typename T::value_type check(typename T::value_type *);
-  template <class T> static T check(...);
+  template <class T>
+  static T check(...);
 };
 
 template <class to, class from>
@@ -48,16 +49,18 @@ to convert_complex(
   return to(std::real(v), std::imag(v));
 }
 
-} // end of namespace traits
+}  // end of namespace traits
 
-template <class T> struct get_value_type {
+template <class T>
+struct get_value_type {
   using value_type = decltype(traits::get_value_type::check<T>(nullptr));
 };
 
-template <class to, class from> to convert_complex(from const &v) {
+template <class to, class from>
+to convert_complex(from const &v) {
   return traits::convert_complex<to>(v, nullptr);
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // UTIL_TYPE_TRAITS_HPP
+#endif  // TENES_SRC_UTIL_TYPE_TRAITS_HPP_

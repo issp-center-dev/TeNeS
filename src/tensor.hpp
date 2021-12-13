@@ -14,63 +14,55 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENSOR_HPP
-#define TENSOR_HPP
+#ifndef TENES_SRC_TENSOR_HPP_
+#define TENES_SRC_TENSOR_HPP_
 
-#include <sstream>
+#include <cstddef>
+#include <vector>
+#include <complex>
 
-#include <mptensor/tensor.hpp>
-
-#include "exception.hpp"
+#include "mptensor/tensor.hpp"  // IWYU pragma: export
 
 namespace tenes {
 
+/*! If in the MPI mode, this is just `mptensor::scalapack::Matrix`.
+ *  Otherwise (`_NO_MPI` is defined), this is `mptensor::lapack::Matrix`.
+ */
 #ifdef _NO_MPI
-template <class T> using mptensor_matrix_type = mptensor::lapack::Matrix<T>;
+template <class T>
+using mptensor_matrix_type = mptensor::lapack::Matrix<T>;
 #else
-template <class T> using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
-#endif // USE_MPI
+template <class T>
+using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
+#endif  // USE_MPI
 
-template <class T> using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type, T>;
+template <class T>
+using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type, T>;
+
+/*! @brief Non-distributed tensor even in the MPI mode
+ */
+template <class T>
+using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix, T>;
+
 using real_tensor = mptensor_tensor_type<double>;
 using complex_tensor = mptensor_tensor_type<std::complex<double>>;
 
+template <class tensor>
+tensor resize_tensor(tensor const& src, mptensor::Shape target_shape);
+
 template <class T>
-mptensor_tensor_type<T> resize_tensor(mptensor_tensor_type<T> const& src, mptensor::Shape target_shape){
-  mptensor::Shape shape = src.shape();
-  const size_t ndim = shape.size();
-  if(target_shape.size() != ndim){
-    std::stringstream ss;
-    ss << "dimension mismatch in resize_tensor: source = " << ndim << ", target = " << target_shape.size();
-    tenes::logic_error(ss.str());
-  }
-  mptensor::Shape zero = shape;
+void eigen(small_tensor<T> const& A, std::vector<std::complex<double>>& eigvals,
+           std::vector<std::complex<double>>& eigvecs_last, int nev);
 
-  bool to_extend = false;
-  bool to_shrink = false;
-
-  for(size_t i=0; i<ndim; ++i){
-    if(shape[i] < target_shape[i]){
-      to_extend = true;
-      shape[i] = target_shape[i];
-    }else if(shape[i] > target_shape[i]){
-      to_shrink = true;
-    }
-    zero[i] = 0;
+template <class T>
+small_tensor<T> identity(std::size_t k, T v) {
+  small_tensor<T> ret{mptensor::Shape(k, k)};
+  for (std::size_t i = 0; i < k; ++i) {
+    ret.set_value({k, k}, v);
   }
-  mptensor_tensor_type<T> A;
-  if(to_extend){
-    A = mptensor::extend(src, shape);
-  }else{
-    A = src;
-  }
-  if(to_shrink){
-    return mptensor::slice(A, zero, target_shape);
-  }else{
-    return A;
-  }
+  return ret;
 }
 
-} // end of namespace tenes
+}  // end of namespace tenes
 
-#endif // TENSOR_HPP
+#endif  // TENES_SRC_TENSOR_HPP_

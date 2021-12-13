@@ -1,0 +1,16 @@
+# Usage
+# find_pacakge(TeNeS REQUIRED)
+# add_executable(main main.cpp)
+# target_include_directories(main PRIVATE ${TENES_INCLUDE_DIRS})
+# target_link_libraries(main PRIVATE ${TENES_LIBRARIES})
+# target_compile_options(main PRIVATE ${TENES_COMPILE_OPTIONS})
+
+set(TENES_VERSION @TENES_VERSION@)
+
+@PACKAGE_INIT@
+
+set_and_check(TENES_INCLUDE_DIRS @PACKAGE_TENESCONFIG_INCLUDE_DIRS@)
+set_and_check(TENES_LIBRARIES @PACKAGE_TENESCONFIG_LIBRARY_DIR@/@CMAKE_SHARED_LIBRARY_PREFIX@tenes@CMAKE_SHARED_LIBRARY_SUFFIX@)
+set(TENES_COMPILE_OPTIONS @TENES_COMPILE_OPTIONS@)
+
+check_required_components(TeNeS)

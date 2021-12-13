@@ -14,9 +14,9 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef VERSION_HPP
-#define VERSION_HPP
+#ifndef TENES_SRC_VERSION_HPP_
+#define TENES_SRC_VERSION_HPP_
 
-#define TENES_VERSION "1.1.2"
+#define TENES_VERSION "1.2.0"
 
-#endif // VERSION_HPP
+#endif // TENES_SRC_VERSION_HPP_
