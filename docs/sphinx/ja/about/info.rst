@@ -30,6 +30,13 @@ TeNeS は以下のメンバーで開発しています。
 
 本ソフトウェアのプログラムパッケージおよびソースコード一式はGNU General Public License version 3（GPL v3）に準じて配布されています。
 
+論文
+========
+
+TeNeS を用いた結果を出版する場合には、次の論文を引用していただけると幸いです。
+
+`Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", arXiv:2112.13184 <https://arXiv.org/abs/2112.13184>`_
+
 コピーライト
 ==================
 
