@@ -30,6 +30,13 @@ License
 
 This package is distributed under GNU General Public License version 3 (GPL v3) or later.
 
+Papers
+========
+
+When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
+
+`Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", arXiv:2112.13184 <https://arXiv.org/abs/2112.13184>`_
+
 Copyright
 ==================
 

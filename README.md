@@ -229,6 +229,12 @@ Before send a PR, please make sure the following:
 
 TeNeS is available under the GNU GPL v3.
 
+## Paper
+
+When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
+
+[Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", arXiv:2112.13184][paper/2021]
+
 ## Acknowledgement
 
 TeNeS was supported by MEXT as "Exploratory Challenge on Post-K computer" (Frontiers of Basic Science: Challenging the Limits) and "Priority Issue on Post-K computer" (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
@@ -245,3 +251,5 @@ We also would also like to express our thanks for the support of the "Project fo
 [doc/master/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/master/ja/html/index.html
 [doc/develop/en/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html
 [doc/develop/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html
+
+[paper/2021]: https://arxiv.org/abs/2112.13184
