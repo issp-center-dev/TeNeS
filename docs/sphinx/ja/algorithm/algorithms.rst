@@ -103,7 +103,7 @@ iTPSを基底状態の変分波動関数として用いる場合、iTPSが最小
 .. math::
    |\Psi^{\mathrm{iTPS}} \rangle  \simeq e^{-T \mathcal{H}} |\Psi_0\rangle,
 
-を考えます。ここで、 :math:`|\Psi_0 \rangle` は任意の初期 iTPS です。. もし、 :math:`T` が十分に大きければ、左辺の :math:`|\Psi^{\mathrm{iTPS}}\rangle` は基底状態の良い近似になっていると考えることができます。
+を考えます。ここで、 :math:`|\Psi_0 \rangle` は任意の初期 iTPS です。 もし、 :math:`T` が十分に大きければ、左辺の :math:`|\Psi^{\mathrm{iTPS}}\rangle` は基底状態の良い近似になっていると考えることができます。
 
 TeNeSでは、ハミルトニアンは短距離の二体相互作用の和で
 
