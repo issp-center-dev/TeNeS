@@ -5,7 +5,7 @@ Install
 Download
 ===================
 You can download the source code for TeNeS from the `GitHub page <https://github.com/issp-center-dev/TeNeS>`_ . 
-If you have git installed on your machine, type the following command to start download:
+If you have git installed on your machine, type the following command to start downloading:
 
 ``$ git clone https://github.com/issp-center-dev/TeNeS``
 
@@ -81,7 +81,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 
 .. admonition:: Specify compiler
 
-   CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler by the following way,
+   CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler in the following way,
 
    ::
 
@@ -90,7 +90,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 
 .. admonition:: Specify ScaLAPACK
 
-  CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (``<path>/lib/libscalapack.so``) by the following way,
+  CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (``<path>/lib/libscalapack.so``) in the following way,
 
   ::
 
@@ -109,7 +109,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
    TeNeS tools (``tenes_simple`` and ``tenes_std``) use ``python3`` interpreter which is found in ``PATH`` via ``/usr/bin/env python3``.
    Please make sure that ``python3`` command invokes the interpreter which you want to use, for example, by using ``type python3``.
 
-   If you want to fix the interpreter (or ``/usr/bin/env`` does not exist), you can specify the interpreter by the following way,
+   If you want to fix the interpreter (or ``/usr/bin/env`` does not exist), you can specify the interpreter in the following way,
 
    ::
 
