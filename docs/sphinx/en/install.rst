@@ -98,7 +98,7 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 
 .. admonition:: Use the pre-built mptensor
 
-   TeNeS is based on the parallerized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor (``<path>/lib/libmptensor.a``), please add the following option in cmake.
+   TeNeS is based on the parallelized tensor library ``mptensor``. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor (``<path>/lib/libmptensor.a``), please add the following option in cmake.
    ::
 
       $ cmake -DMPTENSOR_ROOT=<path> ../
