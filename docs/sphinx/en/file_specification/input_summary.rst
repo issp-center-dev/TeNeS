@@ -5,7 +5,7 @@
 Short summary for input files of TeNeS
 ---------------------------------------
 
-Input files of TeNeS is written in `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ format
+Input files of TeNeS are written in `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ format
 and each file has some sections.
 ``tenes_simple`` and ``tenes_std`` read some sections and generate an input file for ``tenes_std`` and ``tenes``, respectively.
 ``tenes`` reads some sections and performs simulation.
