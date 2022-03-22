@@ -13,7 +13,7 @@ foreach(basename input simple_update full_update)
     target_link_libraries(${testname} PUBLIC tenes_static)
 
     if(ENABLE_MPI)
-        add_test(NAME ${testname} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:${testname}>)
+        add_test(NAME ${testname} COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:${testname}>)
     else()
         add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
     endif()

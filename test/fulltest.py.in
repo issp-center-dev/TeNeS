@@ -107,8 +107,10 @@ if simplemode:
     cmd = []
     if "@MPIEXEC@":
         cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
         cmd.append("@MPIEXEC_NUMPROC_FLAG@")
         cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
     cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
     cmd.append("input.toml")
     subprocess.call(cmd)
@@ -116,8 +118,10 @@ else:
     cmd = []
     if "@MPIEXEC@":
         cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
         cmd.append("@MPIEXEC_NUMPROC_FLAG@")
         cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
     cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
     cmd.append(inputfile)
     subprocess.call(cmd)
