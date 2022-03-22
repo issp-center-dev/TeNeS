@@ -22,6 +22,7 @@
 #include <vector>
 #include <string>
 
+#include <limits>
 #include "cpptoml.h"  // IWYU pragma: export
 
 // IWYU pragma: begin_exports
