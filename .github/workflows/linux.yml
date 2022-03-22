@@ -1,4 +1,4 @@
-name: Test
+name: Linux
 
 on: [push]
 
@@ -34,7 +34,7 @@ jobs:
       - name: cmake
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE
+        run: cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
 
       - name: build
         working-directory: ${{runner.workspace}}/build
