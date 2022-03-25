@@ -161,3 +161,60 @@ std.tomlでのボンドハミルトニアンの定義
    \begin{aligned}
    S^z_i S^z_j
    \end{aligned}
+   
+   
+反強磁性体の初期状態とハミルトニアン
+----------------------------
+
+.. code::
+
+   [tensor]/*どういう格子を定義したか？ 
+   type = "square lattice" # 無視される (simple.toml の名残)
+   L_sub = [2, 2] # \ :math:`2\times 2`\ unitcell
+   skew = 0 # \ :math:`y`\ 方向の境界を越えた時の\ :math:`x`\方向のずれ
+
+   [[tensor.unitcell]]
+   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
+   index = [0, 3] #　ユニットセル中のどのテンソルかを示す番号
+   physical_dim = 2 # 物理ボンドの次元
+   initial_state = [1.0, 0.0] # 初期状態の係数
+   noise = 0.01 # 初期テンソルのゆらぎ
+   
+   [[tensor.unitcell]]
+   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
+   index = [1, 2] #　ユニットセル中のどのテンソルかを示す番号
+   physical_dim = 2 # 物理ボンドの次元
+   initial_state = [0.0, 1.0] # 初期状態の係数
+   noise = 0.01 # 初期テンソルのゆらぎ
+   
+   [[hamiltonian]]
+   dim = [2, 2] # 作用するボンド [source, target] の取りうる状態数の対 
+   bonds = """ # 作用するボンドの集合　(1行1ボンド)
+   0 1 0 # 1列目: ユニットセル内のsourceの番号
+   1 1 0 # 2列目: sourceからみたtargetの\ :math:`x`\座標(変位)
+   2 1 0 # 3列目: sourceからみたtargetの\ :math:`y`\座標(変位)
+   3 1 0
+   0 0 1
+   1 0 1
+   2 0 1
+   3 0 1
+   """
+   elements = """ # ハミルトニアンの(非ゼロな)行列要素(1行1要素), J=-1とする
+   0 0 0 0 0.0 0.0 # 1列目: 作用前のsourceの状態
+   1 0 1 0 -0.25 0.0 # 2列目: 作用前のtargetの状態
+   0 1 1 0 0.125 0.0 # 3列目: 作用後のsourceの状態
+   1 0 0 1 0.125 0.0 # 4列目: 作用後のtargetの状態
+   0 1 0 1 -0.25 0.0 # 5列目: 要素の実部
+   1 1 1 1 0.0 0.0 # 6列目: 要素の虚部
+   """
+   
+   [observable]
+   [[observable.onesite]] # 1サイト演算子
+   name = "Sz" # 名前
+   group = 0 # 1サイト演算子の識別番号
+   sites = [] # 1サイト演算子が作用するテンソルの番号 ([]はすべてを意味する)
+   dim = 2 # 1サイト演算子の次元
+   elements = """ # 1サイト演算子行列の非ゼロ要素 (1行1要素)
+   0 0 0.25 0.0 # 1,2列目: 作用前後の状態
+   1 1 0.25 0.0 # 3,4列目: 要素の実部・虚部
+   """
