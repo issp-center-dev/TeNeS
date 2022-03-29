@@ -79,6 +79,7 @@ It is prohibited for source and target to be tensors of the same number.
 Definition of Bond Hamiltonian in std.toml
 
 Definition of Bond Hamiltonian acting bond
+
 .. code::
 
    [[hamiltonian]]
@@ -100,7 +101,9 @@ Definition of Bond Hamiltonian acting bond
 
 
 Definition of the matrix elements of the Bond Hamiltonian operator
+
 .. code::
+
    elements = """ # (nonzero) matrix elements of the Hamiltonian (one element per row)
    0 0 0 0 0.25 0.0 # Row 1: state of source before action
    1 0 1 0 -0.25 0.0 # Row 2: state of target before action
