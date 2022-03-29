@@ -39,8 +39,8 @@ Unit cells are defined using [tensor] and [[tensor.unitcell]]:
    noise = 0.01 # Initial tensor fluctuation
 
 
-全体の初期状態\ :math:`\psi`\はサイトごとの初期状態\ :math:`\psi_i`\の直積状態で書ける。\ :math:`| \Psi \rangle = \otimes_i |\Psi_i\rangle`\
-\ :math:`\psi_i`\は、initial_state配列の要素を前から\ :math:`a_0,a_1,\cdots,a_{d-1}`\とすると、
+The total initial state\ :math:`\psi`\ can be written in the direct product state of the per-site initial state \ :math:`\psi_i`\:\ :math:`| \Psi \rangle = \otimes_i |\Psi_i\rangle`\.
+\ :math:`\psi_i`\ can be written as follows, with the elements of the initial_state array from the front as\ :math:`a_0,a_1,\cdots,a_{d-1}`\
 
 .. math::
 
@@ -49,7 +49,7 @@ Unit cells are defined using [tensor] and [[tensor.unitcell]]:
 
 
 
-Definition of model (bond Hamiltonian)
+Definition of model (Bond Hamiltonian)
 ----------------------------
 
 .. figure:: ../../img/en_tutorial_1_Hamiltonian.*
@@ -60,8 +60,8 @@ Definition of model (bond Hamiltonian)
      [[hamiltonian]]
 
 
-Hamiltonians handled by TeNeS are the sum of bonded Hamiltonians (2-site Hamiltonians)
-(Site Hamiltonians such as magnetic fields are also incorporated as bond Hamiltonians)
+Hamiltonians handled by TeNeS are the sum of Bond Hamiltonians (2-site Hamiltonians)
+(Site Hamiltonians such as magnetic fields are also incorporated as Bond Hamiltonians)
 
 .. math::
 
@@ -82,11 +82,11 @@ Definition of Bond Hamiltonian acting bond
 .. code::
 
    [[hamiltonian]]
-   dim = [2, 2] # 作用するボンド [source, target] の取りうる状態数の対 
-   bonds = """ # 作用するボンドの集合　(1行1ボンド)
-   0 1 0 # 1列目: ユニットセル内のsourceの番号
-   1 1 0 # 2列目: sourceからみたtargetの\ :math:`x`\座標(変位)
-   2 1 0 # 3列目: sourceからみたtargetの\ :math:`y`\座標(変位)
+   dim = [2, 2] # Number of possible states of the acting bond [source, target]
+   bonds = """ # Set of acting bonds (1 bond per line)
+   0 1 0 # Row 1: Number of the source in the unit cell
+   1 1 0 # Row 2: \ :math:`x`\coordinate(displacement) of target from the source
+   2 1 0 # Row 3: \ :math:`y`\coordinate(displacement) of target from the source
    3 1 0
    0 0 1
    1 0 1
@@ -94,28 +94,28 @@ Definition of Bond Hamiltonian acting bond
    3 0 1
    """
 
-0 1 0 は0番と右隣(1) (\ :math:`x+=1, y+=0`\)
-1 0 1 は1番と上隣(3) (\ :math:`x+=0, y+=1`\)
-1 1 0 は1番と右隣(1) 
+0 1 0 is 0 and right neighbor (1) (\ :math:`x+=1, y+=0`\)
+1 0 1 is 1 and upper neighbor (3) (\ :math:`x+=0, y+=1`\)
+1 1 0 is 0 and right neighbor (0) 
 
 
-ボンドハミルトニアン演算子の行列要素の定義
+Definition of the matrix elements of the Bond Hamiltonian operator
 .. code::
-   elements = """ # ハミルトニアンの(非ゼロな)行列要素(1行1要素)
-   0 0 0 0 0.25 0.0 # 1列目: 作用前のsourceの状態
-   1 0 1 0 -0.25 0.0 # 2列目: 作用前のtargetの状態
-   0 1 1 0 0.5 0.0 # 3列目: 作用後のsourceの状態
-   1 0 0 1 0.5 0.0 # 4列目: 作用後のtargetの状態
-   0 1 0 1 -0.25 0.0 # 5列目: 要素の実部
-   1 1 1 1 0.25 0.0 # 6列目: 要素の虚部
+   elements = """ # (nonzero) matrix elements of the Hamiltonian (one element per row)
+   0 0 0 0 0.25 0.0 # Row 1: state of source before action
+   1 0 1 0 -0.25 0.0 # Row 2: state of target before action
+   0 1 1 0 0.5 0.0 # Row 3: state of source after action
+   1 0 0 1 0.5 0.0 # Row 4: state of target after action
+   0 1 0 1 -0.25 0.0 # Row 5: Real part of element
+   1 1 1 1 0.25 0.0 # Row 6: Imaginary part of element
    """
 
-0 0 0 0 0.25 0.0は\ :math:`\langle 00|\mathcal{H}_b|00\rangle=0.25`\
-0 1 1 0 0.25 0.0は\ :math:`\langle 10|\mathcal{H}_b|01\rangle=0.5`\
+0 0 0 0 0.25 0.0 is \ :math:`\langle 00|\mathcal{H}_b|00\rangle=0.25`\
+0 1 1 0 0.25 0.0 is \ :math:`\langle 10|\mathcal{H}_b|01\rangle=0.5`\
 
 
 
-演算子の定義
+Definition of operators
 ----------------------------
 
 .. figure:: ../../img/en_tutorial_1_Observable.*
@@ -126,13 +126,13 @@ Definition of Bond Hamiltonian acting bond
      [[observable.onesite]]
 
 
-最終的に期待値を計算する演算子の定義
-現在は1サイト演算子と2サイト演算子を計算可能
+Definition of the operator whose expected value is finally computed
+Currently calculable for 1-site and 2-site operators
 
-エネルギー演算子　= ボンドハミルトニアンも改めて指定する必要がある
-(tenes_stdが0番の2サイト演算子として自動でコピーしてくれる)
+Energy operator = Bond Hamiltonian also needs to be specified 
+(tenes_std automatically copy it as a 2-site operator with the number 0)
 
-1サイト演算子の数式は
+Expression of the 1-site operator is
 
 .. math::
 
@@ -141,30 +141,30 @@ Definition of Bond Hamiltonian acting bond
    0.5 & 0.0 \\ 0.0 & -0.5
    \end{pmatrix}\end{aligned}
  
-である。
+
 
 .. code::
 
    [observable]
-   [[observable.onesite]] # 1サイト演算子
-   name = "Sz" # 名前
-   group = 0 # 1サイト演算子の識別番号
-   sites = [] # 1サイト演算子が作用するテンソルの番号 ([]はすべてを意味する)
-   dim = 2 # 1サイト演算子の次元
-   elements = """ # 1サイト演算子行列の非ゼロ要素 (1行1要素)
-   0 0 0.5 0.0 # 1,2列目: 作用前後の状態
-   1 1 -0.5 0.0 # 3,4列目: 要素の実部・虚部
+   [[observable.onesite]] # 1-site operator
+   name = "Sz" # Name
+   group = 0 # 1-site operator identification number
+   sites = [] # Number of tensors on which the 1-site operator acts ([] means all)
+   dim = 2 # Dimensions of 1-site operators
+   elements = """ # Non-zero elements of 1-site operator matrix (1 element per row)
+   0 0 0.5 0.0 # Rows 1 and 2: before and after action
+   1 1 -0.5 0.0 # Rows 3 and 4: Real and imaginary parts of the element
    """
    
 
 
-最終的に期待値を計算する演算子の定義
-現在は1サイト演算子と2サイト演算子を計算可能
+Definition of the operator whose expected value is finally computed
+Currently calculable for 1-site and 2-site operators
 
-エネルギー演算子　= ボンドハミルトニアンも改めて指定する必要がある
-(tenes_stdが0番の2サイト演算子として自動でコピーしてくれる)
+Energy operator = Bond Hamiltonian also needs to be specified 
+(tenes_std automatically copy it as a 2-site operator with the number 0)
 
-2サイト演算子の数式は
+Expression of the two-site operator is
 
 .. math::
 
@@ -172,15 +172,15 @@ Definition of Bond Hamiltonian acting bond
    S^z_i S^z_j
    \end{aligned}
  
-である。
+
 
 .. code::
 
-   [[observable].twosite]] # 2サイト演算子
-   name = "SzSz" # 名前
-   group = 1 # 2サイト演算子の識別番号 (1サイトとは独立)
-   dim = [2, 2] # 次元
-   bonds = """ # 作用するボンド (サイト対)
+   [[observable].twosite]] # 2-site operator
+   name = "SzSz" # Name
+   group = 1 # 2-site operator identification number (Independent of 1-site)
+   dim = [2, 2] # Dimension
+   bonds = """ # Bond that acts (site pair)
    0 1 0
    1 1 0
    2 1 0
@@ -190,16 +190,16 @@ Definition of Bond Hamiltonian acting bond
    2 0 1
    3 0 1
    """
-   ops = [0, 0] # 1サイト演算子の直積で書ける場合、その識別番号
-                # 今回は"Sz"が0番の1サイト演算子
-                # elementsとして行列要素を陽に書くことも可能
-                # (ボンドハミルトニアンと同様の書式)
+   ops = [0, 0] # When it can be written as a direct product of 1-site operators, its identification number
+                # This time, "Sz" is the 1-site operator with number 0
+                # Matrix elements can also be written explicitly as elements
+                # (Similar format to Bond Hamiltonian)
    
 
 
    
    
-反強磁性体の2次元ハイゼンベルグ模型のハミルトニアン
+Hamiltonian of the two-dimensional Heisenberg model of antiferromagnet
 ----------------------------
 
 .. figure:: ../../img/en_tutorial_1_2DHeisenberg.*
@@ -207,7 +207,7 @@ Definition of Bond Hamiltonian acting bond
      :width: 400px
      :align: center
 
-     反強磁性体の2次元ハイゼンベルグ模型
+     Two-dimensional Heisenberg model of antiferromagnet
 
 .. code::
 
@@ -231,22 +231,22 @@ Definition of Bond Hamiltonian acting bond
    noise = 0.01 
    
    [[hamiltonian]]
-   dim = [2, 2] # 作用するボンド [source, target] の取りうる状態数の対 
-   bonds = """ # 作用するボンドの集合　(1行1ボンド)
-   0 1 0 # 1列目: ユニットセル内のsourceの番号
-   1 1 0 # 2列目: sourceからみたtargetの\ :math:`x`\座標(変位)
-   2 1 0 # 3列目: sourceからみたtargetの\ :math:`y`\座標(変位)
+   dim = [2, 2] # Number of possible states of the acting bond [source, target]
+   bonds = """ # Set of acting bonds (1 bond per line)
+   0 1 0 # Row 1: Number of the source in the unit cell
+   1 1 0 # Row 2: \ :math:`x`\coordinate(displacement) of target from the source
+   2 1 0 # Row 3: \ :math:`y`\coordinate(displacement) of target from the source
    3 1 0
    0 0 1
    1 0 1
    2 0 1
    3 0 1
    """
-   elements = """ # ハミルトニアンの(非ゼロな)行列要素(1行1要素), J=-1, h=1とする
-   0 0 0 0 0.0 0.0 # 1列目: 作用前のsourceの状態
-   1 0 1 0 0.25 0.0 # 2列目: 作用前のtargetの状態
-   0 1 1 0 0.5 0.0 # 3列目: 作用後のsourceの状態
-   1 0 0 1 0.5 0.0 # 4列目: 作用後のtargetの状態
-   0 1 0 1 -0.75 0.0 # 5列目: 要素の実部
-   1 1 1 1 0.0 0.0 # 6列目: 要素の虚部
+   elements = """ # (nonzero) matrix elements of the Hamiltonian (one element per row), Assume J=-1, h=1
+   0 0 0 0 0.0 0.0 # Row 1: state of source before action
+   1 0 1 0 0.25 0.0 # Row 2: state of target before action
+   0 1 1 0 0.5 0.0 # Row 3: state of source after action
+   1 0 0 1 0.5 0.0 # Row 4: state of target after action
+   0 1 0 1 -0.75 0.0 # Row 5: Real part of element
+   1 1 1 1 0.0 0.0 # Row 6: Imaginary part of element
    """
