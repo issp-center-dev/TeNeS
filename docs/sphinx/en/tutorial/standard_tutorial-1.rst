@@ -1,18 +1,18 @@
 .. highlight:: none
 
-スタンダードモードを用いた格子・模型・演算子の定義
+Definition of lattices, models, and operators using the standard mode
 ----------------------------
 
-シンプルモードは定義済み模型・格子のパラメータからハミルトニアンやユニットセル情報を生成するツールであるが、スタンダードモードでは格子・模型・演算子を定義することができる。ここではスタンダードモードの使い方を説明する。
+While the simple mode is a tool to generate Hamiltonian and unit cell information from parameters of predefined models and lattices, the standard mode enables the definition of lattices, models, and operators. In this section, we explain how to use the standard mode.
 
 .. figure:: ../../img/en_tutorial_1_Network.*
      :name: fig_transverse
      :width: 400px
      :align: center
 
-     4サイトユニットセルのテンソルネットワーク
+     Tensor network of 4-site unit cell
 
-ユニットセル(格子)の定義
+Definition of unit cell (lattice)
 ----------------------------
 
 .. figure:: ../../img/en_tutorial_1_Tensor.*
@@ -20,26 +20,26 @@
      :width: 400px
      :align: center
 
-     [tensor]と[[tensor.unitcell]]
+     [tensor] and [[tensor.unitcell]]
 
-ユニットセルの定義は[tensor]と[[tensor.unitcell]]を用いて行う:
+Unit cells are defined using [tensor] and [[tensor.unitcell]]:
 
 .. code::
 
-   [tensor]/*どういう格子を定義したか？ 
-   type = "square lattice" # 無視される (simple.toml の名残)
+   [tensor]/*What kind of lattice did you define? 
+   type = "square lattice" # Ignored (remnant of simple.toml)
    L_sub = [2, 2] # \ :math:`2\times 2`\ unitcell
-   skew = 0 # \ :math:`y`\ 方向の境界を越えた時の\ :math:`x`\方向のずれ
+   skew = 0 # Displacement in \ :math:`x`\-direction 
 
    [[tensor.unitcell]]
-   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
-   index = [0, 3] #　ユニットセル中のどのテンソルかを示す番号
-   physical_dim = 2 # 物理ボンドの次元
-   initial_state = [1.0, 0.0] # 初期状態の係数
-   noise = 0.01 # 初期テンソルのゆらぎ
+   virtual_dim = [4, 4, 4, 4] # Bond dimensions (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\ order)
+   index = [0, 3] #　Number indicating which tensor is in the unit cell
+   physical_dim = 2 # Physical bond dimensions
+   initial_state = [1.0, 0.0] # Initial state coefficients
+   noise = 0.01 # Initial tensor fluctuation
 
 
-全体の初期状態\ :math:`\psi`\はサイトごとの初期状態\ :math:`\psi_i`\の直積状態\ :math:`| \Psi \rangle = \otimes_i |\Psi_i\rangle`\
+全体の初期状態\ :math:`\psi`\はサイトごとの初期状態\ :math:`\psi_i`\の直積状態で書ける。\ :math:`| \Psi \rangle = \otimes_i |\Psi_i\rangle`\
 \ :math:`\psi_i`\は、initial_state配列の要素を前から\ :math:`a_0,a_1,\cdots,a_{d-1}`\とすると、
 
 .. math::
@@ -49,7 +49,7 @@
 
 
 
-模型(ボンドハミルトニアン)の定義
+Definition of model (bond Hamiltonian)
 ----------------------------
 
 .. figure:: ../../img/en_tutorial_1_Hamiltonian.*
@@ -60,25 +60,25 @@
      [[hamiltonian]]
 
 
-TeNeSが扱うハミルトニアンはボンドハミルトニアン (2サイトハミルトニアン) の和
-(磁場などのサイトハミルトニアンも近くのボンドハミルトニアンを取り入れる)
+Hamiltonians handled by TeNeS are the sum of bonded Hamiltonians (2-site Hamiltonians)
+(Site Hamiltonians such as magnetic fields are also incorporated as bond Hamiltonians)
 
 .. math::
 
    \begin{aligned}
    mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j}\end{aligned}
 
-ボンドはsourceサイトとtargetサイトの組であると考える
+Consider a bond to be a pair of source and target sites
 
-ボンドハミルトニアンは、その行列要素と作用するボンドで規定する
-行列要素を定義すれば模型を定義できる
-ボンドを定義すれば格子を定義できる
-source, targetが同じ番号のテンソルになるのは禁止する
+The Bond Hamiltonian is defined by its matrix elements and the bond it acts on.
+Defining a matrix element enables us to define a model.
+Defining a bond enables us to define a lattice.
+It is prohibited for source and target to be tensors of the same number.
 
 
-std.tomlでのボンドハミルトニアンの定義
+Definition of Bond Hamiltonian in std.toml
 
-ボンドハミルトニアンの作用するボンドの定義
+Definition of Bond Hamiltonian acting bond
 .. code::
 
    [[hamiltonian]]
@@ -211,24 +211,24 @@ std.tomlでのボンドハミルトニアンの定義
 
 .. code::
 
-   [tensor]/*どういう格子を定義したか？ 
-   type = "square lattice" # 無視される (simple.toml の名残)
+   [tensor]/*What kind of lattice did you define? 
+   type = "square lattice" # Ignored (remnant of simple.toml)
    L_sub = [2, 2] # \ :math:`2\times 2`\ unitcell
-   skew = 0 # \ :math:`y`\ 方向の境界を越えた時の\ :math:`x`\方向のずれ
+   skew = 0 # Displacement in \ :math:`x`\-direction 
 
    [[tensor.unitcell]]
-   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
-   index = [0, 3] #　ユニットセル中のどのテンソルかを示す番号
-   physical_dim = 2 # 物理ボンドの次元
-   initial_state = [1.0, 0.0] # 初期状態の係数
-   noise = 0.01 # 初期テンソルのゆらぎ
+   virtual_dim = [4, 4, 4, 4] # Bond dimensions (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\　order)
+   index = [0, 3] #　Number indicating which tensor is in the unit cell
+   physical_dim = 2 # Physical bond dimensions
+   initial_state = [1.0, 0.0] # Initial state coefficients
+   noise = 0.01 # Initial tensor fluctuation
    
    [[tensor.unitcell]]
-   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
-   index = [1, 2] #　ユニットセル中のどのテンソルかを示す番号
-   physical_dim = 2 # 物理ボンドの次元
-   initial_state = [0.0, 1.0] # 初期状態の係数
-   noise = 0.01 # 初期テンソルのゆらぎ
+   virtual_dim = [4, 4, 4, 4] 
+   index = [1, 2] 
+   physical_dim = 2 
+   initial_state = [0.0, 1.0] 
+   noise = 0.01 
    
    [[hamiltonian]]
    dim = [2, 2] # 作用するボンド [source, target] の取りうる状態数の対 
