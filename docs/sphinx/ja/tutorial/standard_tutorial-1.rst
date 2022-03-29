@@ -226,11 +226,11 @@ std.tomlでのボンドハミルトニアンの定義
    noise = 0.01 # 初期テンソルのゆらぎ
    
    [[tensor.unitcell]]
-   virtual_dim = [4, 4, 4, 4] # ボンド次元 (\ :math:`\leftarrow~\uparrow~rightarrow~downarrow`\の順)
-   index = [1, 2] #　ユニットセル中のどのテンソルかを示す番号
-   physical_dim = 2 # 物理ボンドの次元
-   initial_state = [0.0, 1.0] # 初期状態の係数
-   noise = 0.01 # 初期テンソルのゆらぎ
+   virtual_dim = [4, 4, 4, 4] 
+   index = [1, 2] 
+   physical_dim = 2 
+   initial_state = 
+   noise = 0.01 
    
    [[hamiltonian]]
    dim = [2, 2] # 作用するボンド [source, target] の取りうる状態数の対 
