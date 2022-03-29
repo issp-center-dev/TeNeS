@@ -5,9 +5,23 @@
 
 シンプルモードは定義済み模型・格子のパラメータからハミルトニアンやユニットセル情報を生成するツールであるが、スタンダードモードでは格子・模型・演算子を定義することができる。ここではスタンダードモードの使い方を説明する。
 
+.. figure:: ../../img/ja_tutorial_1_Network.*
+     :name: fig_transverse
+     :width: 400px
+     :align: center
+
+     4サイトユニットセルのテンソルネットワーク
 
 ユニットセル(格子)の定義
 ----------------------------
+
+.. figure:: ../../img/ja_tutorial_1_Tensor.*
+     :name: fig_transverse
+     :width: 400px
+     :align: center
+
+     [tensor]と[[tensor.unitcell]]
+
 ユニットセルの定義は[tensor]と[[tensor.unitcell]]を用いて行う:
 
 .. code::
@@ -37,6 +51,13 @@
 
 模型(ボンドハミルトニアン)の定義
 ----------------------------
+
+.. figure:: ../../img/ja_tutorial_1_Hamiltonian.*
+     :name: fig_transverse
+     :width: 400px
+     :align: center
+
+     [[hamiltonian]]
 
 \*図を追加
 \* 2つのサイトに1/2の同時に逆外場を加える(反強磁性)偶奇で区別(次)
@@ -99,6 +120,13 @@ std.tomlでのボンドハミルトニアンの定義
 
 演算子の定義
 ----------------------------
+
+.. figure:: ../../img/ja_tutorial_1_Observable.*
+     :name: fig_transverse
+     :width: 400px
+     :align: center
+
+     ``<Sz>`` , ``<Sx>`` の ``hx`` 依存性
 
 \*数式を先に書いて(これを定義したい)、後から入力ファイルを書いて説明をする。
 最終的に期待値を計算する演算子の定義
@@ -163,8 +191,15 @@ std.tomlでのボンドハミルトニアンの定義
    \end{aligned}
    
    
-反強磁性体の初期状態とハミルトニアン
+反強磁性体の2次元ハイゼンベルグ模型のハミルトニアン
 ----------------------------
+
+.. figure:: ../../img/ja_tutorial_1_2DHeisenberg.*
+     :name: fig_transverse
+     :width: 400px
+     :align: center
+
+     反強磁性体の2次元ハイゼンベルグ模型
 
 .. code::
 
@@ -208,13 +243,3 @@ std.tomlでのボンドハミルトニアンの定義
    1 1 1 1 0.0 0.0 # 6列目: 要素の虚部
    """
    
-   [observable]
-   [[observable.onesite]] # 1サイト演算子
-   name = "Sz" # 名前
-   group = 0 # 1サイト演算子の識別番号
-   sites = [] # 1サイト演算子が作用するテンソルの番号 ([]はすべてを意味する)
-   dim = 2 # 1サイト演算子の次元
-   elements = """ # 1サイト演算子行列の非ゼロ要素 (1行1要素)
-   0 0 0.25 0.0 # 1,2列目: 作用前後の状態
-   1 1 0.25 0.0 # 3,4列目: 要素の実部・虚部
-   """
