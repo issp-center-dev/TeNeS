@@ -186,5 +186,8 @@ html_sidebars = {
 numfig = True
 
 latex_elements = {
-    "extrapackages": "\\usepackage{bm}"
+    "extrapackages": r"""
+    \usepackage{bm}
+    \usepackage{braket}
+    """
 }
