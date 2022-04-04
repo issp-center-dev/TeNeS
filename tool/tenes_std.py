@@ -725,6 +725,7 @@ class Model:
         self.unitcell = Unitcell(param["tensor"])
         offset_x_min = offset_x_max = offset_y_min = offset_y_max = 0
         self.hamiltonians = []
+        ham_as_twosite_obs = []
         for ham in param["hamiltonian"]:
             dims = ham["dim"]
             assert (
@@ -759,44 +760,49 @@ class Model:
                 bonds.append(b)
                 op = NNOperator(b, elements=elements)
                 self.hamiltonians.append(op)
+            ham_as_twosite_obs.append(TwositeObservable(0, bonds, elements=elements, name="hamiltonian"))
         self.graph = LatticeGraph(
             self.unitcell, offset_x_min, offset_y_min, offset_x_max, offset_y_max
         )
 
         self.onesites = []
         self.twobodies = []
-        if "observable" in param:
-            observable = param["observable"]
-            for onesite in observable.get("onesite", []):
-                name = onesite["name"]
-                group = onesite["group"]
-                sites = onesite["sites"]
-                dim = onesite["dim"]
-                elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
-                one_obs = OnesiteObservable(
-                    group=group, elements=elements, sites=sites, name=name
+        observable = param.get("observable", {})
+        for onesite in observable.get("onesite", []):
+            name = onesite["name"]
+            group = onesite["group"]
+            sites = onesite["sites"]
+            dim = onesite["dim"]
+            elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
+            one_obs = OnesiteObservable(
+                group=group, elements=elements, sites=sites, name=name
+            )
+            self.onesites.append(one_obs)
+        has_zero = False
+        for twosite in observable.get("twosite", []):
+            name = twosite["name"]
+            group = twosite["group"]
+            if group == 0:
+                has_zero = True
+            bonds = [
+                parse_bond(line)
+                for line in twosite["bonds"].strip().splitlines()
+                if parse_bond(line) is not None
+            ]
+            if "elements" in twosite:
+                dim = twosite["dim"]
+                elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
+                two_obs = TwositeObservable(
+                    group, bonds, elements=elements, name=name
                 )
-                self.onesites.append(one_obs)
-
-            for twosite in observable.get("twosite", []):
-                name = twosite["name"]
-                group = twosite["group"]
-                bonds = [
-                    parse_bond(line)
-                    for line in twosite["bonds"].strip().splitlines()
-                    if parse_bond(line) is not None
-                ]
-                if "elements" in twosite:
-                    dim = twosite["dim"]
-                    elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
-                    two_obs = TwositeObservable(
-                        group, bonds, elements=elements, name=name
-                    )
-                else:
-                    two_obs = TwositeObservable(
-                        group, bonds, ops=twosite["ops"], name=name
-                    )
-                self.twobodies.append(two_obs)
+            else:
+                two_obs = TwositeObservable(
+                    group, bonds, ops=twosite["ops"], name=name
+                )
+            self.twobodies.append(two_obs)
+        if not has_zero:
+            for ham in ham_as_twosite_obs:
+                self.twobodies.append(ham)
 
         self.simple_updates = []
         self.full_updates = []
