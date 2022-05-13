@@ -162,7 +162,7 @@ void iTPS<ptensor>::summary() const {
       ofs << "time all           = " << time_all << std::endl;
       ofs << "time simple update = " << time_simple_update << std::endl;
       ofs << "time full update   = " << time_full_update << std::endl;
-      ofs << "time environmnent  = " << time_environment << std::endl;
+      ofs << "time environment  = " << time_environment << std::endl;
       ofs << "time observable    = " << time_observable << std::endl;
       if (peps_parameters.print_level >= PrintLevel::info) {
         std::cout << "    Save elapsed times to " << filename << std::endl;
@@ -173,7 +173,7 @@ void iTPS<ptensor>::summary() const {
       std::cout << "  all           = " << time_all << std::endl;
       std::cout << "  simple update = " << time_simple_update << std::endl;
       std::cout << "  full update   = " << time_full_update << std::endl;
-      std::cout << "  environmnent  = " << time_environment << std::endl;
+      std::cout << "  environment  = " << time_environment << std::endl;
       std::cout << "  observable    = " << time_observable << std::endl;
       std::cout << std::endl << "Done." << std::endl;
     }
