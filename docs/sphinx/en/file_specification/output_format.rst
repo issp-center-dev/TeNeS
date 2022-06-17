@@ -13,12 +13,25 @@ Output files are generated in the ``output`` directry.
 
 Paramters in the ``parameter`` and ``lattice`` sections defined in the input file are outputted.
 
-``energy.dat``
-==============
+``density.dat``
+================
 
-The energy of each site is output.
+The expectation value per site of each observable is outputted.
+When the name of the operator (``name``) is an empty, the index of the operator is written.
 
-``site_obs.dat``
+Example
+~~~~~~~~~~
+
+::
+
+   Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
+   Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
+   hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
+   SzSz        = -3.16323622995942133e-01  0.00000000000000000e+00
+   SxSx        = -8.55704529153783616e-02  0.00000000000000000e+00
+   SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
+
+``onesite_obs.dat``
 =================
 
 
@@ -49,68 +62,22 @@ Example
     1 2 -4.07255967738734126e-01 0.00000000000000000e+00
     1 3 4.07308918791554009e-01 0.00000000000000000e+00
 
-``neighbor_obs.dat``
+``twosite_obs.dat``
 ======================
 
--  Nearest neighbor correlations for site operations are outputted.
--  Each row consists of five columns.
+-  Expectation values for two-site operations are outputted.
+-  Each row consists of six columns.
 
-   1. Index of the operator
-   2. Index of the sites
-   3. Index of the sites
-   4. Real part of the expected value
-   5. Imaginary part of the expected value
-
-- In addition, norm of the wave function :math:`\langle \Psi | \Psi \rangle` is outputted as an operator with index of -1.
-
-   - If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.
-
-::
-
-    # $1: op_index
-    # $2: source_site
-    # $3: target_site
-    # $4: real
-    # $5: imag
-
-   0 0 4.08513219339284250e-01 -1.30821773764633317e-18
-   0 1 -4.08513219339288636e-01 -6.09055344460395354e-20
-   0 2 -4.08513219339289801e-01 -6.46773648122808868e-19
-   0 3 4.08513219339286304e-01 -1.46983151052043956e-19
-   1 0 -5.63321380968339106e-05 -1.06329584429579662e-18
-   1 1 5.63321015724943072e-05 8.78344073011021613e-18
-   1 2 5.63321015892866812e-05 4.36590453150828335e-18
-   1 3 -5.63321381136249429e-05 -1.14509908259615756e-18
-   2 0 7.95013947121512355e-06 -5.82669256660366468e-18
-   2 1 -7.95019526521416614e-06 9.61281832688426906e-18
-   2 2 -7.95019527785552810e-06 -9.34047696321987429e-18
-   2 3 7.95013948581251836e-06 -6.49339357741872464e-19
-   -1 0 1.04968851690174758e+00 7.97972798949331263e-17
-   -1 1 1.04968851690174780e+00 7.65446733774766130e-17
-   -1 2 1.04968851690174647e+00 8.32667268468867405e-17
-   -1 3 1.04968851690174803e+00 7.41594285980085033e-17
-
-``correlation.dat``
-=====================
-
--  Correlation functions are outputted.
--  Each row consists of eight columns.
-
-   1. Index of the left operator
-   2. Site index of the left operator
-   3. Index of the right operator
-   4. Site index of the right operator
-   5. Unit cell offset of the right operator (x)
-   6. Unit cell offset of the right operator (y)
-   7. Real part of the expected value
-   8. Imaginary part of the expected value
+   1. Index of the two-site operator
+   2. Index of the source site
+   3. x coordinate of the target site from the source site
+   4. y coordinate of the target site from the source site
+   5. Real part of the expected value
+   6. Imaginary part of the expected value
 
 - In addition, norm of the wave function :math:`\langle \Psi | \Psi \rangle` is outputted as an operator with index of -1.
 
    - If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.
-
-Example
-~~~~~~~
 
 ::
 
@@ -133,10 +100,62 @@ Example
       ... skipped ...
    -1 3 1 0 1.07465536687797147e+00 7.74120351154650166e-17
 
+``correlation.dat``
+=====================
+
+-  Correlation functions :math:`C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle` are outputted.
+-  Each row consists of eight columns.
+
+   1. Site index of the left operator
+   2. Index of the left operator
+   3. Index of the right operator
+   4. Site index of the right operator
+   5. Unit cell offset of the right operator (x)
+   6. Unit cell offset of the right operator (y)
+   7. Real part of the expected value
+   8. Imaginary part of the expected value
+
+
+   1. Index of the left operator :math:`\alpha`
+   2. Index of the left site :math:`i`
+   3. Index of the right operator :math:`\beta`
+   4. x coordinate of the right site :math:`x`
+   5. y coordinate of the right site :math:`y`
+   6. Real part :math:`\mathrm{Re}C`
+   7. Imaginary part :math:`\mathrm{Im}C`
+
+Example
+~~~~~~~~~~~~
+
+::
+
+   # $1: left_op
+   # $2: left_site
+   # $3: right_op
+   # $4: right_dx
+   # $5: right_dy
+   # $6: real
+   # $7: imag
+
+   0 0 0 1 0 -1.71759992763061836e-01 1.36428299157186382e-14 
+   0 0 0 2 0 1.43751794649139675e-01 -1.14110668277268192e-14 
+   0 0 0 3 0 -1.42375391377041444e-01 1.14103263451826963e-14 
+   0 0 0 4 0 1.41835919840103741e-01 -1.11365361507372103e-14 
+   0 0 0 5 0 -1.41783912096811515e-01 1.12856813523671142e-14 
+   0 0 0 0 1 -1.72711348845767942e-01 1.40873628493918905e-14 
+   0 0 0 0 2 1.43814797743900907e-01 -1.17958665742991377e-14 
+   0 0 0 0 3 -1.42415176172922653e-01 1.22109610917000360e-14 
+   0 0 0 0 4 1.41838862178711583e-01 -1.19321507524565005e-14 
+   0 0 0 0 5 -1.41792935491960648e-01 1.23094733264734764e-14 
+   1 0 1 1 0 -7.95389427681298805e-02 6.15901595234210079e-15 
+   1 0 1 2 0 2.01916094009441903e-02 -1.27162373457160362e-15 
+   ... Skipped ...
+   2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16 
 
 ``correlation_length.dat``
 ===========================
 
+The correlation length :math:`\xi` is outputted.
 
 1. Direction (``0: x, 1: y``)
 2. When direction is ``0`` it is :math:`y` coodinate, and otherwise :math:`x` coordinate
@@ -166,3 +185,13 @@ Example
 =====================
 
 The calculation time is outputted.
+
+Example
+~~~~~~~~~~~
+
+::
+
+   time simple update = 1.64429
+   time full update   = 0
+   time environmnent  = 0.741858
+   time observable    = 0.104487
