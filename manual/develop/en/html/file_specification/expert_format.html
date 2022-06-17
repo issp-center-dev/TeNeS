@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>5.4. Input file for tenes &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -35,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="input-file-for-tenes">
-<span id="sec-expert-format"></span><h1><span class="section-number">5.4. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code><a class="headerlink" href="#input-file-for-tenes" title="Permalink to this headline">¶</a></h1>
+<span id="sec-expert-format"></span><h1><span class="section-number">5.4. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code><a class="headerlink" href="#input-file-for-tenes" title="Permalink to this heading">¶</a></h1>
 <ul class="simple">
 <li><p>File format is
 <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a>
@@ -43,15 +44,15 @@ format.</p></li>
 <li><p>The input file has five sections: <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">evolution</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>.</p></li>
 </ul>
 <section id="parameter-section">
-<h2><span class="section-number">5.4.1. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.1. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this heading">¶</a></h2>
 <p>Set various parameters that appear in the calculation, such as the number of updates.
 This section has five subsections: <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
 <p>Imaginary-time step <span class="math notranslate nohighlight">\(\tau\)</span> for simple update <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
 <section id="parameter-general">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this heading">¶</a></h3>
 <p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 29%" />
 <col style="width: 43%" />
@@ -137,9 +138,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </ul>
 </section>
 <section id="parameter-simple-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this heading">¶</a></h3>
 <p>Parameters in the simple update procedure.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -188,9 +189,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </table>
 </section>
 <section id="parameter-full-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h3>
 <p>Parameters in the full update procedure.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -249,9 +250,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </table>
 </section>
 <section id="parameter-ctm">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this heading">¶</a></h3>
 <p>Parameters for corner transfer matrices, CTM.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -311,9 +312,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </section>
 <section id="parameter-random">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this heading">¶</a></h3>
 <p>Parameters for random number generators.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -338,7 +339,7 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
 </section>
 <section id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -356,11 +357,11 @@ dimension = 9 # CHI
 </section>
 </section>
 <section id="tensor-section">
-<h2><span class="section-number">5.4.2. </span><code class="docutils literal notranslate"><span class="pre">tensor</span></code> section<a class="headerlink" href="#tensor-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.2. </span><code class="docutils literal notranslate"><span class="pre">tensor</span></code> section<a class="headerlink" href="#tensor-section" title="Permalink to this heading">¶</a></h2>
 <p>Specify the unit cell information (Information of bonds is given in the <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) and <code class="docutils literal notranslate"><span class="pre">evolution</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes</span></code>)  sections.).
 Unit cell has a shape of a rectangular with the size of <code class="docutils literal notranslate"><span class="pre">Lx</span></code> times <code class="docutils literal notranslate"><span class="pre">Ly</span></code>.
 <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal notranslate"><span class="pre">unitcell</span></code> .</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 21%" />
 <col style="width: 29%" />
@@ -406,12 +407,12 @@ These are arranged in order from the x direction.</p>
 </figcaption>
 </figure>
 <section id="tensor-unitcell-subsection">
-<h3><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this heading">¶</a></h3>
 <p>The information of site tensors <span class="math notranslate nohighlight">\(T_{ijkl\alpha}^{(n)}\)</span> is specified.
 Here, <span class="math notranslate nohighlight">\(i, j, k, l\)</span> indicate the index of the virtual bond,
 <span class="math notranslate nohighlight">\(\alpha\)</span> indicates the index of the physical bond,
 and <span class="math notranslate nohighlight">\(n\)</span> indicates the site number.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 27%" />
 <col style="width: 36%" />
@@ -466,13 +467,13 @@ When you want to set the initial state as the state <span class="math notranslat
 </section>
 </section>
 <section id="observable-section">
-<h2><span class="section-number">5.4.3. </span><code class="docutils literal notranslate"><span class="pre">observable</span></code> section<a class="headerlink" href="#observable-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.3. </span><code class="docutils literal notranslate"><span class="pre">observable</span></code> section<a class="headerlink" href="#observable-section" title="Permalink to this heading">¶</a></h2>
 <p>Define various settings related to physical quantity measurement.
 This section has two types of subsections, <code class="docutils literal notranslate"><span class="pre">onesite</span></code> and <code class="docutils literal notranslate"><span class="pre">twosite</span></code>.</p>
 <section id="observable-onesite">
-<h3><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this heading">¶</a></h3>
 <p>Define one-body operators that indicate physical quantities defined at each site <span class="math notranslate nohighlight">\(i\)</span>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 46%" />
@@ -520,7 +521,7 @@ One element is specified by one line consisting of two integers and two floating
 <li><p>The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.</p></li>
 </ul>
 <section id="id1">
-<h4>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<h4>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
 <p>As an example, the case of <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}S^z = \left(\begin{array}{cc} 0.5 &amp; 0.0 \\ 0.0 &amp; -0.5 \end{array}\right)\end{split}\]</div>
@@ -553,9 +554,9 @@ elements = &quot;&quot;&quot;
 </section>
 </section>
 <section id="observable-twosite">
-<h3><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this heading">¶</a></h3>
 <p>Define two-body operators that indicate physical quantities defined on two sites.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 46%" />
@@ -622,7 +623,7 @@ One element consists of one line consisting of four integers and two floating-po
 For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S ^ z_iS ^ z_j\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code>.</p>
 <p>If both <code class="docutils literal notranslate"><span class="pre">elements</span></code> and <code class="docutils literal notranslate"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
 <section id="id2">
-<h4>Example<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<h4>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
 <p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
@@ -672,10 +673,10 @@ elements = &quot;&quot;&quot;
 </section>
 </section>
 <section id="evolution-section">
-<h2><span class="section-number">5.4.4. </span><code class="docutils literal notranslate"><span class="pre">evolution</span></code> section<a class="headerlink" href="#evolution-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.4. </span><code class="docutils literal notranslate"><span class="pre">evolution</span></code> section<a class="headerlink" href="#evolution-section" title="Permalink to this heading">¶</a></h2>
 <p>Specify the imaginary time evolution opetrators used in simple and full updates.
 This section has two subsections: <code class="docutils literal notranslate"><span class="pre">simple</span></code> and <code class="docutils literal notranslate"><span class="pre">full</span></code>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 46%" />
@@ -728,7 +729,7 @@ elements = &quot;&quot;&quot;
 </div>
 </section>
 <section id="correlation-section">
-<h2><span class="section-number">5.4.5. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.5. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this heading">¶</a></h2>
 <p>In this section, the parameters about the site-site correlation function <span class="math notranslate nohighlight">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0 + \boldsymbol{r}) \right\rangle\)</span> is specified.
 If you omit this section, no correlation functions will be calculated.</p>
 <p>Coordinates <span class="math notranslate nohighlight">\(\boldsymbol{r}, \boldsymbol{r}_0\)</span> measured in the system of square lattice TNS.
@@ -737,7 +738,7 @@ TeNeS calculates the correlation functions along the positive direction of <span
 <div class="math notranslate nohighlight">
 \[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
 <p>The coordinate of each site of the unitcell is used as the center coordinate, <span class="math notranslate nohighlight">\(\boldsymbol{r}_0\)</span>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 46%" />
@@ -762,7 +763,7 @@ TeNeS calculates the correlation functions along the positive direction of <span
 </table>
 <p>The operators defined in the <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> section are used.</p>
 <section id="id3">
-<h3>Example<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<h3>Example<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
 <p>For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as 0th operator and <span class="math notranslate nohighlight">\(S^x\)</span> is defined as 1st one,
 then <span class="math notranslate nohighlight">\(S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)\)</span> for <span class="math notranslate nohighlight">\(0 \le r \le 5\)</span>
 are measured by the following definition:</p>
@@ -774,9 +775,9 @@ operators = [[0,0], [0,1], [1,1]]
 </section>
 </section>
 <section id="correlation-length-section">
-<h2><span class="section-number">5.4.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> section<a class="headerlink" href="#correlation-length-section" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> section<a class="headerlink" href="#correlation-length-section" title="Permalink to this heading">¶</a></h2>
 <p>This section describes how to calculate the correlation length <span class="math notranslate nohighlight">\(\xi\)</span>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 18%" />
 <col style="width: 35%" />
@@ -899,7 +900,7 @@ In the many cases of the transfer matrices, such a process is not necessary (<co
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -916,7 +917,7 @@ In the many cases of the transfer matrices, such a process is not necessary (<co
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

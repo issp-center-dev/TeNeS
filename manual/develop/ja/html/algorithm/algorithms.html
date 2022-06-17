@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>6. アルゴリズム &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -36,9 +37,9 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1><span class="section-number">6. </span>アルゴリズム<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">6. </span>アルゴリズム<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h1>
 <section id="id2">
-<h2><span class="section-number">6.1. </span>テンソルネットワーク状態<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">6.1. </span>テンソルネットワーク状態<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h2>
 <p>テンソルネットワーク状態 (Tensor network states (TNS)) とは小さなテンソルの積、繋がりで表現された変分波動関数です <a class="reference internal" href="#ref-tns"><span class="std std-ref">[TNS]</span></a> 。例えば、<span class="math notranslate nohighlight">\(N\)</span> 個の <span class="math notranslate nohighlight">\(S=1/2\)</span> 量子スピン系では、その波動関数は直積状態の基底を用いて、</p>
 <div class="math notranslate nohighlight">
 \[|\Psi\rangle = \sum_{s_i = \uparrow,\downarrow} \Psi_{s_1,s_2,\dots,s_N} |s_1,s_2,\dots,s_N\rangle\]</div>
@@ -59,7 +60,7 @@
 <p>のように描けます。TeNeSではこのiTPSを用いて、2次元量子多体系の基底状態を近似的に計算します。なお、正方格子テンソルネットワークは、正方格子模型だけでなく、適切なマッピングにより、ハニカム格子模型、三角格子模型など様々な2次元格子模型に適用できます。</p>
 </section>
 <section id="itps">
-<h2><span class="section-number">6.2. </span>iTPS の縮約<a class="headerlink" href="#itps" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">6.2. </span>iTPS の縮約<a class="headerlink" href="#itps" title="Permalink to this heading">¶</a></h2>
 <p>あるTNSが与えられた時に、そのTNSでの期待値、 <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle/\langle \Psi|\Psi\rangle\)</span> を計算するためには、
 一般に、 <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle\)</span> と <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span> という二つの量に対応するテンソルネットワークの縮約計算が必要になります。
 例えば、 <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span> に対応するテンソルネットワークは</p>
@@ -83,7 +84,7 @@
 <p>と表現することができます。また、ダイアグラムの２番目の表記を用いることで、任意の２サイト演算子の期待値も計算できることがわかります。このようなダイグラムを任意の演算子に対して描くことは可能ですが、クラスターが大きくなるとその縮約計算に必要となる計算コストが莫大になることに注意してください。</p>
 </section>
 <section id="id3">
-<h2><span class="section-number">6.3. </span>iTPSの最適化<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">6.3. </span>iTPSの最適化<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h2>
 <p>iTPSを基底状態の変分波動関数として用いる場合、iTPSが最小のエネルギー期待値</p>
 <div class="math notranslate nohighlight">
 \[E = \frac{\langle \Psi|\mathcal{H}|\Psi\rangle}{\langle \Psi|\Psi\rangle},\]</div>
@@ -203,7 +204,7 @@ L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -220,7 +221,7 @@ L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>tensor.unitcell subsection &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -35,7 +36,7 @@
   <p>Specify the unit cell information (Information of bonds is given in the <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) and <code class="docutils literal notranslate"><span class="pre">evolution</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes</span></code>)  sections.).
 Unit cell has a shape of a rectangular with the size of <code class="docutils literal notranslate"><span class="pre">Lx</span></code> times <code class="docutils literal notranslate"><span class="pre">Ly</span></code>.
 <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal notranslate"><span class="pre">unitcell</span></code> .</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 21%" />
 <col style="width: 29%" />
@@ -81,12 +82,12 @@ These are arranged in order from the x direction.</p>
 </figcaption>
 </figure>
 <section id="tensor-unitcell-subsection">
-<h1><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this heading">¶</a></h1>
 <p>The information of site tensors <span class="math notranslate nohighlight">\(T_{ijkl\alpha}^{(n)}\)</span> is specified.
 Here, <span class="math notranslate nohighlight">\(i, j, k, l\)</span> indicate the index of the virtual bond,
 <span class="math notranslate nohighlight">\(\alpha\)</span> indicates the index of the physical bond,
 and <span class="math notranslate nohighlight">\(n\)</span> indicates the site number.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 27%" />
 <col style="width: 36%" />
@@ -190,7 +191,7 @@ When you want to set the initial state as the state <span class="math notranslat
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -207,7 +208,7 @@ When you want to set the initial state as the state <span class="math notranslat
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

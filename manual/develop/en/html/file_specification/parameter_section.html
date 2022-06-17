@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>parameter.general &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -37,9 +38,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
 <p>Imaginary-time step <span class="math notranslate nohighlight">\(\tau\)</span> for simple update <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and that for full update <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> are used only in standard mode <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, not used in <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
 <section id="parameter-general">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this heading">¶</a></h1>
 <p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 29%" />
 <col style="width: 43%" />
@@ -125,9 +126,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </ul>
 </section>
 <section id="parameter-simple-update">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this heading">¶</a></h1>
 <p>Parameters in the simple update procedure.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -176,9 +177,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </table>
 </section>
 <section id="parameter-full-update">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h1>
 <p>Parameters in the full update procedure.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -237,9 +238,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </table>
 </section>
 <section id="parameter-ctm">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this heading">¶</a></h1>
 <p>Parameters for corner transfer matrices, CTM.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -299,9 +300,9 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </section>
 <section id="parameter-random">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this headline">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this heading">¶</a></h1>
 <p>Parameters for random number generators.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 38%" />
@@ -326,7 +327,7 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
 </section>
 <section id="example">
-<h1>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
+<h1>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h1>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -393,7 +394,7 @@ dimension = 9 # CHI
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -410,7 +411,7 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
