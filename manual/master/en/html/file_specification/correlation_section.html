@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Example &#8212; TeNeS 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -40,7 +41,7 @@ TeNeS calculates the correlation functions along the positive direction of <span
 <div class="math notranslate nohighlight">
 \[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
 <p>The coordinate of each site of the unitcell is used as the center coordinate, <span class="math notranslate nohighlight">\(\boldsymbol{r}_0\)</span>.</p>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 46%" />
@@ -65,7 +66,7 @@ TeNeS calculates the correlation functions along the positive direction of <span
 </table>
 <p>The operators defined in the <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> section are used.</p>
 <section id="example">
-<h1>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
+<h1>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h1>
 <p>For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as 0th operator and <span class="math notranslate nohighlight">\(S^x\)</span> is defined as 1st one,
 then <span class="math notranslate nohighlight">\(S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)\)</span> for <span class="math notranslate nohighlight">\(0 \le r \le 5\)</span>
 are measured by the following definition:</p>
@@ -126,7 +127,7 @@ operators = [[0,0], [0,1], [1,1]]
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -143,7 +144,7 @@ operators = [[0,0], [0,1], [1,1]]
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

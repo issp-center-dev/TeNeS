@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>5.5. Output files &#8212; TeNeS 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,6 +12,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -35,18 +36,18 @@
           <div class="body" role="main">
             
   <section id="output-files">
-<span id="sec-output-format"></span><h1><span class="section-number">5.5. </span>Output files<a class="headerlink" href="#output-files" title="Permalink to this headline">¶</a></h1>
+<span id="sec-output-format"></span><h1><span class="section-number">5.5. </span>Output files<a class="headerlink" href="#output-files" title="Permalink to this heading">¶</a></h1>
 <p>Output files are generated in the <code class="docutils literal notranslate"><span class="pre">output</span></code> directry.</p>
 <section id="parameters-dat">
-<h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this heading">¶</a></h2>
 <p>Paramters in the <code class="docutils literal notranslate"><span class="pre">parameter</span></code> and <code class="docutils literal notranslate"><span class="pre">lattice</span></code> sections defined in the input file are outputted.</p>
 </section>
 <section id="energy-dat">
-<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="Permalink to this heading">¶</a></h2>
 <p>The energy of each site is output.</p>
 </section>
 <section id="site-obs-dat">
-<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>The expected values of the site operator are outputted.</p></li>
 <li><p>Each row consists of four columns.</p>
@@ -59,7 +60,7 @@
 </li>
 </ul>
 <section id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
 # $2: site_index
 # $3: real
@@ -78,7 +79,7 @@
 </section>
 </section>
 <section id="neighbor-obs-dat">
-<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="Permalink to this heading">¶</a></h2>
 <ul>
 <li><p>Nearest neighbor correlations for site operations are outputted.</p></li>
 <li><p>Each row consists of five columns.</p>
@@ -124,7 +125,7 @@
 </div>
 </section>
 <section id="correlation-dat">
-<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h2>
 <ul>
 <li><p>Correlation functions are outputted.</p></li>
 <li><p>Each row consists of eight columns.</p>
@@ -148,7 +149,7 @@
 </li>
 </ul>
 <section id="id1">
-<h3>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<h3>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: source_site
 # $3: dx
@@ -172,7 +173,7 @@
 </section>
 </section>
 <section id="correlation-length-dat">
-<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p>Direction (<code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">x,</span> <span class="pre">1:</span> <span class="pre">y</span></code>)</p></li>
 <li><p>When direction is <code class="docutils literal notranslate"><span class="pre">0</span></code> it is <span class="math notranslate nohighlight">\(y\)</span> coodinate, and otherwise <span class="math notranslate nohighlight">\(x\)</span> coordinate</p></li>
@@ -182,7 +183,7 @@
 This information may be used to estimate the bond dimension dependence of the correlation length.
 See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (2018) for more information.</p>
 <section id="id2">
-<h3>Example<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<h3>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
 # $2: col or row index
 # $3: correlation length
@@ -198,7 +199,7 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
 </section>
 </section>
 <section id="time-dat">
-<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this heading">¶</a></h2>
 <p>The calculation time is outputted.</p>
 </section>
 </section>
@@ -264,7 +265,7 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -281,7 +282,7 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
