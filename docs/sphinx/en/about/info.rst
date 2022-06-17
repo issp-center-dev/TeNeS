@@ -19,6 +19,7 @@ TeNeS is developed by the following members.
 Version information
 ======================
 
+- ver. 1.2.0: 2022-12-13.
 - ver. 1.1.1: 2020-11-09.
 - ver. 1.1.0: 2020-07-09.
 - ver. 1.0.0: 2020-04-17.
@@ -35,7 +36,7 @@ Papers
 
 When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
 
-`Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", arXiv:2112.13184 <https://arXiv.org/abs/2112.13184>`_
+`Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. 279, 108437 (2022) <https://www.sciencedirect.com/science/article/pii/S0010465522001564>`_
 
 Copyright
 ==================

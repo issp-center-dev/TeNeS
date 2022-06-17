@@ -233,7 +233,7 @@ TeNeS is available under the GNU GPL v3.
 
 When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
 
-[Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", arXiv:2112.13184][paper/2021]
+[Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. **279**, 108437 (2022)][paper/tenes_1.2]
 
 ## Acknowledgement
 
@@ -252,4 +252,4 @@ We also would also like to express our thanks for the support of the "Project fo
 [doc/develop/en/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/en/html/index.html
 [doc/develop/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html
 
-[paper/2021]: https://arxiv.org/abs/2112.13184
+[paper/tenes_1.2]: https://www.sciencedirect.com/science/article/pii/S0010465522001564
