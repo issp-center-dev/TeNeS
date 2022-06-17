@@ -42,12 +42,24 @@
 <h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this heading">¶</a></h2>
 <p>Paramters in the <code class="docutils literal notranslate"><span class="pre">parameter</span></code> and <code class="docutils literal notranslate"><span class="pre">lattice</span></code> sections defined in the input file are outputted.</p>
 </section>
-<section id="energy-dat">
-<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">energy.dat</span></code><a class="headerlink" href="#energy-dat" title="Permalink to this heading">¶</a></h2>
-<p>The energy of each site is output.</p>
+<section id="density-dat">
+<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="Permalink to this heading">¶</a></h2>
+<p>The expectation value per site of each observable is outputted.
+When the name of the operator (<code class="docutils literal notranslate"><span class="pre">name</span></code>) is an empty, the index of the operator is written.</p>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
+Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
+hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
+SzSz        = -3.16323622995942133e-01  0.00000000000000000e+00
+SxSx        = -8.55704529153783616e-02  0.00000000000000000e+00
+SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
+</pre></div>
+</div>
 </section>
-<section id="site-obs-dat">
-<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">site_obs.dat</span></code><a class="headerlink" href="#site-obs-dat" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="onesite-obs-dat">
+<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>The expected values of the site operator are outputted.</p></li>
 <li><p>Each row consists of four columns.</p>
@@ -59,8 +71,8 @@
 </ol>
 </li>
 </ul>
-<section id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
+<section id="id1">
+<h3>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
 # $2: site_index
 # $3: real
@@ -78,15 +90,16 @@
 </div>
 </section>
 </section>
-<section id="neighbor-obs-dat">
-<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">neighbor_obs.dat</span></code><a class="headerlink" href="#neighbor-obs-dat" title="Permalink to this heading">¶</a></h2>
+<section id="twosite-obs-dat">
+<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Permalink to this heading">¶</a></h2>
 <ul>
-<li><p>Nearest neighbor correlations for site operations are outputted.</p></li>
-<li><p>Each row consists of five columns.</p>
+<li><p>Expectation values for two-site operations are outputted.</p></li>
+<li><p>Each row consists of six columns.</p>
 <ol class="arabic simple">
-<li><p>Index of the operator</p></li>
-<li><p>Index of the sites</p></li>
-<li><p>Index of the sites</p></li>
+<li><p>Index of the two-site operator</p></li>
+<li><p>Index of the source site</p></li>
+<li><p>x coordinate of the target site from the source site</p></li>
+<li><p>y coordinate of the target site from the source site</p></li>
 <li><p>Real part of the expected value</p></li>
 <li><p>Imaginary part of the expected value</p></li>
 </ol>
@@ -99,57 +112,6 @@
 </div></blockquote>
 </li>
 </ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> # $1: op_index
- # $2: source_site
- # $3: target_site
- # $4: real
- # $5: imag
-
-0 0 4.08513219339284250e-01 -1.30821773764633317e-18
-0 1 -4.08513219339288636e-01 -6.09055344460395354e-20
-0 2 -4.08513219339289801e-01 -6.46773648122808868e-19
-0 3 4.08513219339286304e-01 -1.46983151052043956e-19
-1 0 -5.63321380968339106e-05 -1.06329584429579662e-18
-1 1 5.63321015724943072e-05 8.78344073011021613e-18
-1 2 5.63321015892866812e-05 4.36590453150828335e-18
-1 3 -5.63321381136249429e-05 -1.14509908259615756e-18
-2 0 7.95013947121512355e-06 -5.82669256660366468e-18
-2 1 -7.95019526521416614e-06 9.61281832688426906e-18
-2 2 -7.95019527785552810e-06 -9.34047696321987429e-18
-2 3 7.95013948581251836e-06 -6.49339357741872464e-19
--1 0 1.04968851690174758e+00 7.97972798949331263e-17
--1 1 1.04968851690174780e+00 7.65446733774766130e-17
--1 2 1.04968851690174647e+00 8.32667268468867405e-17
--1 3 1.04968851690174803e+00 7.41594285980085033e-17
-</pre></div>
-</div>
-</section>
-<section id="correlation-dat">
-<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h2>
-<ul>
-<li><p>Correlation functions are outputted.</p></li>
-<li><p>Each row consists of eight columns.</p>
-<ol class="arabic simple">
-<li><p>Index of the left operator</p></li>
-<li><p>Site index of the left operator</p></li>
-<li><p>Index of the right operator</p></li>
-<li><p>Site index of the right operator</p></li>
-<li><p>Unit cell offset of the right operator (x)</p></li>
-<li><p>Unit cell offset of the right operator (y)</p></li>
-<li><p>Real part of the expected value</p></li>
-<li><p>Imaginary part of the expected value</p></li>
-</ol>
-</li>
-<li><p>In addition, norm of the wave function <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> is outputted as an operator with index of -1.</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.</p></li>
-</ul>
-</div></blockquote>
-</li>
-</ul>
-<section id="id1">
-<h3>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: source_site
 # $3: dx
@@ -171,9 +133,63 @@
 </pre></div>
 </div>
 </section>
+<section id="correlation-dat">
+<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h2>
+<ul>
+<li><p>Correlation functions <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> are outputted.</p></li>
+<li><p>Each row consists of eight columns.</p>
+<ol class="arabic simple">
+<li><p>Site index of the left operator</p></li>
+<li><p>Index of the left operator</p></li>
+<li><p>Index of the right operator</p></li>
+<li><p>Site index of the right operator</p></li>
+<li><p>Unit cell offset of the right operator (x)</p></li>
+<li><p>Unit cell offset of the right operator (y)</p></li>
+<li><p>Real part of the expected value</p></li>
+<li><p>Imaginary part of the expected value</p></li>
+</ol>
+<ol class="arabic simple">
+<li><p>Index of the left operator <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
+<li><p>Index of the left site <span class="math notranslate nohighlight">\(i\)</span></p></li>
+<li><p>Index of the right operator <span class="math notranslate nohighlight">\(\beta\)</span></p></li>
+<li><p>x coordinate of the right site <span class="math notranslate nohighlight">\(x\)</span></p></li>
+<li><p>y coordinate of the right site <span class="math notranslate nohighlight">\(y\)</span></p></li>
+<li><p>Real part <span class="math notranslate nohighlight">\(\mathrm{Re}C\)</span></p></li>
+<li><p>Imaginary part <span class="math notranslate nohighlight">\(\mathrm{Im}C\)</span></p></li>
+</ol>
+</li>
+</ul>
+<section id="id2">
+<h3>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
+# $2: left_site
+# $3: right_op
+# $4: right_dx
+# $5: right_dy
+# $6: real
+# $7: imag
+
+0 0 0 1 0 -1.71759992763061836e-01 1.36428299157186382e-14
+0 0 0 2 0 1.43751794649139675e-01 -1.14110668277268192e-14
+0 0 0 3 0 -1.42375391377041444e-01 1.14103263451826963e-14
+0 0 0 4 0 1.41835919840103741e-01 -1.11365361507372103e-14
+0 0 0 5 0 -1.41783912096811515e-01 1.12856813523671142e-14
+0 0 0 0 1 -1.72711348845767942e-01 1.40873628493918905e-14
+0 0 0 0 2 1.43814797743900907e-01 -1.17958665742991377e-14
+0 0 0 0 3 -1.42415176172922653e-01 1.22109610917000360e-14
+0 0 0 0 4 1.41838862178711583e-01 -1.19321507524565005e-14
+0 0 0 0 5 -1.41792935491960648e-01 1.23094733264734764e-14
+1 0 1 1 0 -7.95389427681298805e-02 6.15901595234210079e-15
+1 0 1 2 0 2.01916094009441903e-02 -1.27162373457160362e-15
+... Skipped ...
+2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16
+</pre></div>
+</div>
+</section>
 </section>
 <section id="correlation-length-dat">
 <h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this heading">¶</a></h2>
+<p>The correlation length <span class="math notranslate nohighlight">\(\xi\)</span> is outputted.</p>
 <ol class="arabic simple">
 <li><p>Direction (<code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">x,</span> <span class="pre">1:</span> <span class="pre">y</span></code>)</p></li>
 <li><p>When direction is <code class="docutils literal notranslate"><span class="pre">0</span></code> it is <span class="math notranslate nohighlight">\(y\)</span> coodinate, and otherwise <span class="math notranslate nohighlight">\(x\)</span> coordinate</p></li>
@@ -182,8 +198,8 @@
 <p>The 4th and the subsequent columns show the logarithm of the absolute value of the eigenvalues of the transfer matrix, <span class="math notranslate nohighlight">\(e_i = -\log\left|\lambda_i/\lambda_0\right|\)</span> (<span class="math notranslate nohighlight">\(i&gt;0\)</span>).
 This information may be used to estimate the bond dimension dependence of the correlation length.
 See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (2018) for more information.</p>
-<section id="id2">
-<h3>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<section id="id3">
+<h3>Example<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
 # $2: col or row index
 # $3: correlation length
@@ -201,6 +217,15 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
 <section id="time-dat">
 <h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this heading">¶</a></h2>
 <p>The calculation time is outputted.</p>
+<section id="id4">
+<h3>Example<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>time simple update = 1.64429
+time full update   = 0
+time environmnent  = 0.741858
+time observable    = 0.104487
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
