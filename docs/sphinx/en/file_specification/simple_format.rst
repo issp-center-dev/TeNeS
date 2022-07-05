@@ -64,6 +64,7 @@ The exchange interaction :math:`J` can have a bond dependency.
    ``J1''``, "Exchange interaction of **1st** direction **third nearest neighbor** bond", Real, 0.0
    ``J2''``, "Exchange interaction of **2nd** direction **third nearest neighbor** bond", Real, 0.0
 
+For the next nearest and third nearest neighbor bond, please surround the keyname with the double-quotation marks, ``"``.
 The bond direction depends on the lattice defined in the ``lattice`` section.
 For a square lattice, for example, coupling constants along two bond directions can be defined, x-direction (0) and y-direction (1).
 By omitting the direction number, you can specify all directions at once.
