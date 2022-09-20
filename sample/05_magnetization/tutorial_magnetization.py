@@ -13,7 +13,7 @@ num_step_table = [100, 200, 500, 1000, 2000]
 fmag = open("magnetization.dat", "w")
 fene = open("energy.dat", "w")
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-    print("Caclulation Process: {}/{}".format(idx + 1, num_h))
+    print("Calculation Process: {}/{}".format(idx + 1, num_h))
     inum = 0
     num_pre = 0
     fmag.write("{} ".format(h))
@@ -47,10 +47,18 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         subprocess.call(cmd.split())
         cmd = "{} tenes input_{}_{}.toml".format(MPI_cmd, idx, num_step)
         subprocess.call(cmd.split())
+
+        ene = 0.0
+        mag_sz = 0.0
         with open(join("output_{}_{}".format(idx, num_step), "density.dat")) as f:
-            lines = f.readlines()
-            mag_sz = lines[0].split("=")[1].strip()
-            ene = lines[2].split("=")[1].strip()
+            for line in f:
+                name, vals = line.split("=")
+                if name.strip() == "hamiltonian":
+                    re, im = vals.split()
+                    ene += float(re)
+                elif name.strip() == "Sz":
+                    re, im = vals.split()
+                    mag_sz += float(re)
         fene.write("{} ".format(ene))
         fmag.write("{} ".format(mag_sz))
         inum = inum + 1

@@ -16,11 +16,19 @@
 
 from collections import namedtuple
 from itertools import product
-from typing import TextIO, List, Tuple, Optional, cast, MutableMapping, Dict, Any
+from typing import TextIO, List, Tuple, Optional, cast, MutableMapping, Dict, Any, Union
 
 import numpy as np
 
 import scipy.sparse as sparse
+
+
+def drop_comment(line: str) -> str:
+    last = line.find("#")
+    if last < 0:
+        return line[:]
+    else:
+        return line[:last]
 
 
 def lower_dict(d: MutableMapping) -> Dict[str, Any]:
@@ -70,15 +78,21 @@ def value_to_str(v) -> str:
         return "{}".format(v)
 
 
-Bond = namedtuple("Bond", ("source_site", "dx", "dy"))
+class Bond:
+    source_site: int
+    dx: int
+    dy: int
 
+    def __init__(self, source_site: int, dx: int, dy: int):
+        self.source_site = source_site
+        self.dx = dx
+        self.dy = dy
 
-def drop_comment(line: str) -> str:
-    last = line.find("#")
-    if last < 0:
-        return line[:]
-    else:
-        return line[:last]
+    def is_site(self) -> bool:
+        return self.dx == self.dy == 0
+
+    def is_bond(self) -> bool:
+        return not self.is_site()
 
 
 def parse_bond(line: str) -> Bond:
@@ -90,10 +104,6 @@ def parse_bond(line: str) -> Bond:
     dx = int(words[1])
     dy = int(words[2])
     return Bond(source_site, dx, dy)
-
-
-def encode_bond(bond: Bond) -> str:
-    return "{} {} {}".format(bond.source_site, bond.dx, bond.dy)
 
 
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
@@ -485,6 +495,38 @@ class LatticeGraph:
         return bonds
 
 
+class SiteOperator:
+    site: int
+    elements: np.ndarray
+
+    def __init__( self, site: int, elements: np.ndarray ):
+        self.site = site
+        self.elements = elements
+
+    def to_toml_strs(self, unitcell) -> List[str]:
+        ret = []
+        ret.append("site = {}".format(self.site))
+        ret.append("dimensions = {}".format(list(self.elements.shape)))
+        it = np.nditer(
+            self.elements, flags=["multi_index"], op_flags=["readonly"], order="F"
+        )
+        ret.append('elements = """')
+        while not it.finished:
+            i = it.multi_index
+            v = self.elements[i]
+            if np.abs(v) == 0.0:
+                it.iternext()
+                continue
+            line = ""
+            for j in i:
+                line += str(j) + " "
+            line += " {} {}".format(np.real(v), np.imag(v))
+            ret.append(line)
+            it.iternext()
+        ret.append('"""')
+        return ret
+
+
 class NNOperator:
     bond: Bond
     elements: Optional[np.ndarray]
@@ -527,6 +569,9 @@ class NNOperator:
         else:
             ret.append("ops = {}".format(self.ops))
         return ret
+
+
+Operator = Union[SiteOperator, NNOperator]
 
 
 class OnesiteObservable:
@@ -640,8 +685,17 @@ class TwositeObservable:
         else:
             return [NNOperator(bond, ops=self.ops) for bond in self.bonds]
 
+def make_evolution_onesite(
+    hamiltonian: SiteOperator,
+    graph: LatticeGraph,
+    tau: float,
+    result_cutoff: float = 1e-15,
+) -> List[SiteOperator]:
+    D, V = np.linalg.eigh(hamiltonian.elements)
+    evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau*D), V)
+    return [SiteOperator(hamiltonian.site, evo)]
 
-def make_evolution(
+def make_evolution_twosite(
     hamiltonian: NNOperator,
     graph: LatticeGraph,
     tau: float,
@@ -698,6 +752,18 @@ def make_evolution(
     return ret
 
 
+def make_evolution(
+    hamiltonian: Operator,
+    graph: LatticeGraph,
+    tau: float,
+    result_cutoff: float = 1e-15,
+) -> Union[List[SiteOperator], List[NNOperator]]:
+    if isinstance(hamiltonian, SiteOperator):
+        return make_evolution_onesite(hamiltonian, graph, tau, result_cutoff)
+    else:
+        return make_evolution_twosite(hamiltonian, graph, tau, result_cutoff)
+
+
 class Model:
     param: Dict[str, Dict[str, Any]]
     parameter: Dict[str, Any]
@@ -706,12 +772,12 @@ class Model:
     correlation: Dict[str, Any]
     clength: Dict[str, Any]
     unitcell: Unitcell
-    hamiltonians: List[NNOperator]
+    hamiltonians: List[Operator]
     graph: LatticeGraph
     onesites: List[OnesiteObservable]
     twobodies: List[TwositeObservable]
-    simple_updates: List[NNOperator]
-    full_updates: List[NNOperator]
+    simple_updates: List[Operator]
+    full_updates: List[Operator]
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
@@ -725,42 +791,65 @@ class Model:
         self.unitcell = Unitcell(param["tensor"])
         offset_x_min = offset_x_max = offset_y_min = offset_y_max = 0
         self.hamiltonians = []
+        ham_as_onesite_obs = []
         ham_as_twosite_obs = []
         for ham in param["hamiltonian"]:
-            dims = ham["dim"]
-            assert (
-                len(dims) == 2
-                and isinstance(dims[0], int)
-                and isinstance(dims[1], int)
-                and dims[0] > 0
-                and dims[1] > 0
-            ), "hamiltonian.dims should be list with two positive integers but {} is given".format(
-                dims
-            )
-            elements = load_tensor(ham["elements"], dims + dims, atol=atol)
-            assert is_hermite(elements)
-            bonds = []
-            for line in ham["bonds"].strip().splitlines():
-                b = parse_bond(line)
-                if b is None:
-                    continue
-                ox, oy = self.unitcell.target_offset(b)
-                offset_x_min = min(ox, offset_x_min)
-                offset_x_max = max(ox, offset_x_max)
-                offset_y_min = min(oy, offset_y_min)
-                offset_y_max = max(oy, offset_y_max)
+            if "sites" in ham and "bonds" in ham:
+                raise RuntimeError("Both sites and bonds are defined in hamiltonian")
+            dims: List[int] = ham["dim"]
+            if isinstance(dims, int):
+                dims = [dims]
+            if len(dims) == 1:
                 assert (
-                    self.unitcell.sites[self.unitcell.source_site(b)].phys_dim
-                    == elements.shape[0]
+                    isinstance(dims[0], int) and dims[0] > 0
+                ), "hamiltonian.dims should be list with one or two positive integer(s) but {} is given".format(
+                    dims
                 )
+                elements = load_tensor(ham["elements"], dims + dims, atol=atol)
+                assert is_hermite(elements)
+                sites: List[int] = ham["sites"]
+                if len(sites) == 0:
+                    sites = list(range(self.unitcell.numsites()))
+                for site in sites:
+                    op = SiteOperator(site, elements)
+                    self.hamiltonians.append(op)
+            elif len(dims) == 2:
                 assert (
-                    self.unitcell.sites[self.unitcell.target_site(b)].phys_dim
-                    == elements.shape[1]
+                    isinstance(dims[0], int)
+                    and isinstance(dims[1], int)
+                    and dims[0] > 0
+                    and dims[1] > 0
+                ), "hamiltonian.dims should be list with one or two positive integer(s) but {} is given".format(
+                    dims
                 )
-                bonds.append(b)
-                op = NNOperator(b, elements=elements)
-                self.hamiltonians.append(op)
-            ham_as_twosite_obs.append(TwositeObservable(0, bonds, elements=elements, name="hamiltonian"))
+                elements = load_tensor(ham["elements"], dims + dims, atol=atol)
+                assert is_hermite(elements)
+                bonds: List[Bond] = []
+                for line in ham["bonds"].strip().splitlines():
+                    b = parse_bond(line)
+                    if b is None:
+                        continue
+                    ox, oy = self.unitcell.target_offset(b)
+                    offset_x_min = min(ox, offset_x_min)
+                    offset_x_max = max(ox, offset_x_max)
+                    offset_y_min = min(oy, offset_y_min)
+                    offset_y_max = max(oy, offset_y_max)
+                    assert (
+                        self.unitcell.sites[self.unitcell.source_site(b)].phys_dim
+                        == elements.shape[0]
+                    )
+                    assert (
+                        self.unitcell.sites[self.unitcell.target_site(b)].phys_dim
+                        == elements.shape[1]
+                    )
+                    bonds.append(b)
+                    op = NNOperator(b, elements=elements)
+                    self.hamiltonians.append(op)
+                ham_as_twosite_obs.append(
+                    TwositeObservable(0, bonds, elements=elements, name="hamiltonian")
+                )
+            else:
+                raise RuntimeError("dims should be a list with two elements")
         self.graph = LatticeGraph(
             self.unitcell, offset_x_min, offset_y_min, offset_x_max, offset_y_max
         )
@@ -792,13 +881,9 @@ class Model:
             if "elements" in twosite:
                 dim = twosite["dim"]
                 elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
-                two_obs = TwositeObservable(
-                    group, bonds, elements=elements, name=name
-                )
+                two_obs = TwositeObservable(group, bonds, elements=elements, name=name)
             else:
-                two_obs = TwositeObservable(
-                    group, bonds, ops=twosite["ops"], name=name
-                )
+                two_obs = TwositeObservable(group, bonds, ops=twosite["ops"], name=name)
             self.twobodies.append(two_obs)
         if not has_zero:
             for ham in ham_as_twosite_obs:
