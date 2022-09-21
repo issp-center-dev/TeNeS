@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>4.2. Magnetization process of the Heisenberg model on triangular and square lattices &#8212; TeNeS 1.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -96,7 +96,7 @@ num_step_table = [100, 200, 500, 1000, 2000]
 fmag = open(&quot;magnetization.dat&quot;, &quot;w&quot;)
 fene = open(&quot;energy.dat&quot;, &quot;w&quot;)
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_h))
+    print(&quot;Calculation Process: {}/{}&quot;.format(idx + 1, num_h))
     inum = 0
     num_pre = 0
     fmag.write(&quot;{} &quot;.format(h))
@@ -130,10 +130,18 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         subprocess.call(cmd.split())
         cmd = &quot;{} tenes input_{}_{}.toml&quot;.format(MPI_cmd, idx, num_step)
         subprocess.call(cmd.split())
+
+        ene = 0.0
+        mag_sz = 0.0
         with open(join(&quot;output_{}_{}&quot;.format(idx, num_step), &quot;density.dat&quot;)) as f:
-            lines = f.readlines()
-            mag_sz = lines[0].split(&quot;=&quot;)[1].strip()
-            ene = lines[2].split(&quot;=&quot;)[1].strip()
+            for line in f:
+                name, vals = line.split(&quot;=&quot;)
+                if name.strip() == &quot;hamiltonian&quot;:
+                    re, im = vals.split()
+                    ene += float(re)
+                elif name.strip() == &quot;Sz&quot;:
+                    re, im = vals.split()
+                    mag_sz += float(re)
         fene.write(&quot;{} &quot;.format(ene))
         fmag.write(&quot;{} &quot;.format(mag_sz))
         inum = inum + 1
@@ -301,7 +309,7 @@ that the calculation accuracy is sufficiently high.</p>
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

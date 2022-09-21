@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>3.1. tenes_simple の使用方法 &#8212; TeNeS 1.2-dev ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -36,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="tenes-simple">
-<h1><span class="section-number">3.1. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法<a class="headerlink" href="#tenes-simple" title="Permalink to this heading">¶</a></h1>
+<h1><span class="section-number">3.1. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法<a class="headerlink" href="#tenes-simple" title="この見出しへのパーマリンク">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> は定義済みの模型、格子に対する <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルを生成するツールです。</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tenes_simple simple.toml
 </pre></div>
@@ -74,6 +74,14 @@
 <li><p>サイトの座標情報を出力するファイル名 <code class="docutils literal notranslate"><span class="pre">coordfile</span></code> を指定します</p></li>
 <li><p>デフォルトは <code class="docutils literal notranslate"><span class="pre">coordinates.dat</span></code></p></li>
 <li><p>座標ファイルは1列目にサイト番号を、 2, 3列目に x, y 座標（デカルト座標系）を含みます</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--use-site-hamiltonian</span></code></dt><dd><ul>
+<li><p>ゼーマン項や化学ポテンシャル項などのオンサイト項をサイトハミルトニアンとして出力します</p></li>
+<li><p>指定しなかった場合、これらの項は最近接ボンドハミルトニアンに吸収されます</p></li>
 </ul>
 </dd>
 </dl>
@@ -210,7 +218,7 @@ dimension = 9       # bond dimension
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
