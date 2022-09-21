@@ -34,7 +34,7 @@ Usage of ``tenes_simple``
       - Default is ``coordinates.dat``
       - In a coordinate file, the first, second, and third columns denote site index, x coordinate, and y coordinate (in Cartesian), respectively.
 
-   - ``--use-onesite-hamiltonian``
+   - ``--use-site-hamiltonian``
 
       - Onsite terms in Hamiltonian like Zeeman term will be output as site Hamiltonians
       - If not specified, these terms will be absorbed into the nearest neighbor bond Hamiltonians

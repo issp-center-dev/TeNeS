@@ -1327,7 +1327,7 @@ if __name__ == "__main__":
         help="Bond Information file",
     )
     parser.add_argument(
-        "--use-onesite-hamiltonian", dest="onesiteham", action="store_true",
+        "--use-site-hamiltonian", dest="siteham", action="store_true",
         help="Save onsite terms as site Hamiltonians"
     )
     parser.add_argument(
@@ -1339,7 +1339,7 @@ if __name__ == "__main__":
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
-    res, lattice = tenes_simple(toml.load(args.input), args.onesiteham)
+    res, lattice = tenes_simple(toml.load(args.input), args.siteham)
 
     with open(args.output, "w") as f:
         f.write(res)
