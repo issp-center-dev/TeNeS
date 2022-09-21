@@ -32,17 +32,21 @@ Input file for ``tenes``
 ========================
 
 Specify the imaginary time evolution opetrators used in simple and full updates.
+One-site and two-sites (nearest neighbor bond) operators can be defined.
 This section has two subsections: ``simple`` and ``full``.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
+   ``site``,        "Index of site",                                                      Integer
    ``source_site``, "Index of source site",                                               Integer
-   ``source_leg``,  "Direction from source site to  target site",                         Integer
+   ``source_leg``,  "Direction from source site to target site",                          Integer
    ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",         A list of integer
    ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator", String
 
+
+``site`` is available for one-site operator, and ``source_site`` and ``source_leg`` are for two-site operator.
 
 ``source_leg`` is specified as an integer from 0 to 3.
 Defined as ``0: -x, 1: + y, 2: + x, 3: -y`` in the clockwise order from the -x direction.
@@ -53,6 +57,17 @@ The order of the legs is ``source_initial, target_initial, source_final, target_
 Example :: 
 
     [evolution]
+  
+    # One site
+    [[evolution.simple]]
+    site = 0
+    dimensions = [2, 2]
+    elements = """
+    0 0  1.0012507815756226 0.0
+    1 1  0.9987507809245809 0.0
+    """
+  
+    # Two site
     [[evolution.simple]]
     source_site = 0
     source_leg = 2

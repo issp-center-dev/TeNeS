@@ -18,7 +18,7 @@ import re
 
 from collections import namedtuple
 from itertools import chain, product
-from typing import Any, Dict, Iterable, List, Tuple, TextIO, MutableMapping
+from typing import Any, Dict, Iterable, List, Tuple, TextIO, MutableMapping, Optional
 import abc
 
 import numpy as np
@@ -62,7 +62,7 @@ def value_to_str(v) -> str:
 
 
 def lower_dict(d: dict) -> dict:
-    """ makes all keys lowercase"""
+    """makes all keys lowercase"""
     ks = list(d.keys())
     for k in ks:
         if isinstance(d[k], dict):
@@ -96,7 +96,23 @@ def dump_op(op: np.ndarray) -> Iterable[str]:
 
 Bond = namedtuple("Bond", "source dx dy")
 
-Hamiltonian = namedtuple("Hamiltonian", "elements bonds")
+
+class Hamiltonian:
+    elements: np.ndarray
+    sites: Optional[Iterable[int]]
+    bonds: Optional[Iterable[Bond]]
+
+    def __init__(
+        self,
+        elements: np.ndarray,
+        sites: Optional[Iterable[int]] = None,
+        bonds: Optional[Iterable[Bond]] = None,
+    ):
+        if sites is None and bonds is None:
+            raise RuntimeError("Both sites and bonds are None")
+        self.elements = elements
+        self.sites = sites
+        self.bonds = bonds
 
 
 def dumpbond(bond: Bond) -> str:
@@ -499,14 +515,16 @@ class Model(object):
     onesite_ops_name: List[str]
     twosite_ops: List[Tuple[int, int]]
     twosite_ops_name: List[str]
-    params: List[List[Dict[str, Any]]]  # [neighbor_level][bond_type]
-    ham_list: List[List[Tuple[int, int]]]
+    params_onesite: Dict[str, Any]  # [neighbor_level][bond_type]
+    params_twosite: List[List[Dict[str, Any]]]  # [neighbor_level][bond_type]
+    ham_twosites_list: List[List[Tuple[int, int]]]
 
     def __init__(self):
         self.N = 0
         self.onesite_ops = []
-        self.params = [[]]
-        self.ham_list = [[]]
+        self.params_onesite = {}
+        self.params_twosite = [[]]
+        self.ham_twosites_list = [[]]
 
     def onesite_observables_as_dict(self) -> List[Dict[str, Any]]:
         ret = []
@@ -537,23 +555,40 @@ class Model(object):
         return ret
 
     @abc.abstractmethod
-    def model_hamiltonian(self, z: int, **kwargs) -> np.ndarray:
-        pass
+    def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def model_bondhamiltonian(
+        self,
+        z: int,
+        use_onesite_hamiltonian: bool,
+        params_onesite: Dict,
+        params_twosite: Dict,
+    ) -> np.ndarray:
+        ...
 
     @abc.abstractmethod
     def initial_states(self, nlat: int) -> np.ndarray:
-        pass
+        ...
 
-    def bondhamiltonian(self, typ: int, z: int = 1) -> np.ndarray:
-        n, t = self.ham_list[typ][0]
-        return self.model_hamiltonian(z, **self.params[n][t])
+    def sitehamiltonian(self) -> np.ndarray:
+        return self.model_sitehamiltonian(self.params_onesite)
+
+    def bondhamiltonian(
+        self, typ: int, z: int = 1, use_onesite_hamiltonian: bool = False
+    ) -> np.ndarray:
+        n, t = self.ham_twosites_list[typ][0]
+        return self.model_bondhamiltonian(
+            z, use_onesite_hamiltonian, self.params_onesite, self.params_twosite[n][t]
+        )
 
     def _sort_ham_groups(self):
-        num_nn = len(self.params)
-        num_typ = len(self.params[0])
+        num_nn = len(self.params_twosite)
+        num_typ = len(self.params_twosite[0])
         ham_groups = list(range(num_nn * num_typ))
         for i, (n, typ) in enumerate(product(range(num_nn), range(num_typ))):
-            lhs = self.params[n][typ]
+            lhs = self.params_twosite[n][typ]
 
             vs = list(lhs.values())
             if np.count_nonzero(vs) == 0:
@@ -564,10 +599,10 @@ class Model(object):
                     continue
                 if ham_groups[i2] != i2:
                     continue
-                rhs = self.params[n2][typ2]
+                rhs = self.params_twosite[n2][typ2]
                 if lhs == rhs:
                     ham_groups[i2] = i
-        self.ham_list = []
+        self.ham_twosites_list = []
         for t in np.unique(ham_groups):
             if t < 0:
                 continue
@@ -575,7 +610,7 @@ class Model(object):
             for i, (n, typ) in enumerate(product(range(num_nn), range(num_typ))):
                 if ham_groups[i] == t:
                     hl.append((n, typ))
-            self.ham_list.append(hl)
+            self.ham_twosites_list.append(hl)
 
 
 def Sz(S: float) -> np.ndarray:
@@ -658,7 +693,27 @@ class SpinModel(Model):
             ret[2, :] = v.real
         return ret
 
-    def model_hamiltonian(self, z: int, **args) -> np.ndarray:
+    def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        hx = params_onesite.get("hx", 0.0)
+        hy = params_onesite.get("hy", 0.0)
+        hz = params_onesite.get("hz", 0.0)
+        D = params_onesite.get("d", 0.0)
+        Sz, Sx, Sy = self.onesite_ops
+        ham = np.zeros([self.N] * 2, dtype=complex)
+        for input, output in product(range(self.N), repeat=2):
+            ham[input, output] -= hx * Sx[input, output]
+            ham[input, output] -= hy * Sy[input, output]
+            ham[input, output] -= hz * Sz[input, output]
+            ham[input, output] -= D * Sz[input, output] ** 2
+        return ham
+
+    def model_bondhamiltonian(
+        self,
+        z: int,
+        use_onesite_hamiltonian: bool,
+        params_onesite: Dict,
+        params_twosite: Dict,
+    ) -> np.ndarray:
         """
         Geneates bond Hamiltonian of spin system
 
@@ -690,16 +745,21 @@ class SpinModel(Model):
             bond Hamiltonian
         """
 
-        Jz = args.get("jz", 0.0)
-        Jx = args.get("jx", 0.0)
-        Jy = args.get("jy", 0.0)
-        B = args.get("b", 0.0)
+        Jz = params_twosite.get("jz", 0.0)
+        Jx = params_twosite.get("jx", 0.0)
+        Jy = params_twosite.get("jy", 0.0)
+        B = params_twosite.get("b", 0.0)
 
-        hx = args.get("hx", 0.0) / z
-        hy = args.get("hy", 0.0) / z
-        hz = args.get("hz", 0.0) / z
-
-        D = args.get("d", 0.0) / z
+        if use_onesite_hamiltonian:
+            hx = 0.0
+            hy = 0.0
+            hz = 0.0
+            D = 0.0
+        else:
+            hx = params_onesite.get("hx", 0.0) / z
+            hy = params_onesite.get("hy", 0.0) / z
+            hz = params_onesite.get("hz", 0.0) / z
+            D = params_onesite.get("d", 0.0) / z
 
         E = np.eye(self.N)
         Sz, Sx, Sy = self.onesite_ops
@@ -727,11 +787,12 @@ class SpinModel(Model):
 
             ham[in1, in2, out1, out2] = val
             it.iternext()
-        ham += B * SS ** 2
+        ham += B * SS**2
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
-        ret: List[List[Dict[str, Any]]] = [
+        ret_onesite = {}
+        ret_twosite: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
             [{}, {}, {}],  # 3rd neighbors
@@ -742,10 +803,11 @@ class SpinModel(Model):
         ) -> None:
             for typ in types:
                 for name in names:
-                    if name in ret[n][typ]:
+                    if name in ret_twosite[n][typ]:
                         msg = "{} is defined twice".format(key)
                         raise RuntimeError(msg)
-                    ret[n][typ][name] = modelparam.get(key, 0.0)
+                    if key in modelparam:
+                        ret_twosite[n][typ][name] = modelparam[key]
 
         repat_J = re.compile("^j([012]?)('{0,2})([xyz]?)$")
         repat_B = re.compile("^b([012]?)('{0,2})$")
@@ -782,9 +844,9 @@ class SpinModel(Model):
             if "hz" in modelparam:
                 print('ERROR: Both "hz" and "h" are specified. Use "hz".')
                 sys.exit(1)
-            update(range(3), ["hz"], 0, "h")
-        else:
-            update(range(3), ["hz"], 0, "hz")
+            ret_onesite["hz"] = modelparam["h"]
+        elif "hz" in modelparam:
+            ret_onesite["hz"] = modelparam["hz"]
 
         if "g" in modelparam:
             print(
@@ -794,13 +856,15 @@ class SpinModel(Model):
             if "hx" in modelparam:
                 print('ERROR: Both "hx" and "g" are specified. Use "hx".')
                 sys.exit(1)
-            update(range(3), ["hx"], 0, "g")
-        else:
-            update(range(3), ["hx"], 0, "hx")
+            ret_onesite["hx"] = modelparam["g"]
+        elif "hx" in modelparam:
+            ret_onesite["hx"] = modelparam["hx"]
 
-        update(range(3), ["hy"], 0, "hy")
-        update(range(3), ["d"], 0, "d")
-        self.params = ret
+        for name in ("hy", "d"):
+            if name in modelparam:
+                ret_onesite[name] = modelparam[name]
+        self.params_onesite = ret_onesite
+        self.params_twosite = ret_twosite
 
 
 def bose_creator(nmax: int) -> np.ndarray:
@@ -860,7 +924,22 @@ class BoseHubbardModel(Model):
             ret[i, 0] = 1.0
         return ret
 
-    def model_hamiltonian(self, z: int, **args) -> np.ndarray:
+    def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        mu = params_onesite.get("mu", 0.0)
+        U = params_onesite.get("U", 0.0)
+        ham = np.zeros([self.N] * 2, dtype=complex)
+        for input, output in product(range(self.N), repeat=2):
+            ham[input, output] -= mu * N[input, output]
+            ham[input, output] += 0.5 * U * N[input, output] * (N[input, output] - 1)
+        return ham
+
+    def model_bondhamiltonian(
+        self,
+        z: int,
+        use_onesite_hamiltonian: bool,
+        params_onesite: Dict,
+        params_twosite: Dict,
+    ) -> np.ndarray:
         """
         Generate bond Hamiltonian of bosonic system
 
@@ -883,10 +962,15 @@ class BoseHubbardModel(Model):
             bond Hamiltonian
         """
 
-        t = args.get("t", 0.0)
-        mu = args.get("mu", 0.0) / z
-        U = args.get("u", 0.0) / z
-        V = args.get("v", 0.0)
+        t = params_twosite.get("t", 0.0)
+        V = params_twosite.get("v", 0.0)
+
+        if use_onesite_hamiltonian:
+            mu = 0.0
+            U = 0.0
+        else:
+            mu = params_onesite.get("mu", 0.0) / z
+            U = params_onesite.get("u", 0.0) / z
 
         E = np.eye(self.N)
         N, C, A = self.onesite_ops
@@ -908,7 +992,8 @@ class BoseHubbardModel(Model):
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
-        ret: List[List[Dict[str, Any]]] = [
+        ret_onesite = {}
+        ret_twosite: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
             [{}, {}, {}],  # 2nd neighbors
             [{}, {}, {}],  # 3rd neighbors
@@ -919,10 +1004,11 @@ class BoseHubbardModel(Model):
         ) -> None:
             for typ in types:
                 for name in names:
-                    if name in ret[n][typ]:
+                    if name in ret_twosite[n][typ]:
                         msg = "{} is defined twice".format(key)
                         raise RuntimeError(msg)
-                    ret[n][typ][name] = modelparam.get(key, 0.0)
+                    if key in modelparam:
+                        ret_twosite[n][typ][name] = modelparam[key]
 
         repat = {
             "t": re.compile("^t([012]?)('{0,2})$"),
@@ -942,9 +1028,13 @@ class BoseHubbardModel(Model):
                     types = [int(gr[0])] if gr[0] else [0, 1, 2]
                     n = len(gr[1])
                     update(types, [prefix], n, key)
-        for typ in ("mu", "u"):
-            update(range(3), [typ], 0, typ)
-        self.params = ret
+
+        for name in ("mu", "u"):
+            if name in modelparam:
+                ret_onesite[name] = modelparam[name]
+
+        self.params_onesite = ret_onesite
+        self.params_twosite = ret_twosite
 
 
 def make_lattice(param: Dict[str, Any]) -> Lattice:
@@ -1009,18 +1099,29 @@ def make_model(param: Dict[str, Any]) -> Model:
     return model
 
 
-def hamiltonians(lattice: Lattice, model: Model) -> List[Hamiltonian]:
+def hamiltonians(
+    lattice: Lattice, model: Model, use_onesite_hamiltonian: bool = False
+) -> List[Hamiltonian]:
     ret = []
-    for i, hl_list in enumerate(model.ham_list):
-        elem = model.bondhamiltonian(i, lattice.z)
-        bonds = []
+    if use_onesite_hamiltonian:
+        elem = model.sitehamiltonian()
+        if not np.array_equal(elem, np.zeros(elem.shape, dtype=complex)):
+            sites = []
+            ret.append(Hamiltonian(elem, sites=sites))
+    for i, hl_list in enumerate(model.ham_twosites_list):
+        elem = model.bondhamiltonian(
+            i, lattice.z, use_onesite_hamiltonian=use_onesite_hamiltonian
+        )
+        bonds: List[Bond] = []
         for n, typ in hl_list:
             bonds += lattice.bonds[n][typ]
-        ret.append(Hamiltonian(elem, bonds))
+        ret.append(Hamiltonian(elem, bonds=bonds))
     return ret
 
 
-def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
+def tenes_simple(
+    param: MutableMapping[str, Any], use_onesite_hamiltonian: bool = False
+) -> Tuple[str, Lattice]:
     """
     Parameters
     ----------
@@ -1031,7 +1132,7 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
     param = lower_dict(param)
     lattice = make_lattice(param)
     model = make_model(param)
-    hams = hamiltonians(lattice, model)
+    hams = hamiltonians(lattice, model, use_onesite_hamiltonian)
 
     ret = []
     ret.append("[parameter]")
@@ -1074,11 +1175,15 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
 
     for ham in hams:
         ret.append("[[hamiltonian]]")
-        ret.append("dim = {}".format([model.N, model.N]))
-        ret.append('bonds = """')
-        for bond in ham.bonds:
-            ret.append(dumpbond(bond))
-        ret.append('"""')
+        if ham.sites is None:
+            ret.append("dim = {}".format([model.N, model.N]))
+            ret.append('bonds = """')
+            for bond in ham.bonds:
+                ret.append(dumpbond(bond))
+            ret.append('"""')
+        else:
+            ret.append("dim = {}".format([model.N]))
+            ret.append("sites = {}".format(ham.sites))
         ret.append('elements = """')
         for line in dump_op(ham.elements):
             ret.append(line)
@@ -1089,6 +1194,22 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
     if len(vsites) == lattice.numsites():
         vsites = []
     ret.append("[observable]")
+
+    onesite_offset = 0
+    for ham in hams:
+        if ham.bonds is None:
+            onesite_offset = 1
+            ret.append("[[observable.onesite]]")
+            ret.append('name = "hamiltonian"')
+            ret.append("group = 0")
+            ret.append("dim = {}".format(model.N))
+            ret.append("sites = {}".format(ham.sites))
+            ret.append('elements = """')
+            for line in dump_op(ham.elements):
+                ret.append(line)
+            ret.append('"""')
+            ret.append("")
+
     lops = model.onesite_observables_as_dict()
     is_complex = True
     if "general" in pparam:
@@ -1098,7 +1219,7 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
         if is_complex or lop["is_real"]:
             ret.append("[[observable.onesite]]")
             ret.append('name = "{}"'.format(lop["name"]))
-            ret.append("group = {}".format(lop["group"]))
+            ret.append("group = {}".format(lop["group"] + onesite_offset))
             groups.append(lop["group"])
             ret.append("sites = {}".format(vsites))
             ret.append("dim = {}".format(lop["dim"]))
@@ -1111,19 +1232,20 @@ def tenes_simple(param: MutableMapping[str, Any]) -> Tuple[str, Lattice]:
     groups.sort()
 
     for ham in hams:
-        ret.append("[[observable.twosite]]")
-        ret.append('name = "hamiltonian"')
-        ret.append("group = 0")
-        ret.append("dim = {}".format([model.N, model.N]))
-        ret.append('bonds = """')
-        for bond in ham.bonds:
-            ret.append(dumpbond(bond))
-        ret.append('"""')
-        ret.append('elements = """')
-        for line in dump_op(ham.elements):
-            ret.append(line)
-        ret.append('"""')
-        ret.append("")
+        if ham.sites is None:
+            ret.append("[[observable.twosite]]")
+            ret.append('name = "hamiltonian"')
+            ret.append("group = 0")
+            ret.append("dim = {}".format([model.N, model.N]))
+            ret.append('bonds = """')
+            for bond in ham.bonds:
+                ret.append(dumpbond(bond))
+            ret.append('"""')
+            ret.append('elements = """')
+            for line in dump_op(ham.elements):
+                ret.append(line)
+            ret.append('"""')
+            ret.append("")
 
     k = 1
     for i, j in model.twosite_ops:
@@ -1205,6 +1327,10 @@ if __name__ == "__main__":
         help="Bond Information file",
     )
     parser.add_argument(
+        "--use-site-hamiltonian", dest="siteham", action="store_true",
+        help="Save onsite terms as site Hamiltonians"
+    )
+    parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.2-dev"
     )
 
@@ -1213,7 +1339,7 @@ if __name__ == "__main__":
     if args.input == args.output:
         print("The names of input and output are the same")
         sys.exit(1)
-    res, lattice = tenes_simple(toml.load(args.input))
+    res, lattice = tenes_simple(toml.load(args.input), args.siteham)
 
     with open(args.output, "w") as f:
         f.write(res)

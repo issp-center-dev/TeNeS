@@ -33,17 +33,22 @@ void iTPS<tensor>::simple_update() {
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : simple_updates) {
-      const int source = up.source_site;
-      const int source_leg = up.source_leg;
-      const int target = lattice.neighbor(source, source_leg);
-      const int target_leg = (source_leg + 2) % 4;
-      core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
-                               lambda_tensor[target], up.op, source_leg,
-                               peps_parameters, Tn1_new, Tn2_new, lambda_c);
-      lambda_tensor[source][source_leg] = lambda_c;
-      lambda_tensor[target][target_leg] = lambda_c;
-      Tn[source] = Tn1_new;
-      Tn[target] = Tn2_new;
+      if (up.is_onesite()) {
+        const int source = up.source_site;
+        Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
+      } else {
+        const int source = up.source_site;
+        const int source_leg = up.source_leg;
+        const int target = lattice.neighbor(source, source_leg);
+        const int target_leg = (source_leg + 2) % 4;
+        core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
+                                 lambda_tensor[target], up.op, source_leg,
+                                 peps_parameters, Tn1_new, Tn2_new, lambda_c);
+        lambda_tensor[source][source_leg] = lambda_c;
+        lambda_tensor[target][target_leg] = lambda_c;
+        Tn[source] = Tn1_new;
+        Tn[target] = Tn2_new;
+      }
     }
 
     // local gauge fixing

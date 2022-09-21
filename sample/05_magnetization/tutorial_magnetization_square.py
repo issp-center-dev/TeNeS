@@ -41,7 +41,7 @@ fene = open("energy_square.dat", "w")
 fmag = open("magnetization_square.dat", "w")
 for idx in range(num_h):
     h = h_table[idx]
-    print("Caclulation Process: {}/{}".format(idx + 1, num_h))
+    print("Calculation Process: {}/{}".format(idx + 1, num_h))
     inum = 0
     num_pre = 0
     fene.write("{} ".format(h))
@@ -72,12 +72,19 @@ for idx in range(num_h):
         cmd = "{} tenes input_square_{}_{}.toml".format(MPI_cmd, idx, num_step)
         subprocess.call(cmd.split())
 
+        ene = 0.0 + 0.0j
+        mag_sz = 0.0 + 0.0j
         with open(
             join("output_square_{}_{}".format(idx, num_step), "density.dat")
         ) as f:
-            lines = f.readlines()
-            ene = lines[2].split("=")[1].strip()
-            mag_sz = lines[0].split("=")[1].strip()
+            for line in f:
+                name, vals = line.split("=")
+                if name.strip() == "hamiltonian":
+                    re, im = vals.split()
+                    ene += float(re)
+                elif name.strip() == "Sz":
+                    re, im = vals.split()
+                    mag_sz += float(re)
         fene.write("{} ".format(ene))
         fmag.write("{} ".format(mag_sz))
         inum = inum + 1
