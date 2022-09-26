@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>5.5. 出力ファイル &#8212; TeNeS 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -14,6 +14,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
@@ -37,14 +38,14 @@
           <div class="body" role="main">
             
   <section id="sec-output-format">
-<span id="id1"></span><h1><span class="section-number">5.5. </span>出力ファイル<a class="headerlink" href="#sec-output-format" title="Permalink to this heading">¶</a></h1>
+<span id="id1"></span><h1><span class="section-number">5.5. </span>出力ファイル<a class="headerlink" href="#sec-output-format" title="この見出しへのパーマリンク">¶</a></h1>
 <p>各種計算結果は <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリ以下に保存されます。
 また、入力ファイルとして使ったファイルがコピーされます。</p>
 <section id="parameters-dat">
-<h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>実際に計算に使われたパラメータおよび実行日時が出力されます。</p>
 <section id="id2">
-<h3>例<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>simple_num_step = 1000
 simple_inverse_lambda_cutoff = 1e-12
 
@@ -81,11 +82,11 @@ finish_datetime = 2020-03-21T17:04:08+09:00
 </section>
 </section>
 <section id="density-dat">
-<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
 各演算子の名前 <code class="docutils literal notranslate"><span class="pre">name</span></code> が空だった場合はかわりに演算子番号が出力されます。</p>
 <section id="id3">
-<h3>例<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
 Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
 hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
@@ -97,7 +98,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </section>
 </section>
 <section id="onesite-obs-dat">
-<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>onesite 演算子の期待値 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i\rangle = \langle\Psi | \hat{A}^\alpha_i | \Psi \rangle / \langle\Psi | \Psi \rangle\)</span> が出力されます。
 各行4列からなります。</p>
 <ol class="arabic simple">
@@ -110,7 +111,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 ノルムの虚部が有限に残っている場合、計算になにか問題が起きています。
 大抵の場合は、CTM のボンド次元が小さすぎることが原因です。</p>
 <section id="id4">
-<h3>例<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: site_index
 # $3: real
@@ -137,7 +138,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </section>
 </section>
 <section id="twosite-obs-dat">
-<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>twosite 演算子の期待値が出力されます。
 各行6列からなります。</p>
 <ol class="arabic simple">
@@ -152,7 +153,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 ノルムの虚部が有限に残っている場合、計算になにか問題が起きています。
 大抵の場合は、CTM のボンド次元が小さすぎることが原因です。</p>
 <section id="id5">
-<h3>例<a class="headerlink" href="#id5" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
 # $2: source_site
 # $3: dx
@@ -176,7 +177,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </section>
 </section>
 <section id="correlation-dat">
-<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
 各行7列から構成されます。</p>
 <ol class="arabic simple">
@@ -189,7 +190,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 <li><p>演算子の虚部 <span class="math notranslate nohighlight">\(\mathrm{Im}C\)</span></p></li>
 </ol>
 <section id="id6">
-<h3>例<a class="headerlink" href="#id6" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
 # $2: left_site
 # $3: right_op
@@ -217,7 +218,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </section>
 </section>
 <section id="correlation-length-dat">
-<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> が出力されます。
 各行3+n列から構成されます。</p>
 <ol class="arabic simple">
@@ -229,7 +230,7 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 この情報を利用することで相関長のボンド次元依存性を見積もれるかもしれません。
 詳細は PRX <strong>8</strong>, 041033 (2018) と PRX <strong>8</strong>, 031030 (2018) を参照してください。</p>
 <section id="id7">
-<h3>例<a class="headerlink" href="#id7" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
 # $2: col or row index
 # $3: correlation length
@@ -245,10 +246,10 @@ SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 </section>
 </section>
 <section id="time-dat">
-<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算時間が出力されます。</p>
 <section id="id8">
-<h3>例<a class="headerlink" href="#id8" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>time simple update = 1.64429
 time full update   = 0
 time environmnent  = 0.741858
@@ -337,7 +338,7 @@ time observable    = 0.104487
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

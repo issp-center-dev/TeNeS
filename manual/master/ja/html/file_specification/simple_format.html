@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>5.2. tenes_simple の入力ファイル &#8212; TeNeS 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -14,6 +14,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
@@ -37,7 +38,7 @@
           <div class="body" role="main">
             
   <section id="tenes-simple">
-<span id="sec-simple-format"></span><h1><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル<a class="headerlink" href="#tenes-simple" title="Permalink to this heading">¶</a></h1>
+<span id="sec-simple-format"></span><h1><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル<a class="headerlink" href="#tenes-simple" title="この見出しへのパーマリンク">¶</a></h1>
 <ul class="simple">
 <li><p>ファイルフォーマットは
 <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a> 形式</p></li>
@@ -49,15 +50,15 @@
 </li>
 </ul>
 <section id="model">
-<h2><span class="section-number">5.2.1. </span><code class="docutils literal notranslate"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.2.1. </span><code class="docutils literal notranslate"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算する模型を指定します。
 スピン系 (spin) および ボソン系 (boson) が定義済みです。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -76,17 +77,17 @@
 </table>
 <p>模型の種類によって相互作用などのパラメータ名が変わります。</p>
 <section id="spin">
-<h3>スピン系 spin<a class="headerlink" href="#spin" title="Permalink to this heading">¶</a></h3>
+<h3>スピン系 spin<a class="headerlink" href="#spin" title="この見出しへのパーマリンク">¶</a></h3>
 <p>スピン系</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H} = \sum_{i &lt; j}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\]</div>
 <p>一体項のパラメータは次の通り。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -126,10 +127,10 @@
 <p>交換相互作用 <span class="math notranslate nohighlight">\(J\)</span> にはボンド依存性をもたせることができます。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -195,10 +196,10 @@
 <p>双二次相互作用 <span class="math notranslate nohighlight">\(B\)</span> も <span class="math notranslate nohighlight">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -264,7 +265,7 @@
 ここで、ボンドハミルトニアンのうち、 <span class="math notranslate nohighlight">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
 </section>
 <section id="boson">
-<h3>ボソン系 boson<a class="headerlink" href="#boson" title="Permalink to this heading">¶</a></h3>
+<h3>ボソン系 boson<a class="headerlink" href="#boson" title="この見出しへのパーマリンク">¶</a></h3>
 <p>ボソン系</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H} = \sum_{i&lt;j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right]\]</div>
@@ -272,10 +273,10 @@
 <p>一体項のパラメータは次の通り。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -305,10 +306,10 @@
 <p>ホッピング <span class="math notranslate nohighlight">\(t\)</span> およびオフサイト斥力 <span class="math notranslate nohighlight">\(V\)</span> にはボンド依存性をもたせることができます。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 9%" />
-<col style="width: 55%" />
-<col style="width: 18%" />
-<col style="width: 18%" />
+<col style="width: 9.1%" />
+<col style="width: 54.5%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -423,17 +424,17 @@
 </section>
 </section>
 <section id="lattice">
-<h2><span class="section-number">5.2.2. </span><code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.2.2. </span><code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算する格子を指定します。
 正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。
 TeNeS では波動関数を正方格子状に並べられたテンソルによるテンソル積状態で表現し、計算を行います。
 そのため、これらの格子（物理格子）と、計算される正方格子との対応についても記述します。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -510,7 +511,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </li>
 </ul>
 <section id="square-lattice">
-<h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="Permalink to this heading">¶</a></h3>
+<h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="この見出しへのパーマリンク">¶</a></h3>
 <p>正方格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math notranslate nohighlight">\((1,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((0,1)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、 <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-square-lattice"><span class="std std-numref">図 5.1</span></a> (a) に示します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
@@ -528,7 +529,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </figure>
 </section>
 <section id="triangular-lattice">
-<h3>三角格子 triangular lattice<a class="headerlink" href="#triangular-lattice" title="Permalink to this heading">¶</a></h3>
+<h3>三角格子 triangular lattice<a class="headerlink" href="#triangular-lattice" title="この見出しへのパーマリンク">¶</a></h3>
 <p>三角格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math notranslate nohighlight">\((1,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、 <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-triangular-lattice"><span class="std std-numref">図 5.2</span></a> (a) に示します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
@@ -548,7 +549,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </figure>
 </section>
 <section id="honeycomb-lattice">
-<h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Permalink to this heading">¶</a></h3>
+<h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="この見出しへのパーマリンク">¶</a></h3>
 <p>蜂の巣格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math notranslate nohighlight">\((0, 0)\)</span> と <span class="math notranslate nohighlight">\((\sqrt{3}/2, 1/2)\)</span> の2つのサイトからなるユニットが、 <span class="math notranslate nohighlight">\((\sqrt{3},0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1/2, 3/2)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、<code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-honeycomb-lattice"><span class="std std-numref">図 5.3</span></a> (a) に示します。
 破線はユニットを表します。
@@ -571,7 +572,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </figure>
 </section>
 <section id="kagome-lattice">
-<h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="Permalink to this heading">¶</a></h3>
+<h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="この見出しへのパーマリンク">¶</a></h3>
 <p>かごめ格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math notranslate nohighlight">\((0, 0)\)</span>, <span class="math notranslate nohighlight">\((1, 0)\)</span>, <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> の3つのサイトからなるユニット（上向き三角）が、 <span class="math notranslate nohighlight">\((2,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1, \sqrt{3})\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、<code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-kagome-lattice"><span class="std std-numref">図 5.4</span></a> (a) に示します。
 破線はユニットは破線を表します。
@@ -592,21 +593,21 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </section>
 </section>
 <section id="parameter">
-<h2><span class="section-number">5.2.3. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.2.3. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="この見出しへのパーマリンク">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では使われず、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとしてそのままコピーされます。</p>
 <p>更新回数など、 計算にあらわれる種々のパラメータを記述します。
 サブセクションとして <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code> を持ちます。</p>
 <p>simple update およびfull updateの虚時間刻み <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> と <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> のみ、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> 本体ではなくスタンダードモード <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> で使われるパラメータです。</p>
 <section id="parameter-general">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this heading">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="この見出しへのパーマリンク">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 29%" />
-<col style="width: 43%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
+<col style="width: 28.6%" />
+<col style="width: 42.9%" />
+<col style="width: 14.3%" />
+<col style="width: 14.3%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -687,14 +688,14 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </ul>
 </section>
 <section id="parameter-simple-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this heading">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="この見出しへのパーマリンク">¶</a></h3>
 <p>simple update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -738,14 +739,14 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </table>
 </section>
 <section id="parameter-full-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="この見出しへのパーマリンク">¶</a></h3>
 <p>full update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -799,14 +800,14 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </table>
 </section>
 <section id="parameter-ctm">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this heading">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="この見出しへのパーマリンク">¶</a></h3>
 <p>角転送行列 (CTM) に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -861,14 +862,14 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
 </section>
 <section id="parameter-random">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this heading">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="この見出しへのパーマリンク">¶</a></h3>
 <p>疑似乱数生成器に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -888,7 +889,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <p>MPI 並列において、各プロセスは <code class="docutils literal notranslate"><span class="pre">seed</span></code> にプロセス番号を足した数を実際のシードとして持ちます。</p>
 </section>
 <section id="id1">
-<h3>例<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<h3>例<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -906,20 +907,20 @@ dimension = 9 # CHI
 </section>
 </section>
 <section id="correlation">
-<h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="この見出しへのパーマリンク">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では相関関数 <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">=</span> <span class="pre">&lt;A(0)B(r)&gt;</span></code> はデフォルトでは計算されません。
 相関関数を計算したい場合は、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルで指定する <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションと共通のフォーマットで指定することができます。詳細は、<a class="reference internal" href="expert_format.html"><span class="doc">tenes の入力ファイル</span></a> の <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションをご覧ください。</p>
 </section>
 <section id="correlation-length">
-<h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="この見出しへのパーマリンク">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では使われず、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとしてそのままコピーされます。</p>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> の計算に関する情報を指定するセクションです。</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 18%" />
-<col style="width: 35%" />
-<col style="width: 24%" />
-<col style="width: 24%" />
+<col style="width: 17.6%" />
+<col style="width: 35.3%" />
+<col style="width: 23.5%" />
+<col style="width: 23.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -1053,7 +1054,7 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

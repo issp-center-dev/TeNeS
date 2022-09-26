@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>parameter.general &#8212; TeNeS 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -14,6 +14,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
@@ -39,14 +40,14 @@
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code> を持ちます。</p>
 <p>simple update およびfull updateの虚時間刻み <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> と <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> のみ、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> 本体ではなくスタンダードモード <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> で使われるパラメータです。</p>
 <section id="parameter-general">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="この見出しへのパーマリンク">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 29%" />
-<col style="width: 43%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
+<col style="width: 28.6%" />
+<col style="width: 42.9%" />
+<col style="width: 14.3%" />
+<col style="width: 14.3%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -127,14 +128,14 @@
 </ul>
 </section>
 <section id="parameter-simple-update">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="この見出しへのパーマリンク">¶</a></h1>
 <p>simple update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -178,14 +179,14 @@
 </table>
 </section>
 <section id="parameter-full-update">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="この見出しへのパーマリンク">¶</a></h1>
 <p>full update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -239,14 +240,14 @@
 </table>
 </section>
 <section id="parameter-ctm">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="この見出しへのパーマリンク">¶</a></h1>
 <p>角転送行列 (CTM) に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -301,14 +302,14 @@
 <p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
 </section>
 <section id="parameter-random">
-<h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="この見出しへのパーマリンク">¶</a></h1>
 <p>疑似乱数生成器に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
-<col style="width: 38%" />
-<col style="width: 38%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>名前</p></th>
@@ -328,7 +329,7 @@
 <p>MPI 並列において、各プロセスは <code class="docutils literal notranslate"><span class="pre">seed</span></code> にプロセス番号を足した数を実際のシードとして持ちます。</p>
 </section>
 <section id="id1">
-<h1>例<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h1>
+<h1>例<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -412,7 +413,7 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
