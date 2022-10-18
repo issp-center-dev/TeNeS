@@ -699,7 +699,7 @@ class SpinModel(Model):
         hz = params_onesite.get("hz", 0.0)
         D = params_onesite.get("d", 0.0)
         Sz, Sx, Sy = self.onesite_ops
-        ham = np.zeros([self.N] * 2, dtype=complex)
+        ham = np.zeros([self.N] * 2, dtype=np.complex128)
         for input, output in product(range(self.N), repeat=2):
             ham[input, output] -= hx * Sx[input, output]
             ham[input, output] -= hy * Sy[input, output]
@@ -763,7 +763,7 @@ class SpinModel(Model):
 
         E = np.eye(self.N)
         Sz, Sx, Sy = self.onesite_ops
-        ham = np.zeros([self.N] * 4, dtype=complex)
+        ham = np.zeros([self.N] * 4, dtype=np.complex128)
         SS = np.zeros([self.N] * 4)
         it = np.nditer(ham, flags=["multi_index"], order="F")
         while not it.finished:
@@ -927,7 +927,7 @@ class BoseHubbardModel(Model):
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
         mu = params_onesite.get("mu", 0.0)
         U = params_onesite.get("U", 0.0)
-        ham = np.zeros([self.N] * 2, dtype=complex)
+        ham = np.zeros([self.N] * 2, dtype=np.complex128)
         for input, output in product(range(self.N), repeat=2):
             ham[input, output] -= mu * N[input, output]
             ham[input, output] += 0.5 * U * N[input, output] * (N[input, output] - 1)
@@ -974,7 +974,7 @@ class BoseHubbardModel(Model):
 
         E = np.eye(self.N)
         N, C, A = self.onesite_ops
-        ham = np.zeros([self.N] * 4, dtype=np.complex)
+        ham = np.zeros([self.N] * 4, dtype=np.complex128)
         it = np.nditer(ham, flags=["multi_index"], order="F")
         while not it.finished:
             in1, in2, out1, out2 = it.multi_index
@@ -1105,7 +1105,7 @@ def hamiltonians(
     ret = []
     if use_onesite_hamiltonian:
         elem = model.sitehamiltonian()
-        if not np.array_equal(elem, np.zeros(elem.shape, dtype=complex)):
+        if not np.array_equal(elem, np.zeros(elem.shape, dtype=np.complex128)):
             sites = []
             ret.append(Hamiltonian(elem, sites=sites))
     for i, hl_list in enumerate(model.ham_twosites_list):
