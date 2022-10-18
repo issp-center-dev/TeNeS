@@ -19,7 +19,7 @@ fene = open("energy.dat", "w")
 for f in (fmag, fene):
     f.write("# $1: D\n")
     for i, num_step in enumerate(num_step_table, 2):
-        f.write(f"# ${i}: {num_step=}\n")
+        f.write(f"# ${i}: num_step={num_step}\n")
     f.write("\n")
 
 for D in Ds:

@@ -42,7 +42,7 @@ fmag = open("magnetization_square.dat", "w")
 for f in (fmag, fene):
     f.write("# $1: hz\n")
     for i, num_step in enumerate(num_step_table, 2):
-        f.write(f"# ${i}: {num_step=}\n")
+        f.write(f"# ${i}: num_step={num_step}\n")
     f.write("\n")
 
 for idx in range(num_h):
