@@ -499,7 +499,7 @@ class SiteOperator:
     site: int
     elements: np.ndarray
 
-    def __init__( self, site: int, elements: np.ndarray ):
+    def __init__(self, site: int, elements: np.ndarray):
         self.site = site
         self.elements = elements
 
@@ -685,6 +685,7 @@ class TwositeObservable:
         else:
             return [NNOperator(bond, ops=self.ops) for bond in self.bonds]
 
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
@@ -692,8 +693,9 @@ def make_evolution_onesite(
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
     D, V = np.linalg.eigh(hamiltonian.elements)
-    evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau*D), V)
+    evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V)
     return [SiteOperator(hamiltonian.site, evo)]
+
 
 def make_evolution_twosite(
     hamiltonian: NNOperator,
@@ -813,6 +815,11 @@ class Model:
                 for site in sites:
                     op = SiteOperator(site, elements)
                     self.hamiltonians.append(op)
+                ham_as_onesite_obs.append(
+                    OnesiteObservable(
+                        0, sites=sites, elements=elements, name="hamiltonian"
+                    )
+                )
             elif len(dims) == 2:
                 assert (
                     isinstance(dims[0], int)
@@ -857,9 +864,12 @@ class Model:
         self.onesites = []
         self.twobodies = []
         observable = param.get("observable", {})
+        has_zero_onesite = False
         for onesite in observable.get("onesite", []):
             name = onesite["name"]
             group = onesite["group"]
+            if group == 0:
+                has_zero_onesite = True
             sites = onesite["sites"]
             dim = onesite["dim"]
             elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
@@ -867,12 +877,15 @@ class Model:
                 group=group, elements=elements, sites=sites, name=name
             )
             self.onesites.append(one_obs)
-        has_zero = False
+        if not has_zero_onesite:
+            for ham in ham_as_onesite_obs:
+                self.onesites.append(ham)
+        has_zero_twosite = False
         for twosite in observable.get("twosite", []):
             name = twosite["name"]
             group = twosite["group"]
             if group == 0:
-                has_zero = True
+                has_zero_twosite = True
             bonds = [
                 parse_bond(line)
                 for line in twosite["bonds"].strip().splitlines()
@@ -885,7 +898,7 @@ class Model:
             else:
                 two_obs = TwositeObservable(group, bonds, ops=twosite["ops"], name=name)
             self.twobodies.append(two_obs)
-        if not has_zero:
+        if not has_zero_twosite:
             for ham in ham_as_twosite_obs:
                 self.twobodies.append(ham)
 
