@@ -91,45 +91,52 @@ num_step_table = [100, 200, 500, 1000, 2000]
 
 fmag = open(&quot;magnetization.dat&quot;, &quot;w&quot;)
 fene = open(&quot;energy.dat&quot;, &quot;w&quot;)
+
+for f in (fmag, fene):
+    f.write(&quot;# $1: hz\n&quot;)
+    for i, num_step in enumerate(num_step_table, 2):
+        f.write(f&quot;# ${i}: {num_step=}\n&quot;)
+    f.write(&quot;\n&quot;)
+
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
-    print(&quot;Calculation Process: {}/{}&quot;.format(idx + 1, num_h))
+    print(f&quot;Calculation Process: {idx+1}/{num_h}&quot;)
     inum = 0
     num_pre = 0
-    fmag.write(&quot;{} &quot;.format(h))
-    fene.write(&quot;{} &quot;.format(h))
+    fmag.write(f&quot;{h} &quot;)
+    fene.write(f&quot;{h} &quot;)
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print(&quot;Steps: {}&quot;.format(num_step))
+        print(f&quot;Steps: {num_step}&quot;)
         with open(&quot;basic.toml&quot;) as f:
             dict_toml = toml.load(f)
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}_{}&quot;.format(
-            idx, num_step
-        )
-        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;.format(
-            idx, num_step
-        )
+
+        output_dir = f&quot;output_{idx}_{num_step}&quot;
+
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = output_dir
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;
         dict_toml[&quot;model&quot;][&quot;hz&quot;] = float(h)
         dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
         if inum &gt; 0:
-            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;.format(
-                idx, num_pre
-            )
-        with open(&quot;simple_{}_{}.toml&quot;.format(idx, num_step), &quot;w&quot;) as f:
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;
+
+        simple_toml = f&quot;simple_{idx}_{num_step}.toml&quot;
+        std_toml = f&quot;std_{idx}_{num_step}.toml&quot;
+        input_toml = f&quot;input_{idx}_{num_step}.toml&quot;
+
+        with open(simple_toml, &quot;w&quot;) as f:
             toml.dump(dict_toml, f)
-        cmd = &quot;tenes_simple simple_{}_{}.toml -o std_{}_{}.toml&quot;.format(
-            idx, num_step, idx, num_step
-        )
+        cmd = f&quot;tenes_simple {simple_toml} -o {std_toml}&quot;
         subprocess.call(cmd.split())
-        cmd = &quot;tenes_std std_{}_{}.toml -o input_{}_{}.toml&quot;.format(
-            idx, num_step, idx, num_step
-        )
+
+        cmd = f&quot;tenes_std {std_toml} -o {input_toml}&quot;
         subprocess.call(cmd.split())
-        cmd = &quot;{} tenes input_{}_{}.toml&quot;.format(MPI_cmd, idx, num_step)
+
+        cmd = f&quot;{MPI_cmd} tenes {input_toml}&quot;
         subprocess.call(cmd.split())
 
         ene = 0.0
         mag_sz = 0.0
-        with open(join(&quot;output_{}_{}&quot;.format(idx, num_step), &quot;density.dat&quot;)) as f:
+        with open(join(output_dir, &quot;density.dat&quot;)) as f:
             for line in f:
                 name, vals = line.split(&quot;=&quot;)
                 if name.strip() == &quot;hamiltonian&quot;:
@@ -138,8 +145,8 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
                 elif name.strip() == &quot;Sz&quot;:
                     re, im = vals.split()
                     mag_sz += float(re)
-        fene.write(&quot;{} &quot;.format(ene))
-        fmag.write(&quot;{} &quot;.format(mag_sz))
+        fene.write(f&quot;{ene} &quot;)
+        fmag.write(f&quot;{mag_sz} &quot;)
         inum = inum + 1
         num_pre = num_step
     fene.write(&quot;\n&quot;)
@@ -285,7 +292,7 @@ W = 2
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.2.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.3.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

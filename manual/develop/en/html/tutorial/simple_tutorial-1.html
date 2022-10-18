@@ -146,18 +146,25 @@ max_hx = 3.0
 
 total = 0
 for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
-    print(&quot;Caclulation Process: {}/{}&quot;.format(idx + 1, num_hx))
+    print(f&quot;Calculation Process: {idx+1}/{num_hx}&quot;)
     with open(&quot;simple.toml&quot;) as f:
         dict_toml = toml.load(f)
-    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = &quot;output_{}&quot;.format(idx)
+    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = f&quot;output_{idx}&quot;
     dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
-    with open(&quot;simple_{}.toml&quot;.format(idx), &quot;w&quot;) as f:
+
+    simple_toml = f&quot;simple_{idx}.toml&quot;
+    std_toml = f&quot;std_{idx}.toml&quot;
+    input_toml = f&quot;input_{idx}.toml&quot;
+
+    with open(simple_toml, &quot;w&quot;) as f:
         toml.dump(dict_toml, f)
-    cmd = &quot;tenes_simple simple_{}.toml -o std_{}.toml&quot;.format(idx, idx)
+    cmd = f&quot;tenes_simple {simple_toml} -o {std_toml}&quot;
     subprocess.call(cmd.split())
-    cmd = &quot;tenes_std std_{}.toml -o input_{}.toml&quot;.format(idx, idx)
+
+    cmd = f&quot;tenes_std {std_toml} -o {input_toml}&quot;
     subprocess.call(cmd.split())
-    cmd = &quot;{} tenes input_{}.toml&quot;.format(MPI_cmd, idx)
+
+    cmd = f&quot;{MPI_cmd} tenes {input_toml}&quot;
     subprocess.call(cmd.split())
 </pre></div>
 </div>
@@ -166,22 +173,25 @@ for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
 </ul>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>from os.path import join
 
-import numpy as np
-
 import toml
-
 
 num_hx = 16
 
+print(&quot;# $1: h&quot;)
+print(&quot;# $2: ene&quot;)
+print(&quot;# $3: sz&quot;)
+print(&quot;# $4: sx&quot;)
+print()
+
 for idx in range(num_hx):
     try:
-        with open(&quot;simple_{}.toml&quot;.format(idx)) as f:
+        with open(f&quot;simple_{idx}.toml&quot;) as f:
             dict_toml = toml.load(f)
         hx = dict_toml[&quot;model&quot;][&quot;hx&quot;]
         ene = 0.0
         mag_sz = 0.0
         mag_sx = 0.0
-        with open(join(&quot;output_{}&quot;.format(idx), &quot;density.dat&quot;)) as f:
+        with open(join(f&quot;output_{idx}&quot;, &quot;density.dat&quot;)) as f:
             for line in f:
                 words = line.split()
                 if words[0] == &quot;hamiltonian&quot;:
@@ -190,7 +200,7 @@ for idx in range(num_hx):
                     mag_sz = words[2]
                 elif words[0] == &quot;Sx&quot;:
                     mag_sx = words[2]
-        print(&quot;{} {} {} {}&quot;.format(hx, ene, mag_sz, mag_sx))
+        print(f&quot;{hx} {ene} {mag_sz} {mag_sx}&quot;)
     except:
         continue
 </pre></div>
@@ -290,7 +300,7 @@ By typing the following command, <code class="docutils literal notranslate"><spa
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.2.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.3.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
