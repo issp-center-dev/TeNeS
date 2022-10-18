@@ -1166,10 +1166,13 @@ def tenes_simple(
         else:
             ret.append("physical_dim = {}".format(model.N))
             if lattice.initial_states == "random":
-                ret.append("initial_state = [0.0]")
+                state = [0.0]
+            elif lattice.initial_states == "ferro":
+                state = st[0, :]
             else:
-                v = ", ".join(map(str, st[i, :]))
-                ret.append("initial_state = [{}]".format(v))
+                state = st[i, :]
+            v = ", ".join(map(str, state))
+            ret.append("initial_state = [{}]".format(v))
         ret.append("noise = {}".format(lattice.noise))
         ret.append("")
 
