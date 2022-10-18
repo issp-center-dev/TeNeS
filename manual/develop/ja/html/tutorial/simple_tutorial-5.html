@@ -95,7 +95,7 @@ fene = open(&quot;energy.dat&quot;, &quot;w&quot;)
 for f in (fmag, fene):
     f.write(&quot;# $1: hz\n&quot;)
     for i, num_step in enumerate(num_step_table, 2):
-        f.write(f&quot;# ${i}: {num_step=}\n&quot;)
+        f.write(f&quot;# ${i}: num_step={num_step}\n&quot;)
     f.write(&quot;\n&quot;)
 
 for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
