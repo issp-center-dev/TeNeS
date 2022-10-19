@@ -43,10 +43,10 @@
 ここではスタンダードモードの使い方を説明します。</p>
 <section id="id2">
 <h2><span class="section-number">4.4.1. </span>ユニットセルの定義<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
-<figure class="align-center" id="id6">
+<figure class="align-center" id="id8">
 <a class="reference internal image-reference" href="../_images/ja_tutorial_1_Tensor.png"><img alt="../_images/ja_tutorial_1_Tensor.png" src="../_images/ja_tutorial_1_Tensor.png" style="width: 400px;" /></a>
 <figcaption>
-<p><span class="caption-number">図 4.5 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id6" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.5 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id8" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
 <p>ユニットセルの定義は <code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code> を用います</p>
@@ -69,22 +69,23 @@ noise = 0.01               # 初期テンソルのゆらぎ
 <p>と書けます。</p>
 </section>
 <section id="id3">
-<h2><span class="section-number">4.4.2. </span>格子模型(ボンドハミルトニアン)の定義<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
-<figure class="align-center" id="id7">
+<h2><span class="section-number">4.4.2. </span>模型（ハミルトニアン）の定義<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<figure class="align-center" id="id9">
 <a class="reference internal image-reference" href="../_images/ja_tutorial_1_Hamiltonian.png"><img alt="../_images/ja_tutorial_1_Hamiltonian.png" src="../_images/ja_tutorial_1_Hamiltonian.png" style="width: 400px;" /></a>
 <figcaption>
-<p><span class="caption-number">図 4.6 </span><span class="caption-text">[[hamiltonian]] の模式図</span><a class="headerlink" href="#id7" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.6 </span><span class="caption-text">[[hamiltonian]] の模式図</span><a class="headerlink" href="#id9" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
-<p>TeNeSはハミルトニアンをボンドハミルトニアン (2サイトハミルトニアン) の和として扱います
-(磁場などのサイトハミルトニアンもボンドハミルトニアンに取り込まれます)。</p>
+<p>TeNeSはハミルトニアンをボンドハミルトニアン (2サイトハミルトニアン) とサイトハミルトニアン（1サイトハミルトニアン）の和として扱います。</p>
 <div class="math notranslate nohighlight">
-\[\mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j}\]</div>
-<p>ボンドはsourceサイトとtargetサイトの組であると考えます。
-ボンドハミルトニアンは、その行列要素と作用するボンドで規定されます。
+\[\mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j} + \sum_{i}\mathcal{H}_{i}\]</div>
+<p>これら局所ハミルトニアンは（非ゼロの）行列要素と作用するサイト・ボンドの組み合わせで定義されます。
+ボンドはsourceサイトとtargetサイトの組であると考えます。
 行列要素によって模型が、ボンドによって格子が定義されます。</p>
-<p>それぞれのボンドハミルトニアンは <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> で記述されます。
-作用するボンドは <code class="docutils literal notranslate"><span class="pre">bonds</span></code> 文字列で指定します。</p>
+<section id="id4">
+<h3>ボンドハミルトニアン<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<p>それぞれの局所ハミルトニアンは <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> で記述されます。
+ボンドハミルトニアンの作用するボンドは <code class="docutils literal notranslate"><span class="pre">bonds</span></code> 文字列で指定します。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
 bonds = &quot;&quot;&quot;  # 作用するボンドの集合(1行1ボンド)
 0 1 0        # 1列目: ユニットセル内のsourceの番号
@@ -105,14 +106,14 @@ bonds = &quot;&quot;&quot;  # 作用するボンドの集合(1行1ボンド)
 <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> は1番と上隣 (x+=0, y+=1) にある3番の組を表します。</p>
 <p>ボンドハミルトニアンの次元、すなわち作用するサイト対の取りうる状態数の数は <code class="docutils literal notranslate"><span class="pre">dim</span></code> で指定し、
 ボンドハミルトニアン演算子の非ゼロ行列要素は <code class="docutils literal notranslate"><span class="pre">elements</span></code> 文字列で指定します。</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dim = [2, 2]      # [source, target] の取りうる状態数の対
-elements = &quot;&quot;&quot;    # ハミルトニアンの(非ゼロな)行列要素(1行1要素)
-0 0 0 0 0.25 0.0  # 1列目: 作用前のsourceの状態
-1 0 1 0 -0.25 0.0 # 2列目: 作用前のtargetの状態
-0 1 1 0 0.5 0.0   # 3列目: 作用後のsourceの状態
-1 0 0 1 0.5 0.0   # 4列目: 作用後のtargetの状態
-0 1 0 1 -0.25 0.0 # 5列目: 要素の実部
-1 1 1 1 0.25 0.0  # 6列目: 要素の虚部
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dim = [2, 2]       # [source, target] の取りうる状態数の対
+elements = &quot;&quot;&quot;     # ハミルトニアンの(非ゼロな)行列要素(1行1要素)
+0 0 0 0 0.25 0.0   # 1列目: 作用前のsourceの状態
+1 0 1 0 -0.25 0.0  # 2列目: 作用前のtargetの状態
+0 1 1 0 0.5 0.0    # 3列目: 作用後のsourceの状態
+1 0 0 1 0.5 0.0    # 4列目: 作用後のtargetの状態
+0 1 0 1 -0.25 0.0  # 5列目: 要素の実部
+1 1 1 1 0.25 0.0   # 6列目: 要素の虚部
 &quot;&quot;&quot;
 </pre></div>
 </div>
@@ -121,18 +122,36 @@ elements = &quot;&quot;&quot;    # ハミルトニアンの(非ゼロな)行列�
 つづく整数2つは演算子作用 <strong>後</strong> の2サイトそれぞれ (source, target) の状態を示し、
 残る2つの数値は行列要素の実部と虚部を表します。</p>
 </section>
-<section id="id4">
-<h2><span class="section-number">4.4.3. </span>演算子の定義<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h2>
-<figure class="align-center" id="id8">
+<section id="id5">
+<h3>サイトハミルトニアン<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
+<p>サイトハミルトニアンは作用するサイトと（非ゼロ）行列要素との組み合わせで定義します。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
+dim = [2]
+sites = []
+elements = &quot;&quot;&quot;
+1 0 -0.5 0.0
+0 1 -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>サイトは <code class="docutils literal notranslate"><span class="pre">sites</span></code> で指定します。空リストはすべてのサイトを意味します。</p>
+<p>行列要素 <code class="docutils literal notranslate"><span class="pre">elements</span></code> の指定方法はボンドハミルトニアンと同様です（作用するサイトが1つであることに留意）。</p>
+</section>
+</section>
+<section id="id6">
+<h2><span class="section-number">4.4.3. </span>演算子の定義<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h2>
+<figure class="align-center" id="id10">
 <a class="reference internal image-reference" href="../_images/ja_tutorial_1_Observable.png"><img alt="../_images/ja_tutorial_1_Observable.png" src="../_images/ja_tutorial_1_Observable.png" style="width: 400px;" /></a>
 <figcaption>
-<p><span class="caption-number">図 4.7 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id8" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.7 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id10" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
 <p>最終的に期待値を計算する演算子は <code class="docutils literal notranslate"><span class="pre">[observable]</span></code> 以下に定義します。
 現在は1サイト演算子と2サイト演算子が計算可能です。</p>
-<p>エネルギー演算子（ボンドハミルトニアン）もあらためて <code class="docutils literal notranslate"><span class="pre">[observable]</span></code> に定義する必要があります
-(2サイト演算子の0 番が定義されていない時、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> の内容を自動でコピーします)。</p>
+<p>定義の仕方はハミルトニアンと同様ですが、名前 <code class="docutils literal notranslate"><span class="pre">name</span></code> と演算子番号 <code class="docutils literal notranslate"><span class="pre">group</span></code> が必要です。
+演算子番号は1サイト演算子と2サイト演算子とで別あつかいです。
+なお、エネルギー演算子（ハミルトニアン）もあらためて <code class="docutils literal notranslate"><span class="pre">[observable]</span></code> に定義する必要があります
+(0 番の演算子が定義されていない時、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> の内容を自動でコピーします)。</p>
 <p>1サイト演算子の例として、スピンのz 成分</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}S^z =
@@ -152,7 +171,6 @@ elements = &quot;&quot;&quot;  # 1サイト演算子行列の非ゼロ要素 (1�
 &quot;&quot;&quot;
 </pre></div>
 </div>
-<p>行列要素 <code class="docutils literal notranslate"><span class="pre">elements</span></code> の指定方法はボンドハミルトニアンと同様です（作用するサイトが1つであることに留意）。</p>
 <p>2サイト演算子の例として、最近接ボンドにおける Sz 相関 <span class="math notranslate nohighlight">\(S^z_i S^z_j\)</span> を例に取ると</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable].twosite]] # 2サイト演算子
 name = &quot;SzSz&quot; # 名前
@@ -179,32 +197,39 @@ ops = [0, 0] # 1サイト演算子の直積で書ける場合、その識別番�
 行列要素についても、ボンドハミルトニアンと同様に <code class="docutils literal notranslate"><span class="pre">elements</span></code> で指定することもできますが、
 この例のように、 1サイト演算子の直積で書ける場合には、 <code class="docutils literal notranslate"><span class="pre">ops</span></code> を用いてその識別番号で表すこともできます。</p>
 </section>
-<section id="id5">
-<h2><span class="section-number">4.4.4. </span>例： 交代磁場中の反強磁性ハイゼンベルグ模型<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<section id="id7">
+<h2><span class="section-number">4.4.4. </span>例： 交代磁場中の反強磁性ハイゼンベルグ模型<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h2>
 <p>自分でハミルトニアンを書く例として、交代磁場中の正方格子反強磁性ハイゼンベルグ模型を考えます。
 ハミルトニアンは</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H} = J \sum_{\braket{ij}} S_i \cdot S_j - h \sum_{i \in A} S_i^z + h \sum_{j \in B} S_j^z\]</div>
 <p>です。
 ここで、 <span class="math notranslate nohighlight">\(\sum_{\braket{ij}}\)</span> は最近接サイト対に対する和で、 <span class="math notranslate nohighlight">\(A, B\)</span> はそれぞれ正方格子の副格子を表します。
-ハミルトニアンをボンドハミルトニアンの和 <span class="math notranslate nohighlight">\(\mathcal{H} = \sum_{\braket{ij}} \mathcal{H}_{ij}\)</span> に分割すると、
-ボンドハミルトニアンは</p>
+ボンドハミルトニアン <span class="math notranslate nohighlight">\(\mathcal{H}_ij\)</span> は</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{split}
 \mathcal{H}_{ij}
-&amp;= J S_i \cdot S_j - \frac{h}{4} S_i^z \otimes I_j + \frac{h}{4} I_i \otimes S_j^z \\
+&amp;= J S_i \cdot S_j \\
 &amp;= \begin{pmatrix}
-J/4 &amp;&amp;&amp; \\
-&amp; (-J+h)/4 &amp; J/2 &amp; \\
-&amp; J/2 &amp; (-J-h)/4 &amp; \\
-&amp;&amp;&amp; J/4 \\
+J/4 &amp; 0 &amp; 0 &amp; 0 \\
+0 &amp; -J/4 &amp; J/2 &amp; 0 \\
+0 &amp; J/2 &amp; -J/4 &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; J/4 \\
 \end{pmatrix}
 \end{split}\end{split}\]</div>
-<p>と書き表せます (<span class="math notranslate nohighlight">\(I\)</span> は恒等演算子で、基底の順番は
-<span class="math notranslate nohighlight">\(\ket{\uparrow\uparrow}, \ket{\downarrow\uparrow}, \ket{\uparrow\downarrow}, \ket{\downarrow\downarrow}\)</span> )。
-磁場項の重複を防ぐために、磁場の大きさをサイトから出ているボンドの本数 <span class="math notranslate nohighlight">\(z=4\)</span> で割っていることに注意してください。</p>
-<p>たとえば、極端な例として <span class="math notranslate nohighlight">\(J = 0, h = 1\)</span> を考えてみると、
-入力ファイル <code class="docutils literal notranslate"><span class="pre">std.toml</span></code> は次のとおりです</p>
+<p>で、サイトハミルトニアン <span class="math notranslate nohighlight">\(\mathcal{H}_i\)</span> は</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{split}
+\mathcal{H}_{i}
+&amp;= -h S_i^z \\
+&amp;= \begin{pmatrix}
+-h/2 &amp; 0 \\
+   0 &amp; h/2 \\
+\end{pmatrix}
+\end{split}\end{split}\]</div>
+<p>です。
+たとえば、極端な例として <span class="math notranslate nohighlight">\(J = 0, h = 1\)</span> を考えてみると、
+入力ファイル (<code class="docutils literal notranslate"><span class="pre">sample/std-01_model/std.toml</span></code>) は次のとおりです。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -216,8 +241,8 @@ tau = 0.01
 num_step = 0
 tau = 0.01
 [parameter.ctm]
-dimension = 4
-iteration_max = 100
+iteration_max = 10
+dimension = 10
 
 [tensor]
 type = &quot;square lattice&quot;
@@ -226,31 +251,38 @@ skew = 0
 
 [[tensor.unitcell]]
 virtual_dim = [2, 2, 2, 2]
-index = []
+index = [0, 3]
 physical_dim = 2
+initial_state = [1.0, 0.0]
+noise = 0.01
+
+[[tensor.unitcell]]
+virtual_dim = [2, 2, 2, 2]
+index = [1, 2]
+physical_dim = 2
+initial_state = [0.0, 1.0]
 noise = 0.01
 
 [[hamiltonian]]
-dim = [2, 2]
-bonds = &quot;&quot;&quot;
-0 1 0
-3 1 0
-0 -1 0
-3 -1 0
-0 0 1
-3 0 1
-0 0 -1
-3 0 -1
-&quot;&quot;&quot;
+dim = [2]
+sites = [0, 3]
 elements = &quot;&quot;&quot;
-1 0 1 0  1.0 0.0
-0 1 0 1 -1.0 0.0
+0 0 -0.5 0.0
+1 1 0.5 0.0
+&quot;&quot;&quot;
+
+[[hamiltonian]]
+dim = [2]
+sites = [1, 2]
+elements = &quot;&quot;&quot;
+0 0 0.5 0.0
+1 1 -0.5 0.0
 &quot;&quot;&quot;
 
 [observable]
 [[observable.onesite]]
 name = &quot;Sz&quot;
-group = 0
+group = 1
 sites = []
 dim = 2
 elements = &quot;&quot;&quot;
@@ -258,45 +290,33 @@ elements = &quot;&quot;&quot;
 1 1 -0.5 0.0
 &quot;&quot;&quot;
 
-[[observable.onesite]]
-name = &quot;Sx&quot;
-group = 1
-sites = []
-dim = 2
-elements = &quot;&quot;&quot;
-1 0 0.5 0.0
-0 1 0.5 0.0
-&quot;&quot;&quot;
-
 [[observable.twosite]]
 name = &quot;SzSz&quot;
 group = 1
+dim = [2, 2]
 bonds = &quot;&quot;&quot;
 0 1 0
-0 0 1
 1 1 0
-1 0 1
 2 1 0
-2 0 1
 3 1 0
+0 0 1
+1 0 1
+2 0 1
 3 0 1
 &quot;&quot;&quot;
-dim = [2,2]
-ops = [0,0]
+ops = [1, 1]
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> の <code class="docutils literal notranslate"><span class="pre">bonds</span></code> について、 source サイトが常に A 副格子に属するサイトになっていることに注意してください。
-これを用いて計算すると</p>
+<p>これを用いて計算すると</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ tenes_std std.toml
 $ tenes input.toml
 
    ... skipped ...
 
 Onesite observables per site:
+  hamiltonian = -0.5 0
   Sz          = 0 0
-  Sx          = -1.32597e-18 0
 Twosite observables per site:
-  hamiltonian = -2 0
   SzSz        = -0.5 0
 
    ... skipped
@@ -304,17 +324,26 @@ Twosite observables per site:
 </div>
 <p>となります。
 とくに1サイト演算子の期待値 <code class="docutils literal notranslate"><span class="pre">output/onesite_obs.dat</span></code> は:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 0 5.00000000000000000e-01 0.00000000000000000e+00
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
+# $2: site_index
+# $3: real
+# $4: imag
+
+0 0 -5.00000000000000000e-01 0.00000000000000000e+00
 0 1 -5.00000000000000000e-01 0.00000000000000000e+00
 0 2 -5.00000000000000000e-01 0.00000000000000000e+00
-0 3 5.00000000000000000e-01 0.00000000000000000e+00
-1 0 -4.60377857579530558e-18 0.00000000000000000e+00
-1 1 -1.39327011854595808e-18 0.00000000000000000e+00
-1 2 -4.60726081547908400e-18 0.00000000000000000e+00
-1 3 5.30041788535222114e-18 0.00000000000000000e+00
+0 3 -5.00000000000000000e-01 0.00000000000000000e+00
+1 0 5.00000000000000000e-01 0.00000000000000000e+00
+1 1 -5.00000000000000000e-01 0.00000000000000000e+00
+1 2 -5.00000000000000000e-01 0.00000000000000000e+00
+1 3 5.00000000000000000e-01 0.00000000000000000e+00
+-1 0 2.20256797875764860e+04 0.00000000000000000e+00
+-1 1 2.20198975366861232e+04 0.00000000000000000e+00
+-1 2 2.20294461413457539e+04 0.00000000000000000e+00
+-1 3 2.20236290136460302e+04 0.00000000000000000e+00
 </pre></div>
 </div>
-<p>となっていて、 A 副格子スピンは上を、 B 副格子のスピンは下を向いていることがわかります。
+<p>であり、 <span class="math notranslate nohighlight">\(S^z\)</span> (<code class="docutils literal notranslate"><span class="pre">op_group=1</span></code>)を見ると A 副格子 (<code class="docutils literal notranslate"><span class="pre">site_index=0,3</span></code>) のスピンは上 (<code class="docutils literal notranslate"><span class="pre">0.5</span></code>) を、 B 副格子 (<code class="docutils literal notranslate"><span class="pre">site_index=1,2</span></code>) のスピンは下 (<code class="docutils literal notranslate"><span class="pre">-0.5</span></code>) を向いていることがわかります。
 今回は交代磁場のみをかける (<span class="math notranslate nohighlight">\(J = 0, h = 1\)</span>) ことで、Neel 状態を表すようなテンソルを得られました。
 このテンソルは <code class="docutils literal notranslate"><span class="pre">tensor</span></code> ディレクトリに保存されており (<code class="docutils literal notranslate"><span class="pre">tensor_save</span> <span class="pre">=</span> <span class="pre">&quot;tensor&quot;</span></code>)、そのまま他の模型での初期テンソルとして利用できます (<code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;tensor&quot;</span></code> とする)。</p>
 </section>

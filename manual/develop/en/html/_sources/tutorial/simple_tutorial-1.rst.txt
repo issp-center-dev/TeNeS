@@ -8,38 +8,7 @@ By changing the variable ``hx`` in the input file,
 the magnitude of the transverse magnetic field will be modified.
 For example, when the transverse magnetic field is 0, the input file is
 
-.. code::
-
-   [parameter]
-   [parameter.general]
-   is_real = true
-
-   [parameter.simple_update]
-   num_step = 1000
-   tau = 0.01
-
-   [parameter.full_update]
-   num_step = 0
-   tau = 0.01
-
-   [parameter.ctm]
-   iteration_max = 10
-   dimension = 10
-
-   [lattice]
-   type = "square lattice"
-   L = 2
-   W = 2
-   virtual_dim = 2
-   initial = "ferro"
-
-   [model]
-   type = "spin"
-   Jz = -1.0
-   Jx = 0.0
-   Jy = 0.0
-   hx = 0.0
-
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/simple.toml
 
 In this case, since ``Jz = -1.0`` , the ferromagnetic state manifests itself as the ground state at ``hx=0``. 
 When the input file name is ``simple.toml`` , type the following commands to execute ``tenes``
