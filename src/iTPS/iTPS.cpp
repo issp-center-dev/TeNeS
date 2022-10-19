@@ -168,7 +168,9 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
   num_onesite_operators = maxops + 1;
   onesite_operator_names.resize(num_onesite_operators);
+  onesite_operator_counts.resize(num_onesite_operators);
   for (auto const &op : onesite_operators) {
+    ++onesite_operator_counts[op.group];
     if (op.name.empty()) {
       std::stringstream ss;
       ss << "onesite[" << op.group << "]";
@@ -187,7 +189,9 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
   num_twosite_operators = maxops + 1;
   twosite_operator_names.resize(num_twosite_operators);
+  twosite_operator_counts.resize(num_onesite_operators);
   for (auto const &op : twosite_operators) {
+    ++twosite_operator_counts[op.group];
     if (op.name.empty()) {
       std::stringstream ss;
       ss << "twosite[" << op.group << "]";

@@ -38,9 +38,8 @@ The initial state :math:`\ket{\Psi}` is prepared as the direct product state of 
    \Ket{\psi}_i \propto \sum_{k=0}^{d-1}a_k\Ket{k}
 
 
-
-Definition of model and lattice (Bond Hamiltonian)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Definition of model (Hamiltonian)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: ../../img/en_tutorial_1_Hamiltonian.*
      :width: 400px
@@ -48,19 +47,21 @@ Definition of model and lattice (Bond Hamiltonian)
 
      [[hamiltonian]]
 
-TeNeS treats the Hamiltonian as the sum of bond Hamiltonians (two-site Hamiltonians).
-Note that site Hamiltonians such as the Zeeman terms are also included in the bond Hamiltonian.
+TeNeS treats the Hamiltonian as the sum of bond Hamiltonians (two-site Hamiltonians) and site Hamiltonians (one-site Hamiltonians).
 
 .. math::
 
-   \begin{aligned}
-   mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j}\end{aligned}
+   mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j} + \sum_{i} \mathcal{H}_i
 
+These local Hamiltonians are defined as pairs of (nonzero) elements of matrix and site/bond it acts on.
 A bond is a directed pair of two sites: source and target.
-The Bond Hamiltonian is defined by its (non-zero) matrix elements and the bond it acts on.
 To define matrix elements is to define a model, and to define bonds is to define a lattice.
 
-In the input file of the standard mode, say ``std.toml``, each bond Hamiltonian is specified as ``[[hamiltonian]]``.
+
+Bond Hamiltonian
++++++++++++++++++++++
+
+In the input file of the standard mode, say ``std.toml``, each local Hamiltonian is specified as ``[[hamiltonian]]``.
 The bonds where the bond Hamiltonian acts are specified by ``bonds`` string::
 
    [[hamiltonian]]
@@ -84,14 +85,14 @@ and ``1 0 1`` means the pair of the site 1 and the top neighbor (x+=0 and y+=1),
 The dimension of the bond Hamiltonian, i.e., the number of states of the source and target sites, is specified by ``dim``, and
 the non-zero elements of the bond Hamiltonian is defined by ``elements``::
 
-   dim = [2, 2]      # Number of possible states of the acting bond [source, target]
-   elements = """    # (nonzero) matrix elements of the Hamiltonian (one element per row)
-   0 0 0 0 0.25 0.0  # Field 1: State of source before action
-   1 0 1 0 -0.25 0.0 # Field 2: State of target before action
-   0 1 1 0 0.5 0.0   # Field 3: State of source after action
-   1 0 0 1 0.5 0.0   # Field 4: State of target after action
-   0 1 0 1 -0.25 0.0 # Field 5: Real part of element
-   1 1 1 1 0.25 0.0  # Field 6: Imaginary part of element
+   dim = [2, 2]       # Number of possible states of the acting bond [source, target]
+   elements = """     # (nonzero) matrix elements of the Hamiltonian (one element per row)
+   0 0 0 0 0.25 0.0   # Field 1: State of source before action
+   1 0 1 0 -0.25 0.0  # Field 2: State of target before action
+   0 1 1 0 0.5 0.0    # Field 3: State of source after action
+   1 0 0 1 0.5 0.0    # Field 4: State of target after action
+   0 1 0 1 -0.25 0.0  # Field 5: Real part of element
+   1 1 1 1 0.25 0.0   # Field 6: Imaginary part of element
    """
 
 One line of ``elements`` corresponds one element.
@@ -100,6 +101,23 @@ and
 the following two integers are the states of the source and target sites **after** the Hamiltonian acts on.
 The remaining two numbers are the real and imaginary part of the element of the bond Hamiltonian.
 
+Site Hamiltonian
++++++++++++++++++++
+
+A site Hamiltonian is defined as a pair of (non-zero) matrix element and site it acts on.::
+
+   [[hamiltonian]]
+   dim = [2]
+   sites = []
+   elements = """
+   1 0 -0.5 0.0
+   0 1 -0.5 0.0
+   """
+
+Site is specified by ``sites`` as a list of indices.
+An empty list means all the sites.
+
+Non-zero matrix elements are specified by ``elements``, and how to define is the similar for bond Hamiltonians (Note that site Hamiltonians acts on only one site).
 
 Definition of operators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,12 +129,12 @@ Definition of operators
      ``[[observable.onesite]]``
 
 
-
 Operators whose expected values are finally computed are defined in ``[observable]``.
 The current version of TeNeS can evaluate onesite and twosites operators.
+The way to define operators is similar in Hamiltoninans, but an operator require the name (``name``) and identifier number (``group``).
 Although the energy operator is just the Hamiltonian (sum of the bond Hamiltonians),
 it should be defined in ``[observable]`` if users want to calculate.
-For convenience, ``tenes_std`` copies ``[[hamiltonian]]`` as ``[[observable.twosites]]`` when twosites operator with ``group = 0`` is not defined.
+For convenience, ``tenes_std`` copies ``[[hamiltonian]]`` in ``[[observable]]`` when operator with ``group = 0`` is not defined.
 
 For an example of onesite operator, the z-component of the spin operator ::
 
@@ -178,108 +196,38 @@ The Hamiltonian is as follows
 
 where :math:`\sum_{\braket{ij}}` is summation over the nearest neighbor bonds
 and :math:`A` and :math:`B` are the sublattices of the square lattice.
-When splitting the Hamiltonian into the summation of bond Hamiltonians, :math:`\mathcal{H} = \sum_{\braket{ij}} \mathcal{H}_{ij}`
-the bond Hamiltonian can be written as follows
+The bond Hamiltonian :math:`\mathcal{H}_{ij}` can be written as follows
 
 .. math::
 
    \begin{split}
    \mathcal{H}_{ij}
-   &= J S_i \cdot S_j - \frac{h}{4} S_i^z \otimes I_j + \frac{h}{4} I_i \otimes S_j^z \\
+   &= J S_i \cdot S_j \\
    &= \begin{pmatrix}
-   J/4 &&& \\
-   & (-J+h)/4 & J/2 & \\
-   & J/2 & (-J-h)/4 & \\
-   &&& J/4 \\
-   \end{pmatrix},
+   J/4 & 0 & 0 & 0 \\
+   0 & -J/4 & J/2 & 0 \\
+   0 & J/2 & -J/4 & 0 \\
+   0 & 0 & 0 & J/4 \\
+   \end{pmatrix}
    \end{split}
 
-where :math:`I` is an identity operator, and the order of basis is 
-:math:`\ket{\uparrow\uparrow}, \ket{\downarrow\uparrow}, \ket{\uparrow\downarrow}, \ket{\downarrow\downarrow}`.
-It should be note that we divide the strength of the field, :math:`h`, by the number of the bonds connected to each site, :math:`z=4` in order to aviod double-counting.
+and the site Hamiltonian :math:`\mathcal{H}_i` can be written as
 
-When :math:`J = 0, h = 1`, for example, an input file of ``tenes_std``, ``std.toml``, is as follows::
+.. math::
 
-   [parameter]
-   [parameter.general]
-   is_real = true
-   tensor_save = "tensor"
-   [parameter.simple_update]
-   num_step = 1000
-   tau = 0.01
-   [parameter.full_update]
-   num_step = 0
-   tau = 0.01
-   [parameter.ctm]
-   dimension = 4
-   iteration_max = 100
+   \begin{split}
+   \mathcal{H}_{i}
+   &= -h S_i^z \\
+   &= \begin{pmatrix}
+   -h/2 & 0 \\
+      0 & h/2 \\
+   \end{pmatrix}
+   \end{split}
 
-   [tensor]
-   type = "square lattice"
-   L_sub = [2, 2]
-   skew = 0
+When :math:`J = 0, h = 1`, for example, an input file of ``tenes_std``, ``std.toml`` (``sample/std-01_model/std.toml``), is as follows
 
-   [[tensor.unitcell]]
-   virtual_dim = [2, 2, 2, 2]
-   index = []
-   physical_dim = 2
-   noise = 0.01
+.. literalinclude:: ../../../../sample/std-01_model/std.toml
 
-   [[hamiltonian]]
-   dim = [2, 2]
-   bonds = """
-   0 1 0
-   3 1 0
-   0 -1 0
-   3 -1 0
-   0 0 1
-   3 0 1
-   0 0 -1
-   3 0 -1
-   """
-   elements = """
-   1 0 1 0  1.0 0.0
-   0 1 0 1 -1.0 0.0
-   """
-
-   [observable]
-   [[observable.onesite]]
-   name = "Sz"
-   group = 0
-   sites = []
-   dim = 2
-   elements = """
-   0 0 0.5 0.0
-   1 1 -0.5 0.0
-   """
-
-   [[observable.onesite]]
-   name = "Sx"
-   group = 1
-   sites = []
-   dim = 2
-   elements = """
-   1 0 0.5 0.0
-   0 1 0.5 0.0
-   """
-
-   [[observable.twosite]]
-   name = "SzSz"
-   group = 1
-   bonds = """
-   0 1 0
-   0 0 1
-   1 1 0
-   1 0 1
-   2 1 0
-   2 0 1
-   3 1 0
-   3 0 1
-   """
-   dim = [2,2]
-   ops = [0,0]
-
-Note that in ``bonds`` of ``[[hamiltonian]]``, source sites (the first column) is always sites belonging to the A sublattice, 0 and 3.
 We can calculate this model and obtain results as ::
    
    $ tenes_std std.toml
@@ -288,26 +236,35 @@ We can calculate this model and obtain results as ::
       ... skipped ...
 
    Onesite observables per site:
+     hamiltonian = -0.5 0
      Sz          = 0 0
-     Sx          = -1.32597e-18 0
    Twosite observables per site:
-     hamiltonian = -2 0
      SzSz        = -0.5 0
 
       ... skipped
 
 Especially, the expectation values of onesite operators written in ``output/onesite_obs.dat`` are::
 
-   0 0 5.00000000000000000e-01 0.00000000000000000e+00
+   # $1: op_group
+   # $2: site_index
+   # $3: real
+   # $4: imag
+
+   0 0 -5.00000000000000000e-01 0.00000000000000000e+00
    0 1 -5.00000000000000000e-01 0.00000000000000000e+00
    0 2 -5.00000000000000000e-01 0.00000000000000000e+00
-   0 3 5.00000000000000000e-01 0.00000000000000000e+00
-   1 0 -4.60377857579530558e-18 0.00000000000000000e+00
-   1 1 -1.39327011854595808e-18 0.00000000000000000e+00
-   1 2 -4.60726081547908400e-18 0.00000000000000000e+00
-   1 3 5.30041788535222114e-18 0.00000000000000000e+00
+   0 3 -5.00000000000000000e-01 0.00000000000000000e+00
+   1 0 5.00000000000000000e-01 0.00000000000000000e+00
+   1 1 -5.00000000000000000e-01 0.00000000000000000e+00
+   1 2 -5.00000000000000000e-01 0.00000000000000000e+00
+   1 3 5.00000000000000000e-01 0.00000000000000000e+00
+   -1 0 2.20256797875764860e+04 0.00000000000000000e+00
+   -1 1 2.20198975366861232e+04 0.00000000000000000e+00
+   -1 2 2.20294461413457539e+04 0.00000000000000000e+00
+   -1 3 2.20236290136460302e+04 0.00000000000000000e+00
 
-This means that spins on the A sublattice are up and those on the B are down.
+Values of :math:`S^z` (``op_group=``) show that
+spins on the A sublattice (``site_index=0,3``) are up (``0.5``) and those on the B (``site_index=1,2``) are down (``-0.5``).
 By imposing the staggered magnetic field (:math:`J = 0, h = 1`), a tensor product state representing the Neel state is obtained.
 Tensors are saved into the ``tensor`` directory because we set ``tensor_save = "tensor"``,
 and therefore we can use them as the initial states of another calculation by setting ``tensor_load = "tensor"``.

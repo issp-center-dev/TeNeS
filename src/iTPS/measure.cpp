@@ -97,6 +97,9 @@ void iTPS<ptensor>::measure() {
 
       if (mpirank == 0) {
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+          if (onesite_operator_counts[ilops] == 0){
+            continue;
+          }
           const auto v = loc_obs[ilops] * invV;
           ofs << onesite_operator_names[ilops] << " = ";
           if (std::real(v) >= 0.0) {
@@ -110,6 +113,9 @@ void iTPS<ptensor>::measure() {
         }
 
         for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+          if (twosite_operator_counts[ilops] == 0){
+            continue;
+          }
           const auto v = two_obs[ilops] * invV;
           ofs << twosite_operator_names[ilops] << " = ";
           if (std::real(v) >= 0.0) {
@@ -137,6 +143,9 @@ void iTPS<ptensor>::measure() {
 
       std::cout << "Onesite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+        if ( onesite_operator_counts[ilops] == 0) {
+          continue;
+        }
         const auto v = loc_obs[ilops] * invV;
         std::cout << "  " << onesite_operator_names[ilops] << " = "
                   << std::real(v) << " " << std::imag(v) << std::endl;
@@ -144,6 +153,9 @@ void iTPS<ptensor>::measure() {
 
       std::cout << "Twosite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+        if ( twosite_operator_counts[ilops] == 0) {
+          continue;
+        }
         const auto v = two_obs[ilops] * invV;
         std::cout << "  " << twosite_operator_names[ilops] << " = "
                   << std::real(v) << " " << std::imag(v) << std::endl;

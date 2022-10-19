@@ -179,6 +179,8 @@ class iTPS {
   int num_twosite_operators;
   std::vector<std::string> onesite_operator_names;
   std::vector<std::string> twosite_operator_names;
+  std::vector<int> onesite_operator_counts;
+  std::vector<int> twosite_operator_counts;
 
   std::vector<tensor> op_identity;
 
