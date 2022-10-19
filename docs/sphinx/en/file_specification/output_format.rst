@@ -32,7 +32,7 @@ Example
    SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
 
 ``onesite_obs.dat``
-=================
+======================
 
 
 -  The expected values of the site operator are outputted.
