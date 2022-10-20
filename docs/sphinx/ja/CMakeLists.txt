@@ -28,7 +28,7 @@ if(LATEX_FOUND)
     COMMAND
       cd pdf && make
     )
-  install(FILES ${SPHINX_PDF_DIR}/TeNeS.pdf
+  install(FILES ${SPHINX_PDF_DIR}/TeNeS_ja.pdf
     DESTINATION ${TENES_DOC_DIR_JP}
     )
 
