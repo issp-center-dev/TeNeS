@@ -1,6 +1,5 @@
 import subprocess
 from os.path import join
-import numpy as np
 import toml
 
 MPI_cmd = ""  # e.g., "mpiexec -np 1"
@@ -39,47 +38,62 @@ num_step_table = [100, 200, 500, 1000, 2000]
 
 fene = open("energy_square.dat", "w")
 fmag = open("magnetization_square.dat", "w")
+
+for f in (fmag, fene):
+    f.write("# $1: hz\n")
+    for i, num_step in enumerate(num_step_table, 2):
+        f.write(f"# ${i}: num_step={num_step}\n")
+    f.write("\n")
+
 for idx in range(num_h):
     h = h_table[idx]
-    print("Caclulation Process: {}/{}".format(idx + 1, num_h))
+    print(f"Calculation Process: {idx+1}/{num_h}")
     inum = 0
     num_pre = 0
-    fene.write("{} ".format(h))
-    fmag.write("{} ".format(h))
+    fene.write(f"{h} ")
+    fmag.write(f"{h} ")
     for num_step in num_step_table:
         ns = num_step - num_pre
-        print("Steps: {}".format(num_step))
+        print(f"Steps: {num_step}")
         with open("basic_square.toml") as f:
             dict_toml = toml.load(f)
-        dict_toml["parameter"]["general"]["output"] = "output_square_{}_{}".format(
-            idx, num_step
-        )
+
+        output_dir = f"output_square_{idx}_{num_step}"
+        dict_toml["parameter"]["general"]["output"] = output_dir
         dict_toml["parameter"]["general"]["tensor_save"] = "tensor_save_square"
         dict_toml["model"]["hz"] = float(h)
         dict_toml["parameter"]["simple_update"]["num_step"] = ns
         if inum > 0:
             dict_toml["parameter"]["general"]["tensor_load"] = "tensor_save_square"
-        with open("simple_square_{}_{}.toml".format(idx, num_step), "w") as f:
+
+        simple_toml = f"simple_square_{idx}_{num_step}.toml"
+        std_toml = f"std_square_{idx}_{num_step}.toml"
+        input_toml = f"input_square_{idx}_{num_step}.toml"
+
+        with open(simple_toml, "w") as f:
             toml.dump(dict_toml, f)
-        cmd = "tenes_simple simple_square_{}_{}.toml -o std_square_{}_{}.toml".format(
-            idx, num_step, idx, num_step
-        )
-        subprocess.call(cmd.split())
-        cmd = "tenes_std std_square_{}_{}.toml -o input_square_{}_{}.toml".format(
-            idx, num_step, idx, num_step
-        )
-        subprocess.call(cmd.split())
-        cmd = "{} tenes input_square_{}_{}.toml".format(MPI_cmd, idx, num_step)
+        cmd = f"tenes_simple {simple_toml} -o {std_toml}"
         subprocess.call(cmd.split())
 
-        with open(
-            join("output_square_{}_{}".format(idx, num_step), "density.dat")
-        ) as f:
-            lines = f.readlines()
-            ene = lines[2].split("=")[1].strip()
-            mag_sz = lines[0].split("=")[1].strip()
-        fene.write("{} ".format(ene))
-        fmag.write("{} ".format(mag_sz))
+        cmd = f"tenes_std {std_toml} -o {input_toml}"
+        subprocess.call(cmd.split())
+
+        cmd = f"{MPI_cmd} tenes {input_toml}"
+        subprocess.call(cmd.split())
+
+        ene = 0.0
+        mag_sz = 0.0
+        with open(join(output_dir, "density.dat")) as f:
+            for line in f:
+                name, vals = line.split("=")
+                if name.strip() == "hamiltonian":
+                    re, im = vals.split()
+                    ene += float(re)
+                elif name.strip() == "Sz":
+                    re, im = vals.split()
+                    mag_sz += float(re)
+        fene.write(f"{ene} ")
+        fmag.write(f"{mag_sz} ")
         inum = inum + 1
         num_pre = num_step
     fene.write("\n")

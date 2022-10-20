@@ -6,38 +6,7 @@
 ここでは横磁場イジングモデルに対して、横磁場を変化させた場合の計算例について紹介します。
 入力ファイルの変数 ``hx`` を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、
 
-.. code::
-
-   [parameter]
-   [parameter.general]
-   is_real = true
-
-   [parameter.simple_update]
-   num_step = 1000
-   tau = 0.01
-
-   [parameter.full_update]
-   num_step = 0
-   tau = 0.01
-
-   [parameter.ctm]
-   iteration_max = 10
-   dimension = 10
-
-   [lattice]
-   type = "square lattice"
-   L = 2
-   W = 2
-   virtual_dim = 2
-   initial = "ferro"
-
-   [model]
-   type = "spin"
-   Jz = -1.0
-   Jx = 0.0
-   Jy = 0.0
-   hx  = 0.0
-
+.. literalinclude:: ../../../../sample/01_transverse_field_ising/simple.toml
 
 とします(``Jz = -1.0`` なので、 ``hx=0`` では強磁性状態になります)。入力ファイルを ``simple.toml`` とした場合、
    

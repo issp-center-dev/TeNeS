@@ -90,8 +90,10 @@ inputfile = join("data", "restart_0.toml")
 cmd = []
 if "@MPIEXEC@":
     cmd.append("@MPIEXEC@")
+    cmd.extend("@MPIEXEC_PREFLAGS@".split())
     cmd.append("@MPIEXEC_NUMPROC_FLAG@")
     cmd.append("1")
+    cmd.extend("@MPIEXEC_POSTFLAGS@".split())
 cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
 cmd.append(inputfile)
 subprocess.call(cmd)
@@ -103,8 +105,10 @@ inputfile = join("data", "restart_1.toml")
 cmd = []
 if "@MPIEXEC@":
     cmd.append("@MPIEXEC@")
+    cmd.extend("@MPIEXEC_PREFLAGS@".split())
     cmd.append("@MPIEXEC_NUMPROC_FLAG@")
     cmd.append("1")
+    cmd.extend("@MPIEXEC_POSTFLAGS@".split())
 cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
 cmd.append(inputfile)
 subprocess.call(cmd)

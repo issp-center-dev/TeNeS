@@ -25,14 +25,14 @@ where we assume that shapes of :math:`T^{(1)}[s_1]` , :math:`T^{(i)}[s_i] (i\neq
 .. image:: ../../img/MPS.*
    :align: center
 
-This MPS represents a wavefunction for a finite size system. Similarly, we can also consider an infinitely long MPS to represent an infinite system. Especially, when we assume a lattice transrational symmetry, with a certain period, we can construct an infinite MPS (iMPS) with a few independent tensors. In the case of two-site periodicity, an iMPS looks like as
+This MPS represents a wavefunction for a finite size system. Similarly, we can also consider an infinitely long MPS to represent an infinite system. Especially, when we assume a lattice translational symmetry, with a certain period, we can construct an infinite MPS (iMPS) with a few independent tensors. In the case of two-site periodicity, an iMPS looks as
 
 .. image:: ../../img/iMPS.*
    :align: center
 
 where tensors with the same color indicate identical tensors.
 
-In TeNeS, we consider two-dimensional infinite tensor product states (iTNS), which are natural extension of iMPS to higher dimensions. We assume a square lattice tensor network with a translational symmetry, whose diagram is shown as
+In TeNeS, we consider two-dimensional infinite tensor product states (iTNS), which are natural extensions of iMPS to higher dimensions. We assume a square lattice tensor network with a translational symmetry, whose diagram is shown as
 
 .. image:: ../../img/iTPS.*
    :align: center
@@ -47,7 +47,7 @@ In order to calculate expectation values over a TNS, :math:`\langle \Psi|O|\Psi\
 .. image:: ../../img/iTPS_braket.*
    :align: center
 
-which is often called as a double layered tensor network. The contraction of a double layered tensor network often needs huge computation cost. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, *e.g*, by considering a transfer matrix which consists of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method :ref:`[CTMRG] <Ref-CTMRG>`, which expresses an infinitely extended double layered tensor network by using *corner transfer matrices* and *edge tensors*.
+which is often called a double layered tensor network. The contraction of a double layered tensor network often needs huge computation costs. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, *e.g*, by considering a transfer matrix which consists of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method :ref:`[CTMRG] <Ref-CTMRG>`, which expresses an infinitely extended double layered tensor network by using *corner transfer matrices* and *edge tensors*.
 
 When we simplify the double layered tensor network by using a locally contracted tensor,
 
@@ -73,7 +73,7 @@ In the CTMRG algorithm, we iteratively optimise corner transfer matrices and edg
 
 The projectors in the above diagram is calculated in several ways :ref:`[CTMRG] <Ref-CTMRG>` and they reduces the degree of freedoms to :math:`\chi`.
 
-When we consider iTPS with the bond dimension :math:`D` and CTMs with the bond dimension :math:`\chi`, the leading computation cost of CTMRG scales as :math:`O(\chi^2 D^6)` and :math:`O(\chi^3 D^4)`. Notice that the bond dimension of the double layered tensor network becomes :math:`D^2` by using locally contracted tensors. Thus, typically we increase :math:`\chi` as :math:`\chi \propto O(D^2)`. In this setup, the leading computation cost of CTMRG algorithm is reduced to :math:`O(D^{10})`, while the memory usage scales :math:`O(D^{8})`. In order to achive the computation cost discussed above, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD insted of the partial SVD, the computation cost becomes :math:`O(D^{12})`. 
+When we consider iTPS with the bond dimension :math:`D` and CTMs with the bond dimension :math:`\chi`, the leading computation cost of CTMRG scales as :math:`O(\chi^2 D^6)` and :math:`O(\chi^3 D^4)`. Notice that the bond dimension of the double layered tensor network becomes :math:`D^2` by using locally contracted tensors. Thus, typically we increase :math:`\chi` as :math:`\chi \propto O(D^2)`. In this setup, the leading computation cost of CTMRG algorithm is reduced to :math:`O(D^{10})`, while the memory usage scales :math:`O(D^{8})`. In order to achieve the computation cost discussed above, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD instead of the partial SVD, the computation cost becomes :math:`O(D^{12})`. 
 
 Once we obtain the corner transfer matrices and edge tensors, we can also calculate :math:`\langle \Psi|O|\Psi\rangle` efficiently. For example, a local magnetization :math:`\langle \Psi|S^z_i|\Psi\rangle` is represented as
 
@@ -86,7 +86,7 @@ and similarly the nearest neighbor correlation :math:`\langle \Psi|S^z_iS^z_{i+1
 .. image:: ../../img/SzSz.*
    :align: center
 
-Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operators, the computation cost to contract the tensor network becomes huge for larger clusters.
+Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operator, the computation cost to contract the tensor network becomes huge for larger clusters.
 
 Optimization of iTPS
 ===========================
@@ -139,7 +139,7 @@ Naively, efficient truncation can be done by solving the minimization problem
 .. math::
    \min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle -\prod_{\{(i,j) \in \mathrm{subset}_n \}} e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.
 
-However, in practice, solving this minimization problem needs huge computation cost because it is a highly nonlinear problem due to the translational symmetry of iTPS. Thus, instead, we usually consider an alternative local problem where we apply only a local ITE operator and try to find optimal iTPS :math:`|\Psi_{\tau}^{\mathrm{iTPS}}\rangle` in which only a few local tensors are modified from the original :math:`|\Psi^{\mathrm{iTPS}}\rangle`. This minimization problem is written as 
+However, in practice, solving this minimization problem needs a huge computation cost because it is a highly nonlinear problem due to the translational symmetry of iTPS. Thus, instead, we usually consider an alternative local problem where we apply only a local ITE operator and try to find optimal iTPS :math:`|\Psi_{\tau}^{\mathrm{iTPS}}\rangle` in which only a few local tensors are modified from the original :math:`|\Psi^{\mathrm{iTPS}}\rangle`. This minimization problem is written as 
 
 .. math::
    \min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle - e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.
@@ -166,7 +166,7 @@ In this diagram, :math:`\lambda_i` represents a non-negative diagonal matrix con
 .. image:: ../../img/Simple_update.*
    :align: center
 
-The singular values obtained from the SVD of the matrix is used as the mean field :math:`\lambda` in the next step. The computation cost of the simple update is :math:`O(D^{5})`, if we use QR decomposition before we construct the matrix :ref:`[QR] <Ref-QR>`. Thus, it is much cheaper that that of the full update.
+The singular values obtained from the SVD of the matrix are used as the mean field :math:`\lambda` in the next step. The computation cost of the simple update is :math:`O(D^{5})`, if we use QR decomposition before we construct the matrix :ref:`[QR] <Ref-QR>`. Thus, it is much cheaper than that of the full update.
 
 Although the computation cost of the simple update is cheaper than that of the full update, it is known that the simple update shows strong initial state dependence and it tends to overestimate the local magnetization. Thus, for complicated problems, we need to carefully check results obtained by the simple update. 
 

@@ -1,10 +1,14 @@
-name: Test
+name: macOS
 
 on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-11, macos-10.15]
+        compiler: [c++, g++-9, g++-11]
 
     steps:
       - uses: actions/checkout@v2
@@ -12,17 +16,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
-
-      - name: apt
-        run: |
-          sudo apt update
-          sudo apt install openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
+          python-version: 3.9
 
       - name: pip install
         run: |
-          python -m pip install -U pip
-          python -m pip install numpy scipy toml
+          python3 -m pip install -U pip
+          python3 -m pip install numpy scipy toml
 
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -30,7 +29,7 @@ jobs:
       - name: cmake
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE
+        run: cmake -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
 
       - name: build
         working-directory: ${{runner.workspace}}/build

@@ -395,8 +395,6 @@ template <class tensor>
 NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
                                     MPI_Comm comm, double atol,
                                     const char *tablename) {
-  auto source_site = find<int>(param, "source_site");
-  auto source_leg = find<int>(param, "source_leg");
   auto dimensions = param->get_array_of<int64_t>("dimensions");
   if (!dimensions) {
     throw input_error(detail::msg_cannot_find("dimensions", tablename));
@@ -406,13 +404,26 @@ NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
   for (auto d : *dimensions) {
     shape.push(d);
   }
-  if (shape.size() != 4) {
+
+  if (shape.size() == 2) {
+    // siteoperator
+    auto site = find<int>(param, "site");
+
+    tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
+    return NNOperator<tensor>(site, -1, A);
+  }else if(shape.size() == 4) {
+    // nnoperator
+    auto source_site = find<int>(param, "source_site");
+    auto source_leg = find<int>(param, "source_leg");
+
+    tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
+    return NNOperator<tensor>(source_site, source_leg, A);
+  }else{
     std::stringstream ss;
-    ss << tablename << ".dimensions should have 4 integers";
+    ss << tablename << ".dimensions should have 2 or 4 integers";
     throw input_error(ss.str());
   }
-  tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
-  return NNOperator<tensor>(source_site, source_leg, A);
+
 }
 
 template <class tensor>

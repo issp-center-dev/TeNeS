@@ -97,6 +97,9 @@ void iTPS<ptensor>::measure() {
 
       if (mpirank == 0) {
         for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+          if (onesite_operator_counts[ilops] == 0){
+            continue;
+          }
           const auto v = loc_obs[ilops] * invV;
           ofs << onesite_operator_names[ilops] << " = ";
           if (std::real(v) >= 0.0) {
@@ -110,6 +113,9 @@ void iTPS<ptensor>::measure() {
         }
 
         for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+          if (twosite_operator_counts[ilops] == 0){
+            continue;
+          }
           const auto v = two_obs[ilops] * invV;
           ofs << twosite_operator_names[ilops] << " = ";
           if (std::real(v) >= 0.0) {
@@ -137,6 +143,9 @@ void iTPS<ptensor>::measure() {
 
       std::cout << "Onesite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+        if ( onesite_operator_counts[ilops] == 0) {
+          continue;
+        }
         const auto v = loc_obs[ilops] * invV;
         std::cout << "  " << onesite_operator_names[ilops] << " = "
                   << std::real(v) << " " << std::imag(v) << std::endl;
@@ -144,6 +153,9 @@ void iTPS<ptensor>::measure() {
 
       std::cout << "Twosite observables per site:" << std::endl;
       for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+        if ( twosite_operator_counts[ilops] == 0) {
+          continue;
+        }
         const auto v = two_obs[ilops] * invV;
         std::cout << "  " << twosite_operator_names[ilops] << " = "
                   << std::real(v) << " " << std::imag(v) << std::endl;
@@ -162,7 +174,7 @@ void iTPS<ptensor>::summary() const {
       ofs << "time all           = " << time_all << std::endl;
       ofs << "time simple update = " << time_simple_update << std::endl;
       ofs << "time full update   = " << time_full_update << std::endl;
-      ofs << "time environmnent  = " << time_environment << std::endl;
+      ofs << "time environment  = " << time_environment << std::endl;
       ofs << "time observable    = " << time_observable << std::endl;
       if (peps_parameters.print_level >= PrintLevel::info) {
         std::cout << "    Save elapsed times to " << filename << std::endl;
@@ -173,7 +185,7 @@ void iTPS<ptensor>::summary() const {
       std::cout << "  all           = " << time_all << std::endl;
       std::cout << "  simple update = " << time_simple_update << std::endl;
       std::cout << "  full update   = " << time_full_update << std::endl;
-      std::cout << "  environmnent  = " << time_environment << std::endl;
+      std::cout << "  environment  = " << time_environment << std::endl;
       std::cout << "  observable    = " << time_observable << std::endl;
       std::cout << std::endl << "Done." << std::endl;
     }

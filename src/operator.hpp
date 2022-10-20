@@ -84,9 +84,13 @@ struct NNOperator {
   int source_leg;
   tensor op;
 
+  NNOperator(int site, tensor const &op)
+      : source_site(site), source_leg(-1), op(op) {}
   NNOperator(int site, int leg, tensor const &op)
       : source_site(site), source_leg(leg), op(op) {}
 
+  bool is_onesite() const { return source_leg < 0; }
+  bool is_twosite() const { return !is_onesite(); }
   bool is_horizontal() const { return source_leg % 2 == 0; }
   bool is_vertical() const { return !is_horizontal(); }
 };
