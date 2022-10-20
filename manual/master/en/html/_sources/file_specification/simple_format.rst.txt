@@ -64,6 +64,7 @@ The exchange interaction :math:`J` can have a bond dependency.
    ``J1''``, "Exchange interaction of **1st** direction **third nearest neighbor** bond", Real, 0.0
    ``J2''``, "Exchange interaction of **2nd** direction **third nearest neighbor** bond", Real, 0.0
 
+For the next nearest and third nearest neighbor bond, please surround the keyname with the double-quotation marks, ``"``.
 The bond direction depends on the lattice defined in the ``lattice`` section.
 For a square lattice, for example, coupling constants along two bond directions can be defined, x-direction (0) and y-direction (1).
 By omitting the direction number, you can specify all directions at once.
@@ -103,7 +104,7 @@ In addition, bond Hamiltonian
  - \frac{1}{z} \left[ \sum_\alpha^{x,y,z} h^\alpha \left(S^\alpha_i + S^\alpha_j \right) + D \left(\left(S^z_i\right)^2 + \left(S^z_j\right)^2 \right) \right],
 
 and spin correlations on nearest neighbor bonds :math:`S^\alpha_iS^\alpha_j` ( :math:`\alpha=x,y,z` ) are automatically defined as two-site operators.
-In the bond Hamiltonian, one body terms (:math:`h^\alpha` and :math:`D` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+In the bond Hamiltonian, one body terms (:math:`h^\alpha` and :math:`D` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coordinate number.
 
 
 Bosonic system: ``"boson"``
@@ -164,7 +165,7 @@ In addition, bond Hamiltonian
  + \frac{1}{z} \left[\left(U\frac{n_i(n_i-1)}{2} - \mu n_i\right) + (i \leftrightarrow j)\right]
 
 and short range correlations on nearest neighbor bonds :math:`n_i n_j`, :math:`b^\dagger_i b_j`, and :math:`b_i b^\dagger_j`  are automatically defined as two-site operators.
-In the bond Hamiltonian, one body terms (:math:`U` and :math:`\mu` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coodinate number.
+In the bond Hamiltonian, one body terms (:math:`U` and :math:`\mu` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coordinate number.
 
 
 ``lattice`` section
@@ -268,7 +269,7 @@ The blue, red, and green lines represent bonds of ``bondtype = 0, 1``, and ``2``
    (b) Nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 30 degree direction, ``bondtype=1`` (red) one in the 150 degree direction, and ``bondtype=2`` (green) one in the -90 degree direction.
    (c) Second nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the 120 degree direction, ``bondtype=1`` (red) one in the 60 degree direction, and ``bondtype=2`` (green) one in the 0 degree direction.
    (d) Third nearest neighbor bonds. ``bondtype=0`` (blue) bond extends in the -30 degree direction, ``bondtype=1`` (red) one in the -150 degree direction, and ``bondtype=2`` (green) one in the 90 degree direction.
-   (e) Corrensponding square TPS of the honeycomb lattice with ``L=2, W=2``. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.
+   (e) Corresponding square TPS of the honeycomb lattice with ``L=2, W=2``. Note that the most top-right red tensor in the honeycomb lattice moves to the most top-left position, and the boundary condition is skewed.
 
 
 Kagome lattice
