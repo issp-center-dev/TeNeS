@@ -42,33 +42,34 @@
 入力ファイルの変数 <code class="docutils literal notranslate"><span class="pre">hx</span></code> を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
-is_real = true
+is_real = true  # Limit tensor elements in real (not complex)
 
 [parameter.simple_update]
-num_step = 1000
-tau = 0.01
+num_step = 1000 # Number of steps in simple update
+tau = 0.01      # Imaginary time slice
 
 [parameter.full_update]
-num_step = 0
-tau = 0.01
+num_step = 0    # Number of steps in full update
+tau = 0.01      # Imaginary time slice
 
 [parameter.ctm]
-iteration_max = 10
-dimension = 10
+meanfield_env = false # Use meanfield environment to contract iTNS
+iteration_max = 10    # Maximum number of iterations in CTMRG
+dimension = 10        # Bond dimension of corner transfer matrix
 
 [lattice]
-type = &quot;square lattice&quot;
-L = 2
-W = 2
-virtual_dim = 2
-initial = &quot;ferro&quot;
+type = &quot;square lattice&quot; # Type of lattice
+L = 2                   # X length of unit cell
+W = 2                   # Y length of unit cell
+virtual_dim = 2         # Bond dimension of bulk tensors
+initial = &quot;ferro&quot;       # Initial condition
 
 [model]
-type = &quot;spin&quot;
-Jz = -1.0
-Jx = 0.0
-Jy = 0.0
-hx = 0.0
+type = &quot;spin&quot; # Type of model
+Jz = -1.0     # Jz SzSz
+Jx = 0.0      # Jx SxSx
+Jy = 0.0      # Jy SySy
+hx = 0.0      # hx Sx
 </pre></div>
 </div>
 <p>とします(<code class="docutils literal notranslate"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 <code class="docutils literal notranslate"><span class="pre">hx=0</span></code> では強磁性状態になります)。入力ファイルを <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> とした場合、</p>
