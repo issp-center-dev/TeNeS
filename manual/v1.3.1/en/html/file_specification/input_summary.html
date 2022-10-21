@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>5.1. Short summary for input files of TeNeS &#8212; TeNeS 1.3.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5.2. Input file for tenes_simple" href="simple_format.html" />
+    <link rel="prev" title="5. File format" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="short-summary-for-input-files-of-tenes">
+<span id="sec-input-summary"></span><h1><span class="section-number">5.1. </span>Short summary for input files of TeNeS<a class="headerlink" href="#short-summary-for-input-files-of-tenes" title="Permalink to this heading">¶</a></h1>
+<p>Input files of TeNeS are written in <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a> format
+and each file has some sections.
+<code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> read some sections and generate an input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes</span></code>, respectively.
+<code class="docutils literal notranslate"><span class="pre">tenes</span></code> reads some sections and performs simulation.</p>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> reads <code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">lattice</span></code> sections and generates <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, and <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> ones.
+Additionary, this copies <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>, and <code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> sections.</p>
+<p>The following table summarizes how each tool deal with sections.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27.3%" />
+<col style="width: 27.3%" />
+<col style="width: 27.3%" />
+<col style="width: 18.2%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">parameter</span></code></p></td>
+<td><p>copy</p></td>
+<td><p>in / copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p></td>
+<td><p>in</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p></td>
+<td><p>in</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor</span></code></p></td>
+<td><p>out</p></td>
+<td><p>in / copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">observable</span></code></p></td>
+<td><p>out</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">correlation</span></code></p></td>
+<td><p>copy</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code></p></td>
+<td><p>copy</p></td>
+<td><p>copy</p></td>
+<td><p>in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code></p></td>
+<td><p>out</p></td>
+<td><p>in</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evolution</span></code></p></td>
+<td></td>
+<td><p>out</p></td>
+<td><p>in</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>“in”</p>
+<ul>
+<li><p>Tool uses this section as input</p></li>
+</ul>
+</li>
+<li><p>“out”</p>
+<ul>
+<li><p>Tool generates this section in output (= next input)</p></li>
+</ul>
+</li>
+<li><p>“copy”</p>
+<ul>
+<li><p>Tool copies this section into output (= next input)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. Output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">5. </span>File format</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter"><span class="section-number">5. </span>File format</a></li>
+      <li>Next: <a href="simple_format.html" title="next chapter"><span class="section-number">5.2. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.3.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/file_specification/input_summary.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
