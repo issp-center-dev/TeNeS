@@ -5,13 +5,13 @@
 Short summary for input files of TeNeS
 ---------------------------------------
 
-Input files of TeNeS is written in `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ format
+Input files of TeNeS are written in `TOML <https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md>`__ format
 and each file has some sections.
 ``tenes_simple`` and ``tenes_std`` read some sections and generate an input file for ``tenes_std`` and ``tenes``, respectively.
 ``tenes`` reads some sections and performs simulation.
 
 For example, ``tenes_simple`` reads ``model`` and ``lattice`` sections and generates ``tensor``, ``observable``, and ``hamiltonian`` ones.
-Additionary, this copies ``parameter`` and ``correlation`` sections.
+Additionary, this copies ``parameter``, ``correlation``, and ``correlation_length`` sections.
 
 The following table summarizes how each tool deal with sections.
 
@@ -25,6 +25,7 @@ The following table summarizes how each tool deal with sections.
   ``tensor``,      "out",  "in / copy", "in"
   ``observable``,  "out",  "copy",    "in"
   ``correlation``, "copy", "copy",    "in"
+  ``correlation_length``, "copy", "copy",    "in"
   ``hamiltonian``, "out",  "in",      ""
   ``evolution``,   "",     "out",     "in"
 
