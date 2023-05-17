@@ -684,7 +684,7 @@ class SpinModel(Model):
             ret[0, 0] = 1.0
         elif num_sublattice == 2:
             ret[0, 0] = 1.0
-            ret[1, 1] = 1.0
+            ret[1, -1] = 1.0
         elif num_sublattice == 3:
             ret[0, 0] = 1.0
             v = coherent_state(2 * np.pi / 3, 0.0)
