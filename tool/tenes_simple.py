@@ -787,7 +787,7 @@ class SpinModel(Model):
 
             ham[in1, in2, out1, out2] = val
             it.iternext()
-        ham += B * SS**2
+        ham += B * np.tensordot(SS,SS,([2,3],[0,1]))
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
