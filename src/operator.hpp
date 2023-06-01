@@ -79,24 +79,42 @@ template <class tensor>
 using Operators = std::vector<Operator<tensor>>;
 
 template <class tensor>
-struct NNOperator {
+struct EvolutionOperator {
   int source_site;
   int source_leg;
   tensor op;
 
-  NNOperator(int site, tensor const &op)
-      : source_site(site), source_leg(-1), op(op) {}
-  NNOperator(int site, int leg, tensor const &op)
-      : source_site(site), source_leg(leg), op(op) {}
+  EvolutionOperator(int source_site, int source_leg, tensor const &op)
+      : source_site(source_site), source_leg(source_leg), op(op) {}
 
   bool is_onesite() const { return source_leg < 0; }
   bool is_twosite() const { return !is_onesite(); }
   bool is_horizontal() const { return source_leg % 2 == 0; }
   bool is_vertical() const { return !is_horizontal(); }
 };
+template <class tensor>
+EvolutionOperator<tensor> make_onesite_EvolutionOperator(int source_site,
+                                                         tensor const &op) {
+  if (source_site < 0) {
+    throw std::runtime_error("source_site must be non-negative");
+  }
+  return EvolutionOperator<tensor>(source_site, -1, op);
+}
+template <class tensor>
+EvolutionOperator<tensor> make_twosite_EvolutionOperator(int source_site,
+                                                         int source_leg,
+                                                         tensor const &op) {
+  if (source_site < 0) {
+    throw std::runtime_error("source_site must be non-negative");
+  }
+  if (source_leg < 0 || source_leg > 3) {
+    throw std::runtime_error("source_leg must be 0, 1, 2, or 3");
+  }
+  return EvolutionOperator<tensor>(source_site, source_leg, op);
+}
 
 template <class tensor>
-using NNOperators = std::vector<NNOperator<tensor>>;
+using EvolutionOperators = std::vector<EvolutionOperator<tensor>>;
 
 }  // namespace tenes
 

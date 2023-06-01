@@ -66,8 +66,8 @@ class iTPS {
    *  @param[in] comm_
    *  @param[in] peps_parameters
    *  @param[in] lattice_
-   *  @param[in] simple_updates ITE operators for simple updates
-   *  @param[in] full_updates ITE operators for full updates
+   *  @param[in] simple_updates Time Evolution operators for simple updates
+   *  @param[in] full_updates Time Evolution operators for full updates
    *  @param[in] onesite_operators_ onesite operators to be measured
    *  @param[in] twosite_operators_ twosite operators to be measured
    *  @param[in] corparam_  parameters for measuring correlation functions
@@ -75,7 +75,8 @@ class iTPS {
    * transfer matrix
    */
   iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, SquareLattice lattice_,
-       NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
+       EvolutionOperators<tensor> simple_updates_,
+       EvolutionOperators<tensor> full_updates_,
        Operators<tensor> onesite_operators_,
        Operators<tensor> twosite_operators_, CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
@@ -170,8 +171,8 @@ class iTPS {
   PEPS_Parameters peps_parameters;
   SquareLattice lattice;
 
-  NNOperators<tensor> simple_updates;
-  NNOperators<tensor> full_updates;
+  EvolutionOperators<tensor> simple_updates;
+  EvolutionOperators<tensor> full_updates;
   Operators<tensor> onesite_operators;
   Operators<tensor> twosite_operators;
   std::vector<std::vector<int>> site_ops_indices;

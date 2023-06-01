@@ -47,8 +47,9 @@ namespace itps {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                   SquareLattice lattice_, NNOperators<tensor> simple_updates_,
-                   NNOperators<tensor> full_updates_,
+                   SquareLattice lattice_,
+                   EvolutionOperators<tensor> simple_updates_,
+                   EvolutionOperators<tensor> full_updates_,
                    Operators<tensor> onesite_operators_,
                    Operators<tensor> twosite_operators_,
                    CorrelationParameter corparam_,
