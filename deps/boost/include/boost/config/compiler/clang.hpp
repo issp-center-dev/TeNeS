@@ -250,6 +250,11 @@
 
 #if !__has_feature(cxx_override_control)
 #  define BOOST_NO_CXX11_FINAL
+#  define BOOST_NO_CXX11_OVERRIDE
+#endif
+
+#if !__has_feature(cxx_unrestricted_unions)
+#  define BOOST_NO_CXX11_UNRESTRICTED_UNION
 #endif
 
 #if !(__has_feature(__cxx_binary_literals__) || __has_extension(__cxx_binary_literals__))
@@ -320,10 +325,17 @@
 // All versions with __cplusplus above this value seem to support this:
 #  define BOOST_NO_CXX14_DIGIT_SEPARATORS
 #endif
-//
-// __builtin_unreachable:
-#if defined(__has_builtin) && __has_builtin(__builtin_unreachable)
+
+// Unreachable code markup
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_unreachable)
 #define BOOST_UNREACHABLE_RETURN(x) __builtin_unreachable();
+#endif
+#endif
+
+// Deprecated symbol markup
+#if __has_attribute(deprecated)
+#define BOOST_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #endif
 
 #if (__clang_major__ == 3) && (__clang_minor__ == 0)
@@ -346,3 +358,5 @@
 // Macro used to identify the Clang compiler.
 #define BOOST_CLANG 1
 
+// BOOST_CLANG_VERSION
+#include <boost/config/compiler/clang_version.hpp>
