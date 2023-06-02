@@ -107,7 +107,7 @@ to_real(tenes::EvolutionOperators<mptensor::Tensor<
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
     }
-    ret.emplace_back(op.source_site, op.source_leg, A);
+    ret.emplace_back(op.source_site, op.source_leg, op.group, A);
   }
   return ret;
 }

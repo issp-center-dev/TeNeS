@@ -18,6 +18,7 @@
 #define TENES_SRC_PEPS_PARAMETERS_HPP_
 
 #include <string>
+#include <vector>
 
 #include "../mpi.hpp"
 #include "../printlevel.hpp"
@@ -25,8 +26,7 @@
 namespace tenes {
 namespace itps {
 
-class PEPS_Parameters {
- public:
+struct PEPS_Parameters {
   // Tensor
   int D;    // Bond dimension for central tensor
   int CHI;  // Bond dimension for environment tensor
@@ -34,7 +34,8 @@ class PEPS_Parameters {
   PrintLevel print_level;
 
   // Simple update
-  int num_simple_step;
+  std::vector<int> num_simple_step;
+  std::vector<double> tau_simple_step;
   double Inverse_lambda_cut;
   bool Simple_Gauge_Fix;
   int Simple_Gauge_maxiter;
@@ -50,7 +51,8 @@ class PEPS_Parameters {
   bool MeanField_Env;
 
   // Full update
-  int num_full_step;
+  std::vector<int> num_full_step;
+  std::vector<double> tau_full_step;
   double Inverse_Env_cut;
   double Full_Inverse_precision;
   double Full_Convergence_Epsilon;

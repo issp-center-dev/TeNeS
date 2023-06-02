@@ -82,10 +82,15 @@ template <class tensor>
 struct EvolutionOperator {
   int source_site;
   int source_leg;
+  int group;
   tensor op;
 
-  EvolutionOperator(int source_site, int source_leg, tensor const &op)
-      : source_site(source_site), source_leg(source_leg), op(op) {}
+  EvolutionOperator(int source_site, int source_leg, int group,
+                    tensor const &op)
+      : source_site(source_site),
+        source_leg(source_leg),
+        group(group),
+        op(op) {}
 
   bool is_onesite() const { return source_leg < 0; }
   bool is_twosite() const { return !is_onesite(); }
@@ -94,15 +99,20 @@ struct EvolutionOperator {
 };
 template <class tensor>
 EvolutionOperator<tensor> make_onesite_EvolutionOperator(int source_site,
+                                                         int group,
                                                          tensor const &op) {
   if (source_site < 0) {
     throw std::runtime_error("source_site must be non-negative");
   }
-  return EvolutionOperator<tensor>(source_site, -1, op);
+  if (group < 0) {
+    throw std::runtime_error("group must be non-negative");
+  }
+  return EvolutionOperator<tensor>(source_site, -1, group, op);
 }
 template <class tensor>
 EvolutionOperator<tensor> make_twosite_EvolutionOperator(int source_site,
                                                          int source_leg,
+                                                         int group,
                                                          tensor const &op) {
   if (source_site < 0) {
     throw std::runtime_error("source_site must be non-negative");
@@ -110,7 +120,10 @@ EvolutionOperator<tensor> make_twosite_EvolutionOperator(int source_site,
   if (source_leg < 0 || source_leg > 3) {
     throw std::runtime_error("source_leg must be 0, 1, 2, or 3");
   }
-  return EvolutionOperator<tensor>(source_site, source_leg, op);
+  if (group < 0) {
+    throw std::runtime_error("group must be non-negative");
+  }
+  return EvolutionOperator<tensor>(source_site, source_leg, group, op);
 }
 
 template <class tensor>

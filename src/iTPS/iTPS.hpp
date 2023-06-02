@@ -172,7 +172,9 @@ class iTPS {
   SquareLattice lattice;
 
   EvolutionOperators<tensor> simple_updates;
+  int num_simple_update_groups;
   EvolutionOperators<tensor> full_updates;
+  int num_full_update_groups;
   Operators<tensor> onesite_operators;
   Operators<tensor> twosite_operators;
   std::vector<std::vector<int>> site_ops_indices;

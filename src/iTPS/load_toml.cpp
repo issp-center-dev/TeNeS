@@ -57,8 +57,49 @@ std::string type_name<std::string>() {
   return "string";
 }
 
+template <class T>
+struct bittype{
+  typedef T type;
+};
+
+template <>
+struct bittype<short int>{
+  typedef int64_t type;
+};
+
+template <>
+struct bittype<int>{
+  typedef int64_t type;
+};
+
+template <>
+struct bittype<long long int>{
+  typedef int64_t type;
+};
+
 }  // end of namespace detail
 
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key);
+
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key, T default_value);
+
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key,
+                            std::vector<T> const &default_value);
+
+/*! @brief Load a parameter if key is defined.
+ *
+ * @param dst Destination of the parameter.
+ * @param param TOML file object.
+ * @param key Key of the parameter.
+ *
+ * @throw input_error if the parameter is found but the type is not matched.
+ */
 template <class T>
 inline void load_if(T &dst, decltype(cpptoml::parse_file("")) param,
                     const char *key) {
@@ -76,6 +117,31 @@ inline void load_if(T &dst, decltype(cpptoml::parse_file("")) param,
   }
 }
 
+/*! @brief Load a parameter if key is defined.
+ *
+ * @param dst Destination of the parameter.
+ * @param param TOML file object.
+ * @param key Key of the parameter.
+ *
+ * @throw input_error if the parameter is found but the type is not matched.
+ */
+template <class T>
+inline void load_if(std::vector<T> &dst,
+                    decltype(cpptoml::parse_file("")) param, const char *key) {
+  if (param->contains(key)) {
+    auto xs = get_array_of<typename detail::bittype<T>::type>(param, key);
+    dst.assign(xs.begin(), xs.end());
+  }
+}
+
+/*! @brief
+ * @param param TOML file object.
+ * @param key Key of the parameter.
+ * @param value Default value.
+ * @return Value of the parameter if the parameter is defined, otherwise default
+ * is returned.
+ * @throw input_error if the parameter is found but the type is not matched.
+ */
 template <class T>
 inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
                  T value) {
@@ -86,6 +152,12 @@ inline T find_or(decltype(cpptoml::parse_file("")) param, const char *key,
   return ret;
 }
 
+/*! @brief Find a parameter from TOML object.
+ *  @param param TOML file object.
+ *  @param key Key of the parameter.
+ *  @return Value of the parameter.
+ *  @throw input_error if the parameter is not found.
+ */
 template <class T>
 inline T find(decltype(cpptoml::parse_file("")) param, const char *key) {
   T ret;
@@ -95,6 +167,73 @@ inline T find(decltype(cpptoml::parse_file("")) param, const char *key) {
     throw input_error(detail::msg_cannot_find(key));
   }
   return ret;
+}
+
+/*! @brief Find a list parameter from TOML object.
+ *
+ * If the parameter is scalar, it is converted to a list with single element.
+ *
+ * @param param TOML file object.
+ * @param key Key of the parameter.
+ * @return Value of the parameter.
+ * @throw input_error if the parameter is not found.
+ */
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key) {
+  if (!param->contains(key)) {
+    throw input_error(detail::msg_cannot_find(key));
+  }
+  auto scalar = param->get_as<T>(key);
+  auto arr = param->get_array_of<T>(key);
+  std::vector<T> ret;
+  if (scalar) {
+    ret.push_back(*scalar);
+  } else if (arr) {
+    ret.assign(arr->begin(), arr->end());
+  } else {
+    auto vv = param->get(key);
+    std::stringstream ss;
+    ss << "\"" << key << "\" requires value(s) of type "
+       << detail::type_name<T>() << ", but given value is " << *vv;
+    throw input_error(ss.str());
+  }
+  return ret;
+}
+
+/*! @brief Find a list parameter from TOML object.
+ *
+ * If the parameter is scalar, it is converted to a list with single element.
+ *
+ * @param param TOML file object.
+ * @param key Key of the parameter.
+ * @param default_value Default value.
+ * @return Value of the parameter.
+ */
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key, T default_value) {
+  if (!param->contains(key)) {
+    return std::vector<T>{default_value};
+  } else {
+    auto xs = get_array_of<typename detail::bittype<T>::type>(param, key);
+    std::vector<T> ret(xs.begin(), xs.end());
+    return ret;
+  }
+}
+
+template <class T>
+std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
+                            const char *key,
+                            std::vector<T> const &default_value) {
+  if (!param->contains(key)) {
+    std::vector<T> ret = default_value;
+    return ret;
+  } else {
+    auto xs = get_array_of<typename detail::bittype<T>::type>(param, key);
+    std::vector<T> ret(xs.begin(), xs.end());
+    return ret;
+  }
 }
 
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
@@ -113,47 +252,30 @@ SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
     throw input_error(detail::msg_cannot_find("unitcell", tablename));
   }
   for (const auto &site : *sites) {
-    std::vector<int> indices;
-    auto index_int = site->get_as<int>("index");
-    auto index_arr = site->get_array_of<int64_t>("index");
-
-    if (index_arr) {
-      indices.assign(index_arr->begin(), index_arr->end());
-      if (indices.empty()) {
-        for (int i = 0; i < lat.N_UNIT; ++i) {
-          indices.push_back(i);
-        }
+    auto indices = get_array_of<int64_t>(site, "index");
+    if (indices.empty()) {
+      for (int i = 0; i < lat.N_UNIT; ++i) {
+        indices.push_back(i);
       }
-    } else if (index_int) {
-      indices.push_back(*index_int);
-    } else {
-      throw input_error(detail::msg_cannot_find("index", tablename));
     }
 
     for (int index : indices) {
-      auto dir = site->get_array_of<double>("initial_state");
-      if (dir) {
-        lat.initial_dirs[index] = *dir;
-      } else {
-        lat.initial_dirs[index] = std::vector<double>{0.0};
-      }
+      lat.initial_dirs[index] =
+          get_array_of<double>(site, "initial_state", 0.0);
 
       lat.noises[index] = find_or(site, "noise", 0.0);
 
       lat.physical_dims[index] = find<int>(site, "physical_dim");
 
-      auto vdim_int = site->get_as<int>("virtual_dim");
-      auto vdim_arr = site->get_array_of<int64_t>("virtual_dim");
-      std::vector<int> vdim;
-
-      if (vdim_arr) {
-        vdim.assign((*vdim_arr).begin(), (*vdim_arr).end());
-      } else if (vdim_int) {
-        vdim.assign(4, *vdim_int);
-      } else {
-        throw input_error(
-            detail::msg_cannot_find("virtual_dim", "tensor.unitcell"));
+      auto vdim = get_array_of<int64_t>(site, "virtual_dim");
+      if (vdim.size() == 1) {
+        vdim.resize(4, vdim[0]);
       }
+      if (vdim.size() != 4) {
+        throw input_error(
+            "The size of tensor.unitcell.virtual_dim must be 1 or 4.");
+      }
+
       for (int i = 0; i < 4; ++i) {
         lat.virtual_dims[index][i] = vdim[i];
       }
@@ -405,20 +527,22 @@ EvolutionOperator<tensor> load_Evolution_operator(
   for (auto d : *dimensions) {
     shape.push(d);
   }
+  auto group = find_or<int>(param, "group", 0);
 
   if (shape.size() == 2) {
     // siteoperator
     auto site = find<int>(param, "site");
 
     tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
-    return make_onesite_EvolutionOperator<tensor>(site, A);
+    return make_onesite_EvolutionOperator<tensor>(site, group, A);
   } else if (shape.size() == 4) {
     // nnoperator
     auto source_site = find<int>(param, "source_site");
     auto source_leg = find<int>(param, "source_leg");
 
     tensor A = util::read_tensor<tensor>(elements, shape, comm, atol);
-    return make_twosite_EvolutionOperator<tensor>(source_site, source_leg, A);
+    return make_twosite_EvolutionOperator<tensor>(source_site, source_leg,
+                                                  group, A);
   } else {
     std::stringstream ss;
     ss << tablename << ".dimensions should have 2 or 4 integers";

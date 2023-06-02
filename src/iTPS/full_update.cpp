@@ -28,17 +28,21 @@ namespace itps {
 
 template <class ptensor>
 void iTPS<ptensor>::full_update() {
-  if (peps_parameters.num_full_step > 0) {
+  const int group = 0;
+  if (peps_parameters.num_full_step[group] > 0) {
     update_CTM();
   }
 
   Timer<> timer;
   ptensor Tn1_new(comm), Tn2_new(comm);
-  const int nsteps = peps_parameters.num_full_step;
+  const int nsteps = peps_parameters.num_full_step[group];
   double next_report = 10.0;
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : full_updates) {
+      if (up.group != group) {
+        continue;
+      }
       if (up.is_onesite()) {
         const int source = up.source_site;
         Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
