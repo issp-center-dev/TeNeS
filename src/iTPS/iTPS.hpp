@@ -89,9 +89,12 @@ class iTPS {
 
   //! perform simple update
   void simple_update();
+  void simple_update(EvolutionOperator<tensor> const &up);
+  void fix_local_gauge();
 
   //! perform full update
   void full_update();
+  void full_update(EvolutionOperator<tensor> const &up);
 
   //! optimize tensors
   void optimize();
