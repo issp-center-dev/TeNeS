@@ -154,7 +154,7 @@ class LocalTensor:
     phys_dim : int
         Dimension of physical bond.
     virtual_dim : List[int]
-        Dimenstions of four virtual bonds.
+        Dimensions of four virtual bonds.
         Four bonds are ordered as [-x, +y, +x, -y].
     """
 
@@ -702,7 +702,7 @@ class TwositeObservable:
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
@@ -714,7 +714,7 @@ def make_evolution_onesite(
 def make_evolution_twosite(
     hamiltonian: NNOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[NNOperator]:
@@ -772,7 +772,7 @@ def make_evolution_twosite(
 def make_evolution(
     hamiltonian: Operator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> Union[List[SiteOperator], List[NNOperator]]:
@@ -800,11 +800,19 @@ class Model:
     twobodies: List[TwositeObservable]
     simple_updates: List[Operator]
     full_updates: List[Operator]
+    time_evolution: bool
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
         self.param = param
         self.parameter = param["parameter"]
+        if "general" in self.parameter:
+            mode = self.parameter["general"].get("mode", "ground state").lower()
+        else:
+            mode = "ground state"
+        if not isinstance(mode, str):
+            raise ValueError("mode must be a string.")
+        self.time_evolution = mode.startswith("time")
         tau = self.parameter["simple_update"].get("tau", [0.01])
         if isinstance(tau, float):
             self.simple_tau = [tau]
@@ -934,10 +942,14 @@ class Model:
         self.full_updates = []
 
         for g, tau in enumerate(self.simple_tau):
+            if self.time_evolution:
+                tau *= 1.0j
             for ham in self.hamiltonians:
                 for evo in make_evolution(ham, self.graph, tau, group=g):
                     self.simple_updates.append(evo)
         for g, tau in enumerate(self.full_tau):
+            if self.time_evolution:
+                tau *= 1.0j
             for ham in self.hamiltonians:
                 for evo in make_evolution(ham, self.graph, tau, group=g):
                     self.full_updates.append(evo)

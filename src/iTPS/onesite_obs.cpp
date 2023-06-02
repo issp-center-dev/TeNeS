@@ -84,7 +84,8 @@ auto iTPS<tensor>::measure_onesite()
   }
   if (mpirank == 0) {
     if (norm_real_min <= 0.0) {
-      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = " << norm_real_min <<"].\n";
+      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = "
+                << norm_real_min << "].\n";
       std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
     }
     if (norm_imag_abs_max > 1e-6) {
@@ -102,30 +103,45 @@ auto iTPS<tensor>::measure_onesite()
 template <class ptensor>
 void iTPS<ptensor>::save_onesite(
     std::vector<std::vector<typename iTPS<ptensor>::tensor_type>> const
-        &onesite_obs) {
+        &onesite_obs,
+    boost::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
 
   const int nlops = num_onesite_operators;
-  std::string filename = outdir + "/onesite_obs.dat";
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "    Save onesite observables to " << filename << std::endl;
+  std::string filepath = outdir + "/" + filename_prefix + "onesite_obs.dat";
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "    Save onesite observables to " << filepath << std::endl;
   }
-  std::ofstream ofs(filename.c_str());
+
+  static bool first_time = true;
+  if(first_time){
+    std::ofstream ofs(filepath.c_str());
+    int index = 1;
+    if (time) {
+      ofs << "# $" << index++ << ": (imaginary) time\n";
+    }
+    ofs << "# $" << index++ << ": op_group\n";
+    ofs << "# $" << index++ << ": site_index\n";
+    ofs << "# $" << index++ << ": real\n";
+    ofs << "# $" << index++ << ": imag\n";
+    ofs << std::endl;
+    first_time = false;
+  }
+
+  std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
-  ofs << "# $1: op_group\n";
-  ofs << "# $2: site_index\n";
-  ofs << "# $3: real\n";
-  ofs << "# $4: imag\n";
-  ofs << std::endl;
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
     for (int i = 0; i < N_UNIT; ++i) {
       const auto v = onesite_obs[ilops][i];
       if (std::isnan(std::real(v))) {
         continue;
+      }
+      if (time) {
+        ofs << time.get() << " ";
       }
       ofs << ilops << " " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
@@ -137,6 +153,9 @@ void iTPS<ptensor>::save_onesite(
       const auto v = onesite_obs[nlops][i];
       if (std::isnan(std::real(v))) {
         continue;
+      }
+      if (time) {
+        ofs << time.get() << " ";
       }
       ofs << "-1 " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;

@@ -226,8 +226,72 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     }
   }
 
+  if (peps_parameters.calcmode !=
+      PEPS_Parameters::CalculationMode::ground_state) {
+    if (peps_parameters.num_simple_step[0] > 0 &&
+        peps_parameters.num_full_step[0]) {
+      std::string msg =
+          "ERROR: While mode is not ground state calculation,\n"
+          "       simple update and full update are both required.";
+      throw std::runtime_error(msg);
+    }
+    if (peps_parameters.num_simple_step[0] > 0) {
+      int nss_size = peps_parameters.num_simple_step.size();
+      if (nss_size != num_simple_update_groups) {
+        if (nss_size == 1) {
+          peps_parameters.num_simple_step.resize(
+              num_simple_update_groups, peps_parameters.num_simple_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of num_step " << nss_size
+              << " is not equal to the number of simple update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+
+      int tss_size = peps_parameters.tau_simple_step.size();
+      if (tss_size != num_simple_update_groups) {
+        if (tss_size == 1) {
+          peps_parameters.tau_simple_step.resize(
+              num_simple_update_groups, peps_parameters.tau_simple_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of tau " << nss_size
+              << " is not equal to the number of simple update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+    } else {
+      int nss_size = peps_parameters.num_full_step.size();
+      if (nss_size != num_full_update_groups) {
+        if (nss_size == 1) {
+          peps_parameters.num_full_step.resize(
+              num_full_update_groups, peps_parameters.num_full_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of num_step " << nss_size
+              << " is not equal to the number of full update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+      int tss_size = peps_parameters.tau_full_step.size();
+      if (tss_size != num_full_update_groups) {
+        if (tss_size == 1) {
+          peps_parameters.tau_full_step.resize(
+              num_full_update_groups, peps_parameters.tau_full_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of tau " << tss_size
+              << " is not equal to the number of full update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+    }
+  } else {
+  }
+
   int maxops = -1;
-  size_t maxlength = 0;
+  size_t maxlength = std::string("Energy").size();
   for (auto const &op : onesite_operators) {
     maxops = std::max(op.group, maxops);
   }

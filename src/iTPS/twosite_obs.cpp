@@ -146,7 +146,7 @@ auto iTPS<ptensor>::measure_twosite()
         const_cast<ptensor *>(Tn_[nrow - 1][col])
             ->multiply_vector(lambda_tensor[indices[nrow - 1][col]][3], 3);
       }
-    } else { // Use CTM
+    } else {  // Use CTM
       for (int row = 0; row < nrow; ++row) {
         for (int col = 0; col < ncol; ++col) {
           const int index =
@@ -168,7 +168,7 @@ auto iTPS<ptensor>::measure_twosite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
-    const auto norm_key = Bond{indices[nrow-1][0], nrow-1, ncol-1};
+    const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
         norms[norm_key] = core::Contract_MF(Tn_, op_);
@@ -194,7 +194,7 @@ auto iTPS<ptensor>::measure_twosite()
                             C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
                             eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
                             eTl[top], Tn[top], Tn[bottom], o);
-        } else { // ncol == 2
+        } else {  // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
           ptensor o =
@@ -248,19 +248,21 @@ auto iTPS<ptensor>::measure_twosite()
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
-  for(auto & r: norms){
+  for (auto &r : norms) {
     double norm_re = std::real(r.second);
     double norm_im = std::imag(r.second);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
-  if(mpirank == 0){
-    if(norm_real_min < 0.0){
-      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = " << norm_real_min << "].\n";
+  if (mpirank == 0) {
+    if (norm_real_min < 0.0) {
+      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = "
+                << norm_real_min << "].\n";
       std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
     }
-    if(norm_imag_abs_max > 1.0e-6){
-      std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = " << norm_imag_abs_max << " > 1e-6].\n";
+    if (norm_imag_abs_max > 1.0e-6) {
+      std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = "
+                << norm_imag_abs_max << " > 1e-6].\n";
       std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
     }
   }
@@ -272,52 +274,67 @@ auto iTPS<ptensor>::measure_twosite()
 template <class ptensor>
 void iTPS<ptensor>::save_twosite(
     std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> const
-        &twosite_obs) {
+        &twosite_obs,
+    boost::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
 
   const int nlops = num_twosite_operators;
-  std::string filename = outdir + "/twosite_obs.dat";
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "    Save twosite observables to " << filename << std::endl;
+  std::string filepath = outdir + "/" + filename_prefix + "twosite_obs.dat";
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "    Save twosite observables to " << filepath << std::endl;
   }
-  std::ofstream ofs(filename.c_str());
+  static bool first_time = true;
+  if (first_time) {
+    std::ofstream ofs(filepath.c_str());
+    int index = 1;
+    if (time) {
+      ofs << "# $" << index++ << ": (imaginary) time\n";
+    }
+    ofs << "# $" << index++ << ": op_group\n";
+    ofs << "# $" << index++ << ": source_site\n";
+    ofs << "# $" << index++ << ": dx\n";
+    ofs << "# $" << index++ << ": dy\n";
+    ofs << "# $" << index++ << ": real\n";
+    ofs << "# $" << index++ << ": imag\n";
+    ofs << std::endl;
+    first_time = false;
+  }
+  std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
-  ofs << "# $1: op_group\n";
-  ofs << "# $2: source_site\n";
-  ofs << "# $3: dx\n";
-  ofs << "# $4: dy\n";
-  ofs << "# $5: real\n";
-  ofs << "# $6: imag\n";
-  ofs << std::endl;
+
   for (int ilops = 0; ilops < nlops; ++ilops) {
     for (const auto &r : twosite_obs[ilops]) {
       auto bond = r.first;
       auto value = r.second;
+      if (time) {
+        ofs << time.get() << " ";
+      }
       ofs << ilops << " " << bond.source_site << " " << bond.dx << " "
           << bond.dy << " " << std::real(value) << " " << std::imag(value)
           << std::endl;
     }
   }
 
-  if (twosite_obs.size() == nlops+1){
+  if (twosite_obs.size() == nlops + 1) {
     // includes norm
     for (const auto &r : twosite_obs[nlops]) {
       auto bond = r.first;
       auto value = r.second;
-      ofs << "-1 " << bond.source_site << " " << bond.dx << " "
-          << bond.dy << " " << std::real(value) << " " << std::imag(value)
-          << std::endl;
+      if (time) {
+        ofs << time.get() << " ";
+      }
+      ofs << "-1 " << bond.source_site << " " << bond.dx << " " << bond.dy
+          << " " << std::real(value) << " " << std::imag(value) << std::endl;
     }
   }
-
 }
 
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-} // namespace itps
-} // namespace tenes
+}  // namespace itps
+}  // namespace tenes

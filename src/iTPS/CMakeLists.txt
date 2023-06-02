@@ -14,9 +14,11 @@ add_library(
   measure.cpp
   onesite_obs.cpp
   twosite_obs.cpp
+  density.cpp
   simple_update.cpp
   full_update.cpp
   optimize.cpp
+  time_evolution.cpp
   correlation_function.cpp
   correlation_length.cpp
   transfer_matrix.cpp)

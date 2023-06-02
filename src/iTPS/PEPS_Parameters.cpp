@@ -36,6 +36,7 @@ PEPS_Parameters::PEPS_Parameters() {
   // Simple update
   num_simple_step = std::vector<int>{0};
   tau_simple_step = std::vector<double>{0.0};
+  measure_interval = std::vector<int>{10};
   Inverse_lambda_cut = 1e-12;
   Simple_Gauge_Fix = false;
   Simple_Gauge_maxiter = 100;
@@ -72,6 +73,7 @@ PEPS_Parameters::PEPS_Parameters() {
   tensor_load_dir = "";
   tensor_save_dir = "";
   outdir = "output";
+  calcmode = CalculationMode::ground_state;
 }
 
 #define SAVE_PARAM(name, type) params_##type[I_##name] = static_cast<type>(name)
@@ -228,6 +230,12 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   for (int i = 0; i < num_simple_step.size(); ++i) {
     if (i != 0) ofs << ", ";
     ofs << num_simple_step[i];
+  }
+  ofs << "]" << std::endl;
+  ofs << "simple_tau = [";
+  for (int i = 0; i < tau_simple_step.size(); ++i) {
+    if (i != 0) ofs << ", ";
+    ofs << tau_simple_step[i];
   }
   ofs << "]" << std::endl;
   ofs << "simple_inverse_lambda_cutoff = " << Inverse_lambda_cut << std::endl;
