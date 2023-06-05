@@ -27,6 +27,7 @@ int omp_get_max_threads() { return 1; }
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <set>
 
 #include <mptensor/rsvd.hpp>
 
@@ -47,8 +48,9 @@ namespace itps {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                   SquareLattice lattice_, NNOperators<tensor> simple_updates_,
-                   NNOperators<tensor> full_updates_,
+                   SquareLattice lattice_,
+                   EvolutionOperators<tensor> simple_updates_,
+                   EvolutionOperators<tensor> full_updates_,
                    Operators<tensor> onesite_operators_,
                    Operators<tensor> twosite_operators_,
                    CorrelationParameter corparam_,
@@ -160,6 +162,69 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   initialize_tensors();
+
+  std::set<int> simple_update_groups;
+  bool notwarned = true;
+  for (auto const &op : simple_updates) {
+    auto g = op.group;
+    if (g < 0) {
+      std::stringstream ss;
+      ss << "ERROR: a simple update has negative group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+    if (notwarned && g > 0) {
+      std::cerr << "WARNING: a simple update has nonzero group number " << g
+                << std::endl;
+      std::cerr << "         This feature is reserved for future use."
+                << std::endl;
+      std::cerr << "         Currently, all simple updates with nonzero group "
+                   "number are ignored."
+                << std::endl;
+      notwarned = false;
+    }
+    simple_update_groups.insert(g);
+  }
+  num_simple_update_groups = *simple_update_groups.rbegin() + 1;
+  for (int g = 0; g < num_simple_update_groups; ++g) {
+    auto it = simple_update_groups.find(g);
+    if (it == simple_update_groups.end()) {
+      std::stringstream ss;
+      ss << "ERROR: no simple update with group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+  }
+
+  notwarned = true;
+
+  std::set<int> full_update_groups;
+  for (auto const &op : full_updates) {
+    auto g = op.group;
+    if (g < 0) {
+      std::stringstream ss;
+      ss << "ERROR: a full update has negative group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+    if (notwarned && g > 0) {
+      std::cerr << "WARNING: a full update has nonzero group number " << g
+                << std::endl;
+      std::cerr << "         This feature is reserved for future use."
+                << std::endl;
+      std::cerr << "         Currently, all full updates with nonzero group "
+                   "number are ignored."
+                << std::endl;
+      notwarned = false;
+    }
+    full_update_groups.insert(g);
+  }
+  num_full_update_groups = *full_update_groups.rbegin() + 1;
+  for (int g = 0; g < num_full_update_groups; ++g) {
+    auto it = full_update_groups.find(g);
+    if (it == full_update_groups.end()) {
+      std::stringstream ss;
+      ss << "ERROR: no full update with group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+  }
 
   int maxops = -1;
   size_t maxlength = 0;

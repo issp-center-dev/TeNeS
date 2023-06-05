@@ -24,15 +24,19 @@ namespace itps {
 
 template <class tensor>
 void iTPS<tensor>::simple_update() {
+  const int group = 0;
   Timer<> timer;
   tensor Tn1_new(comm);
   tensor Tn2_new(comm);
   std::vector<double> lambda_c;
-  const int nsteps = peps_parameters.num_simple_step;
+  const int nsteps = peps_parameters.num_simple_step[group];
   double next_report = 10.0;
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : simple_updates) {
+      if (up.group != group){
+        continue;
+      }
       if (up.is_onesite()) {
         const int source = up.source_site;
         Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
@@ -118,7 +122,7 @@ void iTPS<tensor>::simple_update() {
                   << nsteps << "] done" << std::endl;
       }
     }
-  }
+  } // end of for (int_tau)
   time_simple_update += timer.elapsed();
 }
 

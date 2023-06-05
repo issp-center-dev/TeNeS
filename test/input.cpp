@@ -47,10 +47,12 @@ TEST_CASE("input") {
 
     CHECK(peps_parameters.CHI == 2);
 
-    CHECK(peps_parameters.num_simple_step == 0);
+    CHECK(peps_parameters.num_simple_step.size() == 1);
+    CHECK(peps_parameters.num_simple_step[0] == 0);
     CHECK(peps_parameters.Inverse_lambda_cut == 1e-12);
 
-    CHECK(peps_parameters.num_full_step == 0);
+    CHECK(peps_parameters.num_full_step.size() == 1);
+    CHECK(peps_parameters.num_full_step[0] == 0);
     CHECK(peps_parameters.Inverse_Env_cut == 1e-12);
     CHECK(peps_parameters.Full_Inverse_precision == 1e-12);
     CHECK(peps_parameters.Full_Convergence_Epsilon == 1e-6);
@@ -105,10 +107,12 @@ seed = 42)");
 
     CHECK(peps_parameters.CHI == 16);
 
-    CHECK(peps_parameters.num_simple_step == 1000);
+    CHECK(peps_parameters.num_simple_step.size() == 1);
+    CHECK(peps_parameters.num_simple_step[0] == 1000);
     CHECK(peps_parameters.Inverse_lambda_cut == 1e-10);
 
-    CHECK(peps_parameters.num_full_step == 1);
+    CHECK(peps_parameters.num_full_step.size() == 1);
+    CHECK(peps_parameters.num_full_step[0] == 1);
     CHECK(peps_parameters.Inverse_Env_cut == 1e-10);
     CHECK(peps_parameters.Full_Inverse_precision == 1e-10);
     CHECK(peps_parameters.Full_Convergence_Epsilon == 1e-10);
@@ -167,6 +171,7 @@ elements = """
       const auto simple_updates = tenes::itps::load_simple_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(simple_updates[0].source_site == 0);
       CHECK(simple_updates[0].source_leg == 2);
+      CHECK(simple_updates[0].group == 0);
       auto &op = simple_updates[0].op;
       CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
       std::complex<double> v = 0.0;
@@ -189,6 +194,7 @@ elements = """
       const auto full_updates = tenes::itps::load_full_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(full_updates[0].source_site == 0);
       CHECK(full_updates[0].source_leg == 2);
+      CHECK(full_updates[0].group == 0);
       auto &op = full_updates[0].op;
       CHECK(op.shape() == mptensor::Shape{2, 2, 2, 4});
       std::complex<double> v = 0.0;

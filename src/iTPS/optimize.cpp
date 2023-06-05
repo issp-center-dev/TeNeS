@@ -28,7 +28,7 @@ void iTPS<ptensor>::optimize() {
   }
   simple_update();
 
-  if (peps_parameters.num_full_step > 0) {
+  if (peps_parameters.num_full_step[0] > 0) {
     if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "Start full update" << std::endl;
     }

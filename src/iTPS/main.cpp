@@ -91,10 +91,12 @@ bool is_real(tenes::Operators<mptensor::Tensor<
   return true;
 }
 
-tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
-to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
-                                            std::complex<double>>> const& ops) {
-  tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+tenes::EvolutionOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+to_real(tenes::EvolutionOperators<mptensor::Tensor<
+            tenes::mptensor_matrix_type, std::complex<double>>> const& ops) {
+  tenes::EvolutionOperators<
+      mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+      ret;
   if (ops.empty()) {
     return ret;
   }
@@ -105,12 +107,12 @@ to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
     }
-    ret.emplace_back(op.source_site, op.source_leg, A);
+    ret.emplace_back(op.source_site, op.source_leg, op.group, A);
   }
   return ret;
 }
 
-bool is_real(tenes::NNOperators<mptensor::Tensor<
+bool is_real(tenes::EvolutionOperators<mptensor::Tensor<
                  tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
              double tol) {
   for (auto const& op : ops) {
@@ -136,7 +138,8 @@ namespace itps {
 
 template <class tensor>
 int run(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
-        NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
+        EvolutionOperators<tensor> simple_updates,
+        EvolutionOperators<tensor> full_updates,
         Operators<tensor> onesite_operators,
         Operators<tensor> twosite_operators, CorrelationParameter corparam,
         TransferMatrix_Parameters clength_param) {
