@@ -59,17 +59,24 @@ void iTPS<ptensor>::save_density(
 
   const double invV = 1.0 / numsites;
   std::string filename = outdir + "/" + filename_prefix + "density.dat";
+  energy *= invV;
 
-  if(time){
+  if (time) {
     static bool first_time = true;
-    if(first_time){
+    if (first_time) {
       first_time = false;
       std::ofstream ofs(filename.c_str());
-      ofs << "# $1: (imaginary) time\n";
+      ofs << "# The meaning of each column is the following: \n";
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::time_evolution) {
+        ofs << "# $1: time\n";
+      } else if (peps_parameters.calcmode ==
+                 PEPS_Parameters::CalculationMode::finite_temperature) {
+        ofs << "# $1: inverse temperature\n";
+      }
       ofs << "# $2: observable ID\n";
       ofs << "# $3: real\n";
       ofs << "# $4: imag\n";
-      ofs << std::endl;
 
       int index = 1;
       ofs << "# The meaning of observable IDs are the following: \n";
@@ -86,15 +93,16 @@ void iTPS<ptensor>::save_density(
         }
         ofs << "# " << index++ << ": " << twosite_operator_names[ilops] << "\n";
       }
+      ofs << std::endl;
     }
   }
   std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
-  if(time){
+  if (time) {
     ofs << time.get() << " 1 ";
-  }else{
+  } else {
     size_t namesize = onesite_operator_names[0].size();
     std::string s = "Energy";
     const auto l = namesize - s.size();
@@ -114,9 +122,9 @@ void iTPS<ptensor>::save_density(
       continue;
     }
     const auto v = loc_obs[ilops] * invV;
-    if(time){
+    if (time) {
       ofs << time.get() << " " << index++ << " ";
-    }else{
+    } else {
       ofs << onesite_operator_names[ilops] << " = ";
     }
     if (std::real(v) >= 0.0) {
@@ -133,9 +141,9 @@ void iTPS<ptensor>::save_density(
     if (twosite_operator_counts[ilops] == 0) {
       continue;
     }
-    if(time){
+    if (time) {
       ofs << time.get() << " " << index++ << " ";
-    }else{
+    } else {
       ofs << twosite_operator_names[ilops] << " = ";
     }
     const auto v = two_obs[ilops] * invV;
@@ -149,7 +157,7 @@ void iTPS<ptensor>::save_density(
     ofs << std::imag(v) << std::endl;
   }
 
-  if(!time){
+  if (!time) {
     std::cout << "    Save observable densities to " << filename << std::endl;
     if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << std::endl;

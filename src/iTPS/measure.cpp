@@ -28,64 +28,40 @@ namespace tenes {
 namespace itps {
 
 template <class ptensor>
-void iTPS<ptensor>::measure() {
-  if (peps_parameters.print_level >= PrintLevel::info) {
+void iTPS<ptensor>::measure(boost::optional<double> time, std::string filename_prefix) {
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;
     std::cout << "  Start updating environment" << std::endl;
   }
+
   if (!peps_parameters.MeanField_Env) {
     update_CTM();
   }
 
-  if (peps_parameters.print_level >= PrintLevel::info) {
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "  Start calculating onesite operators" << std::endl;
   }
   auto onesite_obs = measure_onesite();
-  save_onesite(onesite_obs);
-
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "  Start calculating twosite operators" << std::endl;
-  }
-  auto twosite_obs = measure_twosite();
-  save_twosite(twosite_obs);
-
-  if (corparam.r_max > 0) {
-    if (peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "  Start calculating long range correlation" << std::endl;
-    }
-    auto correlations = measure_correlation();
-    save_correlation(correlations);
-  }
-
-  if (tmatrix_param.to_calculate) {
-    if (peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "  Start calculating correlation length" << std::endl;
-    }
-    auto correlation_length = measure_transfer_matrix_eigenvalues();
-    save_correlation_length(correlation_length);
-  }
-
-  save_density(onesite_obs, twosite_obs);
-}
-
-template <class ptensor>
-void iTPS<ptensor>::measure(double time, std::string filename_prefix) {
-  if (!peps_parameters.MeanField_Env) {
-    update_CTM();
-  }
-
-  auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs, time, filename_prefix);
 
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "  Start calculating twosite operators" << std::endl;
+  }
   auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs, time, filename_prefix);
 
   if (corparam.r_max > 0) {
+    if (!time && peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "  Start calculating long range correlation" << std::endl;
+    }
     auto correlations = measure_correlation();
     save_correlation(correlations, time, filename_prefix);
   }
 
   if (tmatrix_param.to_calculate) {
+    if (!time && peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "  Start calculating correlation length" << std::endl;
+    }
     auto correlation_length = measure_transfer_matrix_eigenvalues();
     save_correlation_length(correlation_length, time, filename_prefix);
   }

@@ -102,8 +102,8 @@ class iTPS {
   void optimize();
 
   //! measure expectation value of observables
-  void measure();
-  void measure(double time, std::string filename_prefix);
+  void measure(boost::optional<double> time = boost::optional<double>(),
+               std::string filename_prefix = "");
 
   //! print elapsed time
   void summary() const;

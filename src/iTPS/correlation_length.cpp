@@ -70,18 +70,25 @@ void iTPS<ptensor>::save_correlation_length(
 
   static bool first_time = true;
   if (first_time) {
+    first_time = false;
     std::ofstream ofs(filepath.c_str());
+    ofs << "# The meaning of each column is the following: \n";
     int index = 1;
     if (time) {
-      ofs << "# $" << index++ << ": (imaginary) time \n";
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::time_evolution) {
+        ofs << "# $" << index++ << ": time\n";
+      } else if (peps_parameters.calcmode ==
+                 PEPS_Parameters::CalculationMode::finite_temperature) {
+        ofs << "# $" << index++ << ": inverse temperature\n";
+      }
     }
-    ofs << "#  $" << index++ << ": direction 0: +x, 1: +y\n";
-    ofs << "#  $" << index++ << ": y (dir=0) or x (dir=1) coorinates\n";
-    ofs << "#  $" << index++ << ": correlation length xi = 1/e_1 \n";
+    ofs << "# $" << index++ << ": direction 0: +x, 1: +y\n";
+    ofs << "# $" << index++ << ": y (dir=0) or x (dir=1) coorinates\n";
+    ofs << "# $" << index++ << ": correlation length xi = 1/e_1 \n";
     ofs << "# $" << index++ << "-: eigenvalues e_i = -log|t_i/t_0|\n";
     ofs << "#      where i > 0 and t_i is i-th largest eigenvalue of T\n";
     ofs << std::endl;
-    first_time = false;
   }
   std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific

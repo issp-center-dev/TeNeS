@@ -22,6 +22,7 @@ namespace itps {
 template <class tensor>
 void iTPS<tensor>::time_evolution() {
   Timer<> timer;
+  double time_measure = 0.0;
   double next_report = 10.0;
   double t = 0.0;
   measure(t, "TE_");
@@ -54,7 +55,9 @@ void iTPS<tensor>::time_evolution() {
         fix_local_gauge();
       }
       if ((int_tau + 1) % measure_interval == 0) {
+        Timer<> timer_m;
         measure(t, "TE_");
+        time_measure += timer_m.elapsed();
       }
       if (peps_parameters.print_level >= PrintLevel::info) {
         double r_tau = 100.0 * (int_tau + 1) / nsteps;
@@ -68,12 +71,14 @@ void iTPS<tensor>::time_evolution() {
       }
     }  // end of for (int_tau)
     if (nsteps % measure_interval != 0) {
+      Timer<> timer_m;
       measure(t, "TE_");
+      time_measure += timer_m.elapsed();
     }
     if(su){
-      time_simple_update += timer.elapsed();
+      time_simple_update += timer.elapsed() - time_measure;
     }else{
-      time_full_update += timer.elapsed();
+      time_full_update += timer.elapsed() - time_measure;
     }
   }
 }

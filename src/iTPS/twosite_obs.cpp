@@ -287,10 +287,18 @@ void iTPS<ptensor>::save_twosite(
   }
   static bool first_time = true;
   if (first_time) {
+    first_time = false;
     std::ofstream ofs(filepath.c_str());
+    ofs << "# The meaning of each column is the following: \n";
     int index = 1;
     if (time) {
-      ofs << "# $" << index++ << ": (imaginary) time\n";
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::time_evolution) {
+        ofs << "# $" << index++ << ": time\n";
+      } else if (peps_parameters.calcmode ==
+                 PEPS_Parameters::CalculationMode::finite_temperature) {
+        ofs << "# $" << index++ << ": inverse temperature\n";
+      }
     }
     ofs << "# $" << index++ << ": op_group\n";
     ofs << "# $" << index++ << ": source_site\n";
@@ -298,8 +306,15 @@ void iTPS<ptensor>::save_twosite(
     ofs << "# $" << index++ << ": dy\n";
     ofs << "# $" << index++ << ": real\n";
     ofs << "# $" << index++ << ": imag\n";
+
+    ofs << "# The names of op_group are the following: \n";
+    for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+      ofs << "# " << ilops << ": " << twosite_operator_names[ilops] << "\n";
+    }
+    if (twosite_obs.size() == nlops + 1) {
+      ofs << "# -1: norm\n";
+    }
     ofs << std::endl;
-    first_time = false;
   }
   std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific
