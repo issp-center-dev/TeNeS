@@ -94,11 +94,11 @@ void iTPS<ptensor>::measure(double time, std::string filename_prefix) {
 }
 
 template <class ptensor>
-void iTPS<ptensor>::summary(std::string filename_prefix) const {
+void iTPS<ptensor>::summary() const {
   if (mpirank == 0) {
     const double time_all = timer_all.elapsed();
     {
-      std::string filename = outdir + "/" + filename_prefix + "time.dat";
+      std::string filename = outdir + "/time.dat";
       std::ofstream ofs(filename.c_str());
       ofs << "time all           = " << time_all << std::endl;
       ofs << "time simple update = " << time_simple_update << std::endl;

@@ -171,7 +171,7 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, corparam,
                    clength_param);
   tns.time_evolution();
-  tns.summary("TE_");
+  tns.summary();
   return 0;
 }
 

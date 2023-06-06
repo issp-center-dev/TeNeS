@@ -106,7 +106,7 @@ class iTPS {
   void measure(double time, std::string filename_prefix);
 
   //! print elapsed time
-  void summary(std::string filename_prefix = "") const;
+  void summary() const;
 
   void time_evolution();
 
