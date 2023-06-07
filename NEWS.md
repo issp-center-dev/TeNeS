@@ -6,7 +6,8 @@
 
 - `tenes_simple`
     - Antiferromagnetic initial state for S>1/2 is wrong (#61 #62)
-    - Bilinear biquadratic term B S \dot S is wrong (#63)
+    - Bilinear biquadratic term $B S \cdot S$ is wrong (#63)
+    - `tenes_simple` fails to treat longer interaction and field simultaneously unless using `--use-site-hamiltonian` option (#66)
 
 ## Changes between v1.3.1 and v1.3.0
 
