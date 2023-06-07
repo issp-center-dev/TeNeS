@@ -61,6 +61,7 @@ void iTPS<ptensor>::save_density(
   std::string filename = outdir + "/" + filename_prefix + "density.dat";
   energy *= invV;
 
+  std::ios::openmode mode = std::ios::out;
   if (time) {
     static bool first_time = true;
     if (first_time) {
@@ -95,8 +96,9 @@ void iTPS<ptensor>::save_density(
       }
       ofs << std::endl;
     }
+    mode |= std::ios::app;
   }
-  std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::app);
+  std::ofstream ofs(filename.c_str(), mode);
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
