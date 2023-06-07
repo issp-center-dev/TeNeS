@@ -16,12 +16,27 @@ General parameters for ``tenes``.
    :header: "Name", "Description", "Type", "Default"
    :widths: 20, 30, 10, 10
 
+   ``mode``,        "Calculation mode",                                        String, ``\"ground state\"``
    ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
    ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
    ``measure``,     "Whether to calculate and save observables",               Boolean, true
+   ``measure_interval``, "Interval of measurement in time evolution process",  Integer or list of integers, 10
    ``output``,      "Directory for saving result such as physical quantities", String,  \"output\"
    ``tensor_save``, "Directory for saving optimized tensors",                  String,  \"\"
    ``tensor_load``, "Directory for loading initial tensors",                   String,  \"\"
+
+- ``mode``
+
+  - Specify the calculation mode
+  - ``"ground state"``
+
+    - Search for the ground state of the Hamiltonian
+    - ``tenes_std`` calculates the imaginary time evolution operator :math:`e^{-\tau H}` from the Hamiltonian
+
+  - ``"time evolution"``
+
+    - Calculate the time evolution from the initial state
+    - ``tenes_std`` calculates the time evolution operator :math:`e^{-it H}` from the Hamiltonian
 
 - ``is_real``
 
@@ -36,6 +51,10 @@ General parameters for ``tenes``.
 
   - When set to ``false``, the stages for measuring and saving observables will be skipped
   - Elapsed time ``time.dat`` is always saved
+
+- ``measure_interval``
+
+  - Specify the interval of measurement in time evolution process
 
 - ``output``
 
@@ -61,12 +80,27 @@ Parameters in the simple update procedure.
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``,           "Imaginary time step :math:`\tau` in imaginary time evolution operator", Real,    0.01
-   ``num_step``,      "Number of simple updates",                                              Integer, 0
+   ``tau``,           "(Imaginary) time step :math:`\tau` in (imaginary) time evolution operator", Real or list of real,    0.01
+   ``num_step``,      "Number of simple updates",                                              Integer or list of integers, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
    ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, false
    ``gauge_maxiter``, "Maximum number of iterations for fixing gauge", Integer, 100
    ``gauge_converge_epsilon``, "Convergence criteria of iterations for fixing gauge", Real, 1e-2
+
+
+- ``tau``
+
+  - Specify the (imaginary) time step :math:`\tau` in (imaginary) time evolution operator
+
+    - ``tenes_std`` uses it to calculate the imaginary time evolution operator :math:`e^{-\tau H}` from the Hamiltonian
+    - ``tenes`` uses it to calculate the time of each measurement
+
+  - When a list is specified, the time step can be changed for each group of time evolution operators
+
+- ``num_step``
+
+  - Specify the number of simple updates
+  - When a list is specified, the number of simple updates can be changed for each group of time evolution operators
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,8 +111,8 @@ Parameters in the full update procedure.
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``,                 "Imaginary time step :math:`\tau` in imaginary time evolution operator",                                       Real,    0.01
-   ``num_step``,            "Number of full updates",                                                                                      Integer, 0
+   ``tau``,                 "(Imaginary) time step :math:`\tau` in (imaginary) time evolution operator",                                       Real or list of reals,    0.01
+   ``num_step``,            "Number of full updates",                                                                                      Integer or list of integers, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
    ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
    ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-6

@@ -10,10 +10,8 @@
 -  ``parameter``, ``tensor``, ``hamiltonian``, ``observable``, ``correlation``
    の5つのセクションを持ちます。
 
-   - ``hamiltonian`` 以外の4つは以下に挙げる例外を除き、 ``tenes`` の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。
+   - ``hamiltonian`` 以外の4つは、 ``tenes`` の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。
   
-   - ``parameter.simple_update.tau`` および ``parameter.full_update.tau`` に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。
-
 
 ``parameter`` セクション
 ===========================
