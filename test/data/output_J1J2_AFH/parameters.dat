@@ -34,4 +34,4 @@ outdir = output_J1J2_AFH
 Lsub = [ 2 , 2 ]
 skew = 0
 
-start_datetime =  2023-06-02T19:39:23+09:00
+start_datetime =  2023-06-07T16:31:18+09:00

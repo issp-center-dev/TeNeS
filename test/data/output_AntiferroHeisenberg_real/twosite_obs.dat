@@ -1,9 +1,16 @@
+# The meaning of each column is the following: 
 # $1: op_group
 # $2: source_site
 # $3: dx
 # $4: dy
 # $5: real
 # $6: imag
+# The names of op_group are the following: 
+# 0: hamiltonian
+# 1: SzSz       
+# 2: SxSx       
+# 3: SySy       
+# -1: norm
 
 0 0 0 1 -1.66584129761267519e-01 0.00000000000000000e+00
 0 0 1 0 -2.61373275291908735e-01 0.00000000000000000e+00

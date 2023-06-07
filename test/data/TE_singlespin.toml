@@ -1,0 +1,131 @@
+[parameter]
+[parameter.general]
+output = 'output_TE_singlespin'
+mode = 'time'
+[parameter.simple_update]
+num_step = 1000
+tau = 0.01
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 1
+
+[tensor]
+L_sub = [2, 1]
+skew = 1
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [1, 1, 1, 1]
+initial_state = [1.0, 0.0]
+noise = 0.01
+
+[observable]
+[[observable.onesite]]
+name = "hamiltonian"
+group = 0
+sites = []
+dim = 2
+elements = """
+1 0  -0.5 0.0
+0 1  -0.5 0.0
+"""
+[[observable.onesite]]
+name = "Sz"
+group = 1
+sites = []
+dim = 2
+elements = """
+0 0  0.5 0.0
+1 1  -0.5 0.0
+"""
+[[observable.onesite]]
+name = "Sx"
+group = 2
+sites = []
+dim = 2
+elements = """
+1 0  0.5 0.0
+0 1  0.5 0.0
+"""
+[[observable.onesite]]
+name = "Sy"
+group = 3
+sites = []
+dim = 2
+elements = """
+1 0  0.0 0.5
+0 1  0.0 -0.5
+"""
+
+[[observable.twosite]]
+name = "SzSz"
+group = 1
+bonds = """
+0 1 0
+1 1 0
+0 0 1
+1 0 1
+"""
+ops = [0, 0]
+[[observable.twosite]]
+name = "SxSx"
+group = 2
+bonds = """
+0 1 0
+1 1 0
+0 0 1
+1 0 1
+"""
+ops = [1, 1]
+[[observable.twosite]]
+name = "SySy"
+group = 3
+bonds = """
+0 1 0
+1 1 0
+0 0 1
+1 0 1
+"""
+ops = [2, 2]
+
+[evolution]
+[[evolution.simple]]
+group = 0
+site = 0
+dimensions = [2, 2]
+elements = """
+0 0  0.9999875000260414 0.0
+1 0  0.0 0.004999979166692707
+0 1  0.0 0.004999979166692707
+1 1  0.9999875000260414 0.0
+"""
+[[evolution.simple]]
+group = 0
+site = 1
+dimensions = [2, 2]
+elements = """
+0 0  0.9999875000260414 0.0
+1 0  0.0 0.004999979166692707
+0 1  0.0 0.004999979166692707
+1 1  0.9999875000260414 0.0
+"""
+[[evolution.full]]
+group = 0
+site = 0
+dimensions = [2, 2]
+elements = """
+0 0  0.9999999999999998 0.0
+1 1  0.9999999999999998 0.0
+"""
+[[evolution.full]]
+group = 0
+site = 1
+dimensions = [2, 2]
+elements = """
+0 0  0.9999999999999998 0.0
+1 1  0.9999999999999998 0.0
+"""

@@ -1,7 +1,12 @@
+# The meaning of each column is the following: 
 # $1: op_group
 # $2: site_index
 # $3: real
 # $4: imag
+# The names of op_group are the following: 
+# 0: Sz         
+# 1: Sx         
+# -1: norm
 
 0 0 3.82993056788538233e-01 0.00000000000000000e+00
 0 1 -3.89547536347500889e-01 0.00000000000000000e+00

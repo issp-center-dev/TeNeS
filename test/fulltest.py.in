@@ -16,7 +16,9 @@
 
 import subprocess
 import sys
+import os.path
 from os.path import join
+import shutil
 
 import numpy as np
 
@@ -93,6 +95,15 @@ else:
     testname = sys.argv[1]
 
 inputfile = join("data", "{}.toml".format(testname))
+
+with open(inputfile) as f:
+    param = toml.load(f)
+
+resdir = param["parameter"]["general"]["output"]
+if os.path.exists(resdir):
+    shutil.rmtree(resdir)
+refdir = join("data", resdir)
+
 if simplemode:
     cmd = []
     cmd.append(join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple"))
@@ -126,20 +137,23 @@ else:
     cmd.append(inputfile)
     subprocess.call(cmd)
 
-with open(inputfile) as f:
-    param = toml.load(f)
-
-resdir = param["parameter"]["general"]["output"]
-refdir = join("data", resdir)
 atol = 1.0e-4
 rtol = 1.0e-3
 
 result = True
 
-result = check_density(resdir, refdir, rtol=rtol, atol=atol) and result
-result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-# result = check("correlation.dat", resdir, refdir, tol) and result
+mode = param["parameter"]["general"].get("mode", "ground")
+if mode.startswith("ground"):
+    result = check_density(resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    # result = check("correlation.dat", resdir, refdir, tol) and result
+elif mode.startswith("time"):
+    result = check("TE_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("TE_onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("TE_twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+else:
+    raise ValueError("unknown mode: {}".format(mode))
 
 if result:
     sys.exit(0)
