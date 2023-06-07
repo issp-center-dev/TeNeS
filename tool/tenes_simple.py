@@ -684,7 +684,7 @@ class SpinModel(Model):
             ret[0, 0] = 1.0
         elif num_sublattice == 2:
             ret[0, 0] = 1.0
-            ret[1, 1] = 1.0
+            ret[1, -1] = 1.0
         elif num_sublattice == 3:
             ret[0, 0] = 1.0
             v = coherent_state(2 * np.pi / 3, 0.0)
@@ -787,7 +787,7 @@ class SpinModel(Model):
 
             ham[in1, in2, out1, out2] = val
             it.iternext()
-        ham += B * SS**2
+        ham += B * np.tensordot(SS,SS,([2,3],[0,1]))
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
@@ -1334,7 +1334,7 @@ if __name__ == "__main__":
         help="Save onsite terms as site Hamiltonians"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.3.1"
+        "-v", "--version", dest="version", action="version", version="1.4-dev"
     )
 
     args = parser.parse_args()

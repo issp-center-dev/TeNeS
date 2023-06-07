@@ -7,16 +7,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-11, macos-10.15]
-        compiler: [c++, g++-9, g++-11]
+        os: [macos-12, macos-11]
+        compiler: [c++, g++-12]
+        clude:
+          - os: macos-12
+            compiler: g++-11
+          - os: macos-11
+            compiler: g++-10
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: "3.10"
 
       - name: pip install
         run: |
