@@ -1,4 +1,12 @@
-# TeNeS v1.3.1 Release Notes
+# TeNeS v1.3.x Release Notes
+
+## Changes between v1.3.2 and v1.3.1
+
+### Bugfixes
+
+- `tenes_simple`
+    - Antiferromagnetic initial state for S>1/2 is wrong (#61 #62)
+    - Bilinear biquadratic term B S \dot S is wrong (#63)
 
 ## Changes between v1.3.1 and v1.3.0
 

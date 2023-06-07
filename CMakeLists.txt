@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6...3.14)
 message(STATUS "CMake version: " ${CMAKE_VERSION})
 project(TeNeS CXX)
-set(TENES_VERSION 1.4-dev)
+set(TENES_VERSION 1.3.2-dev)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
