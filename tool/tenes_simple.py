@@ -145,7 +145,7 @@ class SubLattice:
 
 class Lattice(object):
     type: str
-    z: int
+    zs: List[List[int]]
     skew: int
     L: int
     W: int
@@ -158,7 +158,7 @@ class Lattice(object):
 
     def __init__(self, param: Dict[str, Any]):
         self.type = ""
-        self.z = 0
+        self.zs = [[]]
         self.skew = 0
         self.L = param["l"]
         self.W = param.get("w", self.L)
@@ -226,7 +226,7 @@ class SquareLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
         super().__init__(param)
         self.type = "square lattice"
-        self.z = 4
+        self.zs = [[2, 2, 0], [2, 2, 0], [2, 2, 0]]
         self.skew = 0
         L, W = self.L, self.W
         if W == 1:
@@ -269,7 +269,7 @@ class HoneycombLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
         super().__init__(param)
         self.type = "honeycomb lattice"
-        self.z = 3
+        self.zs = [[1, 1, 1], [2, 2, 2], [1, 1, 1]]
         self.bondtypes = 3
 
         self.L *= 2
@@ -351,7 +351,7 @@ class TriangularLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
         super().__init__(param)
         self.type = "triangular lattice"
-        self.z = 6
+        self.zs = [[2, 2, 2], [2, 2, 2], [2, 2, 2]]
 
         L, W = self.L, self.W
         assert L > 1 and W > 1
@@ -417,7 +417,7 @@ class KagomeLattice(Lattice):
     def __init__(self, param: Dict[str, Any]):
         super().__init__(param)
         self.type = "kagome lattice"
-        self.z = 4
+        self.zs = [[2, 2, 0], [4, 0, 0], [4, 2, 0]]
 
         self.L *= 2
         self.W *= 2
@@ -576,19 +576,26 @@ class Model(object):
         return self.model_sitehamiltonian(self.params_onesite)
 
     def bondhamiltonian(
-        self, typ: int, z: int = 1, use_onesite_hamiltonian: bool = False
+        self,
+        n: int,
+        t: int,
+        z: int = 1,
+        use_onesite_hamiltonian: bool = False,
     ) -> np.ndarray:
-        n, t = self.ham_twosites_list[typ][0]
         return self.model_bondhamiltonian(
-            z, use_onesite_hamiltonian, self.params_onesite, self.params_twosite[n][t]
+            z,
+            use_onesite_hamiltonian,
+            self.params_onesite,
+            self.params_twosite[n][t],
         )
 
-    def _sort_ham_groups(self):
+    def sort_ham_groups(self, zs, consider_site_term: bool):
         num_nn = len(self.params_twosite)
         num_typ = len(self.params_twosite[0])
         ham_groups = list(range(num_nn * num_typ))
         for i, (n, typ) in enumerate(product(range(num_nn), range(num_typ))):
             lhs = self.params_twosite[n][typ]
+            zlhs = zs[n][typ]
 
             vs = list(lhs.values())
             if np.count_nonzero(vs) == 0:
@@ -600,7 +607,8 @@ class Model(object):
                 if ham_groups[i2] != i2:
                     continue
                 rhs = self.params_twosite[n2][typ2]
-                if lhs == rhs:
+                zrhs = zs[n2][typ2]
+                if lhs == rhs and not (consider_site_term and zlhs != zrhs):
                     ham_groups[i2] = i
         self.ham_twosites_list = []
         for t in np.unique(ham_groups):
@@ -667,7 +675,6 @@ class SpinModel(Model):
             self.twosite_ops.append((i, i))
             self.twosite_ops_name.append("{}{}".format(name, name))
         self.read_params(param)
-        super()._sort_ham_groups()
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
         def coherent_state(theta, phi):
@@ -915,7 +922,6 @@ class BoseHubbardModel(Model):
                 "{}{}".format(self.onesite_ops_name[i], self.onesite_ops[j])
             )
         self.read_params(param)
-        super()._sort_ham_groups()
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
         ret = np.zeros((num_sublattice, self.N))
@@ -1103,14 +1109,21 @@ def hamiltonians(
     lattice: Lattice, model: Model, use_onesite_hamiltonian: bool = False
 ) -> List[Hamiltonian]:
     ret = []
+    elem = model.sitehamiltonian()
     if use_onesite_hamiltonian:
         elem = model.sitehamiltonian()
         if not np.array_equal(elem, np.zeros(elem.shape, dtype=np.complex128)):
             sites = []
             ret.append(Hamiltonian(elem, sites=sites))
-    for i, hl_list in enumerate(model.ham_twosites_list):
+    model.sort_ham_groups(lattice.zs, len(ret) > 0)
+    ztotal = 0
+    for hl_list in model.ham_twosites_list:
+        for n, t in hl_list:
+            ztotal += lattice.zs[n][t]
+    for hl_list in model.ham_twosites_list:
+        n, t = hl_list[0]
         elem = model.bondhamiltonian(
-            i, lattice.z, use_onesite_hamiltonian=use_onesite_hamiltonian
+            n, t, ztotal, use_onesite_hamiltonian=use_onesite_hamiltonian
         )
         bonds: List[Bond] = []
         for n, typ in hl_list:
@@ -1269,7 +1282,7 @@ def tenes_simple(
             ret.append(dumpbond(bond))
         ret.append('"""')
         if is_complex or (np.all(np.isreal(oi)) and np.all(np.isreal(oj))):
-            ret.append("ops = {}".format([i, j]))
+            ret.append("ops = {}".format([i + onesite_offset, j + onesite_offset]))
         else:
             v = np.einsum("ij,kl -> ikjl", oi, oj)
             ret.append('elements = """')
@@ -1330,8 +1343,10 @@ if __name__ == "__main__":
         help="Bond Information file",
     )
     parser.add_argument(
-        "--use-site-hamiltonian", dest="siteham", action="store_true",
-        help="Save onsite terms as site Hamiltonians"
+        "--use-site-hamiltonian",
+        dest="siteham",
+        action="store_true",
+        help="Save onsite terms as site Hamiltonians",
     )
     parser.add_argument(
         "-v", "--version", dest="version", action="version", version="1.3.2-dev"
