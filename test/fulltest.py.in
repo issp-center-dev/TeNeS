@@ -30,8 +30,9 @@ def check_density(resdir, refdir, *, rtol, atol):
         ret = []
         with open(filename) as f:
             for line in f:
-                words = line.split()
-                ret.append(complex(float(words[2]), float(words[3])))
+                value = line.split('=')[1]
+                re, im = value.split()
+                ret.append(complex(float(re), float(im)))
         return ret
 
     res = read(join(resdir, "density.dat"))

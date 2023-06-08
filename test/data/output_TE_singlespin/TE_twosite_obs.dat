@@ -7,10 +7,10 @@
 # $6: real
 # $7: imag
 # The names of op_group are the following: 
-# 0:            
-# 1: SzSz       
-# 2: SxSx       
-# 3: SySy       
+# 0:                 
+# 1: SzSz            
+# 2: SxSx            
+# 3: SySy            
 # -1: norm
 
 0.00000000000000000e+00 1 0 0 1 0.00000000000000000e+00 0.00000000000000000e+00

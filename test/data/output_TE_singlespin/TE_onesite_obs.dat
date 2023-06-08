@@ -5,10 +5,10 @@
 # $4: real
 # $5: imag
 # The names of op_group are the following: 
-# 0: hamiltonian
-# 1: Sz         
-# 2: Sx         
-# 3: Sy         
+# 0: bond hamiltonian
+# 1: Sz              
+# 2: Sx              
+# 3: Sy              
 # -1: norm
 
 0.00000000000000000e+00 0 0 0.00000000000000000e+00 0.00000000000000000e+00

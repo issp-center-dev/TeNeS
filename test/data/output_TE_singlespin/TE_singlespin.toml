@@ -1,6 +1,6 @@
 [parameter]
 [parameter.general]
-output = 'output'
+output = 'output_TE_singlespin'
 mode = 'time'
 [parameter.simple_update]
 num_step = 1000
@@ -25,7 +25,7 @@ noise = 0.01
 
 [observable]
 [[observable.onesite]]
-name = "hamiltonian"
+name = "bond hamiltonian"
 group = 0
 sites = []
 dim = 2
