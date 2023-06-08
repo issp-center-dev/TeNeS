@@ -853,7 +853,7 @@ class Model:
                     self.hamiltonians.append(op)
                 ham_as_onesite_obs.append(
                     OnesiteObservable(
-                        0, sites=sites, elements=elements, name="hamiltonian"
+                        0, sites=sites, elements=elements, name="site hamiltonian"
                     )
                 )
             elif len(dims) == 2:
@@ -889,7 +889,7 @@ class Model:
                     op = NNOperator(b, elements=elements)
                     self.hamiltonians.append(op)
                 ham_as_twosite_obs.append(
-                    TwositeObservable(0, bonds, elements=elements, name="hamiltonian")
+                    TwositeObservable(0, bonds, elements=elements, name="bond hamiltonian")
                 )
             else:
                 raise RuntimeError("dims should be a list with two elements")

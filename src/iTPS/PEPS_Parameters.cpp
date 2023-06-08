@@ -278,8 +278,20 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   ofs << std::endl;
 
+  ofs << "mode = ";
+  switch(calcmode){
+    case PEPS_Parameters::CalculationMode::ground_state:
+      ofs << "ground state" << std::endl;
+      break;
+    case PEPS_Parameters::CalculationMode::time_evolution:
+      ofs << "time evolution" << std::endl;
+    case PEPS_Parameters::CalculationMode::finite_temperature:
+      ofs << "finite temperature" << std::endl;
+    default:
+      break;
+  }
+  ofs << "simple" << std::endl;
   ofs << "Lcor = " << Lcor << std::endl;
-
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;

@@ -1216,7 +1216,7 @@ def tenes_simple(
         if ham.bonds is None:
             onesite_offset = 1
             ret.append("[[observable.onesite]]")
-            ret.append('name = "hamiltonian"')
+            ret.append('name = "site hamiltonian"')
             ret.append("group = 0")
             ret.append("dim = {}".format(model.N))
             ret.append("sites = {}".format(ham.sites))
@@ -1250,7 +1250,7 @@ def tenes_simple(
     for ham in hams:
         if ham.sites is None:
             ret.append("[[observable.twosite]]")
-            ret.append('name = "hamiltonian"')
+            ret.append('name = "bond hamiltonian"')
             ret.append("group = 0")
             ret.append("dim = {}".format([model.N, model.N]))
             ret.append('bonds = """')

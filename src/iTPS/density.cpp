@@ -53,8 +53,15 @@ void iTPS<ptensor>::save_density(
   }
 
   auto energy = 0.0;
-  for (const auto &obs : twosite_obs[0]) {
-    energy += std::real(obs.second);
+  for (int iops=0; iops<num_onesite_operators; ++iops) {
+    if (onesite_operator_names[iops] == "site hamiltonian"){
+      energy += std::real(loc_obs[iops]);
+    }
+  }
+  for (int iops=0; iops<num_twosite_operators; ++iops) {
+    if (twosite_operator_names[iops] == "bond hamiltonian"){
+      energy += std::real(two_obs[iops]);
+    }
   }
 
   const double invV = 1.0 / numsites;
@@ -79,7 +86,7 @@ void iTPS<ptensor>::save_density(
       ofs << "# $3: real\n";
       ofs << "# $4: imag\n";
 
-      int index = 1;
+      int index = 0;
       ofs << "# The meaning of observable IDs are the following: \n";
       ofs << "# " << index++ << ": Energy\n";
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
@@ -103,7 +110,7 @@ void iTPS<ptensor>::save_density(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   if (time) {
-    ofs << time.get() << " 1 ";
+    ofs << time.get() << " 0 "; // 0 means the index of "Energy"
   } else {
     size_t namesize = onesite_operator_names[0].size();
     std::string s = "Energy";
@@ -118,7 +125,7 @@ void iTPS<ptensor>::save_density(
   }
   ofs << energy << "  " << 0.0 << std::endl;
 
-  int index = 2;
+  int index = 1;
   for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
     if (onesite_operator_counts[ilops] == 0) {
       continue;
