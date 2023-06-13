@@ -82,30 +82,39 @@ class iTPS {
 
   //! initialize tensors
   void initialize_tensors();
-
+  void initialize_tensors_density();
+  std::vector<tensor> make_single_tensor_density();
+  
   //! update corner transfer matrices
   void update_CTM();
+  void update_CTM_density();
 
   //! perform simple update
   void simple_update();
+  void simple_update_density();
+  void simple_update_density_purification();
 
   //! perform full update
   void full_update();
 
   //! optimize tensors
   void optimize();
+  void optimize_density();
 
   //! measure expectation value of observables
   void measure();
+  void measure_density();
 
   //! print elapsed time
   void summary() const;
 
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
+  //  std::vector<std::vector<tensor_type>> measure_onesite_density();
 
   //! measure expectation value of twosite observables
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
+  //  std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();

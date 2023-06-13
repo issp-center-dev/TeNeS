@@ -232,6 +232,20 @@ void iTPS<ptensor>::update_CTM() {
   time_environment += timer.elapsed();
 }
 
+template <class ptensor>
+void iTPS<ptensor>::update_CTM_density() {
+  Timer<> timer;
+  core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                             peps_parameters, lattice);
+  time_environment += timer.elapsed();
+}
+
+template <class ptensor>
+std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density(){
+  return core::Make_single_tensor_density(Tn);
+}
+
+  
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

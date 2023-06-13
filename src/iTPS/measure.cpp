@@ -192,6 +192,129 @@ void iTPS<ptensor>::summary() const {
   }
 }
 
+/*
+template <class ptensor>
+void iTPS<ptensor>::measure_density() {
+  if (peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "Start calculating observables" << std::endl;
+    std::cout << "  Start updating environment" << std::endl;
+  }
+  if (!peps_parameters.MeanField_Env) {
+    update_CTM_density();
+  }
+
+  if (peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "  Start calculating onesite operators" << std::endl;
+  }
+  auto onesite_obs = measure_onesite_density();
+  save_onesite(onesite_obs);
+
+  if (peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "  Start calculating twosite operators" << std::endl;
+  }
+  auto twosite_obs = measure_twosite_density();
+  save_twosite(twosite_obs);
+
+  if (mpirank == 0) {
+    std::vector<tensor_type> loc_obs(num_onesite_operators);
+    int numsites = 0;
+    for (int i = 0; i < N_UNIT; ++i) {
+      if (lattice.physical_dims[i] > 1) {
+        ++numsites;
+        for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+          loc_obs[ilops] += onesite_obs[ilops][i];
+        }
+      }
+    }
+    std::vector<tensor_type> two_obs(num_twosite_operators);
+    for (int iops = 0; iops < num_twosite_operators; ++iops) {
+      for (const auto &obs : twosite_obs[iops]) {
+        two_obs[iops] += obs.second;
+      }
+    }
+
+    auto energy = 0.0;
+    for (const auto &obs : twosite_obs[0]) {
+      energy += std::real(obs.second);
+    }
+
+    {
+      const double invV = 1.0 / numsites;
+      std::string filename = outdir + "/density.dat";
+      std::ofstream ofs(filename.c_str());
+      ofs << std::scientific
+          << std::setprecision(std::numeric_limits<double>::max_digits10);
+
+      if (mpirank == 0) {
+        for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+          if (onesite_operator_counts[ilops] == 0){
+            continue;
+          }
+          const auto v = loc_obs[ilops] * invV;
+          ofs << onesite_operator_names[ilops] << " = ";
+          if (std::real(v) >= 0.0) {
+            ofs << " ";
+          }
+          ofs << std::real(v) << " ";
+          if (std::imag(v) >= 0.0) {
+            ofs << " ";
+          }
+          ofs << std::imag(v) << std::endl;
+        }
+
+        for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+          if (twosite_operator_counts[ilops] == 0){
+            continue;
+          }
+          const auto v = two_obs[ilops] * invV;
+          ofs << twosite_operator_names[ilops] << " = ";
+          if (std::real(v) >= 0.0) {
+            ofs << " ";
+          }
+          ofs << std::real(v) << " ";
+          if (std::imag(v) >= 0.0) {
+            ofs << " ";
+          }
+          ofs << std::imag(v) << std::endl;
+        }
+        std::cout << "    Save observable densities to " << filename
+                  << std::endl;
+      }
+    }
+    {
+      std::string filename = outdir + "/parameters.dat";
+      std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::app);
+      ofs << "finish_datetime = " << util::datetime() << std::endl;
+    }
+
+    if (peps_parameters.print_level >= PrintLevel::info) {
+      const double invV = 1.0 / numsites;
+      std::cout << std::endl;
+
+      std::cout << "Onesite observables per site:" << std::endl;
+      for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+        if ( onesite_operator_counts[ilops] == 0) {
+          continue;
+        }
+        const auto v = loc_obs[ilops] * invV;
+        std::cout << "  " << onesite_operator_names[ilops] << " = "
+                  << std::real(v) << " " << std::imag(v) << std::endl;
+      }
+
+      std::cout << "Twosite observables per site:" << std::endl;
+      for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
+        if ( twosite_operator_counts[ilops] == 0) {
+          continue;
+        }
+        const auto v = two_obs[ilops] * invV;
+        std::cout << "  " << twosite_operator_names[ilops] << " = "
+                  << std::real(v) << " " << std::imag(v) << std::endl;
+      }
+    }
+  }  // end of if(mpirank == 0)
+}
+ */
+  
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
