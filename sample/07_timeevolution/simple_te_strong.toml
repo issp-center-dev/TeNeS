@@ -1,0 +1,33 @@
+[parameter]
+[parameter.general]
+output = "output_te_strong"
+tensor_load = "save_tensor"
+mode = "time"
+
+[parameter.simple_update]
+num_step = 500
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 3
+initial = "ferro"
+
+[model]
+type = "spin"
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 2.0
+hz = 0.001
