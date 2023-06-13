@@ -110,11 +110,11 @@ class iTPS {
 
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
-  //  std::vector<std::vector<tensor_type>> measure_onesite_density();
+  std::vector<std::vector<tensor_type>> measure_onesite_density();
 
   //! measure expectation value of twosite observables
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
-  //  std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
+  std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();

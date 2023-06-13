@@ -192,7 +192,7 @@ void iTPS<ptensor>::summary() const {
   }
 }
 
-/*
+
 template <class ptensor>
 void iTPS<ptensor>::measure_density() {
   if (peps_parameters.print_level >= PrintLevel::info) {
@@ -313,7 +313,6 @@ void iTPS<ptensor>::measure_density() {
     }
   }  // end of if(mpirank == 0)
 }
- */
   
 // template specialization
 template class iTPS<real_tensor>;

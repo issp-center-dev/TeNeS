@@ -158,6 +158,42 @@ typename tensor::value_type FinishCorrelation(
 template <class tensor>
 void TransferMatrix_MatVec(tensor &inoutvec, const tensor &eT1);
 
+
+
+template <class tensor>
+typename tensor::value_type Contract_one_site_density(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &Tn1, const tensor &op1);
+
+template <class tensor>
+typename tensor::value_type Contract_two_sites_horizontal_density(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op1, const tensor &op2);
+
+template <class tensor>
+typename tensor::value_type Contract_two_sites_vertical_density(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op1, const tensor &op2);
+
+template <class tensor>
+typename tensor::value_type Contract_two_sites_horizontal_op12_density(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op12);
+
+template <class tensor>
+typename tensor::value_type Contract_two_sites_vertical_op12_density(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op12);
+  
 }  // end of namespace core
 }  // namespace itps
 }  // namespace tenes

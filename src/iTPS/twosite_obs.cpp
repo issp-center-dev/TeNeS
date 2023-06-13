@@ -315,7 +315,6 @@ void iTPS<ptensor>::save_twosite(
 
 }
 
-  /*
 template <class ptensor>
 auto iTPS<ptensor>::measure_twosite_density()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
@@ -324,7 +323,7 @@ auto iTPS<ptensor>::measure_twosite_density()
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
-  constexpr int nmax = 4;
+  //constexpr int nmax = 4;
 
   std::map<Bond, tensor_type> norms;
 
@@ -335,7 +334,7 @@ auto iTPS<ptensor>::measure_twosite_density()
 
     const int ncol = std::abs(dx) + 1;
     const int nrow = std::abs(dy) + 1;
-    if (ncol > nmax || nrow > nmax) {
+    if (ncol * nrow != 2) {
       std::cerr
           << "Warning: now version of TeNeS does not support too long-ranged "
              "operator"
@@ -376,63 +375,29 @@ auto iTPS<ptensor>::measure_twosite_density()
       target_row = nrow - 1;
     }
 
-    if (peps_parameters.MeanField_Env) {
-      int iboundary = 0;
-      const int nboundary = 2 * (ncol + nrow - 2);
-      boundaries.reserve(nboundary);
-
-      for (int row = 0; row < nrow; ++row) {
-        for (int col = 0; col < ncol; ++col) {
-          const int index =
-              lattice.other(source, col - source_col, source_row - row);
-          indices[row][col] = index;
-          op_[row][col] = &(op_identity[index]);
-          if ((0 < row && row < nrow - 1) && (0 < col && col < ncol - 1)) {
-            Tn_[row][col] = &(Tn[index]);
-          } else {
-            boundaries.push_back(Tn[index]);
-            Tn_[row][col] = &(boundaries[iboundary++]);
-          }
-        }
-      }
-      assert(boundaries.size() == nboundary);
-
-      // absorb MF ENV into center tensors on boundary
-      for (int row = 0; row < nrow; ++row) {
-        const_cast<ptensor *>(Tn_[row][0])
-            ->multiply_vector(lambda_tensor[indices[row][0]][0], 0);
-        const_cast<ptensor *>(Tn_[row][ncol - 1])
-            ->multiply_vector(lambda_tensor[indices[row][ncol - 1]][2], 2);
-      }
+    for (int row = 0; row < nrow; ++row) {
       for (int col = 0; col < ncol; ++col) {
-        const_cast<ptensor *>(Tn_[0][col])
-            ->multiply_vector(lambda_tensor[indices[0][col]][1], 1);
-        const_cast<ptensor *>(Tn_[nrow - 1][col])
-            ->multiply_vector(lambda_tensor[indices[nrow - 1][col]][3], 3);
+	const int index =
+	    lattice.other(source, col - source_col, source_row - row);
+	indices[row][col] = index;
+	op_[row][col] = &(op_identity[index]);
+	Tn_[row][col] = &(Tn[index]);
       }
-    } else { // Use CTM
-      for (int row = 0; row < nrow; ++row) {
-        for (int col = 0; col < ncol; ++col) {
-          const int index =
-              lattice.other(source, col - source_col, source_row - row);
-          indices[row][col] = index;
-          op_[row][col] = &(op_identity[index]);
-          Tn_[row][col] = &(Tn[index]);
-        }
-        eTl_[row] = &(eTl[indices[row][0]]);
-        eTr_[row] = &(eTr[indices[row][ncol - 1]]);
-      }
-      for (int col = 0; col < ncol; ++col) {
-        eTt_[col] = &(eTt[indices[0][col]]);
-        eTb_[col] = &(eTb[indices[nrow - 1][col]]);
-      }
-      C_[0] = &(C1[indices[0][0]]);
-      C_[1] = &(C2[indices[0][ncol - 1]]);
-      C_[2] = &(C3[indices[nrow - 1][ncol - 1]]);
-      C_[3] = &(C4[indices[nrow - 1][0]]);
+      eTl_[row] = &(eTl[indices[row][0]]);
+      eTr_[row] = &(eTr[indices[row][ncol - 1]]);
     }
+    for (int col = 0; col < ncol; ++col) {
+      eTt_[col] = &(eTt[indices[0][col]]);
+      eTb_[col] = &(eTb[indices[nrow - 1][col]]);
+    }
+    C_[0] = &(C1[indices[0][0]]);
+    C_[1] = &(C2[indices[0][ncol - 1]]);
+    C_[2] = &(C3[indices[nrow - 1][ncol - 1]]);
+    C_[3] = &(C4[indices[nrow - 1][0]]);
 
+    
     const auto norm_key = Bond{indices[nrow-1][0], nrow-1, ncol-1};
+    /*
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
         norms[norm_key] = core::Contract_MF_density(Tn_, op_);
@@ -440,73 +405,105 @@ auto iTPS<ptensor>::measure_twosite_density()
         norms[norm_key] = core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       }
     }
+    */
+    
+    if (norms.count(norm_key) == 0) {
+      if (nrow == 2){ 
+          const int top = indices[0][0];
+          const int bottom = indices[1][0];
+	  norms[norm_key] = core::Contract_two_sites_vertical_density(
+                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
+                            eTl[top], Tn[top], Tn[bottom], op_identity[top], op_identity[bottom]);
+      }else{
+          const int left = indices[0][0];
+          const int right = indices[0][1];
+	  norms[norm_key] = core::Contract_two_sites_horizontal_density(
+                            C1[left], C2[right], C3[right], C4[left], eTt[left],
+                            eTt[right], eTr[right], eTb[right], eTb[left],
+                            eTl[left], Tn[left], Tn[right], op_identity[left], op_identity[right]);
+      }
+    }
     auto norm = norms[norm_key];
 
     tensor_type value = 0.0;
-    if (op.ops_indices.empty()) {
-      if (nrow * ncol == 2) {
-        if (nrow == 2) {
-          const int top = indices[0][0];
-          const int bottom = indices[1][0];
-          ptensor o =
-              (top == source ? op.op
-                             : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_vertical_op12_MF_density(
-                            *(Tn_[0][0]), *(Tn_[1][0]), o)
-                      : core::Contract_two_sites_vertical_op12_density(
-                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-                            eTl[top], Tn[top], Tn[bottom], o);
-        } else { // ncol == 2
-          const int left = indices[0][0];
-          const int right = indices[0][1];
-          ptensor o =
-              (left == source ? op.op
-                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_horizontal_op12_MF_density(
-                            *(Tn_[0][0]), *(Tn_[0][1]), o)
-                      : core::Contract_two_sites_horizontal_op12_density(
-                            C1[left], C2[right], C3[right], C4[left], eTt[left],
-                            eTt[right], eTr[right], eTb[right], eTb[left],
-                            eTl[left], Tn[left], Tn[right], o);
-        }
-      } else {
-        ptensor U, VT;
-        std::vector<double> s;
-        mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
-        const int ns = s.size();
-        for (int is = 0; is < ns; ++is) {
-          ptensor source_op =
-              reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
-          op_[source_row][source_col] = &source_op;
-          ptensor target_op =
-              reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-          op_[target_row][target_col] = &target_op;
-          auto localvalue =
-              peps_parameters.MeanField_Env
-                  ? core::Contract_MF_density(Tn_, op_)
-                  : core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-          value += localvalue * s[is];
-        }
+    //    if (op.ops_indices.empty()) {
+    if (nrow * ncol == 2) {
+      if (nrow == 2) {
+	const int top = indices[0][0];
+	const int bottom = indices[1][0];
+	ptensor o =
+	    (top == source ? op.op
+			   : mptensor::transpose(op.op, {1, 0, 3, 2}));
+	/*
+	value = peps_parameters.MeanField_Env
+		    ? core::Contract_two_sites_vertical_op12_MF_density(
+			  *(Tn_[0][0]), *(Tn_[1][0]), o)
+		    : core::Contract_two_sites_vertical_op12_density(
+			  C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+			  eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
+			  eTl[top], Tn[top], Tn[bottom], o);
+	*/
+	value = core::Contract_two_sites_vertical_op12_density(
+			  C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+			  eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
+			  eTl[top], Tn[top], Tn[bottom], o);
+
+      } else { // ncol == 2
+	const int left = indices[0][0];
+	const int right = indices[0][1];
+	ptensor o =
+	    (left == source ? op.op
+			    : mptensor::transpose(op.op, {1, 0, 3, 2}));
+	/*
+	value = peps_parameters.MeanField_Env
+		    ? core::Contract_two_sites_horizontal_op12_MF_density(
+			  *(Tn_[0][0]), *(Tn_[0][1]), o)
+		    : core::Contract_two_sites_horizontal_op12_density(
+			  C1[left], C2[right], C3[right], C4[left], eTt[left],
+			  eTt[right], eTr[right], eTb[right], eTb[left],
+			  eTl[left], Tn[left], Tn[right], o);
+	*/
+	value = core::Contract_two_sites_horizontal_op12_density(
+			  C1[left], C2[right], C3[right], C4[left], eTt[left],
+			  eTt[right], eTr[right], eTb[right], eTb[left],
+			  eTl[left], Tn[left], Tn[right], o);
       }
-    } else {
-      op_[source_row][source_col] =
-          &(onesite_operators[siteoperator_index(op.source_site,
-                                                 op.ops_indices[0])]
-                .op);
-      const int target_site = lattice.other(op.source_site, dx, dy);
-      op_[target_row][target_col] = &(
-          onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
-              .op);
-      auto localvalue =
-          peps_parameters.MeanField_Env
-              ? core::Contract_MF_density(Tn_, op_)
-              : core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-      value += localvalue;
-    }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
+    } /*else {
+      ptensor U, VT;
+      std::vector<double> s;
+      mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
+      const int ns = s.size();
+      for (int is = 0; is < ns; ++is) {
+	ptensor source_op =
+	    reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
+	op_[source_row][source_col] = &source_op;
+	ptensor target_op =
+	    reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
+	op_[target_row][target_col] = &target_op;
+	auto localvalue =
+	    peps_parameters.MeanField_Env
+		? core::Contract_MF_density(Tn_, op_)
+		: core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+	value += localvalue * s[is];
+      }
+      }
+  } else {
+    op_[source_row][source_col] =
+	&(onesite_operators[siteoperator_index(op.source_site,
+					       op.ops_indices[0])]
+	      .op);
+    const int target_site = lattice.other(op.source_site, dx, dy);
+    op_[target_row][target_col] = &(
+	onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
+	    .op);
+    auto localvalue =
+	peps_parameters.MeanField_Env
+	    ? core::Contract_MF_density(Tn_, op_)
+	    : core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+    value += localvalue;
+    }*/
+  ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
   }
   ret.push_back(norms);
 
@@ -532,8 +529,7 @@ auto iTPS<ptensor>::measure_twosite_density()
   time_observable += timer.elapsed();
   return ret;
 }
-*/
-
+    
   
 // template specialization
 template class iTPS<real_tensor>;

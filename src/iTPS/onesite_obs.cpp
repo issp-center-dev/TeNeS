@@ -143,7 +143,7 @@ void iTPS<ptensor>::save_onesite(
     }
   }
 }
-  /*
+
 template <class tensor>
 auto iTPS<tensor>::measure_onesite_density()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
@@ -154,6 +154,7 @@ auto iTPS<tensor>::measure_onesite_density()
                  N_UNIT, std::numeric_limits<double>::quiet_NaN()));
   std::vector<tensor_type> norm(N_UNIT);
 
+  /*
   if (peps_parameters.MeanField_Env) {
     std::vector<tensor> Tn_(Tn);
     for (int i = 0; i < N_UNIT; ++i) {
@@ -172,20 +173,20 @@ auto iTPS<tensor>::measure_onesite_density()
       const auto val = core::Contract_one_site_MF_density(Tn_[i], op.op);
       local_obs[op.group][i] = val / norm[i];
     }
-  } else {
-    for (int i = 0; i < N_UNIT; ++i) {
-      norm[i] =
-          core::Contract_one_site_density(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                  eTb[i], eTl[i], Tn[i], op_identity[i]);
-    }
-    for (auto const &op : onesite_operators) {
-      const int i = op.source_site;
-      const auto val =
-          core::Contract_one_site_density(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                  eTb[i], eTl[i], Tn[i], op.op);
-      local_obs[op.group][i] = val / norm[i];
-    }
+    } else {*/
+  for (int i = 0; i < N_UNIT; ++i) {
+    norm[i] =
+	core::Contract_one_site_density(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+				eTb[i], eTl[i], Tn[i], op_identity[i]);
   }
+  for (auto const &op : onesite_operators) {
+    const int i = op.source_site;
+    const auto val =
+	core::Contract_one_site_density(C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+				eTb[i], eTl[i], Tn[i], op.op);
+    local_obs[op.group][i] = val / norm[i];
+  }
+  //  }
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
   for (int i = 0; i < N_UNIT; ++i) {
@@ -209,8 +210,6 @@ auto iTPS<tensor>::measure_onesite_density()
   time_observable += timer.elapsed();
   return local_obs;
 }
-  */
-
   
 // template specialization
 template class iTPS<real_tensor>;

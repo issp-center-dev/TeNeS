@@ -80,6 +80,39 @@ template TENSOR_TYPE::value_type Contract_four_sites(
     const TENSOR_TYPE &Tn4, const TENSOR_TYPE &op1, const TENSOR_TYPE &op2,
     const TENSOR_TYPE &op3, const TENSOR_TYPE &op4);
 
+template TENSOR_TYPE::value_type Contract_one_site_density(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &Tn1,
+    const TENSOR_TYPE &op1);
+
+template TENSOR_TYPE::value_type Contract_two_sites_horizontal_density(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+    const TENSOR_TYPE &op1, const TENSOR_TYPE &op2);
+
+template TENSOR_TYPE::value_type Contract_two_sites_vertical_density(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+    const TENSOR_TYPE &op1, const TENSOR_TYPE &op2);
+
+template TENSOR_TYPE::value_type Contract_two_sites_horizontal_op12_density(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+    const TENSOR_TYPE &op12);
+
+template TENSOR_TYPE::value_type Contract_two_sites_vertical_op12_density(
+    const TENSOR_TYPE &C1, const TENSOR_TYPE &C2, const TENSOR_TYPE &C3,
+    const TENSOR_TYPE &C4, const TENSOR_TYPE &eT1, const TENSOR_TYPE &eT2,
+    const TENSOR_TYPE &eT3, const TENSOR_TYPE &eT4, const TENSOR_TYPE &eT5,
+    const TENSOR_TYPE &eT6, const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2,
+    const TENSOR_TYPE &op12);
 }  // namespace core
 }  // namespace itps
 }  // namespace tenes
