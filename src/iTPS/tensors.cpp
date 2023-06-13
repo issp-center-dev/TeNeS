@@ -411,7 +411,8 @@ void iTPS<ptensor>::load_tensors_v0() {
   }
 }
 
-  /*
+
+template <class ptensor>
 void iTPS<ptensor>::initialize_tensors_density() {
   using mptensor::Shape;
 
@@ -483,7 +484,6 @@ void iTPS<ptensor>::initialize_tensors_density() {
     }
   }  // end of else part of if(load_dir.empty())
 }
-  */
 
   
 // template specialization
