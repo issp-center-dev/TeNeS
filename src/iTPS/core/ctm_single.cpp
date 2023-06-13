@@ -43,21 +43,8 @@ using mptensor::Shape;
 template <class tensor>
 std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn){
   std::vector<tensor> Tn_single;
-  Index index;
   for (int num = 0; num < Tn.size(); ++num) {
-    const auto comm = Tn[num].get_comm();
-    tensor identity_matrix(comm, Shape(Tn[num].shape()[4], Tn[num].shape()[4]));
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
-      index = identity_matrix.global_index(i);
-      if (index[0] == index[1]) {
-        identity_matrix.set_value(index, 1.0);
-      } else {
-        identity_matrix.set_value(index, 0.0);
-      }
-    }
-    
-    //Tn_single.push_back(mptensor:trace(Tn[num], Axes(4), Axes(5)));
-    Tn_single.push_back(tensordot(Tn[num], identity_matrix, Axes(4,5), Axes(0,1)));
+    Tn_single.push_back(mptensor::contract(Tn[num], Axes(4), Axes(5)));
   }
   return Tn_single;
 }
