@@ -1,10 +1,11 @@
 [parameter]
 [parameter.general]
-output = "output"
-tensor_save = "save_tensor"
+output = "output_te_middle"
+tensor_load = "save_tensor"
+mode = "time"
 
 [parameter.simple_update]
-num_step = 10
+num_step = 500
 tau = 0.01
 
 [parameter.full_update]
@@ -28,4 +29,4 @@ type = "spin"
 Jz = -1.0
 Jx = 0.0
 Jy = 0.0
-hx = 0.0
+hx = 0.8
