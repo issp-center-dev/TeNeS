@@ -4,8 +4,6 @@ Set various parameters that appear in the calculation, such as the number of upd
 This section has five subsections: ``general``, ``simple_update``, ``full_update``,
 ``ctm``, ``random``.
 
-Imaginary-time step :math:`\tau` for simple update ``parameter.simple_update.tau`` and that for full update ``parameter.full_update.tau`` are used only in standard mode ``tenes_std``, not used in ``tenes``.
-
 
 ``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
