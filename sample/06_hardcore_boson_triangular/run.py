@@ -83,7 +83,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)[::step_mu]):
                 words = line.split("=")
                 if words[0].strip() == "N":
                     density = words[1].strip()
-                if words[0].strip() == "hamiltonian":
+                if words[0].strip() == "Energy":
                     ene = words[1].strip()
         fene.write(f"{ene} ")
         fmag.write(f"{density} ")

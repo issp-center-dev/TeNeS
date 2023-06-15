@@ -36,6 +36,7 @@ struct PEPS_Parameters {
   // Simple update
   std::vector<int> num_simple_step;
   std::vector<double> tau_simple_step;
+  std::vector<int> measure_interval;
   double Inverse_lambda_cut;
   bool Simple_Gauge_Fix;
   int Simple_Gauge_maxiter;
@@ -73,6 +74,14 @@ struct PEPS_Parameters {
   std::string tensor_load_dir;
   std::string tensor_save_dir;
   std::string outdir;
+
+  enum CalculationMode {
+      ground_state,
+      time_evolution,
+      finite_temperature,
+  };
+  CalculationMode calcmode;
+
 
   PEPS_Parameters();
 

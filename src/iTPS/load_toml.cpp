@@ -17,6 +17,7 @@
 #include "load_toml.hpp"
 
 #define _USE_MATH_DEFINES
+#include <algorithm>
 #include <array>
 #include <iterator>
 #include <string>
@@ -58,22 +59,22 @@ std::string type_name<std::string>() {
 }
 
 template <class T>
-struct bittype{
+struct bittype {
   typedef T type;
 };
 
 template <>
-struct bittype<short int>{
+struct bittype<short int> {
   typedef int64_t type;
 };
 
 template <>
-struct bittype<int>{
+struct bittype<int> {
   typedef int64_t type;
 };
 
 template <>
-struct bittype<long long int>{
+struct bittype<long long int> {
   typedef int64_t type;
 };
 
@@ -331,12 +332,25 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     load_if(pparam.outdir, general, "output");
     load_if(pparam.tensor_load_dir, general, "tensor_load");
     load_if(pparam.tensor_save_dir, general, "tensor_save");
+
+    std::string mode_str = find_or(general, "mode", std::string("ground state"));
+    if (util::startswith(mode_str, "ground")) {
+      pparam.calcmode = PEPS_Parameters::CalculationMode::ground_state;
+    } else if (util::startswith(mode_str, "time")) {
+      pparam.calcmode = PEPS_Parameters::CalculationMode::time_evolution;
+    } else if (util::startswith(mode_str, "finite")) {
+      pparam.calcmode = PEPS_Parameters::CalculationMode::finite_temperature;
+    } else {
+      throw input_error("Invalid mode: " + mode_str);
+    }
+    load_if(pparam.measure_interval, general, "measure_interval");
   }
 
   // Simple update
   auto simple = param->get_table("simple_update");
   if (simple != nullptr) {
     load_if(pparam.num_simple_step, simple, "num_step");
+    load_if(pparam.tau_simple_step, simple, "tau");
     load_if(pparam.Inverse_lambda_cut, simple, "lambda_cutoff");
     load_if(pparam.Simple_Gauge_Fix, simple, "gauge_fix");
     load_if(pparam.Simple_Gauge_maxiter, simple, "gauge_maxiter");
@@ -348,6 +362,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   auto full = param->get_table("full_update");
   if (full != nullptr) {
     load_if(pparam.num_full_step, full, "num_step");
+    load_if(pparam.tau_full_step, simple, "tau");
     load_if(pparam.Full_Inverse_precision, full, "inverse_precision");
     load_if(pparam.Full_Convergence_Epsilon, full, "convergence_epsilon");
     load_if(pparam.Inverse_Env_cut, full, "env_cutoff");

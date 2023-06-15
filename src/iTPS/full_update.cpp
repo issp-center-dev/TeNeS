@@ -26,6 +26,131 @@
 namespace tenes {
 namespace itps {
 
+template <class tensor>
+void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
+  if (up.is_onesite()) {
+    const int source = up.source_site;
+    Tn[source] =
+        tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
+  } else {
+    tensor Tn1_work(comm), Tn2_work(comm);
+    const int source = up.source_site;
+    const int source_leg = up.source_leg;
+    const int target = lattice.neighbor(source, source_leg);
+    // const int target_leg = (source_leg + 2) % 4;
+
+    if (source_leg == 0) {
+      /*
+       *  C1' t' t C3
+       *  l'  T' T r
+       *  C2' b' b C4
+       *
+       *   |
+       *   | rotate
+       *   V
+       *
+       *  C4 b b' C2'
+       *  r  T T' l'
+       *  C3 t t' C1'
+       */
+      core::Full_update_bond(C4[source], C2[target], C1[target], C3[source],
+                             eTb[source], eTb[target], eTl[target], eTt[target],
+                             eTt[source], eTr[source], Tn[source], Tn[target],
+                             up.op, source_leg, peps_parameters, Tn1_work,
+                             Tn2_work);
+    } else if (source_leg == 1) {
+      /*
+       * C1' t' C2'
+       *  l' T'  r'
+       *  l  T   r
+       * C4  b  C3
+       *
+       *   |
+       *   | rotate
+       *   V
+       *
+       *  C4 l l' C1'
+       *  b  T T' t'
+       *  C3 r r' C2'
+       */
+      core::Full_update_bond(C4[source], C1[target], C2[target], C3[source],
+                             eTl[source], eTl[target], eTt[target], eTr[target],
+                             eTr[source], eTb[source], Tn[source], Tn[target],
+                             up.op, source_leg, peps_parameters, Tn1_work,
+                             Tn2_work);
+    } else if (source_leg == 2) {
+      /*
+       *  C1 t t' C2'
+       *  l  T T' r'
+       *  C4 b b' C3'
+       */
+      core::Full_update_bond(C1[source], C2[target], C3[target], C4[source],
+                             eTt[source], eTt[target],
+                             eTr[target],  // t  t' r'
+                             eTb[target], eTb[source],
+                             eTl[source],  // b' b l
+                             Tn[source], Tn[target], up.op, source_leg,
+                             peps_parameters, Tn1_work, Tn2_work);
+    } else {
+      /*
+       * C1  t C2
+       *  l  T  r
+       *  l' T' r'
+       * C4' b C3'
+       *
+       *   |
+       *   | rotate
+       *   V
+       *
+       *  C2 r r' C3'
+       *  t  T T' b'
+       *  C1 l l' C4'
+       */
+      core::Full_update_bond(C2[source], C3[target], C4[target], C1[source],
+                             eTr[source], eTr[target], eTb[target], eTl[target],
+                             eTl[source], eTt[source], Tn[source], Tn[target],
+                             up.op, source_leg, peps_parameters, Tn1_work,
+                             Tn2_work);
+    }
+    Tn[source] = Tn1_work;
+    Tn[target] = Tn2_work;
+
+    if (peps_parameters.Full_Use_FastFullUpdate) {
+      if (source_leg == 0) {
+        const int source_x = source % LX;
+        const int target_x = target % LX;
+        core::Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
+                         peps_parameters, lattice);
+        core::Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
+                        peps_parameters, lattice);
+      } else if (source_leg == 1) {
+        const int source_y = source / LX;
+        const int target_y = target / LX;
+        core::Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
+                          peps_parameters, lattice);
+        core::Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
+                       peps_parameters, lattice);
+      } else if (source_leg == 2) {
+        const int source_x = source % LX;
+        const int target_x = target % LX;
+        core::Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
+                        peps_parameters, lattice);
+        core::Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
+                         peps_parameters, lattice);
+      } else {
+        const int source_y = source / LX;
+        const int target_y = target / LX;
+        core::Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
+                       peps_parameters, lattice);
+        core::Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
+                          peps_parameters, lattice);
+      }
+    } else {
+      update_CTM();
+    }
+  }
+}
+
 template <class ptensor>
 void iTPS<ptensor>::full_update() {
   const int group = 0;
@@ -34,7 +159,7 @@ void iTPS<ptensor>::full_update() {
   }
 
   Timer<> timer;
-  ptensor Tn1_new(comm), Tn2_new(comm);
+  ptensor Tn1_work(comm), Tn2_work(comm);
   const int nsteps = peps_parameters.num_full_step[group];
   double next_report = 10.0;
 
@@ -43,125 +168,7 @@ void iTPS<ptensor>::full_update() {
       if (up.group != group) {
         continue;
       }
-      if (up.is_onesite()) {
-        const int source = up.source_site;
-        Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
-      } else {
-        const int source = up.source_site;
-        const int source_leg = up.source_leg;
-        const int target = lattice.neighbor(source, source_leg);
-        // const int target_leg = (source_leg + 2) % 4;
-
-        if (source_leg == 0) {
-          /*
-           *  C1' t' t C3
-           *  l'  T' T r
-           *  C2' b' b C4
-           *
-           *   |
-           *   | rotate
-           *   V
-           *
-           *  C4 b b' C2'
-           *  r  T T' l'
-           *  C3 t t' C1'
-           */
-          core::Full_update_bond(C4[source], C2[target], C1[target], C3[source],
-                                 eTb[source], eTb[target], eTl[target],
-                                 eTt[target], eTt[source], eTr[source],
-                                 Tn[source], Tn[target], up.op, source_leg,
-                                 peps_parameters, Tn1_new, Tn2_new);
-        } else if (source_leg == 1) {
-          /*
-           * C1' t' C2'
-           *  l' T'  r'
-           *  l  T   r
-           * C4  b  C3
-           *
-           *   |
-           *   | rotate
-           *   V
-           *
-           *  C4 l l' C1'
-           *  b  T T' t'
-           *  C3 r r' C2'
-           */
-          core::Full_update_bond(C4[source], C1[target], C2[target], C3[source],
-                                 eTl[source], eTl[target], eTt[target],
-                                 eTr[target], eTr[source], eTb[source],
-                                 Tn[source], Tn[target], up.op, source_leg,
-                                 peps_parameters, Tn1_new, Tn2_new);
-        } else if (source_leg == 2) {
-          /*
-           *  C1 t t' C2'
-           *  l  T T' r'
-           *  C4 b b' C3'
-           */
-          core::Full_update_bond(C1[source], C2[target], C3[target], C4[source],
-                                 eTt[source], eTt[target],
-                                 eTr[target],  // t  t' r'
-                                 eTb[target], eTb[source],
-                                 eTl[source],  // b' b l
-                                 Tn[source], Tn[target], up.op, source_leg,
-                                 peps_parameters, Tn1_new, Tn2_new);
-        } else {
-          /*
-           * C1  t C2
-           *  l  T  r
-           *  l' T' r'
-           * C4' b C3'
-           *
-           *   |
-           *   | rotate
-           *   V
-           *
-           *  C2 r r' C3'
-           *  t  T T' b'
-           *  C1 l l' C4'
-           */
-          core::Full_update_bond(C2[source], C3[target], C4[target], C1[source],
-                                 eTr[source], eTr[target], eTb[target],
-                                 eTl[target], eTl[source], eTt[source],
-                                 Tn[source], Tn[target], up.op, source_leg,
-                                 peps_parameters, Tn1_new, Tn2_new);
-        }
-        Tn[source] = Tn1_new;
-        Tn[target] = Tn2_new;
-
-        if (peps_parameters.Full_Use_FastFullUpdate) {
-          if (source_leg == 0) {
-            const int source_x = source % LX;
-            const int target_x = target % LX;
-            core::Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
-                             peps_parameters, lattice);
-            core::Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
-                            peps_parameters, lattice);
-          } else if (source_leg == 1) {
-            const int source_y = source / LX;
-            const int target_y = target / LX;
-            core::Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
-                              peps_parameters, lattice);
-            core::Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
-                           peps_parameters, lattice);
-          } else if (source_leg == 2) {
-            const int source_x = source % LX;
-            const int target_x = target % LX;
-            core::Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_x,
-                            peps_parameters, lattice);
-            core::Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_x,
-                             peps_parameters, lattice);
-          } else {
-            const int source_y = source / LX;
-            const int target_y = target / LX;
-            core::Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, source_y,
-                           peps_parameters, lattice);
-            core::Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
-                              peps_parameters, lattice);
-          }
-        } else {
-          update_CTM();
-        }
-      }
+      full_update(up);
     }
 
     if (peps_parameters.print_level >= PrintLevel::info) {

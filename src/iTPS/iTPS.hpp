@@ -25,6 +25,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 // IWYU pragma begin_exports
 #include "../mpi.hpp"
 #include "../tensor.hpp"
@@ -89,18 +91,24 @@ class iTPS {
 
   //! perform simple update
   void simple_update();
+  void simple_update(EvolutionOperator<tensor> const &up);
+  void fix_local_gauge();
 
   //! perform full update
   void full_update();
+  void full_update(EvolutionOperator<tensor> const &up);
 
   //! optimize tensors
   void optimize();
 
   //! measure expectation value of observables
-  void measure();
+  void measure(boost::optional<double> time = boost::optional<double>(),
+               std::string filename_prefix = "");
 
   //! print elapsed time
   void summary() const;
+
+  void time_evolution();
 
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
@@ -119,27 +127,40 @@ class iTPS {
    *
    *  @param[in] onesite_obs
    */
-  void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs);
+  void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   /*! @brief write measured twosite observables
    *
    *  @param[in] twosite_obs
    */
-  void save_twosite(
-      std::vector<std::map<Bond, tensor_type>> const &twosite_obs);
+  void save_twosite(std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   /*! @brief write measured correlation functions
    *
    *  @param[in] correlations
    */
-  void save_correlation(std::vector<Correlation> const &correlations);
+  void save_correlation(
+      std::vector<Correlation> const &correlations,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
 
   /*! @brief calculate and write correlation length
    *
    *  @param [in] eigvals
    */
   void save_correlation_length(
-      std::vector<transfer_matrix_eigenvalues_type> const &eigvals);
+      std::vector<transfer_matrix_eigenvalues_type> const &eigvals,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
+
+  void save_density(std::vector<std::vector<tensor_type>> const &onesite_obs,
+                    std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   //! save optimized tensors into files
   void save_tensors() const;
