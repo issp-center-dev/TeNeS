@@ -139,11 +139,12 @@ void iTPS<tensor>::simple_update() {
 
 template <class tensor>
 void iTPS<tensor>::simple_update_density() {
+  const int group = 0;
   Timer<> timer;
   tensor Tn1_new(comm);
   tensor Tn2_new(comm);
   std::vector<double> lambda_c;
-  const int nsteps = peps_parameters.num_simple_step;
+  const int nsteps = peps_parameters.num_simple_step[group];
   double next_report = 10.0;
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
@@ -243,11 +244,12 @@ void iTPS<tensor>::simple_update_density() {
 
 template <class tensor>  
 void iTPS<tensor>::simple_update_density_purification() {
+  const int group = 0;
   Timer<> timer;
   tensor Tn1_new(comm);
   tensor Tn2_new(comm);
   std::vector<double> lambda_c;
-  const int nsteps = peps_parameters.num_simple_step;
+  const int nsteps = peps_parameters.num_simple_step[group];
   double next_report = 10.0;
 
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
