@@ -41,8 +41,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code>
 の5つのセクションを持ちます。</p>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> 以外の4つは以下に挙げる例外を除き、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> および <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> に実数を渡すことで、虚時間発展演算子における虚時間刻みを指定できます。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> 以外の4つは、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルフォーマットと同一であり、そのままtenes の入力ファイルとしてコピーされます。</p></li>
 </ul>
 </li>
 </ul>
@@ -51,7 +50,6 @@
 <p>更新回数など、 計算にあらわれる種々のパラメータを記述します。
 サブセクションとして <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code> を持ちます。</p>
-<p>simple update およびfull updateの虚時間刻み <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> と <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code> のみ、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> 本体ではなくスタンダードモード <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> で使われるパラメータです。</p>
 <section id="parameter-general">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="この見出しへのパーマリンク">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
@@ -70,20 +68,30 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p></td>
+<td><p>計算モード</p></td>
+<td><p>文字列</p></td>
+<td><p>&quot;ground state&quot;</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
 <td><p>すべてのテンソルを実数に制限するかどうか</p></td>
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
 <td><p>演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ</p></td>
 <td><p>実数</p></td>
 <td><p>0.0</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
-<td><p>物理量測定をするかどうか</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<td><p>基底状態計算において、物理量測定をするかどうか</p></td>
 <td><p>真偽値</p></td>
 <td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
+<td><p>時間発展中に物理量を測定する頻度</p></td>
+<td><p>整数 or 整数のリスト</p></td>
+<td><p>10</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>物理量などを書き込むディレクトリ</p></td>
@@ -103,6 +111,23 @@
 </tbody>
 </table>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
+<ul>
+<li><p>計算モードを指定します</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
+<ul>
+<li><p>基底状態計算</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は虚時間発展演算子を計算します</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;time</span> <span class="pre">evolution&quot;</span></code></p>
+<ul>
+<li><p>実時間発展計算</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は実時間発展演算子を計算します</p></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">true</span></code> にするとテンソルの要素を実数に制限して計算を行います</p></li>
@@ -116,8 +141,13 @@
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</p></li>
+<li><p>基底状態計算において、 <code class="docutils literal notranslate"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</p></li>
 <li><p>実行時間 <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> は常に保存されます</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p>
+<ul>
+<li><p>実時間発展計算において、 物理量を測定する頻度を指定します</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
@@ -134,7 +164,7 @@
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
 <ul>
-<li><p>各種テンソルをこのディレクトリ以下から読み込みます</p></li>
+<li><p>初期テンソルをこのディレクトリ以下から読み込みます</p></li>
 <li><p>空文字列の場合は読み込みません</p></li>
 </ul>
 </li>
@@ -159,13 +189,13 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
-<td><p>虚時間発展演算子における虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
-<td><p>実数</p></td>
+<td><p>(虚)時間発展演算子における(虚)時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
+<td><p>実数 or 実数のリスト</p></td>
 <td><p>0.01</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
 <td><p>simple update の回数</p></td>
-<td><p>整数</p></td>
+<td><p>整数 or 整数のリスト</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
@@ -190,6 +220,25 @@
 </tr>
 </tbody>
 </table>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p>
+<ul>
+<li><p>(虚)時間発展演算子における(虚)時間刻み <span class="math notranslate nohighlight">\(\tau\)</span> を指定します</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> では時間発展演算子を計算するために用いられます</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> では各ステップでの経過時間を求めるために用いられます</p></li>
+</ul>
+</li>
+<li><p>リストを指定すると、時間発展演算子のグループごとに刻み幅を変えることができます</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p>
+<ul>
+<li><p>simple update の回数を指定します</p></li>
+<li><p>リストを指定すると、時間発展演算子のグループごとに回数を変えることができます</p></li>
+</ul>
+</li>
+</ul>
 </section>
 <section id="parameter-full-update">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="この見出しへのパーマリンク">¶</a></h3>
@@ -210,13 +259,13 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
-<td><p>虚時間発展演算子における虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
-<td><p>実数</p></td>
+<td><p>(虚)時間発展演算子における(虚)時間刻み <span class="math notranslate nohighlight">\(\tau\)</span></p></td>
+<td><p>実数 or 実数のリスト</p></td>
 <td><p>0.01</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
 <td><p>full update の回数</p></td>
-<td><p>整数</p></td>
+<td><p>整数 or 整数のリスト</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>

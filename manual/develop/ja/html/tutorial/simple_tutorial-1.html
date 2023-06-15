@@ -192,7 +192,7 @@ for idx in range(num_hx):
         with open(join(f&quot;output_{idx}&quot;, &quot;density.dat&quot;)) as f:
             for line in f:
                 words = line.split()
-                if words[0] == &quot;hamiltonian&quot;:
+                if words[0] == &quot;Energy&quot;:
                     ene = words[2]
                 elif words[0] == &quot;Sz&quot;:
                     mag_sz = words[2]

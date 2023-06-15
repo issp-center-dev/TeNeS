@@ -37,12 +37,7 @@
 <ul class="simple">
 <li><p>File format:
 <a class="reference external" href="https://qiita.com/minoritea/items/c0de47b8beb813c655d4">TOML</a> format</p></li>
-<li><p>This file has 5 sections: <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code></p>
-<ul>
-<li><p>The four sections other than <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> are identical to the <code class="docutils literal notranslate"><span class="pre">tenes</span></code> input file format, with the following exceptions, and are copied to the <code class="docutils literal notranslate"><span class="pre">tenes</span></code> input file.</p></li>
-<li><p>By setting a real number for <code class="docutils literal notranslate"><span class="pre">parameter.simple_update.tau</span></code> and <code class="docutils literal notranslate"><span class="pre">parameter.full_update.tau</span></code>, the imaginary time step for the imaginary time evolution operator can be specified.</p></li>
-</ul>
-</li>
+<li><p>This file has 5 sections: <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code></p></li>
 </ul>
 <section id="parameter-section">
 <h2><span class="section-number">5.3.1. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this heading">¶</a></h2>
@@ -68,20 +63,30 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p></td>
+<td><p>Calculation mode</p></td>
+<td><p>String</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">\&quot;ground</span> <span class="pre">state\&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
 <td><p>Whether to limit all tensors to real valued ones</p></td>
 <td><p>Boolean</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
 <td><p>Absolute cutoff value for reading operators</p></td>
 <td><p>Real</p></td>
 <td><p>0.0</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
 <td><p>Whether to calculate and save observables</p></td>
 <td><p>Boolean</p></td>
 <td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
+<td><p>Interval of measurement in time evolution process</p></td>
+<td><p>Integer or list of integers</p></td>
+<td><p>10</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>Directory for saving result such as physical quantities</p></td>
@@ -101,6 +106,23 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tbody>
 </table>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
+<ul>
+<li><p>Specify the calculation mode</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
+<ul>
+<li><p>Search for the ground state of the Hamiltonian</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> calculates the imaginary time evolution operator <span class="math notranslate nohighlight">\(e^{-\tau H}\)</span> from the Hamiltonian</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;time</span> <span class="pre">evolution&quot;</span></code></p>
+<ul>
+<li><p>Calculate the time evolution from the initial state</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> calculates the time evolution operator <span class="math notranslate nohighlight">\(e^{-it H}\)</span> from the Hamiltonian</p></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
 <ul>
 <li><p>When set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</p></li>
@@ -116,6 +138,11 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <ul>
 <li><p>When set to <code class="docutils literal notranslate"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</p></li>
 <li><p>Elapsed time <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> is always saved</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p>
+<ul>
+<li><p>Specify the interval of measurement in time evolution process</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
@@ -157,13 +184,13 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
-<td><p>Imaginary time step <span class="math notranslate nohighlight">\(\tau\)</span> in imaginary time evolution operator</p></td>
-<td><p>Real</p></td>
+<td><p>(Imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p></td>
+<td><p>Real or list of real</p></td>
 <td><p>0.01</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
 <td><p>Number of simple updates</p></td>
-<td><p>Integer</p></td>
+<td><p>Integer or list of integers</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
@@ -188,6 +215,25 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p>
+<ul>
+<li><p>Specify the (imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> uses it to calculate the imaginary time evolution operator <span class="math notranslate nohighlight">\(e^{-\tau H}\)</span> from the Hamiltonian</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> uses it to calculate the time of each measurement</p></li>
+</ul>
+</li>
+<li><p>When a list is specified, the time step can be changed for each group of time evolution operators</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p>
+<ul>
+<li><p>Specify the number of simple updates</p></li>
+<li><p>When a list is specified, the number of simple updates can be changed for each group of time evolution operators</p></li>
+</ul>
+</li>
+</ul>
 </section>
 <section id="parameter-full-update">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h3>
@@ -208,13 +254,13 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
-<td><p>Imaginary time step <span class="math notranslate nohighlight">\(\tau\)</span> in imaginary time evolution operator</p></td>
-<td><p>Real</p></td>
+<td><p>(Imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p></td>
+<td><p>Real or list of reals</p></td>
 <td><p>0.01</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
 <td><p>Number of full updates</p></td>
-<td><p>Integer</p></td>
+<td><p>Integer or list of integers</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>

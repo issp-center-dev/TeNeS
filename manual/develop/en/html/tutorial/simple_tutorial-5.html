@@ -140,7 +140,7 @@ for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
         with open(join(output_dir, &quot;density.dat&quot;)) as f:
             for line in f:
                 name, vals = line.split(&quot;=&quot;)
-                if name.strip() == &quot;hamiltonian&quot;:
+                if name.strip() == &quot;Energy&quot;:
                     re, im = vals.split()
                     ene += float(re)
                 elif name.strip() == &quot;Sz&quot;:
