@@ -25,6 +25,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 // IWYU pragma begin_exports
 #include "../mpi.hpp"
 #include "../tensor.hpp"
@@ -66,8 +68,8 @@ class iTPS {
    *  @param[in] comm_
    *  @param[in] peps_parameters
    *  @param[in] lattice_
-   *  @param[in] simple_updates ITE operators for simple updates
-   *  @param[in] full_updates ITE operators for full updates
+   *  @param[in] simple_updates Time Evolution operators for simple updates
+   *  @param[in] full_updates Time Evolution operators for full updates
    *  @param[in] onesite_operators_ onesite operators to be measured
    *  @param[in] twosite_operators_ twosite operators to be measured
    *  @param[in] corparam_  parameters for measuring correlation functions
@@ -75,7 +77,8 @@ class iTPS {
    * transfer matrix
    */
   iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_, SquareLattice lattice_,
-       NNOperators<tensor> simple_updates_, NNOperators<tensor> full_updates_,
+       EvolutionOperators<tensor> simple_updates_,
+       EvolutionOperators<tensor> full_updates_,
        Operators<tensor> onesite_operators_,
        Operators<tensor> twosite_operators_, CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
@@ -91,22 +94,28 @@ class iTPS {
 
   //! perform simple update
   void simple_update();
+  void simple_update(EvolutionOperator<tensor> const &up);
+  void fix_local_gauge();
   void simple_update_density();
   void simple_update_density_purification();
 
   //! perform full update
   void full_update();
+  void full_update(EvolutionOperator<tensor> const &up);
 
   //! optimize tensors
   void optimize();
   void optimize_density();
 
   //! measure expectation value of observables
-  void measure();
+  void measure(boost::optional<double> time = boost::optional<double>(),
+               std::string filename_prefix = "");
   void measure_density();
 
   //! print elapsed time
   void summary() const;
+
+  void time_evolution();
 
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
@@ -127,27 +136,40 @@ class iTPS {
    *
    *  @param[in] onesite_obs
    */
-  void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs);
+  void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   /*! @brief write measured twosite observables
    *
    *  @param[in] twosite_obs
    */
-  void save_twosite(
-      std::vector<std::map<Bond, tensor_type>> const &twosite_obs);
+  void save_twosite(std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   /*! @brief write measured correlation functions
    *
    *  @param[in] correlations
    */
-  void save_correlation(std::vector<Correlation> const &correlations);
+  void save_correlation(
+      std::vector<Correlation> const &correlations,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
 
   /*! @brief calculate and write correlation length
    *
    *  @param [in] eigvals
    */
   void save_correlation_length(
-      std::vector<transfer_matrix_eigenvalues_type> const &eigvals);
+      std::vector<transfer_matrix_eigenvalues_type> const &eigvals,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
+
+  void save_density(std::vector<std::vector<tensor_type>> const &onesite_obs,
+                    std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+                    boost::optional<double> time = boost::optional<double>(),
+                    std::string filename_prefix = "");
 
   //! save optimized tensors into files
   void save_tensors() const;
@@ -179,8 +201,10 @@ class iTPS {
   PEPS_Parameters peps_parameters;
   SquareLattice lattice;
 
-  NNOperators<tensor> simple_updates;
-  NNOperators<tensor> full_updates;
+  EvolutionOperators<tensor> simple_updates;
+  int num_simple_update_groups;
+  EvolutionOperators<tensor> full_updates;
+  int num_full_update_groups;
   Operators<tensor> onesite_operators;
   Operators<tensor> twosite_operators;
   std::vector<std::vector<int>> site_ops_indices;

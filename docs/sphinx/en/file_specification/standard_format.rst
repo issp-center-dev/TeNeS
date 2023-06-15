@@ -9,9 +9,6 @@ Input file for ``tenes_std``
    `TOML <https://qiita.com/minoritea/items/c0de47b8beb813c655d4>`__ format
 -  This file has 5 sections: ``parameter``, ``tensor``, ``hamiltonian``, ``observable``, ``correlation``
 
-   - The four sections other than ``hamiltonian`` are identical to the ``tenes`` input file format, with the following exceptions, and are copied to the ``tenes`` input file.
-   - By setting a real number for ``parameter.simple_update.tau`` and ``parameter.full_update.tau``, the imaginary time step for the imaginary time evolution operator can be specified.
-
 ``parameter`` section
 ===========================
 

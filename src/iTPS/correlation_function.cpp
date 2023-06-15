@@ -265,27 +265,53 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
 
 template <class ptensor>
 void iTPS<ptensor>::save_correlation(
-    std::vector<Correlation> const &correlations) {
+    std::vector<Correlation> const &correlations, boost::optional<double> time,
+    std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
-  std::string filename = outdir + "/correlation.dat";
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "    Save long-range correlations to " << filename
+  std::string filepath = outdir + "/" + filename_prefix + "correlation.dat";
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "    Save long-range correlations to " << filepath
               << std::endl;
   }
-  std::ofstream ofs(filename.c_str());
+
+  static bool first_time = true;
+  if (first_time) {
+    first_time = false;
+    std::ofstream ofs(filepath.c_str());
+    ofs << "# The meaning of each column is the following: \n";
+    int index = 1;
+    if (time) {
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::time_evolution) {
+        ofs << "# $" << index++ << ": time\n";
+      } else if (peps_parameters.calcmode ==
+                 PEPS_Parameters::CalculationMode::finite_temperature) {
+        ofs << "# $" << index++ << ": inverse temperature\n";
+      }
+    }
+    ofs << "# $" << index++ << ": left_op\n";
+    ofs << "# $" << index++ << ": left_site\n";
+    ofs << "# $" << index++ << ": right_op\n";
+    ofs << "# $" << index++ << ": right_dx\n";
+    ofs << "# $" << index++ << ": right_dy\n";
+    ofs << "# $" << index++ << ": real\n";
+    ofs << "# $" << index++ << ": imag\n";
+
+    ofs << "# The names of operators are the following: \n";
+    for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+      ofs << "# " << ilops << ": " << onesite_operator_names[ilops] << "\n";
+    }
+    ofs << std::endl;
+  }
+  std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
-  ofs << "# $1: left_op\n";
-  ofs << "# $2: left_site\n";
-  ofs << "# $3: right_op\n";
-  ofs << "# $4: right_dx\n";
-  ofs << "# $5: right_dy\n";
-  ofs << "# $6: real\n";
-  ofs << "# $7: imag\n";
-  ofs << std::endl;
   for (auto const &cor : correlations) {
+    if (time) {
+      ofs << time.get() << " ";
+    }
     ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
         << cor.right_dx << " " << cor.right_dy << " " << cor.real << " "
         << cor.imag << " " << std::endl;

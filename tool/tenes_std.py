@@ -154,7 +154,7 @@ class LocalTensor:
     phys_dim : int
         Dimension of physical bond.
     virtual_dim : List[int]
-        Dimenstions of four virtual bonds.
+        Dimensions of four virtual bonds.
         Four bonds are ordered as [-x, +y, +x, -y].
     """
 
@@ -498,13 +498,17 @@ class LatticeGraph:
 class SiteOperator:
     site: int
     elements: np.ndarray
+    group: Optional[int]
 
-    def __init__(self, site: int, elements: np.ndarray):
+    def __init__(self, site: int, elements: np.ndarray, group: Optional[int] = None):
         self.site = site
         self.elements = elements
+        self.group = group
 
     def to_toml_strs(self, unitcell) -> List[str]:
         ret = []
+        if self.group is not None:
+            ret.append("group = {}".format(self.group))
         ret.append("site = {}".format(self.site))
         ret.append("dimensions = {}".format(list(self.elements.shape)))
         it = np.nditer(
@@ -531,11 +535,18 @@ class NNOperator:
     bond: Bond
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
+    group = Optional[int]
 
     def __init__(
-        self, bond: Bond, *, elements: np.ndarray = None, ops: List[int] = None
+        self,
+        bond: Bond,
+        *,
+        elements: Optional[np.ndarray] = None,
+        ops: Optional[List[int]] = None,
+        group: Optional[int] = None
     ):
         self.bond = bond
+        self.group = group
         if elements is not None:
             self.elements = elements
             self.ops = None
@@ -545,6 +556,8 @@ class NNOperator:
 
     def to_toml_strs(self, unitcell: Unitcell) -> List[str]:
         ret = []
+        if self.group is not None:
+            ret.append("group = {}".format(self.group))
         ret.append("source_site = {}".format(self.bond.source_site))
         ret.append("source_leg = {}".format(unitcell.bond_direction(self.bond)))
         if self.elements is not None:
@@ -689,18 +702,20 @@ class TwositeObservable:
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
     D, V = np.linalg.eigh(hamiltonian.elements)
     evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V)
-    return [SiteOperator(hamiltonian.site, evo)]
+    return [SiteOperator(hamiltonian.site, evo, group=group)]
 
 
 def make_evolution_twosite(
     hamiltonian: NNOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[NNOperator]:
     if hamiltonian.elements is None:
@@ -717,7 +732,7 @@ def make_evolution_twosite(
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
     if nhops == 1:
-        return [NNOperator(hamiltonian.bond, elements=evo)]
+        return [NNOperator(hamiltonian.bond, elements=evo, group=group)]
 
     mdofs = []
     unitcell = graph.unitcell
@@ -757,20 +772,25 @@ def make_evolution_twosite(
 def make_evolution(
     hamiltonian: Operator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> Union[List[SiteOperator], List[NNOperator]]:
     if isinstance(hamiltonian, SiteOperator):
-        return make_evolution_onesite(hamiltonian, graph, tau, result_cutoff)
+        return make_evolution_onesite(
+            hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
+        )
     else:
-        return make_evolution_twosite(hamiltonian, graph, tau, result_cutoff)
+        return make_evolution_twosite(
+            hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
+        )
 
 
 class Model:
     param: Dict[str, Dict[str, Any]]
     parameter: Dict[str, Any]
-    simple_tau: float
-    full_tau: float
+    simple_tau: List[float]
+    full_tau: List[float]
     correlation: Dict[str, Any]
     clength: Dict[str, Any]
     unitcell: Unitcell
@@ -780,13 +800,29 @@ class Model:
     twobodies: List[TwositeObservable]
     simple_updates: List[Operator]
     full_updates: List[Operator]
+    time_evolution: bool
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
         self.param = param
         self.parameter = param["parameter"]
-        self.simple_tau = self.parameter["simple_update"].get("tau", 0.01)
-        self.full_tau = self.parameter["full_update"].get("tau", 0.01)
+        if "general" in self.parameter:
+            mode = self.parameter["general"].get("mode", "ground state").lower()
+        else:
+            mode = "ground state"
+        if not isinstance(mode, str):
+            raise ValueError("mode must be a string.")
+        self.time_evolution = mode.startswith("time")
+        tau = self.parameter["simple_update"].get("tau", [0.01])
+        if isinstance(tau, float):
+            self.simple_tau = [tau]
+        else:
+            self.simple_tau = tau
+        tau = self.parameter["full_update"].get("tau", [0.01])
+        if isinstance(tau, float):
+            self.full_tau = [tau]
+        else:
+            self.full_tau = tau
         self.correlation = param.get("correlation", None)
         self.clength = param.get("correlation_length", None)
 
@@ -817,7 +853,7 @@ class Model:
                     self.hamiltonians.append(op)
                 ham_as_onesite_obs.append(
                     OnesiteObservable(
-                        0, sites=sites, elements=elements, name="hamiltonian"
+                        0, sites=sites, elements=elements, name="site_hamiltonian"
                     )
                 )
             elif len(dims) == 2:
@@ -853,7 +889,7 @@ class Model:
                     op = NNOperator(b, elements=elements)
                     self.hamiltonians.append(op)
                 ham_as_twosite_obs.append(
-                    TwositeObservable(0, bonds, elements=elements, name="hamiltonian")
+                    TwositeObservable(0, bonds, elements=elements, name="bond_hamiltonian")
                 )
             else:
                 raise RuntimeError("dims should be a list with two elements")
@@ -905,11 +941,18 @@ class Model:
         self.simple_updates = []
         self.full_updates = []
 
-        for ham in self.hamiltonians:
-            for evo in make_evolution(ham, self.graph, self.simple_tau):
-                self.simple_updates.append(evo)
-            for evo in make_evolution(ham, self.graph, self.full_tau):
-                self.full_updates.append(evo)
+        for g, tau in enumerate(self.simple_tau):
+            if self.time_evolution:
+                tau *= 1.0j
+            for ham in self.hamiltonians:
+                for evo in make_evolution(ham, self.graph, tau, group=g):
+                    self.simple_updates.append(evo)
+        for g, tau in enumerate(self.full_tau):
+            if self.time_evolution:
+                tau *= 1.0j
+            for ham in self.hamiltonians:
+                for evo in make_evolution(ham, self.graph, tau, group=g):
+                    self.full_updates.append(evo)
 
     def to_toml(self, f: TextIO):
         # parameter

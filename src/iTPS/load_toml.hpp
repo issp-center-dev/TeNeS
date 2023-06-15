@@ -55,34 +55,30 @@ std::vector<std::tuple<int, int, int>> read_bonds(std::string str);
 
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                MPI_Comm comm,
-                                int nsites, int nbody, double atol = 0.0,
+                                MPI_Comm comm, int nsites, int nbody,
+                                double atol = 0.0,
                                 const char *tablename = "observable.onesite");
 
 template <class tensor>
 Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
-                                 MPI_Comm comm,
-                                 int nsites, int nbody, double atol,
-                                 std::string const &key);
-
-template <class tensor>
-NNOperator<tensor> load_nn_operator(decltype(cpptoml::parse_file("")) param,
-                                    MPI_Comm comm,
-                                    double atol = 0.0,
-                                    const char *tablename = "evolution.simple");
-
-template <class tensor>
-NNOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
-                                 MPI_Comm comm,
+                                 MPI_Comm comm, int nsites, int nbody,
                                  double atol, std::string const &key);
+
 template <class tensor>
-NNOperators<tensor> load_simple_updates(decltype(cpptoml::parse_file("")) param,
-                                        MPI_Comm comm,
-                                        double atol = 0.0);
+EvolutionOperator<tensor> load_Evolution_operator(
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0,
+    const char *tablename = "evolution.simple");
+
 template <class tensor>
-NNOperators<tensor> load_full_updates(decltype(cpptoml::parse_file("")) param,
-                                      MPI_Comm comm,
-                                      double atol = 0.0);
+EvolutionOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
+                                        MPI_Comm comm, double atol,
+                                        std::string const &key);
+template <class tensor>
+EvolutionOperators<tensor> load_simple_updates(
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
+template <class tensor>
+EvolutionOperators<tensor> load_full_updates(
+    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
 
 }  // namespace itps
 }  // namespace tenes

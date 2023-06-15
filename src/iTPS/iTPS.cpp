@@ -27,6 +27,7 @@ int omp_get_max_threads() { return 1; }
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <set>
 
 #include <mptensor/rsvd.hpp>
 
@@ -47,8 +48,9 @@ namespace itps {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
-                   SquareLattice lattice_, NNOperators<tensor> simple_updates_,
-                   NNOperators<tensor> full_updates_,
+                   SquareLattice lattice_,
+                   EvolutionOperators<tensor> simple_updates_,
+                   EvolutionOperators<tensor> full_updates_,
                    Operators<tensor> onesite_operators_,
                    Operators<tensor> twosite_operators_,
                    CorrelationParameter corparam_,
@@ -161,8 +163,135 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 
   initialize_tensors();
 
+  std::set<int> simple_update_groups;
+  bool notwarned = true;
+  for (auto const &op : simple_updates) {
+    auto g = op.group;
+    if (g < 0) {
+      std::stringstream ss;
+      ss << "ERROR: a simple update has negative group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+    if (notwarned && g > 0) {
+      std::cerr << "WARNING: a simple update has nonzero group number " << g
+                << std::endl;
+      std::cerr << "         This feature is reserved for future use."
+                << std::endl;
+      std::cerr << "         Currently, all simple updates with nonzero group "
+                   "number are ignored."
+                << std::endl;
+      notwarned = false;
+    }
+    simple_update_groups.insert(g);
+  }
+  num_simple_update_groups = *simple_update_groups.rbegin() + 1;
+  for (int g = 0; g < num_simple_update_groups; ++g) {
+    auto it = simple_update_groups.find(g);
+    if (it == simple_update_groups.end()) {
+      std::stringstream ss;
+      ss << "ERROR: no simple update with group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+  }
+
+  notwarned = true;
+
+  std::set<int> full_update_groups;
+  for (auto const &op : full_updates) {
+    auto g = op.group;
+    if (g < 0) {
+      std::stringstream ss;
+      ss << "ERROR: a full update has negative group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+    if (notwarned && g > 0) {
+      std::cerr << "WARNING: a full update has nonzero group number " << g
+                << std::endl;
+      std::cerr << "         This feature is reserved for future use."
+                << std::endl;
+      std::cerr << "         Currently, all full updates with nonzero group "
+                   "number are ignored."
+                << std::endl;
+      notwarned = false;
+    }
+    full_update_groups.insert(g);
+  }
+  num_full_update_groups = *full_update_groups.rbegin() + 1;
+  for (int g = 0; g < num_full_update_groups; ++g) {
+    auto it = full_update_groups.find(g);
+    if (it == full_update_groups.end()) {
+      std::stringstream ss;
+      ss << "ERROR: no full update with group number " << g;
+      throw std::runtime_error(ss.str());
+    }
+  }
+
+  if (peps_parameters.calcmode !=
+      PEPS_Parameters::CalculationMode::ground_state) {
+    if (peps_parameters.num_simple_step[0] > 0 &&
+        peps_parameters.num_full_step[0]) {
+      std::string msg =
+          "ERROR: While mode is not ground state calculation,\n"
+          "       simple update and full update are both required.";
+      throw std::runtime_error(msg);
+    }
+    if (peps_parameters.num_simple_step[0] > 0) {
+      int nss_size = peps_parameters.num_simple_step.size();
+      if (nss_size != num_simple_update_groups) {
+        if (nss_size == 1) {
+          peps_parameters.num_simple_step.resize(
+              num_simple_update_groups, peps_parameters.num_simple_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of num_step " << nss_size
+              << " is not equal to the number of simple update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+
+      int tss_size = peps_parameters.tau_simple_step.size();
+      if (tss_size != num_simple_update_groups) {
+        if (tss_size == 1) {
+          peps_parameters.tau_simple_step.resize(
+              num_simple_update_groups, peps_parameters.tau_simple_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of tau " << nss_size
+              << " is not equal to the number of simple update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+    } else {
+      int nss_size = peps_parameters.num_full_step.size();
+      if (nss_size != num_full_update_groups) {
+        if (nss_size == 1) {
+          peps_parameters.num_full_step.resize(
+              num_full_update_groups, peps_parameters.num_full_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of num_step " << nss_size
+              << " is not equal to the number of full update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+      int tss_size = peps_parameters.tau_full_step.size();
+      if (tss_size != num_full_update_groups) {
+        if (tss_size == 1) {
+          peps_parameters.tau_full_step.resize(
+              num_full_update_groups, peps_parameters.tau_full_step[0]);
+        } else {
+          std::stringstream msg;
+          msg << "ERROR: size of tau " << tss_size
+              << " is not equal to the number of full update groups.";
+          throw std::runtime_error(msg.str());
+        }
+      }
+    }
+  } else {
+  }
+
   int maxops = -1;
-  size_t maxlength = 0;
+  size_t maxlength = std::string("Energy").size();
   for (auto const &op : onesite_operators) {
     maxops = std::max(op.group, maxops);
   }
