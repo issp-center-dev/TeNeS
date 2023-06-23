@@ -53,6 +53,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
                    EvolutionOperators<tensor> full_updates_,
                    Operators<tensor> onesite_operators_,
                    Operators<tensor> twosite_operators_,
+                   Operators<tensor> multisite_operators_,
                    CorrelationParameter corparam_,
                    TransferMatrix_Parameters clength_param_)
     : comm(comm_),
@@ -62,6 +63,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       full_updates(full_updates_),
       onesite_operators(onesite_operators_),
       twosite_operators(twosite_operators_),
+      multisite_operators(multisite_operators_),
       corparam(corparam_),
       tmatrix_param(clength_param_),
       outdir("output"),
@@ -290,8 +292,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   } else {
   }
 
-  int maxops = -1;
   size_t maxlength = std::string("Energy").size();
+  int maxops = -1;
   for (auto const &op : onesite_operators) {
     maxops = std::max(op.group, maxops);
   }
@@ -300,12 +302,22 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   onesite_operator_counts.resize(num_onesite_operators);
   for (auto const &op : onesite_operators) {
     ++onesite_operator_counts[op.group];
-    if (op.name.empty()) {
+    std::string name = op.name;
+    if (name.empty()) {
       std::stringstream ss;
       ss << "onesite[" << op.group << "]";
-      onesite_operator_names[op.group] = ss.str();
-    } else {
+      name = ss.str();
+    }
+    if (onesite_operator_names[op.group].empty()) {
       onesite_operator_names[op.group] = op.name;
+    } else if (onesite_operator_names[op.group] != op.name) {
+      std::stringstream ss;
+      ss << "ERROR: onesite operator group " << op.group
+         << " has two different names: " << name << " and "
+         << onesite_operator_names[op.group] << "\n";
+      ss << "       onesite operators with the same group must "
+             "have the same name.\n";
+      throw std::runtime_error(ss.str());
     }
   }
   for (auto const &s : onesite_operator_names) {
@@ -318,21 +330,77 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
   num_twosite_operators = maxops + 1;
   twosite_operator_names.resize(num_twosite_operators);
-  twosite_operator_counts.resize(num_onesite_operators);
+  twosite_operator_counts.resize(num_twosite_operators);
   for (auto const &op : twosite_operators) {
     ++twosite_operator_counts[op.group];
-    if (op.name.empty()) {
+    std::string name = op.name;
+    if (name.empty()) {
       std::stringstream ss;
       ss << "twosite[" << op.group << "]";
-      twosite_operator_names[op.group] = ss.str();
-    } else {
+      name = ss.str();
+    }
+    if (twosite_operator_names[op.group].empty()) {
       twosite_operator_names[op.group] = op.name;
+    } else if (twosite_operator_names[op.group] != name) {
+      std::stringstream ss;
+      ss << "ERROR: twosite operator group " << op.group
+         << " has two names: " << twosite_operator_names[op.group] << " and "
+         << name << "\n";
+      ss << "       twosite operators with the same group must "
+             "have the same name.\n";
+      throw std::runtime_error(ss.str());
     }
   }
   for (auto const &s : twosite_operator_names) {
     maxlength = std::max(s.size(), maxlength);
   }
 
+  maxops = -1;
+  for (auto const &op : multisite_operators) {
+    maxops = std::max(op.group, maxops);
+  }
+  num_multisite_operators = maxops + 1;
+  multisite_operator_names.resize(num_multisite_operators);
+  multisite_operator_counts.resize(num_multisite_operators);
+  multisite_operator_nsites.resize(num_multisite_operators);
+  for (auto const &op : multisite_operators) {
+    ++multisite_operator_counts[op.group];
+    std::string name = op.name;
+    if (name.empty()) {
+      std::stringstream ss;
+      ss << "multisite[" << op.group << "]";
+      name = ss.str();
+    }
+    if (multisite_operator_names[op.group].empty()) {
+      multisite_operator_names[op.group] = name;
+    } else if (multisite_operator_names[op.group] != name) {
+      std::stringstream msg;
+      msg << "ERROR: multisite operator " << name << " has group " << op.group
+          << " but was previously set to " << multisite_operator_names[op.group]
+          << "\n";
+      msg << "       multisite operators with the same group must "
+             "have the same name.\n";
+      throw std::runtime_error(msg.str());
+    }
+
+    if (multisite_operator_nsites[op.group] == 0) {
+      multisite_operator_nsites[op.group] = op.nsites();
+    } else if (multisite_operator_nsites[op.group] != op.nsites()) {
+      std::stringstream msg;
+      msg << "ERROR: multisite operator " << op.name << " has nsites "
+          << op.nsites() << " but was previously set to "
+          << multisite_operator_nsites[op.group] << "\n";
+      msg << "       Multiple multisite operators with the same group must "
+             "have the same number of sites.\n";
+      throw std::runtime_error(msg.str());
+    }
+    multisite_operator_nsites_set.insert(op.nsites());
+  }
+  for (auto const &s : multisite_operator_names) {
+    maxlength = std::max(s.size(), maxlength);
+  }
+
+  // add right margin to operator names
   for (auto &s : onesite_operator_names) {
     const auto l = maxlength - s.size();
     for (size_t i = 0; i < l; ++i) {
@@ -340,6 +408,12 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     }
   }
   for (auto &s : twosite_operator_names) {
+    const auto l = maxlength - s.size();
+    for (size_t i = 0; i < l; ++i) {
+      s += " ";
+    }
+  }
+  for (auto &s : multisite_operator_names) {
     const auto l = maxlength - s.size();
     for (size_t i = 0; i < l; ++i) {
       s += " ";

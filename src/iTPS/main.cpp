@@ -144,11 +144,12 @@ int run_groundstate(MPI_Comm comm, PEPS_Parameters peps_parameters,
                     EvolutionOperators<tensor> full_updates,
                     Operators<tensor> onesite_operators,
                     Operators<tensor> twosite_operators,
+                    Operators<tensor> multisite_operators,
                     CorrelationParameter corparam,
                     TransferMatrix_Parameters clength_param) {
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
-                   onesite_operators, twosite_operators, corparam,
-                   clength_param);
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
   tns.optimize();
   tns.save_tensors();
   if (peps_parameters.to_measure) {
@@ -165,11 +166,12 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
                       EvolutionOperators<tensor> full_updates,
                       Operators<tensor> onesite_operators,
                       Operators<tensor> twosite_operators,
+                      Operators<tensor> multisite_operators,
                       CorrelationParameter corparam,
                       TransferMatrix_Parameters clength_param) {
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
-                   onesite_operators, twosite_operators, corparam,
-                   clength_param);
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
   tns.time_evolution();
   tns.summary();
   return 0;
@@ -233,6 +235,8 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       input_toml, comm, lattice.N_UNIT, 1, tol, "observable.onesite");
   const auto twosite_obs = load_operators<tensor_complex>(
       input_toml, comm, lattice.N_UNIT, 2, tol, "observable.twosite");
+  const auto multisite_obs = load_operators<tensor_complex>(
+      input_toml, comm, lattice.N_UNIT, 3, tol, "observable.multisite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -252,6 +256,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   is_real = is_real && ::is_real(full_updates, tol);
   is_real = is_real && ::is_real(onesite_obs, tol);
   is_real = is_real && ::is_real(twosite_obs, tol);
+  is_real = is_real && ::is_real(multisite_obs, tol);
 
   if (peps_parameters.is_real && !is_real) {
     std::stringstream ss;
@@ -293,17 +298,17 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       return run_groundstate(comm, peps_parameters, lattice,
                              to_real(simple_updates), to_real(full_updates),
                              to_real(onesite_obs), to_real(twosite_obs),
-                             corparam, clength_param);
+                             to_real(multisite_obs), corparam, clength_param);
     } else {
       return run_groundstate(comm, peps_parameters, lattice, simple_updates,
-                             full_updates, onesite_obs, twosite_obs, corparam,
-                             clength_param);
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
     }
   } else if (peps_parameters.calcmode ==
              PEPS_Parameters::CalculationMode::time_evolution) {
     return run_timeevolution(comm, peps_parameters, lattice, simple_updates,
-                             full_updates, onesite_obs, twosite_obs, corparam,
-                             clength_param);
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
   } else {
     return 1;
   }

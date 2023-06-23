@@ -30,31 +30,41 @@ namespace tenes {
 namespace itps {
 
 template <class ptensor>
-auto iTPS<ptensor>::measure_twosite()
-    -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
+auto iTPS<ptensor>::measure_multisite()
+    -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
   Timer<> timer;
 
-  const int nlops = num_twosite_operators;
-  std::vector<std::map<Bond, tensor_type>> ret(nlops);
+  const int nlops = num_multisite_operators;
+  std::vector<std::map<Multisites, tensor_type>> ret(nlops);
+  if (nlops == 0) {
+    return ret;
+  }
 
   constexpr int nmax = 4;
 
   std::map<Bond, tensor_type> norms;
 
-  for (const auto &op : twosite_operators) {
+  for (const auto &op : multisite_operators) {
+    const int nothers = op.dx.size();
+    const int nsites = nothers + 1;
     const int source = op.source_site;
-    const int dx = op.dx[0];
-    const int dy = op.dy[0];
+    int mindx = 0, maxdx = 0, mindy = 0, maxdy = 0;
+    for (auto dx : op.dx) {
+      mindx = std::min(mindx, dx);
+      maxdx = std::max(maxdx, dx);
+    }
+    for (auto dy : op.dy) {
+      mindy = std::min(mindy, dy);
+      maxdy = std::max(maxdy, dy);
+    }
+    const int ncol = maxdx - mindx + 1;
+    const int nrow = maxdy - mindy + 1;
 
-    const int ncol = std::abs(dx) + 1;
-    const int nrow = std::abs(dy) + 1;
     if (ncol > nmax || nrow > nmax) {
       std::cerr
           << "Warning: now version of TeNeS does not support too long-ranged "
              "operator"
           << std::endl;
-      std::cerr << "group = " << op.group << " (dx = " << dx << ", dy = " << dy
-                << ")" << std::endl;
       continue;
     }
 
@@ -90,22 +100,8 @@ auto iTPS<ptensor>::measure_twosite()
     std::vector<std::vector<int>> indices(nrow, std::vector<int>(ncol));
     std::vector<ptensor> boundaries;
 
-    int source_col, source_row, target_col, target_row;
-
-    if (dx >= 0) {
-      source_col = 0;
-      target_col = ncol - 1;
-    } else {
-      source_col = ncol - 1;
-      target_col = 0;
-    }
-    if (dy >= 0) {
-      source_row = nrow - 1;
-      target_row = 0;
-    } else {
-      source_row = 0;
-      target_row = nrow - 1;
-    }
+    const int source_col = -mindx;
+    const int source_row = maxdy;
 
     if (peps_parameters.MeanField_Env) {
       int iboundary = 0;
@@ -175,71 +171,31 @@ auto iTPS<ptensor>::measure_twosite()
 
     tensor_type value = 0.0;
     if (op.ops_indices.empty()) {
-      if (nrow * ncol == 2) {
-        if (nrow == 2) {
-          const int top = indices[0][0];
-          const int bottom = indices[1][0];
-          ptensor o =
-              (top == source ? op.op
-                             : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_vertical_op12_MF(
-                            *(Tn_[0][0]), *(Tn_[1][0]), o)
-                      : core::Contract_two_sites_vertical_op12(
-                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-                            eTl[top], Tn[top], Tn[bottom], o);
-        } else {  // ncol == 2
-          const int left = indices[0][0];
-          const int right = indices[0][1];
-          ptensor o =
-              (left == source ? op.op
-                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_horizontal_op12_MF(
-                            *(Tn_[0][0]), *(Tn_[0][1]), o)
-                      : core::Contract_two_sites_horizontal_op12(
-                            C1[left], C2[right], C3[right], C4[left], eTt[left],
-                            eTt[right], eTr[right], eTb[right], eTb[left],
-                            eTl[left], Tn[left], Tn[right], o);
-        }
-      } else {
-        ptensor U, VT;
-        std::vector<double> s;
-        mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
-        const int ns = s.size();
-        for (int is = 0; is < ns; ++is) {
-          ptensor source_op =
-              reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
-          op_[source_row][source_col] = &source_op;
-          ptensor target_op =
-              reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-          op_[target_row][target_col] = &target_op;
-          auto localvalue =
-              peps_parameters.MeanField_Env
-                  ? core::Contract_MF(Tn_, op_)
-                  : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-          value += localvalue * s[is];
-        }
-      }
+      throw std::runtime_error(
+          "Empty op.ops_indices is not supported for multisites observable");
     } else {
       op_[source_row][source_col] =
           &(onesite_operators[siteoperator_index(op.source_site,
                                                  op.ops_indices[0])]
                 .op);
-      const int target_site = lattice.other(op.source_site, dx, dy);
-      op_[target_row][target_col] = &(
-          onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
-              .op);
+      for (int i = 0; i < nothers; ++i) {
+        const int dx = op.dx[i];
+        const int dy = op.dy[i];
+        const int target_site = lattice.other(op.source_site, dx, dy);
+        op_[source_row - dy][source_col + dx] =
+            &(onesite_operators[siteoperator_index(target_site,
+                                                   op.ops_indices[i + 1])]
+                  .op);
+      }
       auto localvalue =
           peps_parameters.MeanField_Env
               ? core::Contract_MF(Tn_, op_)
               : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
+    ret[op.group][{op.source_site, op.dx, op.dy}] = value / norm;
   }
-  ret.push_back(norms);
+  // ret.push_back(norms);
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
@@ -267,77 +223,85 @@ auto iTPS<ptensor>::measure_twosite()
 }
 
 template <class ptensor>
-void iTPS<ptensor>::save_twosite(
-    std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> const
-        &twosite_obs,
+void iTPS<ptensor>::save_multisite(
+    std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> const
+        &multisite_obs,
     boost::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
 
-  const int nlops = num_twosite_operators;
-  std::string filepath = outdir + "/" + filename_prefix + "twosite_obs.dat";
-  if (!time && peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "    Save twosite observables to " << filepath << std::endl;
+  const int nlops = num_multisite_operators;
+  std::map<int, std::string> filepath;
+  for (auto nsites : multisite_operator_nsites_set) {
+    std::stringstream ss;
+    ss << outdir << "/" << filename_prefix << "multisite_obs_" << nsites
+       << ".dat";
+    filepath[nsites] = ss.str();
+    if (!time && peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "    Save " << nsites << "-site observables to " << ss.str() <<
+      std::endl;
+    }
   }
+
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    std::ofstream ofs(filepath.c_str());
-    ofs << "# The meaning of each column is the following: \n";
-    int index = 1;
-    if (time) {
-      if (peps_parameters.calcmode ==
-          PEPS_Parameters::CalculationMode::time_evolution) {
-        ofs << "# $" << index++ << ": time\n";
-      } else if (peps_parameters.calcmode ==
-                 PEPS_Parameters::CalculationMode::finite_temperature) {
-        ofs << "# $" << index++ << ": inverse temperature\n";
+    for (auto nsites : multisite_operator_nsites_set) {
+      std::ofstream ofs(filepath[nsites].c_str());
+      ofs << "# The meaning of each column is the following: \n";
+      int index = 1;
+      if (time) {
+        if (peps_parameters.calcmode ==
+            PEPS_Parameters::CalculationMode::time_evolution) {
+          ofs << "# $" << index++ << ": time\n";
+        } else if (peps_parameters.calcmode ==
+                   PEPS_Parameters::CalculationMode::finite_temperature) {
+          ofs << "# $" << index++ << ": inverse temperature\n";
+        }
       }
-    }
-    ofs << "# $" << index++ << ": op_group\n";
-    ofs << "# $" << index++ << ": source_site\n";
-    ofs << "# $" << index++ << ": dx\n";
-    ofs << "# $" << index++ << ": dy\n";
-    ofs << "# $" << index++ << ": real\n";
-    ofs << "# $" << index++ << ": imag\n";
+      ofs << "# $" << index++ << ": op_group\n";
+      ofs << "# $" << index++ << ": source_site\n";
+      for (int other = 1; other < nsites; ++other) {
+        ofs << "# $" << index++ << ": dx[" << other << "]\n";
+        ofs << "# $" << index++ << ": dy[" << other << "]\n";
+      }
+      ofs << "# $" << index++ << ": real\n";
+      ofs << "# $" << index++ << ": imag\n";
 
-    ofs << "# The names of op_group are the following: \n";
-    for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
-      ofs << "# " << ilops << ": " << twosite_operator_names[ilops] << "\n";
+      ofs << "# The names of op_group are the following: \n";
+      for (int ilops = 0; ilops < num_multisite_operators; ++ilops) {
+        if (multisite_operator_nsites[ilops] == nsites) {
+          ofs << "# " << ilops << ": " << multisite_operator_names[ilops]
+              << "\n";
+        }
+      }
+      ofs << std::endl;
     }
-    if (twosite_obs.size() == nlops + 1) {
-      ofs << "# -1: norm\n";
-    }
-    ofs << std::endl;
   }
-  std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
-  ofs << std::scientific
-      << std::setprecision(std::numeric_limits<double>::max_digits10);
+
+  std::map<int, std::ofstream> ofs;
+  for (auto nsites : multisite_operator_nsites_set) {
+    ofs[nsites] =
+        std::ofstream(filepath[nsites].c_str(), std::ios::out | std::ios::app);
+    ofs[nsites] << std::scientific
+                << std::setprecision(std::numeric_limits<double>::max_digits10);
+  }
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
-    for (const auto &r : twosite_obs[ilops]) {
-      auto bond = r.first;
+    const int nsites = multisite_operator_nsites[ilops];
+    for (const auto &r : multisite_obs[ilops]) {
+      auto multi = r.first;
       auto value = r.second;
       if (time) {
-        ofs << time.get() << " ";
+        ofs[nsites] << time.get() << " ";
       }
-      ofs << ilops << " " << bond.source_site << " " << bond.dx << " "
-          << bond.dy << " " << std::real(value) << " " << std::imag(value)
-          << std::endl;
-    }
-  }
-
-  if (twosite_obs.size() == nlops + 1) {
-    // includes norm
-    for (const auto &r : twosite_obs[nlops]) {
-      auto bond = r.first;
-      auto value = r.second;
-      if (time) {
-        ofs << time.get() << " ";
+      ofs[nsites] << ilops << " " << multi.source_site;
+      for (int other = 0; other < nsites-1; ++other) {
+        ofs[nsites] << " " << multi.dx[other] << " " << multi.dy[other];
       }
-      ofs << "-1 " << bond.source_site << " " << bond.dx << " " << bond.dy
-          << " " << std::real(value) << " " << std::imag(value) << std::endl;
+      ofs[nsites] << " " << std::real(value) << " " << std::imag(value)
+                  << std::endl;
     }
   }
 }
