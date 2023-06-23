@@ -197,6 +197,16 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </pre></div>
 </div>
 </section>
+<section id="multisite-obs-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">multisite_obs_#.dat</span></code><a class="headerlink" href="#multisite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<p>multisite 演算子の期待値が出力されます。
+ファイル名の <code class="docutils literal notranslate"><span class="pre">#</span></code> にはサイト数 <span class="math notranslate nohighlight">\(N\)</span> が入ります。
+各行 <span class="math notranslate nohighlight">\(4+2(N-1)\)</span> 列からなります。</p>
+<p>最初の列は演算子の識別番号です。
+2列目は座標の基準となるサイト番号です。
+基準サイト以外の各サイトの相対座標が3列目以降に並びます。
+最後の2列は期待値の実部と虚部です。</p>
+</section>
 <section id="correlation-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="この見出しへのパーマリンク">¶</a></h3>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
@@ -383,6 +393,17 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 4.99999999999993783e+00 -1 3 1 0 9.99999999999999445e-01 1.38777878078144568e-17
 </pre></div>
 </div>
+</section>
+<section id="te-multisite-obs-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">TE_multisite_obs_#.dat</span></code><a class="headerlink" href="#te-multisite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<p>multisite 演算子の期待値が出力されます。
+ファイル名の <code class="docutils literal notranslate"><span class="pre">#</span></code> にはサイト数 <span class="math notranslate nohighlight">\(N\)</span> が入ります。
+各行 <span class="math notranslate nohighlight">\(5+2(N-1)\)</span> 列からなります。</p>
+<p>最初の列は時刻 <span class="math notranslate nohighlight">\(t\)</span> です。
+2列目は演算子の識別番号です。
+3列目は座標の基準となるサイト番号です。
+基準サイト以外の各サイトの相対座標が4列目以降に並びます。
+最後の2列は期待値の実部と虚部です。</p>
 </section>
 <section id="te-correlation-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">TE_correlation.dat</span></code><a class="headerlink" href="#te-correlation-dat" title="この見出しへのパーマリンク">¶</a></h3>

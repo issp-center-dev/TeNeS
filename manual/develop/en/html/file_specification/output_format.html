@@ -209,6 +209,28 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </pre></div>
 </div>
 </section>
+<section id="multisite-obs-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">multisite_obs_#.dat</span></code><a class="headerlink" href="#multisite-obs-dat" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Expectation values for multi-site operations are outputted.</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">#</span></code> in the filename is replaced by the number of sites in the operator, <span class="math notranslate nohighlight">\(N\)</span>.</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p>Each row consists of <span class="math notranslate nohighlight">\(4+2(N-1)\)</span> columns.</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p>The first column is the index of the operator.</p></li>
+<li><p>The second column is the index of the site, which is the origin of the coordinate.</p></li>
+<li><p>The following columns are the relative coordinates of the other sites.</p></li>
+<li><p>The last two columns are the real and imaginary parts of the expected value.</p></li>
+</ul>
+</div></blockquote>
+</section>
 <section id="correlation-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
@@ -410,6 +432,29 @@ Each row consists of five columns.</p>
 4.99999999999993783e+00 -1 3 1 0 9.99999999999999445e-01 1.38777878078144568e-17
 </pre></div>
 </div>
+</section>
+<section id="te-multisite-obs-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">TE_multisite_obs_#.dat</span></code><a class="headerlink" href="#te-multisite-obs-dat" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Expectation values for multi-site operations are outputted.</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">#</span></code> in the filename is replaced by the number of sites in the operator, <span class="math notranslate nohighlight">\(N\)</span>.</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p>Each row consists of <span class="math notranslate nohighlight">\(5+2(N-1)\)</span> columns.</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p>The first column is the time <span class="math notranslate nohighlight">\(t\)</span>.</p></li>
+<li><p>The second column is the index of the operator.</p></li>
+<li><p>The third column is the index of the site, which is the origin of the coordinate.</p></li>
+<li><p>The following columns are the relative coordinates of the other sites.</p></li>
+<li><p>The last two columns are the real and imaginary parts of the expected value.</p></li>
+</ul>
+</div></blockquote>
 </section>
 <section id="te-correlation-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">TE_correlation.dat</span></code><a class="headerlink" href="#te-correlation-dat" title="Permalink to this heading">¶</a></h3>

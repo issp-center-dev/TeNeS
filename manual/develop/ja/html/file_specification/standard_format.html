@@ -517,7 +517,7 @@ dimension = 9 # CHI
 <section id="observable">
 <h2><span class="section-number">5.3.3. </span><code class="docutils literal notranslate"><span class="pre">observable</span></code> セクション<a class="headerlink" href="#observable" title="この見出しへのパーマリンク">¶</a></h2>
 <p>物理量測定に関する諸々を記述します。
-<code class="docutils literal notranslate"><span class="pre">onesite</span></code> と <code class="docutils literal notranslate"><span class="pre">twosite</span></code> の2種類のサブセクションを持ちます。</p>
+<code class="docutils literal notranslate"><span class="pre">onesite</span></code>, <code class="docutils literal notranslate"><span class="pre">twosite</span></code> と <code class="docutils literal notranslate"><span class="pre">multisite</span></code> の3種類のサブセクションを持ちます。</p>
 <section id="observable-onesite">
 <h3><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="この見出しへのパーマリンク">¶</a></h3>
 <p>ひとつのサイト上で定義される物理量を示す一体演算子を定義します。</p>
@@ -722,6 +722,58 @@ elements = &quot;&quot;&quot;
 </pre></div>
 </div>
 </section>
+</section>
+<section id="observable-multisite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.multisite</span></code><a class="headerlink" href="#observable-multisite" title="この見出しへのパーマリンク">¶</a></h3>
+<p>みっつ以上のサイト上で定義される物理量を示す演算子を定義します。
+サイトごとの1体演算子の直積として定義されます。</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>演算子の名前</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>演算子の識別番号</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">multisites</span></code></p></td>
+<td><p>サイトの組み合わせ</p></td>
+<td><p>文字列</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ops</span></code></p></td>
+<td><p>onesite 演算子の識別番号</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> は multisites 演算子の識別番号です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">multisites</span></code> は演算子が作用するサイト群の集合を表す文字列です。
+整数からなる1行が1つのサイト群を意味します。</p>
+<ul class="simple">
+<li><p>最初の整数は 始点サイト (source) の番号です。</p></li>
+<li><p>のこりの整数は source site からみた他サイト (target) の座標の組 (dx, dy) を並べたものです。</p>
+<ul>
+<li><p>Nサイトの場合、 <code class="docutils literal notranslate"><span class="pre">source_site</span> <span class="pre">dx2</span> <span class="pre">dy2</span> <span class="pre">dx3</span> <span class="pre">dy3</span> <span class="pre">...</span> <span class="pre">dxN</span> <span class="pre">dyN</span></code> という形式です。</p></li>
+<li><p><span class="math notranslate nohighlight">\(4 \times 4\)</span> の正方形内に収まる必要があります。</p></li>
+</ul>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">ops</span></code> を用いて <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> で定義した1体演算子の直積として演算子を定義します。
+例えば <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> の <code class="docutils literal notranslate"><span class="pre">group=0</span></code> として <span class="math notranslate nohighlight">\(S^z\)</span> を定義していた場合には、
+<code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0,0]</span></code> として <span class="math notranslate nohighlight">\(S^z_iS^z_jS^z_k\)</span> を表現できます。</p>
 </section>
 </section>
 <section id="hamiltonian">
