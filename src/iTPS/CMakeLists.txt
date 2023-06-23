@@ -14,6 +14,7 @@ add_library(
   measure.cpp
   onesite_obs.cpp
   twosite_obs.cpp
+  multisite_obs.cpp
   density.cpp
   simple_update.cpp
   full_update.cpp

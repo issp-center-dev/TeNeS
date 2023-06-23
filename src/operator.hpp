@@ -32,11 +32,31 @@ struct Operator {
   tensor op;
   std::vector<int> ops_indices;
 
-  // onesite
+  /*!
+   * @brief Constructor for a one-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] site Site of the operator.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int site, tensor const &op)
-      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {}
+      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {
+    if (op.rank() != 2) {
+      throw std::runtime_error("Operator tensor must be rank 2.");
+    }
+  }
 
-  // twosite
+  /*!
+   * @brief Constructor for a two-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other site.
+   * @param[in] dy Y displacement of the other site.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int source_site, int dx, int dy,
            tensor const &op)
       : name(name),
@@ -44,7 +64,47 @@ struct Operator {
         source_site(source_site),
         dx(1, dx),
         dy(1, dy),
-        op(op) {}
+        op(op) {
+    if (op.rank() != 4) {
+      throw std::runtime_error("Operator tensor must be rank 4.");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a two-site operator represented by the product of
+   * two one-site operators.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other site.
+   * @param[in] dy Y displacement of the other site.
+   * @param[in] ops_indices Onesite operator indices.
+   */
+  Operator(std::string const &name, int group, int source_site, int dx, int dy,
+           std::vector<int> const &ops_indices)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(1, dx),
+        dy(1, dy),
+        ops_indices(ops_indices) {
+    if (ops_indices.size() != 2) {
+      throw std::runtime_error(
+          "Operator must be a product of two one-site operators.");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a multi-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other sites.
+   * @param[in] dy Y displacement of the other sites.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
            tensor const &op)
@@ -53,15 +113,26 @@ struct Operator {
         source_site(source_site),
         dx(dx),
         dy(dy),
-        op(op) {}
-  Operator(std::string const &name, int group, int source_site, int dx, int dy,
-           std::vector<int> const &ops_indices)
-      : name(name),
-        group(group),
-        source_site(source_site),
-        dx(1, dx),
-        dy(1, dy),
-        ops_indices(ops_indices) {}
+        op(op) {
+    if (dx.size() != dy.size()) {
+      throw std::runtime_error("dx and dy must have the same size.");
+    }
+    if (op.rank() != 2 * (dx.size()+1)) {
+      throw std::runtime_error("Operator tensor must be rank 2 * (dx.size()+1).");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a multi-site operator represented by the product of
+   * one-site operators.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other sites.
+   * @param[in] dy Y displacement of the other sites.
+   * @param[in] ops_indices Onesite operator indices.
+   */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
            std::vector<int> const &ops_indices)
@@ -70,9 +141,18 @@ struct Operator {
         source_site(source_site),
         dx(dx),
         dy(dy),
-        ops_indices(ops_indices) {}
+        ops_indices(ops_indices) {
+    if (dx.size() != dy.size()) {
+      throw std::runtime_error("dx and dy must have the same size.");
+    }
+    if (ops_indices.size() != dx.size()+1) {
+      throw std::runtime_error(
+          "Operator must be a product of dx.size()+1 one-site operators.");
+    }
+  }
 
   bool is_onesite() const { return dx.empty(); }
+  int nsites() const { return dx.size() + 1; }
 };
 
 template <class tensor>

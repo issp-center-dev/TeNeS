@@ -176,6 +176,20 @@ Example::
       ... Skipped ...
    -1 3 1 0 1.00000000000000067e+00 0.00000000000000000e+00
 
+``multisite_obs_#.dat``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-  Expectation values for multi-site operations are outputted.
+
+  - ``#`` in the filename is replaced by the number of sites in the operator, :math:`N`.
+
+-  Each row consists of :math:`4+2(N-1)` columns.
+
+  - The first column is the index of the operator.
+  - The second column is the index of the site, which is the origin of the coordinate.
+  - The following columns are the relative coordinates of the other sites.
+  - The last two columns are the real and imaginary parts of the expected value.
+
 ``correlation.dat``
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -368,6 +382,23 @@ Example::
    0.00000000000000000e+00 0 2 0 1 -2.49999931343070220e-01 8.27316466562544801e-25
       ... Skipped ...
    4.99999999999993783e+00 -1 3 1 0 9.99999999999999445e-01 1.38777878078144568e-17
+
+
+``TE_multisite_obs_#.dat``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-  Expectation values for multi-site operations are outputted.
+
+  - ``#`` in the filename is replaced by the number of sites in the operator, :math:`N`.
+
+-  Each row consists of :math:`5+2(N-1)` columns.
+
+  - The first column is the time :math:`t`.
+  - The second column is the index of the operator.
+  - The third column is the index of the site, which is the origin of the coordinate.
+  - The following columns are the relative coordinates of the other sites.
+  - The last two columns are the real and imaginary parts of the expected value.
+
 
 ``TE_correlation.dat``
 ~~~~~~~~~~~~~~~~~~~~~~~
