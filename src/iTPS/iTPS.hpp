@@ -24,6 +24,7 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
+#include <set>
 
 #include <boost/optional.hpp>
 
@@ -51,6 +52,22 @@ struct Bond {
   int dx;
   int dy;
 };
+// std::map<Bond, T> requires operator<
+inline bool operator<(const Bond &a, const Bond &b) {
+  return std::tie(a.source_site, a.dx, a.dy) <
+         std::tie(b.source_site, b.dx, b.dy);
+}
+
+struct Multisites {
+  int source_site;
+  std::vector<int> dx;
+  std::vector<int> dy;
+};
+// std::map<Multisites, T> requires operator<
+inline bool operator<(const Multisites &a, const Multisites &b) {
+  return std::tie(a.source_site, a.dx, a.dy) <
+         std::tie(b.source_site, b.dx, b.dy);
+}
 
 //! Solver main class
 template <class tensor>
@@ -72,6 +89,7 @@ class iTPS {
    *  @param[in] full_updates Time Evolution operators for full updates
    *  @param[in] onesite_operators_ onesite operators to be measured
    *  @param[in] twosite_operators_ twosite operators to be measured
+   *  @param[in] multisite_operators_ multisite operators to be measured
    *  @param[in] corparam_  parameters for measuring correlation functions
    *  @param[in] tmatrix_param_  parameters for measuring eigenvalues of
    * transfer matrix
@@ -80,7 +98,8 @@ class iTPS {
        EvolutionOperators<tensor> simple_updates_,
        EvolutionOperators<tensor> full_updates_,
        Operators<tensor> onesite_operators_,
-       Operators<tensor> twosite_operators_, CorrelationParameter corparam_,
+       Operators<tensor> twosite_operators_,
+       Operators<tensor> multisite_operators_, CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
 
   //! initialize tensors
@@ -125,6 +144,9 @@ class iTPS {
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
   std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
+  //! measure expectation value of multisite observables
+  std::vector<std::map<Multisites, tensor_type>> measure_multisite();
+
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();
 
@@ -135,6 +157,8 @@ class iTPS {
   /*! @brief write measured onesite observables
    *
    *  @param[in] onesite_obs
+   *  @param[in] time
+   *  @param[in] filename_prefix
    */
   void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs,
                     boost::optional<double> time = boost::optional<double>(),
@@ -143,14 +167,29 @@ class iTPS {
   /*! @brief write measured twosite observables
    *
    *  @param[in] twosite_obs
+   *  @param[in] time
+   *  @param[in] filename_prefix
    */
   void save_twosite(std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
                     boost::optional<double> time = boost::optional<double>(),
                     std::string filename_prefix = "");
 
+  /*! @brief write measured multisite observables
+   *
+   *  @param[in] multisite_obs
+   *  @param[in] time
+   *  @param[in] filename_prefix
+   */
+  void save_multisite(
+      std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
+
   /*! @brief write measured correlation functions
    *
    *  @param[in] correlations
+   *  @param[in] time
+   *  @param[in] filename_prefix
    */
   void save_correlation(
       std::vector<Correlation> const &correlations,
@@ -159,15 +198,26 @@ class iTPS {
 
   /*! @brief calculate and write correlation length
    *
-   *  @param [in] eigvals
+   *  @param[in] eigvals
+   *  @param[in] time
+   *  @param[in] filename_prefix
    */
   void save_correlation_length(
       std::vector<transfer_matrix_eigenvalues_type> const &eigvals,
       boost::optional<double> time = boost::optional<double>(),
       std::string filename_prefix = "");
 
+  /*! @brief calculate and write correlation length
+   *
+   *  @param[in] onesite_obs
+   *  @param[in] twosite_obs,
+   *  @param[in] multisite_obs,
+   *  @param[in] time
+   *  @param[in] filename_prefix
+   */
   void save_density(std::vector<std::vector<tensor_type>> const &onesite_obs,
                     std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+                    std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
                     boost::optional<double> time = boost::optional<double>(),
                     std::string filename_prefix = "");
 
@@ -207,13 +257,19 @@ class iTPS {
   int num_full_update_groups;
   Operators<tensor> onesite_operators;
   Operators<tensor> twosite_operators;
+  Operators<tensor> multisite_operators;
   std::vector<std::vector<int>> site_ops_indices;
   int num_onesite_operators;
   int num_twosite_operators;
+  int num_multisite_operators;
   std::vector<std::string> onesite_operator_names;
   std::vector<std::string> twosite_operator_names;
+  std::vector<std::string> multisite_operator_names;
   std::vector<int> onesite_operator_counts;
   std::vector<int> twosite_operator_counts;
+  std::vector<int> multisite_operator_counts;
+  std::vector<int> multisite_operator_nsites;
+  std::set<int> multisite_operator_nsites_set;
 
   std::vector<tensor> op_identity;
 

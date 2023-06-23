@@ -29,11 +29,6 @@
 namespace tenes {
 namespace itps {
 
-bool operator<(const Bond &a, const Bond &b) {
-  return std::tie(a.source_site, a.dx, a.dy) <
-         std::tie(b.source_site, b.dx, b.dy);
-}
-
 template <class ptensor>
 auto iTPS<ptensor>::measure_twosite()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {

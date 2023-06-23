@@ -31,6 +31,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_density(
     std::vector<std::vector<tensor_type>> const &onesite_obs,
     std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+    std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
     boost::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
@@ -49,6 +50,12 @@ void iTPS<ptensor>::save_density(
   for (int iops = 0; iops < num_twosite_operators; ++iops) {
     for (const auto &obs : twosite_obs[iops]) {
       two_obs[iops] += obs.second;
+    }
+  }
+  std::vector<tensor_type> multi_obs(num_multisite_operators);
+  for (int iops = 0; iops < num_multisite_operators; ++iops) {
+    for (const auto &obs : multisite_obs[iops]) {
+      multi_obs[iops] += obs.second;
     }
   }
 
@@ -100,6 +107,12 @@ void iTPS<ptensor>::save_density(
           continue;
         }
         ofs << "# " << index++ << ": " << twosite_operator_names[ilops] << "\n";
+      }
+      for (int ilops = 0; ilops < num_multisite_operators; ++ilops) {
+        if (multisite_operator_counts[ilops] == 0) {
+          continue;
+        }
+        ofs << "# " << index++ << ": " << multisite_operator_names[ilops] << "\n";
       }
       ofs << std::endl;
     }
@@ -156,6 +169,26 @@ void iTPS<ptensor>::save_density(
       ofs << twosite_operator_names[ilops] << " = ";
     }
     const auto v = two_obs[ilops] * invV;
+    if (std::real(v) >= 0.0) {
+      ofs << " ";
+    }
+    ofs << std::real(v) << " ";
+    if (std::imag(v) >= 0.0) {
+      ofs << " ";
+    }
+    ofs << std::imag(v) << std::endl;
+  }
+
+  for (int ilops = 0; ilops < num_multisite_operators; ++ilops) {
+    if (multisite_operator_counts[ilops] == 0) {
+      continue;
+    }
+    if (time) {
+      ofs << time.get() << " " << index++ << " ";
+    } else {
+      ofs << multisite_operator_names[ilops] << " = ";
+    }
+    const auto v = multi_obs[ilops] * invV;
     if (std::real(v) >= 0.0) {
       ofs << " ";
     }

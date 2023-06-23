@@ -28,7 +28,8 @@ namespace tenes {
 namespace itps {
 
 template <class ptensor>
-void iTPS<ptensor>::measure(boost::optional<double> time, std::string filename_prefix) {
+void iTPS<ptensor>::measure(boost::optional<double> time,
+                            std::string filename_prefix) {
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;
     std::cout << "  Start updating environment" << std::endl;
@@ -50,6 +51,14 @@ void iTPS<ptensor>::measure(boost::optional<double> time, std::string filename_p
   auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs, time, filename_prefix);
 
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "  Start calculating multisite operators" << std::endl;
+  }
+  auto multisite_obs = measure_multisite();
+  if (multisite_operators.size() > 0) {
+    save_multisite(multisite_obs, time, filename_prefix);
+  }
+
   if (corparam.r_max > 0) {
     if (!time && peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "  Start calculating long range correlation" << std::endl;
@@ -66,7 +75,7 @@ void iTPS<ptensor>::measure(boost::optional<double> time, std::string filename_p
     save_correlation_length(correlation_length, time, filename_prefix);
   }
 
-  save_density(onesite_obs, twosite_obs, time, filename_prefix);
+  save_density(onesite_obs, twosite_obs, multisite_obs, time, filename_prefix);
 }
 
 template <class ptensor>

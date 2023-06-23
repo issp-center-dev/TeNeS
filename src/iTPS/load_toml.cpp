@@ -333,7 +333,8 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     load_if(pparam.tensor_load_dir, general, "tensor_load");
     load_if(pparam.tensor_save_dir, general, "tensor_save");
 
-    std::string mode_str = find_or(general, "mode", std::string("ground state"));
+    std::string mode_str =
+        find_or(general, "mode", std::string("ground state"));
     if (util::startswith(mode_str, "ground")) {
       pparam.calcmode = PEPS_Parameters::CalculationMode::ground_state;
     } else if (util::startswith(mode_str, "time")) {
@@ -406,6 +407,26 @@ std::tuple<int, int, int> read_bond(std::string line) {
   }
   return std::make_tuple(stoi(words[0]), stoi(words[1]), stoi(words[2]));
 }
+
+std::tuple<int, std::vector<int>, std::vector<int>> read_multisites(
+    std::string line) {
+  using std::stoi;
+  auto words = util::split(util::strip(line));
+  if (words.size() < 5) {
+    throw input_error("A multisite should have at least 5 integers");
+  }
+  if (words.size() % 2 != 1) {
+    throw input_error("A multisite should have odd number of integers");
+  }
+
+  std::vector<int> dx, dy;
+  for (int i = 1; i < words.size(); i += 2) {
+    dx.push_back(stoi(words[i]));
+    dy.push_back(stoi(words[i + 1]));
+  }
+  return std::make_tuple(stoi(words[0]), dx, dy);
+}
+
 std::vector<std::tuple<int, int, int>> read_bonds(std::string str) {
   std::vector<std::tuple<int, int, int>> ret;
   std::string line;
@@ -421,12 +442,26 @@ std::vector<std::tuple<int, int, int>> read_bonds(std::string str) {
   return ret;
 }
 
+std::vector<std::tuple<int, std::vector<int>, std::vector<int>>>
+read_multisitesset(std::string str) {
+  std::vector<std::tuple<int, std::vector<int>, std::vector<int>>> ret;
+  std::string line;
+  std::stringstream ss(str);
+  while (std::getline(ss, line)) {
+    line = util::strip(util::drop_comment(line));
+    if (util::strip(line).empty()) {
+      continue;
+    }
+    auto bond = read_multisites(line);
+    ret.push_back(bond);
+  }
+  return ret;
+}
+
 template <class tensor>
 Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
                                 MPI_Comm comm, int nsites, int nbody,
                                 double atol, const char *tablename) {
-  assert(nbody == 1 || nbody == 2);
-
   auto elements = param->get_as<std::string>("elements");
   auto ops = param->get_array_of<int64_t>("ops");
   if (elements && ops) {
@@ -442,6 +477,11 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     throw tenes::input_error(ss.str());
   }
   if (elements) {
+    if (nbody > 2) {
+      std::stringstream ss;
+      ss << "observable.multisite does not support elements";
+      throw tenes::input_error(ss.str());
+    }
     mptensor::Shape shape;
     auto dim_arr = param->get_array_of<int64_t>("dim");
     auto dim_int = param->get_as<int>("dim");
@@ -498,7 +538,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (int s : sites) {
       ret.emplace_back(name, group, s, A);
     }
-  } else {  // nbody == 2
+  } else if (nbody == 2) {
     auto bonds_str = find<std::string>(param, "bonds");
     auto bonds = read_bonds(bonds_str);
     for (auto bond : bonds) {
@@ -508,6 +548,18 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       } else {
         ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
                          std::get<2>(bond), op_ind);
+      }
+    }
+  } else {
+    auto ms_str = find<std::string>(param, "multisites");
+    auto mss = read_multisitesset(ms_str);
+    for (auto ms : mss) {
+      if (elements) {
+        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
+                         std::get<2>(ms), A);
+      } else {
+        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
+                         std::get<2>(ms), op_ind);
       }
     }
   }
@@ -520,6 +572,11 @@ Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
                                  double atol, std::string const &key) {
   Operators<tensor> ret;
   auto tables = param->get_table_array_qualified(key);
+  if (!tables) {
+    std::cout << "INFO: " << key << " is not found in the input file. (Skipped)"
+              << std::endl;
+    return ret;
+  }
   for (const auto &table : *tables) {
     auto obs =
         load_operator<tensor>(table, comm, nsites, nbody, atol, key.c_str());

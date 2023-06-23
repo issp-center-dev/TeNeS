@@ -16,7 +16,18 @@
 
 from collections import namedtuple
 from itertools import product
-from typing import TextIO, List, Tuple, Optional, cast, MutableMapping, Dict, Any, Union
+from typing import (
+    TextIO,
+    List,
+    Tuple,
+    Optional,
+    cast,
+    MutableMapping,
+    Dict,
+    Any,
+    Union,
+    Iterable,
+)
 
 import numpy as np
 
@@ -104,6 +115,33 @@ def parse_bond(line: str) -> Bond:
     dx = int(words[1])
     dy = int(words[2])
     return Bond(source_site, dx, dy)
+
+
+class Multisite:
+    source_site: int
+    dx: List[int]
+    dy: List[int]
+
+    def __init__(self, source_site: int, dx: Iterable[int], dy: Iterable[int]):
+        self.source_site = source_site
+        self.dx = list(dx)
+        self.dy = list(dy)
+        if len(self.dx) != len(self.dy):
+            raise RuntimeError("dx and dy should have the same length")
+
+    def nsites(self) -> int:
+        return len(self.dx) + 1
+
+
+def parse_multisite(line: str) -> Multisite:
+    line = drop_comment(line)
+    if not line:
+        return None
+    words = line.split()
+    source_site = int(words[0])
+    dx = [int(x) for x in words[1::2]]
+    dy = [int(x) for x in words[2::2]]
+    return Multisite(source_site, dx, dy)
 
 
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
@@ -699,6 +737,41 @@ class TwositeObservable:
             return [NNOperator(bond, ops=self.ops) for bond in self.bonds]
 
 
+class MultisiteObservable:
+    group: int
+    multisites: List[Multisite]
+    ops: List[int]
+    name: str
+
+    def __init__(
+        self, group: int, multisites: List[Multisite], ops: List[int], name: str = ""
+    ):
+        self.group = group
+        self.multisites = multisites
+        for ms in multisites:
+            if ms.nsites() != self.nsites():
+                raise ValueError("Multisites have different number of sites")
+        self.ops = ops
+        self.name = name
+
+    def nsites(self) -> int:
+        return self.multisites[0].nsites()
+
+    def to_toml_strs(self) -> List[str]:
+        ret = []
+        ret.append('name = "{}"'.format(self.name))
+        ret.append("group = {}".format(self.group))
+        ret.append('multisites = """')
+        for ms in self.multisites:
+            line = str(ms.source_site)
+            for i in range(ms.nsites()-1):
+                line += f" {ms.dx[i]} {ms.dy[i]}"
+            ret.append(line)
+        ret.append('"""')
+        ret.append("ops = {}".format(self.ops))
+        return ret
+
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
@@ -798,6 +871,7 @@ class Model:
     graph: LatticeGraph
     onesites: List[OnesiteObservable]
     twobodies: List[TwositeObservable]
+    multibodies: List[MultisiteObservable]
     simple_updates: List[Operator]
     full_updates: List[Operator]
     time_evolution: bool
@@ -889,7 +963,9 @@ class Model:
                     op = NNOperator(b, elements=elements)
                     self.hamiltonians.append(op)
                 ham_as_twosite_obs.append(
-                    TwositeObservable(0, bonds, elements=elements, name="bond_hamiltonian")
+                    TwositeObservable(
+                        0, bonds, elements=elements, name="bond_hamiltonian"
+                    )
                 )
             else:
                 raise RuntimeError("dims should be a list with two elements")
@@ -898,7 +974,6 @@ class Model:
         )
 
         self.onesites = []
-        self.twobodies = []
         observable = param.get("observable", {})
         has_zero_onesite = False
         for onesite in observable.get("onesite", []):
@@ -916,6 +991,8 @@ class Model:
         if not has_zero_onesite:
             for ham in ham_as_onesite_obs:
                 self.onesites.append(ham)
+
+        self.twobodies = []
         has_zero_twosite = False
         for twosite in observable.get("twosite", []):
             name = twosite["name"]
@@ -937,6 +1014,20 @@ class Model:
         if not has_zero_twosite:
             for ham in ham_as_twosite_obs:
                 self.twobodies.append(ham)
+
+        self.multibodies = []
+        for multisite in observable.get("multisite", []):
+            name = multisite["name"]
+            group = multisite["group"]
+            ms = [
+                parse_multisite(line)
+                for line in multisite["multisites"].strip().splitlines()
+                if parse_multisite(line) is not None
+            ]
+            if "ops" not in multisite:
+                raise RuntimeError("multisite observable should have ops")
+            obs = MultisiteObservable(group, ms, ops=multisite["ops"], name=name)
+            self.multibodies.append(obs)
 
         self.simple_updates = []
         self.full_updates = []
@@ -990,6 +1081,12 @@ class Model:
         for twosite in self.twobodies:
             f.write("[[observable.twosite]]\n")
             for line in twosite.to_toml_strs():
+                f.write(line + "\n")
+        f.write("\n")
+
+        for ms in self.multibodies:
+            f.write("[[observable.multisite]]\n")
+            for line in ms.to_toml_strs():
                 f.write(line + "\n")
         f.write("\n")
 

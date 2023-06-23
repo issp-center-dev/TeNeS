@@ -177,3 +177,36 @@ As a result, the Heisenberg Hamiltonian for S=1/2 is defined as follows:
   0 1 0 1  -0.25 0.0
   1 1 1 1  0.25 0.0
   """
+
+
+``observable.multisite``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Define multi-body operators that indicate physical quantities defined on three or more sites.
+It is defined as a direct product of one-body operators defined in ``observable.onesite``.
+
+.. csv-table::
+   :header: "Name", "Description", "Type"
+   :widths: 15, 30, 20
+
+   ``name``,       "Operator name",                      String
+   ``group``,      "Identification number of operators", Integer
+   ``multisites``, "Sites",                              String
+   ``ops``,        "Index of onesite operators",         List of integers
+
+``name``  specifies an operator name.
+
+``group`` specifies an identification number of two sites operators.
+
+``multisites`` specifies a string representing the set of sets of sites on which the operator acts.
+One line consisting of integers means a set sites.
+
+- The first integer is the number of the source site.
+- The following integers are the coordinates (dx, dy) of the other sites from the source site.
+
+  - ``source_site dx2 dy2 dx3 dy3 ... dxN dyN`` for N-site operator.
+  - All sites must be within a square of size :math:`4 \times 4`.
+
+Using ``ops``, a multi-body operator can be defined as a direct product of the one-body operators defined in ``observable.onesite``.
+For example, if :math:`S^z` is defined as ``group = 0`` in ``observable.onesite``,  :math:`S^z_i S^z_j S^z_k` can be expressed as ``ops = [0,0,0]``.
+
