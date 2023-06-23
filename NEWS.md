@@ -5,3 +5,4 @@
 ### New Features
 
 - Real-time evolution (https://github.com/issp-center-dev/TeNeS/pull/68)
+- Multisite observables (https://github.com/issp-center-dev/TeNeS/pull/69)
