@@ -1,0 +1,30 @@
+- how to run
+    - `export PATH=${WHERE_TENES_INSTALLED}/bin:$PATH`
+    - `sh run.sh`
+    - `gnuplot -persist plot_e.plt` for generate a figure of energy
+    - `gnuplot -persist plot_mz.plt` for generate a figure of manetization alog Sz
+    - `gnuplot -persist plot_mx.plt` for generate a figure of magnetization alog Sx
+- model
+    - Ferromagnetic Ising model on the square lattice
+    - Transverse field is also considered
+        - The critical value is about hx = 1.5
+- Inputs
+    - `simple_ft_strong.toml`
+        - Finite temperature simulation under the strong field
+        - `Jz = -1`
+        - `hx = 2.0`
+    - `simple_ft_middle.toml`
+        - Finite temperature simulation under the moderate field
+        - `Jz = -1`
+        - `hx = 0.8`
+    - `simple_ft_weak.toml`
+        - Finite temperature simulation under the weak field
+        - `Jz = -1`
+        - `hx = 0.5`
+
+- Observables
+    - Magnetization along Sz
+    - Magnetization along Sx
+    - Energy
+- Unitcell
+    - 2x2
