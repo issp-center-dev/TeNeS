@@ -37,14 +37,6 @@ void iTPS<ptensor>::optimize() {
 }
 
 
-template <class ptensor>
-void iTPS<ptensor>::optimize_density() {
-  if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "Start simple update for density matrix" << std::endl;
-  }
-  simple_update_density();
-}
-  
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

@@ -20,6 +20,7 @@ add_library(
   full_update.cpp
   optimize.cpp
   time_evolution.cpp
+  finite_temperature.cpp
   correlation_function.cpp
   correlation_length.cpp
   transfer_matrix.cpp)

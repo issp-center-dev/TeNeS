@@ -306,6 +306,15 @@ void iTPS<ptensor>::save_multisite(
   }
 }
 
+
+
+template <class ptensor>
+auto iTPS<ptensor>::measure_multisite_density()
+    -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
+  // not implemented yet
+  std::vector<std::map<Multisites, tensor_type>> ret(0);
+  return ret;
+}  
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

@@ -177,6 +177,27 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
   return 0;
 }
 
+template <class tensor>
+int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
+			  SquareLattice lattice,
+			  EvolutionOperators<tensor> simple_updates,
+			  EvolutionOperators<tensor> full_updates,
+			  Operators<tensor> onesite_operators,
+			  Operators<tensor> twosite_operators,
+			  Operators<tensor> multisite_operators,
+			  CorrelationParameter corparam,
+			  TransferMatrix_Parameters clength_param) {
+  iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
+  std::cout << "  " << "done tns" << std::endl;
+  tns.finite_temperature();
+  tns.summary();
+  return 0;
+}
+
+
+  
 int itps_main(const char* input_filename, MPI_Comm comm,
               PrintLevel print_level) {
   return itps_main(std::string(input_filename), comm, print_level);
@@ -309,7 +330,20 @@ int itps_main(std::string input_filename, MPI_Comm comm,
     return run_timeevolution(comm, peps_parameters, lattice, simple_updates,
                              full_updates, onesite_obs, twosite_obs,
                              multisite_obs, corparam, clength_param);
+  } else if (peps_parameters.calcmode ==
+             PEPS_Parameters::CalculationMode::finite_temperature) {
+    if (is_real) {
+      return run_finitetemperature(comm, peps_parameters, lattice,
+                             to_real(simple_updates), to_real(full_updates),
+                             to_real(onesite_obs), to_real(twosite_obs),
+                             to_real(multisite_obs), corparam, clength_param);
+    } else {
+      return run_finitetemperature(comm, peps_parameters, lattice, simple_updates,
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
+    }
   } else {
+   
     return 1;
   }
 }

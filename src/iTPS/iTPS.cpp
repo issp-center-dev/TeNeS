@@ -123,8 +123,15 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       std::cout << "Bond dimensions:\n";
       std::cout << "   D  (Bulk): " << Dmax << "\n";
       std::cout << "   chi (CTM): " << CHI << std::endl;
-      if (CHI < Dmax * Dmax) {
-        std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
+      if (peps_parameters.calcmode == PEPS_Parameters::CalculationMode::finite_temperature){
+	if (CHI < Dmax) {
+	  std::cerr << "WARNING: CTM may be too small (chi < D) for finite_temperature mode" << std::endl;
+	}
+	else {
+	  if (CHI < Dmax * Dmax) {
+	    std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
+	  }
+	}
       }
     }
 
@@ -163,7 +170,11 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     throw tenes::runtime_error(ss.str());
   }
 
-  initialize_tensors();
+  if (peps_parameters.calcmode == PEPS_Parameters::CalculationMode::finite_temperature){
+    initialize_tensors_density();
+  } else {
+    initialize_tensors();
+  }
 
   std::set<int> simple_update_groups;
   bool notwarned = true;
