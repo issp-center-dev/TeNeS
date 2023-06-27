@@ -61,12 +61,12 @@ void iTPS<ptensor>::save_density(
 
   auto energy = 0.0;
   for (int iops=0; iops<num_onesite_operators; ++iops) {
-    if (onesite_operator_names[iops] == "site hamiltonian"){
+    if (onesite_operator_names[iops] == "site_hamiltonian"){
       energy += std::real(loc_obs[iops]);
     }
   }
   for (int iops=0; iops<num_twosite_operators; ++iops) {
-    if (twosite_operator_names[iops] == "bond hamiltonian"){
+    if (twosite_operator_names[iops] == "bond_hamiltonian"){
       energy += std::real(two_obs[iops]);
     }
   }
