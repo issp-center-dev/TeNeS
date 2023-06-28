@@ -25,7 +25,7 @@ noise = 0.01
 
 [observable]
 [[observable.onesite]]
-name = "bond hamiltonian"
+name = "site_hamiltonian"
 group = 0
 sites = []
 dim = 2
