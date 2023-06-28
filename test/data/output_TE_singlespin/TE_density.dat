@@ -5,7 +5,7 @@
 # $4: imag
 # The meaning of observable IDs are the following: 
 # 0: Energy
-# 1: bond hamiltonian
+# 1: site_hamiltonian
 # 2: Sz              
 # 3: Sx              
 # 4: Sy              
