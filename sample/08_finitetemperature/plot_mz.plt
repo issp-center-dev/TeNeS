@@ -174,5 +174,5 @@ GNUTERM = "qt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "magnetization_strong.dat"
-p [:5]"magnetization_weak.dat" u (1/$1):2 w lp ti "h_x = 0.5", "magnetization_middle.dat" u (1/$1):2 w lp ti "h_x = 0.8", "magnetization_strong.dat" u (1/$1):2 w lp ti "h_x = 2.0"
+p [:5] "magnetization_zero.dat" u (1/$1):(abs($2)) w lp ti "h_x = 0","magnetization_weak.dat" u (1/$1):(abs($2)) w lp ti "h_x = 0.5", "magnetization_middle.dat" u (1/$1):(abs($2)) w lp ti "h_x = 0.8", "magnetization_strong.dat" u (1/$1):(abs($2)) w lp ti "h_x = 2.0"
 #    EOF

@@ -174,5 +174,5 @@ GNUTERM = "qt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "energy_strong.dat"
-p [:5]"energy_weak.dat" u (1/$1):2 w lp ti "h_x = 0.5", "energy_middle.dat" u (1/$1):2 w lp ti "h_x = 0.8", "energy_strong.dat" u (1/$1):2 w lp ti "h_x = 2.0"
+p [:5] "energy_zero.dat" u (1/$1):2 w lp ti "h_x = 0", "energy_weak.dat" u (1/$1):2 w lp ti "h_x = 0.5", "energy_middle.dat" u (1/$1):2 w lp ti "h_x = 0.8", "energy_strong.dat" u (1/$1):2 w lp ti "h_x = 2.0"
 #    EOF

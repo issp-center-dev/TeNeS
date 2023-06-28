@@ -753,12 +753,21 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
     int num, d1, d2, d34;
     Index index;
     tensor Projector;
-
+    
+    tensor uniform_vector1, uniform_vector2;
+    const auto comm = Tn[0].get_comm();
+      
     for (int i = 0; i < lattice.N_UNIT; ++i) {
       num = lattice.top(lattice.left(i));
       d1 = Tn[num].shape()[3];
       d2 = Tn[num].shape()[2];
-      C1[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 1, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
+
+      C1[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)), uniform_vector2, Axes(0), Axes(0)).transpose(Axes(1, 0));
+
+      //C1[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 1, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
 	C1[i] =	extend(C1[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
@@ -782,7 +791,13 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       num = lattice.top(lattice.right(i));
       d1 = Tn[num].shape()[0];
       d2 = Tn[num].shape()[3];
-      C2[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 1, 0, 1), 2, 0, 1), Shape(d1,d2));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
+
+      C2[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1), Axes(0)), uniform_vector2, Axes(1), Axes(0));
+
+      //      C2[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 1, 0, 1), 2, 0, 1), Shape(d1,d2));
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         C2[i] = extend(C2[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
@@ -803,7 +818,13 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       num = lattice.bottom(lattice.right(i));
       d1 = Tn[num].shape()[1];
       d2 = Tn[num].shape()[0];
-      C3[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 2, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
+
+      C3[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2), Axes(0)), uniform_vector2, Axes(2), Axes(0)).transpose(Axes(1,0));
+
+      //C3[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 2, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
@@ -826,7 +847,12 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       num = lattice.bottom(lattice.left(i));
       d1 = Tn[num].shape()[2];
       d2 = Tn[num].shape()[1];
-      C4[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
+      C4[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)), uniform_vector2, Axes(2), Axes(0)).transpose(Axes(1,0));
+
+      //C4[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
@@ -850,7 +876,11 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[0];
       d2 = Tn[num].shape()[2];
       d34 = Tn[num].shape()[3];
-      eTt[i] = reshape(mptensor::slice(Tn_single[num], 1, 0, 1), Shape(d1, d2, d34));
+
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
+      eTt[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1), Axes(0));
+      //eTt[i] = reshape(mptensor::slice(Tn_single[num], 1, 0, 1), Shape(d1, d2, d34));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
@@ -877,7 +907,11 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[1];
       d2 = Tn[num].shape()[3];
       d34 = Tn[num].shape()[0];
-      eTr[i] = reshape(mptensor::slice(Tn_single[num], 2, 0, 1), Shape(d34, d1, d2)).transpose(Axes(1, 2, 0));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
+      eTr[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2), Axes(0)).transpose(Axes(1, 2, 0));
+
+      //eTr[i] = reshape(mptensor::slice(Tn_single[num], 2, 0, 1), Shape(d34, d1, d2)).transpose(Axes(1, 2, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
@@ -904,7 +938,10 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[2];
       d2 = Tn[num].shape()[0];
       d34 = Tn[num].shape()[1];
-      eTb[i] = reshape(mptensor::slice(Tn_single[num], 3, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
+
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
+      eTb[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(3), Axes(0)).transpose(Axes(2, 0, 1));
+      //eTb[i] = reshape(mptensor::slice(Tn_single[num], 3, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
@@ -931,7 +968,9 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[3];
       d2 = Tn[num].shape()[1];
       d34 = Tn[num].shape()[2];
-      eTl[i] = reshape(mptensor::slice(Tn_single[num], 0, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
+      eTl[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)).transpose(Axes(2, 0, 1));
+      //eTl[i] = reshape(mptensor::slice(Tn_single[num], 0, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {

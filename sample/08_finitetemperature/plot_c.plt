@@ -133,7 +133,7 @@ set x2label ""
 set x2label  font "" textcolor lt -1 norotate
 set xrange [ * : * ] noreverse writeback
 set x2range [ * : * ] noreverse writeback
-set ylabel "<M_x>" 
+set ylabel "C" 
 set ylabel  font "" textcolor lt -1 rotate
 set y2label "" 
 set y2label  font "" textcolor lt -1 rotate
@@ -170,9 +170,20 @@ set loadpath
 set fontpath
 set psdir
 set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap v5
+d2(x,y) = ($0 == 0) ? (x1 = x, y1 = y, 1/0) : (x2 = x1, x1 = x, y2 = y1, y1 = y, (y1-y2)/(x1-x2))
+dx(x) = ($0 == 0) ? (dx1 = x, 1/0) : (dx2 = dx1, dx1 = x, (dx1+dx2) * 0.5)
+dxs(x) =  ($0 == 0) ? (dxs1 = x, 1/0) : (dxs2 = dxs1, dxs1 = x, (dx1+dx2)**2 * 0.25)
 GNUTERM = "qt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
-## Last datafile plotted: "magnetization_x_strong.dat"
-p [:5] "magnetization_x_zero.dat" u (1/$1):2 w lp ti "h_x = 0", "magnetization_x_weak.dat" u (1/$1):2 w lp ti "h_x = 0.5", "magnetization_x_middle.dat" u (1/$1):2 w lp ti "h_x = 0.8", "magnetization_x_strong.dat" u (1/$1):2 w lp ti "h_x = 2.0"
+x1 = 4.99999999999994
+y1 = -1.0642246504554
+y2 = -1.06412623796841
+x2 = 4.89999999999994
+dx1 = 4.99999999999994
+dx2 = 4.89999999999994
+dxs1 = 4.99999999999994
+dxs2 = 4.89999999999994
+## Last datafile plotted: "energy_strong.dat"
+p [:5] "energy_zero.dat" u (1/dx($1)) : (-dxs($1)*d2($1,$2)) w lp ti "h_x = 0", "energy_weak.dat" u (1/dx($1)) : (-dxs($1)*d2($1,$2)) w lp ti "h_x = 0.5", "energy_middle.dat" u (1/dx($1)) : (-dxs($1)*d2($1,$2)) w lp ti "h_x = 0.8", "energy_strong.dat" u (1/dx($1)) : (-dxs($1)*d2($1,$2)) w lp ti "h_x = 2.0"
 #    EOF

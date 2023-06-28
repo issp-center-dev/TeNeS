@@ -2,6 +2,7 @@
     - `export PATH=${WHERE_TENES_INSTALLED}/bin:$PATH`
     - `sh run.sh`
     - `gnuplot -persist plot_e.plt` for generate a figure of energy
+    - `gnuplot -persist plot_c.plt` for generate a figure of specific heat
     - `gnuplot -persist plot_mz.plt` for generate a figure of manetization alog Sz
     - `gnuplot -persist plot_mx.plt` for generate a figure of magnetization alog Sx
 - model
@@ -21,6 +22,10 @@
         - Finite temperature simulation under the weak field
         - `Jz = -1`
         - `hx = 0.5`
+    - `simple_ft_zero.toml`
+        - Finite temperature simulation under the zero field
+        - `Jz = -1`
+        - `hx = 0`
 
 - Observables
     - Magnetization along Sz

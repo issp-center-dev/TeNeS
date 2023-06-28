@@ -1,0 +1,30 @@
+[parameter]
+[parameter.general]
+mode = "finite"
+is_real = false
+output = "output_ft_zero"
+
+[parameter.simple_update]
+num_step = 500
+tau = 0.005
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 2
+
+[model]
+type = "spin"
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 0.0
