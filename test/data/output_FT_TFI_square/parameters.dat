@@ -1,0 +1,39 @@
+simple_num_step = [500]
+simple_tau = [0.005]
+simple_inverse_lambda_cutoff = 1e-12
+simple_gauge_fix = 0
+simple_gauge_maxiter = 100
+simple_gauge_convergence_epsilon = 0.01
+
+full_num_step = [0]
+full_inverse_projector_cutoff = 1e-12
+full_inverse_precision = 1e-12
+full_convergence_epsilon = 1e-06
+full_iteration_max = 100
+full_gauge_fix = true
+full_fastfullupdate = true
+
+ctm_dimension = 10
+ctm_inverse_projector_cutoff = 1e-12
+ctm_convergence_epsilon = 1e-06
+ctm_iteration_max = 10
+ctm_projector_corner = true
+use_rsvd = false
+rsvd_oversampling_factor = 2
+meanfield_env = false
+
+mode = finite temperature
+simple
+Lcor = 0
+seed = 11
+is_real = 0
+iszero_tol = 0
+measure = 1
+tensor_load_dir = 
+tensor_save_dir = 
+outdir = output_FT_TFI_square
+
+Lsub = [ 2 , 2 ]
+skew = 0
+
+start_datetime =  2023-07-06T10:42:20+09:00

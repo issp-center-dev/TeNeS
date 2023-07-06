@@ -153,6 +153,10 @@ elif mode.startswith("time"):
     result = check("TE_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
     result = check("TE_onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
     result = check("TE_twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+elif mode.startswith("finite"):
+    result = check("FT_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("FT_onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+    result = check("FT_twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 else:
     raise ValueError("unknown mode: {}".format(mode))
 

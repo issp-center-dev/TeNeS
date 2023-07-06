@@ -36,7 +36,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/restart.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/restart.py @ONLY)
 
 foreach(name AntiferroHeisenberg_real AntiferroHeisenberg_complex J1J2_AFH
-             TE_singlespin)
+             TE_singlespin FT_TFI_square)
   add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
                                 ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
