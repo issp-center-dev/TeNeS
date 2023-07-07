@@ -30,7 +30,7 @@ def check_density(resdir, refdir, *, rtol, atol):
         ret = []
         with open(filename) as f:
             for line in f:
-                value = line.split('=')[1]
+                value = line.split("=")[1]
                 re, im = value.split()
                 ret.append(complex(float(re), float(im)))
         return ret
@@ -145,20 +145,27 @@ result = True
 
 mode = param["parameter"]["general"].get("mode", "ground")
 if mode.startswith("ground"):
+    prefix = ""
     result = check_density(resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    # result = check("correlation.dat", resdir, refdir, tol) and result
 elif mode.startswith("time"):
+    prefix = "TE_"
     result = check("TE_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("TE_onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("TE_twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 elif mode.startswith("finite"):
+    prefix = "FT_"
     result = check("FT_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("FT_onesite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
-    result = check("FT_twosite_obs.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 else:
     raise ValueError("unknown mode: {}".format(mode))
+
+for filename in (
+    "onesite_obs.dat",
+    "twosite_obs.dat",
+    "correlation_length.dat",
+    "correlation.dat",
+    "multisite_obs_4.dat",
+):
+    filename = prefix + filename
+    if os.path.exists(os.path.join(refdir, filename)):
+        result = check(filename, resdir, refdir, rtol=rtol, atol=atol) and result
 
 if result:
     sys.exit(0)
