@@ -1,15 +1,16 @@
 [parameter]
 [parameter.general]
 is_real = true
-output = 'output_AntiferroHeisenberg_real'
+output = 'output_AntiferroHeisenberg_mf'
 [parameter.simple_update]
 tau = 0.01
 num_step = 100
 [parameter.full_update]
 tau = 0.01
-num_step = 1
+num_step = 0
 [parameter.ctm]
 dimension = 5
+meanfield_env = true
 
 [tensor]
 L_sub = [2, 2]
