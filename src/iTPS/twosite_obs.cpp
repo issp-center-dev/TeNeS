@@ -539,11 +539,11 @@ auto iTPS<ptensor>::measure_twosite_density()
 	  } else{
 	    op_l = onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op;
 	    op_r = onesite_operators[siteoperator_index(op.source_site,op.ops_indices[0])].op;
+          }
 	  value = core::Contract_two_sites_horizontal_density(
 								   C1[left], C2[right], C3[right], C4[left], eTt[left],
 								   eTt[right], eTr[right], eTb[right], eTb[left],
 								   eTl[left], Tn[left], Tn[right], op_l, op_r);
-	  }
 	}
       }
     }
