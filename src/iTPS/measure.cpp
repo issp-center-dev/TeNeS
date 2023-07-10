@@ -113,16 +113,32 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   update_CTM_density();
   //  }
 
-  auto onesite_obs = measure_onesite_density();
+  // auto onesite_obs = measure_onesite_density();
+  auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs, beta, filename_prefix);
 
-  auto twosite_obs = measure_twosite_density();
+  // auto twosite_obs = measure_twosite_density();
+  auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs, beta, filename_prefix);
 
   // In finite temperature simplation, multisite operators are not supported so far.
-  auto multisite_obs = measure_multisite_density();
+  // auto multisite_obs = measure_multisite_density();
+  auto multisite_obs = measure_multisite();
   if (multisite_operators.size() > 0) {
     save_multisite(multisite_obs, beta, filename_prefix);
+  }
+
+  if (corparam.r_max > 0) {
+    auto correlations = measure_correlation();
+    save_correlation(correlations, beta, filename_prefix);
+  }
+
+  if (tmatrix_param.to_calculate) {
+    if(beta > 0.0){
+      // the method is unstable at beta = 0.0, so we skip it.
+      auto correlation_length = measure_transfer_matrix_eigenvalues();
+      save_correlation_length(correlation_length, beta, filename_prefix);
+    }
   }
   save_density(onesite_obs, twosite_obs, multisite_obs, beta, filename_prefix);
 }

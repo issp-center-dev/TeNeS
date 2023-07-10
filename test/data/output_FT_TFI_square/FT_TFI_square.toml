@@ -24,6 +24,10 @@ virtual_dim = [3, 3, 3, 3]
 initial_state = [0.0]
 noise = 0.01
 
+[correlation]
+r_max = 3
+operators = [[0,0], [0,1]]
+
 [observable]
 [[observable.onesite]]
 name = "Sz"

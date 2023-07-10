@@ -23,8 +23,7 @@
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 
-#include "core/contract_ctm.hpp"
-#include "core/contract_mf.hpp"
+#include "core/contract.hpp"
 
 namespace tenes {
 namespace itps {
@@ -34,6 +33,9 @@ auto iTPS<ptensor>::measure_twosite()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
   Timer<> timer;
 
+  const bool is_TPO = peps_parameters.calcmode ==
+                      PEPS_Parameters::CalculationMode::finite_temperature;
+  const bool is_mf = peps_parameters.MeanField_Env;
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
@@ -166,9 +168,15 @@ auto iTPS<ptensor>::measure_twosite()
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
-        norms[norm_key] = core::Contract_MF(Tn_, op_);
+        norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
       } else {
-        norms[norm_key] = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+        if (is_TPO) {
+          norms[norm_key] =
+              core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+        } else {
+          norms[norm_key] =
+              core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+        }
       }
     }
     auto norm = norms[norm_key];
@@ -182,26 +190,35 @@ auto iTPS<ptensor>::measure_twosite()
           ptensor o =
               (top == source ? op.op
                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_vertical_op12_MF(
-                            *(Tn_[0][0]), *(Tn_[1][0]), o)
-                      : core::Contract_two_sites_vertical_op12(
-                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-                            eTl[top], Tn[top], Tn[bottom], o);
+          value = core::Contract_two_sites_vertical_op12(
+              C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+              eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], *(Tn_[0][0]),
+              *(Tn_[1][0]), o, is_TPO, is_mf);
+          // value = peps_parameters.MeanField_Env
+          //             ? core::Contract_two_sites_vertical_op12_MF(
+          //                   *(Tn_[0][0]), *(Tn_[1][0]), o)
+          //             : core::Contract_two_sites_vertical_op12(
+          //                   C1[top], C2[top], C3[bottom], C4[bottom],
+          //                   eTt[top], eTr[top], eTr[bottom], eTb[bottom],
+          //                   eTl[bottom], eTl[top], Tn[top], Tn[bottom], o);
         } else {  // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
           ptensor o =
               (left == source ? op.op
                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = peps_parameters.MeanField_Env
-                      ? core::Contract_two_sites_horizontal_op12_MF(
-                            *(Tn_[0][0]), *(Tn_[0][1]), o)
-                      : core::Contract_two_sites_horizontal_op12(
-                            C1[left], C2[right], C3[right], C4[left], eTt[left],
-                            eTt[right], eTr[right], eTb[right], eTb[left],
-                            eTl[left], Tn[left], Tn[right], o);
+
+          value = core::Contract_two_sites_horizontal_op12(
+              C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+              eTr[right], eTb[right], eTb[left], eTl[left], *(Tn_[0][0]), *(Tn_[0][1]),
+              o, is_TPO, is_mf);
+          // value = peps_parameters.MeanField_Env
+          //             ? core::Contract_two_sites_horizontal_op12_MF(
+          //                   *(Tn_[0][0]), *(Tn_[0][1]), o)
+          //             : core::Contract_two_sites_horizontal_op12(
+          //                   C1[left], C2[right], C3[right], C4[left],
+          //                   eTt[left], eTt[right], eTr[right], eTb[right],
+          //                   eTb[left], eTl[left], Tn[left], Tn[right], o);
         }
       } else {
         ptensor U, VT;
@@ -215,10 +232,12 @@ auto iTPS<ptensor>::measure_twosite()
           ptensor target_op =
               reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
           op_[target_row][target_col] = &target_op;
-          auto localvalue =
-              peps_parameters.MeanField_Env
-                  ? core::Contract_MF(Tn_, op_)
-                  : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+          auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_,
+                                           is_TPO, is_mf);
+          // auto localvalue =
+          //     peps_parameters.MeanField_Env
+          //         ? core::Contract_MF(Tn_, op_)
+          //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
           value += localvalue * s[is];
         }
       }
@@ -232,9 +251,11 @@ auto iTPS<ptensor>::measure_twosite()
           onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
               .op);
       auto localvalue =
-          peps_parameters.MeanField_Env
-              ? core::Contract_MF(Tn_, op_)
-              : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+          core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_TPO, is_mf);
+      // auto localvalue =
+      //     peps_parameters.MeanField_Env
+      //         ? core::Contract_MF(Tn_, op_)
+      //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
@@ -350,7 +371,7 @@ auto iTPS<ptensor>::measure_twosite_density()
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
-  //constexpr int nmax = 4;
+  // constexpr int nmax = 4;
 
   std::map<Bond, tensor_type> norms;
 
@@ -362,7 +383,6 @@ auto iTPS<ptensor>::measure_twosite_density()
     const int nrow = std::abs(dy) + 1;
   }
 
-  
   for (const auto &op : twosite_operators) {
     const int source = op.source_site;
     const int dx = op.dx[0];
@@ -413,11 +433,11 @@ auto iTPS<ptensor>::measure_twosite_density()
 
     for (int row = 0; row < nrow; ++row) {
       for (int col = 0; col < ncol; ++col) {
-	const int index =
-	    lattice.other(source, col - source_col, source_row - row);
-	indices[row][col] = index;
-	op_[row][col] = &(op_identity[index]);
-	Tn_[row][col] = &(Tn[index]);
+        const int index =
+            lattice.other(source, col - source_col, source_row - row);
+        indices[row][col] = index;
+        op_[row][col] = &(op_identity[index]);
+        Tn_[row][col] = &(Tn[index]);
       }
       eTl_[row] = &(eTl[indices[row][0]]);
       eTr_[row] = &(eTr[indices[row][ncol - 1]]);
@@ -431,33 +451,33 @@ auto iTPS<ptensor>::measure_twosite_density()
     C_[2] = &(C3[indices[nrow - 1][ncol - 1]]);
     C_[3] = &(C4[indices[nrow - 1][0]]);
 
-    
-    const auto norm_key = Bond{indices[nrow-1][0], nrow-1, ncol-1};
+    const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     /*
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
         norms[norm_key] = core::Contract_MF_density(Tn_, op_);
       } else {
-        norms[norm_key] = core::Contract_density(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+        norms[norm_key] = core::Contract_density(C_, eTt_, eTr_, eTb_,
+        eTl_, Tn_, op_);
       }
     }
     */
 
     if (norms.count(norm_key) == 0) {
-      if (nrow == 2){ 
-          const int top = indices[0][0];
-          const int bottom = indices[1][0];
-	  norms[norm_key] = core::Contract_two_sites_vertical_density(
-                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-                            eTl[top], Tn[top], Tn[bottom], op_identity[top], op_identity[bottom]);
-      }else{
-          const int left = indices[0][0];
-          const int right = indices[0][1];
-	  norms[norm_key] = core::Contract_two_sites_horizontal_density(
-                            C1[left], C2[right], C3[right], C4[left], eTt[left],
-                            eTt[right], eTr[right], eTb[right], eTb[left],
-                            eTl[left], Tn[left], Tn[right], op_identity[left], op_identity[right]);
+      if (nrow == 2) {
+        const int top = indices[0][0];
+        const int bottom = indices[1][0];
+        norms[norm_key] = core::Contract_two_sites_vertical_density_CTM(
+            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+            eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], Tn[top],
+            Tn[bottom], op_identity[top], op_identity[bottom]);
+      } else {
+        const int left = indices[0][0];
+        const int right = indices[0][1];
+        norms[norm_key] = core::Contract_two_sites_horizontal_density_CTM(
+            C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+            eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
+            op_identity[left], op_identity[right]);
       }
     }
     auto norm = norms[norm_key];
@@ -465,107 +485,125 @@ auto iTPS<ptensor>::measure_twosite_density()
     tensor_type value = 0.0;
     if (nrow * ncol == 2) {
       if (op.ops_indices.empty()) {
-	if (nrow == 2) {
-	  const int top = indices[0][0];
-	  const int bottom = indices[1][0];
-	  ptensor o =
-	    (top == source ? op.op
-			   : mptensor::transpose(op.op, {1, 0, 3, 2}));
-	/*
-	value = peps_parameters.MeanField_Env
-		    ? core::Contract_two_sites_vertical_op12_MF_density(
-			  *(Tn_[0][0]), *(Tn_[1][0]), o)
-		    : core::Contract_two_sites_vertical_op12_density(
-			  C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-			  eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-			  eTl[top], Tn[top], Tn[bottom], o);
-	*/
-	  value = core::Contract_two_sites_vertical_op12_density(
-								 C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-								 eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-								 eTl[top], Tn[top], Tn[bottom], o);
+        if (nrow == 2) {
+          const int top = indices[0][0];
+          const int bottom = indices[1][0];
+          ptensor o =
+              (top == source ? op.op
+                             : mptensor::transpose(op.op, {1, 0, 3, 2}));
+          /*
+          value = peps_parameters.MeanField_Env
+                      ? core::Contract_two_sites_vertical_op12_MF_density(
+                            *(Tn_[0][0]), *(Tn_[1][0]), o)
+                      : core::Contract_two_sites_vertical_op12_density(
+                            C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+                            eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
+                            eTl[top], Tn[top], Tn[bottom], o);
+          */
+          value = core::Contract_two_sites_vertical_op12_density_CTM(
+              C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+              eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], Tn[top],
+              Tn[bottom], o);
 
-	} else { // ncol == 2
-	  const int left = indices[0][0];
-	  const int right = indices[0][1];
-	  ptensor o =
-	    (left == source ? op.op
-	     : mptensor::transpose(op.op, {1, 0, 3, 2}));
-	  /*
-	    value = peps_parameters.MeanField_Env
-	    ? core::Contract_two_sites_horizontal_op12_MF_density(
-	    *(Tn_[0][0]), *(Tn_[0][1]), o)
-	    : core::Contract_two_sites_horizontal_op12_density(
-	    C1[left], C2[right], C3[right], C4[left], eTt[left],
-	    eTt[right], eTr[right], eTb[right], eTb[left],
-	    eTl[left], Tn[left], Tn[right], o);
-	  */
-	  value = core::Contract_two_sites_horizontal_op12_density(
-								   C1[left], C2[right], C3[right], C4[left], eTt[left],
-								   eTt[right], eTr[right], eTb[right], eTb[left],
-								   eTl[left], Tn[left], Tn[right], o);
-	}
+        } else {  // ncol == 2
+          const int left = indices[0][0];
+          const int right = indices[0][1];
+          ptensor o =
+              (left == source ? op.op
+                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
+          /*
+            value = peps_parameters.MeanField_Env
+            ? core::Contract_two_sites_horizontal_op12_MF_density(
+            *(Tn_[0][0]), *(Tn_[0][1]), o)
+            : core::Contract_two_sites_horizontal_op12_density(
+            C1[left], C2[right], C3[right], C4[left], eTt[left],
+            eTt[right], eTr[right], eTb[right], eTb[left],
+            eTl[left], Tn[left], Tn[right], o);
+          */
+          value = core::Contract_two_sites_horizontal_op12_density_CTM(
+              C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+              eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
+              o);
+        }
       } else {
-	if (nrow == 2) {
-	  const int top = indices[0][0];
-	  const int bottom = indices[1][0];
-	  const int target_site = lattice.other(op.source_site, dx, dy);
+        if (nrow == 2) {
+          const int top = indices[0][0];
+          const int bottom = indices[1][0];
+          const int target_site = lattice.other(op.source_site, dx, dy);
 
-	  ptensor op_t, op_b;
-	  
-	  if (top == source){
-	    op_t = onesite_operators[siteoperator_index(op.source_site,op.ops_indices[0])].op;
-	    op_b = onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op;
-	  } else{
-	    op_t = onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op;
-	    op_b = onesite_operators[siteoperator_index(op.source_site,op.ops_indices[0])].op;
-	  }	    
-	  
-	  value = core::Contract_two_sites_vertical_density(
-								 C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-								 eTr[top], eTr[bottom], eTb[bottom], eTl[bottom],
-								 eTl[top], Tn[top], Tn[bottom], op_t, op_b);
+          ptensor op_t, op_b;
 
-	} else { // ncol == 2
-	  const int left = indices[0][0];
-	  const int right = indices[0][1];
-	  const int target_site = lattice.other(op.source_site, dx, dy);
-
-	  ptensor op_l, op_r;
-	  
-	  if (left == source){
-	    op_l = onesite_operators[siteoperator_index(op.source_site,op.ops_indices[0])].op;
-	    op_r = onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op;
-	  } else{
-	    op_l = onesite_operators[siteoperator_index(target_site, op.ops_indices[1])].op;
-	    op_r = onesite_operators[siteoperator_index(op.source_site,op.ops_indices[0])].op;
+          if (top == source) {
+            op_t = onesite_operators[siteoperator_index(op.source_site,
+                                                        op.ops_indices[0])]
+                       .op;
+            op_b = onesite_operators[siteoperator_index(target_site,
+                                                        op.ops_indices[1])]
+                       .op;
+          } else {
+            op_t = onesite_operators[siteoperator_index(target_site,
+                                                        op.ops_indices[1])]
+                       .op;
+            op_b = onesite_operators[siteoperator_index(op.source_site,
+                                                        op.ops_indices[0])]
+                       .op;
           }
-	  value = core::Contract_two_sites_horizontal_density(
-								   C1[left], C2[right], C3[right], C4[left], eTt[left],
-								   eTt[right], eTr[right], eTb[right], eTb[left],
-								   eTl[left], Tn[left], Tn[right], op_l, op_r);
-	}
+
+          value = core::Contract_two_sites_vertical_density_CTM(
+              C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+              eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], Tn[top],
+              Tn[bottom], op_t, op_b);
+
+        } else {  // ncol == 2
+          const int left = indices[0][0];
+          const int right = indices[0][1];
+          const int target_site = lattice.other(op.source_site, dx, dy);
+
+          ptensor op_l, op_r;
+
+          if (left == source) {
+            op_l = onesite_operators[siteoperator_index(op.source_site,
+                                                        op.ops_indices[0])]
+                       .op;
+            op_r = onesite_operators[siteoperator_index(target_site,
+                                                        op.ops_indices[1])]
+                       .op;
+          } else {
+            op_l = onesite_operators[siteoperator_index(target_site,
+                                                        op.ops_indices[1])]
+                       .op;
+            op_r = onesite_operators[siteoperator_index(op.source_site,
+                                                        op.ops_indices[0])]
+                       .op;
+          }
+          value = core::Contract_two_sites_horizontal_density_CTM(
+              C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+              eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
+              op_l, op_r);
+        }
       }
     }
-  ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
   }
   ret.push_back(norms);
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
-  for(auto & r: norms){
+  for (auto &r : norms) {
     double norm_re = std::real(r.second);
     double norm_im = std::imag(r.second);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
-  if(mpirank == 0){
-    if(norm_real_min < 0.0){
-      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = " << norm_real_min << "].\n";
+  if (mpirank == 0) {
+    if (norm_real_min < 0.0) {
+      std::cerr << "WARNING: Norm is negative [min(real(NORM)) = "
+                << norm_real_min << "].\n";
       std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
     }
-    if(norm_imag_abs_max > 1.0e-6){
-      std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = " << norm_imag_abs_max << " > 1e-6].\n";
+    if (norm_imag_abs_max > 1.0e-6) {
+      std::cerr << "WARNING: Norm is not real [max(abs(imag(NORM))) = "
+                << norm_imag_abs_max << " > 1e-6].\n";
       std::cerr << "HINT: Increase the bond dimension of CTM." << std::endl;
     }
   }
@@ -573,8 +611,7 @@ auto iTPS<ptensor>::measure_twosite_density()
   time_observable += timer.elapsed();
   return ret;
 }
-    
-  
+
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

@@ -479,3 +479,11 @@ Example::
    2.00000000000000039e-01 1 1 1.63323696507474692e-01 6.12281023136305169e+00 6.12281023136305169e+00 7.83104916294462416e+00
       ... Skipped ...
    4.99999999999993783e+00 1 1 4.61585992965019176e-01 2.16644355600232430e+00 2.16644355600232430e+00 2.29497956495965427e+00
+
+
+For finite temperature calculation mode
+========================================
+
+The formats of the files are the same as those in the real time evolution mode.
+The only difference is that the file name starts with ``FT_`` instead of ``TE_``, and the first column is the inverse temperature :math:`\beta = 1/T` instead of the time :math:`t`.
+

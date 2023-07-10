@@ -336,13 +336,13 @@ function dump_fn_declare(io::IO, tensors::Tensors; lang::AbstractString="cpp", p
         println(io, "typename tensor::value_type")
         println(io, "Contract_$(tensors.nrow)x$(tensors.ncol)(")
         if pass_as_vector
-            println(io, "  std::vector<const tensor*> &C,")
-            println(io, "  std::vector<const tensor*> &eTt,")
-            println(io, "  std::vector<const tensor*> &eTr,")
-            println(io, "  std::vector<const tensor*> &eTb,")
-            println(io, "  std::vector<const tensor*> &eTl,")
-            println(io, "  std::vector<std::vector<const tensor*>> &Tn,")
-            println(io, "  std::vector<std::vector<const tensor*>> &op")
+            println(io, "  const std::vector<const tensor*> &C,")
+            println(io, "  const std::vector<const tensor*> &eTt,")
+            println(io, "  const std::vector<const tensor*> &eTr,")
+            println(io, "  const std::vector<const tensor*> &eTb,")
+            println(io, "  const std::vector<const tensor*> &eTl,")
+            println(io, "  const std::vector<std::vector<const tensor*>> &Tn,")
+            println(io, "  const std::vector<std::vector<const tensor*>> &op")
         else
             args = String[]
             for T in iter

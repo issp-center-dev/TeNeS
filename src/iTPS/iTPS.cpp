@@ -123,15 +123,18 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       std::cout << "Bond dimensions:\n";
       std::cout << "   D  (Bulk): " << Dmax << "\n";
       std::cout << "   chi (CTM): " << CHI << std::endl;
-      if (peps_parameters.calcmode == PEPS_Parameters::CalculationMode::finite_temperature){
-	if (CHI < Dmax) {
-	  std::cerr << "WARNING: CTM may be too small (chi < D) for finite_temperature mode" << std::endl;
-	}
-	else {
-	  if (CHI < Dmax * Dmax) {
-	    std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
-	  }
-	}
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::finite_temperature) {
+        if (CHI < Dmax) {
+          std::cerr << "WARNING: CTM may be too small (chi < D) for "
+                       "finite_temperature mode"
+                    << std::endl;
+        } else {
+          if (CHI < Dmax * Dmax) {
+            std::cerr << "WARNING: CTM may be too small (chi < D*D)"
+                      << std::endl;
+          }
+        }
       }
     }
 
@@ -170,7 +173,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     throw tenes::runtime_error(ss.str());
   }
 
-  if (peps_parameters.calcmode == PEPS_Parameters::CalculationMode::finite_temperature){
+  if (peps_parameters.calcmode ==
+      PEPS_Parameters::CalculationMode::finite_temperature) {
     initialize_tensors_density();
   } else {
     initialize_tensors();
@@ -327,7 +331,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
          << " has two different names: " << name << " and "
          << onesite_operator_names[op.group] << "\n";
       ss << "       onesite operators with the same group must "
-             "have the same name.\n";
+            "have the same name.\n";
       throw std::runtime_error(ss.str());
     }
   }
@@ -358,7 +362,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
          << " has two names: " << twosite_operator_names[op.group] << " and "
          << name << "\n";
       ss << "       twosite operators with the same group must "
-             "have the same name.\n";
+            "have the same name.\n";
       throw std::runtime_error(ss.str());
     }
   }
@@ -450,16 +454,15 @@ template <class ptensor>
 void iTPS<ptensor>::update_CTM_density() {
   Timer<> timer;
   core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                             peps_parameters, lattice);
+                                     peps_parameters, lattice);
   time_environment += timer.elapsed();
 }
 
 template <class ptensor>
-std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density(){
+std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density() {
   return core::Make_single_tensor_density(Tn);
 }
 
-  
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
