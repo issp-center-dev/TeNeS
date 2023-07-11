@@ -364,12 +364,11 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   using mptensor::Axes;
   using mptensor::Shape;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
-  const size_t rank = eTt[0].rank();
+  const MPI_Comm comm = this->C1[0].get_comm();
   int site = lattice.index(0, y);
   ptensor top = eTt[site];
   ptensor bottom = eTb[lattice.top(site)];
-  const MPI_Comm comm = this->C1[0].get_comm();
+  const size_t CHI = top.shape()[0];
   ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
 #pragma omp parallel for shared(res)
   for (size_t i = 0; i < CHI * CHI; ++i) {
@@ -377,6 +376,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
     res.set_value({i, i}, v);
   }
   res = reshape(res, {CHI, CHI, CHI, CHI});
+  const size_t rank = top.rank();
   if (rank == 3) {
     res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
@@ -409,8 +409,11 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
   using mptensor::Shape;
   const MPI_Comm comm = this->C1[0].get_comm();
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
   const auto x_orig = x;
+
+  const int s0 = lattice.index(x, 0);
+  const size_t CHI = eTl[s0].shape()[0];
+
   ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
 #pragma omp parallel for shared(res)
   for (size_t i = 0; i < CHI * CHI; ++i) {
@@ -419,7 +422,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
   }
   res = reshape(res, {CHI, CHI, CHI, CHI});
 
-  const size_t rank = eTl[0].rank();
+  const size_t rank = eTl[s0].rank();
   if (rank == 3) {
     do {
       for (int y = 0; y < lattice.LY; ++y) {

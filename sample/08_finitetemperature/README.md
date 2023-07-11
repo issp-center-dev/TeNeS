@@ -1,6 +1,7 @@
 - how to run
     - `export PATH=${WHERE_TENES_INSTALLED}/bin:$PATH`
     - `sh run.sh`
+    - `python3 ./calcspec.py` for calculating specific heat by spline interpolation of energy
     - `gnuplot -persist plot_e.plt` for generate a figure of energy
     - `gnuplot -persist plot_c.plt` for generate a figure of specific heat
     - `gnuplot -persist plot_mz.plt` for generate a figure of manetization alog Sz
@@ -26,10 +27,11 @@
         - Finite temperature simulation under the zero field
         - `Jz = -1`
         - `hx = 0`
-
 - Observables
     - Magnetization along Sz
     - Magnetization along Sx
     - Energy
+    - Specific Heat
+        - calculated from Energy by interpolation and differentiation
 - Unitcell
     - 2x2

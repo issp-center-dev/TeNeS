@@ -189,16 +189,16 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       ss << "ERROR: a simple update has negative group number " << g;
       throw std::runtime_error(ss.str());
     }
-    if (notwarned && g > 0) {
-      std::cerr << "WARNING: a simple update has nonzero group number " << g
-                << std::endl;
-      std::cerr << "         This feature is reserved for future use."
-                << std::endl;
-      std::cerr << "         Currently, all simple updates with nonzero group "
-                   "number are ignored."
-                << std::endl;
-      notwarned = false;
-    }
+    // if (notwarned && g > 0) {
+    //   std::cerr << "WARNING: a simple update has nonzero group number " << g
+    //             << std::endl;
+    //   std::cerr << "         This feature is reserved for future use."
+    //             << std::endl;
+    //   std::cerr << "         Currently, all simple updates with nonzero group "
+    //                "number are ignored."
+    //             << std::endl;
+    //   notwarned = false;
+    // }
     simple_update_groups.insert(g);
   }
   num_simple_update_groups = *simple_update_groups.rbegin() + 1;
@@ -221,16 +221,16 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       ss << "ERROR: a full update has negative group number " << g;
       throw std::runtime_error(ss.str());
     }
-    if (notwarned && g > 0) {
-      std::cerr << "WARNING: a full update has nonzero group number " << g
-                << std::endl;
-      std::cerr << "         This feature is reserved for future use."
-                << std::endl;
-      std::cerr << "         Currently, all full updates with nonzero group "
-                   "number are ignored."
-                << std::endl;
-      notwarned = false;
-    }
+    // if (notwarned && g > 0) {
+    //   std::cerr << "WARNING: a full update has nonzero group number " << g
+    //             << std::endl;
+    //   std::cerr << "         This feature is reserved for future use."
+    //             << std::endl;
+    //   std::cerr << "         Currently, all full updates with nonzero group "
+    //                "number are ignored."
+    //             << std::endl;
+    //   notwarned = false;
+    // }
     full_update_groups.insert(g);
   }
   num_full_update_groups = *full_update_groups.rbegin() + 1;

@@ -22,17 +22,23 @@ namespace itps {
 template <class tensor>
 void iTPS<tensor>::finite_temperature() {
   Timer<> timer;
-  double time_measure = 0.0;
-  double next_report = 10.0;
   double beta = 0.0;
   measure_density(beta, "FT_");
 
   const int num_groups = num_simple_update_groups;
+  if (peps_parameters.measure_interval.size() < num_groups){
+    while(peps_parameters.measure_interval.size() < num_groups){
+      peps_parameters.measure_interval.push_back(*peps_parameters.measure_interval.rbegin());
+    }
+  }
 
   for (int group = 0; group < num_groups; ++group) {
     const int nsteps = peps_parameters.num_simple_step[group];
     const double dt = peps_parameters.tau_simple_step[group];
     int measure_interval = peps_parameters.measure_interval[group];
+
+    double time_measure = 0.0;
+    double next_report = 10.0;
 
     for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
       auto const& evols = simple_updates;
@@ -63,7 +69,7 @@ void iTPS<tensor>::finite_temperature() {
         }
       }
     }  // end of for (int_tau)
-    if (nsteps % measure_interval != 0) {
+    if (measure_interval==0 || nsteps % measure_interval != 0) {
       Timer<> timer_m;
       measure_density(beta, "TE_");
       time_measure += timer_m.elapsed();

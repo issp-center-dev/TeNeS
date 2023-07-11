@@ -3,10 +3,11 @@
 mode = "finite"
 is_real = false
 output = "output_ft_weak"
+measure_interval = [10, 10, 5]
 
 [parameter.simple_update]
-num_step = 500
-tau = 0.005
+num_step = [50, 200, 10]
+tau = [0.01, 0.005, 0.05]
 
 [parameter.full_update]
 num_step = 0
