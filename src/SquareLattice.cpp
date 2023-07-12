@@ -16,11 +16,30 @@
 
 #include "SquareLattice.hpp"
 
+#include <cassert>
 #include <fstream>  // for operator<<, basic_ostream, char_traits, endl
 #include <tuple>    // for tuple, make_tuple, tie
 #include <cassert>
 
 #include "exception.hpp"
+
+namespace {
+int gcd(int a, int b) {
+  assert(a >= 0);
+  assert(b >= 0);
+  while (b != 0) {
+    int r = a % b;
+    a = b;
+    b = r;
+  }
+  return a;
+}
+
+int lcm(int a, int b) {
+  return (a / gcd(a, b)) * b;
+}
+
+}
 
 namespace tenes {
 
@@ -28,7 +47,7 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
-      skew(skew),
+      skew(skew%LX),
       physical_dims(N_UNIT, -1),
       virtual_dims(N_UNIT, std::array<int, 4>{-1, -1, -1, -1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
@@ -39,6 +58,13 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
   if (Y <= 0) {
     throw tenes::input_error("Lattice.Y should be positive");
   }
+  LX_noskew = LX;
+  if(skew == 0){
+    LY_noskew = LY;
+  }else{
+    LY_noskew = LY * (::lcm(LX, skew) / skew);
+  }
+  N_UNIT_noskew = LX_noskew * LY_noskew;
   calc_neighbors();
 }
 
