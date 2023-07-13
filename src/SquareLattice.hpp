@@ -53,9 +53,9 @@ namespace tenes {
  */
 class SquareLattice {
  public:
-  int LX;
-  int LY;
-  int N_UNIT;
+  int LX, LX_noskew;
+  int LY, LY_noskew;
+  int N_UNIT, N_UNIT_noskew;
 
   /*!
    * @brief Skew boundary condition
