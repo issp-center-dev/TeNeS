@@ -487,11 +487,11 @@ void Left_move(std::vector<tensor> &C1, const std::vector<tensor> &C2,
      part of C1, C4, eTl will be modified */
 
   std::vector<tensor> PUs, PLs;
-  PUs.resize(lattice.LY);
-  PLs.resize(lattice.LY);
+  PUs.resize(lattice.LY_noskew);
+  PLs.resize(lattice.LY_noskew);
   int i, j, k, l;
-  for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.index_fast(ix, iy);
+  for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+    i = lattice.index(ix, iy);
     j = lattice.right(i);
     k = lattice.bottom(j);
     l = lattice.left(k);
@@ -516,13 +516,13 @@ void Left_move(std::vector<tensor> &C1, const std::vector<tensor> &C2,
     eTl_bak[num] = eTl[num];
   }
   int iy_up, iy_down;
-  for (int iy = 0; iy < lattice.LY; ++iy) {
-    i = lattice.index_fast(ix, iy);
+  for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+    i = lattice.index(ix, iy);
     j = lattice.right(i);
     k = lattice.bottom(j);
     l = lattice.left(k);
-    iy_up = (iy + 1) % lattice.LY;
-    iy_down = (iy - 1 + lattice.LY) % lattice.LY;
+    iy_up = (iy + 1) % lattice.LY_noskew;
+    iy_down = (iy - 1 + lattice.LY_noskew) % lattice.LY_noskew;
 
     Calc_Next_CTM(C1_bak[i], C4_bak[l], eTt[i], eTb[l], PUs[iy_up],
                   PLs[iy_down], C1[j], C4[k]);
@@ -544,11 +544,11 @@ void Right_move(const std::vector<tensor> &C1, std::vector<tensor> &C2,
     part of C2, C3, eTr will be modified
   */
   std::vector<tensor> PUs, PLs;
-  PUs.resize(lattice.LY);
-  PLs.resize(lattice.LY);
+  PUs.resize(lattice.LY_noskew);
+  PLs.resize(lattice.LY_noskew);
   int i, j, k, l;
-  for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.index_fast(ix, iy);
+  for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+    k = lattice.index(ix, iy);
     l = lattice.left(k);
     i = lattice.top(l);
     j = lattice.right(i);
@@ -577,14 +577,14 @@ void Right_move(const std::vector<tensor> &C1, std::vector<tensor> &C2,
     eTr_bak[num] = eTr[num];
   }
   int iy_up, iy_down;
-  for (int iy = 0; iy < lattice.LY; ++iy) {
-    k = lattice.index_fast(ix, iy);
+  for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+    k = lattice.index(ix, iy);
     l = lattice.left(k);
     i = lattice.top(l);
     j = lattice.right(i);
 
-    iy_up = (iy + 1) % lattice.LY;
-    iy_down = (iy - 1 + lattice.LY) % lattice.LY;
+    iy_up = (iy + 1) % lattice.LY_noskew;
+    iy_down = (iy - 1 + lattice.LY_noskew) % lattice.LY_noskew;
 
     Calc_Next_CTM(C3_bak[k], C2_bak[j], eTb[k], eTt[j], PUs[iy_down],
                   PLs[iy_up], C3[l], C2[i]);
@@ -609,11 +609,11 @@ void Top_move(std::vector<tensor> &C1, std::vector<tensor> &C2,
     ## part of C1, C2, eTt will be modified
   */
   std::vector<tensor> PUs, PLs;
-  PUs.resize(lattice.LX);
-  PLs.resize(lattice.LX);
+  PUs.resize(lattice.LX_noskew);
+  PLs.resize(lattice.LX_noskew);
   int i, j, k, l;
-  for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.index_fast(ix, iy);
+  for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+    j = lattice.index(ix, iy);
     k = lattice.bottom(j);
     l = lattice.left(k);
     i = lattice.top(l);
@@ -642,14 +642,14 @@ void Top_move(std::vector<tensor> &C1, std::vector<tensor> &C2,
     eTt_bak[num] = eTt[num];
   }
   int ix_right, ix_left;
-  for (int ix = 0; ix < lattice.LX; ++ix) {
-    j = lattice.index_fast(ix, iy);
+  for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+    j = lattice.index(ix, iy);
     k = lattice.bottom(j);
     l = lattice.left(k);
     i = lattice.top(l);
 
-    ix_right = (ix + 1) % lattice.LX;
-    ix_left = (ix - 1 + lattice.LX) % lattice.LX;
+    ix_right = (ix + 1) % lattice.LX_noskew;
+    ix_left = (ix - 1 + lattice.LX_noskew) % lattice.LX_noskew;
 
     Calc_Next_CTM(C2_bak[j], C1_bak[i], eTr[j], eTl[i], PUs[ix_right],
                   PLs[ix_left], C2[k], C1[l]);
@@ -675,11 +675,11 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
   */
 
   std::vector<tensor> PUs, PLs;
-  PUs.resize(lattice.LX);
-  PLs.resize(lattice.LX);
+  PUs.resize(lattice.LX_noskew);
+  PLs.resize(lattice.LX_noskew);
   int i, j, k, l;
-  for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.index_fast(ix, iy);
+  for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+    l = lattice.index(ix, iy);
     i = lattice.top(l);
     j = lattice.right(i);
     k = lattice.bottom(j);
@@ -709,14 +709,14 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
     eTb_bak[num] = eTb[num];
   }
   int ix_left, ix_right;
-  for (int ix = 0; ix < lattice.LX; ++ix) {
-    l = lattice.index_fast(ix, iy);
+  for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+    l = lattice.index(ix, iy);
     i = lattice.top(l);
     j = lattice.right(i);
     k = lattice.bottom(j);
 
-    ix_right = (ix + 1) % lattice.LX;
-    ix_left = (ix - 1 + lattice.LX) % lattice.LX;
+    ix_right = (ix + 1) % lattice.LX_noskew;
+    ix_left = (ix - 1 + lattice.LX_noskew) % lattice.LX_noskew;
 
     Calc_Next_CTM(C4_bak[l], C3_bak[k], eTl[l], eTr[k], PUs[ix_left],
                   PLs[ix_right], C4[i], C3[j]);
@@ -1119,26 +1119,26 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
   double sig_max = 0.0;
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
     // left move
-    for (int ix = 0; ix < lattice.LX; ++ix) {
+    for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
       Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
                 lattice);
     }
 
     // right move
-    for (int ix = 0; ix > -lattice.LX; --ix) {
+    for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
       Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                 (ix + 1 + lattice.LX) % lattice.LX, peps_parameters, lattice);
+                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew, peps_parameters, lattice);
     }
 
     // top move
-    for (int iy = 0; iy > -lattice.LY; --iy) {
+    for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
       Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-               (iy + 1 + lattice.LY) % lattice.LY, peps_parameters, lattice);
+               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew, peps_parameters, lattice);
     }
 
     // bottom move
 
-    for (int iy = 0; iy < lattice.LY; ++iy) {
+    for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
       Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy, peps_parameters,
                   lattice);
     }
