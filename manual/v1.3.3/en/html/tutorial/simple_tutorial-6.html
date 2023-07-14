@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4.3. Phase diagram of the hardcore boson model on a trianglar lattice &#8212; TeNeS 1.3.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="4.4. Definition of lattices, models, and operators using the standard mode" href="standard_tutorial-1.html" />
+    <link rel="prev" title="4.2. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="phase-diagram-of-the-hardcore-boson-model-on-a-trianglar-lattice">
+<h1><span class="section-number">4.3. </span>Phase diagram of the hardcore boson model on a trianglar lattice<a class="headerlink" href="#phase-diagram-of-the-hardcore-boson-model-on-a-trianglar-lattice" title="Permalink to this heading">¶</a></h1>
+<p>Finally, let us consider a zero-temperature phase diagram of the hardcore boson model on a trianglar lattice.
+The Hamiltonian of this model is given as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = \sum_{\langle i,j \rangle} \Bigl[ -t (b_i^\dagger b_j + b_j^\dagger b_i) + V n_i n_j \Bigr] -\mu \sum_i n_i ,
+\end{aligned}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\langle i, j\rangle\)</span> indicates a pair of the nearest-neighbor sites, <span class="math notranslate nohighlight">\(\mu\)</span> is a chemical potential, <span class="math notranslate nohighlight">\(t\)</span> is a hopping energy, <span class="math notranslate nohighlight">\(V\)</span>  is a strength of the nearest-neighbor interaction.
+For a hardcore boson system, the maximum number of bosons at each site is restricted to 0 or 1.
+It is known that several ordered phases characterized by two types of long-range order appear in this model <a class="reference internal" href="#ref-wessel"><span class="std std-ref">[Wessel]</span></a> .
+One is a solid-like order which exists at a 1/3 filling, where one of three sites is filled in a <span class="math notranslate nohighlight">\(\sqrt{3}\times\sqrt{3}\)</span> ordering with wave vector <span class="math notranslate nohighlight">\(\boldsymbol{Q}=(4\pi/3,0)\)</span> (see the inset of <a class="reference internal" href="#fig-tutorial6-hardcore-boson"><span class="std std-numref">Fig. 4.4</span></a> ).
+This long-range order is characterized by the structure factor <span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span>.
+The other is a superfluid order which is characterized by the offdiagonal order parameter <span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span>.</p>
+<p>To perform calculation for this system, the user can use toml files named <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> , <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> and a python script file <code class="docutils literal notranslate"><span class="pre">run.py</span></code> in the direction <code class="docutils literal notranslate"><span class="pre">sample/06_hardcore_boson_triangular</span></code> . Here, <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> specifies the model and its parameters. This file is almost the same as the triangular Heisenberg model described in the previous section and differs from it only in the section <code class="docutils literal notranslate"><span class="pre">model</span></code> in the last part, where the line <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;boson&quot;</span></code> specifies the hardcore boson model and <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0.1</span></code>  , <code class="docutils literal notranslate"><span class="pre">V</span> <span class="pre">=</span> <span class="pre">1</span></code>  determines the strength of the hopping and nearest-neighbor interaction.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> file describes the structure factor to be measured.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.twosite]]
+name = &quot;&lt;nn&gt;&quot;
+group = 4
+bonds = &quot;&quot;&quot;
+0 1 0
+0 2 0
+0 0 1
+0 1 1
+0 2 1
+0 0 2
+0 1 2
+0 2 2
+1 1 0
+1 2 0
+1 0 1
+1 1 1
+1 2 1
+1 0 2
+1 1 2
+1 2 2
+2 1 0
+2 2 0
+2 0 1
+2 1 1
+2 2 1
+2 0 2
+2 1 2
+2 2 2
+&quot;&quot;&quot;
+ops = [0, 0]
+
+</pre></div>
+</div>
+<p>Using this file, the structure factor <span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span> can be calculated.</p>
+<p>Let us execute calculation using the script <code class="docutils literal notranslate"><span class="pre">run.py</span></code> .
+After setting of the paths, execute calculation by typing the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python run.py
+</pre></div>
+</div>
+<p>The calculation will finish within several minutes or several tens of minutes.
+After the calculation, start <code class="docutils literal notranslate"><span class="pre">gnuplot</span></code> and execute the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.gp&#39;
+</pre></div>
+</div>
+<p>Then, we obtain a graph for the structure factor <span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span> and the superfluid order parameter <span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span> as shown in <a class="reference internal" href="#fig-tutorial6-hardcore-boson"><span class="std std-numref">Fig. 4.4</span></a> (a).
+We note that this calculation is not so accurate because the bond dimension used in the calculation is small.
+By commenting out the four lines in the beginning of the script <code class="docutils literal notranslate"><span class="pre">run.py</span></code> , we can perform more accurate calculation at the expense of execution time.
+The result is shown in <a class="reference internal" href="#fig-tutorial6-hardcore-boson"><span class="std std-numref">Fig. 4.4</span></a> (b).
+From these figures, we find that there exists three phases for the ground state, i.e., (a) a superfluid phase (<span class="math notranslate nohighlight">\(-0.5 \lesssim \mu/V \lesssim -0.2\)</span>), (b) a solid phase (<span class="math notranslate nohighlight">\(-0.2 \lesssim \mu/V \lesssim 2.4\)</span>), and (c) a supersolid phase (<span class="math notranslate nohighlight">\(2.4 \lesssim \mu/V\)</span>).
+This result is consistent with the previous work <a class="reference internal" href="#ref-wessel"><span class="std std-ref">[Wessel]</span></a> .</p>
+<figure class="align-default" id="fig-tutorial6-hardcore-boson">
+<a class="reference internal image-reference" href="../_images/tutorial_6_hardcore_boson.png"><img alt="../_images/tutorial_6_hardcore_boson.png" src="../_images/tutorial_6_hardcore_boson.png" style="width: 600px;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 4.4 </span><span class="caption-text">Phase diagram of the hardcore boson model on a triangular lattice. (a) The bond dimension is 2. (b) The bond dimension is 5. Inset: a particle pattern for a solid phase.</span><a class="headerlink" href="#fig-tutorial6-hardcore-boson" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p class="rubric">Reference</p>
+<p id="ref-wessel">[Wessel]
+S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</em>, Phys. Rev. Lett. <strong>95</strong>, 127205 (2005). <a class="reference external" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.95.127205">link</a>.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.2. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.3. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.4. Definition of lattices, models, and operators using the standard mode</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
+      <li>Previous: <a href="simple_tutorial-5.html" title="previous chapter"><span class="section-number">4.2. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+      <li>Next: <a href="standard_tutorial-1.html" title="next chapter"><span class="section-number">4.4. </span>Definition of lattices, models, and operators using the standard mode</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.0.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/tutorial/simple_tutorial-6.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
