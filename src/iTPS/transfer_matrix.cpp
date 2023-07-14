@@ -186,8 +186,11 @@ void TransferMatrix_ctm<ptensor>::matvec_horizontal(ptensor &outvec,
                                                     int y) const {
   using mptensor::Axes;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
-  outvec = reshape(invec, {CHI, CHI});
+  const int s0 = lattice.index(0, y);
+  const int s1 = lattice.top(s0);
+  const size_t CHI0 = eTt[s0].shape()[0];
+  const size_t CHI1 = eTb[s1].shape()[1];
+  outvec = reshape(invec, {CHI0, CHI1});
   const size_t rank = eTt[0].rank();
   if (rank == 3) {
     // iTPO
@@ -227,7 +230,7 @@ void TransferMatrix_ctm<ptensor>::matvec_horizontal(ptensor &outvec,
     throw std::runtime_error("rank of eTt is not 3 or 4");
   }
 
-  outvec = reshape(outvec, {CHI * CHI});
+  outvec = reshape(outvec, {CHI0 * CHI1});
 }
 
 template <class ptensor>
@@ -236,9 +239,12 @@ void TransferMatrix_ctm<ptensor>::matvec_vertical(ptensor &outvec,
                                                   int x) const {
   using mptensor::Axes;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
+  const int s0 = lattice.index(x, 0);
+  const int s1 = lattice.left(s0);
+  const size_t CHI0 = eTl[s0].shape()[0];
+  const size_t CHI1 = eTr[s1].shape()[1];
   const auto x_orig = x;
-  outvec = reshape(invec, {CHI, CHI});
+  outvec = reshape(invec, {CHI0, CHI1});
 
   const size_t rank = eTl[0].rank();
 
@@ -287,7 +293,7 @@ void TransferMatrix_ctm<ptensor>::matvec_vertical(ptensor &outvec,
   } else {
     throw std::runtime_error("rank of eTl is not 3 or 4");
   }
-  outvec = reshape(outvec, {CHI * CHI});
+  outvec = reshape(outvec, {CHI0 * CHI1});
 }
 
 template <class ptensor>
@@ -365,22 +371,24 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   using mptensor::Shape;
   const auto &lattice = this->lattice;
   const MPI_Comm comm = this->C1[0].get_comm();
-  int site = lattice.index(0, y);
-  ptensor top = eTt[site];
-  ptensor bottom = eTb[lattice.top(site)];
-  const size_t CHI = top.shape()[0];
-  ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
+  int s0 = lattice.index(0, y);
+  int s1 = lattice.top(s0);
+  ptensor top = eTt[s0];
+  ptensor bottom = eTb[s1];
+  const size_t CHI0 = top.shape()[0];
+  const size_t CHI1 = bottom.shape()[1];
+  ptensor res(comm, Shape(CHI0 * CHI1, CHI0 * CHI1));
 #pragma omp parallel for shared(res)
-  for (size_t i = 0; i < CHI * CHI; ++i) {
+  for (size_t i = 0; i < CHI0 * CHI1; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
   }
-  res = reshape(res, {CHI, CHI, CHI, CHI});
+  res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
   const size_t rank = top.rank();
   if (rank == 3) {
     res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
-      site = lattice.index(x, y);
+      int site = lattice.index(x, y);
       top = eTt[site];
       bottom = eTb[lattice.top(site)];
       res = tensordot(res, tensordot(top, bottom, Axes(2), Axes(2)), Axes(2, 3),
@@ -390,7 +398,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
     res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
                     Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
-      site = lattice.index(x, y);
+      int site = lattice.index(x, y);
       top = eTt[site];
       bottom = eTb[lattice.top(site)];
       res = tensordot(res, tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
@@ -399,7 +407,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   } else {
     throw std::runtime_error("rank of eTt is not 3 or 4");
   }
-  res = reshape(res, {CHI * CHI, CHI * CHI});
+  res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
   return res;
 }
 
@@ -412,15 +420,17 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
   const auto x_orig = x;
 
   const int s0 = lattice.index(x, 0);
-  const size_t CHI = eTl[s0].shape()[0];
+  const int s1 = lattice.left(s0);
+  const size_t CHI0 = eTl[s0].shape()[0];
+  const size_t CHI1 = eTr[s1].shape()[1];
 
-  ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
+  ptensor res(comm, Shape(CHI0 * CHI1, CHI0 * CHI1));
 #pragma omp parallel for shared(res)
-  for (size_t i = 0; i < CHI * CHI; ++i) {
+  for (size_t i = 0; i < CHI0 * CHI1; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
   }
-  res = reshape(res, {CHI, CHI, CHI, CHI});
+  res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
 
   const size_t rank = eTl[s0].rank();
   if (rank == 3) {
@@ -434,7 +444,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
       }
       x = (x + lattice.skew + lattice.LX) % lattice.LX;
     } while (x != x_orig);
-    res = reshape(res, {CHI * CHI, CHI * CHI});
+    res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
   } else if (rank == 4) {
     do {
       for (int y = 0; y < lattice.LY; ++y) {
@@ -446,7 +456,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
       }
       x = (x + lattice.skew + lattice.LX) % lattice.LX;
     } while (x != x_orig);
-    res = reshape(res, {CHI * CHI, CHI * CHI});
+    res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
   } else {
     throw std::runtime_error("rank of eTl is not 3 or 4");
   }
