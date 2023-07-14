@@ -1,0 +1,31 @@
+[parameter]
+[parameter.general]
+# is_real = true
+mode = "finite temperature"
+output = "output_gapfull"
+
+[parameter.simple_update]
+num_step = [500, 450]
+tau = [0.01, 0.1]
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 100
+dimension = 20
+meanfield_env = false
+
+[lattice]
+type = "honeycomb lattice"
+L = 1
+W = 2
+virtual_dim = 4
+initial = "random"
+
+[model]
+type = "spin"
+J0x = -0.3
+J1y = -0.3
+J2z = -2.4
