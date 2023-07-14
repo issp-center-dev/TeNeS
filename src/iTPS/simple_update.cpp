@@ -67,7 +67,8 @@ void iTPS<tensor>::fix_local_gauge() {
           int target = lattice.neighbor(source, source_leg);
           core::fix_local_gauge(Tn[source], Tn[target], lambda_tensor[source],
                                 lambda_tensor[target], source_leg,
-                                peps_parameters, Tn1_work, Tn2_work, lambda_work);
+                                peps_parameters, Tn1_work, Tn2_work,
+                                lambda_work);
           lambda_tensor[source][source_leg] = lambda_work;
           lambda_tensor[target][target_leg] = lambda_work;
           Tn[source] = Tn1_work;
@@ -136,13 +137,14 @@ void iTPS<tensor>::simple_update() {
   time_simple_update += timer.elapsed();
 }
 
-
 template <class tensor>
 void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
-    Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
-    Tn[source] = tensordot(Tn[source], conj(up.op), mptensor::Axes(4), mptensor::Axes(1));
+    Tn[source] =
+        tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
+    Tn[source] = tensordot(Tn[source], conj(up.op), mptensor::Axes(4),
+                           mptensor::Axes(1));
   } else {
     tensor Tn1_work(comm), Tn2_work(comm);
     std::vector<double> lambda_work;
@@ -150,16 +152,30 @@ void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
     const int source_leg = up.source_leg;
     const int target = lattice.neighbor(source, source_leg);
     const int target_leg = (source_leg + 2) % 4;
-    core::Simple_update_bond(reshape(Tn[source],mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],Tn[source].shape()[4]*Tn[source].shape()[5])), reshape(Tn[target],mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],Tn[target].shape()[4]*Tn[target].shape()[5])), lambda_tensor[source],
-			     lambda_tensor[target], mptensor::kron(up.op,conj(up.op).transpose(mptensor::Shape(2,3,0,1))), source_leg,
-                                 peps_parameters, Tn1_work, Tn2_work, lambda_work);
+    core::Simple_update_bond(
+        reshape(Tn[source],
+                mptensor::Shape(Tn[source].shape()[0], Tn[source].shape()[1],
+                                Tn[source].shape()[2], Tn[source].shape()[3],
+                                Tn[source].shape()[4] * Tn[source].shape()[5])),
+        reshape(Tn[target],
+                mptensor::Shape(Tn[target].shape()[0], Tn[target].shape()[1],
+                                Tn[target].shape()[2], Tn[target].shape()[3],
+                                Tn[target].shape()[4] * Tn[target].shape()[5])),
+        lambda_tensor[source], lambda_tensor[target],
+        mptensor::kron(up.op, conj(up.op)),
+        source_leg, peps_parameters, Tn1_work, Tn2_work, lambda_work);
     lambda_tensor[source][source_leg] = lambda_work;
     lambda_tensor[target][target_leg] = lambda_work;
-    Tn[source] = reshape(Tn1_work,mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],up.op.shape()[2],up.op.shape()[0]));
-    Tn[target] = reshape(Tn2_work,mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],up.op.shape()[3],up.op.shape()[1]));
+    Tn[source] = reshape(
+        Tn1_work, mptensor::Shape(Tn[source].shape()[0], Tn[source].shape()[1],
+                                  Tn[source].shape()[2], Tn[source].shape()[3],
+                                  up.op.shape()[2], up.op.shape()[2]));
+    Tn[target] = reshape(
+        Tn2_work, mptensor::Shape(Tn[target].shape()[0], Tn[target].shape()[1],
+                                  Tn[target].shape()[2], Tn[target].shape()[3],
+                                  up.op.shape()[3], up.op.shape()[3]));
   }
 }
-
 
 template <class tensor>
 void iTPS<tensor>::fix_local_gauge_density() {
@@ -180,17 +196,32 @@ void iTPS<tensor>::fix_local_gauge_density() {
           if (lattice.virtual_dims[source][source_leg] <= 1) {
             continue;
           }
-	  int target = lattice.neighbor(source, source_leg);
-	  core::fix_local_gauge(
-				reshape(Tn[source],mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],Tn[source].shape()[4]*Tn[source].shape()[5])),
-				reshape(Tn[target],mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],Tn[target].shape()[4]*Tn[target].shape()[5])),
-				lambda_tensor[source],
-				lambda_tensor[target], source_leg, peps_parameters, Tn1_work,
-				Tn2_work, lambda_work);
-	  lambda_tensor[source][source_leg] = lambda_work;
-	  lambda_tensor[target][target_leg] = lambda_work;
-	  Tn[source] = reshape(Tn1_work,mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],Tn[source].shape()[4],Tn[source].shape()[5]));
-	  Tn[target] = reshape(Tn2_work,mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],Tn[target].shape()[4],Tn[target].shape()[5]));
+          int target = lattice.neighbor(source, source_leg);
+          core::fix_local_gauge(
+              reshape(Tn[source],
+                      mptensor::Shape(
+                          Tn[source].shape()[0], Tn[source].shape()[1],
+                          Tn[source].shape()[2], Tn[source].shape()[3],
+                          Tn[source].shape()[4] * Tn[source].shape()[5])),
+              reshape(Tn[target],
+                      mptensor::Shape(
+                          Tn[target].shape()[0], Tn[target].shape()[1],
+                          Tn[target].shape()[2], Tn[target].shape()[3],
+                          Tn[target].shape()[4] * Tn[target].shape()[5])),
+              lambda_tensor[source], lambda_tensor[target], source_leg,
+              peps_parameters, Tn1_work, Tn2_work, lambda_work);
+          lambda_tensor[source][source_leg] = lambda_work;
+          lambda_tensor[target][target_leg] = lambda_work;
+          Tn[source] = reshape(
+              Tn1_work,
+              mptensor::Shape(Tn[source].shape()[0], Tn[source].shape()[1],
+                              Tn[source].shape()[2], Tn[source].shape()[3],
+                              Tn[source].shape()[4], Tn[source].shape()[5]));
+          Tn[target] = reshape(
+              Tn2_work,
+              mptensor::Shape(Tn[target].shape()[0], Tn[target].shape()[1],
+                              Tn[target].shape()[2], Tn[target].shape()[3],
+                              Tn[target].shape()[4], Tn[target].shape()[5]));
         }
       }
     }
@@ -202,9 +233,12 @@ void iTPS<tensor>::fix_local_gauge_density() {
         if (lattice.virtual_dims[site][leg] <= 1) {
           continue;
         }
-	auto M = core::boundary_tensor(reshape(Tn[site],mptensor::Shape(Tn[site].shape()[0],Tn[site].shape()[1],Tn[site].shape()[2],Tn[site].shape()[3],Tn[site].shape()[4]*Tn[site].shape()[5])),
-				       lambda_tensor[site], leg,
-				       peps_parameters);
+        auto M = core::boundary_tensor(
+            reshape(Tn[site],
+                    mptensor::Shape(Tn[site].shape()[0], Tn[site].shape()[1],
+                                    Tn[site].shape()[2], Tn[site].shape()[3],
+                                    Tn[site].shape()[4] * Tn[site].shape()[5])),
+            lambda_tensor[site], leg, peps_parameters);
 
         tensor U;
         std::vector<double> D;
@@ -220,7 +254,6 @@ void iTPS<tensor>::fix_local_gauge_density() {
   }  // end of for (iter_gauge)
 }
 
-  
 template <class tensor>
 void iTPS<tensor>::simple_update_density() {
   const int group = 0;
@@ -255,12 +288,13 @@ void iTPS<tensor>::simple_update_density() {
   time_simple_update += timer.elapsed();
 }
 
-
 template <class tensor>
-void iTPS<tensor>::simple_update_density_purification(EvolutionOperator<tensor> const &up) {
+void iTPS<tensor>::simple_update_density_purification(
+    EvolutionOperator<tensor> const &up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
-    Tn[source] = tensordot(Tn[source], up.op, mptensor::Axes(5), mptensor::Axes(0));
+    Tn[source] =
+        tensordot(Tn[source], up.op, mptensor::Axes(5), mptensor::Axes(0));
   } else {
     tensor Tn1_work(comm), Tn2_work(comm);
     std::vector<double> lambda_work;
@@ -269,30 +303,46 @@ void iTPS<tensor>::simple_update_density_purification(EvolutionOperator<tensor> 
     const int target = lattice.neighbor(source, source_leg);
     const int target_leg = (source_leg + 2) % 4;
 
-
-    tensor identity(comm, mptensor::Shape(Tn[source].shape()[5],Tn[target].shape()[5],Tn[source].shape()[5],Tn[target].shape()[5]));
+    tensor identity(
+        comm, mptensor::Shape(Tn[source].shape()[5], Tn[target].shape()[5],
+                              Tn[source].shape()[5], Tn[target].shape()[5]));
     for (int j1 = 0; j1 < Tn[source].shape()[5]; ++j1) {
       for (int k1 = 0; k1 < Tn[target].shape()[5]; ++k1) {
-	for (int j2 = 0; j2 < Tn[source].shape()[5]; ++j2) {
-	  for (int k2 = 0; k2 < Tn[target].shape()[5]; ++k2) {
-	    identity.set_value(mptensor::Index(j1, k1, j2, k2), (j1 == j2 && k1 == k2 ? 1.0 : 0.0));
-	  }
-	}
+        for (int j2 = 0; j2 < Tn[source].shape()[5]; ++j2) {
+          for (int k2 = 0; k2 < Tn[target].shape()[5]; ++k2) {
+            identity.set_value(mptensor::Index(j1, k1, j2, k2),
+                               (j1 == j2 && k1 == k2 ? 1.0 : 0.0));
+          }
+        }
       }
-    }	
-    
-    core::Simple_update_bond(reshape(Tn[source],mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],Tn[source].shape()[4]*Tn[source].shape()[5])), reshape(Tn[target],mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],Tn[target].shape()[4]*Tn[target].shape()[5])), lambda_tensor[source],
-			     lambda_tensor[target], mptensor::kron(up.op,identity), source_leg,
-			     peps_parameters, Tn1_work, Tn2_work, lambda_work);
+    }
+
+    core::Simple_update_bond(
+        reshape(Tn[source],
+                mptensor::Shape(Tn[source].shape()[0], Tn[source].shape()[1],
+                                Tn[source].shape()[2], Tn[source].shape()[3],
+                                Tn[source].shape()[4] * Tn[source].shape()[5])),
+        reshape(Tn[target],
+                mptensor::Shape(Tn[target].shape()[0], Tn[target].shape()[1],
+                                Tn[target].shape()[2], Tn[target].shape()[3],
+                                Tn[target].shape()[4] * Tn[target].shape()[5])),
+        lambda_tensor[source], lambda_tensor[target],
+        mptensor::kron(up.op, identity), source_leg, peps_parameters, Tn1_work,
+        Tn2_work, lambda_work);
     lambda_tensor[source][source_leg] = lambda_work;
     lambda_tensor[target][target_leg] = lambda_work;
-    Tn[source] = reshape(Tn1_work,mptensor::Shape(Tn[source].shape()[0],Tn[source].shape()[1],Tn[source].shape()[2],Tn[source].shape()[3],up.op.shape()[2],Tn[source].shape()[5]));
-    Tn[target] = reshape(Tn2_work,mptensor::Shape(Tn[target].shape()[0],Tn[target].shape()[1],Tn[target].shape()[2],Tn[target].shape()[3],up.op.shape()[3],Tn[target].shape()[5]));
+    Tn[source] = reshape(
+        Tn1_work, mptensor::Shape(Tn[source].shape()[0], Tn[source].shape()[1],
+                                  Tn[source].shape()[2], Tn[source].shape()[3],
+                                  up.op.shape()[2], Tn[source].shape()[5]));
+    Tn[target] = reshape(
+        Tn2_work, mptensor::Shape(Tn[target].shape()[0], Tn[target].shape()[1],
+                                  Tn[target].shape()[2], Tn[target].shape()[3],
+                                  up.op.shape()[3], Tn[target].shape()[5]));
   }
 }
 
-  
-template <class tensor>  
+template <class tensor>
 void iTPS<tensor>::simple_update_density_purification() {
   const int group = 0;
   Timer<> timer;
@@ -322,10 +372,10 @@ void iTPS<tensor>::simple_update_density_purification() {
                   << nsteps << "] done" << std::endl;
       }
     }
-  }  
+  }
   time_simple_update += timer.elapsed();
 }
-  
+
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

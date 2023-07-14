@@ -127,13 +127,13 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
           PEPS_Parameters::CalculationMode::finite_temperature) {
         if (CHI < Dmax) {
           std::cerr << "WARNING: CTM may be too small (chi < D) for "
-                       "finite_temperature mode"
+                       "iTPO (finite_temperature mode)"
                     << std::endl;
-        } else {
-          if (CHI < Dmax * Dmax) {
-            std::cerr << "WARNING: CTM may be too small (chi < D*D)"
-                      << std::endl;
-          }
+        }
+      } else {
+        if (CHI < Dmax * Dmax) {
+          std::cerr << "WARNING: CTM may be too small (chi < D*D) for iTPS"
+                    << std::endl;
         }
       }
     }
@@ -194,7 +194,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     //             << std::endl;
     //   std::cerr << "         This feature is reserved for future use."
     //             << std::endl;
-    //   std::cerr << "         Currently, all simple updates with nonzero group "
+    //   std::cerr << "         Currently, all simple updates with nonzero group
+    //   "
     //                "number are ignored."
     //             << std::endl;
     //   notwarned = false;
