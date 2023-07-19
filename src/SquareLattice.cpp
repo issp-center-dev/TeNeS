@@ -24,6 +24,10 @@
 #include "exception.hpp"
 
 namespace {
+int mod(int a, int b) {
+  assert(b > 0);
+  return (a % b + b) % b;
+}
 int gcd(int a, int b) {
   assert(a >= 0);
   assert(b >= 0);
@@ -35,11 +39,9 @@ int gcd(int a, int b) {
   return a;
 }
 
-int lcm(int a, int b) {
-  return (a / gcd(a, b)) * b;
-}
+int lcm(int a, int b) { return (a / gcd(a, b)) * b; }
 
-}
+}  // namespace
 
 namespace tenes {
 
@@ -47,7 +49,7 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
-      skew(skew%LX),
+      skew(skew % LX),
       physical_dims(N_UNIT, -1),
       virtual_dims(N_UNIT, std::array<int, 4>{-1, -1, -1, -1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
@@ -59,9 +61,10 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
     throw tenes::input_error("Lattice.Y should be positive");
   }
   LX_noskew = LX;
-  if(skew == 0){
+  if (skew == 0) {
     LY_noskew = LY;
-  }else{
+  } else {
+    skew = mod(skew, LX);
     LY_noskew = LY * (::lcm(LX, skew) / skew);
   }
   N_UNIT_noskew = LX_noskew * LY_noskew;
