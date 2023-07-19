@@ -50,7 +50,7 @@ elements = """
 """
 
 [[observable.twosite]]
-name = "hamiltonian"
+name = "bond_hamiltonian"
 group = 0
 bonds = """
 0 1 0

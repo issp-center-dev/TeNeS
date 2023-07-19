@@ -19,7 +19,7 @@ operators = [[0,0], [0,1]]
 
 [tensor]
 L_sub = [2, 1]
-skew = 1
+skew = -1
 [[tensor.unitcell]]
 index = [0]
 physical_dim = 2
@@ -54,7 +54,7 @@ elements = """
 """
 
 [[observable.twosite]]
-name = "hamiltonian"
+name = "bond_hamiltonian"
 group = 0
 bonds = """
 0 1 0
