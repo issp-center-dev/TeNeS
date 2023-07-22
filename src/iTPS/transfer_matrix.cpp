@@ -89,13 +89,16 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
   const size_t N = dim(dir, fixed_coord);
   const size_t nev = std::min(static_cast<size_t>(params.num_eigvals), N);
 
-  std::vector<std::complex<double>> eigvals;
-
+  std::vector<std::complex<double>> eigvals(nev);
   if (N == 1) {
-    eigvals.resize(nev);
     eigvals[0] = 1.0;
     return eigvals;
   }
+
+  static int nst = 0;
+  std::stringstream filename;
+  filename << "matrix_" << nst++ << ".dat";
+  std::ofstream fout(filename.str());
 
   if (N <= params.maxdim_dense_eigensolver) {
     ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
@@ -107,6 +110,7 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
         typename ptensor::value_type v;
         matrix.get_value({row, col}, v);
         matrix_2.set_value({row, col}, v);
+        fout << row << " " << col << " " << std::real(v) << std::endl;
       }
     }
     std::vector<std::complex<double>> evecs;
@@ -385,7 +389,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   }
   res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
   const size_t rank = top.rank();
-  if (rank == 3) {
+  if (rank == 3) { // iTPO
     res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
       int site = lattice.index(x, y);
@@ -394,7 +398,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
       res = tensordot(res, tensordot(top, bottom, Axes(2), Axes(2)), Axes(2, 3),
                       Axes(0, 3));
     }
-  } else if (rank == 4) {
+  } else if (rank == 4) { // iTPS
     res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
                     Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
@@ -521,8 +525,20 @@ ptensor TransferMatrix_mf<ptensor>::matrix_vertical(int x) const {
 
 template <class ptensor>
 size_t TransferMatrix_ctm<ptensor>::dim(int dir, int fixed_coord) const {
-  auto ret = C1[0].shape()[0];
-  return ret * ret;
+  const auto &lattice = this->lattice;
+  if(dir == 0){
+    const int s0 = lattice.index(0, fixed_coord);
+    const int s1 = lattice.top(s0);
+    const size_t CHI0 = eTt[s0].shape()[0];
+    const size_t CHI1 = eTb[s1].shape()[1];
+    return CHI0 * CHI1;
+  }else{
+    const int s0 = lattice.index(fixed_coord, 0);
+    const int s1 = lattice.left(s0);
+    const size_t CHI0 = eTl[s0].shape()[0];
+    const size_t CHI1 = eTr[s1].shape()[1];
+    return CHI0 * CHI1;
+  }
 }
 
 template <class ptensor>

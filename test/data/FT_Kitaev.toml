@@ -1,0 +1,216 @@
+[parameter]
+[parameter.general]
+mode = 'finite temperature'
+output = 'output_FT_Kitaev'
+measure_interval = 50
+[parameter.simple_update]
+num_step = 500
+tau = 0.01
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+[parameter.ctm]
+iteration_max = 100
+dimension = 5
+meanfield_env = false
+
+[correlation]
+r_max = 3
+operators = [[0,0], [0,1]]
+
+[tensor]
+L_sub = [2, 1]
+skew = 1
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = [4, 1, 4, 4]
+initial_state = [0.0]
+noise = 0.01
+[[tensor.unitcell]]
+index = [1]
+physical_dim = 2
+virtual_dim = [4, 4, 4, 1]
+initial_state = [0.0]
+noise = 0.01
+
+[observable]
+[[observable.onesite]]
+name = "Sz"
+group = 0
+sites = []
+dim = 2
+elements = """
+0 0  0.5 0.0
+1 1  -0.5 0.0
+"""
+[[observable.onesite]]
+name = "Sx"
+group = 1
+sites = []
+dim = 2
+elements = """
+1 0  0.5 0.0
+0 1  0.5 0.0
+"""
+[[observable.onesite]]
+name = "Sy"
+group = 2
+sites = []
+dim = 2
+elements = """
+1 0  0.0 0.5
+0 1  0.0 -0.5
+"""
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = """
+0 1 0
+"""
+dim = [2, 2]
+elements = """
+1 1 0 0  -0.075 0.0
+0 1 1 0  -0.075 0.0
+1 0 0 1  -0.075 0.0
+0 0 1 1  -0.075 0.0
+"""
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = """
+1 1 0
+"""
+dim = [2, 2]
+elements = """
+1 1 0 0  0.075 0.0
+0 1 1 0  -0.075 0.0
+1 0 0 1  -0.075 0.0
+0 0 1 1  0.075 0.0
+"""
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = """
+1 0 1
+"""
+dim = [2, 2]
+elements = """
+0 0 0 0  -0.6 0.0
+1 0 1 0  0.6 0.0
+0 1 0 1  0.6 0.0
+1 1 1 1  -0.6 0.0
+"""
+[[observable.twosite]]
+name = "SzSz"
+group = 1
+bonds = """
+0 1 0
+1 1 0
+1 0 1
+"""
+ops = [0, 0]
+[[observable.twosite]]
+name = "SxSx"
+group = 2
+bonds = """
+0 1 0
+1 1 0
+1 0 1
+"""
+ops = [1, 1]
+[[observable.twosite]]
+name = "SySy"
+group = 3
+bonds = """
+0 1 0
+1 1 0
+1 0 1
+"""
+ops = [2, 2]
+
+
+[evolution]
+[[evolution.simple]]
+group = 0
+source_site = 0
+source_leg = 2
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.000000281250013 0.0
+1 1 0 0  0.0007500000703124684 0.0
+1 0 1 0  1.000000281250013 0.0
+0 1 1 0  0.0007500000703124684 0.0
+1 0 0 1  0.0007500000703124684 0.0
+0 1 0 1  1.000000281250013 0.0
+0 0 1 1  0.0007500000703124684 0.0
+1 1 1 1  1.000000281250013 0.0
+"""
+[[evolution.simple]]
+group = 0
+source_site = 1
+source_leg = 2
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.000000281250013 0.0
+1 1 0 0  -0.0007500000703124684 0.0
+1 0 1 0  1.000000281250013 0.0
+0 1 1 0  0.0007500000703124684 0.0
+1 0 0 1  0.0007500000703124684 0.0
+0 1 0 1  1.000000281250013 0.0
+0 0 1 1  -0.0007500000703124684 0.0
+1 1 1 1  1.000000281250013 0.0
+"""
+[[evolution.simple]]
+group = 0
+source_site = 1
+source_leg = 1
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.006018036054065 0.0
+1 0 1 0  0.9940179640539353 0.0
+0 1 0 1  0.9940179640539353 0.0
+1 1 1 1  1.006018036054065 0.0
+"""
+[[evolution.full]]
+group = 0
+source_site = 0
+source_leg = 2
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.000000281250013 0.0
+1 1 0 0  0.0007500000703124684 0.0
+1 0 1 0  1.000000281250013 0.0
+0 1 1 0  0.0007500000703124684 0.0
+1 0 0 1  0.0007500000703124684 0.0
+0 1 0 1  1.000000281250013 0.0
+0 0 1 1  0.0007500000703124684 0.0
+1 1 1 1  1.000000281250013 0.0
+"""
+[[evolution.full]]
+group = 0
+source_site = 1
+source_leg = 2
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.000000281250013 0.0
+1 1 0 0  -0.0007500000703124684 0.0
+1 0 1 0  1.000000281250013 0.0
+0 1 1 0  0.0007500000703124684 0.0
+1 0 0 1  0.0007500000703124684 0.0
+0 1 0 1  1.000000281250013 0.0
+0 0 1 1  -0.0007500000703124684 0.0
+1 1 1 1  1.000000281250013 0.0
+"""
+[[evolution.full]]
+group = 0
+source_site = 1
+source_leg = 1
+dimensions = [2, 2, 2, 2]
+elements = """
+0 0 0 0  1.006018036054065 0.0
+1 0 1 0  0.9940179640539353 0.0
+0 1 0 1  0.9940179640539353 0.0
+1 1 1 1  1.006018036054065 0.0
+"""
