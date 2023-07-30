@@ -190,7 +190,6 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
-  std::cout << "  " << "done tns" << std::endl;
   tns.finite_temperature();
   tns.summary();
   return 0;

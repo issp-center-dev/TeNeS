@@ -21,7 +21,6 @@ namespace itps {
 
 template <class tensor>
 void iTPS<tensor>::finite_temperature() {
-  Timer<> timer;
   double beta = 0.0;
   measure_density(beta, "FT_");
 
@@ -33,12 +32,20 @@ void iTPS<tensor>::finite_temperature() {
   }
 
   for (int group = 0; group < num_groups; ++group) {
+    if (peps_parameters.print_level >= PrintLevel::info) {
+      if(num_groups == 1){
+        std::cout << " Start Simple update" << std::endl;
+      }else{
+        std::cout << " Start Simple update " << group << std::endl;
+      }
+    }
     const int nsteps = peps_parameters.num_simple_step[group];
     const double dt = peps_parameters.tau_simple_step[group];
     int measure_interval = peps_parameters.measure_interval[group];
 
     double time_measure = 0.0;
     double next_report = 10.0;
+    Timer<> timer;
 
     for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
       auto const& evols = simple_updates;
