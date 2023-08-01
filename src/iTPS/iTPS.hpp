@@ -104,14 +104,22 @@ class iTPS {
 
   //! initialize tensors
   void initialize_tensors();
-
+  void initialize_tensors_density();
+  std::vector<tensor> make_single_tensor_density();
+  
   //! update corner transfer matrices
   void update_CTM();
+  void update_CTM_density();
 
   //! perform simple update
   void simple_update();
   void simple_update(EvolutionOperator<tensor> const &up);
   void fix_local_gauge();
+  void simple_update_density();
+  void simple_update_density(EvolutionOperator<tensor> const &up);
+  void simple_update_density_purification();
+  void simple_update_density_purification(EvolutionOperator<tensor> const &up);
+  void fix_local_gauge_density();
 
   //! perform full update
   void full_update();
@@ -119,24 +127,31 @@ class iTPS {
 
   //! optimize tensors
   void optimize();
+  //void optimize_density();
 
   //! measure expectation value of observables
   void measure(boost::optional<double> time = boost::optional<double>(),
                std::string filename_prefix = "");
+  void measure_density(double beta, std::string filename_prefix = "FT_");
 
   //! print elapsed time
   void summary() const;
 
   void time_evolution();
 
+  void finite_temperature();
+
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
+  std::vector<std::vector<tensor_type>> measure_onesite_density();
 
   //! measure expectation value of twosite observables
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
+  std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
   //! measure expectation value of multisite observables
   std::vector<std::map<Multisites, tensor_type>> measure_multisite();
+  std::vector<std::map<Multisites, tensor_type>> measure_multisite_density();
 
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();

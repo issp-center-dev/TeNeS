@@ -30,12 +30,17 @@
   - ``"ground state"``
 
     - 基底状態計算
-    - ``tenes_std`` は虚時間発展演算子を計算します
+    - ``tenes_std`` は虚時間発展演算子 :math:`U(\tau) = \exp(-\tau \mathcal{H})` を計算します
 
   - ``"time evolution"``
 
     - 実時間発展計算
-    - ``tenes_std`` は実時間発展演算子を計算します
+    - ``tenes_std`` は実時間発展演算子 :math:`U(t) = \exp(-it \mathcal{H})` を計算します
+
+  - ``"finite temperature"``
+
+    - 有限温度計算
+    - ``tenes_std`` は虚時間発展演算子 :math:`U(\tau) = \exp(-\tau \mathcal{H})` を計算します
 
 - ``is_real``
 
@@ -93,7 +98,10 @@ simple update に関するパラメータ
   - (虚)時間発展演算子における(虚)時間刻み :math:`\tau` を指定します
 
     - ``tenes_std`` では時間発展演算子を計算するために用いられます
-    - ``tenes`` では各ステップでの経過時間を求めるために用いられます
+    - ``tenes`` では各ステップでの経過時間・逆温度を求めるために用いられます
+
+      - For finite temperature calculation, note that the inverse temperature increase :math:`2\tau` at a step because :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)`
+      - 有限温度計算の場合、 :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)` なので、 ステップごとに逆温度は :math:`2\tau` だけ増加することに注意してください。
 
   - リストを指定すると、時間発展演算子のグループごとに刻み幅を変えることができます
 

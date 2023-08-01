@@ -22,13 +22,17 @@ namespace itps {
 template <class tensor>
 void iTPS<tensor>::time_evolution() {
   Timer<> timer;
-  double time_measure = 0.0;
-  double next_report = 10.0;
   double t = 0.0;
   measure(t, "TE_");
 
   const bool su = peps_parameters.num_simple_step[0] > 0;
   const int num_groups = su ? num_simple_update_groups : num_full_update_groups;
+
+  if (peps_parameters.measure_interval.size() < num_groups){
+    while(peps_parameters.measure_interval.size() < num_groups){
+      peps_parameters.measure_interval.push_back(*peps_parameters.measure_interval.rbegin());
+    }
+  }
 
   for (int group = 0; group < num_groups; ++group) {
     const int nsteps = su ? peps_parameters.num_simple_step[group]
@@ -36,6 +40,8 @@ void iTPS<tensor>::time_evolution() {
     const double dt = su ? peps_parameters.tau_simple_step[group]
                          : peps_parameters.tau_full_step[group];
     int measure_interval = peps_parameters.measure_interval[group];
+    double time_measure = 0.0;
+    double next_report = 10.0;
 
     for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
       auto const& evols = su ? simple_updates : full_updates;

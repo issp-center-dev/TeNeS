@@ -123,8 +123,18 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       std::cout << "Bond dimensions:\n";
       std::cout << "   D  (Bulk): " << Dmax << "\n";
       std::cout << "   chi (CTM): " << CHI << std::endl;
-      if (CHI < Dmax * Dmax) {
-        std::cerr << "WARNING: CTM may be too small (chi < D*D)" << std::endl;
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::finite_temperature) {
+        if (CHI < Dmax) {
+          std::cerr << "WARNING: CTM may be too small (chi < D) for "
+                       "iTPO (finite_temperature mode)"
+                    << std::endl;
+        }
+      } else {
+        if (CHI < Dmax * Dmax) {
+          std::cerr << "WARNING: CTM may be too small (chi < D*D) for iTPS"
+                    << std::endl;
+        }
       }
     }
 
@@ -163,7 +173,12 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     throw tenes::runtime_error(ss.str());
   }
 
-  initialize_tensors();
+  if (peps_parameters.calcmode ==
+      PEPS_Parameters::CalculationMode::finite_temperature) {
+    initialize_tensors_density();
+  } else {
+    initialize_tensors();
+  }
 
   std::set<int> simple_update_groups;
   bool notwarned = true;
@@ -174,16 +189,17 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       ss << "ERROR: a simple update has negative group number " << g;
       throw std::runtime_error(ss.str());
     }
-    if (notwarned && g > 0) {
-      std::cerr << "WARNING: a simple update has nonzero group number " << g
-                << std::endl;
-      std::cerr << "         This feature is reserved for future use."
-                << std::endl;
-      std::cerr << "         Currently, all simple updates with nonzero group "
-                   "number are ignored."
-                << std::endl;
-      notwarned = false;
-    }
+    // if (notwarned && g > 0) {
+    //   std::cerr << "WARNING: a simple update has nonzero group number " << g
+    //             << std::endl;
+    //   std::cerr << "         This feature is reserved for future use."
+    //             << std::endl;
+    //   std::cerr << "         Currently, all simple updates with nonzero group
+    //   "
+    //                "number are ignored."
+    //             << std::endl;
+    //   notwarned = false;
+    // }
     simple_update_groups.insert(g);
   }
   num_simple_update_groups = *simple_update_groups.rbegin() + 1;
@@ -206,16 +222,16 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       ss << "ERROR: a full update has negative group number " << g;
       throw std::runtime_error(ss.str());
     }
-    if (notwarned && g > 0) {
-      std::cerr << "WARNING: a full update has nonzero group number " << g
-                << std::endl;
-      std::cerr << "         This feature is reserved for future use."
-                << std::endl;
-      std::cerr << "         Currently, all full updates with nonzero group "
-                   "number are ignored."
-                << std::endl;
-      notwarned = false;
-    }
+    // if (notwarned && g > 0) {
+    //   std::cerr << "WARNING: a full update has nonzero group number " << g
+    //             << std::endl;
+    //   std::cerr << "         This feature is reserved for future use."
+    //             << std::endl;
+    //   std::cerr << "         Currently, all full updates with nonzero group "
+    //                "number are ignored."
+    //             << std::endl;
+    //   notwarned = false;
+    // }
     full_update_groups.insert(g);
   }
   num_full_update_groups = *full_update_groups.rbegin() + 1;
@@ -316,7 +332,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
          << " has two different names: " << name << " and "
          << onesite_operator_names[op.group] << "\n";
       ss << "       onesite operators with the same group must "
-             "have the same name.\n";
+            "have the same name.\n";
       throw std::runtime_error(ss.str());
     }
   }
@@ -347,7 +363,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
          << " has two names: " << twosite_operator_names[op.group] << " and "
          << name << "\n";
       ss << "       twosite operators with the same group must "
-             "have the same name.\n";
+            "have the same name.\n";
       throw std::runtime_error(ss.str());
     }
   }
@@ -433,6 +449,19 @@ void iTPS<ptensor>::update_CTM() {
   core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
                              peps_parameters, lattice);
   time_environment += timer.elapsed();
+}
+
+template <class ptensor>
+void iTPS<ptensor>::update_CTM_density() {
+  Timer<> timer;
+  core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                                     peps_parameters, lattice);
+  time_environment += timer.elapsed();
+}
+
+template <class ptensor>
+std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density() {
+  return core::Make_single_tensor_density(Tn);
 }
 
 // template specialization

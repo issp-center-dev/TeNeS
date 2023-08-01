@@ -23,8 +23,7 @@
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 
-#include "core/contract_ctm.hpp"
-#include "core/contract_mf.hpp"
+#include "core/contract.hpp"
 
 namespace tenes {
 namespace itps {
@@ -33,6 +32,10 @@ template <class ptensor>
 auto iTPS<ptensor>::measure_multisite()
     -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
   Timer<> timer;
+
+  const bool is_meanfield = peps_parameters.MeanField_Env;
+  const bool is_density = peps_parameters.calcmode ==
+                          PEPS_Parameters::CalculationMode::finite_temperature;
 
   const int nlops = num_multisite_operators;
   std::vector<std::map<Multisites, tensor_type>> ret(nlops);
@@ -103,7 +106,7 @@ auto iTPS<ptensor>::measure_multisite()
     const int source_col = -mindx;
     const int source_row = maxdy;
 
-    if (peps_parameters.MeanField_Env) {
+    if (is_meanfield) {
       int iboundary = 0;
       const int nboundary = 2 * (ncol + nrow - 2);
       boundaries.reserve(nboundary);
@@ -161,11 +164,14 @@ auto iTPS<ptensor>::measure_multisite()
 
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
-      if (peps_parameters.MeanField_Env) {
-        norms[norm_key] = core::Contract_MF(Tn_, op_);
-      } else {
-        norms[norm_key] = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-      }
+      norms[norm_key] = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_,
+                                       is_density, is_meanfield);
+      // if (peps_parameters.MeanField_Env) {
+      //   norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
+      // } else {
+      //   norms[norm_key] =
+      //       core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+      // }
     }
     auto norm = norms[norm_key];
 
@@ -187,10 +193,13 @@ auto iTPS<ptensor>::measure_multisite()
                                                    op.ops_indices[i + 1])]
                   .op);
       }
+      // auto localvalue =
+      //     peps_parameters.MeanField_Env
+      //         ? core::Contract_iTPS_MF(Tn_, op_)
+      //         : core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
+      //         op_);
       auto localvalue =
-          peps_parameters.MeanField_Env
-              ? core::Contract_MF(Tn_, op_)
-              : core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
+          core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_density, is_meanfield);
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx, op.dy}] = value / norm;
@@ -239,8 +248,8 @@ void iTPS<ptensor>::save_multisite(
        << ".dat";
     filepath[nsites] = ss.str();
     if (!time && peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "    Save " << nsites << "-site observables to " << ss.str() <<
-      std::endl;
+      std::cout << "    Save " << nsites << "-site observables to " << ss.str()
+                << std::endl;
     }
   }
 
@@ -297,7 +306,7 @@ void iTPS<ptensor>::save_multisite(
         ofs[nsites] << time.get() << " ";
       }
       ofs[nsites] << ilops << " " << multi.source_site;
-      for (int other = 0; other < nsites-1; ++other) {
+      for (int other = 0; other < nsites - 1; ++other) {
         ofs[nsites] << " " << multi.dx[other] << " " << multi.dy[other];
       }
       ofs[nsites] << " " << std::real(value) << " " << std::imag(value)
@@ -306,6 +315,13 @@ void iTPS<ptensor>::save_multisite(
   }
 }
 
+template <class ptensor>
+auto iTPS<ptensor>::measure_multisite_density()
+    -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
+  // not implemented yet
+  std::vector<std::map<Multisites, tensor_type>> ret(0);
+  return ret;
+}
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

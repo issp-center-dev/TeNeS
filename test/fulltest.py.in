@@ -150,6 +150,9 @@ if mode.startswith("ground"):
 elif mode.startswith("time"):
     prefix = "TE_"
     result = check("TE_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
+elif mode.startswith("finite"):
+    prefix = "FT_"
+    result = check("FT_density.dat", resdir, refdir, rtol=rtol, atol=atol) and result
 else:
     raise ValueError("unknown mode: {}".format(mode))
 

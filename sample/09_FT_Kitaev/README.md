@@ -1,0 +1,27 @@
+- how to run
+    - `export PATH=${WHERE_TENES_INSTALLED}/bin:$PATH`
+    - `sh run.sh`
+    - `gnuplot -persist plot_e.plt` for generate a figure of energy
+    - `gnuplot -persist plot_c.plt` for generate a figure of specific heat
+- model
+    - Kitaev model on the honeycomb lattice
+- Inputs
+    - `simple_gapless.toml`
+        - Finite temperature simulation of isotropic Kitaev Heisenberg model
+            - `J0x = -1`
+            - `J1y = -1`
+            - `J2z = -1`
+        - Note that the gapless model is difficult to reach the ground state
+    - `simple_gapfull.toml`
+        - Finite temperature simulation of anisotropic Kitaev Heisenberg model
+            - `J0x = -0.3`
+            - `J1y = -0.3`
+            - `J2z = -2.4`
+- Observables
+    - Energy
+    - Specific Heat
+        - calculated from Energy by interpolation and differentiation
+- Unitcell
+    - 2x2
+- Reference data
+    - calculated by the TPQ method (HPhi)

@@ -36,6 +36,7 @@ void iTPS<ptensor>::optimize() {
   }
 }
 
+
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

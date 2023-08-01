@@ -98,27 +98,24 @@ void iTPS<ptensor>::save_correlation_length(
     int dir, x;
     std::vector<std::complex<double>> eigvals;
     std::tie(dir, x, eigvals) = lambda;
-
-    int L = 1;
-    if (dir == 0) {
-      L = LX;
-    } else {
-      L = 0;
-      int x = 0;
-      do {
-        L += LY;
-        x = (x + LX + lattice.skew) % LX;
-      } while (x != 0);
+    if(eigvals.size() == 1){
+      if (time) {
+        ofs << time.get() << " ";
+      }
+      ofs << dir << " " << x << " " << 0.0 << std::endl;
+      continue;
     }
+
+    const int L = dir == 0 ? lattice.LX_noskew : lattice.LY_noskew;
 
     const double e0 = std::abs(eigvals[0]);
     const double e1 = std::abs(eigvals[1]) / e0;
     const double correlation_length = -L / std::log(e1);
+
     if (time) {
       ofs << time.get() << " ";
     }
     ofs << dir << " " << x << " " << correlation_length;
-
     for (size_t i = 1; i < eigvals.size(); ++i) {
       const double e = std::abs(eigvals[i]) / e0;
       ofs << " " << -std::log(e) / L;
