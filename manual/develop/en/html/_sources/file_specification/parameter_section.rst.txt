@@ -29,12 +29,17 @@ General parameters for ``tenes``.
   - ``"ground state"``
 
     - Search for the ground state of the Hamiltonian
-    - ``tenes_std`` calculates the imaginary time evolution operator :math:`e^{-\tau H}` from the Hamiltonian
+    - ``tenes_std`` calculates the imaginary time evolution operator :math:`U(\tau) = e^{-\tau H}` from the Hamiltonian :math:`H`
 
   - ``"time evolution"``
 
-    - Calculate the time evolution from the initial state
-    - ``tenes_std`` calculates the time evolution operator :math:`e^{-it H}` from the Hamiltonian
+    - Calculate the time evolution of the observables from the initial state
+    - ``tenes_std`` calculates the time evolution operator :math:`U(t) = e^{-it H}` from the Hamiltonian :math:`H`
+
+  - ``"finite temperature"``
+
+    - Calculate the finite temperature expectation values of the observables
+    - ``tenes_std`` calculates the imaginary time evolution operator :math:`U(\tau) = e^{-\tau H}` from the Hamiltonian :math:`H`
 
 - ``is_real``
 
@@ -92,6 +97,8 @@ Parameters in the simple update procedure.
 
     - ``tenes_std`` uses it to calculate the imaginary time evolution operator :math:`e^{-\tau H}` from the Hamiltonian
     - ``tenes`` uses it to calculate the time of each measurement
+
+      - For finite temperature calculation, note that the inverse temperature increase :math:`2\tau` at a step because :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)`
 
   - When a list is specified, the time step can be changed for each group of time evolution operators
 

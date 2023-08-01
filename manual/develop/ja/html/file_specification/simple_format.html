@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>5.2. tenes_simple の入力ファイル &#8212; TeNeS 1.4-dev ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/sphinx_highlight.js"></script>
-    <script src="../_static/translations.js"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b76e3c8a" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2f4a50b9"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -662,13 +662,19 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
 <ul>
 <li><p>基底状態計算</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は虚時間発展演算子を計算します</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は虚時間発展演算子 <span class="math notranslate nohighlight">\(U(\tau) = \exp(-\tau \mathcal{H})\)</span> を計算します</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;time</span> <span class="pre">evolution&quot;</span></code></p>
 <ul>
 <li><p>実時間発展計算</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は実時間発展演算子を計算します</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は実時間発展演算子 <span class="math notranslate nohighlight">\(U(t) = \exp(-it \mathcal{H})\)</span> を計算します</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;finite</span> <span class="pre">temperature&quot;</span></code></p>
+<ul>
+<li><p>有限温度計算</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は虚時間発展演算子 <span class="math notranslate nohighlight">\(U(\tau) = \exp(-\tau \mathcal{H})\)</span> を計算します</p></li>
 </ul>
 </li>
 </ul>
@@ -771,7 +777,12 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <li><p>(虚)時間発展演算子における(虚)時間刻み <span class="math notranslate nohighlight">\(\tau\)</span> を指定します</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> では時間発展演算子を計算するために用いられます</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> では各ステップでの経過時間を求めるために用いられます</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> では各ステップでの経過時間・逆温度を求めるために用いられます</p>
+<ul>
+<li><p>For finite temperature calculation, note that the inverse temperature increase <span class="math notranslate nohighlight">\(2\tau\)</span> at a step because <span class="math notranslate nohighlight">\(\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)\)</span></p></li>
+<li><p>有限温度計算の場合、 <span class="math notranslate nohighlight">\(\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)\)</span> なので、 ステップごとに逆温度は <span class="math notranslate nohighlight">\(2\tau\)</span> だけ増加することに注意してください。</p></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><p>リストを指定すると、時間発展演算子のグループごとに刻み幅を変えることができます</p></li>
@@ -1101,7 +1112,7 @@ dimension = 9 # CHI
       &copy;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.0.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
