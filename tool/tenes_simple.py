@@ -931,6 +931,7 @@ class BoseHubbardModel(Model):
         return ret
 
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        N, Bdagger, B = self.onesite_ops
         mu = params_onesite.get("mu", 0.0)
         U = params_onesite.get("U", 0.0)
         ham = np.zeros([self.N] * 2, dtype=np.complex128)
@@ -1109,7 +1110,6 @@ def hamiltonians(
     lattice: Lattice, model: Model, use_onesite_hamiltonian: bool = False
 ) -> List[Hamiltonian]:
     ret = []
-    elem = model.sitehamiltonian()
     if use_onesite_hamiltonian:
         elem = model.sitehamiltonian()
         if not np.array_equal(elem, np.zeros(elem.shape, dtype=np.complex128)):
