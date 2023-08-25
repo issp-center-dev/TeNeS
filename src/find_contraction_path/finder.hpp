@@ -1,0 +1,115 @@
+#ifndef TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
+#define TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
+
+#include <cassert>
+#include <vector>
+#include <set>
+#include <map>
+#include <string>
+
+namespace tenes {
+namespace find_contraction_path {
+
+struct Tensor {
+ public:
+  std::vector<int> name;
+  std::vector<int> bonds;
+
+  Tensor() : name(), bonds() {}
+
+  Tensor(int name_value) : name(1, name_value), bonds() {}
+
+  Tensor(const std::vector<int>& name_values) : name(name_values), bonds() {}
+
+  Tensor(const int name_value, const std::vector<int>& bond_values)
+      : name(1, name_value), bonds(bond_values) {}
+
+  Tensor(const std::vector<int>& name_values,
+         const std::vector<int>& bond_values)
+      : name(name_values), bonds(bond_values) {}
+};
+
+struct Bond {
+ public:
+  int t0;
+  int t1;
+
+  Bond() : t0(-1), t1(-1) {}
+
+  Bond(int t0_value, int t1_value) : t0(t0_value), t1(t1_value) {}
+
+  bool isFree() const { return t0 < 0 || t1 < 0; }
+
+  void connect(int tensor_index) {
+    assert(isFree() && "edge already connected to two tensors");
+    if (t0 < 0) {
+      t0 = tensor_index;
+    } else {
+      assert(t0 != tensor_index && "edge connects to the same tensor");
+      t1 = tensor_index;
+    }
+  }
+};
+
+struct TensorFrame {
+ public:
+  std::vector<int> rpn;
+  int bits;
+  std::set<int> bonds;
+  double cost;
+  bool is_new;
+
+  TensorFrame(const std::vector<int>& rpn_ = {}, int bits_ = 0,
+              const std::set<int>& bonds_ = {}, double cost_ = 0.0,
+              bool is_new_ = true)
+      : rpn(rpn_), bits(bits_), bonds(bonds_), cost(cost_), is_new(is_new_) {}
+};
+
+bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2);
+bool are_overlap(const TensorFrame& t1, const TensorFrame& t2);
+double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2, const std::vector<int>& bond_dims);
+TensorFrame contract(const TensorFrame& t1, const TensorFrame& t2);
+
+
+class TensorNetwork {
+public:
+  std::vector<Tensor> tensors;
+  std::vector<Bond> bonds;
+  std::vector<std::string> tensor_names;
+  std::vector<std::string> bond_names;
+  std::vector<int> bond_dims;
+  double total_memory;
+  double max_memory;
+  double cpu_cost;
+  int default_bond_dim;
+
+  TensorNetwork()
+      : tensors(), bonds(), tensor_names(), bond_names(), bond_dims(), total_memory(0.0), max_memory(0.0), cpu_cost(0.0), default_bond_dim(10) {}
+
+  void add_tensor(const std::string& t_name,
+                  const std::vector<std::string>& b_names);
+
+  static TensorNetwork from_file(const std::string& filename);
+
+  TensorNetwork clone() const;
+
+  std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> find_bonds(
+      int tensor_a, int tensor_b) const;
+
+  TensorNetwork contract(int t0, int t1, const std::vector<int>& bc,
+                         const std::vector<int>& br0,
+                         const std::vector<int>& br1);
+  double calc_memory(const std::vector<int>& rpn) const;
+  void set_bond_dim(const std::string& bond_name, int dim);
+
+  std::vector<std::map<int, TensorFrame>> init_tensordict_of_size();
+  std::pair<std::vector<int>, double> optimize();
+};
+
+
+void read_file(const std::string& filename, TensorNetwork& tn);
+
+}  // namespace find_contraction_path
+}  // namespace tenes
+
+#endif  // TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
