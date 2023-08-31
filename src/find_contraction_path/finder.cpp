@@ -22,29 +22,51 @@
 #include <iterator>
 #include <limits>
 
+#include <omp.h>
+
 namespace tenes {
 namespace find_contraction_path {
-
-inline bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2) {
-  for (const auto& b : t1.bonds) {
-    if (t2.bonds.find(b) != t2.bonds.end()) {
-      return false;
-    }
-  }
-  return true;
-}
 
 inline bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
   return (t1.bits & t2.bits) > 0;
 }
 
+// returns the cost of contracting two tensors
+// if the tensors are not connected, returns 0.0
 double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
                             const std::vector<int>& bond_dims) {
+  bool connected = false;
   double cost = 1.0;
-  std::set<int> union_bonds(t1.bonds);
-  union_bonds.insert(t2.bonds.begin(), t2.bonds.end());
-  for (const auto& b : union_bonds) {
-    cost *= bond_dims[b];
+  auto it1 = t1.bonds.begin();
+  auto it2 = t2.bonds.begin();
+  auto end1 = t1.bonds.end();
+  auto end2 = t2.bonds.end();
+  while (it1 != end1 || it2 != end2) {
+    if (it2 == end2) {
+      cost *= bond_dims[*it1];
+      ++it1;
+    } else if (it1 == end1) {
+      cost *= bond_dims[*it2];
+      ++it2;
+    } else {
+      int b1 = *it1;
+      int b2 = *it2;
+      if (b1 < b2) {
+        cost *= bond_dims[b1];
+        ++it1;
+      } else if (b1 > b2) {
+        cost *= bond_dims[b2];
+        ++it2;
+      } else {
+        cost *= bond_dims[b1];
+        ++it1;
+        ++it2;
+        connected = true;
+      }
+    }
+  }
+  if (!connected) {
+    return 0.0;
   }
   cost += t1.cost + t2.cost;
   return cost;
@@ -52,7 +74,8 @@ double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
 
 TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
                         const std::vector<int>& bond_dims) {
-  assert(!are_direct_product(t1, t2));
+  double cost = get_contracting_cost(t1, t2, bond_dims);
+  assert(cost > 0.0);
 
   std::vector<int> rpn = t1.rpn;
   rpn.insert(rpn.end(), t2.rpn.begin(), t2.rpn.end());
@@ -60,16 +83,36 @@ TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
 
   // XOR bits and bonds
   boost::multiprecision::cpp_int bits = t1.bits ^ t2.bits;
-  std::set<int> bonds = t1.bonds;
-  for (const auto& b : t2.bonds) {
-    if (bonds.find(b) == bonds.end()) {
-      bonds.insert(b);
+
+  std::vector<int> bonds;
+  bonds.reserve(t1.bonds.size() + t2.bonds.size());
+  auto it1 = t1.bonds.begin();
+  auto it2 = t2.bonds.begin();
+  auto end1 = t1.bonds.end();
+  auto end2 = t2.bonds.end();
+  while(it1 != end1 || it2 != end2){
+    if (it2 == end2) {
+      bonds.push_back(*it1);
+      ++it1;
+    } else if (it1 == end1) {
+      bonds.push_back(*it2);
+      ++it2;
     } else {
-      bonds.erase(b);
+      int b1 = *it1;
+      int b2 = *it2;
+      if (b1 < b2) {
+        bonds.push_back(b1);
+        ++it1;
+      } else if (b1 > b2) {
+        bonds.push_back(b2);
+        ++it2;
+      } else {
+        ++it1;
+        ++it2;
+      }
     }
   }
 
-  double cost = get_contracting_cost(t1, t2, bond_dims);
   return TensorFrame(rpn, bits, bonds, cost);
 }
 
@@ -281,7 +324,8 @@ TensorNetwork::init_tensordict_of_size() {
   for (const auto& t : tensors) {
     const auto& rpn = t.name;
     mp::cpp_int bits = mp::cpp_int(1) << rpn[0];
-    std::set<int> bonds(t.bonds.begin(), t.bonds.end());
+    std::vector<int> bonds = t.bonds;
+    std::sort(bonds.begin(), bonds.end());
     double cost = 0.0;
     tensordict_of_size[1][bits] = TensorFrame(rpn, bits, bonds, cost);
   }
@@ -305,20 +349,37 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
       for (int d1 = 1; d1 <= c / 2; ++d1) {
         int d2 = c - d1;
 
-        for (const auto& t1 : tensordict_of_size[d1]) {
-          for (const auto& t2 : tensordict_of_size[d2]) {
+        std::vector<std::pair<mp::cpp_int, TensorFrame>> t1_list(
+            tensordict_of_size[d1].begin(), tensordict_of_size[d1].end());
+        std::vector<std::pair<mp::cpp_int, TensorFrame>> t2_list(
+            tensordict_of_size[d2].begin(), tensordict_of_size[d2].end());
+        const size_t n1 = t1_list.size();
+        const size_t n2 = t2_list.size();
+        // const size_t n1 = tensordict_of_size[d1].size();
+        // const size_t n2 = tensordict_of_size[d2].size();
+        if (n1 * n2 == 0) continue;
+        // IC(n1, n2, n1*n2);
+
+        // for (const auto& t1 : tensordict_of_size[d1]) {
+        // #pragma omp parallel for
+        for (size_t i1 = 0; i1 < n1; ++i1) {
+          const auto& t1 = t1_list[i1];
+          // for (const auto& t2 : tensordict_of_size[d2]) {
+          for (size_t i2 = 0; i2 < n2; ++i2) {
+            const auto& t2 = t2_list[i2];
             if (are_overlap(t1.second, t2.second)) continue;
-            if (are_direct_product(t1.second, t2.second)) continue;
+            // if (are_direct_product(t1.second, t2.second)) continue;
 
             double cost = get_contracting_cost(t1.second, t2.second, bond_dims);
+            if (cost == 0.0) continue; // disconnected
             mp::cpp_int bits = t1.first ^ t2.first;
 
-            if (next_mu_cap <= cost){
+            if (next_mu_cap <= cost) {
               continue;
-            } else if (mu_cap < cost){
+            } else if (mu_cap < cost) {
               next_mu_cap = cost;
             } else if (t1.second.is_new || t2.second.is_new ||
-                     prev_mu_cap < cost) {
+                       prev_mu_cap < cost) {
               auto t_old_it = tensordict_of_size[c].find(bits);
               if (t_old_it == tensordict_of_size[c].end() ||
                   cost < t_old_it->second.cost) {
@@ -338,7 +399,7 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
         t.second.is_new = false;
       }
     }
-  } // while
+  }  // while
 
   auto t_final = tensordict_of_size.back().find((mp::cpp_int(1) << n) - 1);
   return {t_final->second.rpn, t_final->second.cost};

@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <vector>
-#include <set>
 #include <map>
 #include <string>
 
@@ -54,18 +53,16 @@ struct Bond {
 struct TensorFrame {
   std::vector<int> rpn;
   boost::multiprecision::cpp_int bits;
-  std::set<int> bonds;
+  std::vector<int> bonds;
   double cost;
   bool is_new;
 
   TensorFrame(const std::vector<int>& rpn_ = {}, boost::multiprecision::cpp_int bits_ = 0,
-              const std::set<int>& bonds_ = {}, double cost_ = 0.0,
+              const std::vector<int>& bonds_ = {}, double cost_ = 0.0,
               bool is_new_ = true)
       : rpn(rpn_), bits(bits_), bonds(bonds_), cost(cost_), is_new(is_new_) {}
 };
 
-// bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2);
-// bool are_overlap(const TensorFrame& t1, const TensorFrame& t2);
 double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
                             const std::vector<int>& bond_dims);
 TensorFrame contract(const TensorFrame& t1, const TensorFrame& t2);
