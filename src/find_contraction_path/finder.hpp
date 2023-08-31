@@ -1,5 +1,5 @@
-#ifndef TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
-#define TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
+#ifndef TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_
+#define TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_
 
 #include <cassert>
 #include <vector>
@@ -7,11 +7,12 @@
 #include <map>
 #include <string>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 namespace tenes {
 namespace find_contraction_path {
 
 struct Tensor {
- public:
   std::vector<int> name;
   std::vector<int> bonds;
 
@@ -30,7 +31,6 @@ struct Tensor {
 };
 
 struct Bond {
- public:
   int t0;
   int t1;
 
@@ -52,27 +52,26 @@ struct Bond {
 };
 
 struct TensorFrame {
- public:
   std::vector<int> rpn;
-  int bits;
+  boost::multiprecision::cpp_int bits;
   std::set<int> bonds;
   double cost;
   bool is_new;
 
-  TensorFrame(const std::vector<int>& rpn_ = {}, int bits_ = 0,
+  TensorFrame(const std::vector<int>& rpn_ = {}, boost::multiprecision::cpp_int bits_ = 0,
               const std::set<int>& bonds_ = {}, double cost_ = 0.0,
               bool is_new_ = true)
       : rpn(rpn_), bits(bits_), bonds(bonds_), cost(cost_), is_new(is_new_) {}
 };
 
-bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2);
-bool are_overlap(const TensorFrame& t1, const TensorFrame& t2);
-double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2, const std::vector<int>& bond_dims);
+// bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2);
+// bool are_overlap(const TensorFrame& t1, const TensorFrame& t2);
+double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
+                            const std::vector<int>& bond_dims);
 TensorFrame contract(const TensorFrame& t1, const TensorFrame& t2);
 
-
 class TensorNetwork {
-public:
+ private:
   std::vector<Tensor> tensors;
   std::vector<Bond> bonds;
   std::vector<std::string> tensor_names;
@@ -82,9 +81,23 @@ public:
   double max_memory;
   double cpu_cost;
   int default_bond_dim;
+  std::vector<int> result;
 
+ public:
   TensorNetwork()
-      : tensors(), bonds(), tensor_names(), bond_names(), bond_dims(), total_memory(0.0), max_memory(0.0), cpu_cost(0.0), default_bond_dim(10) {}
+      : tensors(),
+        bonds(),
+        tensor_names(),
+        bond_names(),
+        bond_dims(),
+        total_memory(0.0),
+        max_memory(0.0),
+        cpu_cost(0.0),
+        default_bond_dim(10) {}
+
+  std::vector<std::string> const& get_tensor_names() const {
+    return tensor_names;
+  }
 
   void add_tensor(const std::string& t_name,
                   const std::vector<std::string>& b_names);
@@ -102,14 +115,13 @@ public:
   double calc_memory(const std::vector<int>& rpn) const;
   void set_bond_dim(const std::string& bond_name, int dim);
 
-  std::vector<std::map<int, TensorFrame>> init_tensordict_of_size();
+  std::vector<std::map<boost::multiprecision::cpp_int, TensorFrame>>
+  init_tensordict_of_size();
   std::pair<std::vector<int>, double> optimize();
+  std::vector<int> path() const { return result; }
 };
-
-
-void read_file(const std::string& filename, TensorNetwork& tn);
 
 }  // namespace find_contraction_path
 }  // namespace tenes
 
-#endif  // TENES_SRC_FINDCONTRACTIONPATH_FIND_HPP_
+#endif  // TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_

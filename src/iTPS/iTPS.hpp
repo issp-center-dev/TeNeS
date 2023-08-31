@@ -317,6 +317,15 @@ class iTPS {
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 
+  /*! @brief Contraction path
+   *
+   *  contraction_paths[(tensor_index, LX, LY)]
+   *
+   */
+  std::map<std::tuple<int, int, int>, std::vector<int>> contraction_paths;
+
+  void make_contraction_paths();
+
   std::size_t CHI;  //!< Bond dimension of corner transfer matrices
   int LX;           //!< Length of a unitcell along with X axes
   int LY;           //!< Length of a unitcell along with Y axes

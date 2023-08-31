@@ -165,6 +165,9 @@ auto iTPS<ptensor>::measure_twosite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
+    const auto cpath_key = std::make_tuple(op.source_site, dx, dy);
+    const auto it = contraction_paths.find(cpath_key);
+
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {

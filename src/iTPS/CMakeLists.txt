@@ -21,8 +21,9 @@ add_library(
   optimize.cpp
   time_evolution.cpp
   finite_temperature.cpp
+  contraction_path.cpp
   correlation_function.cpp
   correlation_length.cpp
   transfer_matrix.cpp)
 
-target_link_libraries(iTPS_impl PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters)
+target_link_libraries(iTPS_impl PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters find_contraction_path)

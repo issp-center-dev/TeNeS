@@ -4,6 +4,8 @@
  * The original license is the MIT License.
  */
 
+#include "../icecream.cpp"
+
 #include "finder.hpp"
 
 #include <iostream>
@@ -23,7 +25,7 @@
 namespace tenes {
 namespace find_contraction_path {
 
-bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2) {
+inline bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2) {
   for (const auto& b : t1.bonds) {
     if (t2.bonds.find(b) != t2.bonds.end()) {
       return false;
@@ -32,7 +34,7 @@ bool are_direct_product(const TensorFrame& t1, const TensorFrame& t2) {
   return true;
 }
 
-bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
+inline bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
   return (t1.bits & t2.bits) > 0;
 }
 
@@ -49,19 +51,15 @@ double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
 }
 
 TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
-                     const std::vector<int>& bond_dims) {
-  // Check if the tensors are not a direct product
+                        const std::vector<int>& bond_dims) {
   assert(!are_direct_product(t1, t2));
 
-  // Create the new rpn
   std::vector<int> rpn = t1.rpn;
   rpn.insert(rpn.end(), t2.rpn.begin(), t2.rpn.end());
   rpn.push_back(-1);
 
-  // XOR the bits
-  int bits = t1.bits ^ t2.bits;
-
-  // XOR the bonds
+  // XOR bits and bonds
+  boost::multiprecision::cpp_int bits = t1.bits ^ t2.bits;
   std::set<int> bonds = t1.bonds;
   for (const auto& b : t2.bonds) {
     if (bonds.find(b) == bonds.end()) {
@@ -71,10 +69,7 @@ TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
     }
   }
 
-  // Get the cost
   double cost = get_contracting_cost(t1, t2, bond_dims);
-
-  // Return the new TensorFrame
   return TensorFrame(rpn, bits, bonds, cost);
 }
 
@@ -84,18 +79,16 @@ void TensorNetwork::add_tensor(const std::string& t_name,
   std::vector<int> b_indices;
   for (const auto& b : b_names) {
     auto it = std::find(bond_names.begin(), bond_names.end(), b);
+    int i = std::distance(bond_names.begin(), it);
     if (it == bond_names.end()) {
       bonds.push_back(Bond());
       bond_names.push_back(b);
       bond_dims.push_back(default_bond_dim);
     }
-    int i = std::distance(bond_names.begin(),
-                          std::find(bond_names.begin(), bond_names.end(), b));
     bonds[i].connect(t_index);
     b_indices.push_back(i);
   }
-  // Assuming TENSOR_NAMES is another global variable
-  tensor_names.push_back(t_name);  // Uncomment if needed
+  tensor_names.push_back(t_name);
   tensors.push_back(Tensor(t_index, b_indices));
 }
 
@@ -279,19 +272,15 @@ TensorNetwork TensorNetwork::from_file(const std::string& filename) {
   return tn;
 }
 
-std::vector<std::map<int, TensorFrame>>
+std::vector<std::map<boost::multiprecision::cpp_int, TensorFrame>>
 TensorNetwork::init_tensordict_of_size() {
-  std::vector<std::map<int, TensorFrame>> tensordict_of_size(
+  namespace mp = boost::multiprecision;
+  std::vector<std::map<mp::cpp_int, TensorFrame>> tensordict_of_size(
       tensors.size() + 1);
 
   for (const auto& t : tensors) {
     const auto& rpn = t.name;
-    int bits = 0;
-    for (const auto& i : rpn) {
-      if (i >= 0) {
-        bits += 1 << i;
-      }
-    }
+    mp::cpp_int bits = mp::cpp_int(1) << rpn[0];
     std::set<int> bonds(t.bonds.begin(), t.bonds.end());
     double cost = 0.0;
     tensordict_of_size[1][bits] = TensorFrame(rpn, bits, bonds, cost);
@@ -301,6 +290,7 @@ TensorNetwork::init_tensordict_of_size() {
 }
 
 std::pair<std::vector<int>, double> TensorNetwork::optimize() {
+  namespace mp = boost::multiprecision;
   auto tensordict_of_size = init_tensordict_of_size();
 
   int n = tensors.size();
@@ -315,27 +305,25 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
       for (int d1 = 1; d1 <= c / 2; ++d1) {
         int d2 = c - d1;
 
-        // The logic for iterating over t1 and t2 combinations/product is
-        // somewhat complex in Python We'll use nested loops in C++ for
-        // simplicity
         for (const auto& t1 : tensordict_of_size[d1]) {
           for (const auto& t2 : tensordict_of_size[d2]) {
             if (are_overlap(t1.second, t2.second)) continue;
             if (are_direct_product(t1.second, t2.second)) continue;
 
             double cost = get_contracting_cost(t1.second, t2.second, bond_dims);
-            int bits = t1.first ^ t2.first;
+            mp::cpp_int bits = t1.first ^ t2.first;
 
-            if (next_mu_cap <= cost)
+            if (next_mu_cap <= cost){
               continue;
-            else if (mu_cap < cost)
+            } else if (mu_cap < cost){
               next_mu_cap = cost;
-            else if (t1.second.is_new || t2.second.is_new ||
+            } else if (t1.second.is_new || t2.second.is_new ||
                      prev_mu_cap < cost) {
               auto t_old_it = tensordict_of_size[c].find(bits);
               if (t_old_it == tensordict_of_size[c].end() ||
                   cost < t_old_it->second.cost) {
-                tensordict_of_size[c][bits] = contract_tf(t1.second, t2.second, bond_dims);
+                tensordict_of_size[c][bits] =
+                    contract_tf(t1.second, t2.second, bond_dims);
               }
             }
           }
@@ -350,17 +338,14 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
         t.second.is_new = false;
       }
     }
-  }
+  } // while
 
-  auto t_final = tensordict_of_size.back().find((1 << n) - 1);
+  auto t_final = tensordict_of_size.back().find((mp::cpp_int(1) << n) - 1);
   return {t_final->second.rpn, t_final->second.cost};
 }
 
 int test(std::string filename) {
   TensorNetwork tn = TensorNetwork::from_file(filename);
-
-  assert(!tn.tensors.empty() && "No tensor.");
-  assert(!tn.bonds.empty() && "No bond.");
 
   auto result = tn.optimize();
   std::vector<int> rpn = result.first;
@@ -368,7 +353,7 @@ int test(std::string filename) {
 
   // calc_memory(tn, rpn);
 
-  for (const auto& name : tn.tensor_names) {
+  for (const auto& name : tn.get_tensor_names()) {
     std::cout << name << " ";
   }
   std::cout << std::endl;
@@ -384,11 +369,3 @@ int test(std::string filename) {
 
 }  // namespace find_contraction_path
 }  // namespace tenes
-
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cout << "Usage: " << argv[0] << " <input_file>" << std::endl;
-    return 1;
-  }
-  return tenes::find_contraction_path::test(argv[1]);
-}
