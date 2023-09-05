@@ -21,6 +21,7 @@ add_library(
   optimize.cpp
   time_evolution.cpp
   finite_temperature.cpp
+  make_LGS.cpp
   correlation_function.cpp
   correlation_length.cpp
   transfer_matrix.cpp)

@@ -244,8 +244,9 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     }
   }
 
-  if (peps_parameters.calcmode !=
-      PEPS_Parameters::CalculationMode::ground_state) {
+  if (peps_parameters.calcmode ==
+      PEPS_Parameters::CalculationMode::finite_temperature || peps_parameters.calcmode ==
+      PEPS_Parameters::CalculationMode::time_evolution) {
     if (peps_parameters.num_simple_step[0] > 0 &&
         peps_parameters.num_full_step[0]) {
       std::string msg =

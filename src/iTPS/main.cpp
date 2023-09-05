@@ -195,6 +195,24 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
   return 0;
 }
 
+template <class tensor>
+int run_make_LGS(MPI_Comm comm, PEPS_Parameters peps_parameters,
+			  SquareLattice lattice,
+			  EvolutionOperators<tensor> simple_updates,
+			  EvolutionOperators<tensor> full_updates,
+			  Operators<tensor> onesite_operators,
+			  Operators<tensor> twosite_operators,
+			  Operators<tensor> multisite_operators,
+			  CorrelationParameter corparam,
+			  TransferMatrix_Parameters clength_param) {
+  iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
+  tns.make_LGS();
+  tns.save_tensors();
+  tns.summary();
+  return 0;
+}
 
   
 int itps_main(const char* input_filename, MPI_Comm comm,
@@ -341,6 +359,11 @@ int itps_main(std::string input_filename, MPI_Comm comm,
                              full_updates, onesite_obs, twosite_obs,
                              multisite_obs, corparam, clength_param);
     }
+  } else if (peps_parameters.calcmode ==
+             PEPS_Parameters::CalculationMode::make_lgs) {
+    return run_make_LGS(comm, peps_parameters, lattice, simple_updates,
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
   } else {
    
     return 1;

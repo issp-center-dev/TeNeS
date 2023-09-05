@@ -79,6 +79,7 @@ struct PEPS_Parameters {
       ground_state,
       time_evolution,
       finite_temperature,
+      make_lgs,
   };
   CalculationMode calcmode;
 

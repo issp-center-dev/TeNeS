@@ -341,7 +341,9 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
       pparam.calcmode = PEPS_Parameters::CalculationMode::time_evolution;
     } else if (util::startswith(mode_str, "finite")) {
       pparam.calcmode = PEPS_Parameters::CalculationMode::finite_temperature;
-    } else {
+    } else if (util::startswith(mode_str, "lgs")) {
+      pparam.calcmode = PEPS_Parameters::CalculationMode::make_lgs;
+    }else {
       throw input_error("Invalid mode: " + mode_str);
     }
     load_if(pparam.measure_interval, general, "measure_interval");

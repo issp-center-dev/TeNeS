@@ -141,6 +141,7 @@ class iTPS {
 
   void finite_temperature();
 
+  void make_LGS();
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
   std::vector<std::vector<tensor_type>> measure_onesite_density();
