@@ -330,8 +330,6 @@ class iTPS {
            TensorNetworkContractor<tensor>>
       contraction_paths;
 
-  void make_contraction_paths(int nrows, int ncols,
-                              std::vector<int> const &shape_types);
   bool dynamic_contraction;
 
   std::size_t CHI;  //!< Bond dimension of corner transfer matrices

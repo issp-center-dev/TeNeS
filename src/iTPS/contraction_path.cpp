@@ -175,15 +175,20 @@ bool TensorNetworkContractor<tensor>::check_path(
       ++num_contract;
     }
   }
+  bool res = true;
   if (num_contract != num_tensors - 1) {
-    return false;
+    std::cerr << "ERROR: number of -1 is " << num_contract << " (expected: " << num_tensors-1 <<  ")" << std::endl;
+    res = false;
   }
-  for (auto i : t) {
-    if (i != 1) {
-      return false;
+  for (size_t i=0; i < num_tensors; ++i) {
+    int n = t[i];
+    if (n != 1) {
+      std::cerr << "ERROR: number of " << i << " is " << n << " (expected: 1)" << std::endl;
+      res = false;
     }
   }
-  return true;
+  std::flush(std::cerr);
+  return res;
 }
 
 template <class tensor>

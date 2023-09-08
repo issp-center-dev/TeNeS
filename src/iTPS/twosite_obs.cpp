@@ -183,6 +183,7 @@ auto iTPS<ptensor>::measure_twosite()
             forward_as_tuple(nrow, ncol, shape_types, tensor_shape_dims,
                              peps_parameters.CHI, is_TPO, is_mf));
         tnc_it = res.first;
+        tnc_it->second.optimize();
       }
       tnc = tnc_it->second;
     }
