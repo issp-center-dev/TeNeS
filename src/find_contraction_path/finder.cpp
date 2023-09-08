@@ -4,16 +4,14 @@
  * The original license is the MIT License.
  */
 
-#include "../icecream.cpp"
-
 #include "finder.hpp"
 
 #include <iostream>
 #include <cassert>
 
 #include <vector>
-#include <set>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <algorithm>
 
@@ -22,12 +20,12 @@
 #include <iterator>
 #include <limits>
 
-#include <omp.h>
+// #include <omp.h>
 
 namespace tenes {
 namespace find_contraction_path {
 
-inline bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
+bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
   return (t1.bits & t2.bits) > 0;
 }
 
@@ -74,9 +72,6 @@ double get_contracting_cost(const TensorFrame& t1, const TensorFrame& t2,
 
 TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
                         const std::vector<int>& bond_dims) {
-  double cost = get_contracting_cost(t1, t2, bond_dims);
-  assert(cost > 0.0);
-
   std::vector<int> rpn = t1.rpn;
   rpn.insert(rpn.end(), t2.rpn.begin(), t2.rpn.end());
   rpn.push_back(-1);
@@ -84,34 +79,41 @@ TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
   // XOR bits and bonds
   boost::multiprecision::cpp_int bits = t1.bits ^ t2.bits;
 
+  double cost = 1.0;
   std::vector<int> bonds;
   bonds.reserve(t1.bonds.size() + t2.bonds.size());
   auto it1 = t1.bonds.begin();
   auto it2 = t2.bonds.begin();
   auto end1 = t1.bonds.end();
   auto end2 = t2.bonds.end();
-  while(it1 != end1 || it2 != end2){
+  while (it1 != end1 || it2 != end2) {
     if (it2 == end2) {
       bonds.push_back(*it1);
+      cost *= bond_dims[*it1];
       ++it1;
     } else if (it1 == end1) {
       bonds.push_back(*it2);
+      cost *= bond_dims[*it2];
       ++it2;
     } else {
       int b1 = *it1;
       int b2 = *it2;
       if (b1 < b2) {
         bonds.push_back(b1);
+        cost *= bond_dims[b1];
         ++it1;
       } else if (b1 > b2) {
         bonds.push_back(b2);
+        cost *= bond_dims[b2];
         ++it2;
       } else {
+        cost *= bond_dims[b1];
         ++it1;
         ++it2;
       }
     }
   }
+  cost += t1.cost + t2.cost;
 
   return TensorFrame(rpn, bits, bonds, cost);
 }
@@ -271,11 +273,17 @@ double TensorNetwork::calc_memory(const std::vector<int>& rpn) const {
 }
 
 void TensorNetwork::set_bond_dim(const std::string& bond_name, int dim) {
-  auto it = std::find(bond_names.begin(), bond_names.end(), bond_name);
-  if (it != bond_names.end()) {
-    int index = std::distance(bond_names.begin(), it);
-    bond_dims[index] = dim;
+  const size_t n = bond_names.size();
+  for(size_t i=0; i<n; ++i){
+    if(bond_names[i] == bond_name){
+      bond_dims[i] = dim;
+      break;
+    }
   }
+}
+
+void TensorNetwork::set_default_bond_dim(int dim) {
+  default_bond_dim = dim;
 }
 
 TensorNetwork TensorNetwork::from_file(const std::string& filename) {
@@ -346,32 +354,48 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
     double next_mu_cap = std::numeric_limits<double>::max();
 
     for (int c = 2; c <= n; ++c) {
+      std::vector<size_t> ns(c + 1);
+      std::vector<std::vector<std::pair<mp::cpp_int, TensorFrame>>> t_list(c +
+                                                                           1);
+      for (int d = 1; d <= c; ++d) {
+        t_list[d].assign(tensordict_of_size[d].begin(),
+                         tensordict_of_size[d].end());
+        ns[d] = t_list[d].size();
+      }
+      // bits -> d1, d2, i1, i2, cost
+      std::map<mp::cpp_int, std::tuple<int, int, int, int, double>> winners;
       for (int d1 = 1; d1 <= c / 2; ++d1) {
         int d2 = c - d1;
 
-        std::vector<std::pair<mp::cpp_int, TensorFrame>> t1_list(
-            tensordict_of_size[d1].begin(), tensordict_of_size[d1].end());
-        std::vector<std::pair<mp::cpp_int, TensorFrame>> t2_list(
-            tensordict_of_size[d2].begin(), tensordict_of_size[d2].end());
-        const size_t n1 = t1_list.size();
-        const size_t n2 = t2_list.size();
+        // const auto& t1_list = t_list[d1];
+        // const auto& t2_list = t_list[d2];
+        // std::vector<std::pair<mp::cpp_int, TensorFrame>> t1_list(
+        //     tensordict_of_size[d1].begin(), tensordict_of_size[d1].end());
+        // std::vector<std::pair<mp::cpp_int, TensorFrame>> t2_list(
+        //     tensordict_of_size[d2].begin(), tensordict_of_size[d2].end());
+        // const size_t n1 = t_list[d1].size();
+        // const size_t n2 = t_list[d2].size();
+        const size_t n1 = ns[d1];
+        const size_t n2 = ns[d2];
+        // const size_t n1 = t1_list.size();
+        // const size_t n2 = t2_list.size();
         // const size_t n1 = tensordict_of_size[d1].size();
         // const size_t n2 = tensordict_of_size[d2].size();
         if (n1 * n2 == 0) continue;
-        // IC(n1, n2, n1*n2);
 
         // for (const auto& t1 : tensordict_of_size[d1]) {
         // #pragma omp parallel for
         for (size_t i1 = 0; i1 < n1; ++i1) {
-          const auto& t1 = t1_list[i1];
+          const auto& t1 = t_list[d1][i1];
           // for (const auto& t2 : tensordict_of_size[d2]) {
           for (size_t i2 = 0; i2 < n2; ++i2) {
-            const auto& t2 = t2_list[i2];
-            if (are_overlap(t1.second, t2.second)) continue;
-            // if (are_direct_product(t1.second, t2.second)) continue;
+            const auto& t2 = t_list[d2][i2];
+            if (are_overlap(t1.second, t2.second)) {
+              continue;
+            }
 
             double cost = get_contracting_cost(t1.second, t2.second, bond_dims);
-            if (cost == 0.0) continue; // disconnected
+            if (cost == 0.0) continue;  // disconnected
             mp::cpp_int bits = t1.first ^ t2.first;
 
             if (next_mu_cap <= cost) {
@@ -380,18 +404,30 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
               next_mu_cap = cost;
             } else if (t1.second.is_new || t2.second.is_new ||
                        prev_mu_cap < cost) {
-              auto t_old_it = tensordict_of_size[c].find(bits);
-              if (t_old_it == tensordict_of_size[c].end() ||
-                  cost < t_old_it->second.cost) {
-                tensordict_of_size[c][bits] =
-                    contract_tf(t1.second, t2.second, bond_dims);
+              auto winner = winners.find(bits);
+              if (winner == winners.end() ||
+                  cost < std::get<4>(winner->second)) {
+                winners[bits] = std::make_tuple(d1, d2, i1, i2, cost);
               }
+              // auto t_old_it = tensordict_of_size[c].find(bits);
+              // if (t_old_it == tensordict_of_size[c].end() ||
+              //     cost < t_old_it->second.cost) {
+              //   tensordict_of_size[c][bits] =
+              //   contract_tf(t1.second, t2.second, bond_dims);
+              // }
             }
-          }
-        }
+          }  // end for i2
+        }    // end for i1
+      }      // end for d1
+      for (auto const& winner : winners) {
+        const int d1 = std::get<0>(winner.second);
+        const int d2 = std::get<1>(winner.second);
+        const int i1 = std::get<2>(winner.second);
+        const int i2 = std::get<3>(winner.second);
+        tensordict_of_size[c][winner.first] = contract_tf(
+            t_list[d1][i1].second, t_list[d2][i2].second, bond_dims);
       }
-    }
-
+    }  // end for c
     prev_mu_cap = mu_cap;
     mu_cap = std::max(next_mu_cap, mu_cap * xi_min);
     for (auto& s : tensordict_of_size) {
@@ -399,7 +435,7 @@ std::pair<std::vector<int>, double> TensorNetwork::optimize() {
         t.second.is_new = false;
       }
     }
-  }  // while
+  }  // end while
 
   auto t_final = tensordict_of_size.back().find((mp::cpp_int(1) << n) - 1);
   return {t_final->second.rpn, t_final->second.cost};

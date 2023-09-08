@@ -62,7 +62,12 @@ struct PEPS_Parameters {
   bool Full_Use_FastFullUpdate;
 
   // observable
-  int Lcor;
+  enum ContractionMode {
+    automatic,
+    force_static,
+    force_dynamic,
+  };
+  ContractionMode contraction_mode;
 
   // random
   int seed;

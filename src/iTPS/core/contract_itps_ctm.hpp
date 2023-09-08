@@ -97,7 +97,7 @@ DECLARE_CONTRACT(3, 4);
 DECLARE_CONTRACT(4, 4);
 //! @endcond
 
-#undef DECLARE_CONTRACT_iTPS_CTM
+#undef DECLARE_CONTRACT
 
 template <class tensor>
 typename tensor::value_type Contract_one_site_iTPS_CTM(

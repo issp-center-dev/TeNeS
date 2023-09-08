@@ -33,9 +33,9 @@ auto iTPS<ptensor>::measure_multisite()
     -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
   Timer<> timer;
 
-  const bool is_meanfield = peps_parameters.MeanField_Env;
-  const bool is_density = peps_parameters.calcmode ==
-                          PEPS_Parameters::CalculationMode::finite_temperature;
+  const bool is_mf = peps_parameters.MeanField_Env;
+  const bool is_TPO = peps_parameters.calcmode ==
+                      PEPS_Parameters::CalculationMode::finite_temperature;
 
   const int nlops = num_multisite_operators;
   std::vector<std::map<Multisites, tensor_type>> ret(nlops);
@@ -48,8 +48,8 @@ auto iTPS<ptensor>::measure_multisite()
   std::map<Bond, tensor_type> norms;
 
   for (const auto &op : multisite_operators) {
+    bool dcont = dynamic_contraction;
     const int nothers = op.dx.size();
-    const int nsites = nothers + 1;
     const int source = op.source_site;
     int mindx = 0, maxdx = 0, mindy = 0, maxdy = 0;
     for (auto dx : op.dx) {
@@ -64,11 +64,15 @@ auto iTPS<ptensor>::measure_multisite()
     const int nrow = maxdy - mindy + 1;
 
     if (ncol > nmax || nrow > nmax) {
-      std::cerr
-          << "Warning: now version of TeNeS does not support too long-ranged "
-             "operator"
-          << std::endl;
-      continue;
+      if (peps_parameters.contraction_mode == PEPS_Parameters::ContractionMode::force_static) {
+        std::cerr
+            << "Warning: now version of TeNeS does not support too long-ranged "
+               "operator"
+            << std::endl;
+        continue;
+      }else{
+        dcont = true;
+      }
     }
 
     std::vector<const ptensor *> C_(4, nullptr);
@@ -101,12 +105,13 @@ auto iTPS<ptensor>::measure_multisite()
         nrow, std::vector<const ptensor *>(ncol, nullptr));
 
     std::vector<std::vector<int>> indices(nrow, std::vector<int>(ncol));
+    std::vector<int> shape_types(nrow * ncol);
     std::vector<ptensor> boundaries;
 
     const int source_col = -mindx;
     const int source_row = maxdy;
 
-    if (is_meanfield) {
+    if (is_mf) {
       int iboundary = 0;
       const int nboundary = 2 * (ncol + nrow - 2);
       boundaries.reserve(nboundary);
@@ -116,6 +121,7 @@ auto iTPS<ptensor>::measure_multisite()
           const int index =
               lattice.other(source, col - source_col, source_row - row);
           indices[row][col] = index;
+          shape_types[row * ncol + col] = tensor_shape_types[index];
           op_[row][col] = &(op_identity[index]);
           if ((0 < row && row < nrow - 1) && (0 < col && col < ncol - 1)) {
             Tn_[row][col] = &(Tn[index]);
@@ -162,16 +168,28 @@ auto iTPS<ptensor>::measure_multisite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
+    TensorNetworkContractor<ptensor> tnc;
+    if (dcont) {
+      auto tnc_it =
+          contraction_paths.find(forward_as_tuple(nrow, ncol, shape_types));
+      if (tnc_it == contraction_paths.end()) {
+        auto res = contraction_paths.emplace(
+            std::piecewise_construct, forward_as_tuple(nrow, ncol, shape_types),
+            forward_as_tuple(nrow, ncol, shape_types, tensor_shape_dims,
+                             peps_parameters.CHI, is_TPO, is_mf));
+        tnc_it = res.first;
+      }
+      tnc = tnc_it->second;
+    }
+
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
-      norms[norm_key] = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_,
-                                       is_density, is_meanfield);
-      // if (peps_parameters.MeanField_Env) {
-      //   norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
-      // } else {
-      //   norms[norm_key] =
-      //       core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-      // }
+      if (dcont) {
+        norms[norm_key] = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_);
+      } else {
+        norms[norm_key] =
+            core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_TPO, is_mf);
+      }
     }
     auto norm = norms[norm_key];
 
@@ -180,7 +198,8 @@ auto iTPS<ptensor>::measure_multisite()
       throw std::runtime_error(
           "Empty op.ops_indices is not supported for multisites observable");
     } else {
-      op_[source_row][source_col] =
+      std::map<std::tuple<int, int>, ptensor const *> ops;
+      ops[std::forward_as_tuple(source_row, source_col)] =
           &(onesite_operators[siteoperator_index(op.source_site,
                                                  op.ops_indices[0])]
                 .op);
@@ -188,23 +207,25 @@ auto iTPS<ptensor>::measure_multisite()
         const int dx = op.dx[i];
         const int dy = op.dy[i];
         const int target_site = lattice.other(op.source_site, dx, dy);
-        op_[source_row - dy][source_col + dx] =
+        ops[std::forward_as_tuple(source_row - dy, source_col + dx)] =
             &(onesite_operators[siteoperator_index(target_site,
                                                    op.ops_indices[i + 1])]
                   .op);
       }
-      // auto localvalue =
-      //     peps_parameters.MeanField_Env
-      //         ? core::Contract_iTPS_MF(Tn_, op_)
-      //         : core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
-      //         op_);
-      auto localvalue =
-          core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_density, is_meanfield);
-      value += localvalue;
+      if (dcont) {
+        auto localvalue = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, ops);
+        value += localvalue;
+      } else {
+        for(const auto& op : ops){
+          op_[std::get<0>(op.first)][std::get<1>(op.first)] = op.second;
+        }
+        auto localvalue =
+            core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_TPO, is_mf);
+        value += localvalue;
+      }
     }
     ret[op.group][{op.source_site, op.dx, op.dy}] = value / norm;
   }
-  // ret.push_back(norms);
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
@@ -315,13 +336,6 @@ void iTPS<ptensor>::save_multisite(
   }
 }
 
-template <class ptensor>
-auto iTPS<ptensor>::measure_multisite_density()
-    -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
-  // not implemented yet
-  std::vector<std::map<Multisites, tensor_type>> ret(0);
-  return ret;
-}
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;

@@ -41,6 +41,8 @@
 #include "transfer_matrix.hpp"
 #include "correlation_function.hpp"
 
+#include "contraction_path.hpp"
+
 #include "PEPS_Parameters.hpp"
 // IWYU pragma end_exports
 
@@ -106,7 +108,7 @@ class iTPS {
   void initialize_tensors();
   void initialize_tensors_density();
   std::vector<tensor> make_single_tensor_density();
-  
+
   //! update corner transfer matrices
   void update_CTM();
   void update_CTM_density();
@@ -127,7 +129,7 @@ class iTPS {
 
   //! optimize tensors
   void optimize();
-  //void optimize_density();
+  // void optimize_density();
 
   //! measure expectation value of observables
   void measure(boost::optional<double> time = boost::optional<double>(),
@@ -143,15 +145,12 @@ class iTPS {
 
   //! measure expectation value of onesite observables
   std::vector<std::vector<tensor_type>> measure_onesite();
-  std::vector<std::vector<tensor_type>> measure_onesite_density();
 
   //! measure expectation value of twosite observables
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
-  std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
   //! measure expectation value of multisite observables
   std::vector<std::map<Multisites, tensor_type>> measure_multisite();
-  std::vector<std::map<Multisites, tensor_type>> measure_multisite_density();
 
   //! measure correlation functions
   std::vector<Correlation> measure_correlation();
@@ -221,11 +220,12 @@ class iTPS {
    *  @param[in] time
    *  @param[in] filename_prefix
    */
-  void save_density(std::vector<std::vector<tensor_type>> const &onesite_obs,
-                    std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
-                    std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
-                    boost::optional<double> time = boost::optional<double>(),
-                    std::string filename_prefix = "");
+  void save_density(
+      std::vector<std::vector<tensor_type>> const &onesite_obs,
+      std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+      std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
+      boost::optional<double> time = boost::optional<double>(),
+      std::string filename_prefix = "");
 
   //! save optimized tensors into files
   void save_tensors() const;
@@ -317,14 +317,22 @@ class iTPS {
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 
+  std::vector<int> tensor_shape_types;  //!< Bunk tensor shape types
+  std::vector<std::vector<int>>
+      tensor_shape_dims;  //!< Bunk tensor shape dimensions
+
   /*! @brief Contraction path
    *
-   *  contraction_paths[(tensor_index, LX, LY)]
+   *  contraction_paths[(nrows, ncols, [tensor_type...])]
    *
    */
-  std::map<std::tuple<int, int, int>, std::vector<int>> contraction_paths;
+  std::map<std::tuple<int, int, std::vector<int>>,
+           TensorNetworkContractor<tensor>>
+      contraction_paths;
 
-  void make_contraction_paths();
+  void make_contraction_paths(int nrows, int ncols,
+                              std::vector<int> const &shape_types);
+  bool dynamic_contraction;
 
   std::size_t CHI;  //!< Bond dimension of corner transfer matrices
   int LX;           //!< Length of a unitcell along with X axes

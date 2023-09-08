@@ -180,6 +180,37 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     initialize_tensors();
   }
 
+  std::map<std::vector<int>, int> shape_type_map;
+  tensor_shape_types.resize(N_UNIT);
+  tensor_shape_dims.clear();
+  for (int i = 0; i < N_UNIT; ++i) {
+    std::vector<int> shape(lattice.virtual_dims[i].begin(),
+                           lattice.virtual_dims[i].end());
+    shape.push_back(lattice.physical_dims[i]);
+    shape.push_back(lattice.physical_dims[i]);
+    auto it = shape_type_map.find(shape);
+    if (it == shape_type_map.end()) {
+      shape_type_map[shape] = tensor_shape_types[i] = shape_type_map.size();
+      tensor_shape_dims.push_back(shape);
+    } else {
+      tensor_shape_types[i] = it->second;
+    }
+  }
+  if (peps_parameters.contraction_mode ==
+      PEPS_Parameters::ContractionMode::force_static) {
+    dynamic_contraction = false;
+  } else if (peps_parameters.contraction_mode ==
+             PEPS_Parameters::ContractionMode::force_dynamic) {
+    dynamic_contraction = true;
+  } else {
+    if (tensor_shape_dims.size() == 1) {
+      // all tensors have the same shape
+      dynamic_contraction = false;
+    } else {
+      dynamic_contraction = true;
+    }
+  }
+
   std::set<int> simple_update_groups;
   bool notwarned = true;
   for (auto const &op : simple_updates) {

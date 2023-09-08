@@ -61,7 +61,8 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Gauge_Fix = true;
   Full_Use_FastFullUpdate = true;
 
-  Lcor = 0;
+  // observable
+  contraction_mode = ContractionMode::automatic;
 
   // random
   seed = 11;
@@ -97,7 +98,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Full_max_iteration,
     I_Full_Gauge_Fix,
     I_Full_Use_FastFullUpdate,
-    I_Lcor,
     I_seed,
     I_is_real,
     I_to_measure,
@@ -147,7 +147,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Full_max_iteration, int);
     SAVE_PARAM(Full_Gauge_Fix, int);
     SAVE_PARAM(Full_Use_FastFullUpdate, int);
-    SAVE_PARAM(Lcor, int);
     SAVE_PARAM(seed, int);
 
     SAVE_PARAM(Inverse_lambda_cut, double);
@@ -193,7 +192,6 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Full_max_iteration, int);
     LOAD_PARAM(Full_Gauge_Fix, int);
     LOAD_PARAM(Full_Use_FastFullUpdate, int);
-    LOAD_PARAM(Lcor, int);
     LOAD_PARAM(seed, int);
 
     LOAD_PARAM(Inverse_lambda_cut, double);
@@ -285,13 +283,27 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       break;
     case PEPS_Parameters::CalculationMode::time_evolution:
       ofs << "time evolution" << std::endl;
+      break;
     case PEPS_Parameters::CalculationMode::finite_temperature:
       ofs << "finite temperature" << std::endl;
+      break;
     default:
       break;
   }
   ofs << "simple" << std::endl;
-  ofs << "Lcor = " << Lcor << std::endl;
+  switch(contraction_mode){
+    case PEPS_Parameters::ContractionMode::automatic:
+      ofs << "contraction_mode = automatic" << std::endl;
+      break;
+    case PEPS_Parameters::ContractionMode::force_static:
+      ofs << "contraction_mode = force_static" << std::endl;
+      break;
+    case PEPS_Parameters::ContractionMode::force_dynamic:
+      ofs << "contraction_mode = force_dynamic" << std::endl;
+      break;
+    default:
+      break;
+  }
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;

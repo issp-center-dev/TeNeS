@@ -4,6 +4,7 @@
 #include <cassert>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 
 #include <boost/multiprecision/cpp_int.hpp>
@@ -111,6 +112,7 @@ class TensorNetwork {
                          const std::vector<int>& br1);
   double calc_memory(const std::vector<int>& rpn) const;
   void set_bond_dim(const std::string& bond_name, int dim);
+  void set_default_bond_dim(int dim);
 
   std::vector<std::map<boost::multiprecision::cpp_int, TensorFrame>>
   init_tensordict_of_size();
