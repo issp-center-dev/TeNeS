@@ -131,7 +131,6 @@
 #include <boost/type_traits/is_scoped_enum.hpp>
 #include <boost/type_traits/is_signed.hpp>
 #include <boost/type_traits/is_stateless.hpp>
-#include <boost/type_traits/is_swappable.hpp>
 #include <boost/type_traits/is_trivially_copyable.hpp>
 #include <boost/type_traits/is_union.hpp>
 #include <boost/type_traits/is_unscoped_enum.hpp>

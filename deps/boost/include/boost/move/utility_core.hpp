@@ -29,6 +29,7 @@
 #include <boost/move/detail/workaround.hpp>  //forceinline
 #include <boost/move/core.hpp>
 #include <boost/move/detail/meta_utils.hpp>
+#include <boost/static_assert.hpp>
 
 #if defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && !defined(BOOST_MOVE_DOXYGEN_INVOKED)
 
@@ -208,8 +209,7 @@
       #else //BOOST_MOVE_OLD_RVALUE_REF_BINDING_RULES
 
          template <class T>
-         BOOST_MOVE_INTRINSIC_CAST
-         typename ::boost::move_detail::remove_reference<T>::type && move(T&& t) BOOST_NOEXCEPT
+         BOOST_MOVE_FORCEINLINE typename ::boost::move_detail::remove_reference<T>::type && move(T&& t) BOOST_NOEXCEPT
          { return static_cast<typename ::boost::move_detail::remove_reference<T>::type &&>(t); }
 
       #endif   //BOOST_MOVE_OLD_RVALUE_REF_BINDING_RULES
@@ -245,16 +245,14 @@
       #else //Old move
 
          template <class T>
-         BOOST_MOVE_INTRINSIC_CAST
-         T&& forward(typename ::boost::move_detail::remove_reference<T>::type& t) BOOST_NOEXCEPT
+         BOOST_MOVE_FORCEINLINE T&& forward(typename ::boost::move_detail::remove_reference<T>::type& t) BOOST_NOEXCEPT
          {  return static_cast<T&&>(t);   }
 
          template <class T>
-         BOOST_MOVE_INTRINSIC_CAST
-         T&& forward(typename ::boost::move_detail::remove_reference<T>::type&& t) BOOST_NOEXCEPT
+         BOOST_MOVE_FORCEINLINE T&& forward(typename ::boost::move_detail::remove_reference<T>::type&& t) BOOST_NOEXCEPT
          {
             //"boost::forward<T> error: 'T' is a lvalue reference, can't forward as rvalue.";
-            BOOST_MOVE_STATIC_ASSERT(!boost::move_detail::is_lvalue_reference<T>::value);
+            BOOST_STATIC_ASSERT(!boost::move_detail::is_lvalue_reference<T>::value);
             return static_cast<T&&>(t);
          }
 
@@ -294,7 +292,7 @@
       BOOST_MOVE_FORCEINLINE T&& move_if_not_lvalue_reference(typename ::boost::move_detail::remove_reference<T>::type&& t) BOOST_NOEXCEPT
       {
          //"boost::forward<T> error: 'T' is a lvalue reference, can't forward as rvalue.";
-         BOOST_MOVE_STATIC_ASSERT(!boost::move_detail::is_lvalue_reference<T>::value);
+         BOOST_STATIC_ASSERT(!boost::move_detail::is_lvalue_reference<T>::value);
          return static_cast<T&&>(t);
       }
 

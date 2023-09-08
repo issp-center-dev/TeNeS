@@ -14,15 +14,15 @@
 #include <boost/math/tools/is_standalone.hpp>
 
 // Minimum language standard transition
-#ifdef _MSVC_LANG
-#  if _MSVC_LANG < 201402L
-#    pragma warning("The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)");
-#  endif
-#else
-#  if __cplusplus < 201402L
-#    warning "The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)"
-#  endif
-#endif
+// #ifdef _MSVC_LANG
+// #  if _MSVC_LANG < 201402L
+// #    pragma warning("The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)");
+// #  endif
+// #else
+// #  if __cplusplus < 201402L
+// #    warning "The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)"
+// #  endif
+// #endif
 
 #ifndef BOOST_MATH_STANDALONE
 #include <boost/config.hpp>
@@ -168,6 +168,9 @@
 #include <cmath>
 #include <climits>
 #include <cfloat>
+#if (defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__))
+#  include <math.h>
+#endif
 
 #include <boost/math/tools/user.hpp>
 

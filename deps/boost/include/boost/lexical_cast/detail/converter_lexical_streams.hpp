@@ -1,6 +1,6 @@
 // Copyright Kevlin Henney, 2000-2005.
 // Copyright Alexander Nasonov, 2006-2010.
-// Copyright Antony Polukhin, 2011-2023.
+// Copyright Antony Polukhin, 2011-2022.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -38,7 +38,6 @@
 #include <boost/static_assert.hpp>
 #include <boost/detail/lcast_precision.hpp>
 #include <boost/detail/workaround.hpp>
-#include <boost/core/snprintf.hpp>
 
 #ifndef BOOST_NO_STD_LOCALE
 #   include <locale>
@@ -280,7 +279,11 @@ namespace boost {
                 using namespace std;
                 const double val_as_double = val;
                 finish = start +
-                    boost::core::snprintf(begin, CharacterBufferSize,
+#if defined(_MSC_VER) && (_MSC_VER >= 1400) && !defined(__SGI_STL_PORT) && !defined(_STLPORT_VERSION)
+                    sprintf_s(begin, CharacterBufferSize,
+#else
+                    sprintf(begin,
+#endif
                     "%.*g", static_cast<int>(boost::detail::lcast_get_precision<float>()), val_as_double);
                 return finish > start;
             }
@@ -288,7 +291,11 @@ namespace boost {
             bool shl_real_type(double val, char* begin) {
                 using namespace std;
                 finish = start +
-                    boost::core::snprintf(begin, CharacterBufferSize,
+#if defined(_MSC_VER) && (_MSC_VER >= 1400) && !defined(__SGI_STL_PORT) && !defined(_STLPORT_VERSION)
+                    sprintf_s(begin, CharacterBufferSize,
+#else
+                    sprintf(begin,
+#endif
                     "%.*g", static_cast<int>(boost::detail::lcast_get_precision<double>()), val);
                 return finish > start;
             }
@@ -297,7 +304,11 @@ namespace boost {
             bool shl_real_type(long double val, char* begin) {
                 using namespace std;
                 finish = start +
-                    boost::core::snprintf(begin, CharacterBufferSize,
+#if defined(_MSC_VER) && (_MSC_VER >= 1400) && !defined(__SGI_STL_PORT) && !defined(_STLPORT_VERSION)
+                    sprintf_s(begin, CharacterBufferSize,
+#else
+                    sprintf(begin,
+#endif
                     "%.*Lg", static_cast<int>(boost::detail::lcast_get_precision<long double>()), val );
                 return finish > start;
             }
