@@ -237,6 +237,14 @@ std::vector<T> get_array_of(decltype(cpptoml::parse_file("")) param,
   }
 }
 
+template <>
+std::vector<int32_t> get_array_of<int32_t>(
+    decltype(cpptoml::parse_file("")) param, const char *key) {
+  auto xs = get_array_of<int64_t>(param, key);
+  std::vector<int32_t> ret(xs.begin(), xs.end());
+  return ret;
+}
+
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                           const char *tablename) {
   auto Lsub = toml->get_array_of<int64_t>("L_sub");
@@ -345,20 +353,6 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
       throw input_error("Invalid mode: " + mode_str);
     }
     load_if(pparam.measure_interval, general, "measure_interval");
-
-    std::string contraction_mode_str =
-        find_or(general, "contraction_mode", std::string("automatic"));
-    if (contraction_mode_str == "automatic") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::automatic;
-    } else if (contraction_mode_str == "force_static") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_static;
-    } else if (contraction_mode_str == "force_dynamic") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_dynamic;
-    } else if (contraction_mode_str == "old") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::old;
-    } else {
-      throw input_error("Invalid contraction mode: " + contraction_mode_str);
-    }
   }
 
   // Simple update
@@ -402,6 +396,28 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
       std::string msg = "rsvd_oversampling_factor must be >= 1.0";
       throw tenes::input_error(msg);
     }
+  }
+
+  // Contraction
+
+  auto contraction = param->get_table("contraction");
+  if (contraction != nullptr) {
+    std::string contraction_mode_str =
+        find_or(contraction, "mode", std::string("automatic"));
+    if (contraction_mode_str == "automatic") {
+      pparam.contraction_mode = PEPS_Parameters::ContractionMode::automatic;
+    } else if (contraction_mode_str == "force_static") {
+      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_static;
+    } else if (contraction_mode_str == "force_dynamic") {
+      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_dynamic;
+    } else if (contraction_mode_str == "old") {
+      pparam.contraction_mode = PEPS_Parameters::ContractionMode::old;
+    } else {
+      throw input_error("Invalid contraction mode: " + contraction_mode_str);
+    }
+
+    pparam.contraction_path_file =
+        find_or(contraction, "pathfile", std::string(""));
   }
 
   // random
@@ -659,6 +675,82 @@ EvolutionOperators<tensor> load_full_updates(
   return load_updates<tensor>(param, comm, atol, "evolution.full");
 }
 
+template <class tensor>
+std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_paths(
+    std::string const &path_file) {
+  std::map<TNC_map_key, TensorNetworkContractor<tensor>> ret;
+
+  auto input_toml = cpptoml::parse_file(path_file);
+  auto params_toml = input_toml->get_table("params");
+  if (!params_toml) {
+    throw input_error(detail::msg_cannot_find("params", path_file));
+  }
+  const bool is_tpo = find<bool>(params_toml, "is_TPO");
+  const bool is_mf = find<bool>(params_toml, "is_mf");
+
+  auto tensor_toml = input_toml->get_table("tensor");
+  if (!tensor_toml) {
+    throw input_error(detail::msg_cannot_find("tensor", path_file));
+  }
+  const auto L_sub = get_array_of<int32_t>(tensor_toml, "L_sub");
+  if (L_sub.size() != 2) {
+    throw input_error("L_sub should have 2 integers");
+  }
+  const int LX = L_sub[0];
+  const int LY = L_sub[1];
+  const int N_UNIT = LX * LY;
+
+  const auto shape_type = get_array_of<int32_t>(tensor_toml, "shape_types");
+  if (shape_type.size() != N_UNIT) {
+    throw input_error("shape_types should have " + std::to_string(N_UNIT) +
+                      " integers");
+  }
+  int num_types_shape = 0;
+  for (auto s : shape_type) {
+    num_types_shape = std::max(num_types_shape, s);
+  }
+  ++num_types_shape;
+
+  const auto shape_dims_o =
+      tensor_toml->get_array_of<cpptoml::array>("shape_dims");
+  if (shape_dims_o->size() != num_types_shape) {
+    throw input_error("shape_dims should have " +
+                      std::to_string(num_types_shape) + " lists");
+  }
+  const auto nlegs = is_tpo ? 6 : 5;
+  std::vector<std::vector<int32_t>> shape_dims(num_types_shape);
+  for (int i = 0; i < num_types_shape; ++i) {
+    auto v = (*shape_dims_o)[i]->get_array_of<int64_t>();
+    shape_dims[i].assign(v->begin(), v->end());
+    if (shape_dims[i].size() != nlegs) {
+      throw input_error("shape_dims[" + std::to_string(i) + "] should have " +
+                        std::to_string(nlegs) + " integers");
+    }
+  }
+
+  auto contractions = input_toml->get_table_array_qualified("contraction");
+  if (!contractions) {
+    throw input_error(detail::msg_cannot_find("contraction", path_file));
+  }
+  for (const auto &ctable : *contractions) {
+    const int nrow = find<int>(ctable, "nrow");
+    const int ncol = find<int>(ctable, "ncol");
+    const int nsites = nrow * ncol;
+    const auto shape_types = get_array_of<int32_t>(ctable, "shape_types");
+    if (shape_types.size() != nsites) {
+      throw input_error("shape_types should have " + std::to_string(nsites) +
+                        " integers");
+    }
+    TensorNetworkContractor<tensor> tnc(nrow, ncol, is_tpo, is_mf);
+    const auto cpath = get_array_of<int32_t>(ctable, "contraction_path");
+    tnc.set_path(cpath);
+
+    ret[TNC_map_key(nrow, ncol, shape_types)] = tnc;
+  }
+
+  return ret;
+}
+
 // template instantiations
 
 template Operators<real_tensor> load_operator(
@@ -699,6 +791,13 @@ template EvolutionOperators<real_tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 template EvolutionOperators<complex_tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
+
+template std::map<TNC_map_key, TensorNetworkContractor<real_tensor>>
+load_contraction_paths(std::string const &path_file);
+template std::map<TNC_map_key, TensorNetworkContractor<complex_tensor>>
+load_contraction_paths(std::string const &path_file);
+
+// end of template instantiations
 
 }  // namespace itps
 }  // namespace tenes

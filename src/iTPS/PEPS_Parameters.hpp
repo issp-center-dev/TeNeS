@@ -61,7 +61,7 @@ struct PEPS_Parameters {
   bool Full_Gauge_Fix;
   bool Full_Use_FastFullUpdate;
 
-  // observable
+  // contraction
   enum ContractionMode {
     automatic,
     force_static,
@@ -69,6 +69,7 @@ struct PEPS_Parameters {
     old,
   };
   ContractionMode contraction_mode;
+  std::string contraction_path_file;
 
   // random
   int seed;

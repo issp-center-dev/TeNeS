@@ -33,6 +33,8 @@
 #include "transfer_matrix.hpp"
 #include "correlation_function.hpp"
 #include "PEPS_Parameters.hpp"
+#include "contraction_path.hpp"
+
 // IWYU pragma: end_exports
 
 namespace tenes {
@@ -79,6 +81,10 @@ EvolutionOperators<tensor> load_simple_updates(
 template <class tensor>
 EvolutionOperators<tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
+
+template <class tensor>
+std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_paths(
+    std::string const &path_file);
 
 }  // namespace itps
 }  // namespace tenes

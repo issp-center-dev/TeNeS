@@ -44,7 +44,7 @@ class TensorNetworkContractor {
   std::pair<std::vector<int>, double> optimize(
       std::vector<int> const& shape_types,
       std::vector<std::vector<int>> const& shape_dims, int chi);
-  void load_path(std::vector<int> const& path);
+  void set_path(std::vector<int> const& path);
   std::vector<int> get_path() const;
 
   typename tensor::value_type contract(
@@ -64,6 +64,8 @@ class TensorNetworkContractor {
       std::vector<std::vector<tensor const*>> const& Tn,
       std::map<std::tuple<int, int>, tensor const*> const& ops) const;
 };
+
+using TNC_map_key = std::tuple<int, int, std::vector<int>>;
 
 std::vector<int> default_path(int nrows, int ncols, bool is_tpo, bool is_mf);
 

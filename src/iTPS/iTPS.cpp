@@ -14,6 +14,7 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include "load_toml.hpp"
 #include "iTPS.hpp"
 
 #ifdef _NO_OMP
@@ -198,7 +199,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   std::set<int> simple_update_groups;
-  bool notwarned = true;
+  // bool notwarned = true;
   for (auto const &op : simple_updates) {
     auto g = op.group;
     if (g < 0) {
@@ -229,7 +230,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     }
   }
 
-  notwarned = true;
+  // notwarned = true;
 
   std::set<int> full_update_groups;
   for (auto const &op : full_updates) {
@@ -458,7 +459,17 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     auto const &op = onesite_operators[i];
     site_ops_indices[op.source_site][op.group] = i;
   }
-}
+
+  if (!peps_parameters.contraction_path_file.empty()) {
+    contraction_paths =
+        load_contraction_paths<tensor>(peps_parameters.contraction_path_file);
+    if (peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "Contraction paths loaded from "
+                << peps_parameters.contraction_path_file << "\n";
+    }
+  }
+
+}  // end of constructor
 
 template <class ptensor>
 void iTPS<ptensor>::update_CTM() {
@@ -480,7 +491,6 @@ template <class ptensor>
 std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density() {
   return core::Make_single_tensor_density(Tn);
 }
-
 
 // template specialization
 template class iTPS<real_tensor>;

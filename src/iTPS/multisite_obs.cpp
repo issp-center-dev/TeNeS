@@ -187,7 +187,7 @@ auto iTPS<ptensor>::measure_multisite()
                    PEPS_Parameters::ContractionMode::force_static) {
           std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
           assert(!path.empty());
-          tnc_it->second.load_path(path);
+          tnc_it->second.set_path(path);
         } else {
           std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
           if (path.empty()) {
@@ -211,7 +211,7 @@ auto iTPS<ptensor>::measure_multisite()
               }
             }
             if (use_default_path) {
-              tnc_it->second.load_path(path);
+              tnc_it->second.set_path(path);
             } else {
               tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
             }

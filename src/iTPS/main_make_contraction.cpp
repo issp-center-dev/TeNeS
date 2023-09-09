@@ -128,8 +128,7 @@ void make_key(Operator<tensor> const op,
   contractions.insert(std::forward_as_tuple(nrow, ncol, shape_types));
 }
 
-int main_make_contraction(std::string input_filename,
-                          std::string output_filename, MPI_Comm comm,
+int main_make_contraction(std::string input_filename, MPI_Comm comm,
                           PrintLevel print_level) {
   using tensor_complex =
       mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
@@ -152,6 +151,13 @@ int main_make_contraction(std::string input_filename,
       (toml_param != nullptr ? gen_param(toml_param) : PEPS_Parameters());
   peps_parameters.print_level = print_level;
   peps_parameters.Bcast(comm);
+
+  std::string output_filename = peps_parameters.contraction_path_file;
+  if (output_filename.empty()) {
+    throw tenes::input_error(
+        "parameter.contraction.pathfile is not specified (this is used for "
+        "output filename)");
+  }
 
   const int CHI = peps_parameters.CHI;
   const bool is_TPO = peps_parameters.calcmode ==
@@ -282,8 +288,8 @@ int main_make_contraction(std::string input_filename,
     std::ofstream ofs(output_filename.c_str());
     ofs << "[params]" << std::endl;
     ofs << "chi = " << CHI << std::endl;
-    ofs << "is_TPO = " << is_TPO << std::endl;
-    ofs << "is_mf = " << is_mf << std::endl;
+    ofs << "is_TPO = " << (is_TPO ? "true" : "false") << std::endl;
+    ofs << "is_mf = " << (is_mf ? "true" : "false") << std::endl;
     ofs << std::endl;
     ofs << "[tensor]" << std::endl;
     ofs << "L_sub = [" << lattice.LX << ", " << lattice.LY << "]" << std::endl;
@@ -326,14 +332,13 @@ int main_impl(int argc, char** argv) {
       R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
   
   Usage:
-    tenes [--quiet] [-o|--output output_toml] <input_toml>
+    tenes [--quiet] <input_toml>
     tenes --help
     tenes --version
 
   Options:
     -h --help       Show this help message.
     -v --version    Show the version.
-    -o --output f   Output filename
     -q --quiet      Do not print any messages.
   )";
 
@@ -341,7 +346,6 @@ int main_impl(int argc, char** argv) {
 
   PrintLevel print_level = PrintLevel::info;
   std::string input_filename;
-  std::string output_filename = "contraction_path.toml";
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-h" || opt == "--help") {
@@ -352,16 +356,6 @@ int main_impl(int argc, char** argv) {
       return 0;
     } else if (opt == "-q" || opt == "--quiet") {
       print_level = PrintLevel::none;
-    } else if (opt == "-o" || opt == "--output") {
-      ++i;
-      if (i < argc) {
-        output_filename = argv[i];
-      } else {
-        if (mpirank == 0) {
-          std::cerr << "[ERROR] Output filename is not specified." << std::endl;
-        }
-        return 1;
-      }
     } else {
       input_filename = opt;
     }
@@ -373,8 +367,8 @@ int main_impl(int argc, char** argv) {
   }
 
   try {
-    status = tenes::itps::main_make_contraction(input_filename, output_filename,
-                                                MPI_COMM_WORLD, print_level);
+    status = tenes::itps::main_make_contraction(input_filename, MPI_COMM_WORLD,
+                                                print_level);
   } catch (const tenes::input_error e) {
     if (mpirank == 0) {
       std::cerr << "[INPUT ERROR]" << std::endl;

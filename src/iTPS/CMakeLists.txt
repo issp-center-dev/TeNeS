@@ -7,7 +7,7 @@ add_library(load_toml STATIC load_toml.cpp)
 target_link_libraries(load_toml PUBLIC tenes_util tenes_mpi tensor SquareLattice PEPS_Parameters)
 target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR} ${BOOST_INCLUDE_DIR})
 
-add_library(contraction_path STATIC contraction_path.cpp)
+add_library(contraction_path STATIC contraction_path.cpp default_path.cpp)
 target_link_libraries(contraction_path PUBLIC load_toml find_contraction_path)
 
 add_library(

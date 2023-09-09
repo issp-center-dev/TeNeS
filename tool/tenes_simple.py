@@ -1150,7 +1150,7 @@ def tenes_simple(
     ret = []
     ret.append("[parameter]")
     pparam = param["parameter"]
-    for name in ("general", "simple_update", "full_update", "ctm", "random"):
+    for name in ("general", "simple_update", "full_update", "ctm", "contraction", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
             for k, v in pparam[name].items():
