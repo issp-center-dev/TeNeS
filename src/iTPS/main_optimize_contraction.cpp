@@ -14,8 +14,6 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-// #include "main.hpp"
-
 #include <complex>  // for complex
 #include <cstdlib>  // for abs, size_t
 #include <set>

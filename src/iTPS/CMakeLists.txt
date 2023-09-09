@@ -30,6 +30,6 @@ add_library(
 
 target_link_libraries(iTPS_impl PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters contraction_path)
 
-add_executable(tenes_make_contraction_path main_make_contraction.cpp)
-target_link_libraries(tenes_make_contraction_path PUBLIC contraction_path)
-install(TARGETS tenes_make_contraction_path RUNTIME DESTINATION bin)
+add_executable(tenes_optimize_contraction_path main_optimize_contraction.cpp)
+target_link_libraries(tenes_optimize_contraction_path PUBLIC contraction_path)
+install(TARGETS tenes_optimize_contraction_path RUNTIME DESTINATION bin)
