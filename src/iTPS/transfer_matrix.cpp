@@ -95,11 +95,6 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     return eigvals;
   }
 
-  static int nst = 0;
-  std::stringstream filename;
-  filename << "matrix_" << nst++ << ".dat";
-  std::ofstream fout(filename.str());
-
   if (N <= params.maxdim_dense_eigensolver) {
     ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
                               : matrix_vertical(fixed_coord);
@@ -110,7 +105,6 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
         typename ptensor::value_type v;
         matrix.get_value({row, col}, v);
         matrix_2.set_value({row, col}, v);
-        fout << row << " " << col << " " << std::real(v) << std::endl;
       }
     }
     std::vector<std::complex<double>> evecs;
