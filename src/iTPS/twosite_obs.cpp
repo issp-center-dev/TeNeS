@@ -37,7 +37,7 @@ auto iTPS<ptensor>::measure_twosite()
                       PEPS_Parameters::CalculationMode::finite_temperature;
   const bool is_mf = peps_parameters.MeanField_Env;
   const bool use_old =
-      peps_parameters.contraction_mode == PEPS_Parameters::ContractionMode::old;
+      peps_parameters.cpath_opt == PEPS_Parameters::CPathOptimization::old;
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
@@ -53,8 +53,8 @@ auto iTPS<ptensor>::measure_twosite()
     const int ncol = std::abs(dx) + 1;
     const int nrow = std::abs(dy) + 1;
     if (ncol > nmax || nrow > nmax) {
-      if (peps_parameters.contraction_mode ==
-              PEPS_Parameters::ContractionMode::force_static ||
+      if (peps_parameters.cpath_opt ==
+              PEPS_Parameters::CPathOptimization::never ||
           use_old) {
         std::cerr << "Warning: When contraction_mode = force_static or old, "
                      "too long-ranged operator does not supported."
@@ -181,11 +181,11 @@ auto iTPS<ptensor>::measure_twosite()
             std::piecewise_construct, std::forward_as_tuple(nrow, ncol, shape_types),
             std::forward_as_tuple(nrow, ncol, is_TPO, is_mf));
         tnc_it = res.first;
-        if (peps_parameters.contraction_mode ==
-            PEPS_Parameters::ContractionMode::force_dynamic) {
+        if (peps_parameters.cpath_opt ==
+            PEPS_Parameters::CPathOptimization::always) {
           tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
-        } else if (peps_parameters.contraction_mode ==
-                   PEPS_Parameters::ContractionMode::force_static) {
+        } else if (peps_parameters.cpath_opt ==
+                   PEPS_Parameters::CPathOptimization::never) {
           std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
           assert(!path.empty());
           tnc_it->second.set_path(path);

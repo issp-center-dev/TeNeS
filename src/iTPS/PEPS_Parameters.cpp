@@ -62,7 +62,7 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FastFullUpdate = true;
 
   // observable
-  contraction_mode = ContractionMode::automatic;
+  cpath_opt = CPathOptimization::automatic;
   contraction_path_file = "";
 
   // random
@@ -292,17 +292,17 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       break;
   }
   ofs << "simple" << std::endl;
-  switch(contraction_mode){
-    case PEPS_Parameters::ContractionMode::automatic:
-      ofs << "contraction_mode = automatic" << std::endl;
+  switch(cpath_opt){
+    case PEPS_Parameters::CPathOptimization::automatic:
+      ofs << "contraction_optimize = automatic" << std::endl;
       break;
-    case PEPS_Parameters::ContractionMode::force_static:
-      ofs << "contraction_mode = force_static" << std::endl;
+    case PEPS_Parameters::CPathOptimization::never:
+      ofs << "contraction_optimize = never" << std::endl;
       break;
-    case PEPS_Parameters::ContractionMode::force_dynamic:
-      ofs << "contraction_mode = force_dynamic" << std::endl;
+    case PEPS_Parameters::CPathOptimization::always:
+      ofs << "contraction_optimize = always" << std::endl;
       break;
-    case PEPS_Parameters::ContractionMode::old:
+    case PEPS_Parameters::CPathOptimization::old:
       ofs << "contraction_mode = old" << std::endl;
       break;
     default:

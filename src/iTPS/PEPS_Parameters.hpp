@@ -62,13 +62,13 @@ struct PEPS_Parameters {
   bool Full_Use_FastFullUpdate;
 
   // contraction
-  enum ContractionMode {
+  enum CPathOptimization {
     automatic,
-    force_static,
-    force_dynamic,
+    never,
+    always,
     old,
   };
-  ContractionMode contraction_mode;
+  CPathOptimization cpath_opt;
   std::string contraction_path_file;
 
   // random

@@ -43,7 +43,7 @@ auto iTPS<ptensor>::measure_multisite()
   const bool is_TPO = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
   const bool use_old =
-      peps_parameters.contraction_mode == PEPS_Parameters::ContractionMode::old;
+      peps_parameters.cpath_opt == PEPS_Parameters::CPathOptimization::old;
 
   const int nmax = is_mf ? 5 : 4;
 
@@ -65,10 +65,10 @@ auto iTPS<ptensor>::measure_multisite()
     const int nrow = maxdy - mindy + 1;
 
     if (ncol > nmax || nrow > nmax) {
-      if (peps_parameters.contraction_mode ==
-              PEPS_Parameters::ContractionMode::force_static ||
+      if (peps_parameters.cpath_opt ==
+              PEPS_Parameters::CPathOptimization::never ||
           use_old) {
-        std::cerr << "Warning: When contraction_mode = force_static or old, "
+        std::cerr << "Warning: When contraction optimize = never or old, "
                      "too long-ranged operator does not supported."
                   << std::endl;
         std::cerr << "Skipped: group = " << op.group << " (ncol = " << ncol
@@ -172,26 +172,29 @@ auto iTPS<ptensor>::measure_multisite()
 
     TensorNetworkContractor<ptensor> tnc;
     if (!use_old) {
-      auto tnc_it =
-          contraction_paths.find(std::forward_as_tuple(nrow, ncol, shape_types));
+      auto tnc_it = contraction_paths.find(
+          std::forward_as_tuple(nrow, ncol, shape_types));
       if (tnc_it == contraction_paths.end()) {
         auto res = contraction_paths.emplace(
-            std::piecewise_construct, std::forward_as_tuple(nrow, ncol, shape_types),
+            std::piecewise_construct,
+            std::forward_as_tuple(nrow, ncol, shape_types),
             std::forward_as_tuple(nrow, ncol, is_TPO, is_mf));
         tnc_it = res.first;
 
-        if (peps_parameters.contraction_mode ==
-            PEPS_Parameters::ContractionMode::force_dynamic) {
-          tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
-        } else if (peps_parameters.contraction_mode ==
-                   PEPS_Parameters::ContractionMode::force_static) {
+        if (peps_parameters.cpath_opt ==
+            PEPS_Parameters::CPathOptimization::always) {
+          tnc_it->second.optimize(shape_types, tensor_shape_dims,
+                                  peps_parameters.CHI);
+        } else if (peps_parameters.cpath_opt ==
+                   PEPS_Parameters::CPathOptimization::never) {
           std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
           assert(!path.empty());
           tnc_it->second.set_path(path);
         } else {
           std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
           if (path.empty()) {
-            tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
+            tnc_it->second.optimize(shape_types, tensor_shape_dims,
+                                    peps_parameters.CHI);
           } else {
             bool use_default_path = true;
             const int first_type = shape_types[0];
@@ -213,7 +216,8 @@ auto iTPS<ptensor>::measure_multisite()
             if (use_default_path) {
               tnc_it->second.set_path(path);
             } else {
-              tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
+              tnc_it->second.optimize(shape_types, tensor_shape_dims,
+                                      peps_parameters.CHI);
             }
           }  // end use_default_path
         }    // end contraction_mode

@@ -403,17 +403,17 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   auto contraction = param->get_table("contraction");
   if (contraction != nullptr) {
     std::string contraction_mode_str =
-        find_or(contraction, "mode", std::string("automatic"));
+        find_or(contraction, "optimize", std::string("automatic"));
     if (contraction_mode_str == "automatic") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::automatic;
-    } else if (contraction_mode_str == "force_static") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_static;
-    } else if (contraction_mode_str == "force_dynamic") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_dynamic;
+      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::automatic;
+    } else if (contraction_mode_str == "never") {
+      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::never;
+    } else if (contraction_mode_str == "always") {
+      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::always;
     } else if (contraction_mode_str == "old") {
-      pparam.contraction_mode = PEPS_Parameters::ContractionMode::old;
+      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::old;
     } else {
-      throw input_error("Invalid contraction mode: " + contraction_mode_str);
+      throw input_error("Invalid contraction optimize: " + contraction_mode_str);
     }
 
     pparam.contraction_path_file =
