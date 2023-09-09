@@ -196,20 +196,6 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       tensor_shape_types[i] = it->second;
     }
   }
-  if (peps_parameters.contraction_mode ==
-      PEPS_Parameters::ContractionMode::force_static) {
-    dynamic_contraction = false;
-  } else if (peps_parameters.contraction_mode ==
-             PEPS_Parameters::ContractionMode::force_dynamic) {
-    dynamic_contraction = true;
-  } else {
-    if (tensor_shape_dims.size() == 1) {
-      // all tensors have the same shape
-      dynamic_contraction = false;
-    } else {
-      dynamic_contraction = true;
-    }
-  }
 
   std::set<int> simple_update_groups;
   bool notwarned = true;
@@ -494,6 +480,7 @@ template <class ptensor>
 std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density() {
   return core::Make_single_tensor_density(Tn);
 }
+
 
 // template specialization
 template class iTPS<real_tensor>;

@@ -301,6 +301,9 @@ void PEPS_Parameters::save(const char *filename, bool append) {
     case PEPS_Parameters::ContractionMode::force_dynamic:
       ofs << "contraction_mode = force_dynamic" << std::endl;
       break;
+    case PEPS_Parameters::ContractionMode::old:
+      ofs << "contraction_mode = old" << std::endl;
+      break;
     default:
       break;
   }

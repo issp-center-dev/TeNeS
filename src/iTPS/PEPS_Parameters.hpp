@@ -66,6 +66,7 @@ struct PEPS_Parameters {
     automatic,
     force_static,
     force_dynamic,
+    old,
   };
   ContractionMode contraction_mode;
 

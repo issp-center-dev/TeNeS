@@ -330,8 +330,6 @@ class iTPS {
            TensorNetworkContractor<tensor>>
       contraction_paths;
 
-  bool dynamic_contraction;
-
   std::size_t CHI;  //!< Bond dimension of corner transfer matrices
   int LX;           //!< Length of a unitcell along with X axes
   int LY;           //!< Length of a unitcell along with Y axes

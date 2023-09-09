@@ -36,8 +36,14 @@ int MPI_Comm_get_parent(MPI_Comm* parent) {
   *parent = MPI_COMM_NULL;
   return 0;
 }
-
 int MPI_Send(const void*, int, MPI_Datatype, int, int, MPI_Comm) { return 0; }
+int MPI_Recv(void*, int, MPI_Datatype, int, int, MPI_Comm, MPI_Status*) {
+  return 0;
+}
+int MPI_Irecv(void*, int, MPI_Datatype, int, int, MPI_Comm, MPI_Request*) {
+  return 0;
+}
+int MPI_Test(MPI_Request*, int* flag, MPI_Status*) { return *flag = 1; }
 int MPI_Bcast(void*, int, MPI_Datatype, int, MPI_Comm) { return 0; }
 #endif
 

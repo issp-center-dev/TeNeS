@@ -98,6 +98,9 @@ class TensorNetwork {
   }
 
   void add_tensor(const std::string& t_name,
+                  const std::vector<int>& b_names);
+
+  void add_tensor(const std::string& t_name,
                   const std::vector<std::string>& b_names);
 
   static TensorNetwork from_file(const std::string& filename);
@@ -111,6 +114,7 @@ class TensorNetwork {
                          const std::vector<int>& br0,
                          const std::vector<int>& br1);
   double calc_memory(const std::vector<int>& rpn) const;
+  void set_bond_dim(int bond_name, int dim);
   void set_bond_dim(const std::string& bond_name, int dim);
   void set_default_bond_dim(int dim);
 

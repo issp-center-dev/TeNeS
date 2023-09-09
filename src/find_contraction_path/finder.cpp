@@ -119,6 +119,16 @@ TensorFrame contract_tf(const TensorFrame& t1, const TensorFrame& t2,
 }
 
 void TensorNetwork::add_tensor(const std::string& t_name,
+                               const std::vector<int>& b_names) {
+  std::vector<std::string> b_names_str;
+  b_names_str.reserve(b_names.size());
+  for (const auto& b : b_names) {
+    b_names_str.push_back(std::to_string(b));
+  }
+  add_tensor(t_name, b_names_str);
+}
+
+void TensorNetwork::add_tensor(const std::string& t_name,
                                const std::vector<std::string>& b_names) {
   int t_index = tensors.size();
   std::vector<int> b_indices;
@@ -270,6 +280,11 @@ double TensorNetwork::calc_memory(const std::vector<int>& rpn) const {
   }
 
   return std::get<1>(cost[0]);
+}
+
+void TensorNetwork::set_bond_dim(int bond_name, int dim) {
+  std::string name = std::to_string(bond_name);
+  set_bond_dim(name, dim);
 }
 
 void TensorNetwork::set_bond_dim(const std::string& bond_name, int dim) {

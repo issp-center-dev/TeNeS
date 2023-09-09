@@ -36,15 +36,16 @@ auto iTPS<ptensor>::measure_twosite()
   const bool is_TPO = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
   const bool is_mf = peps_parameters.MeanField_Env;
+  const bool use_old =
+      peps_parameters.contraction_mode == PEPS_Parameters::ContractionMode::old;
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
-  constexpr int nmax = 4;
+  const int nmax = is_mf ? 5 : 4;
 
   std::map<Bond, tensor_type> norms;
 
   for (const auto &op : twosite_operators) {
-    bool dcont = dynamic_contraction;
     const int source = op.source_site;
     const int dx = op.dx[0];
     const int dy = op.dy[0];
@@ -53,16 +54,14 @@ auto iTPS<ptensor>::measure_twosite()
     const int nrow = std::abs(dy) + 1;
     if (ncol > nmax || nrow > nmax) {
       if (peps_parameters.contraction_mode ==
-          PEPS_Parameters::ContractionMode::force_static) {
-        std::cerr
-            << "Warning: now version of TeNeS does not support too long-ranged "
-               "operator"
-            << std::endl;
-        std::cerr << "group = " << op.group << " (dx = " << dx
+              PEPS_Parameters::ContractionMode::force_static ||
+          use_old) {
+        std::cerr << "Warning: When contraction_mode = force_static or old, "
+                     "too long-ranged operator does not supported."
+                  << std::endl;
+        std::cerr << "Skipped: group = " << op.group << " (dx = " << dx
                   << ", dy = " << dy << ")" << std::endl;
         continue;
-      }else{
-        dynamic_contraction = true;
       }
     }
 
@@ -174,27 +173,62 @@ auto iTPS<ptensor>::measure_twosite()
     }
 
     TensorNetworkContractor<ptensor> tnc;
-    if (dcont) {
+    if (!use_old) {
       auto tnc_it =
-          contraction_paths.find(forward_as_tuple(nrow, ncol, shape_types));
+          contraction_paths.find(std::forward_as_tuple(nrow, ncol, shape_types));
       if (tnc_it == contraction_paths.end()) {
         auto res = contraction_paths.emplace(
-            std::piecewise_construct, forward_as_tuple(nrow, ncol, shape_types),
-            forward_as_tuple(nrow, ncol, shape_types, tensor_shape_dims,
-                             peps_parameters.CHI, is_TPO, is_mf));
+            std::piecewise_construct, std::forward_as_tuple(nrow, ncol, shape_types),
+            std::forward_as_tuple(nrow, ncol, is_TPO, is_mf));
         tnc_it = res.first;
-        tnc_it->second.optimize();
-      }
+        if (peps_parameters.contraction_mode ==
+            PEPS_Parameters::ContractionMode::force_dynamic) {
+          tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
+        } else if (peps_parameters.contraction_mode ==
+                   PEPS_Parameters::ContractionMode::force_static) {
+          std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
+          assert(!path.empty());
+          tnc_it->second.load_path(path);
+        } else {
+          std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
+          if (path.empty()) {
+            tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
+          } else {
+            bool use_default_path = true;
+            const int first_type = shape_types[0];
+            for (size_t d = 1; d < 4; ++d) {
+              if (tensor_shape_dims[first_type][d] !=
+                  tensor_shape_dims[first_type][0]) {
+                use_default_path = false;
+                break;
+              }
+            }
+            if (use_default_path) {
+              for (const auto &stype : shape_types) {
+                if (stype != first_type) {
+                  use_default_path = false;
+                  break;
+                }
+              }
+            }
+            if (use_default_path) {
+              tnc_it->second.load_path(path);
+            } else {
+              tnc_it->second.optimize(shape_types, tensor_shape_dims, peps_parameters.CHI);
+            }
+          }  // end use_default_path
+        }    // end contraction_mode
+      }      // end tnc_it == contraction_paths.end()
       tnc = tnc_it->second;
-    }
+    }  // end !use_old
 
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
-      if (dcont) {
-        norms[norm_key] = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_);
-      } else {
+      if (use_old) {
         norms[norm_key] =
             core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_TPO, is_mf);
+      } else {
+        norms[norm_key] = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_);
       }
     }
     auto norm = norms[norm_key];
@@ -234,18 +268,18 @@ auto iTPS<ptensor>::measure_twosite()
               reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
           ptensor target_op =
               reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-          if (dcont) {
+          if (!use_old) {
+            op_[source_row][source_col] = &source_op;
+            op_[target_row][target_col] = &target_op;
+            auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
+                                             op_, is_TPO, is_mf);
+            value += localvalue * s[is];
+          } else {
             std::map<std::tuple<int, int>, ptensor const *> ops;
             ops[std::forward_as_tuple(source_row, source_col)] = &source_op;
             ops[std::forward_as_tuple(target_row, target_col)] = &target_op;
             auto localvalue =
                 tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, ops);
-            value += localvalue * s[is];
-          } else {
-            op_[source_row][source_col] = &source_op;
-            op_[target_row][target_col] = &target_op;
-            auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
-                                             op_, is_TPO, is_mf);
             value += localvalue * s[is];
           }
         }
@@ -259,22 +293,22 @@ auto iTPS<ptensor>::measure_twosite()
       ptensor const *op_target = &(
           onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
               .op);
-      if (dcont) {
-        std::map<std::tuple<int, int>, ptensor const *> ops;
-        ops[std::forward_as_tuple(source_row, source_col)] = op_source;
-        ops[std::forward_as_tuple(target_row, target_col)] = op_target;
-        auto localvalue = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, ops);
-        value += localvalue;
-      } else {
+      if (use_old) {
         op_[source_row][source_col] = op_source;
         op_[target_row][target_col] = op_target;
         auto localvalue =
             core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_TPO, is_mf);
         value += localvalue;
+      } else {
+        std::map<std::tuple<int, int>, ptensor const *> ops;
+        ops[std::forward_as_tuple(source_row, source_col)] = op_source;
+        ops[std::forward_as_tuple(target_row, target_col)] = op_target;
+        auto localvalue = tnc.contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, ops);
+        value += localvalue;
       }
     }
     ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = value / norm;
-  } // end of loop over twosite_operators
+  }  // end of loop over twosite_operators
   ret.push_back(norms);
 
   double norm_real_min = 1e100;

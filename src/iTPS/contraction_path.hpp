@@ -2,8 +2,7 @@
 #define TENES_SRC_ITPS_CONTRACTION_PATH_HPP_
 
 #include <mptensor/tensor.hpp>
-
-#include "../find_contraction_path/finder.hpp"
+#include <map>
 
 namespace tenes {
 namespace itps {
@@ -11,7 +10,6 @@ namespace itps {
 template <class tensor>
 class TensorNetworkContractor {
  private:
-  find_contraction_path::TensorNetwork tnw;
   int nrows;
   int ncols;
   bool is_tpo;
@@ -20,7 +18,7 @@ class TensorNetworkContractor {
 
   struct TensorName {
     std::string name;
-    std::vector<std::string> bonds;
+    std::vector<int> bonds;
     TensorName() : name(), bonds() {}
     TensorName(int bond_size) : name(), bonds(bond_size) {}
   };
@@ -32,26 +30,22 @@ class TensorNetworkContractor {
   std::vector<TensorName> eTl_name;
   std::vector<TensorName> Tn_name;
 
-  void initialize_ctm(std::vector<int> const& shape_types,
-                      std::vector<std::vector<int>> const& shape_dims, int chi);
-  void initialize_mf(std::vector<int> const& shape_types,
-                     std::vector<std::vector<int>> const& shape_dims);
+  void initialize_ctm();
+  void initialize_mf();
 
   bool check_path(std::vector<int> const& path) const;
 
  public:
   TensorNetworkContractor(){};
-  TensorNetworkContractor(int nrows, int ncols,
-                          std::vector<int> const& shape_types,
-                          std::vector<std::vector<int>> const& shape_dims,
-                          int chi, bool is_tpo, bool is_mf);
+  TensorNetworkContractor(int nrows, int ncols, bool is_tpo, bool is_mf);
 
-  void initialize(int nrows, int ncols, std::vector<int> const& shape_types,
-                  std::vector<std::vector<int>> const& shape_dims, int chi,
-                  bool is_tpo, bool is_mf);
+  void initialize(int nrows, int ncols, bool is_tpo, bool is_mf);
 
-  void optimize();
+  std::pair<std::vector<int>, double> optimize(
+      std::vector<int> const& shape_types,
+      std::vector<std::vector<int>> const& shape_dims, int chi);
   void load_path(std::vector<int> const& path);
+  std::vector<int> get_path() const;
 
   typename tensor::value_type contract(
       std::vector<tensor const*> const& C,
@@ -59,8 +53,7 @@ class TensorNetworkContractor {
       std::vector<tensor const*> const& eTr,
       std::vector<tensor const*> const& eTb,
       std::vector<tensor const*> const& eTl,
-      std::vector<std::vector<tensor const*>> const& Tn
-      ) const;
+      std::vector<std::vector<tensor const*>> const& Tn) const;
 
   typename tensor::value_type contract(
       std::vector<tensor const*> const& C,
@@ -69,9 +62,10 @@ class TensorNetworkContractor {
       std::vector<tensor const*> const& eTb,
       std::vector<tensor const*> const& eTl,
       std::vector<std::vector<tensor const*>> const& Tn,
-      std::map<std::tuple<int, int>, tensor const*> const& ops
-      ) const;
+      std::map<std::tuple<int, int>, tensor const*> const& ops) const;
 };
+
+std::vector<int> default_path(int nrows, int ncols, bool is_tpo, bool is_mf);
 
 }  // namespace itps
 }  // namespace tenes

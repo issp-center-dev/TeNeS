@@ -347,13 +347,15 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     load_if(pparam.measure_interval, general, "measure_interval");
 
     std::string contraction_mode_str =
-        find_or(general, "contraction", std::string("automatic"));
+        find_or(general, "contraction_mode", std::string("automatic"));
     if (contraction_mode_str == "automatic") {
       pparam.contraction_mode = PEPS_Parameters::ContractionMode::automatic;
     } else if (contraction_mode_str == "force_static") {
       pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_static;
     } else if (contraction_mode_str == "force_dynamic") {
       pparam.contraction_mode = PEPS_Parameters::ContractionMode::force_dynamic;
+    } else if (contraction_mode_str == "old") {
+      pparam.contraction_mode = PEPS_Parameters::ContractionMode::old;
     } else {
       throw input_error("Invalid contraction mode: " + contraction_mode_str);
     }
