@@ -41,7 +41,7 @@
 #include "transfer_matrix.hpp"
 #include "correlation_function.hpp"
 
-#include "contraction_path.hpp"
+#include "contraction_order.hpp"
 
 #include "PEPS_Parameters.hpp"
 // IWYU pragma end_exports
@@ -321,12 +321,12 @@ class iTPS {
   std::vector<std::vector<int>>
       tensor_shape_dims;  //!< Bunk tensor shape dimensions
 
-  /*! @brief Contraction path
+  /*! @brief Contraction order
    *
-   *  contraction_paths[(nrows, ncols, [tensor_type...])]
+   *  contraction_orders[(nrows, ncols, [tensor_type...])]
    *
    */
-  std::map<TNC_map_key, TensorNetworkContractor<tensor>> contraction_paths;
+  std::map<TNC_map_key, TensorNetworkContractor<tensor>> contraction_orders;
 
   std::size_t CHI;  //!< Bond dimension of corner transfer matrices
   int LX;           //!< Length of a unitcell along with X axes

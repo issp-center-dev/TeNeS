@@ -43,7 +43,7 @@ auto iTPS<ptensor>::measure_multisite()
   const bool is_TPO = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
   const bool use_old =
-      peps_parameters.cpath_opt == PEPS_Parameters::CPathOptimization::old;
+      peps_parameters.corder_opt == PEPS_Parameters::ContractionOrderOptimization::old;
 
   const int nmax = is_mf ? 5 : 4;
 
@@ -65,8 +65,8 @@ auto iTPS<ptensor>::measure_multisite()
     const int nrow = maxdy - mindy + 1;
 
     if (ncol > nmax || nrow > nmax) {
-      if (peps_parameters.cpath_opt ==
-              PEPS_Parameters::CPathOptimization::never ||
+      if (peps_parameters.corder_opt ==
+              PEPS_Parameters::ContractionOrderOptimization::never ||
           use_old) {
         std::cerr << "Warning: When contraction optimize = never or old, "
                      "too long-ranged operator does not supported."
@@ -172,56 +172,56 @@ auto iTPS<ptensor>::measure_multisite()
 
     TensorNetworkContractor<ptensor> tnc;
     if (!use_old) {
-      auto tnc_it = contraction_paths.find(
+      auto tnc_it = contraction_orders.find(
           std::forward_as_tuple(nrow, ncol, shape_types));
-      if (tnc_it == contraction_paths.end()) {
-        auto res = contraction_paths.emplace(
+      if (tnc_it == contraction_orders.end()) {
+        auto res = contraction_orders.emplace(
             std::piecewise_construct,
             std::forward_as_tuple(nrow, ncol, shape_types),
             std::forward_as_tuple(nrow, ncol, is_TPO, is_mf));
         tnc_it = res.first;
 
-        if (peps_parameters.cpath_opt ==
-            PEPS_Parameters::CPathOptimization::always) {
+        if (peps_parameters.corder_opt ==
+            PEPS_Parameters::ContractionOrderOptimization::always) {
           tnc_it->second.optimize(shape_types, tensor_shape_dims,
                                   peps_parameters.CHI);
-        } else if (peps_parameters.cpath_opt ==
-                   PEPS_Parameters::CPathOptimization::never) {
-          std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
-          assert(!path.empty());
-          tnc_it->second.set_path(path);
+        } else if (peps_parameters.corder_opt ==
+                   PEPS_Parameters::ContractionOrderOptimization::never) {
+          std::vector<int> order = default_order(nrow, ncol, is_TPO, is_mf);
+          assert(!order.empty());
+          tnc_it->second.set_order(order);
         } else {
-          std::vector<int> path = default_path(nrow, ncol, is_TPO, is_mf);
-          if (path.empty()) {
+          std::vector<int> order = default_order(nrow, ncol, is_TPO, is_mf);
+          if (order.empty()) {
             tnc_it->second.optimize(shape_types, tensor_shape_dims,
                                     peps_parameters.CHI);
           } else {
-            bool use_default_path = true;
+            bool use_default_order = true;
             const int first_type = shape_types[0];
             for (size_t d = 1; d < 4; ++d) {
               if (tensor_shape_dims[first_type][d] !=
                   tensor_shape_dims[first_type][0]) {
-                use_default_path = false;
+                use_default_order = false;
                 break;
               }
             }
-            if (use_default_path) {
+            if (use_default_order) {
               for (const auto &stype : shape_types) {
                 if (stype != first_type) {
-                  use_default_path = false;
+                  use_default_order = false;
                   break;
                 }
               }
             }
-            if (use_default_path) {
-              tnc_it->second.set_path(path);
+            if (use_default_order) {
+              tnc_it->second.set_order(order);
             } else {
               tnc_it->second.optimize(shape_types, tensor_shape_dims,
                                       peps_parameters.CHI);
             }
-          }  // end use_default_path
+          }  // end use_default_order
         }    // end contraction_mode
-      }      // end tnc_it == contraction_paths.end()
+      }      // end tnc_it == contraction_orders.end()
       tnc = tnc_it->second;
     }
 

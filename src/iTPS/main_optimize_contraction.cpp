@@ -26,7 +26,7 @@
 #include "../mpi.hpp"
 
 #include "load_toml.hpp"
-#include "contraction_path.hpp"
+#include "contraction_order.hpp"
 
 using std::size_t;
 
@@ -38,7 +38,7 @@ struct entry {
   int ncol;
   std::vector<int> shape_types;
   double cost;
-  std::vector<int> path;
+  std::vector<int> order;
 
   void write_toml(std::ofstream& ofs) const {
     ofs << "[[contraction]]" << std::endl;
@@ -49,9 +49,8 @@ struct entry {
       ofs << type << ", ";
     }
     ofs << "]" << std::endl;
-    ofs << "cost = " << cost << std::endl;
-    ofs << "contraction_path = [" << std::endl;
-    for (const auto& p : path) {
+    ofs << "contraction_order = [" << std::endl;
+    for (const auto& p : order) {
       ofs << p << ", ";
     }
     ofs << std::endl;
@@ -73,7 +72,7 @@ struct entry {
     e.ncol = buffer[1];
     e.shape_types.assign(buffer.begin() + 2,
                          buffer.begin() + 2 + e.nrow * e.ncol);
-    e.path.assign(buffer.begin() + 2 + e.nrow * e.ncol, buffer.end());
+    e.order.assign(buffer.begin() + 2 + e.nrow * e.ncol, buffer.end());
 
     return e;
   }
@@ -83,14 +82,14 @@ struct entry {
     MPI_Comm_rank(comm, &mpirank);
     double buffer_double[2];
     buffer_double[0] = cost;
-    buffer_double[1] = shape_types.size() + path.size() + 2;
+    buffer_double[1] = shape_types.size() + order.size() + 2;
     MPI_Send(buffer_double, 2, MPI_DOUBLE, tgt, mpirank, comm);
 
     std::vector<int> buffer;
     buffer.push_back(nrow);
     buffer.push_back(ncol);
     buffer.insert(buffer.end(), shape_types.begin(), shape_types.end());
-    buffer.insert(buffer.end(), path.begin(), path.end());
+    buffer.insert(buffer.end(), order.begin(), order.end());
     MPI_Send(buffer.data(), buffer.size(), MPI_INT, tgt, mpirank, comm);
   }
 };
@@ -150,10 +149,10 @@ int main_make_contraction(std::string input_filename, MPI_Comm comm,
   peps_parameters.print_level = print_level;
   peps_parameters.Bcast(comm);
 
-  std::string output_filename = peps_parameters.contraction_path_file;
+  std::string output_filename = peps_parameters.contraction_order_file;
   if (output_filename.empty()) {
     throw tenes::input_error(
-        "parameter.contraction.pathfile is not specified (this is used for "
+        "parameter.contraction.orderfile is not specified (this is used for "
         "output filename)");
   }
 

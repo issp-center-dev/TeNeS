@@ -405,19 +405,19 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
     std::string contraction_mode_str =
         find_or(contraction, "optimize", std::string("automatic"));
     if (contraction_mode_str == "automatic") {
-      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::automatic;
+      pparam.corder_opt = PEPS_Parameters::ContractionOrderOptimization::automatic;
     } else if (contraction_mode_str == "never") {
-      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::never;
+      pparam.corder_opt = PEPS_Parameters::ContractionOrderOptimization::never;
     } else if (contraction_mode_str == "always") {
-      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::always;
+      pparam.corder_opt = PEPS_Parameters::ContractionOrderOptimization::always;
     } else if (contraction_mode_str == "old") {
-      pparam.cpath_opt = PEPS_Parameters::CPathOptimization::old;
+      pparam.corder_opt = PEPS_Parameters::ContractionOrderOptimization::old;
     } else {
       throw input_error("Invalid contraction optimize: " + contraction_mode_str);
     }
 
-    pparam.contraction_path_file =
-        find_or(contraction, "pathfile", std::string(""));
+    pparam.contraction_order_file =
+        find_or(contraction, "orderfile", std::string(""));
   }
 
   // random
@@ -676,21 +676,21 @@ EvolutionOperators<tensor> load_full_updates(
 }
 
 template <class tensor>
-std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_paths(
-    std::string const &path_file) {
+std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_orders(
+    std::string const &order_file) {
   std::map<TNC_map_key, TensorNetworkContractor<tensor>> ret;
 
-  auto input_toml = cpptoml::parse_file(path_file);
+  auto input_toml = cpptoml::parse_file(order_file);
   auto params_toml = input_toml->get_table("params");
   if (!params_toml) {
-    throw input_error(detail::msg_cannot_find("params", path_file));
+    throw input_error(detail::msg_cannot_find("params", order_file));
   }
   const bool is_tpo = find<bool>(params_toml, "is_TPO");
   const bool is_mf = find<bool>(params_toml, "is_mf");
 
   auto tensor_toml = input_toml->get_table("tensor");
   if (!tensor_toml) {
-    throw input_error(detail::msg_cannot_find("tensor", path_file));
+    throw input_error(detail::msg_cannot_find("tensor", order_file));
   }
   const auto L_sub = get_array_of<int32_t>(tensor_toml, "L_sub");
   if (L_sub.size() != 2) {
@@ -730,7 +730,7 @@ std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_paths(
 
   auto contractions = input_toml->get_table_array_qualified("contraction");
   if (!contractions) {
-    throw input_error(detail::msg_cannot_find("contraction", path_file));
+    throw input_error(detail::msg_cannot_find("contraction", order_file));
   }
   for (const auto &ctable : *contractions) {
     const int nrow = find<int>(ctable, "nrow");
@@ -742,8 +742,8 @@ std::map<TNC_map_key, TensorNetworkContractor<tensor>> load_contraction_paths(
                         " integers");
     }
     TensorNetworkContractor<tensor> tnc(nrow, ncol, is_tpo, is_mf);
-    const auto cpath = get_array_of<int32_t>(ctable, "contraction_path");
-    tnc.set_path(cpath);
+    const auto order = get_array_of<int32_t>(ctable, "contraction_order");
+    tnc.set_order(order);
 
     ret[TNC_map_key(nrow, ncol, shape_types)] = tnc;
   }
@@ -793,9 +793,9 @@ template EvolutionOperators<complex_tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 
 template std::map<TNC_map_key, TensorNetworkContractor<real_tensor>>
-load_contraction_paths(std::string const &path_file);
+load_contraction_orders(std::string const &order_file);
 template std::map<TNC_map_key, TensorNetworkContractor<complex_tensor>>
-load_contraction_paths(std::string const &path_file);
+load_contraction_orders(std::string const &order_file);
 
 // end of template instantiations
 

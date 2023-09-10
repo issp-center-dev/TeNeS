@@ -62,8 +62,8 @@ PEPS_Parameters::PEPS_Parameters() {
   Full_Use_FastFullUpdate = true;
 
   // observable
-  cpath_opt = CPathOptimization::automatic;
-  contraction_path_file = "";
+  corder_opt = ContractionOrderOptimization::automatic;
+  contraction_order_file = "";
 
   // random
   seed = 11;
@@ -292,23 +292,23 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       break;
   }
   ofs << "simple" << std::endl;
-  switch(cpath_opt){
-    case PEPS_Parameters::CPathOptimization::automatic:
+  switch(corder_opt){
+    case PEPS_Parameters::ContractionOrderOptimization::automatic:
       ofs << "contraction_optimize = automatic" << std::endl;
       break;
-    case PEPS_Parameters::CPathOptimization::never:
+    case PEPS_Parameters::ContractionOrderOptimization::never:
       ofs << "contraction_optimize = never" << std::endl;
       break;
-    case PEPS_Parameters::CPathOptimization::always:
+    case PEPS_Parameters::ContractionOrderOptimization::always:
       ofs << "contraction_optimize = always" << std::endl;
       break;
-    case PEPS_Parameters::CPathOptimization::old:
+    case PEPS_Parameters::ContractionOrderOptimization::old:
       ofs << "contraction_mode = old" << std::endl;
       break;
     default:
       break;
   }
-  ofs << "contraction_path_file = " << contraction_path_file << std::endl;
+  ofs << "contraction_order_file = " << contraction_order_file << std::endl;
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;

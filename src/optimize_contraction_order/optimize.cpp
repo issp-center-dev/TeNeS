@@ -21,7 +21,7 @@
  * The original license is the MIT License.
  */
 
-#include "finder.hpp"
+#include "optimize.hpp"
 
 #include <iostream>
 #include <cassert>
@@ -40,7 +40,7 @@
 // #include <omp.h>
 
 namespace tenes {
-namespace find_contraction_path {
+namespace optimize_contraction_order {
 
 bool are_overlap(const TensorFrame& t1, const TensorFrame& t2) {
   return (t1.bits & t2.bits) > 0;
@@ -496,5 +496,5 @@ int test(std::string filename) {
   return 0;
 }
 
-}  // namespace find_contraction_path
+}  // namespace optimize_contract_order
 }  // namespace tenes

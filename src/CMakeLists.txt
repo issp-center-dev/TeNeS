@@ -28,7 +28,7 @@ target_link_libraries(tensor PUBLIC tenes_mpi)
 add_library(SquareLattice STATIC SquareLattice.cpp)
 target_link_libraries(SquareLattice PUBLIC tenes_mpi)
 
-add_subdirectory(find_contraction_path)
+add_subdirectory(optimize_contraction_order)
 
 add_subdirectory(iTPS)
 

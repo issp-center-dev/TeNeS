@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_
-#define TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_
+#ifndef TENES_SRC_OPTIMIZE_CONTRACT_ORDER_OPTIMIZE_HPP_
+#define TENES_SRC_OPTIMIZE_CONTRACT_ORDER_OPTIMIZE_HPP_
 
 #include <cassert>
 #include <vector>
@@ -26,7 +26,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace tenes {
-namespace find_contraction_path {
+namespace optimize_contraction_order {
 
 struct Tensor {
   std::vector<int> name;
@@ -140,7 +140,7 @@ class TensorNetwork {
   std::vector<int> path() const { return result; }
 };
 
-}  // namespace find_contraction_path
+}  // namespace optimize_contraction_order
 }  // namespace tenes
 
-#endif  // TENES_SRC_FINDCONTRACTIONPATH_FINDER_HPP_
+#endif  // TENES_SRC_OPTIMIZE_CONTRACT_ORDER_OPTIMIZE_HPP_

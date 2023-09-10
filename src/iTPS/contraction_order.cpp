@@ -14,12 +14,12 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#include "../find_contraction_path/finder.hpp"
+#include "../optimize_contraction_order/optimize.hpp"
 
 #include <stack>
 
 #include "iTPS.hpp"
-#include "contraction_path.hpp"
+#include "contraction_order.hpp"
 
 namespace {
 inline int coord2index(int row, int col, int nrows, int ncols) {
@@ -110,7 +110,7 @@ void TensorNetworkContractor<tensor>::initialize(int nrows, int ncols,
   this->ncols = ncols;
   this->is_tpo = is_tpo;
   this->is_mf = is_mf;
-  path.clear();
+  order.clear();
 
   if (is_mf) {
     initialize_mf();
@@ -125,7 +125,7 @@ std::pair<std::vector<int>, double> TensorNetworkContractor<tensor>::optimize(
     std::vector<std::vector<int>> const& shape_dims, int chi) {
   const int tn_num_bonds = (is_tpo ? 4 : 5);
 
-  find_contraction_path::TensorNetwork tnw;
+  optimize_contraction_order::TensorNetwork tnw;
   tnw.set_default_bond_dim(chi);
 
   // add tensor
@@ -165,14 +165,14 @@ std::pair<std::vector<int>, double> TensorNetworkContractor<tensor>::optimize(
   }
 
   auto res = tnw.optimize();
-  path = std::get<0>(res);
-  assert(check_path(path));
+  order = std::get<0>(res);
+  assert(check_order(order));
   return res;
 }
 
 template <class tensor>
-bool TensorNetworkContractor<tensor>::check_path(
-    std::vector<int> const& path) const {
+bool TensorNetworkContractor<tensor>::check_order(
+    std::vector<int> const& order) const {
   size_t num_tensors = 0;
   num_tensors += C_name.size();
   num_tensors += eTt_name.size();
@@ -184,7 +184,7 @@ bool TensorNetworkContractor<tensor>::check_path(
   std::vector<int> t(num_tensors, 0);
 
   size_t num_contract = 0;
-  for (auto p : path) {
+  for (auto p : order) {
     if (p >= 0) {
       ++t[p];
     } else {
@@ -210,11 +210,11 @@ bool TensorNetworkContractor<tensor>::check_path(
 }
 
 template <class tensor>
-void TensorNetworkContractor<tensor>::set_path(std::vector<int> const& path) {
-  if (!check_path(path)) {
-    throw std::runtime_error("invalid contraction path");
+void TensorNetworkContractor<tensor>::set_order(std::vector<int> const& order) {
+  if (!check_order(order)) {
+    throw std::runtime_error("invalid contraction order");
   }
-  this->path = path;
+  this->order = order;
 }
 
 template <class tensor>
@@ -428,7 +428,7 @@ typename tensor::value_type TensorNetworkContractor<tensor>::contract(
     std::map<std::tuple<int, int>, tensor const*> const& ops) const {
   using mptensor::Axes;
   std::stack<Tensor_w_bondname<tensor>> st;
-  for (auto action : path) {
+  for (auto action : order) {
     if (action < 0) {
       // contract and push
       Tensor_w_bondname<tensor> rhs = std::move(st.top());
@@ -501,7 +501,7 @@ typename tensor::value_type TensorNetworkContractor<tensor>::contract(
             action + 4 + ncols + nrows + ncols + nrows + N_UNIT;
         throw std::runtime_error("invalid action " +
                                  std::to_string(action_orig) +
-                                 " in contraction path");
+                                 " in contraction order");
       } else {  // mean field
         if (is_tpo) {
           throw std::runtime_error("not implemented");
@@ -532,23 +532,23 @@ typename tensor::value_type TensorNetworkContractor<tensor>::contract(
         const int action_orig = action + N_UNIT;
         throw std::runtime_error("invalid action " +
                                  std::to_string(action_orig) +
-                                 " in contraction path");
+                                 " in contraction order");
       }
     }
   }
   if (st.size() != 1) {
-    throw std::runtime_error("invalid contraction path");
+    throw std::runtime_error("invalid contraction order");
   }
   if (st.top().t.rank() != 0) {
-    throw std::runtime_error("invalid contraction path");
+    throw std::runtime_error("invalid contraction order");
   }
 
   return mptensor::trace(st.top().t, Axes(), Axes());
 }
 
 template <class tensor>
-std::vector<int> TensorNetworkContractor<tensor>::get_path() const {
-  return path;
+std::vector<int> TensorNetworkContractor<tensor>::get_order() const {
+  return order;
 }
 
 template class TensorNetworkContractor<real_tensor>;

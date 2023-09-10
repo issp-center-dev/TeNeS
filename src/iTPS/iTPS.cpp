@@ -460,12 +460,12 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     site_ops_indices[op.source_site][op.group] = i;
   }
 
-  if (!peps_parameters.contraction_path_file.empty()) {
-    contraction_paths =
-        load_contraction_paths<tensor>(peps_parameters.contraction_path_file);
+  if (!peps_parameters.contraction_order_file.empty()) {
+    contraction_orders =
+        load_contraction_orders<tensor>(peps_parameters.contraction_order_file);
     if (peps_parameters.print_level >= PrintLevel::info) {
-      std::cout << "Contraction paths loaded from "
-                << peps_parameters.contraction_path_file << "\n";
+      std::cout << "Contraction orders loaded from "
+                << peps_parameters.contraction_order_file << "\n";
     }
   }
 

@@ -62,14 +62,14 @@ struct PEPS_Parameters {
   bool Full_Use_FastFullUpdate;
 
   // contraction
-  enum CPathOptimization {
+  enum ContractionOrderOptimization {
     automatic,
     never,
     always,
     old,
   };
-  CPathOptimization cpath_opt;
-  std::string contraction_path_file;
+  ContractionOrderOptimization corder_opt;
+  std::string contraction_order_file;
 
   // random
   int seed;

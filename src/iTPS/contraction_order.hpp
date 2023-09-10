@@ -14,8 +14,8 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#ifndef TENES_SRC_ITPS_CONTRACTION_PATH_HPP_
-#define TENES_SRC_ITPS_CONTRACTION_PATH_HPP_
+#ifndef TENES_SRC_ITPS_CONTRACTION_ORDER_HPP_
+#define TENES_SRC_ITPS_CONTRACTION_ORDER_HPP_
 
 #include <mptensor/tensor.hpp>
 #include <map>
@@ -30,7 +30,7 @@ class TensorNetworkContractor {
   int ncols;
   bool is_tpo;
   bool is_mf;
-  std::vector<int> path;
+  std::vector<int> order;
 
   struct TensorName {
     std::string name;
@@ -49,7 +49,7 @@ class TensorNetworkContractor {
   void initialize_ctm();
   void initialize_mf();
 
-  bool check_path(std::vector<int> const& path) const;
+  bool check_order(std::vector<int> const& order) const;
 
  public:
   TensorNetworkContractor(){};
@@ -60,8 +60,8 @@ class TensorNetworkContractor {
   std::pair<std::vector<int>, double> optimize(
       std::vector<int> const& shape_types,
       std::vector<std::vector<int>> const& shape_dims, int chi);
-  void set_path(std::vector<int> const& path);
-  std::vector<int> get_path() const;
+  void set_order(std::vector<int> const& order);
+  std::vector<int> get_order() const;
 
   typename tensor::value_type contract(
       std::vector<tensor const*> const& C,
@@ -83,8 +83,8 @@ class TensorNetworkContractor {
 
 using TNC_map_key = std::tuple<int, int, std::vector<int>>;
 
-std::vector<int> default_path(int nrows, int ncols, bool is_tpo, bool is_mf);
+std::vector<int> default_order(int nrows, int ncols, bool is_tpo, bool is_mf);
 
 }  // namespace itps
 }  // namespace tenes
-#endif  // TENES_SRC_ITPS_CONTRACTION_PATH_HPP_
+#endif  // TENES_SRC_ITPS_CONTRACTION_ORDER_HPP_
