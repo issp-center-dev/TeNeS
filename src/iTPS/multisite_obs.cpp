@@ -156,6 +156,7 @@ auto iTPS<ptensor>::measure_multisite()
           indices[row][col] = index;
           op_[row][col] = &(op_identity[index]);
           Tn_[row][col] = &(Tn[index]);
+          shape_types[row * ncol + col] = tensor_shape_types[index];
         }
         eTl_[row] = &(eTl[indices[row][0]]);
         eTr_[row] = &(eTr[indices[row][ncol - 1]]);
