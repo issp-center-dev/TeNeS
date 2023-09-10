@@ -3,12 +3,12 @@ add_subdirectory(core)
 add_library(PEPS_Parameters STATIC PEPS_Parameters.cpp)
 target_link_libraries(PEPS_Parameters PUBLIC tenes_mpi)
 
-add_library(load_toml STATIC load_toml.cpp)
-target_link_libraries(load_toml PUBLIC tenes_util tenes_mpi tensor SquareLattice PEPS_Parameters)
-target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR} ${BOOST_INCLUDE_DIR})
-
 add_library(contraction_order STATIC contraction_order.cpp default_order.cpp)
-target_link_libraries(contraction_order PUBLIC load_toml optimize_contraction_order)
+target_link_libraries(contraction_order PUBLIC optimize_contraction_order tenes_mpi tensor)
+
+add_library(load_toml STATIC load_toml.cpp)
+target_link_libraries(load_toml PUBLIC tenes_util tenes_mpi tensor SquareLattice PEPS_Parameters contraction_order)
+target_include_directories(load_toml PUBLIC ${CPPTOML_INCLUDE_DIR} ${BOOST_INCLUDE_DIR})
 
 add_library(
   iTPS_impl STATIC
@@ -31,5 +31,5 @@ add_library(
 target_link_libraries(iTPS_impl PUBLIC iTPS_core SquareLattice load_toml tenes_util PEPS_Parameters contraction_order)
 
 add_executable(tenes_optimize_contraction_order main_optimize_contraction.cpp)
-target_link_libraries(tenes_optimize_contraction_order PUBLIC contraction_order)
+target_link_libraries(tenes_optimize_contraction_order PUBLIC contraction_order load_toml)
 install(TARGETS tenes_optimize_contraction_order RUNTIME DESTINATION bin)
