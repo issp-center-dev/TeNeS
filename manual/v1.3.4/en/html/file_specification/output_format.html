@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5.5. Output files &#8212; TeNeS 1.3.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=c122253c"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="../algorithm/index.html" />
+    <link rel="prev" title="5.4. Input file for tenes" href="expert_format.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="output-files">
+<span id="sec-output-format"></span><h1><span class="section-number">5.5. </span>Output files<a class="headerlink" href="#output-files" title="Permalink to this heading">¶</a></h1>
+<p>Output files are generated in the <code class="docutils literal notranslate"><span class="pre">output</span></code> directry.</p>
+<section id="parameters-dat">
+<h2><span class="section-number">5.5.1. </span><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Permalink to this heading">¶</a></h2>
+<p>Paramters in the <code class="docutils literal notranslate"><span class="pre">parameter</span></code> and <code class="docutils literal notranslate"><span class="pre">lattice</span></code> sections defined in the input file are outputted.</p>
+</section>
+<section id="density-dat">
+<h2><span class="section-number">5.5.2. </span><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="Permalink to this heading">¶</a></h2>
+<p>The expectation value per site of each observable is outputted.
+When the name of the operator (<code class="docutils literal notranslate"><span class="pre">name</span></code>) is an empty, the index of the operator is written.</p>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Sz          =  6.11647102532908438e-03  0.00000000000000000e+00
+Sx          = -1.18125085038094907e-01  0.00000000000000000e+00
+hamiltonian = -5.43684776153081639e-01  0.00000000000000000e+00
+SzSz        = -3.16323622995942133e-01  0.00000000000000000e+00
+SxSx        = -8.55704529153783616e-02  0.00000000000000000e+00
+SySy        = -1.41790700241760936e-01  0.00000000000000000e+00
+</pre></div>
+</div>
+</section>
+</section>
+<section id="onesite-obs-dat">
+<h2><span class="section-number">5.5.3. </span><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>The expected values of the site operator are outputted.</p></li>
+<li><p>Each row consists of four columns.</p>
+<ol class="arabic simple">
+<li><p>Index of the operator</p></li>
+<li><p>Index of the sites</p></li>
+<li><p>Real part of the expected value</p></li>
+<li><p>Imaginary part of the expected value</p></li>
+</ol>
+</li>
+</ul>
+<section id="id1">
+<h3>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_index
+# $2: site_index
+# $3: real
+# $4: imag
+
+0 0 1.92549465249573365e-02 0.00000000000000000e+00
+0 1 -1.92620814130195529e-02 0.00000000000000000e+00
+0 2 -1.95243093055922252e-02 0.00000000000000000e+00
+0 3 1.91619477632061150e-02 0.00000000000000000e+00
+1 0 4.07206063348768799e-01 0.00000000000000000e+00
+1 1 -4.07243511737157671e-01 0.00000000000000000e+00
+1 2 -4.07255967738734126e-01 0.00000000000000000e+00
+1 3 4.07308918791554009e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</section>
+</section>
+<section id="twosite-obs-dat">
+<h2><span class="section-number">5.5.4. </span><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Permalink to this heading">¶</a></h2>
+<ul>
+<li><p>Expectation values for two-site operations are outputted.</p></li>
+<li><p>Each row consists of six columns.</p>
+<ol class="arabic simple">
+<li><p>Index of the two-site operator</p></li>
+<li><p>Index of the source site</p></li>
+<li><p>x coordinate of the target site from the source site</p></li>
+<li><p>y coordinate of the target site from the source site</p></li>
+<li><p>Real part of the expected value</p></li>
+<li><p>Imaginary part of the expected value</p></li>
+</ol>
+</li>
+<li><p>In addition, norm of the wave function <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> is outputted as an operator with index of -1.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If the imaginary part is finite, something is wrong. A typical cause is that the bond dimension of the CTM is too small.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
+# $2: source_site
+# $3: dx
+# $4: dy
+# $5: real
+# $6: imag
+
+0 0 0 1 -3.30408104727482554e-01 -3.63538996091175880e-19
+0 0 1 0 -3.26902334621655521e-01 -1.28557778331473411e-19
+0 1 0 1 -3.30408104727482110e-01 6.13195629489298286e-18
+0 1 1 0 -3.28820570518176758e-01 5.98724951760379135e-18
+0 2 0 1 -3.32375821733345012e-01 -5.42272048973129865e-18
+0 2 1 0 -3.26902334621652579e-01 9.69166076872613868e-20
+0 3 0 1 -3.32375821733344956e-01 5.07748884268378299e-18
+0 3 1 0 -3.28820570518176702e-01 4.86902738935337153e-18
+1 0 0 1 -1.87348767102901825e-01 4.90760305979372382e-19
+   ... skipped ...
+-1 3 1 0 1.07465536687797147e+00 7.74120351154650166e-17
+</pre></div>
+</div>
+</section>
+<section id="correlation-dat">
+<h2><span class="section-number">5.5.5. </span><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Permalink to this heading">¶</a></h2>
+<ul>
+<li><p>Correlation functions <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> are outputted.</p></li>
+<li><p>Each row consists of eight columns.</p>
+<ol class="arabic simple">
+<li><p>Site index of the left operator</p></li>
+<li><p>Index of the left operator</p></li>
+<li><p>Index of the right operator</p></li>
+<li><p>Site index of the right operator</p></li>
+<li><p>Unit cell offset of the right operator (x)</p></li>
+<li><p>Unit cell offset of the right operator (y)</p></li>
+<li><p>Real part of the expected value</p></li>
+<li><p>Imaginary part of the expected value</p></li>
+</ol>
+<ol class="arabic simple">
+<li><p>Index of the left operator <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
+<li><p>Index of the left site <span class="math notranslate nohighlight">\(i\)</span></p></li>
+<li><p>Index of the right operator <span class="math notranslate nohighlight">\(\beta\)</span></p></li>
+<li><p>x coordinate of the right site <span class="math notranslate nohighlight">\(x\)</span></p></li>
+<li><p>y coordinate of the right site <span class="math notranslate nohighlight">\(y\)</span></p></li>
+<li><p>Real part <span class="math notranslate nohighlight">\(\mathrm{Re}C\)</span></p></li>
+<li><p>Imaginary part <span class="math notranslate nohighlight">\(\mathrm{Im}C\)</span></p></li>
+</ol>
+</li>
+</ul>
+<section id="id2">
+<h3>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: left_op
+# $2: left_site
+# $3: right_op
+# $4: right_dx
+# $5: right_dy
+# $6: real
+# $7: imag
+
+0 0 0 1 0 -1.71759992763061836e-01 1.36428299157186382e-14
+0 0 0 2 0 1.43751794649139675e-01 -1.14110668277268192e-14
+0 0 0 3 0 -1.42375391377041444e-01 1.14103263451826963e-14
+0 0 0 4 0 1.41835919840103741e-01 -1.11365361507372103e-14
+0 0 0 5 0 -1.41783912096811515e-01 1.12856813523671142e-14
+0 0 0 0 1 -1.72711348845767942e-01 1.40873628493918905e-14
+0 0 0 0 2 1.43814797743900907e-01 -1.17958665742991377e-14
+0 0 0 0 3 -1.42415176172922653e-01 1.22109610917000360e-14
+0 0 0 0 4 1.41838862178711583e-01 -1.19321507524565005e-14
+0 0 0 0 5 -1.41792935491960648e-01 1.23094733264734764e-14
+1 0 1 1 0 -7.95389427681298805e-02 6.15901595234210079e-15
+1 0 1 2 0 2.01916094009441903e-02 -1.27162373457160362e-15
+... Skipped ...
+2 3 2 0 5 -1.41888376278899312e-03 -2.38672137694415560e-16
+</pre></div>
+</div>
+</section>
+</section>
+<section id="correlation-length-dat">
+<h2><span class="section-number">5.5.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Permalink to this heading">¶</a></h2>
+<p>The correlation length <span class="math notranslate nohighlight">\(\xi\)</span> is outputted.</p>
+<ol class="arabic simple">
+<li><p>Direction (<code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">x,</span> <span class="pre">1:</span> <span class="pre">y</span></code>)</p></li>
+<li><p>When direction is <code class="docutils literal notranslate"><span class="pre">0</span></code> it is <span class="math notranslate nohighlight">\(y\)</span> coodinate, and otherwise <span class="math notranslate nohighlight">\(x\)</span> coordinate</p></li>
+<li><p>Correlation length <span class="math notranslate nohighlight">\(\xi = 1/e_1\)</span></p></li>
+</ol>
+<p>The 4th and the subsequent columns show the logarithm of the absolute value of the eigenvalues of the transfer matrix, <span class="math notranslate nohighlight">\(e_i = -\log\left|\lambda_i/\lambda_0\right|\)</span> (<span class="math notranslate nohighlight">\(i&gt;0\)</span>).
+This information may be used to estimate the bond dimension dependence of the correlation length.
+See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (2018) for more information.</p>
+<section id="id3">
+<h3>Example<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: direction
+# $2: col or row index
+# $3: correlation length
+# $4-: eigenvalues e_i = -log|t_i/t_0|
+#      where i &gt; 0 and t_i is i-th largest eigenvalue of T
+
+0 0 7.19213553469021272e-01 1.39040761283856007e+00 1.44013584036962405e+00 1.53522220522654251e+00
+0 1 7.19303527237354912e-01 1.39023369430805133e+00 1.39042786247674610e+00 1.53457094348925005e+00
+1 0 7.26232546918431754e-01 1.37696940772377285e+00 1.39968879441491767e+00 1.51923157420858113e+00
+1 1 7.26095712518373015e-01 1.37722890076244076e+00 1.38699264750702023e+00 1.52016493301531241e+00
+</pre></div>
+</div>
+</section>
+</section>
+<section id="time-dat">
+<h2><span class="section-number">5.5.7. </span><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Permalink to this heading">¶</a></h2>
+<p>The calculation time is outputted.</p>
+<section id="id4">
+<h3>Example<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>time simple update = 1.64429
+time full update   = 0
+time environmnent  = 0.741858
+time observable    = 0.104487
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_format.html">5.3. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">5.5. Output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">5. </span>File format</a><ul>
+      <li>Previous: <a href="expert_format.html" title="previous chapter"><span class="section-number">5.4. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+      <li>Next: <a href="../algorithm/index.html" title="next chapter">&lt;no title&gt;</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/file_specification/output_format.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

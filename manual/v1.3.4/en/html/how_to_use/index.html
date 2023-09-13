@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>3. Usage &#8212; TeNeS 1.3.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=c122253c"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="3.1. Usage of tenes_simple" href="simple_usage.html" />
+    <link rel="prev" title="2. Install" href="../install.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="usage">
+<h1><span class="section-number">3. </span>Usage<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">tenes</span></code>, the main program of TeNeS, needs an input file to define the model, order of operations, etc.
+For ease of use to make the input file, the following script is provided (the schematic flow is shown <a class="reference internal" href="#fig-tenes-flow"><span class="std std-numref">Fig. 3.1</span></a>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> : A tool that generates an input file to execute <code class="docutils literal notranslate"><span class="pre">tenes</span></code>. An input file of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> defines a lattice model etc. by yourself according to a predetermined format.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>: A tool that generates input files for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> from another simpler input file which specifies lattice model predefined.</p></li>
+</ul>
+<p>In order to simulate other models and/or lattices than predefined ones, you should create the input file of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> and convert it.
+Please see <a class="reference internal" href="../file_specification/index.html"><span class="doc">File format</span></a> for details on the input files of TeNeS.</p>
+<figure class="align-default" id="fig-tenes-flow">
+<a class="reference internal image-reference" href="../_images/tenes_flow.png"><img alt="../_images/tenes_flow.png" src="../_images/tenes_flow.png" style="width: 800px;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 3.1 </span><span class="caption-text">Schematic calculation flow of TeNeS</span><a class="headerlink" href="#fig-tenes-flow" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The following sections describe how to use each script, and finally how to use <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simple_usage.html">3.1. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. Usage of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. Usage of <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../install.html" title="previous chapter"><span class="section-number">2. </span>Install</a></li>
+      <li>Next: <a href="simple_usage.html" title="next chapter"><span class="section-number">3.1. </span>Usage of <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/how_to_use/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
