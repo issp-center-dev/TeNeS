@@ -85,8 +85,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   if (peps_parameters.print_level >= PrintLevel::info) {
-    std::cout << "Number of Processes: " << mpisize << std::endl;
-    std::cout << "Number of Threads / Process: " << omp_get_max_threads()
+    std::cout << "Number of MPI Processes: " << mpisize << std::endl;
+    std::cout << "Number of OpenMP Threads of each MPI Process: " << omp_get_max_threads()
               << std::endl;
 
     if (peps_parameters.is_real) {
