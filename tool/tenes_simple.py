@@ -635,7 +635,7 @@ def Splus(S: float) -> np.ndarray:
     ret = np.zeros((N, N))
     for i in range(1, N):
         m = S - i
-        ret[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
+        ret[i, i - 1] = np.sqrt((S - m) * (S + m + 1.0))
     return ret
 
 
@@ -644,7 +644,7 @@ def Sminus(S: float) -> np.ndarray:
     ret = np.zeros((N, N))
     for i in range(N - 1):
         m = S - i
-        ret[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
+        ret[i, i + 1] = np.sqrt((S + m) * (S - m + 1.0))
     return ret
 
 
