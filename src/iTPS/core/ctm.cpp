@@ -40,10 +40,47 @@ using mptensor::Axes;
 using mptensor::Index;
 using mptensor::Shape;
 
+
+/*
+ * Layout of Tensors
+ *
+ *   C1 eT1 eT2  C2
+ *  eT8 Tn1 Tn2 eT3
+ *  eT7 Tn4 Tn3 eT4
+ *   C4 eT6 eT5  C3
+ *
+ *  Tn* has conjugate, cTn*
+ */
+
+
+/*!
+ *
+ */
 template <class tensor>
 class Mult_col {
  public:
+  /*!
+   * @brief
+   * @param[in] LT Left-top block tensor @n
+   *               C1 eT1 @n
+   *              eT8 Tn1 @n
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   * @param[in] LB Left-bottom block tensor @n
+   *              eT7 Tn4 @n
+   *               C4 Tn6 @n
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *
+   */
   Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+
+  /*!
+   * @brief
+   * @param[in] T_in Input tensor
+   *            legs = [0:Tn3_left, 1:eT5_left, 2:cTn3_left]
+   * @return
+   * @param[out] T_out Output tensor
+   *            legs = [0:Tn1_right, 2:eT1_right, 3:cTn1_right]
+   */
   tensor operator()(const tensor &T_in) {
     return tensordot(LT_, tensordot(LB_, T_in, Axes(1, 3, 5), Axes(0, 1, 2)),
                      Axes(1, 3, 5), Axes(0, 1, 2));
@@ -57,7 +94,28 @@ class Mult_col {
 template <class tensor>
 class Mult_row {
  public:
+  /*!
+   * @brief
+   * @param[in] LT Left-top block tensor @n
+   *               C1 eT1 @n
+   *              eT8 Tn1 @n
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   * @param[in] LB Left-bottom block tensor @n
+   *              eT7 Tn4 @n
+   *               C4 Tn6 @n
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *
+   */
   Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+
+  /*!
+   * @brief
+   * @param[in] T_in Input tensor
+   *            legs = [0:Tn2_left, 1:eT2_left, 2:cTn2_left]
+   * @return
+   * @param[out] T_out Output tensor
+   *            legs = [0:Tn4_right, 2:eT6_right, 3:cTn4_right]
+   */
   tensor operator()(const tensor &T_in) {
     return tensordot(tensordot(T_in, LT_, Axes(0, 1, 2), Axes(0, 2, 4)), LB_,
                      Axes(1, 2, 3), Axes(0, 2, 4));
@@ -120,6 +178,13 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
                                const tensor &Tn1, const tensor &Tn4,
                                const PEPS_Parameters peps_parameters,
                                tensor &PU, tensor &PL) {
+  //
+  // Layout of Tensors
+  //   C1 e1 (e2)
+  //   e8 T1 (T2)
+  //   e7 T4 (T3)
+  //   C4 e6 (e5)
+  //
   // Original (cheaper version of P. Corboz, T.M.Rice and M. Troyer, PRL 113,
   // 046402(2014))
 
@@ -174,25 +239,35 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       Shape shape_row(t12, e12, t12);
       Shape shape_col(t34, e56, t34);
 
+      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
       /*int info ()= */
-      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
+      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
+           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
+      std::vector<double> s_c(cut);
 
-      for (int i = 0; i < e78; ++i) {
+      for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s[i] = 1.0 / sqrt(s[i]);
+          s_c[i] = 1.0 / sqrt(s[i]);
         } else {
-          s[i] = 0.0;
+          s_c[i] = 0.0;
+          cut = i;
+          break;
         }
       }
 
-      U.multiply_vector(s, 3);
-      VT.multiply_vector(s, 0);
+      // U.multiply_vector(s, 3);
+      // VT.multiply_vector(s, 0);
 
-      PU = tensordot(LB, conj(VT), Axes(1, 3, 5), Axes(1, 2, 3))
+      tensor U_c = mptensor::slice(U, 3, 0, cut);
+      tensor VT_c = mptensor::slice(VT, 0, 0, cut);
+      s_c.resize(cut);
+      U_c.multiply_vector(s_c, 3);
+      VT_c.multiply_vector(s_c, 0);
+
+      PU = tensordot(LB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3))
                .transpose(Axes(1, 0, 2, 3));
-      PL = tensordot(LT, conj(U), Axes(0, 2, 4), Axes(0, 1, 2))
+      PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     } else {
       // full svd //
@@ -204,19 +279,24 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)), Axes(0, 1, 2),
           Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
-      std::vector<double> s_c;
-      s_c.resize(e78);
+      // s_c.resize(e78);
+      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
+      std::vector<double> s_c(cut);
 
-      for (int i = 0; i < e78; ++i) {
+      for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
+          cut = i;
+          break;
         }
       }
       // O(D^{10})
-      tensor U_c = slice(U, 3, 0, e78);
-      tensor VT_c = slice(VT, 0, 0, e78);
+      // tensor U_c = slice(U, 3, 0, e78);
+      // tensor VT_c = slice(VT, 0, 0, e78);
+      tensor U_c = slice(U, 3, 0, cut);
+      tensor VT_c = slice(VT, 0, 0, cut);
 
       U_c.multiply_vector(s_c, 3);
       VT_c.multiply_vector(s_c, 0);
@@ -226,7 +306,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else {
+  } else { // t41 == 1
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -333,26 +413,33 @@ void Calc_projector_updown_blocks(
       Shape shape_row(t23, e34, t23);
       Shape shape_col(t23, e34, t23);
 
+      int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
       /* int info = */
-      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, e78,
-           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * e78));
+      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
+           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
 
-      for (int i = 0; i < e78; ++i) {
+      std::vector<double> s_c(cut);
+      for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s[i] = 1.0 / sqrt(s[i]);
+          s_c[i] = 1.0 / sqrt(s[i]);
         } else {
-          s[i] = 0.0;
+          s_c[i] = 0.0;
+          cut = i;
+          break;
         }
       }
 
-      U.multiply_vector(s, 3);
-      VT.multiply_vector(s, 0);
+      tensor U_c = mptensor::slice(U, 3, 0, cut);
+      tensor VT_c = mptensor::slice(VT, 0, 0, cut);
 
-      PU = tensordot(LB, tensordot(RB, conj(VT), Axes(1, 3, 5), Axes(1, 2, 3)),
+      U_c.multiply_vector(s, 3);
+      VT_c.multiply_vector(s, 0);
+
+      PU = tensordot(LB, tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
                      Axes(1, 3, 5), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
-      PL = tensordot(LT, tensordot(RT, conj(U), Axes(1, 2, 5), Axes(0, 1, 2)),
+      PL = tensordot(LT, tensordot(RT, conj(U_c), Axes(1, 2, 5), Axes(0, 1, 2)),
                      Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     } else {
@@ -368,18 +455,20 @@ void Calc_projector_updown_blocks(
       svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)), Axes(0, 1, 2),
           Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
-      std::vector<double> s_c;
-      s_c.resize(e78);
+      int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
+      std::vector<double> s_c(cut);
 
-      for (int i = 0; i < e78; ++i) {
+      for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
+          cut = i;
+          break;
         }
       }
-      tensor U_c = slice(U, 3, 0, e78);
-      tensor VT_c = slice(VT, 0, 0, e78);
+      tensor U_c = slice(U, 3, 0, cut);
+      tensor VT_c = slice(VT, 0, 0, cut);
 
       U_c.multiply_vector(s_c, 3);
       VT_c.multiply_vector(s_c, 0);
@@ -389,7 +478,7 @@ void Calc_projector_updown_blocks(
       PL = tensordot(R1, conj(U_c), Axes(0, 1, 2), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else {
+  } else { // t41 == 1
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -1106,8 +1195,7 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
       }
     }
-  }
-  // Initialize done
+  } // end of if(initialize)
 
   bool convergence = false;
   int count = 0;
@@ -1118,6 +1206,7 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
 
   double sig_max = 0.0;
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
+
     // left move
     for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
       Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
