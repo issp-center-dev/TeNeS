@@ -18,7 +18,7 @@ General parameters for ``tenes``.
    ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
    ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
    ``measure``,     "Whether to calculate and save observables",               Boolean, true
-   ``measure_interval``, "Interval of measurement in time evolution process",  Integer or list of integers, 10
+   ``measure_interval``, "Interval of measurement in finite temperature calculation and time evolution process",  Integer or list of integers, 10
    ``output``,      "Directory for saving result such as physical quantities", String,  \"output\"
    ``tensor_save``, "Directory for saving optimized tensors",                  String,  \"\"
    ``tensor_load``, "Directory for loading initial tensors",                   String,  \"\"
@@ -57,7 +57,8 @@ General parameters for ``tenes``.
 
 - ``measure_interval``
 
-  - Specify the interval of measurement in time evolution process
+  - Specify the interval of measurement in time evolution process and finite temperature Calculation
+  - Physical quantitites are calculated and saved each after ``measure_interval`` updates
 
 - ``output``
 
