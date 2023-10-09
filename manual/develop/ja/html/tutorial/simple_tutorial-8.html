@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>イジング模型の実時間発展 &#8212; TeNeS 1.4-dev ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2f4a50b9"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>イジング模型の実時間発展<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<p>ここでは正方格子のイジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の実時間発展の計算例について紹介します。
+このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code> に格納されています。</p>
+<p>最初に初期状態として、基底状態の計算を行います ( <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> ファイル)。ここでは、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+output = &quot;output&quot;
+tensor_save = &quot;save_tensor&quot;
+
+[parameter.simple_update]
+num_step = 10
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 3
+initial = &quot;ferro&quot;
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 0.0
+</pre></div>
+</div>
+<p>とします( <code class="docutils literal notranslate"><span class="pre">`Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 基底状態は強磁性状態になります)。
+初期状態として基底状態を使用するため、 <code class="docutils literal notranslate"><span class="pre">tensor_save</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを保存しておきます。</p>
+<p>次に、実時間発展を行うための入力ファイルを用意します。
+実時間発展は <code class="docutils literal notranslate"><span class="pre">mode</span></code> を <code class="docutils literal notranslate"><span class="pre">time</span></code> にすることで行うことができます。
+以下、入力ファイル例です( <code class="docutils literal notranslate"><span class="pre">simple_te_strong.toml</span></code> ファイル)。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+output = &quot;output_te_strong&quot;
+tensor_load = &quot;save_tensor&quot;
+mode = &quot;time&quot;
+
+[parameter.simple_update]
+num_step = 500
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 3
+initial = &quot;ferro&quot;
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 2.0
+</pre></div>
+</div>
+<p>ここでは、横磁場を <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> 、実時間発展の刻み幅を <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> として時間発展させています。
+また、初期状態として先ほどの基底状態を用いるため、 <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを読み込みます。
+時間発展の様子をいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> 、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> という入力ファイルもサンプルとして用意しています。
+また、これらを一括して計算するためのスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> も準備しています。
+あらかじめ <code class="docutils literal notranslate"><span class="pre">tenes</span></code> などにパスを通した上で</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
+</pre></div>
+</div>
+<p>により計算を実行します。数十秒で計算が終わります。
+計算が終了したら、gnuplotを起動し、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.plt&#39;
+</pre></div>
+</div>
+<p>とすれば、 磁化 <span class="math notranslate nohighlight">\(S_z\)</span> の時間発展の様子がプロットされます。
+その結果を <code class="xref std std-numref docutils literal notranslate"><span class="pre">fig_tutorial7_timeevolution</span></code> に示します。</p>
+<figure class="align-default" id="fig-tutorial7-timeevolution">
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.pdf"><img alt="../_images/tutorial_07_timeevolution.pdf" src="../_images/tutorial_07_timeevolution.pdf" style="width: 600px;" /></a>
+<figcaption>
+<p><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
+<p>なお、時間発展が進むにつれてエンタングルメントが大きくなり、ある時点でテンソルネットワークの容量が波動関数を表現するのに足りなくなります。
+今の場合、 <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> の <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> の場合のジャンプがこの問題を示しています。
+実際に使用する場合には、このような不連続性が存在しないかを確認の上、ジャンプが存在する場合にはテンソルネットワークの容量が足りなくならないように、
+<code class="docutils literal notranslate"><span class="pre">virtual_dimension</span></code> を大きくするなどの対策を行う必要があります。
+例えば、 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> に変更して上述の計算を行うと、 <code class="xref std std-numref docutils literal notranslate"><span class="pre">fig_tutorial7_timeevolution_D10</span></code> に示すように不連続性が消えることがわかります。</p>
+<figure class="align-default" id="fig-tutorial7-timeevolution-d10">
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.pdf"><img alt="../_images/tutorial_07_timeevolution_D10.pdf" src="../_images/tutorial_07_timeevolution_D10.pdf" style="width: 600px;" /></a>
+</figure>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/tutorial/simple_tutorial-8.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
