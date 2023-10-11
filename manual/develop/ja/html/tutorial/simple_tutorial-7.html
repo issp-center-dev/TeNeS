@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>三角格子上のハードコアボゾン模型の相図 &#8212; TeNeS 1.4-dev ドキュメント</title>
+    <title>4.2. 横磁場イジング模型の実時間発展 &#8212; TeNeS 1.4-dev ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2f4a50b9"></script>
@@ -15,6 +15,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="4.3. 横磁場イジング模型の有限温度計算" href="simple_tutorial-8.html" />
+    <link rel="prev" title="4.1. 横磁場イジング模型" href="simple_tutorial-1.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -32,77 +34,116 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1>三角格子上のハードコアボゾン模型の相図<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
-<p>最後に三角格子上で定義されたハードコアボゾン模型の絶対零度のおける相図の計算を紹介します。
-模型のハミルトニアンは以下のようになります:</p>
-<div class="math notranslate nohighlight">
-\[\begin{aligned}
-H = \sum_{\langle i,j \rangle} \Bigl[ -t (b_i^\dagger b_j + b_j^\dagger b_i) + V n_i n_j \Bigr] -\mu \sum_i n_i
-\end{aligned}\]</div>
-<p>ここで<span class="math notranslate nohighlight">\(\langle i, j\rangle\)</span>は隣接サイトの組を表し、<span class="math notranslate nohighlight">\(\mu\)</span>は化学ポテンシャル、<span class="math notranslate nohighlight">\(t\)</span>はホッピングエネルギー、<span class="math notranslate nohighlight">\(V\)</span>は隣接サイト間の相互作用の大きさを表します。
-ハードコアボゾン模型では、各サイトのボソン数は0か1に制限されます。
-この模型では、2つのタイプの長距離秩序によって特徴づけられるいくつかの秩序相が現れることが知られています <a class="reference internal" href="#ref-wessel"><span class="std std-ref">[Wessel]</span></a> 。
-1/3フィリングでは、 <code class="xref std std-numref docutils literal notranslate"><span class="pre">fig_tutorial6_hardcore_boson</span></code> の挿入図に示すような<span class="math notranslate nohighlight">\(\sqrt{3}\times\sqrt{3}\)</span>超格子構造をもつ固体相が出現します。これは波数<span class="math notranslate nohighlight">\(\boldsymbol{Q}=(4\pi/3,0)\)</span>の構造因子<span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span>を計算することで特徴づけることができます。
-もう一つの秩序は消滅演算子の期待値の大きさ<span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span>で特徴づけられる超流動秩序です。</p>
-<p>この模型の計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/06_hardcore_boson_triangular</span></code> ディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> , <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> と、Pythonスクリプト <code class="docutils literal notranslate"><span class="pre">run.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の <code class="docutils literal notranslate"><span class="pre">model</span></code> セクションだけです。ここで、 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;boson&quot;</span></code> によってハードコアボゾン模型を指定しており、 <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0.1</span></code> , <code class="docutils literal notranslate"><span class="pre">V</span> <span class="pre">=</span> <span class="pre">1</span></code> によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。</p>
-<p><code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> ファイルには計算する構造因子の情報が記述されています。</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.twosite]]
-name = &quot;&lt;nn&gt;&quot;
-group = 4
-bonds = &quot;&quot;&quot;
-0 1 0
-0 2 0
-0 0 1
-0 1 1
-0 2 1
-0 0 2
-0 1 2
-0 2 2
-1 1 0
-1 2 0
-1 0 1
-1 1 1
-1 2 1
-1 0 2
-1 1 2
-1 2 2
-2 1 0
-2 2 0
-2 0 1
-2 1 1
-2 2 1
-2 0 2
-2 1 2
-2 2 2
-&quot;&quot;&quot;
-ops = [0, 0]
+<h1><span class="section-number">4.2. </span>横磁場イジング模型の実時間発展<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<p>ここでは正方格子のイジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の実時間発展の計算例について紹介します。
+このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code> に格納されています。</p>
+<p>最初に初期状態として、基底状態の計算を行います ( <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> ファイル)。ここでは、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+output = &quot;output&quot;
+tensor_save = &quot;save_tensor&quot;
 
+[parameter.simple_update]
+num_step = 10
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 3
+initial = &quot;ferro&quot;
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 0.0
 </pre></div>
 </div>
-<p>このファイルによって、構造因子<span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span>を計算することができます。</p>
-<p>実際にスクリプト <code class="docutils literal notranslate"><span class="pre">run.py</span></code> を使って計算を実行してみましょう。
+<p>とします( <code class="docutils literal notranslate"><span class="pre">`Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 基底状態は強磁性状態になります)。
+初期状態として基底状態を使用するため、 <code class="docutils literal notranslate"><span class="pre">tensor_save</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを保存しておきます。</p>
+<p>次に、実時間発展を行うための入力ファイルを用意します。
+実時間発展は <code class="docutils literal notranslate"><span class="pre">mode</span></code> を <code class="docutils literal notranslate"><span class="pre">time</span></code> にすることで行うことができます。
+以下、入力ファイル例です( <code class="docutils literal notranslate"><span class="pre">simple_te_strong.toml</span></code> ファイル)。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+output = &quot;output_te_strong&quot;
+tensor_load = &quot;save_tensor&quot;
+mode = &quot;time&quot;
+
+[parameter.simple_update]
+num_step = 500
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+meanfield_env = true
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 3
+initial = &quot;ferro&quot;
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 2.0
+</pre></div>
+</div>
+<p>ここでは、横磁場を <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> 、実時間発展の刻み幅を <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> として時間発展させています。
+また、初期状態として先ほどの基底状態を用いるため、 <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを読み込みます。
+時間発展の様子をいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> 、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> という入力ファイルもサンプルとして用意しています。
+また、これらを一括して計算するためのスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> も準備しています。
 あらかじめ <code class="docutils literal notranslate"><span class="pre">tenes</span></code> などにパスを通した上で</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python run.py
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
 </pre></div>
 </div>
-<p>により計算を実行します。数分〜十数分程度で計算が終わります。
+<p>により計算を実行します。数十秒で計算が終わります。
 計算が終了したら、gnuplotを起動し、</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.gp&#39;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.plt&#39;
 </pre></div>
 </div>
-<p>とすれば、 <code class="xref std std-numref docutils literal notranslate"><span class="pre">fig_tutorial6_hardcore_boson</span></code> (a)のような構造因子<span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span>と超流動秩序パラメータ<span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span>のグラフが得られます。
-なお、ここで計算に用いたボンド次元は小さい(ボンド次元2)ため、計算精度はそれほど高くありません。
-スクリプト <code class="docutils literal notranslate"><span class="pre">run.py</span></code> の冒頭でコメントになっている4行をコメントアウトすることで、時間がかかりますが、より高精度の計算を行うこともできます。その結果を <code class="xref std std-numref docutils literal notranslate"><span class="pre">fig_tutorial6_hardcore_boson</span></code> (b)に示します。
-この図から、系の基底状態は3種類の相、つまり(a) 超流動相(<span class="math notranslate nohighlight">\(-0.5 \lesssim \mu/V \lesssim -0.2\)</span>), (b) 固体相(<span class="math notranslate nohighlight">\(-0.2 \lesssim \mu/V \lesssim 2.4\)</span>), および(c) 超流動固体相(<span class="math notranslate nohighlight">\(2.4 \lesssim \mu/V\)</span>)が現れることがわかります。これは先行研究の結果と整合します <a class="reference internal" href="#ref-wessel"><span class="std std-ref">[Wessel]</span></a> 。</p>
-<figure class="align-default" id="fig-tutorial6-hardcore-boson">
-<a class="reference internal image-reference" href="../_images/tutorial_6_hardcore_boson.png"><img alt="../_images/tutorial_6_hardcore_boson.png" src="../_images/tutorial_6_hardcore_boson.png" style="width: 600px;" /></a>
+<p>とすれば、 磁化 <span class="math notranslate nohighlight">\(S_z\)</span> の時間発展の様子がプロットされます。
+その結果を <a class="reference internal" href="#fig-tutorial7-timeevolution"><span class="std std-numref">図 4.2</span></a> に示します。</p>
+<figure class="align-default" id="fig-tutorial7-timeevolution">
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.pdf"><img alt="../_images/tutorial_07_timeevolution.pdf" src="../_images/tutorial_07_timeevolution.pdf" style="width: 600px;" /></a>
 <figcaption>
-<p><span class="caption-text">三角格子上のハードコアボゾン模型の基底状態相図. (a) ボンド次元が2のとき. (b) ボンド次元が5のとき. 挿入図: 固体相のときの粒子配置.</span><a class="headerlink" href="#fig-tutorial6-hardcore-boson" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.2 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
-<p class="rubric">参考文献</p>
-<p id="ref-wessel">[Wessel]
-S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</em>, Phys. Rev. Lett. <strong>95</strong>, 127205 (2005). <a class="reference external" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.95.127205">link</a>.</p>
+<p>なお、時間発展が進むにつれてエンタングルメントが大きくなり、ある時点でテンソルネットワークの容量が波動関数を表現するのに足りなくなります。
+今の場合、 <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> の <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> の場合のジャンプがこの問題を示しています。
+実際に使用する場合には、このような不連続性が存在しないかを確認の上、ジャンプが存在する場合にはテンソルネットワークの容量が足りなくならないように、
+<code class="docutils literal notranslate"><span class="pre">virtual_dimension</span></code> を大きくするなどの対策を行う必要があります。
+例えば、 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> に変更して上述の計算を行うと、
+<a class="reference internal" href="#fig-tutorial7-te-d10"><span class="std std-numref">図 4.3</span></a> に示すように不連続性が消えることがわかります。</p>
+<figure class="align-default" id="fig-tutorial7-te-d10">
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.pdf"><img alt="../_images/tutorial_07_timeevolution_D10.pdf" src="../_images/tutorial_07_timeevolution_D10.pdf" style="width: 600px;" /></a>
+<figcaption>
+<p><span class="caption-number">図 4.3 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。
+<code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> とした場合の結果。</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
 </section>
 
 
@@ -127,11 +168,19 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 
 
 <h3>ナビゲーション</h3>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
-<li class="toctree-l1"><a class="reference internal" href="index.html">4. チュートリアル</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. チュートリアル</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. 横磁場イジング模型</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.2. 横磁場イジング模型の実時間発展</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-8.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-6.html">4.5. 三角格子上のハードコアボゾン模型の相図</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
@@ -143,6 +192,10 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>チュートリアル</a><ul>
+      <li>Previous: <a href="simple_tutorial-1.html" title="前の章へ"><span class="section-number">4.1. </span>横磁場イジング模型</a></li>
+      <li>Next: <a href="simple_tutorial-8.html" title="次の章へ"><span class="section-number">4.3. </span>横磁場イジング模型の有限温度計算</a></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

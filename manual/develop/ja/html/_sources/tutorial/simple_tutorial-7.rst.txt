@@ -1,59 +1,61 @@
 .. highlight:: none
 
-三角格子上のハードコアボゾン模型の相図
+横磁場イジング模型の実時間発展
 -----------------------------------------------
 
-最後に三角格子上で定義されたハードコアボゾン模型の絶対零度のおける相図の計算を紹介します。
-模型のハミルトニアンは以下のようになります:
+ここでは正方格子のイジングモデルに対して、横磁場 ``hx`` をかけた場合の実時間発展の計算例について紹介します。
+このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/07_timeevolution`` に格納されています。
 
-.. math::
+最初に初期状態として、基底状態の計算を行います ( ``simple.toml`` ファイル)。ここでは、
 
-   \begin{aligned}
-   H = \sum_{\langle i,j \rangle} \Bigl[ -t (b_i^\dagger b_j + b_j^\dagger b_i) + V n_i n_j \Bigr] -\mu \sum_i n_i
-   \end{aligned}
+.. literalinclude:: ../../../../sample/07_timeevolution/simple.toml
 
-ここで\ :math:`\langle i, j\rangle`\ は隣接サイトの組を表し、\ :math:`\mu`\ は化学ポテンシャル、\ :math:`t`\ はホッピングエネルギー、\ :math:`V`\ は隣接サイト間の相互作用の大きさを表します。
-ハードコアボゾン模型では、各サイトのボソン数は0か1に制限されます。
-この模型では、2つのタイプの長距離秩序によって特徴づけられるいくつかの秩序相が現れることが知られています :ref:`[Wessel] <Ref-Wessel>` 。
-1/3フィリングでは、 :numref:`fig_tutorial6_hardcore_boson` の挿入図に示すような\ :math:`\sqrt{3}\times\sqrt{3}`\ 超格子構造をもつ固体相が出現します。これは波数\ :math:`\boldsymbol{Q}=(4\pi/3,0)`\の構造因子\ :math:`S(\boldsymbol{Q})`\を計算することで特徴づけることができます。
-もう一つの秩序は消滅演算子の期待値の大きさ\ :math:`|\langle b \rangle|`\で特徴づけられる超流動秩序です。
+とします( ```Jz = -1.0`` なので、 基底状態は強磁性状態になります)。
+初期状態として基底状態を使用するため、 ``tensor_save = "save_tensor"`` として、基底状態のテンソルを保存しておきます。
 
-この模型の計算を行うには、 ``sample/06_hardcore_boson_triangular`` ディレクトリ中にある toml ファイル ``basic.toml`` , ``nn_obs.toml`` と、Pythonスクリプト ``run.py`` を利用します。 ``basic.toml`` ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の ``model`` セクションだけです。ここで、 ``type = "boson"`` によってハードコアボゾン模型を指定しており、 ``t = 0.1`` , ``V = 1`` によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。
+次に、実時間発展を行うための入力ファイルを用意します。
+実時間発展は ``mode`` を ``time`` にすることで行うことができます。
+以下、入力ファイル例です( ``simple_te_strong.toml`` ファイル)。
 
-``nn_obs.toml`` ファイルには計算する構造因子の情報が記述されています。
+.. literalinclude:: ../../../../sample/07_timeevolution/simple_te_strong.toml
 
-.. literalinclude:: ../../../../sample/06_hardcore_boson_triangular/nn_obs.toml
-
-このファイルによって、構造因子\ :math:`S(\boldsymbol{Q})`\を計算することができます。
-
-実際にスクリプト ``run.py`` を使って計算を実行してみましょう。
+ここでは、横磁場を ``hx = 2.0`` 、実時間発展の刻み幅を ``tau = 0.01`` として時間発展させています。
+また、初期状態として先ほどの基底状態を用いるため、 ``tensor_load = "save_tensor"`` として、基底状態のテンソルを読み込みます。
+時間発展の様子をいくつかの横磁場で見るために、 ``simple_te_middle.toml`` 、 ``simple_te_weak.toml`` という入力ファイルもサンプルとして用意しています。
+また、これらを一括して計算するためのスクリプト ``run.sh`` も準備しています。
 あらかじめ ``tenes`` などにパスを通した上で
 
 ::
 
-    python run.py
+    sh run.sh
 
-により計算を実行します。数分〜十数分程度で計算が終わります。
+により計算を実行します。数十秒で計算が終わります。
 計算が終了したら、gnuplotを起動し、
 
 ::
 
-    load 'plot.gp'
+    load 'plot.plt'
 
-とすれば、 :numref:`fig_tutorial6_hardcore_boson` (a)のような構造因子\ :math:`S(\boldsymbol{Q})`\と超流動秩序パラメータ\ :math:`|\langle b \rangle|`\のグラフが得られます。
-なお、ここで計算に用いたボンド次元は小さい(ボンド次元2)ため、計算精度はそれほど高くありません。
-スクリプト ``run.py`` の冒頭でコメントになっている4行をコメントアウトすることで、時間がかかりますが、より高精度の計算を行うこともできます。その結果を :numref:`fig_tutorial6_hardcore_boson` (b)に示します。
-この図から、系の基底状態は3種類の相、つまり(a) 超流動相(\ :math:`-0.5 \lesssim \mu/V \lesssim -0.2`\), (b) 固体相(\ :math:`-0.2 \lesssim \mu/V \lesssim 2.4`\), および(c) 超流動固体相(\ :math:`2.4 \lesssim \mu/V`\)が現れることがわかります。これは先行研究の結果と整合します :ref:`[Wessel] <Ref-Wessel>` 。
+とすれば、 磁化 :math:`S_z` の時間発展の様子がプロットされます。
+その結果を :numref:`fig_tutorial7_timeevolution` に示します。
 
-.. figure:: ../../img/tutorial_6_hardcore_boson.*
-	:name: fig_tutorial6_hardcore_boson
+.. figure:: ../../img/tutorial_07_timeevolution.pdf
+	:name: fig_tutorial7_timeevolution
 	:width: 600px
 
-	三角格子上のハードコアボゾン模型の基底状態相図. (a) ボンド次元が2のとき. (b) ボンド次元が5のとき. 挿入図: 固体相のときの粒子配置. 
+	イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。
 
-.. rubric:: 参考文献
 
-.. _Ref-Wessel:
+なお、時間発展が進むにつれてエンタングルメントが大きくなり、ある時点でテンソルネットワークの容量が波動関数を表現するのに足りなくなります。
+今の場合、 ``t=4.25`` の ``hx=2.0`` の場合のジャンプがこの問題を示しています。
+実際に使用する場合には、このような不連続性が存在しないかを確認の上、ジャンプが存在する場合にはテンソルネットワークの容量が足りなくならないように、
+``virtual_dimension`` を大きくするなどの対策を行う必要があります。
+例えば、 ``virtual_dimension = 10`` に変更して上述の計算を行うと、
+:numref:`fig_tutorial7_te_D10` に示すように不連続性が消えることがわかります。
 
-[Wessel] 
-S. Wessel, M. Troyer, *Supersolid hard-core bosonson the triangular lattice*, Phys. Rev. Lett. **95**, 127205 (2005). `link <https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.95.127205>`__.
+.. figure:: ../../img/tutorial_07_timeevolution_D10.pdf
+	:name: fig_tutorial7_te_D10
+	:width: 600px
+
+	イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。
+	``virtual_dimension = 10`` とした場合の結果。
