@@ -6,11 +6,11 @@
 ここでは正方格子のイジングモデルに対して、横磁場 ``hx`` をかけた場合の実時間発展の計算例について紹介します。
 このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/07_timeevolution`` に格納されています。
 
-最初に初期状態として、基底状態の計算を行います ( ``simple.toml`` ファイル)。ここでは、
+最初に初期状態として、基底状態の計算を行います (``simple.toml`` ファイル)。ここでは、
 
 .. literalinclude:: ../../../../sample/07_timeevolution/simple.toml
 
-とします( ```Jz = -1.0`` なので、 基底状態は強磁性状態になります)。
+とします(``Jz = -1.0`` なので、 基底状態は強磁性状態になります)。
 初期状態として基底状態を使用するため、 ``tensor_save = "save_tensor"`` として、基底状態のテンソルを保存しておきます。
 
 次に、実時間発展を行うための入力ファイルを用意します。
@@ -39,7 +39,7 @@
 とすれば、 磁化 :math:`S_z` の時間発展の様子がプロットされます。
 その結果を :numref:`fig_tutorial7_timeevolution` に示します。
 
-.. figure:: ../../img/tutorial_07_timeevolution.pdf
+.. figure:: ../../img/tutorial_07_timeevolution.*
 	:name: fig_tutorial7_timeevolution
 	:width: 600px
 
@@ -53,7 +53,7 @@
 例えば、 ``virtual_dimension = 10`` に変更して上述の計算を行うと、
 :numref:`fig_tutorial7_te_D10` に示すように不連続性が消えることがわかります。
 
-.. figure:: ../../img/tutorial_07_timeevolution_D10.pdf
+.. figure:: ../../img/tutorial_07_timeevolution_D10.*
 	:name: fig_tutorial7_te_D10
 	:width: 600px
 

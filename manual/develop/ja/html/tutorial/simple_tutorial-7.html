@@ -37,7 +37,7 @@
 <h1><span class="section-number">4.2. </span>横磁場イジング模型の実時間発展<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <p>ここでは正方格子のイジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の実時間発展の計算例について紹介します。
 このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code> に格納されています。</p>
-<p>最初に初期状態として、基底状態の計算を行います ( <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> ファイル)。ここでは、</p>
+<p>最初に初期状態として、基底状態の計算を行います (<code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> ファイル)。ここでは、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 output = &quot;output&quot;
@@ -71,7 +71,7 @@ Jy = 0.0
 hx = 0.0
 </pre></div>
 </div>
-<p>とします( <code class="docutils literal notranslate"><span class="pre">`Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 基底状態は強磁性状態になります)。
+<p>とします(<code class="docutils literal notranslate"><span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">-1.0</span></code> なので、 基底状態は強磁性状態になります)。
 初期状態として基底状態を使用するため、 <code class="docutils literal notranslate"><span class="pre">tensor_save</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを保存しておきます。</p>
 <p>次に、実時間発展を行うための入力ファイルを用意します。
 実時間発展は <code class="docutils literal notranslate"><span class="pre">mode</span></code> を <code class="docutils literal notranslate"><span class="pre">time</span></code> にすることで行うことができます。
@@ -126,7 +126,7 @@ hx = 2.0
 <p>とすれば、 磁化 <span class="math notranslate nohighlight">\(S_z\)</span> の時間発展の様子がプロットされます。
 その結果を <a class="reference internal" href="#fig-tutorial7-timeevolution"><span class="std std-numref">図 4.2</span></a> に示します。</p>
 <figure class="align-default" id="fig-tutorial7-timeevolution">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.pdf"><img alt="../_images/tutorial_07_timeevolution.pdf" src="../_images/tutorial_07_timeevolution.pdf" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" /></a>
 <figcaption>
 <p><span class="caption-number">図 4.2 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
@@ -138,7 +138,7 @@ hx = 2.0
 例えば、 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> に変更して上述の計算を行うと、
 <a class="reference internal" href="#fig-tutorial7-te-d10"><span class="std std-numref">図 4.3</span></a> に示すように不連続性が消えることがわかります。</p>
 <figure class="align-default" id="fig-tutorial7-te-d10">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.pdf"><img alt="../_images/tutorial_07_timeevolution_D10.pdf" src="../_images/tutorial_07_timeevolution_D10.pdf" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" /></a>
 <figcaption>
 <p><span class="caption-number">図 4.3 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。
 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> とした場合の結果。</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="この画像へのパーマリンク">¶</a></p>
