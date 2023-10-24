@@ -27,7 +27,7 @@ for lang in ja en; do
 done
 cd $ROOT_DIR
 
-version=1.4-dev
+version=2.0-beta
 
 git submodule update -i -r
 git-archive-all \

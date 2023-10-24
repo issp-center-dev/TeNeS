@@ -17,6 +17,6 @@
 #ifndef TENES_SRC_VERSION_HPP_
 #define TENES_SRC_VERSION_HPP_
 
-#define TENES_VERSION "1.4-dev"
+#define TENES_VERSION "2.0-dev"
 
 #endif // TENES_SRC_VERSION_HPP_
