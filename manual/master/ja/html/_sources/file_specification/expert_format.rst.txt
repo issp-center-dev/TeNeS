@@ -31,20 +31,23 @@
 ``evolution`` セクション
 ========================
 
-simple update, full update で使う虚時間発展演算子を記述します。
-1サイトおよび隣接2サイトに関する虚時間発展を定義できます。
+simple update, full update で使う(虚)時間発展演算子を記述します。
+1サイトおよび隣接2サイトに関する(虚)時間発展を定義できます。
 次のようなフィールドを持つ ``simple``, ``full`` の2つのサブセクションを持ちます。
 
 .. csv-table::
    :header: "名前", "説明", "型"
    :widths: 15, 30, 20
 
-   ``site``,        "site の番号",                             整数
-   ``source_site``, "source site の番号",                      整数
-   ``source_leg``,  "source site から見た target site の方向", 整数
+   ``group``,       "演算子のグループ",                        整数 (0-)
+   ``site``,        "site の番号",                             整数 (0-)
+   ``source_site``, "source site の番号",                      整数 (0-)
+   ``source_leg``,  "source site から見た target site の方向", 整数 (0-3)
    ``dimensions``,  "虚時間発展演算子テンソルの次元",          整数のリスト
    ``elements``,    "虚時間発展演算子テンソルの非ゼロ要素",    文字列
 
+``group`` は時間発展演算子のグループを指定します（省略した場合 0とみなされます）。
+``parameter.simple_update`` および ``parameter.full_update`` における ``tau`` や ``num_steps`` で刻み幅やステップ数をリストを用いて複数指定したときに、そのインデックスに対応します。
 
 ``site`` は1サイト演算子に、 ``source_site`` と ``source_leg`` は2サイト演算子に使用します。
 

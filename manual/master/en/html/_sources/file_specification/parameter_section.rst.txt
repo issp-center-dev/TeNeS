@@ -4,8 +4,6 @@ Set various parameters that appear in the calculation, such as the number of upd
 This section has five subsections: ``general``, ``simple_update``, ``full_update``,
 ``ctm``, ``random``.
 
-Imaginary-time step :math:`\tau` for simple update ``parameter.simple_update.tau`` and that for full update ``parameter.full_update.tau`` are used only in standard mode ``tenes_std``, not used in ``tenes``.
-
 
 ``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -16,12 +14,32 @@ General parameters for ``tenes``.
    :header: "Name", "Description", "Type", "Default"
    :widths: 20, 30, 10, 10
 
+   ``mode``,        "Calculation mode",                                        String, ``\"ground state\"``
    ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
    ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
    ``measure``,     "Whether to calculate and save observables",               Boolean, true
+   ``measure_interval``, "Interval of measurement in finite temperature calculation and time evolution process",  Integer or list of integers, 10
    ``output``,      "Directory for saving result such as physical quantities", String,  \"output\"
    ``tensor_save``, "Directory for saving optimized tensors",                  String,  \"\"
    ``tensor_load``, "Directory for loading initial tensors",                   String,  \"\"
+
+- ``mode``
+
+  - Specify the calculation mode
+  - ``"ground state"``
+
+    - Search for the ground state of the Hamiltonian
+    - ``tenes_std`` calculates the imaginary time evolution operator :math:`U(\tau) = e^{-\tau H}` from the Hamiltonian :math:`H`
+
+  - ``"time evolution"``
+
+    - Calculate the time evolution of the observables from the initial state
+    - ``tenes_std`` calculates the time evolution operator :math:`U(t) = e^{-it H}` from the Hamiltonian :math:`H`
+
+  - ``"finite temperature"``
+
+    - Calculate the finite temperature expectation values of the observables
+    - ``tenes_std`` calculates the imaginary time evolution operator :math:`U(\tau) = e^{-\tau H}` from the Hamiltonian :math:`H`
 
 - ``is_real``
 
@@ -36,6 +54,11 @@ General parameters for ``tenes``.
 
   - When set to ``false``, the stages for measuring and saving observables will be skipped
   - Elapsed time ``time.dat`` is always saved
+
+- ``measure_interval``
+
+  - Specify the interval of measurement in time evolution process and finite temperature Calculation
+  - Physical quantitites are calculated and saved each after ``measure_interval`` updates
 
 - ``output``
 
@@ -61,12 +84,29 @@ Parameters in the simple update procedure.
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``,           "Imaginary time step :math:`\tau` in imaginary time evolution operator", Real,    0.01
-   ``num_step``,      "Number of simple updates",                                              Integer, 0
+   ``tau``,           "(Imaginary) time step :math:`\tau` in (imaginary) time evolution operator", Real or list of real,    0.01
+   ``num_step``,      "Number of simple updates",                                              Integer or list of integers, 0
    ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
    ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, false
    ``gauge_maxiter``, "Maximum number of iterations for fixing gauge", Integer, 100
    ``gauge_converge_epsilon``, "Convergence criteria of iterations for fixing gauge", Real, 1e-2
+
+
+- ``tau``
+
+  - Specify the (imaginary) time step :math:`\tau` in (imaginary) time evolution operator
+
+    - ``tenes_std`` uses it to calculate the imaginary time evolution operator :math:`e^{-\tau H}` from the Hamiltonian
+    - ``tenes`` uses it to calculate the time of each measurement
+
+      - For finite temperature calculation, note that the inverse temperature increase :math:`2\tau` at a step because :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)`
+
+  - When a list is specified, the time step can be changed for each group of time evolution operators
+
+- ``num_step``
+
+  - Specify the number of simple updates
+  - When a list is specified, the number of simple updates can be changed for each group of time evolution operators
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,8 +117,8 @@ Parameters in the full update procedure.
    :header: "Name", "Description", "Type", "Default"
    :widths: 30, 30, 10, 10 
 
-   ``tau``,                 "Imaginary time step :math:`\tau` in imaginary time evolution operator",                                       Real,    0.01
-   ``num_step``,            "Number of full updates",                                                                                      Integer, 0
+   ``tau``,                 "(Imaginary) time step :math:`\tau` in (imaginary) time evolution operator",                                       Real or list of reals,    0.01
+   ``num_step``,            "Number of full updates",                                                                                      Integer or list of integers, 0
    ``env_cutoff``,          "Cutoff of singular values to be considered as zero when computing environment through full updates",          Real,    1e-12
    ``inverse_precision``,   "Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update", Real,    1e-12
    ``convergence_epsilon``, "Convergence criteria for truncation optimization with full update",                                           Real,    1e-6
