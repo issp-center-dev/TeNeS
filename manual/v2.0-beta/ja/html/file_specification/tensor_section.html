@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>tensor.unitcell サブセクション &#8212; TeNeS 2.0-beta ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=7730d50f"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p>「ユニットセル」の情報を記述します(ボンドの情報は <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) や <code class="docutils literal notranslate"><span class="pre">evolution</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes</span></code>) で与えます)。
+ユニットセルは <code class="docutils literal notranslate"><span class="pre">Lx</span></code> かける <code class="docutils literal notranslate"><span class="pre">Ly</span></code> の大きさをもつ長方形の形をしています。
+また、サブセクション <code class="docutils literal notranslate"><span class="pre">unitcell</span></code> を持ちます。</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 40.0%" />
+<col style="width: 26.7%" />
+<col style="width: 13.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+<th class="head"><p>デフォルト</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code></p></td>
+<td><p>ユニットセルの大きさ</p></td>
+<td><p>整数または整数のリスト</p></td>
+<td><p>--</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">skew</span></code></p></td>
+<td><p>skew 境界条件におけるシフト値</p></td>
+<td><p>整数</p></td>
+<td><p>0</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code> として2つの整数からなるリストを渡した場合、はじめの要素が <code class="docutils literal notranslate"><span class="pre">Lx</span></code> に、もう片方が <code class="docutils literal notranslate"><span class="pre">Ly</span></code> になります。
+3つ以上の要素からなるリストを渡した場合にはエラー終了します。
+<code class="docutils literal notranslate"><span class="pre">L_sub</span></code> として整数を渡した場合、 <code class="docutils literal notranslate"><span class="pre">Lx</span></code> と <code class="docutils literal notranslate"><span class="pre">Ly</span></code> とが等しくなります。</p>
+<p>ユニットセル内のサイトは0から順番に番号付けされます。 x 方向から順に並びます。</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig1.png"><img alt="../_images/tensor_sec_fig1.png" src="../_images/tensor_sec_fig1.png" style="width: 150px;" /></a>
+<figcaption>
+<p><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> としたときの例</span><a class="headerlink" href="#id1" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" /></a>
+<figcaption>
+<p><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> としたときの例 (罫線はユニットセルの区切り)</span><a class="headerlink" href="#id2" title="この画像へのパーマリンク">¶</a></p>
+</figcaption>
+</figure>
+<section id="tensor-unitcell">
+<h1><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> サブセクション<a class="headerlink" href="#tensor-unitcell" title="この見出しへのパーマリンク">¶</a></h1>
+<p>サイトテンソル <span class="math notranslate nohighlight">\(T_{ijkl\alpha}^{(n)}\)</span> の情報を指定します。
+ここで <span class="math notranslate nohighlight">\(i,j,k,l\)</span> は virtual bond のインデックス、 <span class="math notranslate nohighlight">\(\alpha\)</span> は physical bond のインデックス、 <span class="math notranslate nohighlight">\(n\)</span> はサイト番号を意味します。</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">index</span></code></p></td>
+<td><p>サイト番号</p></td>
+<td><p>整数 or 整数のリスト</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">physical_dim</span></code></p></td>
+<td><p>サイトテンソルの physical bond の次元</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code></p></td>
+<td><p>サイトテンソルの virtual bond の次元 <span class="math notranslate nohighlight">\(D\)</span></p></td>
+<td><p>整数 or 整数のリスト</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">initial_state</span></code></p></td>
+<td><p>初期状態</p></td>
+<td><p>実数のリスト</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">noise</span></code></p></td>
+<td><p>初期テンソルのゆらぎの大きさ</p></td>
+<td><p>実数</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">index</span></code> にリストを渡すことによって、複数のサイトを同時に指定できます。
+空のサイト <code class="docutils literal notranslate"><span class="pre">[]</span></code> は全サイトを意味します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code> にリストを渡すことで、4方向のボンド次元を個別に指定できます。
+順番は、左(-x)、上(+y)、右(+x)、下(-y) の順番です。</p>
+<p>系全体の初期状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> は、各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span> の直積で与えられます。</p>
+<div class="math notranslate nohighlight">
+\[|\Psi\rangle = \otimes_i |\Psi_i\rangle\]</div>
+<p>サイトテンソルはこの直積状態を表現するように初期化されます。
+<code class="docutils literal notranslate"><span class="pre">initial_state</span></code> では各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態
+<span class="math notranslate nohighlight">\(|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> における実展開係数 <span class="math notranslate nohighlight">\(A_\alpha\)</span> の値を指定します。
+係数は自動的に規格化されます。
+テンソル自体は、 すべてのvirtual ボンドインデックスが0 である要素が、 <span class="math notranslate nohighlight">\(T_{0000\alpha} = A_\alpha\)</span> のように初期化されます。
+他の要素には <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> の一様乱数が互いに独立に入力されます。
+たとえば、 <span class="math notranslate nohighlight">\(S=1/2\)</span> のとき、 <span class="math notranslate nohighlight">\(S^z\)</span> 方向に向いた状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle = |\uparrow\rangle = |0\rangle\)</span> を初期値にしたい場合には <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">0.0]</span></code> に、
+<span class="math notranslate nohighlight">\(S^x\)</span> 方向に向いた状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}\)</span> を初期値にしたい場合には <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">1.0]</span></code> とします。</p>
+<p><code class="docutils literal notranslate"><span class="pre">initial_state</span></code> にゼロのみからなる配列を渡した場合、テンソルのすべての要素が独立に <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> で乱数初期化されます。</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/file_specification/tensor_section.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
