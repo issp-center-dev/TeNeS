@@ -1,15 +1,12 @@
-# TeNeS v1.3.x Release Notes
+# TeNeS v2.0.x Release Notes
 
-## Changes between v1.3.4 and v1.3.3
+## Changes between v2.0.0 and v1.3.3
 
-- `tenes_simple`
-    - Fixed a bug that the script crashes when `model = "boson"`
-- `tenes`
-    - Fixed a bug that the program crashes when `skew` is negative
+- Real-time evolution (https://github.com/issp-center-dev/TeNeS/pull/68)
+- Multisite observables (https://github.com/issp-center-dev/TeNeS/pull/69)
+- Finite temperature calculation (https://github.com/issp-center-dev/TeNeS/pull/75)
+- The bond dimension of CTM is automatically reduced in updating CTM (https://github.com/issp-center-dev/TeNeS/pull/77)
 
-## Changes between v1.3.3 and v1.3.2
+### Bug fixes
 
-### Bugfixes
-
-- `tenes`
-    - Fixed a bug in the CTMRG method for the skewed boundary condition (#71)
+- The sign of Sy in `tenes_simple` is fixed (https://github.com/issp-center-dev/TeNeS/pull/78)

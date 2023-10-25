@@ -32,11 +32,31 @@ struct Operator {
   tensor op;
   std::vector<int> ops_indices;
 
-  // onesite
+  /*!
+   * @brief Constructor for a one-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] site Site of the operator.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int site, tensor const &op)
-      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {}
+      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {
+    if (op.rank() != 2) {
+      throw std::runtime_error("Operator tensor must be rank 2.");
+    }
+  }
 
-  // twosite
+  /*!
+   * @brief Constructor for a two-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other site.
+   * @param[in] dy Y displacement of the other site.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int source_site, int dx, int dy,
            tensor const &op)
       : name(name),
@@ -44,7 +64,47 @@ struct Operator {
         source_site(source_site),
         dx(1, dx),
         dy(1, dy),
-        op(op) {}
+        op(op) {
+    if (op.rank() != 4) {
+      throw std::runtime_error("Operator tensor must be rank 4.");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a two-site operator represented by the product of
+   * two one-site operators.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other site.
+   * @param[in] dy Y displacement of the other site.
+   * @param[in] ops_indices Onesite operator indices.
+   */
+  Operator(std::string const &name, int group, int source_site, int dx, int dy,
+           std::vector<int> const &ops_indices)
+      : name(name),
+        group(group),
+        source_site(source_site),
+        dx(1, dx),
+        dy(1, dy),
+        ops_indices(ops_indices) {
+    if (ops_indices.size() != 2) {
+      throw std::runtime_error(
+          "Operator must be a product of two one-site operators.");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a multi-site operator.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other sites.
+   * @param[in] dy Y displacement of the other sites.
+   * @param[in] op Operator tensor.
+   */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
            tensor const &op)
@@ -53,15 +113,26 @@ struct Operator {
         source_site(source_site),
         dx(dx),
         dy(dy),
-        op(op) {}
-  Operator(std::string const &name, int group, int source_site, int dx, int dy,
-           std::vector<int> const &ops_indices)
-      : name(name),
-        group(group),
-        source_site(source_site),
-        dx(1, dx),
-        dy(1, dy),
-        ops_indices(ops_indices) {}
+        op(op) {
+    if (dx.size() != dy.size()) {
+      throw std::runtime_error("dx and dy must have the same size.");
+    }
+    if (op.rank() != 2 * (dx.size()+1)) {
+      throw std::runtime_error("Operator tensor must be rank 2 * (dx.size()+1).");
+    }
+  }
+
+  /*!
+   * @brief Constructor for a multi-site operator represented by the product of
+   * one-site operators.
+   *
+   * @param[in] name Name of the operator.
+   * @param[in] group Group of the operator.
+   * @param[in] source_site Index of a site.
+   * @param[in] dx X displacement of the other sites.
+   * @param[in] dy Y displacement of the other sites.
+   * @param[in] ops_indices Onesite operator indices.
+   */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
            std::vector<int> const &ops_indices)
@@ -70,33 +141,73 @@ struct Operator {
         source_site(source_site),
         dx(dx),
         dy(dy),
-        ops_indices(ops_indices) {}
+        ops_indices(ops_indices) {
+    if (dx.size() != dy.size()) {
+      throw std::runtime_error("dx and dy must have the same size.");
+    }
+    if (ops_indices.size() != dx.size()+1) {
+      throw std::runtime_error(
+          "Operator must be a product of dx.size()+1 one-site operators.");
+    }
+  }
 
   bool is_onesite() const { return dx.empty(); }
+  int nsites() const { return dx.size() + 1; }
 };
 
 template <class tensor>
 using Operators = std::vector<Operator<tensor>>;
 
 template <class tensor>
-struct NNOperator {
+struct EvolutionOperator {
   int source_site;
   int source_leg;
+  int group;
   tensor op;
 
-  NNOperator(int site, tensor const &op)
-      : source_site(site), source_leg(-1), op(op) {}
-  NNOperator(int site, int leg, tensor const &op)
-      : source_site(site), source_leg(leg), op(op) {}
+  EvolutionOperator(int source_site, int source_leg, int group,
+                    tensor const &op)
+      : source_site(source_site),
+        source_leg(source_leg),
+        group(group),
+        op(op) {}
 
   bool is_onesite() const { return source_leg < 0; }
   bool is_twosite() const { return !is_onesite(); }
   bool is_horizontal() const { return source_leg % 2 == 0; }
   bool is_vertical() const { return !is_horizontal(); }
 };
+template <class tensor>
+EvolutionOperator<tensor> make_onesite_EvolutionOperator(int source_site,
+                                                         int group,
+                                                         tensor const &op) {
+  if (source_site < 0) {
+    throw std::runtime_error("source_site must be non-negative");
+  }
+  if (group < 0) {
+    throw std::runtime_error("group must be non-negative");
+  }
+  return EvolutionOperator<tensor>(source_site, -1, group, op);
+}
+template <class tensor>
+EvolutionOperator<tensor> make_twosite_EvolutionOperator(int source_site,
+                                                         int source_leg,
+                                                         int group,
+                                                         tensor const &op) {
+  if (source_site < 0) {
+    throw std::runtime_error("source_site must be non-negative");
+  }
+  if (source_leg < 0 || source_leg > 3) {
+    throw std::runtime_error("source_leg must be 0, 1, 2, or 3");
+  }
+  if (group < 0) {
+    throw std::runtime_error("group must be non-negative");
+  }
+  return EvolutionOperator<tensor>(source_site, source_leg, group, op);
+}
 
 template <class tensor>
-using NNOperators = std::vector<NNOperator<tensor>>;
+using EvolutionOperators = std::vector<EvolutionOperator<tensor>>;
 
 }  // namespace tenes
 

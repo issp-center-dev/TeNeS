@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [macos-12, macos-11]
         compiler: [c++, g++-12]
-        clude:
+        include:
           - os: macos-12
             compiler: g++-11
           - os: macos-11
@@ -44,4 +44,4 @@ jobs:
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -V
+        run: OMP_NUM_THREADS=1 ctest -V

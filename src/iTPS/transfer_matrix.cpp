@@ -89,10 +89,8 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
   const size_t N = dim(dir, fixed_coord);
   const size_t nev = std::min(static_cast<size_t>(params.num_eigvals), N);
 
-  std::vector<std::complex<double>> eigvals;
-
+  std::vector<std::complex<double>> eigvals(nev);
   if (N == 1) {
-    eigvals.resize(nev);
     eigvals[0] = 1.0;
     return eigvals;
   }
@@ -186,25 +184,51 @@ void TransferMatrix_ctm<ptensor>::matvec_horizontal(ptensor &outvec,
                                                     int y) const {
   using mptensor::Axes;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
-  outvec = reshape(invec, {CHI, CHI});
+  const int s0 = lattice.index(0, y);
+  const int s1 = lattice.top(s0);
+  const size_t CHI0 = eTt[s0].shape()[0];
+  const size_t CHI1 = eTb[s1].shape()[1];
+  outvec = reshape(invec, {CHI0, CHI1});
+  const size_t rank = eTt[0].rank();
+  if (rank == 3) {
+    // iTPO
+    for (int x = 0; x < lattice.LX; ++x) {
+      int site = lattice.index(x, y);
+      ptensor top = eTt[site];
+      ptensor bottom = eTb[lattice.top(site)];
 
-  for (int x = 0; x < lattice.LX; ++x) {
-    int site = lattice.index(x, y);
-    ptensor top = eTt[site];
-    ptensor bottom = eTb[lattice.top(site)];
+      ////////////////////////////////////////////////////////////
+      // ./transfer_matvec_horizontal_den_ctm.dat
+      ////////////////////////////////////////////////////////////
+      // (top*(bottom*vec))
+      // cpu_cost= 270000  memory= 14400
+      // final_bond_order (top_right, bottom_right)
+      ////////////////////////////////////////////////////////////
+      outvec = tensordot(top, tensordot(bottom, outvec, Axes(1), Axes(1)),
+                         Axes(0, 2), Axes(2, 1));
+    }
+  } else if (rank == 4) {
+    // double layer iTPS
+    for (int x = 0; x < lattice.LX; ++x) {
+      int site = lattice.index(x, y);
+      ptensor top = eTt[site];
+      ptensor bottom = eTb[lattice.top(site)];
 
-    ////////////////////////////////////////////////////////////
-    // transfer_matvec_horizontal_ctm.dat
-    ////////////////////////////////////////////////////////////
-    // (top*(bottom*vec))
-    // cpu_cost= 1.35e+06  memory= 68400
-    // final_bond_order (top_right, bottom_right)
-    ////////////////////////////////////////////////////////////
-    outvec = tensordot(top, tensordot(bottom, outvec, Axes(1), Axes(1)),
-                       Axes(0, 2, 3), Axes(3, 1, 2));
+      ////////////////////////////////////////////////////////////
+      // transfer_matvec_horizontal_ctm.dat
+      ////////////////////////////////////////////////////////////
+      // (top*(bottom*vec))
+      // cpu_cost= 1.35e+06  memory= 68400
+      // final_bond_order (top_right, bottom_right)
+      ////////////////////////////////////////////////////////////
+      outvec = tensordot(top, tensordot(bottom, outvec, Axes(1), Axes(1)),
+                         Axes(0, 2, 3), Axes(3, 1, 2));
+    }
+  } else {
+    throw std::runtime_error("rank of eTt is not 3 or 4");
   }
-  outvec = reshape(outvec, {CHI * CHI});
+
+  outvec = reshape(outvec, {CHI0 * CHI1});
 }
 
 template <class ptensor>
@@ -213,30 +237,61 @@ void TransferMatrix_ctm<ptensor>::matvec_vertical(ptensor &outvec,
                                                   int x) const {
   using mptensor::Axes;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
+  const int s0 = lattice.index(x, 0);
+  const int s1 = lattice.left(s0);
+  const size_t CHI0 = eTl[s0].shape()[0];
+  const size_t CHI1 = eTr[s1].shape()[1];
   const auto x_orig = x;
-  outvec = reshape(invec, {CHI, CHI});
+  outvec = reshape(invec, {CHI0, CHI1});
 
-  do {
-    for (int y = 0; y < lattice.LY; ++y) {
-      const int site = lattice.index(x, y);
-      auto left = eTl[site];
-      auto right = eTr[lattice.left(site)];
+  const size_t rank = eTl[0].rank();
 
-      ////////////////////////////////////////////////////////////
-      // transfer_matvec_vertical_ctm.dat
-      ////////////////////////////////////////////////////////////
-      // (left*(right*vec))
-      // cpu_cost= 1.35e+06  memory= 68400
-      // final_bond_order (left_top, right_top)
-      ////////////////////////////////////////////////////////////
-      outvec = tensordot(left, tensordot(right, outvec, Axes(1), Axes(1)),
-                         Axes(0, 2, 3), Axes(3, 1, 2));
-    }
+  if (rank == 3) {
+    // iTPO
+    do {
+      for (int y = 0; y < lattice.LY; ++y) {
+        const int site = lattice.index(x, y);
+        auto left = eTl[site];
+        auto right = eTr[lattice.left(site)];
 
-    x = (x + lattice.skew + lattice.LX) % lattice.LX;
-  } while (x != x_orig);
-  outvec = reshape(outvec, {CHI * CHI});
+        ////////////////////////////////////////////////////////////
+        // ./transfer_matvec_vertical_den_ctm.dat
+        ////////////////////////////////////////////////////////////
+        // (left*(right*vec))
+        // cpu_cost= 270000  memory= 14400
+        // final_bond_order (left_top, right_top)
+        ////////////////////////////////////////////////////////////
+        outvec = tensordot(left, tensordot(right, outvec, Axes(1), Axes(1)),
+                           Axes(0, 2), Axes(2, 1));
+      }
+
+      x = (x + lattice.skew + lattice.LX) % lattice.LX;
+    } while (x != x_orig);
+  } else if (rank == 4) {
+    // double layer iTPS
+    do {
+      for (int y = 0; y < lattice.LY; ++y) {
+        const int site = lattice.index(x, y);
+        auto left = eTl[site];
+        auto right = eTr[lattice.left(site)];
+
+        ////////////////////////////////////////////////////////////
+        // transfer_matvec_vertical_ctm.dat
+        ////////////////////////////////////////////////////////////
+        // (left*(right*vec))
+        // cpu_cost= 1.35e+06  memory= 68400
+        // final_bond_order (left_top, right_top)
+        ////////////////////////////////////////////////////////////
+        outvec = tensordot(left, tensordot(right, outvec, Axes(1), Axes(1)),
+                           Axes(0, 2, 3), Axes(3, 1, 2));
+      }
+
+      x = (x + lattice.skew + lattice.LX) % lattice.LX;
+    } while (x != x_orig);
+  } else {
+    throw std::runtime_error("rank of eTl is not 3 or 4");
+  }
+  outvec = reshape(outvec, {CHI0 * CHI1});
 }
 
 template <class ptensor>
@@ -311,21 +366,46 @@ void TransferMatrix_mf<ptensor>::matvec_vertical(ptensor &outvec,
 template <class ptensor>
 ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   using mptensor::Axes;
+  using mptensor::Shape;
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
-  int site = lattice.index(0, y);
-  ptensor top = eTt[site];
-  ptensor bottom = eTb[lattice.top(site)];
-  ptensor res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
-                          Axes(0, 3, 1, 2));
-  for (int x = 1; x < lattice.LX; ++x) {
-    site = lattice.index(x, y);
-    top = eTt[site];
-    bottom = eTb[lattice.top(site)];
-    res = tensordot(res, tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
-                    Axes(2, 3), Axes(0, 3));
+  const MPI_Comm comm = this->C1[0].get_comm();
+  int s0 = lattice.index(0, y);
+  int s1 = lattice.top(s0);
+  ptensor top = eTt[s0];
+  ptensor bottom = eTb[s1];
+  const size_t CHI0 = top.shape()[0];
+  const size_t CHI1 = bottom.shape()[1];
+  ptensor res(comm, Shape(CHI0 * CHI1, CHI0 * CHI1));
+#pragma omp parallel for shared(res)
+  for (size_t i = 0; i < CHI0 * CHI1; ++i) {
+    typename ptensor::value_type v = 1.0;
+    res.set_value({i, i}, v);
   }
-  res = reshape(res, {CHI * CHI, CHI * CHI});
+  res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
+  const size_t rank = top.rank();
+  if (rank == 3) { // iTPO
+    res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
+    for (int x = 1; x < lattice.LX; ++x) {
+      int site = lattice.index(x, y);
+      top = eTt[site];
+      bottom = eTb[lattice.top(site)];
+      res = tensordot(res, tensordot(top, bottom, Axes(2), Axes(2)), Axes(2, 3),
+                      Axes(0, 3));
+    }
+  } else if (rank == 4) { // iTPS
+    res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
+                    Axes(0, 3, 1, 2));
+    for (int x = 1; x < lattice.LX; ++x) {
+      int site = lattice.index(x, y);
+      top = eTt[site];
+      bottom = eTb[lattice.top(site)];
+      res = tensordot(res, tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
+                      Axes(2, 3), Axes(0, 3));
+    }
+  } else {
+    throw std::runtime_error("rank of eTt is not 3 or 4");
+  }
+  res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
   return res;
 }
 
@@ -335,27 +415,49 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_vertical(int x) const {
   using mptensor::Shape;
   const MPI_Comm comm = this->C1[0].get_comm();
   const auto &lattice = this->lattice;
-  const size_t CHI = C1[0].shape()[0];
   const auto x_orig = x;
-  ptensor res(comm, Shape(CHI * CHI, CHI * CHI));
+
+  const int s0 = lattice.index(x, 0);
+  const int s1 = lattice.left(s0);
+  const size_t CHI0 = eTl[s0].shape()[0];
+  const size_t CHI1 = eTr[s1].shape()[1];
+
+  ptensor res(comm, Shape(CHI0 * CHI1, CHI0 * CHI1));
 #pragma omp parallel for shared(res)
-  for (size_t i = 0; i < CHI * CHI; ++i) {
+  for (size_t i = 0; i < CHI0 * CHI1; ++i) {
     typename ptensor::value_type v = 1.0;
     res.set_value({i, i}, v);
   }
-  res = reshape(res, {CHI, CHI, CHI, CHI});
+  res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
 
-  do {
-    for (int y = 0; y < lattice.LY; ++y) {
-      const int site = lattice.index(x, y);
-      auto left = eTl[site];
-      auto right = eTr[lattice.left(site)];
-      res = tensordot(res, tensordot(left, right, Axes(2, 3), Axes(2, 3)),
-                      Axes(2, 3), Axes(0, 3));
-    }
-    x = (x + lattice.skew + lattice.LX) % lattice.LX;
-  } while (x != x_orig);
-  res = reshape(res, {CHI * CHI, CHI * CHI});
+  const size_t rank = eTl[s0].rank();
+  if (rank == 3) {
+    do {
+      for (int y = 0; y < lattice.LY; ++y) {
+        const int site = lattice.index(x, y);
+        auto left = eTl[site];
+        auto right = eTr[lattice.left(site)];
+        res = tensordot(res, tensordot(left, right, Axes(2), Axes(2)),
+                        Axes(2, 3), Axes(0, 3));
+      }
+      x = (x + lattice.skew + lattice.LX) % lattice.LX;
+    } while (x != x_orig);
+    res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
+  } else if (rank == 4) {
+    do {
+      for (int y = 0; y < lattice.LY; ++y) {
+        const int site = lattice.index(x, y);
+        auto left = eTl[site];
+        auto right = eTr[lattice.left(site)];
+        res = tensordot(res, tensordot(left, right, Axes(2, 3), Axes(2, 3)),
+                        Axes(2, 3), Axes(0, 3));
+      }
+      x = (x + lattice.skew + lattice.LX) % lattice.LX;
+    } while (x != x_orig);
+    res = reshape(res, {CHI0 * CHI1, CHI0 * CHI1});
+  } else {
+    throw std::runtime_error("rank of eTl is not 3 or 4");
+  }
   return res;
 }
 
@@ -417,8 +519,20 @@ ptensor TransferMatrix_mf<ptensor>::matrix_vertical(int x) const {
 
 template <class ptensor>
 size_t TransferMatrix_ctm<ptensor>::dim(int dir, int fixed_coord) const {
-  auto ret = C1[0].shape()[0];
-  return ret * ret;
+  const auto &lattice = this->lattice;
+  if(dir == 0){
+    const int s0 = lattice.index(0, fixed_coord);
+    const int s1 = lattice.top(s0);
+    const size_t CHI0 = eTt[s0].shape()[0];
+    const size_t CHI1 = eTb[s1].shape()[1];
+    return CHI0 * CHI1;
+  }else{
+    const int s0 = lattice.index(fixed_coord, 0);
+    const int s1 = lattice.left(s0);
+    const size_t CHI0 = eTl[s0].shape()[0];
+    const size_t CHI1 = eTr[s1].shape()[1];
+    return CHI0 * CHI1;
+  }
 }
 
 template <class ptensor>

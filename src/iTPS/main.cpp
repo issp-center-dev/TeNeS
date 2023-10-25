@@ -20,6 +20,7 @@
 #include <cstdlib>  // for abs, size_t
 
 #include "../printlevel.hpp"
+#include "../util/string.hpp"
 #include "../util/file.hpp"
 #include "../exception.hpp"
 #include "../mpi.hpp"
@@ -91,10 +92,12 @@ bool is_real(tenes::Operators<mptensor::Tensor<
   return true;
 }
 
-tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
-to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
-                                            std::complex<double>>> const& ops) {
-  tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+tenes::EvolutionOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+to_real(tenes::EvolutionOperators<mptensor::Tensor<
+            tenes::mptensor_matrix_type, std::complex<double>>> const& ops) {
+  tenes::EvolutionOperators<
+      mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+      ret;
   if (ops.empty()) {
     return ret;
   }
@@ -105,12 +108,12 @@ to_real(tenes::NNOperators<mptensor::Tensor<tenes::mptensor_matrix_type,
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
     }
-    ret.emplace_back(op.source_site, op.source_leg, A);
+    ret.emplace_back(op.source_site, op.source_leg, op.group, A);
   }
   return ret;
 }
 
-bool is_real(tenes::NNOperators<mptensor::Tensor<
+bool is_real(tenes::EvolutionOperators<mptensor::Tensor<
                  tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
              double tol) {
   for (auto const& op : ops) {
@@ -135,14 +138,18 @@ namespace tenes {
 namespace itps {
 
 template <class tensor>
-int run(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
-        NNOperators<tensor> simple_updates, NNOperators<tensor> full_updates,
-        Operators<tensor> onesite_operators,
-        Operators<tensor> twosite_operators, CorrelationParameter corparam,
-        TransferMatrix_Parameters clength_param) {
+int run_groundstate(MPI_Comm comm, PEPS_Parameters peps_parameters,
+                    SquareLattice lattice,
+                    EvolutionOperators<tensor> simple_updates,
+                    EvolutionOperators<tensor> full_updates,
+                    Operators<tensor> onesite_operators,
+                    Operators<tensor> twosite_operators,
+                    Operators<tensor> multisite_operators,
+                    CorrelationParameter corparam,
+                    TransferMatrix_Parameters clength_param) {
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
-                   onesite_operators, twosite_operators, corparam,
-                   clength_param);
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
   tns.optimize();
   tns.save_tensors();
   if (peps_parameters.to_measure) {
@@ -152,6 +159,44 @@ int run(MPI_Comm comm, PEPS_Parameters peps_parameters, SquareLattice lattice,
   return 0;
 }
 
+template <class tensor>
+int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
+                      SquareLattice lattice,
+                      EvolutionOperators<tensor> simple_updates,
+                      EvolutionOperators<tensor> full_updates,
+                      Operators<tensor> onesite_operators,
+                      Operators<tensor> twosite_operators,
+                      Operators<tensor> multisite_operators,
+                      CorrelationParameter corparam,
+                      TransferMatrix_Parameters clength_param) {
+  iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
+  tns.time_evolution();
+  tns.summary();
+  return 0;
+}
+
+template <class tensor>
+int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
+			  SquareLattice lattice,
+			  EvolutionOperators<tensor> simple_updates,
+			  EvolutionOperators<tensor> full_updates,
+			  Operators<tensor> onesite_operators,
+			  Operators<tensor> twosite_operators,
+			  Operators<tensor> multisite_operators,
+			  CorrelationParameter corparam,
+			  TransferMatrix_Parameters clength_param) {
+  iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
+                   onesite_operators, twosite_operators, multisite_operators,
+                   corparam, clength_param);
+  tns.finite_temperature();
+  tns.summary();
+  return 0;
+}
+
+
+  
 int itps_main(const char* input_filename, MPI_Comm comm,
               PrintLevel print_level) {
   return itps_main(std::string(input_filename), comm, print_level);
@@ -210,6 +255,8 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       input_toml, comm, lattice.N_UNIT, 1, tol, "observable.onesite");
   const auto twosite_obs = load_operators<tensor_complex>(
       input_toml, comm, lattice.N_UNIT, 2, tol, "observable.twosite");
+  const auto multisite_obs = load_operators<tensor_complex>(
+      input_toml, comm, lattice.N_UNIT, 3, tol, "observable.multisite");
 
   // correlation
   auto toml_correlation = input_toml->get_table("correlation");
@@ -229,6 +276,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   is_real = is_real && ::is_real(full_updates, tol);
   is_real = is_real && ::is_real(onesite_obs, tol);
   is_real = is_real && ::is_real(twosite_obs, tol);
+  is_real = is_real && ::is_real(multisite_obs, tol);
 
   if (peps_parameters.is_real && !is_real) {
     std::stringstream ss;
@@ -264,13 +312,38 @@ int itps_main(std::string input_filename, MPI_Comm comm,
     }
   }
 
-  if (is_real) {
-    return run(comm, peps_parameters, lattice, to_real(simple_updates),
-               to_real(full_updates), to_real(onesite_obs),
-               to_real(twosite_obs), corparam, clength_param);
+  if (peps_parameters.calcmode ==
+      PEPS_Parameters::CalculationMode::ground_state) {
+    if (is_real) {
+      return run_groundstate(comm, peps_parameters, lattice,
+                             to_real(simple_updates), to_real(full_updates),
+                             to_real(onesite_obs), to_real(twosite_obs),
+                             to_real(multisite_obs), corparam, clength_param);
+    } else {
+      return run_groundstate(comm, peps_parameters, lattice, simple_updates,
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
+    }
+  } else if (peps_parameters.calcmode ==
+             PEPS_Parameters::CalculationMode::time_evolution) {
+    return run_timeevolution(comm, peps_parameters, lattice, simple_updates,
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
+  } else if (peps_parameters.calcmode ==
+             PEPS_Parameters::CalculationMode::finite_temperature) {
+    if (is_real) {
+      return run_finitetemperature(comm, peps_parameters, lattice,
+                             to_real(simple_updates), to_real(full_updates),
+                             to_real(onesite_obs), to_real(twosite_obs),
+                             to_real(multisite_obs), corparam, clength_param);
+    } else {
+      return run_finitetemperature(comm, peps_parameters, lattice, simple_updates,
+                             full_updates, onesite_obs, twosite_obs,
+                             multisite_obs, corparam, clength_param);
+    }
   } else {
-    return run(comm, peps_parameters, lattice, simple_updates, full_updates,
-               onesite_obs, twosite_obs, corparam, clength_param);
+   
+    return 1;
   }
 }
 

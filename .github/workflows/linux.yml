@@ -52,4 +52,4 @@ jobs:
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -V
+        run: OMP_NUM_THREADS=1 ctest -V

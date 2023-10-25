@@ -635,7 +635,7 @@ def Splus(S: float) -> np.ndarray:
     ret = np.zeros((N, N))
     for i in range(1, N):
         m = S - i
-        ret[i - 1, i] = np.sqrt((S - m) * (S + m + 1.0))
+        ret[i, i - 1] = np.sqrt((S - m) * (S + m + 1.0))
     return ret
 
 
@@ -644,7 +644,7 @@ def Sminus(S: float) -> np.ndarray:
     ret = np.zeros((N, N))
     for i in range(N - 1):
         m = S - i
-        ret[i + 1, i] = np.sqrt((S + m) * (S - m + 1.0))
+        ret[i, i + 1] = np.sqrt((S + m) * (S - m + 1.0))
     return ret
 
 
@@ -1216,7 +1216,7 @@ def tenes_simple(
         if ham.bonds is None:
             onesite_offset = 1
             ret.append("[[observable.onesite]]")
-            ret.append('name = "hamiltonian"')
+            ret.append('name = "site_hamiltonian"')
             ret.append("group = 0")
             ret.append("dim = {}".format(model.N))
             ret.append("sites = {}".format(ham.sites))
@@ -1250,7 +1250,7 @@ def tenes_simple(
     for ham in hams:
         if ham.sites is None:
             ret.append("[[observable.twosite]]")
-            ret.append('name = "hamiltonian"')
+            ret.append('name = "bond_hamiltonian"')
             ret.append("group = 0")
             ret.append("dim = {}".format([model.N, model.N]))
             ret.append('bonds = """')
@@ -1349,7 +1349,7 @@ if __name__ == "__main__":
         help="Save onsite terms as site Hamiltonians",
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.3.4"
+        "-v", "--version", dest="version", action="version", version="2.0-beta"
     )
 
     args = parser.parse_args()

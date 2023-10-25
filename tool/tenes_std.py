@@ -16,7 +16,18 @@
 
 from collections import namedtuple
 from itertools import product
-from typing import TextIO, List, Tuple, Optional, cast, MutableMapping, Dict, Any, Union
+from typing import (
+    TextIO,
+    List,
+    Tuple,
+    Optional,
+    cast,
+    MutableMapping,
+    Dict,
+    Any,
+    Union,
+    Iterable,
+)
 
 import numpy as np
 
@@ -106,6 +117,33 @@ def parse_bond(line: str) -> Bond:
     return Bond(source_site, dx, dy)
 
 
+class Multisite:
+    source_site: int
+    dx: List[int]
+    dy: List[int]
+
+    def __init__(self, source_site: int, dx: Iterable[int], dy: Iterable[int]):
+        self.source_site = source_site
+        self.dx = list(dx)
+        self.dy = list(dy)
+        if len(self.dx) != len(self.dy):
+            raise RuntimeError("dx and dy should have the same length")
+
+    def nsites(self) -> int:
+        return len(self.dx) + 1
+
+
+def parse_multisite(line: str) -> Multisite:
+    line = drop_comment(line)
+    if not line:
+        return None
+    words = line.split()
+    source_site = int(words[0])
+    dx = [int(x) for x in words[1::2]]
+    dy = [int(x) for x in words[2::2]]
+    return Multisite(source_site, dx, dy)
+
+
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
     A_re = np.zeros(dims)
     A_im = np.zeros(dims)
@@ -154,7 +192,7 @@ class LocalTensor:
     phys_dim : int
         Dimension of physical bond.
     virtual_dim : List[int]
-        Dimenstions of four virtual bonds.
+        Dimensions of four virtual bonds.
         Four bonds are ordered as [-x, +y, +x, -y].
     """
 
@@ -498,13 +536,17 @@ class LatticeGraph:
 class SiteOperator:
     site: int
     elements: np.ndarray
+    group: Optional[int]
 
-    def __init__(self, site: int, elements: np.ndarray):
+    def __init__(self, site: int, elements: np.ndarray, group: Optional[int] = None):
         self.site = site
         self.elements = elements
+        self.group = group
 
     def to_toml_strs(self, unitcell) -> List[str]:
         ret = []
+        if self.group is not None:
+            ret.append("group = {}".format(self.group))
         ret.append("site = {}".format(self.site))
         ret.append("dimensions = {}".format(list(self.elements.shape)))
         it = np.nditer(
@@ -531,11 +573,18 @@ class NNOperator:
     bond: Bond
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
+    group = Optional[int]
 
     def __init__(
-        self, bond: Bond, *, elements: np.ndarray = None, ops: List[int] = None
+        self,
+        bond: Bond,
+        *,
+        elements: Optional[np.ndarray] = None,
+        ops: Optional[List[int]] = None,
+        group: Optional[int] = None
     ):
         self.bond = bond
+        self.group = group
         if elements is not None:
             self.elements = elements
             self.ops = None
@@ -545,6 +594,8 @@ class NNOperator:
 
     def to_toml_strs(self, unitcell: Unitcell) -> List[str]:
         ret = []
+        if self.group is not None:
+            ret.append("group = {}".format(self.group))
         ret.append("source_site = {}".format(self.bond.source_site))
         ret.append("source_leg = {}".format(unitcell.bond_direction(self.bond)))
         if self.elements is not None:
@@ -686,21 +737,58 @@ class TwositeObservable:
             return [NNOperator(bond, ops=self.ops) for bond in self.bonds]
 
 
+class MultisiteObservable:
+    group: int
+    multisites: List[Multisite]
+    ops: List[int]
+    name: str
+
+    def __init__(
+        self, group: int, multisites: List[Multisite], ops: List[int], name: str = ""
+    ):
+        self.group = group
+        self.multisites = multisites
+        for ms in multisites:
+            if ms.nsites() != self.nsites():
+                raise ValueError("Multisites have different number of sites")
+        self.ops = ops
+        self.name = name
+
+    def nsites(self) -> int:
+        return self.multisites[0].nsites()
+
+    def to_toml_strs(self) -> List[str]:
+        ret = []
+        ret.append('name = "{}"'.format(self.name))
+        ret.append("group = {}".format(self.group))
+        ret.append('multisites = """')
+        for ms in self.multisites:
+            line = str(ms.source_site)
+            for i in range(ms.nsites()-1):
+                line += f" {ms.dx[i]} {ms.dy[i]}"
+            ret.append(line)
+        ret.append('"""')
+        ret.append("ops = {}".format(self.ops))
+        return ret
+
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
     D, V = np.linalg.eigh(hamiltonian.elements)
     evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V)
-    return [SiteOperator(hamiltonian.site, evo)]
+    return [SiteOperator(hamiltonian.site, evo, group=group)]
 
 
 def make_evolution_twosite(
     hamiltonian: NNOperator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[NNOperator]:
     if hamiltonian.elements is None:
@@ -717,7 +805,7 @@ def make_evolution_twosite(
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
     if nhops == 1:
-        return [NNOperator(hamiltonian.bond, elements=evo)]
+        return [NNOperator(hamiltonian.bond, elements=evo, group=group)]
 
     mdofs = []
     unitcell = graph.unitcell
@@ -757,20 +845,25 @@ def make_evolution_twosite(
 def make_evolution(
     hamiltonian: Operator,
     graph: LatticeGraph,
-    tau: float,
+    tau: Union[float, complex],
+    group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> Union[List[SiteOperator], List[NNOperator]]:
     if isinstance(hamiltonian, SiteOperator):
-        return make_evolution_onesite(hamiltonian, graph, tau, result_cutoff)
+        return make_evolution_onesite(
+            hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
+        )
     else:
-        return make_evolution_twosite(hamiltonian, graph, tau, result_cutoff)
+        return make_evolution_twosite(
+            hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
+        )
 
 
 class Model:
     param: Dict[str, Dict[str, Any]]
     parameter: Dict[str, Any]
-    simple_tau: float
-    full_tau: float
+    simple_tau: List[float]
+    full_tau: List[float]
     correlation: Dict[str, Any]
     clength: Dict[str, Any]
     unitcell: Unitcell
@@ -778,15 +871,32 @@ class Model:
     graph: LatticeGraph
     onesites: List[OnesiteObservable]
     twobodies: List[TwositeObservable]
+    multibodies: List[MultisiteObservable]
     simple_updates: List[Operator]
     full_updates: List[Operator]
+    time_evolution: bool
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
         self.param = param
         self.parameter = param["parameter"]
-        self.simple_tau = self.parameter["simple_update"].get("tau", 0.01)
-        self.full_tau = self.parameter["full_update"].get("tau", 0.01)
+        if "general" in self.parameter:
+            mode = self.parameter["general"].get("mode", "ground state").lower()
+        else:
+            mode = "ground state"
+        if not isinstance(mode, str):
+            raise ValueError("mode must be a string.")
+        self.time_evolution = mode.startswith("time")
+        tau = self.parameter["simple_update"].get("tau", [0.01])
+        if isinstance(tau, float):
+            self.simple_tau = [tau]
+        else:
+            self.simple_tau = tau
+        tau = self.parameter["full_update"].get("tau", [0.01])
+        if isinstance(tau, float):
+            self.full_tau = [tau]
+        else:
+            self.full_tau = tau
         self.correlation = param.get("correlation", None)
         self.clength = param.get("correlation_length", None)
 
@@ -817,7 +927,7 @@ class Model:
                     self.hamiltonians.append(op)
                 ham_as_onesite_obs.append(
                     OnesiteObservable(
-                        0, sites=sites, elements=elements, name="hamiltonian"
+                        0, sites=sites, elements=elements, name="site_hamiltonian"
                     )
                 )
             elif len(dims) == 2:
@@ -853,7 +963,9 @@ class Model:
                     op = NNOperator(b, elements=elements)
                     self.hamiltonians.append(op)
                 ham_as_twosite_obs.append(
-                    TwositeObservable(0, bonds, elements=elements, name="hamiltonian")
+                    TwositeObservable(
+                        0, bonds, elements=elements, name="bond_hamiltonian"
+                    )
                 )
             else:
                 raise RuntimeError("dims should be a list with two elements")
@@ -862,7 +974,6 @@ class Model:
         )
 
         self.onesites = []
-        self.twobodies = []
         observable = param.get("observable", {})
         has_zero_onesite = False
         for onesite in observable.get("onesite", []):
@@ -880,6 +991,8 @@ class Model:
         if not has_zero_onesite:
             for ham in ham_as_onesite_obs:
                 self.onesites.append(ham)
+
+        self.twobodies = []
         has_zero_twosite = False
         for twosite in observable.get("twosite", []):
             name = twosite["name"]
@@ -902,14 +1015,35 @@ class Model:
             for ham in ham_as_twosite_obs:
                 self.twobodies.append(ham)
 
+        self.multibodies = []
+        for multisite in observable.get("multisite", []):
+            name = multisite["name"]
+            group = multisite["group"]
+            ms = [
+                parse_multisite(line)
+                for line in multisite["multisites"].strip().splitlines()
+                if parse_multisite(line) is not None
+            ]
+            if "ops" not in multisite:
+                raise RuntimeError("multisite observable should have ops")
+            obs = MultisiteObservable(group, ms, ops=multisite["ops"], name=name)
+            self.multibodies.append(obs)
+
         self.simple_updates = []
         self.full_updates = []
 
-        for ham in self.hamiltonians:
-            for evo in make_evolution(ham, self.graph, self.simple_tau):
-                self.simple_updates.append(evo)
-            for evo in make_evolution(ham, self.graph, self.full_tau):
-                self.full_updates.append(evo)
+        for g, tau in enumerate(self.simple_tau):
+            if self.time_evolution:
+                tau *= 1.0j
+            for ham in self.hamiltonians:
+                for evo in make_evolution(ham, self.graph, tau, group=g):
+                    self.simple_updates.append(evo)
+        for g, tau in enumerate(self.full_tau):
+            if self.time_evolution:
+                tau *= 1.0j
+            for ham in self.hamiltonians:
+                for evo in make_evolution(ham, self.graph, tau, group=g):
+                    self.full_updates.append(evo)
 
     def to_toml(self, f: TextIO):
         # parameter
@@ -947,6 +1081,12 @@ class Model:
         for twosite in self.twobodies:
             f.write("[[observable.twosite]]\n")
             for line in twosite.to_toml_strs():
+                f.write(line + "\n")
+        f.write("\n")
+
+        for ms in self.multibodies:
+            f.write("[[observable.multisite]]\n")
+            for line in ms.to_toml_strs():
                 f.write(line + "\n")
         f.write("\n")
 
@@ -993,7 +1133,7 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="1.3.4"
+        "-v", "--version", dest="version", action="version", version="2.0-beta"
     )
 
     args = parser.parse_args()

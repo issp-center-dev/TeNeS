@@ -21,7 +21,7 @@ for idx in range(num_hx):
         with open(join(f"output_{idx}", "density.dat")) as f:
             for line in f:
                 words = line.split()
-                if words[0] == "hamiltonian":
+                if words[0] == "Energy":
                     ene = words[2]
                 elif words[0] == "Sz":
                     mag_sz = words[2]

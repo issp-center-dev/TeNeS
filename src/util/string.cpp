@@ -18,6 +18,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 namespace tenes {
 namespace util {
@@ -64,6 +65,14 @@ std::string strip(std::string const &str, std::string const &delim) {
 std::string drop_comment(std::string const &str) {
   auto index = str.find_first_of("#");
   return str.substr(0, index);
+}
+
+bool startswith(std::string const &str, std::string const &prefix) {
+  return std::equal(prefix.begin(), prefix.end(), str.begin());
+}
+
+bool endswith(std::string const &str, std::string const &suffix) {
+  return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
 
 }  // namespace util

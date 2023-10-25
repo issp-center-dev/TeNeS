@@ -39,12 +39,16 @@ This section has two subsections: ``simple`` and ``full``.
    :header: "Name", "Description", "Type"
    :widths: 15, 30, 20
 
-   ``site``,        "Index of site",                                                      Integer
-   ``source_site``, "Index of source site",                                               Integer
-   ``source_leg``,  "Direction from source site to target site",                          Integer
-   ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",         A list of integer
+   ``group``,       "Group of the evolution operator", Integer (0-)
+   ``site``,        "Index of site",                                                      Integer (0-)
+   ``source_site``, "Index of source site",                                               Integer (0-)
+   ``source_leg``,  "Direction from source site to target site",                          Integer (0-3)
+   ``dimensions``,  "Dimension of a tensor of imaginary time evolution operator",         A list of integers
    ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator", String
 
+
+``group`` specifies the group of the evolution operator (the default value is 0).
+It corresponds to the index of ``tau`` and ``num_steps`` in ``parameter.simple_update`` and ``parameter.full_update``.
 
 ``site`` is available for one-site operator, and ``source_site`` and ``source_leg`` are for two-site operator.
 

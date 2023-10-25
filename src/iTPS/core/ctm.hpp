@@ -34,7 +34,15 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
                                const tensor &Tn1, const tensor &Tn4,
                                const PEPS_Parameters peps_parameters,
                                tensor &PU, tensor &PL);
+template <class tensor>
+void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
+                               const tensor &eT1, const tensor &eT6,
+                               const tensor &eT7, const tensor &eT8,
+                               const tensor &Tn1, const tensor &Tn4,
+                               const PEPS_Parameters peps_parameters,
+                               tensor &PU, tensor &PL);
 
+  
 template <class tensor>
 void Calc_projector_updown_blocks(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
@@ -44,6 +52,15 @@ void Calc_projector_updown_blocks(
     const PEPS_Parameters peps_parameters, tensor &PU, tensor &PL);
 
 template <class tensor>
+void Calc_projector_updown_blocks_single(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &eT7, const tensor &eT8,
+    const tensor &Tn1, const tensor &Tn2, const tensor &Tn3, const tensor &Tn4,
+    const PEPS_Parameters peps_parameters, tensor &PU, tensor &PL);
+
+  
+template <class tensor>
 void Calc_Next_CTM(const tensor &C1, const tensor &C4, const tensor &eT1,
                    const tensor &eT6, const tensor &PU, const tensor &PL,
                    tensor &C1_out, tensor &C4_out);
@@ -52,6 +69,16 @@ template <class tensor>
 void Calc_Next_eT(const tensor &eT8, const tensor &Tn1, const tensor &PU,
                   const tensor &PL, tensor &eT_out);
 
+template <class tensor>
+void Calc_Next_CTM_single(const tensor &C1, const tensor &C4, const tensor &eT1,
+                   const tensor &eT6, const tensor &PU, const tensor &PL,
+                   tensor &C1_out, tensor &C4_out);
+
+template <class tensor>
+void Calc_Next_eT_single(const tensor &eT8, const tensor &Tn1, const tensor &PU,
+                  const tensor &PL, tensor &eT_out);
+
+  
 template <class tensor>
 void Left_move(std::vector<tensor> &C1, const std::vector<tensor> &C2,
                const std::vector<tensor> &C3, std::vector<tensor> &C4,
@@ -106,6 +133,55 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
                          const PEPS_Parameters peps_parameters,
                          const SquareLattice lattice, bool initialize = true);
 
+
+
+template <class tensor>
+void Left_move_single(std::vector<tensor> &C1, const std::vector<tensor> &C2,
+               const std::vector<tensor> &C3, std::vector<tensor> &C4,
+               const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
+               const std::vector<tensor> &eTb, std::vector<tensor> &eTl,
+               const std::vector<tensor> &Tn, const int ix,
+               const PEPS_Parameters peps_parameters,
+               const SquareLattice lattice);
+
+template <class tensor>
+void Right_move_single(const std::vector<tensor> &C1, std::vector<tensor> &C2,
+                std::vector<tensor> &C3, const std::vector<tensor> &C4,
+                const std::vector<tensor> &eTt, std::vector<tensor> &eTr,
+                const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
+                const std::vector<tensor> &Tn, const int ix,
+                const PEPS_Parameters peps_parameters,
+                const SquareLattice lattice);
+
+template <class tensor>
+void Top_move_single(std::vector<tensor> &C1, std::vector<tensor> &C2,
+              const std::vector<tensor> &C3, const std::vector<tensor> &C4,
+              std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
+              const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
+              const std::vector<tensor> &Tn, const int iy,
+              const PEPS_Parameters peps_parameters,
+              const SquareLattice lattice);
+
+template <class tensor>
+void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
+                 std::vector<tensor> &C3, std::vector<tensor> &C4,
+                 const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
+                 std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
+                 const std::vector<tensor> &Tn, const int iy,
+                 const PEPS_Parameters peps_parameters,
+                 const SquareLattice lattice);
+  
+template <class tensor>
+int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C2,
+                         std::vector<tensor> &C3, std::vector<tensor> &C4,
+                         std::vector<tensor> &eTt, std::vector<tensor> &eTr,
+                         std::vector<tensor> &eTb, std::vector<tensor> &eTl,
+                         const std::vector<tensor> &Tn,
+                         const PEPS_Parameters peps_parameters,
+                         const SquareLattice lattice, bool initialize = true);
+
+template <class tensor>
+std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn);
 }  // end of namespace core
 }  // namespace itps
 }  // namespace tenes

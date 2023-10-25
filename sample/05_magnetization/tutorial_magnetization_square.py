@@ -86,7 +86,7 @@ for idx in range(num_h):
         with open(join(output_dir, "density.dat")) as f:
             for line in f:
                 name, vals = line.split("=")
-                if name.strip() == "hamiltonian":
+                if name.strip() == "Energy":
                     re, im = vals.split()
                     ene += float(re)
                 elif name.strip() == "Sz":

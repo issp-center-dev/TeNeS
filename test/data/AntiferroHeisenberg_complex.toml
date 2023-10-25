@@ -21,6 +21,10 @@ virtual_dim = [2, 2, 2, 2]
 initial_state = [0.0]
 noise = 0.01
 
+[correlation]
+r_max = 3
+operators = [[0,0], [0,1]]
+
 [observable]
 [[observable.onesite]]
 name = "Sz"
@@ -51,7 +55,7 @@ elements = """
 """
 
 [[observable.twosite]]
-name = "hamiltonian"
+name = "bond_hamiltonian"
 group = 0
 bonds = """
 0 1 0

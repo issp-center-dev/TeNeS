@@ -2,6 +2,7 @@ Overview
 =================
 TeNeS (**Te** nsor **Ne** twork **S** olver) is an open-source program package for calculation of two-dimensional many-body quantum states based on the tensor network method.
 This package calculates ground-state wavefunctions for user-defined Hamiltonian, and evaluates user-defined physical quantities such as magnetization and correlation functions.
+TeNeS can calculate finite temperature quantity and real-time evolution as well as the ground-state quantity.
 For predefined models and lattices, there is a tool that makes it easy for users to generate input files.
 TeNeS uses an OpenMP/MPI hybrid parallelized tensor operation library and thus can deal with large-scale calculation by using massively parallel machines.
 
@@ -10,7 +11,7 @@ Developers
 TeNeS is developed by the following members.
 
 - Tsuyoshi Okubo (Graduate School of Science, Univ. of Tokyo)
-- Satoshi Morita (Institute for Solid State Physics, Univ. of Tokyo)
+- Satoshi Morita (Faculty of Science and Technology, Keio University)
 - Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
 - Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
 - Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
@@ -19,17 +20,17 @@ TeNeS is developed by the following members.
 Version information
 ======================
 
-- ver. 1.3.4: 2023-09-13.
-- ver. 1.3.3: 2023-07-14.
-- ver. 1.3.2: 2023-06-08.
-- ver. 1.3.1: 2022-10-21.
-- ver. 1.3.0: 2022-10-20.
-- ver. 1.2.0: 2021-12-13.
-- ver. 1.1.1: 2020-11-09.
-- ver. 1.1.0: 2020-07-09.
-- ver. 1.0.0: 2020-04-17.
-- ver. 1.0-beta: 2020-03-30.
-- ver. 0.1: 2019-12-04.
+- ver. 1.3.4: released on 2023-09-13.
+- ver. 1.3.3: released on 2023-07-14.
+- ver. 1.3.2: released on 2023-06-08.
+- ver. 1.3.1: released on 2022-10-21.
+- ver. 1.3.0: released on 2022-10-20.
+- ver. 1.2.0: released on 2021-12-13.
+- ver. 1.1.1: released on 2020-11-09.
+- ver. 1.1.0: released on 2020-07-09.
+- ver. 1.0.0: released on 2020-04-17.
+- ver. 1.0-beta: released on 2020-03-30.
+- ver. 0.1: released on 2019-12-04.
 
 License
 ==================

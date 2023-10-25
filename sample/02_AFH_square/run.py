@@ -63,7 +63,7 @@ for D in Ds:
         with open(join(output_dir, "density.dat")) as f:
             for line in f:
                 words = line.split()
-                if words[0].strip() == "hamiltonian":
+                if words[0].strip() == "Energy":
                     ene = float(words[2].strip())
         with open(join(output_dir, "onesite_obs.dat")) as f:
             for line in f:

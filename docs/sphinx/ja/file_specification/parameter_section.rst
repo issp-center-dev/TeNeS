@@ -5,8 +5,6 @@
 サブセクションとして ``general``, ``simple_update``, ``full_update``,
 ``ctm``, ``random`` を持ちます。
 
-simple update およびfull updateの虚時間刻み ``parameter.simple_update.tau`` と ``parameter.full_update.tau`` のみ、 ``tenes`` 本体ではなくスタンダードモード ``tenes_std`` で使われるパラメータです。
-
 ``parameter.general``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -16,13 +14,33 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 20, 30, 10, 10
 
+   ``mode``,        "計算モード",                                                   文字列, \"ground state\"
    ``is_real``,     "すべてのテンソルを実数に制限するかどうか",                     真偽値, false
    ``iszero_tol``,  "演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ", 実数,   0.0
-   ``measure``,     "物理量測定をするかどうか",                                     真偽値, true
+   ``measure``,     "基底状態計算において、物理量測定をするかどうか",               真偽値, true
+   ``measure_interval``, "実時間発展・有限温度計算において物理量を測定する頻度",    整数 or 整数のリスト, 10 
    ``output``,      "物理量などを書き込むディレクトリ",                             文字列, \"output\"
    ``tensor_save``, "最適化後のテンソルを書き込むディレクトリ",                     文字列, \"\"
    ``tensor_load``, "初期テンソルを読み込むディレクトリ",                           文字列, \"\"
 
+
+- ``mode``
+
+  - 計算モードを指定します
+  - ``"ground state"``
+
+    - 基底状態計算
+    - ``tenes_std`` は虚時間発展演算子 :math:`U(\tau) = \exp(-\tau \mathcal{H})` を計算します
+
+  - ``"time evolution"``
+
+    - 実時間発展計算
+    - ``tenes_std`` は実時間発展演算子 :math:`U(t) = \exp(-it \mathcal{H})` を計算します
+
+  - ``"finite temperature"``
+
+    - 有限温度計算
+    - ``tenes_std`` は虚時間発展演算子 :math:`U(\tau) = \exp(-\tau \mathcal{H})` を計算します
 
 - ``is_real``
 
@@ -35,8 +53,13 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
 - ``measure``
 
-  - ``false`` にすると物理量計算・保存をスキップします
+  - 基底状態計算において、 ``false`` にすると物理量計算・保存をスキップします
   - 実行時間 ``time.dat`` は常に保存されます
+
+- ``measure_interval``
+
+  - 実時間発展計算および有限温度計算において、 物理量を測定する頻度を指定します
+  - ``measure_interval`` ステップ計算した後に物理量を測定します
 
 - ``output``
 
@@ -50,7 +73,7 @@ simple update およびfull updateの虚時間刻み ``parameter.simple_update.t
 
 - ``tensor_load``
 
-  - 各種テンソルをこのディレクトリ以下から読み込みます
+  - 初期テンソルをこのディレクトリ以下から読み込みます
   - 空文字列の場合は読み込みません
 
 
@@ -63,13 +86,30 @@ simple update に関するパラメータ
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``tau``,                       "虚時間発展演算子における虚時間刻み :math:`\tau`",             実数,   0.01
-   ``num_step``,                  "simple update の回数",                                        整数,   0
+   ``tau``,                       "(虚)時間発展演算子における(虚)時間刻み :math:`\tau`",         実数 or 実数のリスト,   0.01
+   ``num_step``,                  "simple update の回数",                                        整数 or 整数のリスト,   0
    ``lambda_cutoff``,             "simple update において平均場 :math:`\lambda` の切り捨て閾値", 実数,   1e-12
    ``gauge_fix``,                 "テンソルのゲージを固定するかどうか",                          真偽値, false
    ``gauge_maxiter``,             "ゲージ固定操作のループ最大数",                                整数,   100
    ``gauge_convergence_epsilon``, "ゲージ固定操作の収束判定値",                                  実数,   1e-2
 
+
+- ``tau``
+
+  - (虚)時間発展演算子における(虚)時間刻み :math:`\tau` を指定します
+
+    - ``tenes_std`` では時間発展演算子を計算するために用いられます
+    - ``tenes`` では各ステップでの経過時間・逆温度を求めるために用いられます
+
+      - For finite temperature calculation, note that the inverse temperature increase :math:`2\tau` at a step because :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)`
+      - 有限温度計算の場合、 :math:`\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)` なので、 ステップごとに逆温度は :math:`2\tau` だけ増加することに注意してください。
+
+  - リストを指定すると、時間発展演算子のグループごとに刻み幅を変えることができます
+
+- ``num_step``
+
+  - simple update の回数を指定します
+  - リストを指定すると、時間発展演算子のグループごとに回数を変えることができます
 
 
 ``parameter.full_update``
@@ -81,8 +121,8 @@ full update に関するパラメータ
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 30, 30, 10, 10
 
-   ``tau``,                 "虚時間発展演算子における虚時間刻み :math:`\tau`",                    実数,   0.01
-   ``num_step``,            "full update の回数",                                                 整数,   0
+   ``tau``,                 "(虚)時間発展演算子における(虚)時間刻み :math:`\tau`",                実数 or 実数のリスト,   0.01
+   ``num_step``,            "full update の回数",                                                 整数 or 整数のリスト,   0
    ``env_cutoff``,          "full update で環境テンソルを計算する際にゼロとみなす特異値のcutoff", 実数,   1e-12
    ``inverse_precision``,   "full update で擬似逆行列を計算する際にゼロとみなす特異値のcutoff",   実数,   1e-12
    ``convergence_epsilon``, "full update でtruncationの最適化を行う際の収束判定値",               実数,   1e-6
