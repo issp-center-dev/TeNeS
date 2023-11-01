@@ -1133,7 +1133,7 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="2.0-beta"
+        "-v", "--version", dest="version", action="version", version="2.0-dev"
     )
 
     args = parser.parse_args()
