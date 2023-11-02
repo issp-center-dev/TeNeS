@@ -24,3 +24,7 @@ initial = "random"
 type = "boson"
 t = 0.1
 V = 1.0
+
+[correlation]
+r_max = 30
+operators = [[0,0]]
