@@ -78,7 +78,7 @@ void iTPS<tensor>::finite_temperature() {
     }  // end of for (int_tau)
     if (measure_interval==0 || nsteps % measure_interval != 0) {
       Timer<> timer_m;
-      measure_density(beta, "TE_");
+      measure_density(beta, "FT_");
       time_measure += timer_m.elapsed();
     }
     time_simple_update += timer.elapsed() - time_measure;
