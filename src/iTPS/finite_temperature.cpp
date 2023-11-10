@@ -56,6 +56,7 @@ void iTPS<tensor>::finite_temperature() {
       for (int debug_n = 0; debug_n < Tn[debug_site_i].local_size(); ++debug_n) {
         mptensor::Index idx = Tn[debug_site_i].global_index(debug_n);
         Tn[debug_site_i].get_value(idx, v);
+        std::cerr << "DEBUG Tn " << debug_n << " ";
         for (int d = 0; d < idx.size(); ++d) {
           std::cerr << idx[d] << " ";
         }
