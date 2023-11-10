@@ -205,7 +205,7 @@ iTPS（および、その他のテンソルネットワーク状態）を用い�
 純粋状態の時と同様に、 :math:`N` 個の :math:`S=1/2` 量子スピン系を例に考えると、有限温度の混合状態は
 
 .. math::
-   \rho(\beta) = \sum_{s_i=\uparrow, \downarrow, s_i' = =\uparrow, \downarrow} \left(\rho(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'} |s_1', s_2', \dots, s_N'\rangle \langle s_1, s_2, \dots, s_N|
+   \rho(\beta) = \sum_{s_i=\uparrow, \downarrow, s_i' =\uparrow, \downarrow} \left(\rho(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'} |s_1', s_2', \dots, s_N'\rangle \langle s_1, s_2, \dots, s_N|
 
 と表すことができます。この展開係数 :math:`\left(\rho(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'}` のテンソルネットワークによる表現は、例えば、MPSを行列（演算子）に一般化した、行列積演算子（Matrix Product Operator(MPO)）を用いて、
 
@@ -214,19 +214,19 @@ iTPS（および、その他のテンソルネットワーク状態）を用い�
 
 で表すことができ、対応するダイアグラムは
 
-.. image:: ../../img/MPO.pdf
+.. image:: ../../img/MPO.*
    :align: center
 
 のように書くことができます。純粋状態の場合と同様に、並進対称性がある混合状態に対しては、同じテンソルを無限に繰り返すiMPOにより、無限系の状態を表すこともでき、例えば、1次元的な2サイトの並進対称性を持つ状態では、対応するiMPOのダイアグラムは
 
-.. image:: ../../img/iMPO.pdf
+.. image:: ../../img/iMPO.*
    :align: center
 
 のようになります。
 
 TeNeSでは、混合状態の表現として、二次元の無限に広がったテンソル積演算子 (infinite tensor product operator (iIPO))を取り扱い :ref:`[TPO] <Ref-TPO>` 、特に、並進対称性を持った正方格子型のネットワークを仮定します。この場合、iTPOのダイアグラムは、
 
-.. image:: ../../img/iTPO.pdf
+.. image:: ../../img/iTPO.*
    :align: center
 
 と書くことができます。
@@ -238,7 +238,7 @@ TeNeSでは、有限温度の混合状態 :math:`\rho(\beta)` を、温度無限
 
 を用いて計算します。ここで、温度無限大では、密度行列は単位行列になっていることに注意してください。この性質から、例えば、温度無限大の状態のiMPO表現は、局所的な単位行列のテンソル積になり、ダイアグラムでは、
 
-.. image:: ../../img/iMPO_T0.pdf
+.. image:: ../../img/iMPO_T0.*
    :align: center
 
 のように、単位行列に対応する"線"が並ぶことになります。
@@ -252,7 +252,7 @@ TeNeSでは、混合状態に対する虚時間発展を、純粋状態での虚
 
 の形で記述でき、対応するダイアグラムは、（見やすさを考えて、iMPOの形で描くと）
 
-.. image:: ../../img/iMPO_ITE_local.pdf
+.. image:: ../../img/iMPO_ITE_local.*
    :align: center
 
 になります。
@@ -264,7 +264,7 @@ iTPOを用いた有限温度状態の計算と、iTPSを用いた純粋状態の
 
 で計算されますが、 :math:`\mathrm{Tr}` は、iTPOの対応する上下の足をつなぐことに相当するので、iTPOの局所的なの上下の足をつなげたテンソル
 
-.. image:: ../../img/trace_tensor.pdf
+.. image:: ../../img/trace_tensor.*
    :align: center
 
 を用いると、例えば、分母の :math:`\mathrm{Tr} \rho` は、純粋状態の期待値計算で現れた二次元正方格子のダイアグラムと同一の構造になり、角転送行列表現とCTMRGを用いた近似計算が可能になります。
@@ -273,7 +273,7 @@ iTPOを用いた有限温度状態の計算と、iTPSを用いた純粋状態の
 
 純粋状態の場合と同様に、一旦、収束した角転送行列とエッジテンソルを計算することができれば、:math:`\mathrm{Tr} (\rho O)` も、純粋状態の場合と同様に効率的に計算できます。例えば、局所磁化 :math:`\mathrm{Tr} (\rho S_i^z)` の場合は、演算子を含んだテンソルを
 
-.. image:: ../../img/trace_Sz.pdf
+.. image:: ../../img/trace_Sz.*
    :align: center
 
 のように定義することで、純粋状態の :math:`\langle \Psi|S_i^z|\Psi\rangle` と同じダイアグラムで計算することができます。
