@@ -25,17 +25,18 @@ void iTPS<tensor>::finite_temperature() {
   measure_density(beta, "FT_");
 
   const int num_groups = num_simple_update_groups;
-  if (peps_parameters.measure_interval.size() < num_groups){
-    while(peps_parameters.measure_interval.size() < num_groups){
-      peps_parameters.measure_interval.push_back(*peps_parameters.measure_interval.rbegin());
+  if (peps_parameters.measure_interval.size() < num_groups) {
+    while (peps_parameters.measure_interval.size() < num_groups) {
+      peps_parameters.measure_interval.push_back(
+          *peps_parameters.measure_interval.rbegin());
     }
   }
 
   for (int group = 0; group < num_groups; ++group) {
     if (peps_parameters.print_level >= PrintLevel::info) {
-      if(num_groups == 1){
+      if (num_groups == 1) {
         std::cout << " Start Simple update" << std::endl;
-      }else{
+      } else {
         std::cout << " Start Simple update " << group << std::endl;
       }
     }
@@ -48,12 +49,26 @@ void iTPS<tensor>::finite_temperature() {
     Timer<> timer;
 
     for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
+      // DEBUG
+      std::cerr << int_tau << std::endl;
+      int debug_site_i = 0;
+      typename tensor::value_type v;
+      for (int debug_n = 0; debug_n < Tn[debug_site_i].local_size(); ++debug_n) {
+        mptensor::Index idx = Tn[debug_site_i].global_index(debug_n);
+        Tn[debug_site_i].get_value(idx, v);
+        for (int d = 0; d < idx.size(); ++d) {
+          std::cerr << idx[d] << " ";
+        }
+        std::cerr << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10) << std::real(v) << " " << std::imag(v) << std::endl;
+      }
+      std::flush(std::cerr);
+
       auto const& evols = simple_updates;
       for (auto up : evols) {
         if (up.group != group) {
           continue;
         }
-	simple_update_density(up);
+        simple_update_density(up);
       }
       beta += dt * 2.0;
       // local gauge fixing
@@ -76,7 +91,7 @@ void iTPS<tensor>::finite_temperature() {
         }
       }
     }  // end of for (int_tau)
-    if (measure_interval==0 || nsteps % measure_interval != 0) {
+    if (measure_interval == 0 || nsteps % measure_interval != 0) {
       Timer<> timer_m;
       measure_density(beta, "TE_");
       time_measure += timer_m.elapsed();
