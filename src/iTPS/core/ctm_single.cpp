@@ -220,6 +220,8 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
       int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41), e12 * t12), e56 * t34);
       s_c.resize(cut);
       for (int i = 0; i < cut; ++i) {
+        // DEBUG
+        std::cerr << "DEBUG s " << i << " " << s[i] / denom << " " << peps_parameters.Inverse_projector_cut << std::endl;
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
@@ -357,6 +359,8 @@ void Calc_projector_updown_blocks_single(
       s_c.resize(cut);
 
       for (int i = 0; i < s.size(); ++i) {
+        // DEBUG
+        std::cerr << "DEBUG s " << i << " " << s[i] / denom << " " << peps_parameters.Inverse_projector_cut << std::endl;
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {

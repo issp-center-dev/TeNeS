@@ -21,6 +21,8 @@ namespace itps {
 
 template <class tensor>
 void iTPS<tensor>::finite_temperature() {
+  // DEBUG
+  std::cerr << std::scientific << std::setprecision(std::numeric_limits<double>::digits10);
   double beta = 0.0;
   measure_density(beta, "FT_");
 
