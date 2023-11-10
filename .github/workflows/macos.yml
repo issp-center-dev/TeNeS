@@ -7,13 +7,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-12, macos-11]
-        compiler: [c++, g++-12]
-        include:
-          - os: macos-12
-            compiler: g++-11
-          - os: macos-11
-            compiler: g++-10
+        os: [macos-11]
+        compiler: [g++-10]
+        # os: [macos-12, macos-11]
+        # compiler: [c++, g++-12]
+        # include:
+        #   - os: macos-12
+        #     compiler: g++-11
+        #   - os: macos-11
+        #     compiler: g++-10
 
     steps:
       - uses: actions/checkout@v3
