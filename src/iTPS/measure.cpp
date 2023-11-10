@@ -113,6 +113,33 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   update_CTM_density();
   //  }
 
+  // DEBUG
+#define DUMP_TENSOR(NAME) \
+  { \
+    int site = 0; \
+    for (int n=0; n < NAME[site].local_size(); ++n){ \
+      typename ptensor::value_type v; \
+      mptensor::Index idx = NAME[site].global_index(n); \
+      NAME[site].get_value(idx, v); \
+      std::cerr << "DEBUG " #NAME " " << beta << " "; \
+      for(int d=0; d<idx.size(); ++d){ \
+        std::cerr << idx[d] << " "; \
+      } \
+      std::cerr << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10) << std::real(v) << " " << std::imag(v) << std::endl; \
+    } \
+  }
+
+  DUMP_TENSOR(C1);
+  DUMP_TENSOR(C2);
+  DUMP_TENSOR(C3);
+  DUMP_TENSOR(C4);
+  DUMP_TENSOR(eTl);
+  DUMP_TENSOR(eTt);
+  DUMP_TENSOR(eTl);
+  DUMP_TENSOR(eTb);
+
+#undef DUMP_TENSOR
+
   // auto onesite_obs = measure_onesite_density();
   auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs, beta, filename_prefix);

@@ -49,21 +49,6 @@ void iTPS<tensor>::finite_temperature() {
     Timer<> timer;
 
     for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
-      // DEBUG
-      std::cerr << int_tau << std::endl;
-      int debug_site_i = 0;
-      typename tensor::value_type v;
-      for (int debug_n = 0; debug_n < Tn[debug_site_i].local_size(); ++debug_n) {
-        mptensor::Index idx = Tn[debug_site_i].global_index(debug_n);
-        Tn[debug_site_i].get_value(idx, v);
-        std::cerr << "DEBUG Tn " << debug_n << " ";
-        for (int d = 0; d < idx.size(); ++d) {
-          std::cerr << idx[d] << " ";
-        }
-        std::cerr << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10) << std::real(v) << " " << std::imag(v) << std::endl;
-      }
-      std::flush(std::cerr);
-
       auto const& evols = simple_updates;
       for (auto up : evols) {
         if (up.group != group) {
@@ -94,7 +79,7 @@ void iTPS<tensor>::finite_temperature() {
     }  // end of for (int_tau)
     if (measure_interval == 0 || nsteps % measure_interval != 0) {
       Timer<> timer_m;
-      measure_density(beta, "TE_");
+      measure_density(beta, "FT_");
       time_measure += timer_m.elapsed();
     }
     time_simple_update += timer.elapsed() - time_measure;
