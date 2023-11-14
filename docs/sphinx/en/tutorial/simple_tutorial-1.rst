@@ -4,6 +4,15 @@ Ising model with transverse magnetic field
 ---------------------------------------------
 
 This section presents a calculation of the transverse magnetic field Ising model as an example.
+The Hamiltonian is
+
+.. math::
+
+   \begin{aligned}
+   H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
+   \end{aligned}
+
+Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
 By changing the variable ``hx`` in the input file,
 the magnitude of the transverse magnetic field will be modified.
 For example, when the transverse magnetic field is 0, the input file is
