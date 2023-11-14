@@ -36,7 +36,14 @@
   <section id="id1">
 <h1><span class="section-number">4.3. </span>横磁場イジング模型の有限温度計算<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <p>ここでは正方格子の強磁性イジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の有限温度の計算例について紹介します。
-このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/08_finitetemperature</span></code> に格納されています。
+ハミルトニアンは</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x
+\end{aligned}\]</div>
+<p>です。
+大きさ1/2のスピン演算子を用いて定義しており、パウリ演算子を直接用いたモデルと係数が異なることに注意してください。</p>
+<p>このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/08_finitetemperature</span></code> に格納されています。
 以下が入力ファイルの例です (<code class="docutils literal notranslate"><span class="pre">simple_ft_strong.toml</span></code> ファイル)。ここでは、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
@@ -72,29 +79,68 @@ hx = 2.0
 </pre></div>
 </div>
 <p>とします。
-実時間発展は <code class="docutils literal notranslate"><span class="pre">mode</span></code> を <code class="docutils literal notranslate"><span class="pre">finite</span></code> にすることで行うことができます。
-ここでは、横磁場を <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> 、 <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> (逆温度の刻み幅は 2 <code class="docutils literal notranslate"><span class="pre">tau</span></code>)として有限温度計算をしています。
-有限温度の振る舞いをいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> 、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> 、 <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> という入力ファイルもサンプルとして用意しています。
-また、これらを一括して計算するためのスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> も準備しています。
+実時間発展は <code class="docutils literal notranslate"><span class="pre">parameter.general</span></code> セクションの <code class="docutils literal notranslate"><span class="pre">mode</span></code> を <code class="docutils literal notranslate"><span class="pre">finite</span></code> にすることで行うことができます。
+横磁場を <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> 、 <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> (逆温度の刻み幅は 2 <code class="docutils literal notranslate"><span class="pre">tau</span></code>)として有限温度計算をしています。
+シンプルモードの入力ファイルを用意したら、基底状態計算などと同様に、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes</span></code> コマンドを用いて計算を実行します。
+計算結果は <code class="docutils literal notranslate"><span class="pre">output_ft_strong</span></code> ディレクトリ以下に出力されます。基本的に基底状態計算の出力と同様ですが、1列目に逆温度が追加されています。
+例えば <code class="docutils literal notranslate"><span class="pre">FT_density.dat</span></code> は</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: inverse temperature
+# $2: observable ID
+# $3: real
+# $4: imag
+# The meaning of observable IDs are the following:
+# 0: Energy
+# 1: Sz
+# 2: Sx
+# 3: Sy
+# 4: bond_hamiltonian
+# 5: SzSz
+# 6: SxSx
+# 7: SySy
+
+0.00000000000000000e+00 0  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 1  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 2  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 3  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 4  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 5  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 6  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 7  0.00000000000000000e+00  0.00000000000000000e+00
+
+   ... continued ...
+</pre></div>
+</div>
+<p>となっています。
+2列目が物理量の種類を示しており、例えば0はエネルギーなので、 <code class="docutils literal notranslate"><span class="pre">awk</span></code> などでエネルギーだけを取り出すことで温度依存性を調べられます:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 0 {print $1, $3, $4}&#39; output_ft_strong/FT_density.dat &gt; energy_strong.dat
+</pre></div>
+</div>
+<p>有限温度の振る舞いをいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>)、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>)、 <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.0</span></code>) という入力ファイルもサンプルとして用意しています。
+また、これらを一括して計算し、エネルギー・縦磁化・横磁化を保存するスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> も準備しています。
 あらかじめ <code class="docutils literal notranslate"><span class="pre">tenes</span></code> などにパスを通した上で</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
 </pre></div>
 </div>
 <p>により計算を実行します。1分程度で計算が終わります。
-計算結果を可視化するため、エネルギー、比熱、磁化 (<span class="math notranslate nohighlight">\(S_x\)</span>, <span class="math notranslate nohighlight">\(S_z\)</span>)を表示するためのスクリプト <code class="docutils literal notranslate"><span class="pre">plot_e.plt</span></code> 、 <code class="docutils literal notranslate"><span class="pre">plot_c.plt</span></code>、 <code class="docutils literal notranslate"><span class="pre">plot_mx.plt</span></code> 、 <code class="docutils literal notranslate"><span class="pre">plot_mz.plt</span></code> を用意しています。</p>
+比熱は直接計算するのが難しいため、エネルギーの温度微分として計算します。
+<code class="docutils literal notranslate"><span class="pre">calcspec.py</span></code> はエネルギーをスプライン補間して温度微分することで比熱を計算します。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python3 calcspec.py
+</pre></div>
+</div>
+<p>計算結果を可視化するため、エネルギー、比熱、磁化を表示するためのスクリプト <code class="docutils literal notranslate"><span class="pre">plot_e.plt</span></code> 、 <code class="docutils literal notranslate"><span class="pre">plot_c.plt</span></code>、 <code class="docutils literal notranslate"><span class="pre">plot_mx.plt</span></code> 、 <code class="docutils literal notranslate"><span class="pre">plot_mz.plt</span></code> を用意しています。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gnuplot -persist plot_e.plt
 gnuplot -persist plot_c.plt
 gnuplot -persist plot_mx.plt
 gnuplot -persist plot_mz.plt
 </pre></div>
 </div>
-<p>とすれば、 エネルギー、比熱、磁化 ( <span class="math notranslate nohighlight">\(S_x\)</span> , <span class="math notranslate nohighlight">\(S_z\)</span> ) が、それぞれプロットされます。
-その結果を <a class="reference internal" href="#fig-tutorial8-finitetemperature"><span class="std std-numref">図 4.4</span></a> に示します。
+<p>その結果を <a class="reference internal" href="#fig-tutorial8-finitetemperature"><span class="std std-numref">図 4.4</span></a> に示します。
 比較のため、量子モンテカルロ法を用いて計算した結果も一緒に表示しています ( <code class="docutils literal notranslate"><span class="pre">ALPS/looper</span></code> を使用)。</p>
 <figure class="align-default" id="fig-tutorial8-finitetemperature">
 <a class="reference internal image-reference" href="../_images/tutorial_08_finitetemperature.png"><img alt="../_images/tutorial_08_finitetemperature.png" src="../_images/tutorial_08_finitetemperature.png" style="width: 600px;" /></a>
 <figcaption>
-<p><span class="caption-number">図 4.4 </span><span class="caption-text">イジング模型の有限温度計算の図: (a) エネルギー、(b) 比熱、(c) <span class="math notranslate nohighlight">\(S_x\)</span> 、(d) <span class="math notranslate nohighlight">\(S_z\)</span>. 縦軸は物理量、横軸は温度を表す。</span><a class="headerlink" href="#fig-tutorial8-finitetemperature" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.4 </span><span class="caption-text">イジング模型の有限温度計算の図: (a) エネルギー、(b) 比熱、(c) <span class="math notranslate nohighlight">\(m_x\)</span> 、(d) <span class="math notranslate nohighlight">\(m_z\)</span>. 縦軸は物理量、横軸は温度を表す。</span><a class="headerlink" href="#fig-tutorial8-finitetemperature" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
 </section>

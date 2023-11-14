@@ -34,7 +34,14 @@
             
   <section id="finite-temperature-calculations-for-the-transverse-field-ising-model">
 <h1><span class="section-number">4.3. </span>Finite Temperature Calculations for the Transverse Field Ising Model<a class="headerlink" href="#finite-temperature-calculations-for-the-transverse-field-ising-model" title="Permalink to this heading">¶</a></h1>
-<p>In this section, we present a calculation example of the ferromagnetic Ising model on a square lattice subjected to a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, at finite temperatures. The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/08_finitetemperature</span></code> directory. Below is a sample input file (<cite>simple_ft_strong.toml</cite>):</p>
+<p>In this section, we present a calculation example of the ferromagnetic Ising model on a square lattice subjected to a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, at finite temperatures.
+The Hamiltonian is</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
+\end{aligned}\]</div>
+<p>Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
+The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/08_finitetemperature</span></code> directory. Below is a sample input file (<cite>simple_ft_strong.toml</cite>):</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 mode = &quot;finite&quot;
@@ -68,22 +75,69 @@ Jy = 0.0
 hx = 2.0
 </pre></div>
 </div>
-<p>To perform finite temperature calculations, set the <code class="docutils literal notranslate"><span class="pre">mode</span></code> to <code class="docutils literal notranslate"><span class="pre">finite</span></code>. Here, the transverse magnetic field is set to <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> with <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> (the inverse temperature step size is 2 times <code class="docutils literal notranslate"><span class="pre">tau</span></code>). To observe the behavior at different transverse magnetic fields, we’ve provided additional sample input files: <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code>, and <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code>. Moreover, a script named <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> has been set up to execute all these calculations simultaneously. Ensure you’ve added tools like <code class="docutils literal notranslate"><span class="pre">tenes</span></code> to your PATH, then initiate the calculations with:</p>
+<p>To perform finite temperature calculations, set the <code class="docutils literal notranslate"><span class="pre">mode</span></code> to <code class="docutils literal notranslate"><span class="pre">finite</span></code>.
+Here, the transverse magnetic field is set to <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> with <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> (the inverse temperature step size is 2 times <code class="docutils literal notranslate"><span class="pre">tau</span></code>).
+Once preparing an input file of the simple mode, execute <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, and <code class="docutils literal notranslate"><span class="pre">tenes</span></code> in the same way as for the ground state calculation.</p>
+<p>The results of the finite temperature calculations are output to the <code class="docutils literal notranslate"><span class="pre">output_ft_strong</span></code> directory.
+Basically, the output is the same as the ground state calculation, but the inverse temperature is added to the first column.
+For example, <code class="docutils literal notranslate"><span class="pre">FT_density.dat</span></code> is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: inverse temperature
+# $2: observable ID
+# $3: real
+# $4: imag
+# The meaning of observable IDs are the following:
+# 0: Energy
+# 1: Sz
+# 2: Sx
+# 3: Sy
+# 4: bond_hamiltonian
+# 5: SzSz
+# 6: SxSx
+# 7: SySy
+
+0.00000000000000000e+00 0  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 1  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 2  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 3  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 4  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 5  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 6  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 7  0.00000000000000000e+00  0.00000000000000000e+00
+
+   ... continued ...
+</pre></div>
+</div>
+<p>The second column indicates the type of physical quantity, and for example, 0 represents energy.
+Thus, you can extract the temperature dependence by extracting only the energy with <code class="docutils literal notranslate"><span class="pre">awk</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 0 {print $1, $3, $4}&#39; output_ft_strong/FT_density.dat &gt; energy_strong.dat
+</pre></div>
+</div>
+<p>To observe the behavior at different transverse magnetic fields, we’ve provided additional sample input files: <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>), <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>), and <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.0</span></code>).
+Moreover, a script named <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> has been set up to execute all these calculations simultaneously.
+Ensure you’ve added tools like <code class="docutils literal notranslate"><span class="pre">tenes</span></code> to your PATH, then initiate the calculations with:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
 </pre></div>
 </div>
-<p>The computation should complete in about a minute. To visualize the results, scripts have been prepared to plot energy, heat capacity, and magnetization (<span class="math notranslate nohighlight">\(S_x\)</span>, <span class="math notranslate nohighlight">\(S_z\)</span>): <code class="docutils literal notranslate"><span class="pre">plot_e.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_c.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_mx.plt</span></code>, and <code class="docutils literal notranslate"><span class="pre">plot_mz.plt</span></code>. Running the following:</p>
+<p>The computation should complete in about a minute.
+Since specific heat is difficult to calculate directly, it is calculated from the energy by numerical differentiation.
+<code class="docutils literal notranslate"><span class="pre">calcspec.py</span></code> is a script to calculate specific heat from the energy by using the spline interpolation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python3 calcspec.py
+</pre></div>
+</div>
+<p>To visualize the results, scripts have been prepared to plot energy, heat capacity, and magnetization (<span class="math notranslate nohighlight">\(S_x\)</span>, <span class="math notranslate nohighlight">\(S_z\)</span>): <code class="docutils literal notranslate"><span class="pre">plot_e.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_c.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_mx.plt</span></code>, and <code class="docutils literal notranslate"><span class="pre">plot_mz.plt</span></code>.
+Running the following:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gnuplot -persist plot_e.plt
 gnuplot -persist plot_c.plt
 gnuplot -persist plot_mx.plt
 gnuplot -persist plot_mz.plt
 </pre></div>
 </div>
-<p>will display plots for energy, heat capacity, and magnetizations (<span class="math notranslate nohighlight">\(S_x\)</span> and <span class="math notranslate nohighlight">\(S_z\)</span>). The resulting plots are illustrated in <a class="reference internal" href="#fig-tutorial8-finitetemperature"><span class="std std-numref">Fig. 4.4</span></a>. For comparison, results obtained using Quantum Monte Carlo calculations are also shown (using <code class="docutils literal notranslate"><span class="pre">ALPS/looper</span></code>).</p>
+<p>will display plots for energy, heat capacity, and magnetizations (<span class="math notranslate nohighlight">\(m_x\)</span> and <span class="math notranslate nohighlight">\(m_z\)</span>). The resulting plots are illustrated in <a class="reference internal" href="#fig-tutorial8-finitetemperature"><span class="std std-numref">Fig. 4.4</span></a>. For comparison, results obtained using Quantum Monte Carlo calculations are also shown (using <code class="docutils literal notranslate"><span class="pre">ALPS/looper</span></code>).</p>
 <figure class="align-default" id="fig-tutorial8-finitetemperature">
 <a class="reference internal image-reference" href="../_images/tutorial_08_finitetemperature.png"><img alt="../_images/tutorial_08_finitetemperature.png" src="../_images/tutorial_08_finitetemperature.png" style="width: 600px;" /></a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.4 </span><span class="caption-text">Graphs for the finite temperature calculations of the Ising model: (a) energy, (b) heat capacity, (c) <span class="math notranslate nohighlight">\(S_x\)</span>, and (d) <span class="math notranslate nohighlight">\(S_z\)</span>. The vertical axis represents the physical quantity, and the horizontal axis denotes temperature.</span><a class="headerlink" href="#fig-tutorial8-finitetemperature" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.4 </span><span class="caption-text">Graphs for the finite temperature calculations of the Ising model: (a) energy, (b) heat capacity, (c) <span class="math notranslate nohighlight">\(m_x\)</span>, and (d) <span class="math notranslate nohighlight">\(m_z\)</span>. The vertical axis represents the physical quantity, and the horizontal axis denotes temperature.</span><a class="headerlink" href="#fig-tutorial8-finitetemperature" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>

@@ -11,6 +11,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=c5bd53df"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="4.2. Real-Time Evolution of the Transverse Field Ising Model" href="simple_tutorial-7.html" />
@@ -34,6 +35,12 @@
   <section id="ising-model-with-transverse-magnetic-field">
 <h1><span class="section-number">4.1. </span>Ising model with transverse magnetic field<a class="headerlink" href="#ising-model-with-transverse-magnetic-field" title="Permalink to this heading">¶</a></h1>
 <p>This section presents a calculation of the transverse magnetic field Ising model as an example.
+The Hamiltonian is</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
+\end{aligned}\]</div>
+<p>Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
 By changing the variable <code class="docutils literal notranslate"><span class="pre">hx</span></code> in the input file,
 the magnitude of the transverse magnetic field will be modified.
 For example, when the transverse magnetic field is 0, the input file is</p>

@@ -36,6 +36,13 @@
   <section id="id1">
 <h1><span class="section-number">4.2. </span>横磁場イジング模型の実時間発展<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <p>ここでは正方格子のイジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の実時間発展の計算例について紹介します。
+ハミルトニアンは</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x
+\end{aligned}\]</div>
+<p>です。
+大きさ1/2のスピン演算子を用いて定義しており、パウリ演算子を直接用いたモデルと係数が異なることに注意してください。
 このチュートリアルで使用する入力ファイルおよびスクリプトファイルは <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code> に格納されています。</p>
 <p>最初に初期状態として、基底状態の計算を行います (<code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> ファイル)。ここでは、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
@@ -112,7 +119,42 @@ hx = 2.0
 </div>
 <p>ここでは、横磁場を <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> 、実時間発展の刻み幅を <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> として時間発展させています。
 また、初期状態として先ほどの基底状態を用いるため、 <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code> として、基底状態のテンソルを読み込みます。
-時間発展の様子をいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> 、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> という入力ファイルもサンプルとして用意しています。
+シンプルモードの入力ファイルを準備したあとは、基底状態計算と同様に、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes</span></code> を順番に実行します。
+計算結果は <code class="docutils literal notranslate"><span class="pre">output_te_strong</span></code> ディレクトリに保存されます。
+基本的に基底状態の出力と同様ですが、1列目に時間が追加されています。
+たとえば <code class="docutils literal notranslate"><span class="pre">FT_density.dat</span></code> には物理量の期待値が時間ごとに記録されており、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: time
+# $2: observable ID
+# $3: real
+# $4: imag
+# The meaning of observable IDs are the following:
+# 0: Energy
+# 1: Sz
+# 2: Sx
+# 3: Sy
+# 4: bond_hamiltonian
+# 5: SzSz
+# 6: SxSx
+# 7: SySy
+
+0.00000000000000000e+00 0 -5.00184764052080899e-01  0.00000000000000000e+00
+0.00000000000000000e+00 1  4.99999945646528332e-01  0.00000000000000000e+00
+0.00000000000000000e+00 2  9.24306486797199186e-05  0.00000000000000000e+00
+0.00000000000000000e+00 3  2.34088935337348195e-06  0.00000000000000000e+00
+0.00000000000000000e+00 4 -5.00184764052080899e-01  3.47535331983321418e-21
+0.00000000000000000e+00 5  4.99999902788251294e-01 -8.46256269499545126e-22
+0.00000000000000000e+00 6  1.12653588020163689e-05  6.35907290717320676e-22
+0.00000000000000000e+00 7 -1.12840199341671039e-05 -2.06527532941704114e-21
+</pre></div>
+</div>
+<p>のようになっています。
+2列目は物理量の種類を表しており、この計算では1番が縦磁化 <span class="math notranslate nohighlight">\(m^z = \langle S^z \rangle\)</span> です。
+<code class="docutils literal notranslate"><span class="pre">awk</span></code> などでフィルタリングすることで、特定の物理量の時間発展を取り出せます。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 1 {print $1, $3, $4}&#39; output_te_strong/TE_density.dat &gt; magnetization_strong.dat
+</pre></div>
+</div>
+<p>時間発展の様子をいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>)、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>) という入力ファイルもサンプルとして用意しています。
 また、これらを一括して計算するためのスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> も準備しています。
 あらかじめ <code class="docutils literal notranslate"><span class="pre">tenes</span></code> などにパスを通した上で</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
@@ -123,7 +165,7 @@ hx = 2.0
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.plt&#39;
 </pre></div>
 </div>
-<p>とすれば、 磁化 <span class="math notranslate nohighlight">\(S_z\)</span> の時間発展の様子がプロットされます。
+<p>とすれば、 磁化 <span class="math notranslate nohighlight">\(m^z\)</span> の時間発展の様子がプロットされます。
 その結果を <a class="reference internal" href="#fig-tutorial7-timeevolution"><span class="std std-numref">図 4.2</span></a> に示します。</p>
 <figure class="align-default" id="fig-tutorial7-timeevolution">
 <a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" /></a>
@@ -131,8 +173,9 @@ hx = 2.0
 <p><span class="caption-number">図 4.2 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
+<p>横磁場を強くしていくと磁化の振動が大きくなり、量子相転移点を超えると <span class="math notranslate nohighlight">\(m^z = 0\)</span> を超えて振動するようになります <a class="reference internal" href="#ref-dqpt"><span class="std std-ref">[DQPT]</span></a> 。</p>
 <p>なお、時間発展が進むにつれてエンタングルメントが大きくなり、ある時点でテンソルネットワークの容量が波動関数を表現するのに足りなくなります。
-今の場合、 <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> の <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> の場合のジャンプがこの問題を示しています。
+今の場合、 <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> における <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> のジャンプがこの問題を示しています。
 実際に使用する場合には、このような不連続性が存在しないかを確認の上、ジャンプが存在する場合にはテンソルネットワークの容量が足りなくならないように、
 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span></code> を大きくするなどの対策を行う必要があります。
 例えば、 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> に変更して上述の計算を行うと、
@@ -144,6 +187,9 @@ hx = 2.0
 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> とした場合の結果。</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
+<p class="rubric">参考文献</p>
+<p id="ref-dqpt">[DQPT]
+M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions in the Transverse-Field Ising Model</em>, Phys. Rev. Lett. <strong>110</strong>, 135704 (2013). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.110.135704">link</a></p>
 </section>
 
 

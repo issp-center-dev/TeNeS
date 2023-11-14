@@ -34,7 +34,14 @@
             
   <section id="real-time-evolution-of-the-transverse-field-ising-model">
 <h1><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model<a class="headerlink" href="#real-time-evolution-of-the-transverse-field-ising-model" title="Permalink to this heading">¶</a></h1>
-<p>Here, we introduce a calculation example for the real-time evolution of the Ising model on a square lattice when a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, is applied. The input and script files used in this tutorial can be found in <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code>.</p>
+<p>Here, we introduce a calculation example for the real-time evolution of the Ising model on a square lattice when a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, is applied.
+The Hamiltonian is</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
+\end{aligned}\]</div>
+<p>Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
+The input and script files used in this tutorial can be found in <code class="docutils literal notranslate"><span class="pre">sample/07_timeevolution</span></code>.</p>
 <p>Initially, we compute the ground state (refer to the <code class="docutils literal notranslate"><span class="pre">simple.toml</span></code> file) which serves as our starting state. Specifically, it’s set as:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
@@ -105,7 +112,43 @@ Jy = 0.0
 hx = 2.0
 </pre></div>
 </div>
-<p>In this case, the transverse field is set to <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code>, and the time-step for evolution is <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code>. Moreover, since we are utilizing the ground state as our initial condition, we load the state tensor with <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code>. For observing the time evolution with different transverse magnetic fields, we’ve also prepared sample input files named <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> and <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code>. Additionally, there’s a script named <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> to execute these calculations in one go. Ensure that paths to tools like <code class="docutils literal notranslate"><span class="pre">tenes</span></code> are set correctly, and then execute the calculations with:</p>
+<p>In this case, the transverse field is set to <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code>, and the time-step for evolution is <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code>.
+Moreover, since we are utilizing the ground state as our initial condition, we load the state tensor with <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;save_tensor&quot;</span></code>.</p>
+<p>Once preparing the input file, we execute <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, and <code class="docutils literal notranslate"><span class="pre">tenes</span></code> in order. The results are saved in the <code class="docutils literal notranslate"><span class="pre">output_te_strong</span></code> directory.
+Basically, the output is the same as the ground state, but with the addition of time in the first column.
+For example, <code class="docutils literal notranslate"><span class="pre">FT_density.dat</span></code> records the expectation values of physical quantities over time:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: time
+# $2: observable ID
+# $3: real
+# $4: imag
+# The meaning of observable IDs are the following:
+# 0: Energy
+# 1: Sz
+# 2: Sx
+# 3: Sy
+# 4: bond_hamiltonian
+# 5: SzSz
+# 6: SxSx
+# 7: SySy
+
+0.00000000000000000e+00 0 -5.00184764052080899e-01  0.00000000000000000e+00
+0.00000000000000000e+00 1  4.99999945646528332e-01  0.00000000000000000e+00
+0.00000000000000000e+00 2  9.24306486797199186e-05  0.00000000000000000e+00
+0.00000000000000000e+00 3  2.34088935337348195e-06  0.00000000000000000e+00
+0.00000000000000000e+00 4 -5.00184764052080899e-01  3.47535331983321418e-21
+0.00000000000000000e+00 5  4.99999902788251294e-01 -8.46256269499545126e-22
+0.00000000000000000e+00 6  1.12653588020163689e-05  6.35907290717320676e-22
+0.00000000000000000e+00 7 -1.12840199341671039e-05 -2.06527532941704114e-21
+</pre></div>
+</div>
+<p>The second column represents the type of physical quantity, and in this case, <code class="docutils literal notranslate"><span class="pre">1</span></code> represents the longitudinal magnetization <span class="math notranslate nohighlight">\(m^z = \langle S^z \rangle\)</span>.
+We can extract the time evolution of the magnetization by extracting rows with the second column equal to <code class="docutils literal notranslate"><span class="pre">1</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 1 {print $1, $3, $4}&#39; output_te_strong/TE_density.dat &gt; magnetization_strong.dat
+</pre></div>
+</div>
+<p>For observing the time evolution with different transverse magnetic fields, we’ve also prepared sample input files named <code class="docutils literal notranslate"><span class="pre">simple_te_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>) and <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>).
+Additionally, there’s a script named <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> to execute these calculations in one go. Ensure that paths to tools like <code class="docutils literal notranslate"><span class="pre">tenes</span></code> are set correctly, and then execute the calculations with:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
 </pre></div>
 </div>
@@ -120,6 +163,7 @@ hx = 2.0
 <p><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Graph illustrating the real-time evolution of the Ising model. The vertical axis represents magnetization, and the horizontal axis represents time.</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
+<p>When the strength of the transverse-field exceeds the quantum phase transition point, the magnetization oscillates beyond 0 <a class="reference internal" href="#ref-dqpt"><span class="std std-ref">[DQPT]</span></a>.</p>
 <p>As time evolution progresses, the entanglement increases. At a certain point, the tensor network’s capacity may be insufficient to express the wave function. In our case, the jump at <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> for <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> indicates this issue. When applying this in practice, ensure no such discontinuities exist. If jumps are observed, steps like increasing the <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span></code> might be necessary. For instance, adjusting it to <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> and redoing the calculation as described above will eliminate the discontinuity, as can be seen in <a class="reference internal" href="#fig-tutorial7-te-d10"><span class="std std-numref">Fig. 4.3</span></a>.</p>
 <figure class="align-default" id="fig-tutorial7-te-d10">
 <a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" /></a>
@@ -127,6 +171,9 @@ hx = 2.0
 <p><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Graph showcasing the real-time evolution of the Ising model. The vertical axis denotes magnetization, while the horizontal axis represents time. Results when <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> are applied.</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
+<p class="rubric">Reference</p>
+<p id="ref-dqpt">[DQPT]
+M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions in the Transverse-Field Ising Model</em>, Phys. Rev. Lett. <strong>110</strong>, 135704 (2013). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.110.135704">link</a></p>
 </section>
 
 

@@ -12,6 +12,7 @@
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="4.2. 横磁場イジング模型の実時間発展" href="simple_tutorial-7.html" />
@@ -34,8 +35,15 @@
             
   <section id="id1">
 <h1><span class="section-number">4.1. </span>横磁場イジング模型<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
-<p>ここでは横磁場イジング模型に対して、横磁場を変化させた場合の計算例について紹介します。
-入力ファイルの変数 <code class="docutils literal notranslate"><span class="pre">hx</span></code> を用いることで横磁場の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
+<p>ここでは正方格子上の横磁場イジング模型に対して、横磁場を変化させた場合の計算例について紹介します。
+ハミルトニアンは</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x
+\end{aligned}\]</div>
+<p>です。
+大きさ1/2のスピン演算子を用いて定義しており、パウリ演算子を直接用いたモデルと係数が異なることに注意してください。
+入力ファイルの変数 <code class="docutils literal notranslate"><span class="pre">hx</span></code> を用いることで横磁場 <span class="math notranslate nohighlight">\(h^x\)</span> の大きさを調整することが可能です。例えば、横磁場が0の場合には、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true  # Limit tensor elements in real (not complex)
