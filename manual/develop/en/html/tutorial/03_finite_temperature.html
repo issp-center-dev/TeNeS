@@ -14,8 +14,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="4.4. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
-    <link rel="prev" title="4.2. Real-Time Evolution of the Transverse Field Ising Model" href="simple_tutorial-7.html" />
+    <link rel="next" title="4.4. Magnetization process of the Heisenberg model on triangular and square lattices" href="04_magnetization.html" />
+    <link rel="prev" title="4.2. Real-Time Evolution of the Transverse Field Ising Model" href="02_time_evolution.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -41,7 +41,7 @@ The Hamiltonian is</p>
 H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
 \end{aligned}\]</div>
 <p>Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
-The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/08_finitetemperature</span></code> directory. Below is a sample input file (<cite>simple_ft_strong.toml</cite>):</p>
+The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/03_finite_temperature</span></code> directory. Below is a sample input file (<code class="docutils literal notranslate"><span class="pre">simple_ft_strong.toml</span></code>):</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 mode = &quot;finite&quot;
@@ -169,12 +169,12 @@ gnuplot -persist plot_mz.plt
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. Ising model with transverse magnetic field</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-7.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-6.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_magnetization.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
@@ -189,8 +189,8 @@ gnuplot -persist plot_mz.plt
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
-      <li>Previous: <a href="simple_tutorial-7.html" title="previous chapter"><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model</a></li>
-      <li>Next: <a href="simple_tutorial-5.html" title="next chapter"><span class="section-number">4.4. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+      <li>Previous: <a href="02_time_evolution.html" title="previous chapter"><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model</a></li>
+      <li>Next: <a href="04_magnetization.html" title="next chapter"><span class="section-number">4.4. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
   </ul></li>
   </ul></li>
 </ul>
@@ -225,7 +225,7 @@ gnuplot -persist plot_mz.plt
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="../_sources/tutorial/simple_tutorial-8.rst.txt"
+      <a href="../_sources/tutorial/03_finite_temperature.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

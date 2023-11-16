@@ -19,7 +19,7 @@ One is a superfluid order which is characterized by the offdiagonal order parame
 The other one is a solid-like order which exists at a 1/3 filling, where one of three sites is filled in a :math:`\sqrt{3}\times\sqrt{3}` ordering with wave vector :math:`\boldsymbol{Q}=(4\pi/3,0)` (see the inset of :numref:`fig_tutorial6_hardcore_boson`).
 This long-range order is characterized by the structure factor :math:`S(\boldsymbol{Q}) = \sum_{ij}^{N_\text{sites}} \langle n_i n_j \rangle \exp[-i\boldsymbol{Q}\cdot(r_i-r_j)] /N_\text{sites}`.
 
-To perform calculation for this system, the user can use toml files named ``basic.toml``, ``nn_obs.toml`` and a python script file ``run.py`` in the direction ``sample/06_hardcore_boson_triangular``. 
+To perform calculation for this system, the user can use toml files named ``basic.toml``, ``nn_obs.toml`` and a python script file ``run.py`` in the direction ``sample/05_hardcore_boson_triangular``. 
 Here, ``basic.toml`` specifies the model and its parameters.
 This file is almost the same as the triangular Heisenberg model described in the previous section and differs from it only in the section ``model`` in the last part, where the line ``type = "boson"`` specifies the hardcore boson model and ``t = 0.1``, ``V = 1`` determines the strength of the hopping and nearest-neighbor interaction.
 

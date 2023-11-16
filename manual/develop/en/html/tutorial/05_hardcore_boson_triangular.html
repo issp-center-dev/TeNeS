@@ -14,8 +14,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="4.6. Definition of lattices, models, and operators using the standard mode" href="standard_tutorial-1.html" />
-    <link rel="prev" title="4.4. Magnetization process of the Heisenberg model on triangular and square lattices" href="simple_tutorial-5.html" />
+    <link rel="next" title="4.6. Definition of lattices, models, and operators using the standard mode" href="06_std_model.html" />
+    <link rel="prev" title="4.4. Magnetization process of the Heisenberg model on triangular and square lattices" href="04_magnetization.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -46,7 +46,7 @@ It is known that several ordered phases characterized by two types of long-range
 One is a superfluid order which is characterized by the offdiagonal order parameter <span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span>.
 The other one is a solid-like order which exists at a 1/3 filling, where one of three sites is filled in a <span class="math notranslate nohighlight">\(\sqrt{3}\times\sqrt{3}\)</span> ordering with wave vector <span class="math notranslate nohighlight">\(\boldsymbol{Q}=(4\pi/3,0)\)</span> (see the inset of <a class="reference internal" href="#fig-tutorial6-hardcore-boson"><span class="std std-numref">Fig. 4.7</span></a>).
 This long-range order is characterized by the structure factor <span class="math notranslate nohighlight">\(S(\boldsymbol{Q}) = \sum_{ij}^{N_\text{sites}} \langle n_i n_j \rangle \exp[-i\boldsymbol{Q}\cdot(r_i-r_j)] /N_\text{sites}\)</span>.</p>
-<p>To perform calculation for this system, the user can use toml files named <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> and a python script file <code class="docutils literal notranslate"><span class="pre">run.py</span></code> in the direction <code class="docutils literal notranslate"><span class="pre">sample/06_hardcore_boson_triangular</span></code>.
+<p>To perform calculation for this system, the user can use toml files named <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> and a python script file <code class="docutils literal notranslate"><span class="pre">run.py</span></code> in the direction <code class="docutils literal notranslate"><span class="pre">sample/05_hardcore_boson_triangular</span></code>.
 Here, <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> specifies the model and its parameters.
 This file is almost the same as the triangular Heisenberg model described in the previous section and differs from it only in the section <code class="docutils literal notranslate"><span class="pre">model</span></code> in the last part, where the line <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;boson&quot;</span></code> specifies the hardcore boson model and <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0.1</span></code>, <code class="docutils literal notranslate"><span class="pre">V</span> <span class="pre">=</span> <span class="pre">1</span></code> determines the strength of the hopping and nearest-neighbor interaction.</p>
 <p>To calculate the structure factor <span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span>, the correlations of densities at all the pairs of sites (in the unitcell) <span class="math notranslate nohighlight">\(\langle n_i n_j \rangle\)</span> are required.
@@ -114,12 +114,12 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. Ising model with transverse magnetic field</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-7.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-8.html">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_magnetization.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
@@ -134,8 +134,8 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
-      <li>Previous: <a href="simple_tutorial-5.html" title="previous chapter"><span class="section-number">4.4. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
-      <li>Next: <a href="standard_tutorial-1.html" title="next chapter"><span class="section-number">4.6. </span>Definition of lattices, models, and operators using the standard mode</a></li>
+      <li>Previous: <a href="04_magnetization.html" title="previous chapter"><span class="section-number">4.4. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+      <li>Next: <a href="06_std_model.html" title="next chapter"><span class="section-number">4.6. </span>Definition of lattices, models, and operators using the standard mode</a></li>
   </ul></li>
   </ul></li>
 </ul>
@@ -170,7 +170,7 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="../_sources/tutorial/simple_tutorial-6.rst.txt"
+      <a href="../_sources/tutorial/05_hardcore_boson_triangular.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

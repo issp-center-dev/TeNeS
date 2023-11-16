@@ -14,8 +14,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="4.5. Phase diagram of the hardcore boson model on a trianglar lattice" href="simple_tutorial-6.html" />
-    <link rel="prev" title="4.3. Finite Temperature Calculations for the Transverse Field Ising Model" href="simple_tutorial-8.html" />
+    <link rel="next" title="4.5. Phase diagram of the hardcore boson model on a trianglar lattice" href="05_hardcore_boson_triangular.html" />
+    <link rel="prev" title="4.3. Finite Temperature Calculations for the Transverse Field Ising Model" href="03_finite_temperature.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -41,7 +41,7 @@ triangular lattice. The Hamiltonian looks like this:</p>
 \[\begin{aligned}
 H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}\]</div>
 <p>Here, <span class="math notranslate nohighlight">\(\langle i, j \rangle\)</span> represents the pair of nearest neighbor sites, and <span class="math notranslate nohighlight">\(h\)</span> represents the magnitude of the external magnetic field applied in the <span class="math notranslate nohighlight">\(z\)</span> direction.
-Let’s calculate the ground state of this model and find <span class="math notranslate nohighlight">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>, where <span class="math notranslate nohighlight">\(N_u\)</span> is the total number of sites in the unit cell, as a function of the magnetic field <span class="math notranslate nohighlight">\(h\)</span>. To do this, the toml file <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> and the python script <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> are prepared in the <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> directory.
+Let’s calculate the ground state of this model and find <span class="math notranslate nohighlight">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>, where <span class="math notranslate nohighlight">\(N_u\)</span> is the total number of sites in the unit cell, as a function of the magnetic field <span class="math notranslate nohighlight">\(h\)</span>. To do this, the toml file <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> and the python script <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> are prepared in the <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> directory.
 The <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> file contains model settings and parameters.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
@@ -201,7 +201,7 @@ necessary to increase the bond dimension.</p>
 <p><span class="caption-number">Fig. 4.5 </span><span class="caption-text">Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
-<p>Next, let’s perform the calculation for a model on a square lattice. Use the toml file <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> and the python script <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> in the <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> directory.
+<p>Next, let’s perform the calculation for a model on a square lattice. Use the toml file <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> and the python script <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> in the <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> directory.
 The content of <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> is the same as <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> except that the <code class="docutils literal notranslate"><span class="pre">lattice</span></code> section has been changed as follows.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
 type = &quot;square lattice&quot;
@@ -263,12 +263,12 @@ that the calculation accuracy is sufficiently high.</p>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. Ising model with transverse magnetic field</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-7.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-8.html">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-6.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
@@ -283,8 +283,8 @@ that the calculation accuracy is sufficiently high.</p>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
-      <li>Previous: <a href="simple_tutorial-8.html" title="previous chapter"><span class="section-number">4.3. </span>Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
-      <li>Next: <a href="simple_tutorial-6.html" title="next chapter"><span class="section-number">4.5. </span>Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+      <li>Previous: <a href="03_finite_temperature.html" title="previous chapter"><span class="section-number">4.3. </span>Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
+      <li>Next: <a href="05_hardcore_boson_triangular.html" title="next chapter"><span class="section-number">4.5. </span>Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
   </ul></li>
   </ul></li>
 </ul>
@@ -319,7 +319,7 @@ that the calculation accuracy is sufficiently high.</p>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="../_sources/tutorial/simple_tutorial-5.rst.txt"
+      <a href="../_sources/tutorial/04_magnetization.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

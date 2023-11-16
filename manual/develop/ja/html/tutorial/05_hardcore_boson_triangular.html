@@ -15,8 +15,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
-    <link rel="next" title="4.6. スタンダードモードによる格子・模型・演算子の定義" href="standard_tutorial-1.html" />
-    <link rel="prev" title="4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程" href="simple_tutorial-5.html" />
+    <link rel="next" title="4.6. スタンダードモードによる格子・模型・演算子の定義" href="06_std_model.html" />
+    <link rel="prev" title="4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程" href="04_magnetization.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -47,7 +47,7 @@ H = \sum_{\langle i,j \rangle} \Bigl[ -t (b_i^\dagger b_j + b_j^\dagger b_i) + V
 まずは消滅演算子の期待値の大きさ<span class="math notranslate nohighlight">\(|\langle b \rangle|\)</span>で特徴づけられる超流動秩序です。
 もうひとつは固体秩序です。 1/3フィリングでは、 <a class="reference internal" href="#fig-tutorial6-hardcore-boson"><span class="std std-numref">図 4.7</span></a> の挿入図に示すような<span class="math notranslate nohighlight">\(\sqrt{3}\times\sqrt{3}\)</span>超格子構造をもつ固体相が出現します。
 これは波数<span class="math notranslate nohighlight">\(\boldsymbol{Q}=(4\pi/3,0)\)</span>の構造因子<span class="math notranslate nohighlight">\(S(\boldsymbol{Q}) = \sum_{ij}^{N_\text{sites}} \langle n_i n_j \rangle \exp[-i\boldsymbol{Q}\cdot(r_i - r_j)] / N_\text{site}\)</span>を計算することで特徴づけることができます。</p>
-<p>この模型の計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/06_hardcore_boson_triangular</span></code> ディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> と、Pythonスクリプト <code class="docutils literal notranslate"><span class="pre">run.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の <code class="docutils literal notranslate"><span class="pre">model</span></code> セクションだけです。ここで、 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;boson&quot;</span></code> によってハードコアボゾン模型を指定しており、 <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0.1</span></code>, <code class="docutils literal notranslate"><span class="pre">V</span> <span class="pre">=</span> <span class="pre">1</span></code> によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。</p>
+<p>この模型の計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/05_hardcore_boson_triangular</span></code> ディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> と、Pythonスクリプト <code class="docutils literal notranslate"><span class="pre">run.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の <code class="docutils literal notranslate"><span class="pre">model</span></code> セクションだけです。ここで、 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;boson&quot;</span></code> によってハードコアボゾン模型を指定しており、 <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0.1</span></code>, <code class="docutils literal notranslate"><span class="pre">V</span> <span class="pre">=</span> <span class="pre">1</span></code> によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。</p>
 <p>構造因子 <span class="math notranslate nohighlight">\(S(\boldsymbol{Q})\)</span> を計算するためには、（ユニットセル中の）全サイト対における密度密度相関 <span class="math notranslate nohighlight">\(\langle n_i n_j \rangle\)</span> を計算する必要があります。
 この演算子は <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では定義されないため、別途定義する必要があります。
 <code class="docutils literal notranslate"><span class="pre">nn_obs.toml</span></code> ファイルに <span class="math notranslate nohighlight">\(3 \times 3\)</span> ユニットセルにおける演算子が定義されており、 <code class="docutils literal notranslate"><span class="pre">run.py</span></code> で <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイル <code class="docutils literal notranslate"><span class="pre">std_XXX_YYY.toml</span></code> に追記しています。</p>
@@ -108,12 +108,12 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. チュートリアル</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. 横磁場イジング模型</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-7.html">4.2. 横磁場イジング模型の実時間発展</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-8.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-5.html">4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. 横磁場イジング模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. 横磁場イジング模型の実時間発展</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_magnetization.html">4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">4.5. 三角格子上のハードコアボゾン模型の相図</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
@@ -128,8 +128,8 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html"><span class="section-number">4. </span>チュートリアル</a><ul>
-      <li>Previous: <a href="simple_tutorial-5.html" title="前の章へ"><span class="section-number">4.4. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
-      <li>Next: <a href="standard_tutorial-1.html" title="次の章へ"><span class="section-number">4.6. </span>スタンダードモードによる格子・模型・演算子の定義</a></li>
+      <li>Previous: <a href="04_magnetization.html" title="前の章へ"><span class="section-number">4.4. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
+      <li>Next: <a href="06_std_model.html" title="次の章へ"><span class="section-number">4.6. </span>スタンダードモードによる格子・模型・演算子の定義</a></li>
   </ul></li>
   </ul></li>
 </ul>
@@ -164,7 +164,7 @@ S. Wessel, M. Troyer, <em>Supersolid hard-core bosonson the triangular lattice</
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="../_sources/tutorial/simple_tutorial-6.rst.txt"
+      <a href="../_sources/tutorial/05_hardcore_boson_triangular.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

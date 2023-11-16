@@ -14,11 +14,11 @@
 
 です。
 大きさ1/2のスピン演算子を用いて定義しており、パウリ演算子を直接用いたモデルと係数が異なることに注意してください。
-このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/07_timeevolution`` に格納されています。
+このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/02_time_evolution`` に格納されています。
 
 最初に初期状態として、基底状態の計算を行います (``simple.toml`` ファイル)。ここでは、
 
-.. literalinclude:: ../../../../sample/07_timeevolution/simple.toml
+.. literalinclude:: ../../../../sample/02_time_evolution/simple.toml
 
 とします(``Jz = -1.0`` なので、 基底状態は強磁性状態になります)。
 初期状態として基底状態を使用するため、 ``tensor_save = "save_tensor"`` として、基底状態のテンソルを保存しておきます。
@@ -27,7 +27,7 @@
 実時間発展は ``mode`` を ``time`` にすることで行うことができます。
 以下、入力ファイル例です( ``simple_te_strong.toml`` ファイル)。
 
-.. literalinclude:: ../../../../sample/07_timeevolution/simple_te_strong.toml
+.. literalinclude:: ../../../../sample/02_time_evolution/simple_te_strong.toml
 
 ここでは、横磁場を ``hx = 2.0`` 、実時間発展の刻み幅を ``tau = 0.01`` として時間発展させています。
 また、初期状態として先ほどの基底状態を用いるため、 ``tensor_load = "save_tensor"`` として、基底状態のテンソルを読み込みます。

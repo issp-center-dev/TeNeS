@@ -15,8 +15,8 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
-    <link rel="next" title="4.5. 三角格子上のハードコアボゾン模型の相図" href="simple_tutorial-6.html" />
-    <link rel="prev" title="4.3. 横磁場イジング模型の有限温度計算" href="simple_tutorial-8.html" />
+    <link rel="next" title="4.5. 三角格子上のハードコアボゾン模型の相図" href="05_hardcore_boson_triangular.html" />
+    <link rel="prev" title="4.3. 横磁場イジング模型の有限温度計算" href="03_finite_temperature.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -42,7 +42,7 @@
 H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}\]</div>
 <p>ここで<span class="math notranslate nohighlight">\(\langle i, j\rangle\)</span>は隣接サイトの組を表し、<span class="math notranslate nohighlight">\(h\)</span>は<span class="math notranslate nohighlight">\(z\)</span>方向にかけられた外部磁場の大きさを表します。
 この模型の基底状態を計算し、ユニットセルの平均磁化 <span class="math notranslate nohighlight">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>を磁場<span class="math notranslate nohighlight">\(h\)</span>の関数として求めてみましょう ( <span class="math notranslate nohighlight">\(N_u\)</span> はユニットセル内のサイト数)。</p>
-<p>この計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> のディレクトリ内にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには、模型の設定やパラメータなどが記述されています。</p>
+<p>この計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> のディレクトリ内にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには、模型の設定やパラメータなどが記述されています。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -180,7 +180,7 @@ fmag.close()
 <p><span class="caption-number">図 4.5 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="この画像へのパーマリンク">¶</a></p>
 </figcaption>
 </figure>
-<p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal notranslate"><span class="pre">sample/05_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
+<p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
 <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> は、 <code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクションが以下のように変更されているほかは <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と同じ内容です。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
 type = &quot;square lattice&quot;
@@ -238,12 +238,12 @@ W = 2
 <li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">4. チュートリアル</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-1.html">4.1. 横磁場イジング模型</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-7.html">4.2. 横磁場イジング模型の実時間発展</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-8.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. 横磁場イジング模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. 横磁場イジング模型の実時間発展</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_tutorial-6.html">4.5. 三角格子上のハードコアボゾン模型の相図</a></li>
-<li class="toctree-l2"><a class="reference internal" href="standard_tutorial-1.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. 三角格子上のハードコアボゾン模型の相図</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
@@ -258,8 +258,8 @@ W = 2
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
   <li><a href="index.html"><span class="section-number">4. </span>チュートリアル</a><ul>
-      <li>Previous: <a href="simple_tutorial-8.html" title="前の章へ"><span class="section-number">4.3. </span>横磁場イジング模型の有限温度計算</a></li>
-      <li>Next: <a href="simple_tutorial-6.html" title="次の章へ"><span class="section-number">4.5. </span>三角格子上のハードコアボゾン模型の相図</a></li>
+      <li>Previous: <a href="03_finite_temperature.html" title="前の章へ"><span class="section-number">4.3. </span>横磁場イジング模型の有限温度計算</a></li>
+      <li>Next: <a href="05_hardcore_boson_triangular.html" title="次の章へ"><span class="section-number">4.5. </span>三角格子上のハードコアボゾン模型の相図</a></li>
   </ul></li>
   </ul></li>
 </ul>
@@ -294,7 +294,7 @@ W = 2
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="../_sources/tutorial/simple_tutorial-5.rst.txt"
+      <a href="../_sources/tutorial/04_magnetization.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
