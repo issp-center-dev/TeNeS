@@ -104,7 +104,7 @@
 <p>次に、それぞれの虚時間発展演算子の部分集合を適用した波動関数を、ボンド次元 <span class="math notranslate nohighlight">\(D\)</span>: の新しいiTPSとして</p>
 <div class="math notranslate nohighlight">
 \[|\Psi_{\tau}^{\mathrm{iTPS}} \rangle  \simeq \prod_{\{(i,j) \in \mathrm{subset}_n \}}e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle,\]</div>
-<p>のように近似します。ここで <span class="math notranslate nohighlight">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 番目の部分集合ないの演算子の積を表し、 <span class="math notranslate nohighlight">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> は新しい iTPS です。ダイアグラムを用いるとこの式は、</p>
+<p>のように近似します。ここで <span class="math notranslate nohighlight">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 番目の部分集合内の演算子の積を表し、 <span class="math notranslate nohighlight">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> は新しい iTPS です。ダイアグラムを用いるとこの式は、</p>
 <img alt="../_images/iMPS_ITE_iMPS.png" class="align-center" src="../_images/iMPS_ITE_iMPS.png" />
 <p>のように表現できます。一般に、 <span class="math notranslate nohighlight">\(e^{-\tau H_{ij}}\)</span> をかけることで 厳密な iTPS 表現のボンド次元は増大してしまうことに注意してください。したがって、虚時間発展のシミュレーションを安定して継続するためには、ボンド次元をある一定値 <span class="math notranslate nohighlight">\(D\)</span> まで毎回打ち切る （ <em>truncate</em> ） 必要があります。</p>
 <p>素朴には、効率的な打ち切りは、最小化問題</p>
@@ -139,7 +139,7 @@
 </section>
 <section id="id5">
 <h2><span class="section-number">6.5. </span>有限温度状態の表現<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
-<p>上では、量子多体系の純粋状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> を対象としたテンソルネットワーク表現を考えていましたが、同様の考えで、有限温度に対応する混合状態</p>
+<p>ここまでは、量子多体系の純粋状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> を対象としたテンソルネットワーク表現を考えていましたが、同様の考えで、有限温度に対応する混合状態</p>
 <div class="math notranslate nohighlight">
 \[\rho(\beta) = \frac{e^{-\beta \mathcal{H}}}{\mathrm{Tr} e^{-\beta \mathcal{H}}}\]</div>
 <p>のテンソルネットワーク表現を考えることもできます。ここで、 <span class="math notranslate nohighlight">\(\beta\)</span> は温度 <span class="math notranslate nohighlight">\(T\)</span> に対応する逆温度 <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> を表しています。</p>
