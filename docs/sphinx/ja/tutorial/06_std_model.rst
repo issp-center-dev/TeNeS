@@ -233,9 +233,9 @@ TeNeSはハミルトニアンをボンドハミルトニアン (2サイトハミ
 
 です。
 たとえば、極端な例として :math:`J = 0, h = 1` を考えてみると、
-入力ファイル (``sample/std-01_model/std.toml``) は次のとおりです。
+入力ファイル (``sample/06_std_model/std.toml``) は次のとおりです。
 
-.. literalinclude:: ../../../../sample/std-01_model/std.toml
+.. literalinclude:: ../../../../sample/06_std_model/std.toml
 
 これを用いて計算すると
 

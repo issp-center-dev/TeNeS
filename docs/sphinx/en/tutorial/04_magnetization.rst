@@ -13,10 +13,10 @@ triangular lattice. The Hamiltonian looks like this:
    H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}
 
 Here, :math:`\langle i, j \rangle` represents the pair of nearest neighbor sites, and :math:`h` represents the magnitude of the external magnetic field applied in the :math:`z` direction. 
-Let's calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, the toml file ``basic.toml`` and the python script ``tutorial_magnetization.py`` are prepared in the ``sample/05_magnetization`` directory. 
+Let's calculate the ground state of this model and find :math:`\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle`, where :math:`N_u` is the total number of sites in the unit cell, as a function of the magnetic field :math:`h`. To do this, the toml file ``basic.toml`` and the python script ``tutorial_magnetization.py`` are prepared in the ``sample/04_magnetization`` directory. 
 The ``basic.toml`` file contains model settings and parameters.
 
-.. literalinclude:: ../../../../sample/05_magnetization/basic.toml
+.. literalinclude:: ../../../../sample/04_magnetization/basic.toml
 
 The ``lattice`` section specifies a triangular lattice with the unit cell
 size of :math:`3\times 3`. Here, in order to make the calculation
@@ -26,7 +26,7 @@ simplicity, :math:`J=1`. Using this basic setting file,
 tutorial_magnetization.py calculates the magnetization when the magnetic
 field is swept.
 
-.. literalinclude:: ../../../../sample/05_magnetization/tutorial_magnetization.py
+.. literalinclude:: ../../../../sample/04_magnetization/tutorial_magnetization.py
 
 In this script, the magnetic field :math:`h` is changed in steps of
 :math:`0.25` from :math:`0` to :math:`5`, and the ground state energy
@@ -82,7 +82,7 @@ necessary to increase the bond dimension.
 
    Ground state energy (left figure) and magnetization (right figure) of the Heisenberg model on the triangular lattice.
 
-Next, let's perform the calculation for a model on a square lattice. Use the toml file ``basic_square.toml`` and the python script ``tutorial_magnetization_square.py`` in the ``sample/05_magnetization`` directory.
+Next, let's perform the calculation for a model on a square lattice. Use the toml file ``basic_square.toml`` and the python script ``tutorial_magnetization_square.py`` in the ``sample/04_magnetization`` directory.
 The content of ``basic_square.toml`` is the same as ``basic.toml`` except that the ``lattice`` section has been changed as follows.
 
 ::
