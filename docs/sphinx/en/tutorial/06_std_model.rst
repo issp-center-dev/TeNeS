@@ -224,9 +224,9 @@ and the site Hamiltonian :math:`\mathcal{H}_i` can be written as
    \end{pmatrix}
    \end{split}
 
-When :math:`J = 0, h = 1`, for example, an input file of ``tenes_std``, ``std.toml`` (``sample/std-01_model/std.toml``), is as follows
+When :math:`J = 0, h = 1`, for example, an input file of ``tenes_std``, ``std.toml`` (``sample/06_std_model/std.toml``), is as follows
 
-.. literalinclude:: ../../../../sample/std-01_model/std.toml
+.. literalinclude:: ../../../../sample/06_std_model/std.toml
 
 We can calculate this model and obtain results as ::
    

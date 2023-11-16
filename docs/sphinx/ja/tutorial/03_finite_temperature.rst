@@ -15,10 +15,10 @@
 です。
 大きさ1/2のスピン演算子を用いて定義しており、パウリ演算子を直接用いたモデルと係数が異なることに注意してください。
 
-このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/08_finitetemperature`` に格納されています。
+このチュートリアルで使用する入力ファイルおよびスクリプトファイルは ``sample/03_finite_temperature`` に格納されています。
 以下が入力ファイルの例です (``simple_ft_strong.toml`` ファイル)。ここでは、
 
-.. literalinclude:: ../../../../sample/08_finitetemperature/simple_ft_strong.toml
+.. literalinclude:: ../../../../sample/03_finite_temperature/simple_ft_strong.toml
 
 とします。
 実時間発展は ``parameter.general`` セクションの ``mode`` を ``finite`` にすることで行うことができます。

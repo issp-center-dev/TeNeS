@@ -13,9 +13,9 @@ The Hamiltonian is
    \end{aligned}
 
 Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
-The input and script files used in this tutorial are located in the ``sample/08_finitetemperature`` directory. Below is a sample input file (`simple_ft_strong.toml`):
+The input and script files used in this tutorial are located in the ``sample/03_finite_temperature`` directory. Below is a sample input file (``simple_ft_strong.toml``):
 
-.. literalinclude:: ../../../../sample/08_finitetemperature/simple_ft_strong.toml
+.. literalinclude:: ../../../../sample/03_finite_temperature/simple_ft_strong.toml
 
 To perform finite temperature calculations, set the ``mode`` to ``finite``.
 Here, the transverse magnetic field is set to ``hx = 2.0`` with ``tau = 0.01`` (the inverse temperature step size is 2 times ``tau``).

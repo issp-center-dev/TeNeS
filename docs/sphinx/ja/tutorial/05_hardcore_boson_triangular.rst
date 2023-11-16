@@ -19,7 +19,7 @@
 もうひとつは固体秩序です。 1/3フィリングでは、 :numref:`fig_tutorial6_hardcore_boson` の挿入図に示すような\ :math:`\sqrt{3}\times\sqrt{3}`\ 超格子構造をもつ固体相が出現します。
 これは波数\ :math:`\boldsymbol{Q}=(4\pi/3,0)`\の構造因子\ :math:`S(\boldsymbol{Q}) = \sum_{ij}^{N_\text{sites}} \langle n_i n_j \rangle \exp[-i\boldsymbol{Q}\cdot(r_i - r_j)] / N_\text{site}`\ を計算することで特徴づけることができます。
 
-この模型の計算を行うには、 ``sample/06_hardcore_boson_triangular`` ディレクトリ中にある toml ファイル ``basic.toml``, ``nn_obs.toml`` と、Pythonスクリプト ``run.py`` を利用します。 ``basic.toml`` ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の ``model`` セクションだけです。ここで、 ``type = "boson"`` によってハードコアボゾン模型を指定しており、 ``t = 0.1``, ``V = 1`` によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。
+この模型の計算を行うには、 ``sample/05_hardcore_boson_triangular`` ディレクトリ中にある toml ファイル ``basic.toml``, ``nn_obs.toml`` と、Pythonスクリプト ``run.py`` を利用します。 ``basic.toml`` ファイルには模型の設定やパラメータなどが記述されています。このファイルの記述は、前節の三角格子ハイゼンベルク模型とほぼ同じであるため、内容は割愛します。唯一の変更点は最後の ``model`` セクションだけです。ここで、 ``type = "boson"`` によってハードコアボゾン模型を指定しており、 ``t = 0.1``, ``V = 1`` によってホッピングおよび隣接サイト間相互作用の大きさを指定しています。
 
 構造因子 :math:`S(\boldsymbol{Q})` を計算するためには、（ユニットセル中の）全サイト対における密度密度相関 :math:`\langle n_i n_j \rangle` を計算する必要があります。
 この演算子は ``tenes_simple`` では定義されないため、別途定義する必要があります。

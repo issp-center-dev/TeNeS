@@ -13,17 +13,17 @@ The Hamiltonian is
    \end{aligned}
 
 Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
-The input and script files used in this tutorial can be found in ``sample/07_timeevolution``.
+The input and script files used in this tutorial can be found in ``sample/02_time_evolution``.
 
 Initially, we compute the ground state (refer to the ``simple.toml`` file) which serves as our starting state. Specifically, it's set as:
 
-.. literalinclude:: ../../../../sample/07_timeevolution/simple.toml
+.. literalinclude:: ../../../../sample/02_time_evolution/simple.toml
 
 Given that ``Jz = -1.0``, the ground state becomes ferromagnetic. We use the ground state as the initial state, and save the state tensor with ``tensor_save = "save_tensor"``.
 
 Next, we prepare the input file for the real-time evolution. This can be achieved by setting the ``mode`` to ``time``. Below is a sample input file (``simple_te_strong.toml``):
 
-.. literalinclude:: ../../../../sample/07_timeevolution/simple_te_strong.toml
+.. literalinclude:: ../../../../sample/02_time_evolution/simple_te_strong.toml
 
 In this case, the transverse field is set to ``hx = 2.0``, and the time-step for evolution is ``tau = 0.01``.
 Moreover, since we are utilizing the ground state as our initial condition, we load the state tensor with ``tensor_load = "save_tensor"``.
