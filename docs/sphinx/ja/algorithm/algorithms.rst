@@ -132,7 +132,7 @@ TeNeSでは、ハミルトニアンは短距離の二体相互作用の和で
 .. math::
    |\Psi_{\tau}^{\mathrm{iTPS}} \rangle  \simeq \prod_{\{(i,j) \in \mathrm{subset}_n \}}e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle,
 
-のように近似します。ここで :math:`\prod_{\{(i,j) \in \mathrm{subset}_n \}}` は :math:`n` 番目の部分集合ないの演算子の積を表し、 :math:`|\Psi_{\tau}^{\mathrm{iTPS}}\rangle` は新しい iTPS です。ダイアグラムを用いるとこの式は、
+のように近似します。ここで :math:`\prod_{\{(i,j) \in \mathrm{subset}_n \}}` は :math:`n` 番目の部分集合内の演算子の積を表し、 :math:`|\Psi_{\tau}^{\mathrm{iTPS}}\rangle` は新しい iTPS です。ダイアグラムを用いるとこの式は、
 
 .. image:: ../../img/iMPS_ITE_iMPS.*
    :align: center
@@ -195,7 +195,7 @@ iTPS（および、その他のテンソルネットワーク状態）を用い�
 
 有限温度状態の表現
 ===========================
-上では、量子多体系の純粋状態 :math:`|\Psi\rangle` を対象としたテンソルネットワーク表現を考えていましたが、同様の考えで、有限温度に対応する混合状態
+ここまでは、量子多体系の純粋状態 :math:`|\Psi\rangle` を対象としたテンソルネットワーク表現を考えていましたが、同様の考えで、有限温度に対応する混合状態
 
 .. math::
    \rho(\beta) = \frac{e^{-\beta \mathcal{H}}}{\mathrm{Tr} e^{-\beta \mathcal{H}}}
