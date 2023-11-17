@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>6. アルゴリズム &#8212; TeNeS 2.0-beta ドキュメント</title>
+    <title>6. アルゴリズム &#8212; TeNeS 2.0.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=7730d50f"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ead71d55"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../_static/translations.js?v=4dbe4bdc"></script>
@@ -104,12 +104,12 @@
 <p>次に、それぞれの虚時間発展演算子の部分集合を適用した波動関数を、ボンド次元 <span class="math notranslate nohighlight">\(D\)</span>: の新しいiTPSとして</p>
 <div class="math notranslate nohighlight">
 \[|\Psi_{\tau}^{\mathrm{iTPS}} \rangle  \simeq \prod_{\{(i,j) \in \mathrm{subset}_n \}}e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle,\]</div>
-<p>のように近似します。ここで <span class="math notranslate nohighlight">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 番目の部分集合ないの演算子の積を表し、 <span class="math notranslate nohighlight">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> は新しい iTPS です。ダイアグラムを用いるとこの式は、</p>
+<p>のように近似します。ここで <span class="math notranslate nohighlight">\(\prod_{\{(i,j) \in \mathrm{subset}_n \}}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 番目の部分集合内の演算子の積を表し、 <span class="math notranslate nohighlight">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> は新しい iTPS です。ダイアグラムを用いるとこの式は、</p>
 <img alt="../_images/iMPS_ITE_iMPS.png" class="align-center" src="../_images/iMPS_ITE_iMPS.png" />
 <p>のように表現できます。一般に、 <span class="math notranslate nohighlight">\(e^{-\tau H_{ij}}\)</span> をかけることで 厳密な iTPS 表現のボンド次元は増大してしまうことに注意してください。したがって、虚時間発展のシミュレーションを安定して継続するためには、ボンド次元をある一定値 <span class="math notranslate nohighlight">\(D\)</span> まで毎回打ち切る （ <em>truncate</em> ） 必要があります。</p>
 <p>素朴には、効率的な打ち切りは、最小化問題</p>
 <div class="math notranslate nohighlight">
-\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle -\prod_{\{(i,j) \in \mathrm{subset}_n \}} e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2.\]</div>
+\[\min \left \Vert |\Psi_{\tau}^{\mathrm{iTPS}} \rangle -\prod_{\{(i,j) \in \mathrm{subset}_n \}} e^{-\tau H_{ij}} |\Psi^{\mathrm{iTPS}}\rangle \right \Vert^2\]</div>
 <p>を解くことで行えます。しかし、この最小化問題を解く計算コストは、主にiTPSの並進対称性で問題が非線形問題になっているために、非常に膨大になってしまいます。そこで、通常は、代わりの問題として、局所的な一つの虚時間発展演算子だけを適用して、それを近似する iTPS <span class="math notranslate nohighlight">\(|\Psi_{\tau}^{\mathrm{iTPS}}\rangle\)</span> を探す問題を考えます。
 ここで、新しいiTPSでは、元の <span class="math notranslate nohighlight">\(|\Psi^{\mathrm{iTPS}}\rangle\)</span> と比較して、数個のテンソルだけが変更されています。 この局所的な最小化問題は</p>
 <div class="math notranslate nohighlight">
@@ -125,7 +125,63 @@
 <p>このダイアグラムでは、 <span class="math notranslate nohighlight">\(\lambda_i\)</span> は非負の対角行列を表していて、これはボンド <span class="math notranslate nohighlight">\(i\)</span> の先にある無視した環境を表わす平均場だと考えることができます。 <span class="math notranslate nohighlight">\(\lambda_i\)</span> の具体的な定義は後で与えられます。 このダイアグラムが表わす最適化問題は、テンソル二つと虚時間発展演算子一つが一体となった行列の低ランク近似と見做すことができるため、SVDを用いて解くことができます。この手続きは、ダイアグラムを用いて、</p>
 <img alt="../_images/Simple_update.png" class="align-center" src="../_images/Simple_update.png" />
 <p>と表すことができます。計算途中のSVDで出てきた行列の特異値は、次のステップでの平均場 <span class="math notranslate nohighlight">\(\lambda\)</span> として利用されます。Simple update法の計算コストは、行列を構成する前にQR分解を行うことで、 <span class="math notranslate nohighlight">\(O(D^{5})\)</span> になります <a class="reference internal" href="#ref-qr"><span class="std std-ref">[QR]</span></a> 。したがって、simple update法はfull update法よりもずっと計算コストが軽くなっています。</p>
-<p>ただし、simple update法はfull updateよりも計算コストが小さいですが、simple update法は初期状態依存性が強く、また、最終結果の局所磁化の大きさを過剰評価する問題が知られています。したがって、未知の問題に適用する場合には、得られた結果を慎重に検証する必要があります。</p>
+<p>ただし、simple update法はfull update法よりも計算コストが小さいですが、simple update法は初期状態依存性が強く、また、最終結果の局所磁化の大きさを過剰評価する問題が知られています。したがって、未知の問題に適用する場合には、得られた結果を慎重に検証する必要があります。</p>
+</section>
+<section id="id4">
+<h2><span class="section-number">6.4. </span>iTPSを用いた実時間発展<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h2>
+<p>基底状態を計算する際に用いた虚時間発展のアルゴリズム、simple update法やfull update法を用いて、量子状態の実時間発展を計算することもできます。TeNeSでは、虚時間発展の場合と同様に、時刻 <span class="math notranslate nohighlight">\(t\)</span> における量子状態</p>
+<div class="math notranslate nohighlight">
+\[|\Psi(t)\rangle = e^{-it\mathcal{H}} |\Psi_0\rangle,\]</div>
+<p>をiTPSで近似することで、近似的な時間発展を計算できます。虚時間発展と実時間発展の違いは、指数関数の肩にあるハミルトニアン <span class="math notranslate nohighlight">\(\mathcal{H}\)</span> の係数が <span class="math notranslate nohighlight">\(-\tau\)</span> か <span class="math notranslate nohighlight">\(-it\)</span> かだけの違いですので、実時間発展でも、Suzuki-Trotter分解を適用することで、虚時間発展で用いたのと全く同じsimple update法とfull update法を用いて、近似的な時間発展を計算できます。</p>
+<p>iTPS（および、その他のテンソルネットワーク状態）を用いた実時間発展は、基底状態の計算に虚時間発展を用いる場合と、以下の二つの点で大きく異なっています。</p>
+<p>一つの大きな違いは、対象となる量子状態の量子エンタングルメントの大きさです。虚時間発展では、時間発展が進むにつれて基底状態に向かうため、計算の過程で、量子状態の量子エンタングルメントが極端に大きくなることはなく、iTPSでの記述が破綻する可能性が低いですが、実時間発展では、典型的には（初期状態のiTPSがハミルトニアンの固有状態である場合を除いて）、時間発展とともに量子エンタングルメントが増大します。そのため、iTPSでの近似精度を保つにには、長時間になればなるほど、iTPSのボンド次元を大きくしなくてはなりません。もちろん、ボンド次元を大きくするとその分計算コストが増大しますので、現実的な計算資源の範囲では、iTPSを用いて実時間発展を精度よく近似できるのは、短時間に限定されます。適用可能な時間範囲はモデルに依存しますが、例えばスピン模型では、相互作用の典型的な大きさ <span class="math notranslate nohighlight">\(J\)</span> に対して、 <span class="math notranslate nohighlight">\(t = O(1/J)\)</span> 程度の時間が限界になることが多いです。</p>
+<p>もう一つの違いは、再現したい物理現象の特徴です。虚時間発展を基底状態の計算に用いる場合には、十分に長い虚時間発展を行った後に、最終的に基底状態に到達できていれば良いので、途中の量子状態が、正しい虚時間発展の経路から多少ずれていても、大きな問題は生じません。一方で、実時間発展を行う場合には、最終状態だけでなく、量子状態の時間発展そのものに興味があることが多いと思われます。時間発展の経路を精度よく近似するためには、iTPSのボンド次元を大きくするだけでなく、Suzuki-Trotter分解での時間刻み <span class="math notranslate nohighlight">\(\delta t\)</span> も十分に小さくする必要があります。また、状況に応じて、高次のSuzuki-Trotter分解を用いた方が効率的な場合もあります。TeNeSでは、最終的にtenesに入力する入力ファイルの <code class="docutils literal notranslate"><span class="pre">evolution</span></code> セクションを編集することで、高次のSuzuki-Trotter分解に対応することができます。</p>
+</section>
+<section id="id5">
+<h2><span class="section-number">6.5. </span>有限温度状態の表現<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<p>ここまでは、量子多体系の純粋状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> を対象としたテンソルネットワーク表現を考えていましたが、同様の考えで、有限温度に対応する混合状態</p>
+<div class="math notranslate nohighlight">
+\[\rho(\beta) = \frac{e^{-\beta \mathcal{H}}}{\mathrm{Tr} e^{-\beta \mathcal{H}}}\]</div>
+<p>のテンソルネットワーク表現を考えることもできます。ここで、 <span class="math notranslate nohighlight">\(\beta\)</span> は温度 <span class="math notranslate nohighlight">\(T\)</span> に対応する逆温度 <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> を表しています。</p>
+<p>純粋状態の時と同様に、 <span class="math notranslate nohighlight">\(N\)</span> 個の <span class="math notranslate nohighlight">\(S=1/2\)</span> 量子スピン系を例に考えると、有限温度の混合状態は</p>
+<div class="math notranslate nohighlight">
+\[\rho(\beta) = \sum_{s_i=\uparrow, \downarrow, s_i' =\uparrow, \downarrow} \left(\rho(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'} |s_1', s_2', \dots, s_N'\rangle \langle s_1, s_2, \dots, s_N|\]</div>
+<p>と表すことができます。この展開係数 <span class="math notranslate nohighlight">\(\left(\rho(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'}\)</span> のテンソルネットワークによる表現は、例えば、MPSを行列（演算子）に一般化した、行列積演算子（Matrix Product Operator(MPO)）を用いて、</p>
+<div class="math notranslate nohighlight">
+\[\left(\rho^{\mathrm{MPO}}(\beta)\right)_{s_1,s_2,\dots, s_N}^{s_1', s_2', \dots, s_N'}  = T^{(1)}[s_1, s_1']T^{(2)}[s_2, s_2']\cdots T^{(N)}[s_N, s_N']\]</div>
+<p>で表すことができ、対応するダイアグラムは</p>
+<img alt="../_images/MPO.png" class="align-center" src="../_images/MPO.png" />
+<p>のように書くことができます。純粋状態の場合と同様に、並進対称性がある混合状態に対しては、同じテンソルを無限に繰り返すiMPOにより、無限系の状態を表すこともでき、例えば、1次元的な2サイトの並進対称性を持つ状態では、対応するiMPOのダイアグラムは</p>
+<img alt="../_images/iMPO.png" class="align-center" src="../_images/iMPO.png" />
+<p>のようになります。</p>
+<p>TeNeSでは、混合状態の表現として、二次元の無限に広がったテンソル積演算子 (infinite tensor product operator (iIPO))を取り扱い <a class="reference internal" href="#ref-tpo"><span class="std std-ref">[TPO]</span></a> 、特に、並進対称性を持った正方格子型のネットワークを仮定します。この場合、iTPOのダイアグラムは、</p>
+<img alt="../_images/iTPO.png" class="align-center" src="../_images/iTPO.png" />
+<p>と書くことができます。</p>
+<p>TeNeSでは、有限温度の混合状態 <span class="math notranslate nohighlight">\(\rho(\beta)\)</span> を、温度無限大に対応する <span class="math notranslate nohighlight">\(\rho(\beta=0)\)</span> を初期状態とした虚時間発展</p>
+<div class="math notranslate nohighlight">
+\[\rho(\beta) = e^{-\frac{\beta}{2} \mathcal{H}} \rho(0) e^{-\frac{\beta}{2} \mathcal{H}/2}\]</div>
+<p>を用いて計算します。ここで、温度無限大では、密度行列は単位行列になっていることに注意してください。この性質から、例えば、温度無限大の状態のiMPO表現は、局所的な単位行列のテンソル積になり、ダイアグラムでは、</p>
+<img alt="../_images/iMPO_T0.png" class="align-center" src="../_images/iMPO_T0.png" />
+<p>のように、単位行列に対応する&quot;線&quot;が並ぶことになります。</p>
+<p>TeNeSでは、混合状態に対する虚時間発展を、純粋状態での虚時間発展の単純な拡張として、iTPOの範囲内での近似的な虚時間発展として計算します。混合状態の場合での計算には、純粋状態の場合に用いた虚時間発展演算子のSuzuki-Trotter分解やsimple update法, full update法をほぼ、そのままの形で適用することができます（TeNeSでは現時点で、simple update法のみをサポートしています）。</p>
+<p>混合状態の場合に解く局所的な最小化問題は</p>
+<div class="math notranslate nohighlight">
+\[\min \left \Vert \rho_{\tau}^{\mathrm{iTPO}} - e^{-\frac{\tau}{2} \mathcal{H}_{ij}/2} \rho^{\mathrm{iTPO}} e^{-\frac{\tau}{2} \mathcal{H}_{ij}}\right \Vert^2\]</div>
+<p>の形で記述でき、対応するダイアグラムは、（見やすさを考えて、iMPOの形で描くと）</p>
+<img alt="../_images/iMPO_ITE_local.png" class="align-center" src="../_images/iMPO_ITE_local.png" />
+<p>になります。</p>
+<p>iTPOを用いた有限温度状態の計算と、iTPSを用いた純粋状態の計算における、アルゴリズム上の一番大きな違いは、期待値計算に現れるテンソルネットワークになります。混合状態 <span class="math notranslate nohighlight">\(\rho\)</span> が与えられた際の物理量 <span class="math notranslate nohighlight">\(O\)</span> の期待値は、</p>
+<div class="math notranslate nohighlight">
+\[\langle O \rangle_\rho = \frac{\mathrm{Tr} (\rho O)}{\mathrm{Tr} \rho}\]</div>
+<p>で計算されますが、 <span class="math notranslate nohighlight">\(\mathrm{Tr}\)</span> は、iTPOの対応する上下の足をつなぐことに相当するので、iTPOの局所的なの上下の足をつなげたテンソル</p>
+<img alt="../_images/trace_tensor.png" class="align-center" src="../_images/trace_tensor.png" />
+<p>を用いると、例えば、分母の <span class="math notranslate nohighlight">\(\mathrm{Tr} \rho\)</span> は、純粋状態の期待値計算で現れた二次元正方格子のダイアグラムと同一の構造になり、角転送行列表現とCTMRGを用いた近似計算が可能になります。</p>
+<p>ボンド次元 <span class="math notranslate nohighlight">\(D\)</span> のiTPOを用いて、ボンド次元 <span class="math notranslate nohighlight">\(\chi\)</span> 角転送行列表現を考える場合のCTMRG計算コストは、 <span class="math notranslate nohighlight">\(O(\chi^2 D^4)\)</span> と <span class="math notranslate nohighlight">\(O(\chi^3 D^3)\)</span> の大きな方でスケールします。この計算量は、同じボンド次元 <span class="math notranslate nohighlight">\(D\)</span> の純粋状態に対するCTMRGと比べて小さくなっていますが、違いの原因は、黒丸で示したテンソルのボンド次元が、純粋状態の計算では <span class="math notranslate nohighlight">\(D^2\)</span> になっている一方で、 混合状態の場合には <span class="math notranslate nohighlight">\(D\)</span> のままであることです。この違いに対応して、角転送行列表現のボンド次元 <span class="math notranslate nohighlight">\(\chi\)</span> も、純粋状態とは異なり、 <span class="math notranslate nohighlight">\(\chi \propto O(D)\)</span> のように  <span class="math notranslate nohighlight">\(D\)</span> に比例して増やせば良いことになります。 この条件の下では、CTMRGの計算コストは <span class="math notranslate nohighlight">\(O(D^6)\)</span> になり、必要なメモリ量は <span class="math notranslate nohighlight">\(O(D^4)\)</span> になります。このように、同じ <span class="math notranslate nohighlight">\(D\)</span> iTPSと比べて、iTPOによる有限温度計算の計算コストは大幅に小さいため、有限温度計算では基底状態の計算よりも大きなボンド次元 <span class="math notranslate nohighlight">\(D\)</span> を用いた計算が可能です。</p>
+<p>純粋状態の場合と同様に、一旦、収束した角転送行列とエッジテンソルを計算することができれば、<span class="math notranslate nohighlight">\(\mathrm{Tr} (\rho O)\)</span> も、純粋状態の場合と同様に効率的に計算できます。例えば、局所磁化 <span class="math notranslate nohighlight">\(\mathrm{Tr} (\rho S_i^z)\)</span> の場合は、演算子を含んだテンソルを</p>
+<img alt="../_images/trace_Sz.png" class="align-center" src="../_images/trace_Sz.png" />
+<p>のように定義することで、純粋状態の <span class="math notranslate nohighlight">\(\langle \Psi|S_i^z|\Psi\rangle\)</span> と同じダイアグラムで計算することができます。</p>
+<p>最後に、iTPOによる近似の欠点について触れておきます。混合状態の密度行列は、エルミートであり、また、その固有値は非負になっている、半正定値行列です。一方で、iTPOで密度行列を近似した場合、この半正定値性は保証されないため、iTPOで近似した密度行列から計算した物理量では、例えば、エネルギーが基底状態エネルギーよりも低くなったりするなどといった、非物理的な振る舞いが見られることがあります。これは、iTPO表現の問題であるため、期待値を計算する際のCTMRGの精度をボンド次元 <span class="math notranslate nohighlight">\(\chi\)</span> を増大することで改善しても回避することができません。物理的な振る舞いを回復するには、iTPOのボンド次元 <span class="math notranslate nohighlight">\(D\)</span> を増やして、密度行列の近似精度を上げる必要があります。</p>
+<p>このような非物理的な振る舞いを避ける別の表現として、密度行列の純粋状態化（Purification）を用いて、純粋状態化された密度行列を、iTPOで表現する手法も提案されています <a class="reference internal" href="#ref-purification"><span class="std std-ref">[Purification]</span></a> 。ただし、この場合には、期待値計算の際に現れるダイアグラムが、純粋状態の場合と同様にダブルレイヤー構造となるため、計算量が大きくなり、扱えるボンド次元 <span class="math notranslate nohighlight">\(D\)</span> が直接的なiTPO表現よりも小さくなってしまいます。</p>
 <p class="rubric">参考文献</p>
 <p id="ref-tns">[TNS]
 R. Orús, <em>A practical introduction to tensor networks: Matrix product states and projected entangled pair states</em>, Annals. of Physics <strong>349</strong>, 117 (2014). <a class="reference external" href="https://linkinghub.elsevier.com/retrieve/pii/S0003491614001596">link</a>; R. Orús, <em>Tensor networks for complex quantum systems</em>, Nature Review Physics <strong>1</strong>, 538 (2019). <a class="reference external" href="https://doi.org/10.1038/s42254-019-0086-7">link</a>; 西野友年、大久保毅 <em>テンソルネットワーク形式の進展と応用</em>, 日本物理学会誌 <strong>72</strong>, 702 (2017). <a class="reference external" href="https://doi.org/10.11316/butsuri.72.10_702">link</a>; 大久保毅 <em>テンソルネットワークによる情報圧縮とフラストレート磁性体への応用</em>, 物性研究・電子版 <strong>7</strong>, 072209 (2018) <a class="reference external" href="https://doi.org/10.14989/235546">link</a>.</p>
@@ -139,6 +195,10 @@ J. Jordan <em>et al.</em>, <em>Classical Simulation of Infinite-Size Quantum Lat
 H. G. Jiang <em>et al.</em>, <em>Accurate Determination of Tensor Network State of Quantum Lattice Models in Two Dimensions</em>, Phys. Rev. Lett. <strong>101</strong>, 090603 (2008). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.101.090603">link</a></p>
 <p id="ref-qr">[QR]
 L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</em>, Phys. Rev. B <strong>83</strong>, 134421 (2011). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.134421">link</a></p>
+<p id="ref-tpo">[TPO]
+A. Kshetrimayum, M. Rizzi, J. Eisert, and R. Orús, <em>Tensor Network Annealing Algorithm for Two-Dimensional Thermal States</em>, Phys. Rev. Lett. <strong>122</strong>, 070502 (2019). <a class="reference external" href="https://doi.org/10.1103/PhysRevLett.122.070502">link</a></p>
+<p id="ref-purification">[Purification]
+P. Czarnik, J. Dziarmaga, and P. Corboz, <em>Time evolution of an infinite projected entangled pair state: An efficient algorithm</em>, Phys. Rev. B <strong>99</strong>, 035115 (2019). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.99.035115">link</a>; P. Czarnik and J. Dziarmaga, <em>Time evolution of an infinite projected entangled pair state: An algorithm from first principles</em>, Phys. Rev. B <strong>98</strong>, 045110 (2018). <a class="reference external" href="https://doi.org/10.1103/PhysRevB.98.045110">link</a></p>
 </section>
 </section>
 
@@ -174,6 +234,8 @@ L. Wang <em>et al.</em>, <em>Monte Carlo simulation with tensor network states</
 <li class="toctree-l2"><a class="reference internal" href="#id2">6.1. テンソルネットワーク状態</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#itps">6.2. iTPS の縮約</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id3">6.3. iTPSの最適化</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">6.4. iTPSを用いた実時間発展</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">6.5. 有限温度状態の表現</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
