@@ -13,5 +13,5 @@ def spec(name):
             f.write(f"{b} {C}\n")
 
 
-for name in ("weak", "middle", "strong"):
+for name in ("weak", "middle", "strong", "zero"):
     spec(name)
