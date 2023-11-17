@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>2. Install &#8212; TeNeS 2.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=73cda6fb"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="3. Usage" href="how_to_use/index.html" />
+    <link rel="prev" title="1.1. Overview" href="about/info.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="install">
+<h1><span class="section-number">2. </span>Install<a class="headerlink" href="#install" title="Permalink to this heading">¶</a></h1>
+<section id="download">
+<h2><span class="section-number">2.1. </span>Download<a class="headerlink" href="#download" title="Permalink to this heading">¶</a></h2>
+<p>You can download the source code for TeNeS from the <a class="reference external" href="https://github.com/issp-center-dev/TeNeS">GitHub page</a> .
+If you have git installed on your machine, type the following command to start downloading:</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/issp-center-dev/TeNeS</span></code></p>
+</section>
+<section id="prerequisites">
+<h2><span class="section-number">2.2. </span>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
+<p>The following tools are required for building TeNeS.</p>
+<ol class="arabic simple">
+<li><p>C++11 compiler</p></li>
+<li><p>CMake (&gt;=3.6.0)</p></li>
+</ol>
+<p>TeNeS depends on the following libraries, but these are downloaded automatically through the build process.</p>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
+<li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
+</ol>
+<p>TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.
+MPI and ScaLAPACK must be installed by yourself.
+For example, if you use Debian GNU/Linux (or Debian based system such as Ubuntu) and have root priviledges,
+you can easily install them by the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span> <span class="n">install</span> <span class="n">openmpi</span><span class="o">-</span><span class="nb">bin</span> <span class="n">libopenmpi</span><span class="o">-</span><span class="n">dev</span> <span class="n">libscalapack</span><span class="o">-</span><span class="n">mpi</span><span class="o">-</span><span class="n">dev</span>
+</pre></div>
+</div>
+<p>For others, see the official instruction of some MPI implementation and ScaLAPACK.</p>
+<p>Python3 is required for the input file generators, <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> .
+Additionary, the following python packages are also required.</p>
+<ol class="arabic simple">
+<li><p>numpy</p></li>
+<li><p>scipy</p></li>
+<li><p>toml</p></li>
+</ol>
+</section>
+<section id="id1">
+<h2><span class="section-number">2.3. </span>Install<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Build TeNeS by typing the following commands (Some environment such as CentOS provides CMake3 as <code class="docutils literal notranslate"><span class="pre">cmake3</span></code>):</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir build
+$ cd build
+$ cmake  -DCMAKE_INSTALL_PREFIX=&lt;path to install to&gt; ..
+$ make
+</pre></div>
+</div>
+<p>The default value of the <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;</span></code> is <code class="docutils literal notranslate"><span class="pre">/usr/local</span></code>.</p>
+<div class="admonition-parallel-build admonition">
+<p class="admonition-title">Parallel Build</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">make</span></code> command accepts <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">&lt;num&gt;</span></code> options and then uses <code class="docutils literal notranslate"><span class="pre">&lt;num&gt;</span></code> processes for a parallel building.
+This reduces the time to build TeNeS drastically.</p>
+</div>
+<p>The executable file <code class="docutils literal notranslate"><span class="pre">tenes</span></code>  will be generated in  <code class="docutils literal notranslate"><span class="pre">build/src</span></code> directory.
+By typing the following command, tests for <code class="docutils literal notranslate"><span class="pre">tenes</span></code> can be done.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ make tests
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Install TeNeS by typing the following commands:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ make install
+</pre></div>
+</div>
+<p>In this case, <code class="docutils literal notranslate"><span class="pre">tenes</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> are installed into the <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">install</span> <span class="pre">to&gt;/bin</span></code> .</p>
+<div class="admonition-disable-mpi-scalapack-parallelization admonition">
+<p class="admonition-title">Disable MPI/ScaLAPACK parallelization</p>
+<p>If you want to disable MPI/ScaLAPACK parallelization, pass <code class="docutils literal notranslate"><span class="pre">-DENABLE_MPI=OFF</span></code> option to <code class="docutils literal notranslate"><span class="pre">cmake</span></code> command.
+On macOS, some functions of ScaLAPACK are incompatible with the system’s BLAS and LAPACK,
+and TeNeS ends in error. It is recommended to disable MPI parallel.</p>
+</div>
+<div class="admonition-specify-compiler admonition">
+<p class="admonition-title">Specify compiler</p>
+<p>CMake detects your compiler automatically but sometimes this does not work. In this case, you can specify the compiler in the following way,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DCMAKE_CXX_COMPILER=&lt;path to your compiler&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-specify-scalapack admonition">
+<p class="admonition-title">Specify ScaLAPACK</p>
+<p>CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (<code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libscalapack.so</span></code>) in the following way,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DSCALAPACK_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-use-the-pre-built-mptensor admonition">
+<p class="admonition-title">Use the pre-built mptensor</p>
+<p>TeNeS is based on the parallelized tensor library <code class="docutils literal notranslate"><span class="pre">mptensor</span></code>. The build system of TeNeS installs this automatically, but if you want to use the specific version of the mptensor (<code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libmptensor.a</span></code>), please add the following option in cmake.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DMPTENSOR_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-specify-python-interpreter admonition">
+<p class="admonition-title">Specify Python interpreter</p>
+<p>TeNeS tools (<code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) use <code class="docutils literal notranslate"><span class="pre">python3</span></code> interpreter which is found in <code class="docutils literal notranslate"><span class="pre">PATH</span></code> via <code class="docutils literal notranslate"><span class="pre">/usr/bin/env</span> <span class="pre">python3</span></code>.
+Please make sure that <code class="docutils literal notranslate"><span class="pre">python3</span></code> command invokes the interpreter which you want to use, for example, by using <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">python3</span></code>.</p>
+<p>If you want to fix the interpreter (or <code class="docutils literal notranslate"><span class="pre">/usr/bin/env</span></code> does not exist), you can specify the interpreter in the following way,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DTENES_PYTHON_EXECUTABLE=&lt;path to your interpreter&gt; ../
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">2. Install</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#download">2.1. Download</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">2.2. Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">2.3. Install</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="about/info.html" title="previous chapter"><span class="section-number">1.1. </span>Overview</a></li>
+      <li>Next: <a href="how_to_use/index.html" title="next chapter"><span class="section-number">3. </span>Usage</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/install.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
