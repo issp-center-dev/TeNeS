@@ -240,9 +240,9 @@ When you publish the results by using TeNeS, we would appreciate if you cite the
 TeNeS was supported by MEXT as "Exploratory Challenge on Post-K computer" (Frontiers of Basic Science: Challenging the Limits) and "Priority Issue on Post-K computer" (Creation of New Functional Devices and High-Performance Materials to Support Next-Generation Industries).
 We also would also like to express our thanks for the support of the "Project for advancement of software usability in materials science" of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
 
-[ci/master/badge]: https://travis-ci.org/issp-center-dev/TeNeS.svg?branch=master
-[ci/master/uri]: https://travis-ci.org/issp-center-dev/TeNeS
-[ci/develop/badge]: https://github.com/issp-center-dev/TeNeS/workflows/Test/badge.svg?branch=develop
+[ci/master/badge]: https://github.com/issp-center-dev/TeNeS/actions/workflows/linux.yml/badge.svg?branch=master
+[ci/develop/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Amaster
+[ci/develop/badge]: https://github.com/issp-center-dev/TeNeS/actions/workflows/linux.yml/badge.svg?branch=develop
 [ci/develop/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop
 
 [doc/en/badge]: https://img.shields.io/badge/doc-English-blue.svg
