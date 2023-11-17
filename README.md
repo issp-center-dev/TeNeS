@@ -241,7 +241,7 @@ TeNeS was supported by MEXT as "Exploratory Challenge on Post-K computer" (Front
 We also would also like to express our thanks for the support of the "Project for advancement of software usability in materials science" of The Institute for Solid State Physics, The University of Tokyo, for the development of TeNeS.
 
 [ci/master/badge]: https://github.com/issp-center-dev/TeNeS/actions/workflows/linux.yml/badge.svg?branch=master
-[ci/develop/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Amaster
+[ci/master/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Amaster
 [ci/develop/badge]: https://github.com/issp-center-dev/TeNeS/actions/workflows/linux.yml/badge.svg?branch=develop
 [ci/develop/uri]: https://github.com/issp-center-dev/TeNeS/actions?query=workflow%3ATest+branch%3Adevelop
 
