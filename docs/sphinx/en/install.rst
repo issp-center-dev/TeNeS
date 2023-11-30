@@ -16,6 +16,7 @@ The following tools are required for building TeNeS.
 
 1. C++11 compiler
 2. CMake (>=3.6.0)
+3. BLAS and LAPACK
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
