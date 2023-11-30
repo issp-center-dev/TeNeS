@@ -107,7 +107,7 @@ Then, the magnetization curve shown in the right panel of
 
 ::
 
-    load 'plot_ene_square.gp'
+    load 'plot_square_ene.gp'
 
 you will obtain the ground-state energy as shown in the left panel of
 :numref:`fig_tutorial5_square`. The calculation is almost converged at 2000
