@@ -82,7 +82,7 @@
 とすれば、 :numref:`fig_tutorial5_square` の右図のような磁化カーブが得られます。同様に
 ::
 
-    load 'plot_ene_square.gp'
+    load 'plot_square_ene.gp'
 
 とすれば、:numref:`fig_tutorial5_square` の左図のような基底エネルギーのグラフが得られます。
 
