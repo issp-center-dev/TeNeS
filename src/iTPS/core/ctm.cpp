@@ -240,28 +240,23 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       Shape shape_col(t34, e56, t34);
 
       int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
-      /*int info ()= */
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
            static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
-      std::vector<double> s_c(cut);
+      std::vector<double> s_c;
+      s_c.reserve(cut);
 
       for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c[i] = 1.0 / sqrt(s[i]);
+          s_c.push_back(1.0 / sqrt(s[i]));
         } else {
-          s_c[i] = 0.0;
           cut = i;
           break;
         }
       }
-
-      // U.multiply_vector(s, 3);
-      // VT.multiply_vector(s, 0);
-
+      
       tensor U_c = mptensor::slice(U, 3, 0, cut);
       tensor VT_c = mptensor::slice(VT, 0, 0, cut);
-      s_c.resize(cut);
       U_c.multiply_vector(s_c, 3);
       VT_c.multiply_vector(s_c, 0);
 
@@ -275,19 +270,18 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       tensor VT;
       std::vector<double> s;
 
-      /* int info = */
       svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)), Axes(0, 1, 2),
           Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
-      // s_c.resize(e78);
-      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
-      std::vector<double> s_c(cut);
+      int cut = s.size();
+      cut = std::min(cut, peps_parameters.CHI);
+      std::vector<double> s_c;
+      s_c.reserve(cut);
 
       for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c[i] = 1.0 / sqrt(s[i]);
+          s_c.push_back(1.0 / sqrt(s[i]));
         } else {
-          s_c[i] = 0.0;
           cut = i;
           break;
         }
@@ -341,6 +335,8 @@ void Calc_projector_updown_blocks(
   int t23 = Tn2.shape()[3];
   // int t34 = Tn3.shape()[0];
   int t41 = Tn4.shape()[1];
+
+  bool shrink_chi = true;
 
   if (t41 != 1) {
     /*
@@ -414,17 +410,16 @@ void Calc_projector_updown_blocks(
       Shape shape_col(t23, e34, t23);
 
       int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
-      /* int info = */
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
            static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
 
-      std::vector<double> s_c(cut);
+      std::vector<double> s_c;
+      s_c.reserve(cut);
       for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c[i] = 1.0 / sqrt(s[i]);
+          s_c.push_back(1.0 / sqrt(s[i]));
         } else {
-          s_c[i] = 0.0;
           cut = i;
           break;
         }
@@ -451,18 +446,18 @@ void Calc_projector_updown_blocks(
       tensor VT;
       std::vector<double> s;
 
-      /* int info = */
       svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)), Axes(0, 1, 2),
           Axes(3, 4, 5), U, s, VT);
       double denom = s[0];
-      int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
-      std::vector<double> s_c(cut);
+      int cut = s.size();
+      cut = std::min(cut, peps_parameters.CHI);
+      std::vector<double> s_c;
+      s_c.reserve(cut);
 
       for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c[i] = 1.0 / sqrt(s[i]);
+          s_c.push_back(1.0 / sqrt(s[i]));
         } else {
-          s_c[i] = 0.0;
           cut = i;
           break;
         }
