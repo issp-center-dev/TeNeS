@@ -65,6 +65,9 @@ class Arnoldi {
 
   std::vector<ptensor> Q;
   small_tensor<value_type> H;
+
+  int mpisize;
+  int mpirank;
 };
 
 }  // end of namespace tenes

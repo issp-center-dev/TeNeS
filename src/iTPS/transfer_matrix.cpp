@@ -95,6 +95,9 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     return eigvals;
   }
 
+  // for debug output
+  // const auto mpirank = this->Tn[0].get_comm_rank();
+
   if (N <= params.maxdim_dense_eigensolver) {
     ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
                               : matrix_vertical(fixed_coord);
@@ -160,20 +163,23 @@ template <class ptensor>
 ptensor TransferMatrix_ctm<ptensor>::initial_vector(int dir, int fixed_coord,
                                                     std::mt19937 &rng) const {
   const auto &lattice = this->lattice;
-  const size_t N = C1[0].shape()[0];
 
   ptensor initial_vec;
   if (dir == 0) {
     int site = lattice.index(0, fixed_coord);
     ptensor left_top = C1[site];
     ptensor left_bottom = C4[lattice.top(site)];
-    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {N * N});
+    const size_t CHI_top = left_top.shape()[1];
+    const size_t CHI_bottom = left_bottom.shape()[0];
+    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {CHI_top * CHI_bottom});
   } else {
     int site = lattice.index(fixed_coord, 0);
     auto left_bottom = C4[site];
     auto right_bottom = C3[lattice.left(site)];
+    const size_t CHI_left = left_bottom.shape()[1];
+    const size_t CHI_right = right_bottom.shape()[0];
     initial_vec =
-        reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {N * N});
+        reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {CHI_left * CHI_right});
   }
   return initial_vec;
 }
@@ -190,6 +196,10 @@ void TransferMatrix_ctm<ptensor>::matvec_horizontal(ptensor &outvec,
   const size_t CHI1 = eTb[s1].shape()[1];
   outvec = reshape(invec, {CHI0, CHI1});
   const size_t rank = eTt[0].rank();
+
+  // for debug output
+  // const auto mpirank = invec.get_comm_rank();
+
   if (rank == 3) {
     // iTPO
     for (int x = 0; x < lattice.LX; ++x) {
@@ -243,6 +253,9 @@ void TransferMatrix_ctm<ptensor>::matvec_vertical(ptensor &outvec,
   const size_t CHI1 = eTr[s1].shape()[1];
   const auto x_orig = x;
   outvec = reshape(invec, {CHI0, CHI1});
+
+  // for debug output
+  // const auto mpirank = invec.get_comm_rank();
 
   const size_t rank = eTl[0].rank();
 
@@ -520,6 +533,8 @@ ptensor TransferMatrix_mf<ptensor>::matrix_vertical(int x) const {
 template <class ptensor>
 size_t TransferMatrix_ctm<ptensor>::dim(int dir, int fixed_coord) const {
   const auto &lattice = this->lattice;
+  // for debug output
+  const auto mpirank = this->Tn[0].get_comm_rank();
   if(dir == 0){
     const int s0 = lattice.index(0, fixed_coord);
     const int s1 = lattice.top(s0);

@@ -20,6 +20,7 @@
 #include <cmath>       // for sqrt
 #include <complex>     // for complex, ope...
 #include <functional>  // for function
+#include <ostream>
 #include <vector>      // for __vector_bas...
 
 #include "util/abs.hpp"
@@ -32,7 +33,7 @@ namespace tenes {
 
 template <class ptensor>
 Arnoldi<ptensor>::Arnoldi(size_t N, size_t maxvec)
-    : N(N), maxvec(maxvec), Q(maxvec + 1), H(Shape(maxvec + 1, maxvec)) {
+    : N(N), maxvec(maxvec), Q(maxvec + 1), H(Shape(maxvec + 1, maxvec)), mpisize(-1), mpirank(-1) {
   for (size_t i = 0; i < maxvec; ++i) {
     Q[i] = ptensor(mptensor::Shape(N));
   }
@@ -41,6 +42,8 @@ Arnoldi<ptensor>::Arnoldi(size_t N, size_t maxvec)
 template <class ptensor>
 void Arnoldi<ptensor>::initialize(ptensor const& initial) {
   Q[0] = initial;
+  mpisize = Q[0].get_comm_size();
+  mpirank = Q[0].get_comm_rank();
   orthonormalize(0);
 }
 
@@ -53,10 +56,14 @@ double norm(ptensor const& A) {
 template <class ptensor>
 void Arnoldi<ptensor>::run(std::function<void(ptensor&, ptensor const&)> A,
                            size_t nev, int mindim, int maxiter, double rtol) {
+  if (mpisize < 0){
+    throw std::runtime_error("Arnoldi::run: initialize() has not been called");
+  }
   if (mindim < nev) {
     mindim = nev;
   }
   this->nev = nev;
+  int iter = 0;
   for (size_t k = 1; k <= nev; ++k) {
     A(Q[k], Q[k - 1]);
     orthonormalize(k);
@@ -92,7 +99,6 @@ template <class ptensor>
 void Arnoldi<ptensor>::orthonormalize(size_t k) {
   for (size_t j = 0; j < k; ++j) {
     auto xx = tensordot(conj(Q[j]), Q[k], {0}, {0});
-    // std::cout << xx << std::endl;
     auto x = trace(xx, {}, {});
     // auto x = trace(tensordot(conj(Q[j]), Q[k], {0}, {0}), {}, {});
     H.set_value({j, k - 1}, x);
