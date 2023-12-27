@@ -433,8 +433,8 @@ void Calc_projector_updown_blocks(
       tensor U_c = mptensor::slice(U, 3, 0, cut);
       tensor VT_c = mptensor::slice(VT, 0, 0, cut);
 
-      U_c.multiply_vector(s, 3);
-      VT_c.multiply_vector(s, 0);
+      U_c.multiply_vector(s_c, 3);
+      VT_c.multiply_vector(s_c, 0);
 
       PU = tensordot(LB, tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
                      Axes(1, 3, 5), Axes(0, 1, 2))

@@ -40,6 +40,7 @@ foreach(
   AntiferroHeisenberg_real
   AntiferroHeisenberg_complex
   AntiferroHeisenberg_mf
+  RSVD
   J1J2_AFH
   Honeycomb
   Honeycomb_skew
