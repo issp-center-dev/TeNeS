@@ -231,7 +231,7 @@ class LocalTensor:
             Raises RuntimeError if any field is invalid.
         """
         if not (isinstance(self.phys_dim, int) and self.phys_dim > 0):
-            msg = "ERROR: physical_dim should be a positive integer"
+            msg = "physical_dim should be a positive integer"
             raise RuntimeError(msg)
 
         if not (
@@ -239,7 +239,7 @@ class LocalTensor:
             and len(self.virtual_dim) == 4
             and all_positive(self.virtual_dim)
         ):
-            msg = "ERROR: virtual_dim must be a positive integer or a list with 4 positive integers"
+            msg = "virtual_dim must be a positive integer or a list with 4 positive integers"
             raise RuntimeError(msg)
 
 
@@ -381,13 +381,13 @@ class Unitcell:
             Raises RuntimeError if any information is invalid.
         """
         if not (isinstance(self.L, list) and len(self.L) == 2 and all_positive(self.L)):
-            msg = "ERROR: L_sub should be a positive integer or a list with 2 positive integers"
+            msg = "L_sub should be a positive integer or a list with 2 positive integers"
             raise RuntimeError(msg)
 
         failed = False
         for i, site in enumerate(self.sites):
             if site is None:
-                print("ERROR: site {} is not defined".format(i))
+                print("site {} is not defined".format(i))
                 failed = True
         for i, isite in enumerate(self.sites):
             for idir in (1, 2):
@@ -397,13 +397,13 @@ class Unitcell:
                 jdim = self.sites[j].virtual_dim[jdir]
                 if idim != jdim:
                     print(
-                        "ERROR: The dimension of bond {idir} of site {i} and that of {jdir} of {j} are mismatch.".format(
+                        "The dimension of bond {idir} of site {i} and that of {jdir} of {j} are mismatch.".format(
                             idir=idir, i=i, jdir=jdir, j=j
                         )
                     )
                     failed = True
         if failed:
-            msg = "ERROR: some sites have problems"
+            msg = "some sites have problems"
             raise RuntimeError(msg)
 
     def neighbor(self, index: int, direction: int) -> int:
@@ -804,6 +804,15 @@ def make_evolution_twosite(
     )
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
+
+    if nhops == 0:
+        source = hamiltonian.bond.source_site
+        dx = hamiltonian.bond.dx
+        dy = hamiltonian.bond.dy
+        msg =  f"A bond term of Hamiltonian connects a source site {source} and a target site (dx, dy) = ({dx}, {dy}) "
+        msg +=  "but they are disconnected. please check the dimensions of virtual bonds (D=1 bonds are disconnected)."
+        raise RuntimeError(msg)
+
     if nhops == 1:
         return [NNOperator(hamiltonian.bond, elements=evo, group=group)]
 
