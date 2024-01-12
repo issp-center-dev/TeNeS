@@ -173,6 +173,7 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.time_evolution();
+  tns.save_tensors();
   tns.summary();
   return 0;
 }
@@ -191,6 +192,7 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.finite_temperature();
+  tns.save_tensors();
   tns.summary();
   return 0;
 }
