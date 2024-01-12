@@ -11,6 +11,7 @@ add_library(
   iTPS_impl STATIC
   iTPS.cpp
   tensors.cpp
+  saveload_tensors.cpp
   measure.cpp
   onesite_obs.cpp
   twosite_obs.cpp
