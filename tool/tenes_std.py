@@ -88,9 +88,7 @@ def value_to_str(v) -> str:
         return "{}".format(v)
 
 
-def merge_input_dict(
-    d1: dict, d2: dict
-) -> None:
+def merge_input_dict(d1: dict, d2: dict) -> None:
     section1 = d1.get("parameter", {})
     section2 = d2.get("parameter", {})
     subsection_names = ("general", "simple_update", "full_update", "ctm", "random")
@@ -124,12 +122,14 @@ def merge_input_dict(
     section1 = d1.get("tensor", {})
     section2 = d2.get("tensor", {})
     for k in section1.keys():
-        if k == "unitcell": continue
+        if k == "unitcell":
+            continue
         if k in section2:
             msg = f"tensor.{k} is defined in multiple input files"
             raise RuntimeError(msg)
     for k in section2.keys():
-        if k == "unitcell": continue
+        if k == "unitcell":
+            continue
         section1[k] = section2[k]
     if "unitcell" not in section1:
         section1["unitcell"] = []
@@ -156,6 +156,7 @@ def merge_input_dict(
             section1[name] = sub1
     if len(section1) > 0:
         d1["observable"] = section1
+
 
 class Bond:
     source_site: int
@@ -1097,8 +1098,15 @@ class Model:
             sites = onesite["sites"]
             dim = onesite["dim"]
             elements = load_tensor(onesite["elements"], [dim, dim], atol=atol)
+            coeff = onesite.get("coeff", 1.0)
+            coeff_im = onesite.get("coeff_im", 0.0)
             one_obs = OnesiteObservable(
-                group=group, elements=elements, sites=sites, name=name
+                group=group,
+                elements=elements,
+                sites=sites,
+                name=name,
+                coeff=coeff,
+                coeff_im=coeff_im,
             )
             self.onesites.append(one_obs)
         if not has_zero_onesite:
@@ -1117,12 +1125,28 @@ class Model:
                 for line in twosite["bonds"].strip().splitlines()
                 if parse_bond(line) is not None
             ]
+            coeff = twosite.get("coeff", 1.0)
+            coeff_im = twosite.get("coeff_im", 0.0)
             if "elements" in twosite:
                 dim = twosite["dim"]
                 elements = load_tensor(twosite["elements"], dim + dim, atol=atol)
-                two_obs = TwositeObservable(group, bonds, elements=elements, name=name)
+                two_obs = TwositeObservable(
+                    group,
+                    bonds,
+                    elements=elements,
+                    coeff=coeff,
+                    coeff_im=coeff_im,
+                    name=name,
+                )
             else:
-                two_obs = TwositeObservable(group, bonds, ops=twosite["ops"], name=name)
+                two_obs = TwositeObservable(
+                    group,
+                    bonds,
+                    ops=twosite["ops"],
+                    coeff=coeff,
+                    coeff_im=coeff_im,
+                    name=name,
+                )
             self.twobodies.append(two_obs)
         if not has_zero_twosite:
             for ham in ham_as_twosite_obs:
@@ -1137,9 +1161,11 @@ class Model:
                 for line in multisite["multisites"].strip().splitlines()
                 if parse_multisite(line) is not None
             ]
+            coeff = multisite.get("coeff", 1.0)
+            coeff_im = multisite.get("coeff_im", 0.0)
             if "ops" not in multisite:
                 raise RuntimeError("multisite observable should have ops")
-            obs = MultisiteObservable(group, ms, ops=multisite["ops"], name=name)
+            obs = MultisiteObservable(group, ms, ops=multisite["ops"], coeff=coeff, coeff_im=coeff_im, name=name)
             self.multibodies.append(obs)
 
         self.simple_updates = []
