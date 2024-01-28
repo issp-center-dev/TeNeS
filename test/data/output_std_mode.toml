@@ -56,6 +56,14 @@ bonds = """
 1 1 1
 """
 ops = [0, 1]
+[[observable.multisite]]
+name = "multisite"
+group = 0
+dim= [2, 2, 2]
+multisites = """
+0 1 0 0 1
+"""
+ops = [0, 0, 0]
 
 [evolution]
 [[evolution.simple]]

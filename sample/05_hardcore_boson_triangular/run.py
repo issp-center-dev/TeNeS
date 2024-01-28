@@ -96,13 +96,10 @@ for idx, mu in enumerate(np.linspace(min_mu, max_mu, num=num_mu)[::step_mu]):
             cmd = f"tenes_simple {simple_toml} -o {std_toml}"
             subprocess.call(cmd.split())
 
+            cmd = f"tenes_std -o {input_toml} {std_toml}"
             if calculate_sq:
-                # append twosite observable <n_i n_j> to std.toml
-                with open(std_toml, "a") as f:
-                    with open("nn_obs.toml") as fin:
-                        for line in fin:
-                            f.write(line)
-            cmd = f"tenes_std {std_toml} -o {input_toml}"
+                # twosite observable <n_i n_j> are also calculated
+                cmd += " nn_obs.toml"
             subprocess.call(cmd.split())
 
             cmd = f"{MPI_cmd} tenes {input_toml}"
