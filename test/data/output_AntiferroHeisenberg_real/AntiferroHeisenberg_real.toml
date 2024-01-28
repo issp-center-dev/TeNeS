@@ -21,6 +21,10 @@ virtual_dim = [2, 2, 2, 2]
 initial_state = [0.0]
 noise = 0.01
 
+[correlation]
+r_max = 3
+operators = [[0,0], [0,1]]
+
 [observable]
 [[observable.onesite]]
 name = "Sz"
@@ -40,9 +44,19 @@ elements = """
 1 0  0.5 0.0
 0 1  0.5 0.0
 """
+[[observable.onesite]]
+name = "2Sz"
+group = 2
+sites = []
+dim = 2
+elements = """
+0 0  0.5 0.0
+1 1  -0.5 0.0
+"""
+coeff = 2.0
 
 [[observable.twosite]]
-name = "hamiltonian"
+name = "bond_hamiltonian"
 group = 0
 bonds = """
 0 1 0
@@ -111,6 +125,44 @@ elements = """
 1 0 0 1  0.25 0.0
 0 0 1 1  -0.25 0.0
 """
+[[observable.twosite]]
+name = "2SzSz"
+group = 4
+bonds = """
+0 1 0
+1 1 0
+2 1 0
+3 1 0
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+"""
+ops = [0, 0]
+coeff = 2.0
+
+[[observable.multisite]]
+name = "SzSzSzSz"
+group = 0
+multisites = """
+0 1 0 1 1 0 1
+1 1 0 1 1 0 1
+2 1 0 1 1 0 1
+3 1 0 1 1 0 1
+"""
+ops = [0,0,0,0]
+
+[[observable.multisite]]
+name = "2SzSzSzSz"
+group = 1
+multisites = """
+0 1 0 1 1 0 1
+1 1 0 1 1 0 1
+2 1 0 1 1 0 1
+3 1 0 1 1 0 1
+"""
+ops = [0,0,0,0]
+coeff = 2.0
 
 [evolution]
 [[evolution.simple]]

@@ -19,11 +19,14 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 namespace tenes {
 
 template <class tensor>
 struct Operator {
+  using value_type = typename tensor::value_type;
+
   std::string name;
   int group;
   int source_site;
@@ -31,6 +34,7 @@ struct Operator {
   std::vector<int> dy;
   tensor op;
   std::vector<int> ops_indices;
+  typename tensor::value_type coeff;
 
   /*!
    * @brief Constructor for a one-site operator.
@@ -39,9 +43,10 @@ struct Operator {
    * @param[in] group Group of the operator.
    * @param[in] site Site of the operator.
    * @param[in] op Operator tensor.
+   * @param[in] coeff coefficient of operator (default: 1.0).
    */
-  Operator(std::string const &name, int group, int site, tensor const &op)
-      : name(name), group(group), source_site(site), dx(0), dy(0), op(op) {
+  Operator(std::string const &name, int group, int site, tensor const &op, value_type coeff=static_cast<value_type>(1.0))
+      : name(name), group(group), source_site(site), dx(0), dy(0), op(op), coeff(coeff) {
     if (op.rank() != 2) {
       throw std::runtime_error("Operator tensor must be rank 2.");
     }
@@ -56,15 +61,17 @@ struct Operator {
    * @param[in] dx X displacement of the other site.
    * @param[in] dy Y displacement of the other site.
    * @param[in] op Operator tensor.
+   * @param[in] coeff coefficient of operator (default: 1.0).
    */
   Operator(std::string const &name, int group, int source_site, int dx, int dy,
-           tensor const &op)
+           tensor const &op, value_type coeff=static_cast<value_type>(1.0))
       : name(name),
         group(group),
         source_site(source_site),
         dx(1, dx),
         dy(1, dy),
-        op(op) {
+        op(op),
+        coeff(coeff) {
     if (op.rank() != 4) {
       throw std::runtime_error("Operator tensor must be rank 4.");
     }
@@ -80,15 +87,17 @@ struct Operator {
    * @param[in] dx X displacement of the other site.
    * @param[in] dy Y displacement of the other site.
    * @param[in] ops_indices Onesite operator indices.
+   * @param[in] coeff coefficient of operator (default: 1.0).
    */
   Operator(std::string const &name, int group, int source_site, int dx, int dy,
-           std::vector<int> const &ops_indices)
+           std::vector<int> const &ops_indices, value_type coeff=static_cast<value_type>(1.0))
       : name(name),
         group(group),
         source_site(source_site),
         dx(1, dx),
         dy(1, dy),
-        ops_indices(ops_indices) {
+        ops_indices(ops_indices),
+        coeff(coeff){
     if (ops_indices.size() != 2) {
       throw std::runtime_error(
           "Operator must be a product of two one-site operators.");
@@ -104,16 +113,18 @@ struct Operator {
    * @param[in] dx X displacement of the other sites.
    * @param[in] dy Y displacement of the other sites.
    * @param[in] op Operator tensor.
+   * @param[in] coeff coefficient of operator (default: 1.0).
    */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
-           tensor const &op)
+           tensor const &op, value_type coeff=static_cast<value_type>(1.0))
       : name(name),
         group(group),
         source_site(source_site),
         dx(dx),
         dy(dy),
-        op(op) {
+        op(op),
+        coeff(coeff) {
     if (dx.size() != dy.size()) {
       throw std::runtime_error("dx and dy must have the same size.");
     }
@@ -132,16 +143,18 @@ struct Operator {
    * @param[in] dx X displacement of the other sites.
    * @param[in] dy Y displacement of the other sites.
    * @param[in] ops_indices Onesite operator indices.
+   * @param[in] coeff coefficient of operator (default: 1.0).
    */
   Operator(std::string const &name, int group, int source_site,
            std::vector<int> const &dx, std::vector<int> const &dy,
-           std::vector<int> const &ops_indices)
+           std::vector<int> const &ops_indices, value_type coeff=static_cast<value_type>(1.0))
       : name(name),
         group(group),
         source_site(source_site),
         dx(dx),
         dy(dy),
-        ops_indices(ops_indices) {
+        ops_indices(ops_indices),
+        coeff(coeff) {
     if (dx.size() != dy.size()) {
       throw std::runtime_error("dx and dy must have the same size.");
     }

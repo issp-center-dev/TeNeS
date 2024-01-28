@@ -381,7 +381,9 @@ class Unitcell:
             Raises RuntimeError if any information is invalid.
         """
         if not (isinstance(self.L, list) and len(self.L) == 2 and all_positive(self.L)):
-            msg = "L_sub should be a positive integer or a list with 2 positive integers"
+            msg = (
+                "L_sub should be a positive integer or a list with 2 positive integers"
+            )
             raise RuntimeError(msg)
 
         failed = False
@@ -581,7 +583,7 @@ class NNOperator:
         *,
         elements: Optional[np.ndarray] = None,
         ops: Optional[List[int]] = None,
-        group: Optional[int] = None
+        group: Optional[int] = None,
     ):
         self.bond = bond
         self.group = group
@@ -630,14 +632,26 @@ class OnesiteObservable:
     elements: np.ndarray
     sites: List[int]
     name: str
+    coeff: float
+    coeff_im: float
 
-    def __init__(self, group: int, elements: np.ndarray, sites: List[int], name: str):
+    def __init__(
+        self,
+        group: int,
+        elements: np.ndarray,
+        sites: List[int],
+        name: str = "",
+        coeff: float = 1.0,
+        coeff_im: float = 0.0,
+    ):
         self.group = group
         assert elements.ndim == 2
         assert elements.shape[0] == elements.shape[1]
         self.elements = elements
         self.sites = sites
         self.name = name
+        self.coeff = coeff
+        self.coeff_im = coeff_im
 
     def to_toml_strs(self) -> List[str]:
         ret = []
@@ -663,6 +677,8 @@ class OnesiteObservable:
             ret.append(line)
             it.iternext()
         ret.append('"""')
+        ret.append("coeff = {}".format(self.coeff))
+        ret.append("coeff_im = {}".format(self.coeff_im))
         return ret
 
 
@@ -672,6 +688,8 @@ class TwositeObservable:
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
     name: str
+    coeff: float
+    coeff_re: float
 
     def __init__(
         self,
@@ -680,7 +698,9 @@ class TwositeObservable:
         *,
         elements: np.ndarray = None,
         ops: List[int] = None,
-        name: str = ""
+        name: str = "",
+        coeff: float = 1.0,
+        coeff_im: float = 0.0,
     ):
         self.group = group
         if elements is not None:
@@ -697,6 +717,8 @@ class TwositeObservable:
             self.ops = ops
         self.bonds = bonds
         self.name = name
+        self.coeff = coeff
+        self.coeff_im = coeff_im
 
     def to_toml_strs(self) -> List[str]:
         ret = []
@@ -728,6 +750,8 @@ class TwositeObservable:
             ret.append('"""')
         else:
             ret.append("ops = {}".format(self.ops))
+        ret.append("coeff = {}".format(self.coeff))
+        ret.append("coeff_im = {}".format(self.coeff_im))
         return ret
 
     def to_twosite_operators(self) -> List[NNOperator]:
@@ -742,9 +766,17 @@ class MultisiteObservable:
     multisites: List[Multisite]
     ops: List[int]
     name: str
+    coeff: float
+    coeff_im: float
 
     def __init__(
-        self, group: int, multisites: List[Multisite], ops: List[int], name: str = ""
+        self,
+        group: int,
+        multisites: List[Multisite],
+        ops: List[int],
+        name: str = "",
+        coeff: float = 1.0,
+        coeff_im: float = 0.0,
     ):
         self.group = group
         self.multisites = multisites
@@ -753,6 +785,8 @@ class MultisiteObservable:
                 raise ValueError("Multisites have different number of sites")
         self.ops = ops
         self.name = name
+        self.coeff = coeff
+        self.coeff_im = coeff_im
 
     def nsites(self) -> int:
         return self.multisites[0].nsites()
@@ -764,11 +798,13 @@ class MultisiteObservable:
         ret.append('multisites = """')
         for ms in self.multisites:
             line = str(ms.source_site)
-            for i in range(ms.nsites()-1):
+            for i in range(ms.nsites() - 1):
                 line += f" {ms.dx[i]} {ms.dy[i]}"
             ret.append(line)
         ret.append('"""')
         ret.append("ops = {}".format(self.ops))
+        ret.append("coeff = {}".format(self.coeff))
+        ret.append("coeff_im = {}".format(self.coeff_im))
         return ret
 
 
@@ -809,8 +845,8 @@ def make_evolution_twosite(
         source = hamiltonian.bond.source_site
         dx = hamiltonian.bond.dx
         dy = hamiltonian.bond.dy
-        msg =  f"A bond term of Hamiltonian connects a source site {source} and a target site (dx, dy) = ({dx}, {dy}) "
-        msg +=  "but they are disconnected. please check the dimensions of virtual bonds (D=1 bonds are disconnected)."
+        msg = f"A bond term of Hamiltonian connects a source site {source} and a target site (dx, dy) = ({dx}, {dy}) "
+        msg += "but they are disconnected. please check the dimensions of virtual bonds (D=1 bonds are disconnected)."
         raise RuntimeError(msg)
 
     if nhops == 1:
