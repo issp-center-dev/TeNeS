@@ -10,7 +10,11 @@ Usage of ``tenes_std``
    $ tenes_std std.toml
 
 
-- Takes a file as an argument
+- Takes input files as arguments
+   - Multiple input files can be specified
+   - When parameters are duplicated, ``tenes_std`` stops with an error
+   - Sections that can be specified multiple times, such as ``[[observable.onesite]]``, can be specified in multiple input files simultaneously
+      - In this case, the sections in the latter input file are appended to those in the former input file
 - Output an input file for ``tenes``
 - Command line options are as follows
    - ``--help``

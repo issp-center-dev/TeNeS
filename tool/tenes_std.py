@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
-from collections import namedtuple
 from itertools import product
 from typing import (
     TextIO,
@@ -88,6 +87,75 @@ def value_to_str(v) -> str:
     else:
         return "{}".format(v)
 
+
+def merge_input_dict(
+    d1: dict, d2: dict
+) -> None:
+    section1 = d1.get("parameter", {})
+    section2 = d2.get("parameter", {})
+    subsection_names = ("general", "simple_update", "full_update", "ctm", "random")
+    for name in subsection_names:
+        sub1 = section1.get(name, {})
+        sub2 = section2.get(name, {})
+        for k in sub1.keys():
+            if k in sub2:
+                msg = f"parameter.{name}.{k} is defined in multiple input files"
+                raise RuntimeError(msg)
+        for k in sub2.keys():
+            sub1[k] = sub2[k]
+        if len(sub1) > 0:
+            section1[name] = sub1
+    if len(section1) > 0:
+        d1["parameter"] = section1
+
+    section_names = ("correlation", "correlation_length")
+    for section_name in section_names:
+        section1 = d1.get(section_name, {})
+        section2 = d2.get(section_name, {})
+        for name in section1.keys():
+            if name in section2:
+                msg = f"{section_name}.{name} is defined in multiple input files"
+                raise RuntimeError(msg)
+        for name in section2.keys():
+            section1[name] = section2[name]
+        if len(section1) > 0:
+            d1[section_name] = section1
+
+    section1 = d1.get("tensor", {})
+    section2 = d2.get("tensor", {})
+    for k in section1.keys():
+        if k == "unitcell": continue
+        if k in section2:
+            msg = f"tensor.{k} is defined in multiple input files"
+            raise RuntimeError(msg)
+    for k in section2.keys():
+        if k == "unitcell": continue
+        section1[k] = section2[k]
+    if "unitcell" not in section1:
+        section1["unitcell"] = []
+    for u2 in section2.get("unitcell", []):
+        section1["unitcell"].append(u2)
+    if len(section1) > 0:
+        d1["tensor"] = section1
+
+    section1 = d1.get("hamiltonian", [])
+    section2 = d2.get("hamiltonian", [])
+    for h2 in section2:
+        section1.append(h2)
+    if len(section1) > 0:
+        d1["hamiltonian"] = section1
+
+    section1 = d1.get("observable", {})
+    section2 = d2.get("observable", {})
+    for name in ("onesite", "twosite", "multisite"):
+        sub1 = section1.get(name, [])
+        sub2 = section2.get(name, [])
+        for o2 in sub2:
+            sub1.append(o2)
+        if len(sub1) > 0:
+            section1[name] = sub1
+    if len(section1) > 0:
+        d1["observable"] = section1
 
 class Bond:
     source_site: int
@@ -1172,7 +1240,7 @@ if __name__ == "__main__":
         description="Input converter for TeNeS", add_help=True
     )
 
-    parser.add_argument("input", help="Input TOML file")
+    parser.add_argument("input", nargs="+", help="Input TOML file")
 
     parser.add_argument(
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
@@ -1183,11 +1251,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.input == args.output:
+    if args.output in args.input:
         print("The names of input and output are the same")
         sys.exit(1)
 
-    param = toml.load(args.input)
+    params = [lower_dict(toml.load(f)) for f in args.input]
+    param = params[0]
+    for p in params[1:]:
+        merge_input_dict(param, p)
     model = Model(param)
 
     with open(args.output, "w") as f:

@@ -44,6 +44,7 @@ cmd = [
     "-o",
     join("output_std_mode.toml"),
     join("data", "std_mode.toml"),
+    join("data", "std_mode_multi.toml"),
 ]
 subprocess.call(cmd)
 
@@ -99,6 +100,28 @@ else:
             obs_result = obs_result and obs_res['ops'] == obs_ref['ops']
 if not obs_result:
     print('check for the section "observable.twosite" fails')
+    result = False
+
+obs_result = True
+if len(res['observable']['multisite']) != len(ref['observable']['multisite']):
+    obs_result = False
+    result = False
+else:
+    for obs_res, obs_ref in zip(res['observable']['multisite'], ref['observable']['multisite']):
+        obs_result = obs_result and obs_res['name'] == obs_ref['name']
+        obs_result = obs_result and obs_res['group'] == obs_ref['group']
+        obs_result = obs_result and obs_res['multisites'] == obs_ref['multisites']
+        if 'elements' in obs_ref:
+            obs_result = obs_result and 'elements' in obs_res
+            obs_result = obs_result and obs_res['dim'] == obs_ref['dim']
+            elem_res = load_str_as_array(obs_res['elements'])
+            elem_ref = load_str_as_array(obs_ref['elements'])
+            obs_result = obs_result and np.allclose(elem_ref, elem_res)
+        else:
+            obs_result = obs_result and 'elements' not in obs_res
+            obs_result = obs_result and obs_res['ops'] == obs_ref['ops']
+if not obs_result:
+    print('check for the section "observable.multisite" fails')
     result = False
 
 
