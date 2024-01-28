@@ -39,7 +39,21 @@
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>Takes a file as an argument</p></li>
+<li><dl class="simple">
+<dt>Takes input files as arguments</dt><dd><ul>
+<li><p>Multiple input files can be specified</p></li>
+<li><p>When parameters are duplicated, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> stops with an error</p></li>
+<li><dl class="simple">
+<dt>Sections that can be specified multiple times, such as <code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code>, can be specified in multiple input files simultaneously</dt><dd><ul>
+<li><p>In this case, the sections in the latter input file are appended to those in the former input file</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
 <li><p>Output an input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></p></li>
 <li><dl class="simple">
 <dt>Command line options are as follows</dt><dd><ul>
