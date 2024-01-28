@@ -66,7 +66,7 @@ auto iTPS<tensor>::measure_onesite()
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
       const auto val = core::Contract_one_site_iTPS_MF(Tn_[i], op.op);
-      local_obs[op.group][i] = val / norm[i];
+      local_obs[op.group][i] = op.coeff * val / norm[i];
     }
   } else {  // CTM
     if (is_density) {
@@ -80,7 +80,7 @@ auto iTPS<tensor>::measure_onesite()
         const auto val = core::Contract_one_site_density_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
             op.op);
-        local_obs[op.group][i] = val / norm[i];
+        local_obs[op.group][i] = op.coeff * val / norm[i];
       }
     } else {
       for (int i = 0; i < N_UNIT; ++i) {
@@ -93,7 +93,7 @@ auto iTPS<tensor>::measure_onesite()
         const auto val = core::Contract_one_site_iTPS_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
             op.op);
-        local_obs[op.group][i] = val / norm[i];
+        local_obs[op.group][i] = op.coeff * val / norm[i];
       }
     }
   }
@@ -240,7 +240,7 @@ auto iTPS<tensor>::measure_onesite_density()
     const auto val = core::Contract_one_site_density_CTM(
         C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
         op.op);
-    local_obs[op.group][i] = val / norm[i];
+    local_obs[op.group][i] = op.coeff * val / norm[i];
   }
   //  }
   double norm_real_min = 1e100;

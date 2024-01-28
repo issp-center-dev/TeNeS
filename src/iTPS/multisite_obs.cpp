@@ -202,7 +202,7 @@ auto iTPS<ptensor>::measure_multisite()
           core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_density, is_meanfield);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx, op.dy}] = value / norm;
+    ret[op.group][{op.source_site, op.dx, op.dy}] = op.coeff * value / norm;
   }
   // ret.push_back(norms);
 

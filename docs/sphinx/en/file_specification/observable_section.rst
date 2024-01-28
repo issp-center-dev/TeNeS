@@ -18,6 +18,8 @@ Define one-body operators that indicate physical quantities defined at each site
    ``sites``,    "Site number",         Integer or a list of integer
    ``dim``,      "Dimension of an operator",       Integer
    ``elements``, "Non-zero elements of an operator", String
+   ``coeff``,    "Coefficient of operator (real part)", Float
+   ``coeff_im``,  "Coefficient of operator (imaginary part)", Float
 
 ``name``  specifies an operator name.
 
@@ -34,6 +36,9 @@ One element is specified by one line consisting of two integers and two floating
 
 - The first two integers are the state numbers before and after the act of the operator, respectively.
 - The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.
+
+``coeff`` and ``coeff_im`` are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.
 
 Example
 .......
@@ -93,6 +98,8 @@ Define two-body operators that indicate physical quantities defined on two sites
    ``dim``,      "Dimension of an operator",           Integer
    ``elements``, "Non-zero elements of an operator",   String
    ``ops``,      "Index of onesite operators",         A list of integer
+   ``coeff``,    "Coefficient of operator (real part)", Float
+   ``coeff_im``,  "Coefficient of operator (imaginary part)", Float
 
 
 ``name``  specifies an operator name.
@@ -122,6 +129,9 @@ Using ``ops``, a two-body operator can be defined as a direct product of the one
 For example, if :math:`S^z` is defined as ``group = 0`` in ``observable.onesite``,  :math:`S ^ z_iS ^ z_j` can be expressed as ``ops = [0,0]``.
 
 If both ``elements`` and ``ops`` are defined, the process will end in error.
+
+``coeff`` and ``coeff_im`` are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.
 
 Example
 .......
@@ -193,6 +203,8 @@ It is defined as a direct product of one-body operators defined in ``observable.
    ``group``,      "Identification number of operators", Integer
    ``multisites``, "Sites",                              String
    ``ops``,        "Index of onesite operators",         List of integers
+   ``coeff``,      "Coefficient of operator (real part)", Float
+   ``coeff_im``,    "Coefficient of operator (imaginary part)", Float
 
 ``name``  specifies an operator name.
 
@@ -210,3 +222,5 @@ One line consisting of integers means a set sites.
 Using ``ops``, a multi-body operator can be defined as a direct product of the one-body operators defined in ``observable.onesite``.
 For example, if :math:`S^z` is defined as ``group = 0`` in ``observable.onesite``,  :math:`S^z_i S^z_j S^z_k` can be expressed as ``ops = [0,0,0]``.
 
+``coeff`` and ``coeff_im`` are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.

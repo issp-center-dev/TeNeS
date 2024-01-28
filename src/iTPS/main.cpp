@@ -48,23 +48,24 @@ tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
   }
   MPI_Comm comm = ops[0].op.get_comm();
   for (auto const& op : ops) {
+    double coeff = std::real(op.coeff);
     if (op.is_onesite()) {
       mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
                                                               op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
-      ret.emplace_back(op.name, op.group, op.source_site, A);
+      ret.emplace_back(op.name, op.group, op.source_site, A, coeff);
     } else if (op.ops_indices.empty()) {
       mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
                                                               op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
-      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, A);
+      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, A, coeff);
     } else {
       ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy,
-                       op.ops_indices);
+                       op.ops_indices, coeff);
     }
   }
   return ret;

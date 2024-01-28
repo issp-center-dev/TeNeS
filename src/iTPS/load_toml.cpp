@@ -78,6 +78,13 @@ struct bittype<long long int> {
   typedef int64_t type;
 };
 
+template <class T>
+T reduce(double re, double im);
+template <>
+std::complex<double> reduce<std::complex<double>>(double re, double im) { return std::complex<double>(re, im); }
+template <>
+double reduce<double>(double re, double im) { return re; }
+
 }  // end of namespace detail
 
 template <class T>
@@ -516,9 +523,17 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
 
   auto group = find<int>(param, "group");
   auto name = find_or(param, "name", std::string(""));
+  auto coeff_re = find_or(param, "coeff", 1.0);
+  auto coeff_im = find_or(param, "coeff_im", 0.0);
+  typename tensor::value_type coeff = detail::reduce<typename tensor::value_type>(coeff_re, coeff_im);
+  auto is_real = std::is_same<typename tensor::value_type, double>::value;
+  if(is_real && coeff_im != 0.0){
+    std::stringstream ss;
+    ss << "parameter.general.is_real is true but coeff_im is not zero in a section " << tablename;
+    throw tenes::input_error(ss.str());
+  }
 
   std::vector<Operator<tensor>> ret;
-
   if (nbody == 1) {
     auto site_int = param->get_as<int>("sites");
     auto site_arr = param->get_array_of<int64_t>("sites");
@@ -536,7 +551,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
       throw input_error(detail::msg_cannot_find("sites", tablename));
     }
     for (int s : sites) {
-      ret.emplace_back(name, group, s, A);
+      ret.emplace_back(name, group, s, A, coeff);
     }
   } else if (nbody == 2) {
     auto bonds_str = find<std::string>(param, "bonds");
@@ -544,10 +559,10 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (auto bond : bonds) {
       if (elements) {
         ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), A);
+                         std::get<2>(bond), A, coeff);
       } else {
         ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), op_ind);
+                         std::get<2>(bond), op_ind, coeff);
       }
     }
   } else {
@@ -556,10 +571,10 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     for (auto ms : mss) {
       if (elements) {
         ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), A);
+                         std::get<2>(ms), A, coeff);
       } else {
         ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), op_ind);
+                         std::get<2>(ms), op_ind, coeff);
       }
     }
   }
