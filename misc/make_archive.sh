@@ -1,3 +1,10 @@
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <version>"
+  exit 1
+fi
+
+version=$1
+
 ROOT_DIR=`pwd`
 if [ -z "$(grep 'project(TeNeS' $ROOT_DIR/CMakeLists.txt 2>/dev/null)" ]; then
   echo "ERROR: current directory is not the root directory of the TeNeS codes"
@@ -27,7 +34,6 @@ for lang in ja en; do
 done
 cd $ROOT_DIR
 
-version=2.1-dev
 
 git submodule update -i -r
 git-archive-all \

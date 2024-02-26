@@ -1,11 +1,22 @@
-# TeNeS v2.0.x Release Notes
+# TeNeS v2.1.x Release Notes
 
-## Changes between v2.0.0 and v1.3.4
+## Changes between v2.1.0 and v2.0.0
 
-- Real-time evolution (https://github.com/issp-center-dev/TeNeS/pull/68)
-- Multisite observables (https://github.com/issp-center-dev/TeNeS/pull/69)
-- Finite temperature calculation (https://github.com/issp-center-dev/TeNeS/pull/75)
-- The bond dimension of CTM is automatically reduced in updating CTM (https://github.com/issp-center-dev/TeNeS/pull/77)
+### New features
+
+- `tenes`
+    - Enabled to save tensors in the real-time evolution and the finite-temperature calculation ([#88][])
+    - Enabled to specify coefficient of observables ([#91][])
+- `tenes_std`
+    - Enabled to read multiple input files ([#92][])
 
 ### Bug fixes
-- The sign of Sy in `tenes_simple` is fixed (https://github.com/issp-center-dev/TeNeS/pull/78)
+- `tenes`
+    - Fixed a bug of combination of RSVD and CTMRG method with shrinkage of chi ([#86][], [#87][])
+
+
+[#86]: https://github.com/issp-center-dev/TeNeS/pull/86
+[#87]: https://github.com/issp-center-dev/TeNeS/pull/87
+[#88]: https://github.com/issp-center-dev/TeNeS/pull/88
+[#91]: https://github.com/issp-center-dev/TeNeS/pull/91
+[#92]: https://github.com/issp-center-dev/TeNeS/pull/92
