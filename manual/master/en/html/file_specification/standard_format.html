@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>5.3. Input file for tenes_std &#8212; TeNeS 2.0.0 documentation</title>
+    <title>5.3. Input file for tenes_std &#8212; TeNeS 2.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=73cda6fb"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=0218eca2"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -563,6 +563,14 @@ This section has two types of subsections, <code class="docutils literal notrans
 <td><p>Non-zero elements of an operator</p></td>
 <td><p>String</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
@@ -577,6 +585,8 @@ One element is specified by one line consisting of two integers and two floating
 <li><p>The first two integers are the state numbers before and after the act of the operator, respectively.</p></li>
 <li><p>The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.</p></li>
 </ul>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
 <section id="id1">
 <h4>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
 <p>As an example, the case of <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2</p>
@@ -650,6 +660,14 @@ elements = &quot;&quot;&quot;
 <td><p>Index of onesite operators</p></td>
 <td><p>A list of integer</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
@@ -679,6 +697,8 @@ One element consists of one line consisting of four integers and two floating-po
 <p>Using <code class="docutils literal notranslate"><span class="pre">ops</span></code>, a two-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.
 For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S ^ z_iS ^ z_j\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code>.</p>
 <p>If both <code class="docutils literal notranslate"><span class="pre">elements</span></code> and <code class="docutils literal notranslate"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
 <section id="id2">
 <h4>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
 <p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
@@ -761,6 +781,14 @@ It is defined as a direct product of one-body operators defined in <code class="
 <td><p>Index of onesite operators</p></td>
 <td><p>List of integers</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
@@ -778,6 +806,8 @@ One line consisting of integers means a set sites.</p>
 </ul>
 <p>Using <code class="docutils literal notranslate"><span class="pre">ops</span></code>, a multi-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.
 For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S^z_i S^z_j S^z_k\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0,0]</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
 </section>
 </section>
 <section id="hamiltonian-section">

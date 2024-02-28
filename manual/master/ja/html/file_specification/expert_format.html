@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>5.4. tenes の入力ファイル &#8212; TeNeS 2.0.0 ドキュメント</title>
+    <title>5.4. tenes の入力ファイル &#8212; TeNeS 2.1.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ead71d55"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../_static/translations.js?v=4dbe4bdc"></script>
@@ -563,6 +563,14 @@ dimension = 9 # CHI
 <td><p>演算子の非ゼロ要素</p></td>
 <td><p>文字列</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>演算子にかかる係数（実部）</p></td>
+<td><p>実数</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>演算子にかかる係数（虚部）</p></td>
+<td><p>実数</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
@@ -577,6 +585,8 @@ dimension = 9 # CHI
 <li><p>最初の2つはそれぞれ演算子が作用する前と後の状態番号を示します。</p></li>
 <li><p>あとの2つはそれぞれ演算子の要素の実部と虚部を示します。</p></li>
 </ul>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code>, <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> は演算子にかかる係数の実部と虚部です。
+省略した場合はそれぞれ 1.0, 0.0 になります。</p>
 <section id="id2">
 <h4>例<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h4>
 <p>S=1/2 のSz 演算子</p>
@@ -652,6 +662,14 @@ elements = &quot;&quot;&quot;
 <td><p>onesite 演算子の識別番号</p></td>
 <td><p>整数のリスト</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>演算子にかかる係数（実部）</p></td>
+<td><p>実数</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>演算子にかかる係数（虚部）</p></td>
+<td><p>実数</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
@@ -679,6 +697,8 @@ elements = &quot;&quot;&quot;
 例えば <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> の <code class="docutils literal notranslate"><span class="pre">group=0</span></code> として <span class="math notranslate nohighlight">\(S^z\)</span> を定義していた場合には、
 <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code> として <span class="math notranslate nohighlight">\(S^z_iS^z_j\)</span> を表現できます。</p>
 <p><code class="docutils literal notranslate"><span class="pre">elements</span></code> と <code class="docutils literal notranslate"><span class="pre">ops</span></code> を同時に定義した場合にはエラー終了します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code>, <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> は演算子にかかる係数の実部と虚部です。
+省略した場合はそれぞれ 1.0, 0.0 になります。</p>
 <section id="id3">
 <h4>例<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h4>
 <p>ここでは具体例として、<code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> の正方格子 S=1/2 ハイゼンベルグ模型のボンドハミルトニアンのエネルギーを求めるため、
@@ -765,6 +785,14 @@ elements = &quot;&quot;&quot;
 <td><p>onesite 演算子の識別番号</p></td>
 <td><p>整数のリスト</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>演算子にかかる係数（実部）</p></td>
+<td><p>実数</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>演算子にかかる係数（虚部）</p></td>
+<td><p>実数</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code> は演算子の名前です。</p>
@@ -783,6 +811,8 @@ elements = &quot;&quot;&quot;
 <p><code class="docutils literal notranslate"><span class="pre">ops</span></code> を用いて <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> で定義した1体演算子の直積として演算子を定義します。
 例えば <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> の <code class="docutils literal notranslate"><span class="pre">group=0</span></code> として <span class="math notranslate nohighlight">\(S^z\)</span> を定義していた場合には、
 <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0,0]</span></code> として <span class="math notranslate nohighlight">\(S^z_iS^z_jS^z_k\)</span> を表現できます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code>, <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> は演算子にかかる係数の実部と虚部です。
+省略した場合はそれぞれ 1.0, 0.0 になります。</p>
 </section>
 </section>
 <section id="evolution">

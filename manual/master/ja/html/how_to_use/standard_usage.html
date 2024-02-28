@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>3.2. tenes_std の使用方法 &#8212; TeNeS 2.0.0 ドキュメント</title>
+    <title>3.2. tenes_std の使用方法 &#8212; TeNeS 2.1.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ead71d55"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
     <script src="../_static/doctools.js?v=888ff710"></script>
     <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../_static/translations.js?v=4dbe4bdc"></script>
@@ -36,11 +36,25 @@
   <section id="tenes-std">
 <h1><span class="section-number">3.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の使用方法<a class="headerlink" href="#tenes-std" title="この見出しへのパーマリンク">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> は与えられたハミルトニアンから虚時間刻み <span class="math notranslate nohighlight">\(\tau\)</span> の虚時間発展演算子 <span class="math notranslate nohighlight">\(\exp\left(-\tau \mathcal{H}_{ij}\right)\)</span> を導出し、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを生成するツールです。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tenes_std<span class="w"> </span>std.toml
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tenes_std<span class="w"> </span>std.toml<span class="w"> </span><span class="o">[</span>std_2.toml<span class="w"> </span>...<span class="o">]</span>
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>引数としてファイルを取ります</p></li>
+<li><dl class="simple">
+<dt>引数としてファイルを取ります</dt><dd><ul>
+<li><p>複数の入力ファイルからひとつの出力ファイルを生成可能です</p></li>
+<li><p>同じ名前のパラメータを複数の入力で指定した場合はエラー終了します</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code> などの複数指定できるセクションについては同時に指定可能です</dt><dd><ul>
+<li><p>後ろのファイルの内容が前のファイルの内容に追記されます</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルを出力します</p></li>
 <li><dl class="simple">
 <dt>コマンドラインオプションは以下の通りです</dt><dd><ul>
