@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5.3. Input file for tenes_std &#8212; TeNeS 2.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=0218eca2"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5.4. Input file for tenes" href="expert_format.html" />
+    <link rel="prev" title="5.2. Input file for tenes_simple" href="simple_format.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="input-file-for-tenes-std">
+<span id="sec-std-format"></span><h1><span class="section-number">5.3. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code><a class="headerlink" href="#input-file-for-tenes-std" title="Permalink to this heading">¶</a></h1>
+<ul class="simple">
+<li><p>File format:
+<a class="reference external" href="https://qiita.com/minoritea/items/c0de47b8beb813c655d4">TOML</a> format</p></li>
+<li><p>This file has 5 sections: <code class="docutils literal notranslate"><span class="pre">parameter</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code>, <code class="docutils literal notranslate"><span class="pre">observable</span></code>, <code class="docutils literal notranslate"><span class="pre">correlation</span></code></p></li>
+</ul>
+<section id="parameter-section">
+<h2><span class="section-number">5.3.1. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> section<a class="headerlink" href="#parameter-section" title="Permalink to this heading">¶</a></h2>
+<p>Set various parameters that appear in the calculation, such as the number of updates.
+This section has five subsections: <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code>.</p>
+<section id="parameter-general">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Permalink to this heading">¶</a></h3>
+<p>General parameters for <code class="docutils literal notranslate"><span class="pre">tenes</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.6%" />
+<col style="width: 42.9%" />
+<col style="width: 14.3%" />
+<col style="width: 14.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p></td>
+<td><p>Calculation mode</p></td>
+<td><p>String</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">\&quot;ground</span> <span class="pre">state\&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p></td>
+<td><p>Whether to limit all tensors to real valued ones</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<td><p>Absolute cutoff value for reading operators</p></td>
+<td><p>Real</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<td><p>Whether to calculate and save observables</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
+<td><p>Interval of measurement in finite temperature calculation and time evolution process</p></td>
+<td><p>Integer or list of integers</p></td>
+<td><p>10</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<td><p>Directory for saving result such as physical quantities</p></td>
+<td><p>String</p></td>
+<td><p>&quot;output&quot;</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
+<td><p>Directory for saving optimized tensors</p></td>
+<td><p>String</p></td>
+<td><p>&quot;&quot;</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
+<td><p>Directory for loading initial tensors</p></td>
+<td><p>String</p></td>
+<td><p>&quot;&quot;</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
+<ul>
+<li><p>Specify the calculation mode</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
+<ul>
+<li><p>Search for the ground state of the Hamiltonian</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> calculates the imaginary time evolution operator <span class="math notranslate nohighlight">\(U(\tau) = e^{-\tau H}\)</span> from the Hamiltonian <span class="math notranslate nohighlight">\(H\)</span></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;time</span> <span class="pre">evolution&quot;</span></code></p>
+<ul>
+<li><p>Calculate the time evolution of the observables from the initial state</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> calculates the time evolution operator <span class="math notranslate nohighlight">\(U(t) = e^{-it H}\)</span> from the Hamiltonian <span class="math notranslate nohighlight">\(H\)</span></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;finite</span> <span class="pre">temperature&quot;</span></code></p>
+<ul>
+<li><p>Calculate the finite temperature expectation values of the observables</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> calculates the imaginary time evolution operator <span class="math notranslate nohighlight">\(U(\tau) = e^{-\tau H}\)</span> from the Hamiltonian <span class="math notranslate nohighlight">\(H\)</span></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
+<ul>
+<li><p>When set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</p></li>
+<li><p>If one complex operator is defined at least,  calculation will end in errors before starting.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<ul>
+<li><p>When the absolute value of operator elements loaded is less than <code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code>, it is regarded as zero</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">meaure</span></code></p>
+<ul>
+<li><p>When set to <code class="docutils literal notranslate"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</p></li>
+<li><p>Elapsed time <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> is always saved</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p>
+<ul>
+<li><p>Specify the interval of measurement in time evolution process and finite temperature Calculation</p></li>
+<li><p>Physical quantitites are calculated and saved each after <code class="docutils literal notranslate"><span class="pre">measure_interval</span></code> updates</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
+<ul>
+<li><p>Save numerical results such as physical quantities to files in this directory</p></li>
+<li><p>Empty means <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span></code> (current directory)</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p>
+<ul>
+<li><p>Save optimized tensors to files in this directory</p></li>
+<li><p>If empty no tensors will be saved</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
+<ul>
+<li><p>Read initial tensors from files in this directory</p></li>
+<li><p>If empty no tensors will be loaded</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="parameter-simple-update">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Permalink to this heading">¶</a></h3>
+<p>Parameters in the simple update procedure.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>(Imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p></td>
+<td><p>Real or list of real</p></td>
+<td><p>0.01</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>Number of simple updates</p></td>
+<td><p>Integer or list of integers</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lambda_cutoff</span></code></p></td>
+<td><p>cutoff of the mean field to be considered zero in the simple update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
+<td><p>Whether the tensor gauge is fixed</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_maxiter</span></code></p></td>
+<td><p>Maximum number of iterations for fixing gauge</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_converge_epsilon</span></code></p></td>
+<td><p>Convergence criteria of iterations for fixing gauge</p></td>
+<td><p>Real</p></td>
+<td><p>1e-2</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p>
+<ul>
+<li><p>Specify the (imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> uses it to calculate the imaginary time evolution operator <span class="math notranslate nohighlight">\(e^{-\tau H}\)</span> from the Hamiltonian</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> uses it to calculate the time of each measurement</p>
+<ul>
+<li><p>For finite temperature calculation, note that the inverse temperature increase <span class="math notranslate nohighlight">\(2\tau\)</span> at a step because <span class="math notranslate nohighlight">\(\rho(\beta + 2\tau) = U(\tau)\rho(\beta)\bar{U}(\tau)\)</span></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>When a list is specified, the time step can be changed for each group of time evolution operators</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p>
+<ul>
+<li><p>Specify the number of simple updates</p></li>
+<li><p>When a list is specified, the number of simple updates can be changed for each group of time evolution operators</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="parameter-full-update">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Permalink to this heading">¶</a></h3>
+<p>Parameters in the full update procedure.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tau</span></code></p></td>
+<td><p>(Imaginary) time step <span class="math notranslate nohighlight">\(\tau\)</span> in (imaginary) time evolution operator</p></td>
+<td><p>Real or list of reals</p></td>
+<td><p>0.01</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_step</span></code></p></td>
+<td><p>Number of full updates</p></td>
+<td><p>Integer or list of integers</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env_cutoff</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing environment through full updates</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inverse_precision</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing the pseudoinverse matrix with full update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>Convergence criteria for truncation optimization with full update</p></td>
+<td><p>Real</p></td>
+<td><p>1e-6</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>Maximum iteration number for truncation optimization on full updates</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gauge_fix</span></code></p></td>
+<td><p>Whether the tensor gauge is fixed</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fastfullupdate</span></code></p></td>
+<td><p>Whether the fast full update is adopted</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="parameter-ctm">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Permalink to this heading">¶</a></h3>
+<p>Parameters for corner transfer matrices, CTM.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dimension</span></code></p></td>
+<td><p>Bond Dimension of CTM <span class="math notranslate nohighlight">\(\chi\)</span></p></td>
+<td><p>Integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_cutoff</span></code></p></td>
+<td><p>Cutoff of singular values to be considered as zero when computing CTM projectors</p></td>
+<td><p>Real</p></td>
+<td><p>1e-12</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code></p></td>
+<td><p>CTM convergence criteria</p></td>
+<td><p>Real</p></td>
+<td><p>1e-6</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<td><p>Maximum iteration number of convergence for CTM</p></td>
+<td><p>Integer</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
+<td><p>Whether to use only the 1/4 corner tensor in the CTM projector calculation</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
+<td><p>Whether to replace SVD with random SVD</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
+<td><p>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</p></td>
+<td><p>Real</p></td>
+<td><p>2.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
+<td><p>Use mean field environment obtained through simple update instead of CTM</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+</tbody>
+</table>
+<p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
+</section>
+<section id="parameter-random">
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Permalink to this heading">¶</a></h3>
+<p>Parameters for random number generators.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 37.5%" />
+<col style="width: 37.5%" />
+<col style="width: 12.5%" />
+<col style="width: 12.5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<td><p>Seed of the pseudo-random number generator used to initialize the tensor</p></td>
+<td><p>Integer</p></td>
+<td><p>11</p></td>
+</tr>
+</tbody>
+</table>
+<p>Each MPI process has the own seed as <code class="docutils literal notranslate"><span class="pre">seed</span></code> plus the process ID (MPI rank).</p>
+</section>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+is_real = true
+[parameter.simple_update]
+num_step = 100
+tau = 0.01
+[parameter.full_update]
+num_step = 0  # No full update
+tau = 0.01
+[parameter.ctm]
+iteration_max = 10
+dimension = 9 # CHI
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tensor-section">
+<h2><span class="section-number">5.3.2. </span><code class="docutils literal notranslate"><span class="pre">tensor</span></code> section<a class="headerlink" href="#tensor-section" title="Permalink to this heading">¶</a></h2>
+<p>Specify the unit cell information (Information of bonds is given in the <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>) and <code class="docutils literal notranslate"><span class="pre">evolution</span></code> (<code class="docutils literal notranslate"><span class="pre">tenes</span></code>)  sections.).
+Unit cell has a shape of a rectangular with the size of <code class="docutils literal notranslate"><span class="pre">Lx</span></code> times <code class="docutils literal notranslate"><span class="pre">Ly</span></code>.
+<code class="docutils literal notranslate"><span class="pre">lattice</span></code> section has an array of subsections <code class="docutils literal notranslate"><span class="pre">unitcell</span></code> .</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21.4%" />
+<col style="width: 28.6%" />
+<col style="width: 28.6%" />
+<col style="width: 21.4%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">L_sub</span></code></p></td>
+<td><p>Unit cell size</p></td>
+<td><p>Integer or a list of integer</p></td>
+<td><p>–</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">skew</span></code></p></td>
+<td><p>Shift value in skew boundary condition</p></td>
+<td><p>Integer</p></td>
+<td><p>0</p></td>
+</tr>
+</tbody>
+</table>
+<p>When a list of two integers is passed as <code class="docutils literal notranslate"><span class="pre">L_sub</span></code>, the first element gives the value of <code class="docutils literal notranslate"><span class="pre">Lx</span></code> and the second one does <code class="docutils literal notranslate"><span class="pre">Ly</span></code>.
+A list of three or more elements causes an error.
+If <code class="docutils literal notranslate"><span class="pre">L_sub</span></code> is an integer, both <code class="docutils literal notranslate"><span class="pre">Lx</span></code> and <code class="docutils literal notranslate"><span class="pre">Ly</span></code> will have the same value.</p>
+<p>Sites in a unit cell are indexed starting from 0.
+These are arranged in order from the x direction.</p>
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig1.png"><img alt="../_images/tensor_sec_fig1.png" src="../_images/tensor_sec_fig1.png" style="width: 150px;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 5.5 </span><span class="caption-text">An example for <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code>.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> is the shift value in the x direction when moving one unit cell in the y direction.</p>
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 5.6 </span><span class="caption-text">An example for <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[3,2],</span> <span class="pre">skew</span> <span class="pre">=</span> <span class="pre">1</span></code> (ruled line is a separator for unit cell).</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<section id="tensor-unitcell-subsection">
+<h3><code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> subsection<a class="headerlink" href="#tensor-unitcell-subsection" title="Permalink to this heading">¶</a></h3>
+<p>The information of site tensors <span class="math notranslate nohighlight">\(T_{ijkl\alpha}^{(n)}\)</span> is specified.
+Here, <span class="math notranslate nohighlight">\(i, j, k, l\)</span> indicate the index of the virtual bond,
+<span class="math notranslate nohighlight">\(\alpha\)</span> indicates the index of the physical bond,
+and <span class="math notranslate nohighlight">\(n\)</span> indicates the site number.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27.3%" />
+<col style="width: 36.4%" />
+<col style="width: 36.4%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">index</span></code></p></td>
+<td><p>Site number</p></td>
+<td><p>Integer or a list of integer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">physical_dim</span></code></p></td>
+<td><p>Dimension of physical bond for a site tensor</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code></p></td>
+<td><p>Dimension of virtual bonds <span class="math notranslate nohighlight">\(D\)</span> for a site tensor</p></td>
+<td><p>Integer or a list of integer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">initial_state</span></code></p></td>
+<td><p>Initial tensor</p></td>
+<td><p>a list of real</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">noise</span></code></p></td>
+<td><p>Noise for initial tensor</p></td>
+<td><p>Real</p></td>
+</tr>
+</tbody>
+</table>
+<p>Multiple sites can be specified at once by setting a list to <code class="docutils literal notranslate"><span class="pre">index</span></code>.
+An empty list <code class="docutils literal notranslate"><span class="pre">[]</span></code> means all sites.</p>
+<p>By setting a list to <code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code>, individual bond dimensions in four directions can be specified.
+The order is left (-x), top (+y), right (+x), and bottom (-y).</p>
+<p>An initial state of a system <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> is represented as
+the direct product state of the initial states at each site <span class="math notranslate nohighlight">\(i\)</span>, <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[|\Psi\rangle = \otimes_i |\Psi_i\rangle,\]</div>
+<p>where <span class="math notranslate nohighlight">\(|\Psi_i\rangle = \sum_\alpha A_\alpha |\alpha\rangle_i\)</span> is the initial state at <span class="math notranslate nohighlight">\(i\)</span> site.
+Site tensors are initialized to realize this product state with some noise.
+<code class="docutils literal notranslate"><span class="pre">initial_state</span></code> specifies (real) values of expansion coefficient <span class="math notranslate nohighlight">\(A_\alpha\)</span>, which will be automatically normalized.
+The tensor itself is initialized such that all elements with a virtual bond index of 0 are <span class="math notranslate nohighlight">\(T_{0000\alpha} = A_\alpha\)</span>.
+The other elements are independently initialized by a uniform random number of <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code>.
+For example, in the case of <span class="math notranslate nohighlight">\(S=1/2\)</span> ,
+set <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">0.0]</span></code> when you want to set the initial state as the state <span class="math notranslate nohighlight">\(|\Psi_i\rangle = |\uparrow\rangle = |0\rangle\)</span>.
+When you want to set the initial state as the state <span class="math notranslate nohighlight">\(|\Psi_i\rangle = \left(|\uparrow\rangle + |\downarrow\rangle\right)/\sqrt{2}\)</span>, set <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[1.0,</span> <span class="pre">1.0]</span></code>.</p>
+<p>When an array consisting of only zeros is passed as <code class="docutils literal notranslate"><span class="pre">initil_state</span></code>, all the elements of the initial tensor will be initialized independently by uniform random value <code class="docutils literal notranslate"><span class="pre">[-noise,</span> <span class="pre">noise)</span></code> .</p>
+</section>
+</section>
+<section id="observable-section">
+<h2><span class="section-number">5.3.3. </span><code class="docutils literal notranslate"><span class="pre">observable</span></code> section<a class="headerlink" href="#observable-section" title="Permalink to this heading">¶</a></h2>
+<p>Define various settings related to physical quantity measurement.
+This section has two types of subsections, <code class="docutils literal notranslate"><span class="pre">onesite</span></code> and <code class="docutils literal notranslate"><span class="pre">twosite</span></code>.</p>
+<section id="observable-onesite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this heading">¶</a></h3>
+<p>Define one-body operators that indicate physical quantities defined at each site <span class="math notranslate nohighlight">\(i\)</span>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>Operator name</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>Identification number of operators</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sites</span></code></p></td>
+<td><p>Site number</p></td>
+<td><p>Integer or a list of integer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>Dimension of an operator</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>Non-zero elements of an operator</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> specifies an identification number of one-site operators.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sites</span></code> specifies a site number where an operater acts on.
+By using a list, the operators can be defined on the multiple sites at the same time.
+An empty list <code class="docutils literal notranslate"><span class="pre">[]</span></code> means all sites.</p>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> specifies a dimension of an operator.</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
+One element is specified by one line consisting of two integers and two floating-point numbers separated by spaces.</p>
+<ul class="simple">
+<li><p>The first two integers are the state numbers before and after the act of the operator, respectively.</p></li>
+<li><p>The latter two floats indicate the real and imaginary parts of the elements of the operator, respectively.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
+<section id="id1">
+<h4>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
+<p>As an example, the case of <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}S^z = \left(\begin{array}{cc} 0.5 &amp; 0.0 \\ 0.0 &amp; -0.5 \end{array}\right)\end{split}\]</div>
+<p>is explained.</p>
+<p>First, set the name to <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;Sz&quot;</span></code> and the identification number to <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code>.</p>
+<p>Next, if the same operator is used at all sites, set <code class="docutils literal notranslate"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[]</span></code>.
+Otherwise, for example, if there are sites with different spin length <span class="math notranslate nohighlight">\(S\)</span>, specify a specific site number such as <code class="docutils literal notranslate"><span class="pre">sites</span> <span class="pre">=</span> <span class="pre">[0,1]</span></code>.</p>
+<p>The dimension of the operator is <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">2</span></code>, because it is the size of the matrix shown above.</p>
+<p>Finally, the operator element is defined.
+When we label two basis on site as <span class="math notranslate nohighlight">\(|\uparrow\rangle = |0\rangle\)</span> and <span class="math notranslate nohighlight">\(|\downarrow\rangle = |1\rangle\)</span>,
+non-zero elements of <span class="math notranslate nohighlight">\(S^z\)</span> are represented as</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>elements = &quot;&quot;&quot;
+0 0   0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>As a result, <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2 is defined as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]]
+name = &quot;Sz&quot;
+group = 0
+sites = []
+dim = 2
+elements = &quot;&quot;&quot;
+0 0  0.5 0.0
+1 1  -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</section>
+</section>
+<section id="observable-twosite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this heading">¶</a></h3>
+<p>Define two-body operators that indicate physical quantities defined on two sites.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>Operator name</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>Identification number of operators</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bonds</span></code></p></td>
+<td><p>Bond</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>Dimension of an operator</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>Non-zero elements of an operator</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ops</span></code></p></td>
+<td><p>Index of onesite operators</p></td>
+<td><p>A list of integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> specifies an identification number of two sites operators.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bonds</span></code> specifies a string representing the set of site pairs on which the operator acts.
+One line consisting of three integers means one site pair.</p>
+<ul>
+<li><p>The first integer is the number of the source site.</p></li>
+<li><p>The last two integers are the coordinates (dx, dy) of the other site (target site) from the source site.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Both dx and dy must be in the range <span class="math notranslate nohighlight">\(-3 \le dx \le 3\)</span>.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> specifies a dimension of an operator.
+In other words, the number of possible states of the site where the operator acts on.
+In the case of interaction between two <span class="math notranslate nohighlight">\(S=1/2\)</span> spins, for example, <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,</span> <span class="pre">2]</span></code> .</p>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
+One element consists of one line consisting of four integers and two floating-point numbers separated by spaces.</p>
+<ul class="simple">
+<li><p>The first two integers are the status numbers of the source site and target site <strong>before</strong> the operator acts on.</p></li>
+<li><p>The next two integers show the status numbers of the source site and target site <strong>after</strong> the operator acts on.</p></li>
+<li><p>The last two floats indicate the real and imaginary parts of the elements of the operator.</p></li>
+</ul>
+<p>Using <code class="docutils literal notranslate"><span class="pre">ops</span></code>, a two-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.
+For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S ^ z_iS ^ z_j\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0]</span></code>.</p>
+<p>If both <code class="docutils literal notranslate"><span class="pre">elements</span></code> and <code class="docutils literal notranslate"><span class="pre">ops</span></code> are defined, the process will end in error.</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
+<section id="id2">
+<h4>Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
+<p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
+<p>is explained below.</p>
+<p>First, the name and identification number is set as <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">=</span> <span class="pre">&quot;hamiltonian&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code>.
+<code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> because the state of each site is a superposition of the two states
+<span class="math notranslate nohighlight">\(|\uparrow\rangle\)</span> and <span class="math notranslate nohighlight">\(|\downarrow\rangle\)</span>.</p>
+<p>Next, let’s define the bonds. In this case, site indecies are given as shown in <code class="xref std std-numref docutils literal notranslate"><span class="pre">bond_22</span></code> .
+The bond connecting 0 and 1 is represented as <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
+Similarly, The bond connecting 1 and 3 is represented as <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> because 3 is located at (0,1) from 1.</p>
+<figure class="align-default" id="id6">
+<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 5.7 </span><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> .</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>Finally, how to define the elements of the operator is explained.
+First, the basis of the site is needed to be labeled. Here, we label <span class="math notranslate nohighlight">\(|\uparrow\rangle\)</span> as 0 and <span class="math notranslate nohighlight">\(|\downarrow\rangle\)</span> as 1.
+Using this basis and label number, for example, one of diagonal elements <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \uparrow_j | \mathcal{H}_{ij} | \uparrow_i \uparrow_j \right\rangle = 1/4\)</span> is specified by <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0.25</span> <span class="pre">0.0</span></code>.
+Likewise, one of off-diagonal elements <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \downarrow_j | \mathcal{H}_{ij} | \downarrow_i \uparrow_j \right\rangle = 1/2\)</span> is specified by <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0.5</span> <span class="pre">0.0</span></code>.</p>
+<p>As a result, the Heisenberg Hamiltonian for S=1/2 is defined as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.twosite]]
+name = &quot;hamiltonian&quot;
+group = 0
+dim = [2, 2]
+bonds = &quot;&quot;&quot;
+0 0 1
+0 1 0
+1 0 1
+1 1 0
+2 0 1
+2 1 0
+3 0 1
+3 1 0
+&quot;&quot;&quot;
+elements = &quot;&quot;&quot;
+0 0 0 0  0.25 0.0
+1 0 1 0  -0.25 0.0
+0 1 1 0  0.5 0.0
+1 0 0 1  0.5 0.0
+0 1 0 1  -0.25 0.0
+1 1 1 1  0.25 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+</section>
+</section>
+<section id="observable-multisite">
+<h3><code class="docutils literal notranslate"><span class="pre">observable.multisite</span></code><a class="headerlink" href="#observable-multisite" title="Permalink to this heading">¶</a></h3>
+<p>Define multi-body operators that indicate physical quantities defined on three or more sites.
+It is defined as a direct product of one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>Operator name</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">group</span></code></p></td>
+<td><p>Identification number of operators</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">multisites</span></code></p></td>
+<td><p>Sites</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ops</span></code></p></td>
+<td><p>Index of onesite operators</p></td>
+<td><p>List of integers</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coeff</span></code></p></td>
+<td><p>Coefficient of operator (real part)</p></td>
+<td><p>Float</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coeff_im</span></code></p></td>
+<td><p>Coefficient of operator (imaginary part)</p></td>
+<td><p>Float</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code>  specifies an operator name.</p>
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> specifies an identification number of two sites operators.</p>
+<p><code class="docutils literal notranslate"><span class="pre">multisites</span></code> specifies a string representing the set of sets of sites on which the operator acts.
+One line consisting of integers means a set sites.</p>
+<ul class="simple">
+<li><p>The first integer is the number of the source site.</p></li>
+<li><p>The following integers are the coordinates (dx, dy) of the other sites from the source site.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">source_site</span> <span class="pre">dx2</span> <span class="pre">dy2</span> <span class="pre">dx3</span> <span class="pre">dy3</span> <span class="pre">...</span> <span class="pre">dxN</span> <span class="pre">dyN</span></code> for N-site operator.</p></li>
+<li><p>All sites must be within a square of size <span class="math notranslate nohighlight">\(4 \times 4\)</span>.</p></li>
+</ul>
+</li>
+</ul>
+<p>Using <code class="docutils literal notranslate"><span class="pre">ops</span></code>, a multi-body operator can be defined as a direct product of the one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.
+For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>,  <span class="math notranslate nohighlight">\(S^z_i S^z_j S^z_k\)</span> can be expressed as <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[0,0,0]</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
+If omitted, they are set to 1.0 and 0.0, respectively.</p>
+</section>
+</section>
+<section id="hamiltonian-section">
+<h2><span class="section-number">5.3.4. </span><code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> section<a class="headerlink" href="#hamiltonian-section" title="Permalink to this heading">¶</a></h2>
+<p>Let the whole Hamiltonian be the sum of the site Hamiltonian (one-site Hamiltonian) and bond Hamiltonian (two-site Hamiltonian).</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H} = \sum_i \mathcal{H}_i + \sum_{i,j} \mathcal{H}_{ij}\]</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">hamiltonian</span></code> section, each local Hamiltonian is defined.
+The format is similar to that of the one-site and two-site operator specified in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> and <code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dim</span></code></p></td>
+<td><p>Dimension of an operator</p></td>
+<td><p>A list of integers</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sites</span></code></p></td>
+<td><p>Site</p></td>
+<td><p>A list of integers</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bonds</span></code></p></td>
+<td><p>Bond</p></td>
+<td><p>String</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">elements</span></code></p></td>
+<td><p>Non-zero elements of an operator</p></td>
+<td><p>String</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">dim</span></code> specifies a dimension of an operator.
+In other words, the number of possible states of the site where the operator acts on.
+In the case of interaction between two <span class="math notranslate nohighlight">\(S=1/2\)</span> spin, for example, <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">=</span> <span class="pre">[2,2]</span></code> .
+<code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> judges whether a local Hamiltonian is site one or bond one from the number of integers in <code class="docutils literal notranslate"><span class="pre">dims</span></code>; if one, a site Hamiltonian is defined and otherwise a bond one.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sites</span></code>, a list of integers, specifies a set of sites where the site operator acts.
+An empty list (<code class="docutils literal notranslate"><span class="pre">[]</span></code>) means all the sites.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bonds</span></code> specifies a string representing the set of site pairs on which the operator acts.
+One line consisting of three integers means one site pair.</p>
+<ul class="simple">
+<li><p>The first integer is the number of the source site.</p></li>
+<li><p>The last two integers are the coordinates (dx, dy) of the destination site (target) from the source site.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">elements</span></code> is a string specifying the non-zero element of an operator.
+One element consists of one line consisting of two (site) or four (bond) integers and two floating-point numbers separated by spaces.</p>
+<ul>
+<li><p>For site Hamiltonian</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The first integer is the index of the state of the site <strong>before</strong> the operator acts on.</p></li>
+<li><p>The next one shows the index of the state of the site <strong>after</strong> the operator acts on.</p></li>
+<li><p>The last two indicate the real and imaginary parts of the elements of the operator.</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>For bond Hamiltonian</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The first two integers are the indices of the states of the source site and target site <strong>before</strong> the operator acts on.</p></li>
+<li><p>The next two show the indices of the states of the source site and target site <strong>after</strong> the operator acts on.</p></li>
+<li><p>The last two indicate the real and imaginary parts of the elements of the operator.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="correlation-section">
+<h2><span class="section-number">5.3.5. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> section<a class="headerlink" href="#correlation-section" title="Permalink to this heading">¶</a></h2>
+<p>In this section, the parameters about the site-site correlation function <span class="math notranslate nohighlight">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0 + \boldsymbol{r}) \right\rangle\)</span> is specified.
+If you omit this section, no correlation functions will be calculated.</p>
+<p>Coordinates <span class="math notranslate nohighlight">\(\boldsymbol{r}, \boldsymbol{r}_0\)</span> measured in the system of square lattice TNS.
+For example, the coordinate of the right neighbor tensor is <span class="math notranslate nohighlight">\(\boldsymbol{r} = (1,0)\)</span> and that of the top neighbor one is <span class="math notranslate nohighlight">\(\boldsymbol{r} = (0,1)\)</span>.
+TeNeS calculates the correlation functions along the positive direction of <span class="math notranslate nohighlight">\(x\)</span> and <span class="math notranslate nohighlight">\(y\)</span> axis, that is,</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>The coordinate of each site of the unitcell is used as the center coordinate, <span class="math notranslate nohighlight">\(\boldsymbol{r}_0\)</span>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">r_max</span></code></p></td>
+<td><p>Maximum distance <span class="math notranslate nohighlight">\(r\)</span> of the correlation function</p></td>
+<td><p>Integer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">operators</span></code></p></td>
+<td><p>Indices of operators A and B to be measured</p></td>
+<td><p>A list of integer</p></td>
+</tr>
+</tbody>
+</table>
+<p>The operators defined in the <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> section are used.</p>
+<section id="id3">
+<h3>Example<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<p>For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is defined as 0th operator and <span class="math notranslate nohighlight">\(S^x\)</span> is defined as 1st one,
+then <span class="math notranslate nohighlight">\(S^z(0) S^z(r), S^z(0) S^x(r), S^x(0) S^x(r)\)</span> for <span class="math notranslate nohighlight">\(0 \le r \le 5\)</span>
+are measured by the following definition:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[correlation]
+r_max = 5
+operators = [[0,0], [0,1], [1,1]]
+</pre></div>
+</div>
+</section>
+</section>
+<section id="correlation-length-section">
+<h2><span class="section-number">5.3.6. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> section<a class="headerlink" href="#correlation-length-section" title="Permalink to this heading">¶</a></h2>
+<p>This section describes how to calculate the correlation length <span class="math notranslate nohighlight">\(\xi\)</span>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17.6%" />
+<col style="width: 35.3%" />
+<col style="width: 23.5%" />
+<col style="width: 23.5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<td><p>Whether to calculate <span class="math notranslate nohighlight">\(xi\)</span> or not</p></td>
+<td><p>Bool</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">num_eigvals</span></code></p></td>
+<td><p>The number of eigenvalues of the transfer matrix to be calculated</p></td>
+<td><p>Integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">maxdim_dense_eigensolver</span></code></p></td>
+<td><p>Maximum dimension of the transfer matrix where the diagonalization method for dense matrices is used</p></td>
+<td><p>Integer</p></td>
+<td><p>200</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">arnoldi_maxdim</span></code></p></td>
+<td><p>Dimension of the Hessenberg matrix generated by the Arnoldi method</p></td>
+<td><p>Integer</p></td>
+<td><p>50</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">arnoldi_restartdim</span></code></p></td>
+<td><p>The number of the initial vectors generated by the restart process of the IRA method</p></td>
+<td><p>Integer</p></td>
+<td><p>20</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">arnoldi_maxiterations</span></code></p></td>
+<td><p>Maximum number of iterations in the IRA method</p></td>
+<td><p>Integer</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">arnoldi_rtol</span></code></p></td>
+<td><p>Relative tolerance used in the Arnoldi method</p></td>
+<td><p>Float</p></td>
+<td><p>1e-10</p></td>
+</tr>
+</tbody>
+</table>
+<p>The correlation length <span class="math notranslate nohighlight">\(\xi\)</span> will be calculated from the dominant eigenvalues of the transfer matrices.
+If the dimension of the transfer matrix is less than or equal to <code class="docutils literal notranslate"><span class="pre">maxdim_dense_eigensolver</span></code>, an eigensolver for dense matrices (LAPACK’s <code class="docutils literal notranslate"><span class="pre">*geev</span></code> routines) will be used.
+If not, an iterative method, the implicit restart Arnoldi method (IRA method), will be used.</p>
+<p>In the IRA method, a Hessenberg matrix with the size of <code class="docutils literal notranslate"><span class="pre">arnoldi_maxdim</span></code> is generated by the Arnoldi process.
+Its eigenvalues are approximants of the first <code class="docutils literal notranslate"><span class="pre">arnoldi_maxdim</span></code> eigenvalues of the original matrix.
+If not converged, the IRA method restarts the Arnoldi process with the newly generated <code class="docutils literal notranslate"><span class="pre">arnoldi_restartdim</span></code> initial vectors.
+In the many cases of the transfer matrices, such a process is not necessary (<code class="docutils literal notranslate"><span class="pre">arnoldi_maxiterations</span> <span class="pre">=</span> <span class="pre">1</span></code>).</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">5. File format</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="input_summary.html">5.1. Short summary for input files of TeNeS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_format.html">5.2. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">5.3. Input file for <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_format.html">5.4. Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="output_format.html">5.5. Output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">5. </span>File format</a><ul>
+      <li>Previous: <a href="simple_format.html" title="previous chapter"><span class="section-number">5.2. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code></a></li>
+      <li>Next: <a href="expert_format.html" title="next chapter"><span class="section-number">5.4. </span>Input file for <code class="docutils literal notranslate"><span class="pre">tenes</span></code></a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/file_specification/standard_format.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>例 &#8212; TeNeS 2.1.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p>サイト演算子の相関関数 <span class="math notranslate nohighlight">\(C = \left\langle A(\boldsymbol{r}_0)B(\boldsymbol{r}_0+\boldsymbol{r})\right\rangle\)</span> に関する情報を指定するセクションです。
+本セクションを省略した場合、相関関数は計算されません。</p>
+<p>座標は正方格子TNS の座標系で測られます。すなわち、右隣のテンソルは <span class="math notranslate nohighlight">\(\boldsymbol{r} = (1,0)\)</span> で、真上は <span class="math notranslate nohighlight">\(\boldsymbol{r} = (0,1)\)</span> です。
+中心座標 <span class="math notranslate nohighlight">\(\boldsymbol{r}_0\)</span> として、ユニットセル内のすべてのサイトが用いられます。
+また、<span class="math notranslate nohighlight">\(\boldsymbol{r}\)</span> は <span class="math notranslate nohighlight">\(x\)</span> ないし <span class="math notranslate nohighlight">\(y\)</span> 軸に平行な方向に、正の向きにのみ動きます。すなわち、</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{r} = (0,0), (1,0), (2,0), \dots, (r_\text{max}, 0), (0,1), (0,2), \dots, (0, r_\text{max})\]</div>
+<p>です。</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23.1%" />
+<col style="width: 46.2%" />
+<col style="width: 30.8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>名前</p></th>
+<th class="head"><p>説明</p></th>
+<th class="head"><p>型</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">r_max</span></code></p></td>
+<td><p>相関関数の距離 <span class="math notranslate nohighlight">\(r\)</span> の最大値</p></td>
+<td><p>整数</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">operators</span></code></p></td>
+<td><p>相関関数を測る1体演算子 A, B を表す番号</p></td>
+<td><p>整数のリストのリスト</p></td>
+</tr>
+</tbody>
+</table>
+<p>演算子は <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code> セクションで指定したものが用いられます。</p>
+<section id="id1">
+<h1>例<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<p>例えば <span class="math notranslate nohighlight">\(S^z\)</span> が0 番で、 <span class="math notranslate nohighlight">\(S^x\)</span> が1 番として定義されている場合、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[correlation]
+r_max = 5
+operators = [[0,0], [0,1], [1,1]]
+</pre></div>
+</div>
+<p>では相関関数 <span class="math notranslate nohighlight">\(S^z(0)S^z(r), S^z(0)S^x(r), S^x(0)S^x(r)\)</span> が、 <span class="math notranslate nohighlight">\(0 \le r \le 5\)</span> の範囲で測定されます。</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/file_specification/correlation_section.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
