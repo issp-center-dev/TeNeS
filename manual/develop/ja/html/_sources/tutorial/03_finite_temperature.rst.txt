@@ -83,11 +83,12 @@
     gnuplot -persist plot_mx.plt
     gnuplot -persist plot_mz.plt
 
-その結果を :numref:`fig_tutorial8_finitetemperature` に示します。
-比較のため、量子モンテカルロ法を用いて計算した結果も一緒に表示しています ( ``ALPS/looper`` を使用)。
+その結果を :numref:`fig_tutorial3_finitetemperature` に示します。
+比較のため、量子モンテカルロ法を用いて計算した結果も一緒に表示しています ( ``DSQSS/dla`` を使用)。
 
-.. figure:: ../../img/tutorial_08_finitetemperature.*
-	:name: fig_tutorial8_finitetemperature
+.. figure:: ../../img/tutorial_03_finitetemperature.*
+	:name: fig_tutorial3_finitetemperature
 	:width: 600px
 
-	イジング模型の有限温度計算の図: (a) エネルギー、(b) 比熱、(c) :math:`m_x` 、(d) :math:`m_z`. 縦軸は物理量、横軸は温度を表す。
+	イジング模型の有限温度計算の図: (a) エネルギー、(b) 比熱、(c) 横磁化、(d) 縦磁化. 縦軸は物理量、横軸は温度を表す。
+	実線はTeNeSによる計算で、四角はDSQSS/dla によるQMC計算（縦磁化は対称性により0）。
