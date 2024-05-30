@@ -1,0 +1,49 @@
+name = "S=1/2 XXZ model"
+[[sites]]
+type = 0
+N = 2
+values = [ -0.5, 0.5,]
+[[sites.elements]]
+istate = [ 0,]
+fstate = [ 0,]
+value = 1.0
+
+[[sites.elements]]
+istate = [ 1,]
+fstate = [ 1,]
+value = -1.0
+
+[[sites.sources]]
+istate = [ 0,]
+fstate = [ 1,]
+value = 0.5
+
+[[sites.sources]]
+istate = [ 1,]
+fstate = [ 0,]
+value = 0.5
+
+
+[[interactions]]
+type = 0
+nbody = 2
+N = [ 2, 2,]
+[[interactions.elements]]
+istate = [ 0, 0,]
+fstate = [ 1, 1,]
+value = -0.25
+
+[[interactions.elements]]
+istate = [ 0, 1,]
+fstate = [ 1, 0,]
+value = -0.25
+
+[[interactions.elements]]
+istate = [ 1, 0,]
+fstate = [ 0, 1,]
+value = -0.25
+
+[[interactions.elements]]
+istate = [ 1, 1,]
+fstate = [ 0, 0,]
+value = -0.25

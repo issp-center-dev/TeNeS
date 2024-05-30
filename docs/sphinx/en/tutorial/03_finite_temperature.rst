@@ -80,10 +80,11 @@ Running the following:
     gnuplot -persist plot_mx.plt
     gnuplot -persist plot_mz.plt
 
-will display plots for energy, heat capacity, and magnetizations (:math:`m_x` and :math:`m_z`). The resulting plots are illustrated in :numref:`fig_tutorial8_finitetemperature`. For comparison, results obtained using Quantum Monte Carlo calculations are also shown (using ``ALPS/looper``).
+will display plots for energy, heat capacity, and magnetizations (:math:`m_x` and :math:`m_z`). The resulting plots are illustrated in :numref:`fig_tutorial3_finitetemperature`. For comparison, results obtained using Quantum Monte Carlo calculations are also shown (using ``DSQSS/dla``).
 
-.. figure:: ../../img/tutorial_08_finitetemperature.*
-    :name: fig_tutorial8_finitetemperature
+.. figure:: ../../img/tutorial_03_finitetemperature.*
+    :name: fig_tutorial3_finitetemperature
     :width: 600px
 
-    Graphs for the finite temperature calculations of the Ising model: (a) energy, (b) heat capacity, (c) :math:`m_x`, and (d) :math:`m_z`. The vertical axis represents the physical quantity, and the horizontal axis denotes temperature.
+    Graphs for the finite temperature calculations of the Ising model: (a) energy, (b) heat capacity, (c) transverse magnetization, and (d) longitudinal magnetization. The vertical axis represents the physical quantity, and the horizontal axis denotes temperature.
+    Curves are results by TeNeS and squares are results by DSQSS/dla (longitudinal magnetization is zero from symmetry).
