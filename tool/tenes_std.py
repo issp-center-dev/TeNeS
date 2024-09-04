@@ -885,7 +885,8 @@ def make_evolution_onesite(
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
     D, V = np.linalg.eigh(hamiltonian.elements)
-    evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V)
+    evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate())
+
     return [SiteOperator(hamiltonian.site, evo, group=group)]
 
 
@@ -904,7 +905,7 @@ def make_evolution_twosite(
     H = hamiltonian.elements.reshape((dims[0] * dims[1], dims[0] * dims[1]))
     D, V = np.linalg.eigh(H)
     evo = np.reshape(
-        np.dot(V, np.dot(np.diag(np.exp(-tau * D)), V.transpose())),
+        np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate()),
         hamiltonian.elements.shape,
     )
     bonds = graph.make_path(hamiltonian.bond)
