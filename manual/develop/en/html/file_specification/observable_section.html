@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>observable.onesite &#8212; TeNeS 2.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=e42c2b12"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=b33cbb84"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -33,7 +35,7 @@
   <p>Define various settings related to physical quantity measurement.
 This section has two types of subsections, <code class="docutils literal notranslate"><span class="pre">onesite</span></code> and <code class="docutils literal notranslate"><span class="pre">twosite</span></code>.</p>
 <section id="observable-onesite">
-<h1><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code><a class="headerlink" href="#observable-onesite" title="Link to this heading">¶</a></h1>
 <p>Define one-body operators that indicate physical quantities defined at each site <span class="math notranslate nohighlight">\(i\)</span>.</p>
 <table class="docutils align-default">
 <colgroup>
@@ -93,7 +95,7 @@ One element is specified by one line consisting of two integers and two floating
 <p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
 If omitted, they are set to 1.0 and 0.0, respectively.</p>
 <section id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h2>
 <p>As an example, the case of <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}S^z = \left(\begin{array}{cc} 0.5 &amp; 0.0 \\ 0.0 &amp; -0.5 \end{array}\right)\end{split}\]</div>
@@ -126,7 +128,7 @@ elements = &quot;&quot;&quot;
 </section>
 </section>
 <section id="observable-twosite">
-<h1><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">observable.twosite</span></code><a class="headerlink" href="#observable-twosite" title="Link to this heading">¶</a></h1>
 <p>Define two-body operators that indicate physical quantities defined on two sites.</p>
 <table class="docutils align-default">
 <colgroup>
@@ -205,7 +207,7 @@ For example, if <span class="math notranslate nohighlight">\(S^z\)</span> is def
 <p><code class="docutils literal notranslate"><span class="pre">coeff</span></code> and <code class="docutils literal notranslate"><span class="pre">coeff_im</span></code> are real and imaginary parts of the coefficient of the operator, respectively.
 If omitted, they are set to 1.0 and 0.0, respectively.</p>
 <section id="id1">
-<h2>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+<h2>Example<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <p>As an example, for the calculation of the energy of the bond Hamiltonian for S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> , the way to define two site operators (equal to the Hamiltonian)</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H}_{ij} = S_i^z S_j^z + \frac{1}{2} \left[S_i^+ S_j^- + S_i^- S_j^+ \right]\]</div>
@@ -217,9 +219,10 @@ If omitted, they are set to 1.0 and 0.0, respectively.</p>
 The bond connecting 0 and 1 is represented as <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> because 1 is located at (1,0) from 0.
 Similarly, The bond connecting 1 and 3 is represented as <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> because 3 is located at (0,1) from 1.</p>
 <figure class="align-default" id="id2">
-<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" /></a>
+<a class="reference internal image-reference" href="../_images/obs_sec_fig1.png"><img alt="../_images/obs_sec_fig1.png" src="../_images/obs_sec_fig1.png" style="width: 150px;" />
+</a>
 <figcaption>
-<p><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> .</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Site indecies of the S=1/2 Heisenberg model on square lattice at <code class="docutils literal notranslate"><span class="pre">Lsub=[2,2]</span></code> .</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>Finally, how to define the elements of the operator is explained.
@@ -254,7 +257,7 @@ elements = &quot;&quot;&quot;
 </section>
 </section>
 <section id="observable-multisite">
-<h1><code class="docutils literal notranslate"><span class="pre">observable.multisite</span></code><a class="headerlink" href="#observable-multisite" title="Permalink to this heading">¶</a></h1>
+<h1><code class="docutils literal notranslate"><span class="pre">observable.multisite</span></code><a class="headerlink" href="#observable-multisite" title="Link to this heading">¶</a></h1>
 <p>Define multi-body operators that indicate physical quantities defined on three or more sites.
 It is defined as a direct product of one-body operators defined in <code class="docutils literal notranslate"><span class="pre">observable.onesite</span></code>.</p>
 <table class="docutils align-default">
@@ -320,11 +323,11 @@ If omitted, they are set to 1.0 and 0.0, respectively.</p>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -356,7 +359,7 @@ If omitted, they are set to 1.0 and 0.0, respectively.</p>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -364,7 +367,7 @@ If omitted, they are set to 1.0 and 0.0, respectively.</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -379,11 +382,11 @@ If omitted, they are set to 1.0 and 0.0, respectively.</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/file_specification/observable_section.rst.txt"

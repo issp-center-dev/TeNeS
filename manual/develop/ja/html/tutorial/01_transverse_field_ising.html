@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>4.1. 横磁場イジング模型 &#8212; TeNeS 2.2-dev ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=7d3690bc"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=2a26002a"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=91613774"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1><span class="section-number">4.1. </span>横磁場イジング模型<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">4.1. </span>横磁場イジング模型<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <p>ここでは正方格子上の横磁場イジング模型に対して、横磁場を変化させた場合の計算例について紹介します。
 ハミルトニアンは</p>
 <div class="math notranslate nohighlight">
@@ -222,9 +224,10 @@ for idx in range(num_hx):
 </div>
 <p>とすることで集計でき、 <code class="docutils literal notranslate"><span class="pre">hx</span></code>, エネルギー、 <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> 、 <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> が出力されます。</p>
 <figure class="align-center" id="fig-transverse">
-<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_1_Sz_vs_G.png"><img alt="../_images/tutorial_1_Sz_vs_G.png" src="../_images/tutorial_1_Sz_vs_G.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal notranslate"><span class="pre">hx</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.1 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> の <code class="docutils literal notranslate"><span class="pre">hx</span></code> 依存性</span><a class="headerlink" href="#fig-transverse" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p><a class="reference internal" href="#fig-transverse"><span class="std std-numref">図 4.1</span></a> から <code class="docutils literal notranslate"><span class="pre">hx</span></code> が大きくなるにつれ、 <code class="docutils literal notranslate"><span class="pre">&lt;Sz&gt;</span></code> が <code class="docutils literal notranslate"><span class="pre">0.5</span></code> から徐々に小さくなり最終的には0になる一方、 <code class="docutils literal notranslate"><span class="pre">&lt;Sx&gt;</span></code> は <code class="docutils literal notranslate"><span class="pre">0</span></code> から大きくなり最終的には <code class="docutils literal notranslate"><span class="pre">0.5</span></code> になることが分かります。</p>
@@ -235,11 +238,11 @@ for idx in range(num_hx):
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -283,7 +286,7 @@ for idx in range(num_hx):
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -291,7 +294,7 @@ for idx in range(num_hx):
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -306,11 +309,11 @@ for idx in range(num_hx):
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/01_transverse_field_ising.rst.txt"

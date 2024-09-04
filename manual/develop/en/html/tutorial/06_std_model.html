@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>4.6. Definition of lattices, models, and operators using the standard mode &#8212; TeNeS 2.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=e42c2b12"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=b33cbb84"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -19,8 +20,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -33,15 +35,16 @@
           <div class="body" role="main">
             
   <section id="definition-of-lattices-models-and-operators-using-the-standard-mode">
-<h1><span class="section-number">4.6. </span>Definition of lattices, models, and operators using the standard mode<a class="headerlink" href="#definition-of-lattices-models-and-operators-using-the-standard-mode" title="Permalink to this heading">¶</a></h1>
+<h1><span class="section-number">4.6. </span>Definition of lattices, models, and operators using the standard mode<a class="headerlink" href="#definition-of-lattices-models-and-operators-using-the-standard-mode" title="Link to this heading">¶</a></h1>
 <p>By using the standard mode, users can define own lattices, models, and operators.
 In this section, we explain how to use the standard mode.</p>
 <section id="definition-of-unit-cell">
-<h2><span class="section-number">4.6.1. </span>Definition of unit cell<a class="headerlink" href="#definition-of-unit-cell" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">4.6.1. </span>Definition of unit cell<a class="headerlink" href="#definition-of-unit-cell" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id1">
-<a class="reference internal image-reference" href="../_images/en_tutorial_1_Tensor.png"><img alt="../_images/en_tutorial_1_Tensor.png" src="../_images/en_tutorial_1_Tensor.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Tensor.png"><img alt="../_images/en_tutorial_1_Tensor.png" src="../_images/en_tutorial_1_Tensor.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.8 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> and <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.8 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> and <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>Unit cells are defined using <code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> and <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code>:</p>
@@ -64,11 +67,12 @@ noise = 0.01               # Fluctuation of elements in initial tensor
 \[\Ket{\psi}_i \propto \sum_{k=0}^{d-1}a_k\Ket{k}\]</div>
 </section>
 <section id="definition-of-model-hamiltonian">
-<h2><span class="section-number">4.6.2. </span>Definition of model (Hamiltonian)<a class="headerlink" href="#definition-of-model-hamiltonian" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">4.6.2. </span>Definition of model (Hamiltonian)<a class="headerlink" href="#definition-of-model-hamiltonian" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id2">
-<a class="reference internal image-reference" href="../_images/en_tutorial_1_Hamiltonian.png"><img alt="../_images/en_tutorial_1_Hamiltonian.png" src="../_images/en_tutorial_1_Hamiltonian.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Hamiltonian.png"><img alt="../_images/en_tutorial_1_Hamiltonian.png" src="../_images/en_tutorial_1_Hamiltonian.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.9 </span><span class="caption-text">[[hamiltonian]]</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.9 </span><span class="caption-text">[[hamiltonian]]</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>TeNeS treats the Hamiltonian as the sum of bond Hamiltonians (two-site Hamiltonians) and site Hamiltonians (one-site Hamiltonians).</p>
@@ -78,7 +82,7 @@ noise = 0.01               # Fluctuation of elements in initial tensor
 A bond is a directed pair of two sites: source and target.
 To define matrix elements is to define a model, and to define bonds is to define a lattice.</p>
 <section id="bond-hamiltonian">
-<h3>Bond Hamiltonian<a class="headerlink" href="#bond-hamiltonian" title="Permalink to this heading">¶</a></h3>
+<h3>Bond Hamiltonian<a class="headerlink" href="#bond-hamiltonian" title="Link to this heading">¶</a></h3>
 <p>In the input file of the standard mode, say <code class="docutils literal notranslate"><span class="pre">std.toml</span></code>, each local Hamiltonian is specified as <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code>.
 The bonds where the bond Hamiltonian acts are specified by <code class="docutils literal notranslate"><span class="pre">bonds</span></code> string:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
@@ -119,7 +123,7 @@ the following two integers are the states of the source and target sites <strong
 The remaining two numbers are the real and imaginary part of the element of the bond Hamiltonian.</p>
 </section>
 <section id="site-hamiltonian">
-<h3>Site Hamiltonian<a class="headerlink" href="#site-hamiltonian" title="Permalink to this heading">¶</a></h3>
+<h3>Site Hamiltonian<a class="headerlink" href="#site-hamiltonian" title="Link to this heading">¶</a></h3>
 <p>A site Hamiltonian is defined as a pair of (non-zero) matrix element and site it acts on.:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
 dim = [2]
@@ -136,11 +140,12 @@ An empty list means all the sites.</p>
 </section>
 </section>
 <section id="definition-of-operators">
-<h2><span class="section-number">4.6.3. </span>Definition of operators<a class="headerlink" href="#definition-of-operators" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">4.6.3. </span>Definition of operators<a class="headerlink" href="#definition-of-operators" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id3">
-<a class="reference internal image-reference" href="../_images/en_tutorial_1_Observable.png"><img alt="../_images/en_tutorial_1_Observable.png" src="../_images/en_tutorial_1_Observable.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Observable.png"><img alt="../_images/en_tutorial_1_Observable.png" src="../_images/en_tutorial_1_Observable.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.10 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.10 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>Operators whose expected values are finally computed are defined in <code class="docutils literal notranslate"><span class="pre">[observable]</span></code>.
@@ -195,7 +200,7 @@ ops = [0, 0] # When it can be written as a direct product of onesite operators,
 <code class="docutils literal notranslate"><span class="pre">ops</span></code> can be used to specify them.</p>
 </section>
 <section id="example-antiferromagnetic-heisenberg-model-in-staggered-field">
-<h2><span class="section-number">4.6.4. </span>Example: Antiferromagnetic Heisenberg model in staggered field<a class="headerlink" href="#example-antiferromagnetic-heisenberg-model-in-staggered-field" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">4.6.4. </span>Example: Antiferromagnetic Heisenberg model in staggered field<a class="headerlink" href="#example-antiferromagnetic-heisenberg-model-in-staggered-field" title="Link to this heading">¶</a></h2>
 <p>Let us consider the antiferromagnetic Heisenberg model in staggered field.
 The Hamiltonian is as follows</p>
 <div class="math notranslate nohighlight">
@@ -350,11 +355,11 @@ and therefore we can use them as the initial states of another calculation by se
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -398,7 +403,7 @@ and therefore we can use them as the initial states of another calculation by se
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -406,7 +411,7 @@ and therefore we can use them as the initial states of another calculation by se
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -421,11 +426,11 @@ and therefore we can use them as the initial states of another calculation by se
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/06_std_model.rst.txt"

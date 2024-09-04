@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>4.6. スタンダードモードによる格子・模型・演算子の定義 &#8212; TeNeS 2.2-dev ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=7d3690bc"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=2a26002a"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=91613774"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,15 +36,16 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1><span class="section-number">4.6. </span>スタンダードモードによる格子・模型・演算子の定義<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">4.6. </span>スタンダードモードによる格子・模型・演算子の定義<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <p>スタンダードモードを使うとユーザが独自に格子・模型・演算子を定義できます。
 ここではスタンダードモードの使い方を説明します。</p>
 <section id="id2">
-<h2><span class="section-number">4.6.1. </span>ユニットセルの定義<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">4.6.1. </span>ユニットセルの定義<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id8">
-<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Tensor.png"><img alt="../_images/ja_tutorial_1_Tensor.png" src="../_images/ja_tutorial_1_Tensor.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Tensor.png"><img alt="../_images/ja_tutorial_1_Tensor.png" src="../_images/ja_tutorial_1_Tensor.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.8 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id8" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.8 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id8" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>ユニットセルの定義は <code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> と <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code> を用います</p>
@@ -65,11 +68,12 @@ noise = 0.01               # 初期テンソルのゆらぎ
 <p>と書けます。</p>
 </section>
 <section id="id3">
-<h2><span class="section-number">4.6.2. </span>模型（ハミルトニアン）の定義<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">4.6.2. </span>模型（ハミルトニアン）の定義<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id9">
-<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Hamiltonian.png"><img alt="../_images/ja_tutorial_1_Hamiltonian.png" src="../_images/ja_tutorial_1_Hamiltonian.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Hamiltonian.png"><img alt="../_images/ja_tutorial_1_Hamiltonian.png" src="../_images/ja_tutorial_1_Hamiltonian.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.9 </span><span class="caption-text">[[hamiltonian]] の模式図</span><a class="headerlink" href="#id9" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.9 </span><span class="caption-text">[[hamiltonian]] の模式図</span><a class="headerlink" href="#id9" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>TeNeSはハミルトニアンをボンドハミルトニアン (2サイトハミルトニアン) とサイトハミルトニアン（1サイトハミルトニアン）の和として扱います。</p>
@@ -79,7 +83,7 @@ noise = 0.01               # 初期テンソルのゆらぎ
 ボンドはsourceサイトとtargetサイトの組であると考えます。
 行列要素によって模型が、ボンドによって格子が定義されます。</p>
 <section id="id4">
-<h3>ボンドハミルトニアン<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ボンドハミルトニアン<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <p>それぞれの局所ハミルトニアンは <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> で記述されます。
 ボンドハミルトニアンの作用するボンドは <code class="docutils literal notranslate"><span class="pre">bonds</span></code> 文字列で指定します。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
@@ -119,7 +123,7 @@ elements = &quot;&quot;&quot;     # ハミルトニアンの(非ゼロな)行列
 残る2つの数値は行列要素の実部と虚部を表します。</p>
 </section>
 <section id="id5">
-<h3>サイトハミルトニアン<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>サイトハミルトニアン<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <p>サイトハミルトニアンは作用するサイトと（非ゼロ）行列要素との組み合わせで定義します。:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
 dim = [2]
@@ -135,11 +139,12 @@ elements = &quot;&quot;&quot;
 </section>
 </section>
 <section id="id6">
-<h2><span class="section-number">4.6.3. </span>演算子の定義<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">4.6.3. </span>演算子の定義<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h2>
 <figure class="align-center" id="id10">
-<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Observable.png"><img alt="../_images/ja_tutorial_1_Observable.png" src="../_images/ja_tutorial_1_Observable.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="../_images/ja_tutorial_1_Observable.png"><img alt="../_images/ja_tutorial_1_Observable.png" src="../_images/ja_tutorial_1_Observable.png" style="width: 400px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.10 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id10" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.10 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id10" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>最終的に期待値を計算する演算子は <code class="docutils literal notranslate"><span class="pre">[observable]</span></code> 以下に定義します。
@@ -194,7 +199,7 @@ ops = [0, 0] # 1サイト演算子の直積で書ける場合、その識別番�
 この例のように、 1サイト演算子の直積で書ける場合には、 <code class="docutils literal notranslate"><span class="pre">ops</span></code> を用いてその識別番号で表すこともできます。</p>
 </section>
 <section id="id7">
-<h2><span class="section-number">4.6.4. </span>例： 交代磁場中の反強磁性ハイゼンベルグ模型<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">4.6.4. </span>例： 交代磁場中の反強磁性ハイゼンベルグ模型<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h2>
 <p>自分でハミルトニアンを書く例として、交代磁場中の正方格子反強磁性ハイゼンベルグ模型を考えます。
 ハミルトニアンは</p>
 <div class="math notranslate nohighlight">
@@ -350,11 +355,11 @@ Twosite observables per site:
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -398,7 +403,7 @@ Twosite observables per site:
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -406,7 +411,7 @@ Twosite observables per site:
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -421,11 +426,11 @@ Twosite observables per site:
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/06_std_model.rst.txt"

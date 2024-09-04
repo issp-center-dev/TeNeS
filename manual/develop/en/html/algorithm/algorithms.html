@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>6. Algorithm &#8212; TeNeS 2.2-dev documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=e42c2b12"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=b33cbb84"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -19,8 +20,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -33,9 +35,9 @@
           <div class="body" role="main">
             
   <section id="algorithm">
-<h1><span class="section-number">6. </span>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading">¶</a></h1>
+<h1><span class="section-number">6. </span>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading">¶</a></h1>
 <section id="tensor-network-states">
-<h2><span class="section-number">6.1. </span>Tensor Network States<a class="headerlink" href="#tensor-network-states" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">6.1. </span>Tensor Network States<a class="headerlink" href="#tensor-network-states" title="Link to this heading">¶</a></h2>
 <p>Tensor network states (TNS) are variational wavefunctions represented as products of small tensors <a class="reference internal" href="#ref-tns"><span class="std std-ref">[TNS]</span></a>. For example, in the case of <span class="math notranslate nohighlight">\(S=1/2\)</span> spin system with <span class="math notranslate nohighlight">\(N\)</span> sites, a wavefunction can be represented by using the product state basis as</p>
 <div class="math notranslate nohighlight">
 \[|\Psi\rangle = \sum_{s_i \pm \uparrow,\downarrow} \Psi_{s_1,s_2,\dots,s_N} |s_1,s_2,\dots,s_N\rangle\]</div>
@@ -55,7 +57,7 @@
 <p>and try to find an approximate ground state wavefunction of two-dimensional quantum many-body systems. Notice that square lattice tensor networks can represent lattices other than the square lattice, such as the honeycomb and the triangular lattices, by considering proper mapping.</p>
 </section>
 <section id="contraction-of-itps">
-<h2><span class="section-number">6.2. </span>Contraction of iTPS<a class="headerlink" href="#contraction-of-itps" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">6.2. </span>Contraction of iTPS<a class="headerlink" href="#contraction-of-itps" title="Link to this heading">¶</a></h2>
 <p>In order to calculate expectation values over a TNS, <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle/\langle \Psi|\Psi\rangle\)</span>, generally we need to contract tensor networks corresponding to <span class="math notranslate nohighlight">\(\langle \Psi|O|\Psi\rangle\)</span> and <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span>. For example, a tensor network corresponding to <span class="math notranslate nohighlight">\(\langle \Psi|\Psi\rangle\)</span> is given by</p>
 <img alt="../_images/iTPS_braket.png" class="align-center" src="../_images/iTPS_braket.png" />
 <p>which is often called a double layered tensor network. The contraction of a double layered tensor network often needs huge computation costs. In the case of MPS (and iMPS), fortunately, we can contract it efficiently, <em>e.g</em>, by considering a transfer matrix which consists of local tensors. However, in the case of TPS (and iTPS), exact contraction is impossible except for small finite size systems (or infinite cylinders) and we often use approximate contraction methods. Among several efficient methods for contracting iTPS in two-dimension, TeNeS supports corner transfer matrix renormalization group (CTMRG) method <a class="reference internal" href="#ref-ctmrg"><span class="std std-ref">[CTMRG]</span></a>, which expresses an infinitely extended double layered tensor network by using <em>corner transfer matrices</em> and <em>edge tensors</em>.</p>
@@ -77,7 +79,7 @@
 <p>Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operator, the computation cost to contract the tensor network becomes huge for larger clusters.</p>
 </section>
 <section id="optimization-of-itps">
-<h2><span class="section-number">6.3. </span>Optimization of iTPS<a class="headerlink" href="#optimization-of-itps" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">6.3. </span>Optimization of iTPS<a class="headerlink" href="#optimization-of-itps" title="Link to this heading">¶</a></h2>
 <p>In order to use iTPS as variational wavefunctions for the ground state, we need to optimize it so that it give us the minimum energy expectation value,</p>
 <div class="math notranslate nohighlight">
 \[E = \frac{\langle \Psi|\mathcal{H}|\Psi\rangle}{\langle \Psi|\Psi\rangle},\]</div>
@@ -121,7 +123,7 @@
 <p>Although the computation cost of the simple update is cheaper than that of the full update, it is known that the simple update shows strong initial state dependence and it tends to overestimate the local magnetization. Thus, for complicated problems, we need to carefully check results obtained by the simple update.</p>
 </section>
 <section id="real-time-evolution-by-itps">
-<h2><span class="section-number">6.4. </span>Real-time evolution by iTPS<a class="headerlink" href="#real-time-evolution-by-itps" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">6.4. </span>Real-time evolution by iTPS<a class="headerlink" href="#real-time-evolution-by-itps" title="Link to this heading">¶</a></h2>
 <p>The algorithms of imaginary time evolution used for computing the ground state, such as the simple update method and the full update method, can also be used to calculate the real-time evolution of a quantum state. In TeNeS, similarly to the case of imaginary time evolution, the quantum state at time <span class="math notranslate nohighlight">\(t\)</span></p>
 <div class="math notranslate nohighlight">
 \[|\Psi(t)\rangle = e^{-it\mathcal{H}} |\Psi_0\rangle,\]</div>
@@ -131,7 +133,7 @@
 <p>Another difference is the characteristics of the physical phenomenon to be reproduced. When using imaginary time evolution to calculate the ground state, it is sufficient to reach the ground state after a sufficiently long evolution, so minor deviations from the correct path of imaginary time evolution are not a significant issue. On the other hand, in real-time evolution, there is often interest not only in the final state but also in the time evolution of the quantum state itself. To accurately approximate the path of time evolution, it is necessary to not only increase the bond dimension of iTPS but also to make the time increment <span class="math notranslate nohighlight">\(\delta t\)</span> of the Suzuki-Trotter decomposition sufficiently small. Depending on the situation, it may be more efficient to use higher-order Suzuki-Trotter decompositions. In TeNeS, it is possible to handle higher-order Suzuki-Trotter decompositions by editing the <code class="docutils literal notranslate"><span class="pre">evolution</span></code> section of the input file that is ultimately entered into TeNeS.</p>
 </section>
 <section id="finite-temperature-simulation">
-<h2><span class="section-number">6.5. </span>Finite temperature simulation<a class="headerlink" href="#finite-temperature-simulation" title="Permalink to this heading">¶</a></h2>
+<h2><span class="section-number">6.5. </span>Finite temperature simulation<a class="headerlink" href="#finite-temperature-simulation" title="Link to this heading">¶</a></h2>
 <p>So far, we considered the tensor network representation of a pure state <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span>, but similarly, we can consider the tensor network representation for a mixed state at finite temperature</p>
 <div class="math notranslate nohighlight">
 \[\rho(\beta) = \frac{e^{-\beta \mathcal{H}}}{\mathrm{Tr} e^{-\beta \mathcal{H}}}\]</div>
@@ -197,11 +199,11 @@ P. Czarnik, J. Dziarmaga, and P. Corboz, <em>Time evolution of an infinite proje
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -244,7 +246,7 @@ P. Czarnik, J. Dziarmaga, and P. Corboz, <em>Time evolution of an infinite proje
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -252,7 +254,7 @@ P. Czarnik, J. Dziarmaga, and P. Corboz, <em>Time evolution of an infinite proje
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -267,11 +269,11 @@ P. Czarnik, J. Dziarmaga, and P. Corboz, <em>Time evolution of an infinite proje
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/algorithm/algorithms.rst.txt"
