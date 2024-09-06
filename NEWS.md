@@ -1,5 +1,12 @@
 # TeNeS v2.1.x Release Notes
 
+## Changes between v2.1.1 and v2.1.0
+
+### Bug fixes
+
+- `tenes_std`
+    - Fixed a bug in the calculation of the evolutionary tensor for complex Hamiltonians ([#97][])
+
 ## Changes between v2.1.0 and v2.0.0
 
 ### New features
@@ -20,3 +27,4 @@
 [#88]: https://github.com/issp-center-dev/TeNeS/pull/88
 [#91]: https://github.com/issp-center-dev/TeNeS/pull/91
 [#92]: https://github.com/issp-center-dev/TeNeS/pull/92
+[#97]: https://github.com/issp-center-dev/TeNeS/pull/97
