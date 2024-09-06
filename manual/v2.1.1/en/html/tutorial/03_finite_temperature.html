@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4.3. Finite Temperature Calculations for the Transverse Field Ising Model &#8212; TeNeS 2.1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=841abef3"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="4.4. Magnetization process of the Heisenberg model on triangular and square lattices" href="04_magnetization.html" />
+    <link rel="prev" title="4.2. Real-Time Evolution of the Transverse Field Ising Model" href="02_time_evolution.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="finite-temperature-calculations-for-the-transverse-field-ising-model">
+<h1><span class="section-number">4.3. </span>Finite Temperature Calculations for the Transverse Field Ising Model<a class="headerlink" href="#finite-temperature-calculations-for-the-transverse-field-ising-model" title="Link to this heading">¶</a></h1>
+<p>In this section, we present a calculation example of the ferromagnetic Ising model on a square lattice subjected to a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, at finite temperatures.
+The Hamiltonian is</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
+\end{aligned}\]</div>
+<p>Please note that the model is defined using spin operators of size 1/2, not Pauli operators.
+The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/03_finite_temperature</span></code> directory. Below is a sample input file (<code class="docutils literal notranslate"><span class="pre">simple_ft_strong.toml</span></code>):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+mode = &quot;finite&quot;
+is_real = false
+output = &quot;output_ft_strong&quot;
+measure_interval = [10, 10, 5]
+
+[parameter.simple_update]
+num_step = [50, 200, 10]
+tau = [0.01, 0.005, 0.05]
+
+[parameter.full_update]
+num_step = 0
+tau = 0.0
+
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+virtual_dim = 3
+
+[model]
+type = &quot;spin&quot;
+Jz = -1.0
+Jx = 0.0
+Jy = 0.0
+hx = 2.0
+</pre></div>
+</div>
+<p>To perform finite temperature calculations, set the <code class="docutils literal notranslate"><span class="pre">mode</span></code> to <code class="docutils literal notranslate"><span class="pre">finite</span></code>.
+Here, the transverse magnetic field is set to <code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">2.0</span></code> with <code class="docutils literal notranslate"><span class="pre">tau</span> <span class="pre">=</span> <span class="pre">0.01</span></code> (the inverse temperature step size is 2 times <code class="docutils literal notranslate"><span class="pre">tau</span></code>).
+Once preparing an input file of the simple mode, execute <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code>, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, and <code class="docutils literal notranslate"><span class="pre">tenes</span></code> in the same way as for the ground state calculation.</p>
+<p>The results of the finite temperature calculations are output to the <code class="docutils literal notranslate"><span class="pre">output_ft_strong</span></code> directory.
+Basically, the output is the same as the ground state calculation, but the inverse temperature is added to the first column.
+For example, <code class="docutils literal notranslate"><span class="pre">FT_density.dat</span></code> is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: inverse temperature
+# $2: observable ID
+# $3: real
+# $4: imag
+# The meaning of observable IDs are the following:
+# 0: Energy
+# 1: Sz
+# 2: Sx
+# 3: Sy
+# 4: bond_hamiltonian
+# 5: SzSz
+# 6: SxSx
+# 7: SySy
+
+0.00000000000000000e+00 0  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 1  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 2  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 3  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 4  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 5  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 6  0.00000000000000000e+00  0.00000000000000000e+00
+0.00000000000000000e+00 7  0.00000000000000000e+00  0.00000000000000000e+00
+
+   ... continued ...
+</pre></div>
+</div>
+<p>The second column indicates the type of physical quantity, and for example, 0 represents energy.
+Thus, you can extract the temperature dependence by extracting only the energy with <code class="docutils literal notranslate"><span class="pre">awk</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 0 {print $1, $3, $4}&#39; output_ft_strong/FT_density.dat &gt; energy_strong.dat
+</pre></div>
+</div>
+<p>To observe the behavior at different transverse magnetic fields, we’ve provided additional sample input files: <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>), <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>), and <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.0</span></code>).
+Moreover, a script named <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> has been set up to execute all these calculations simultaneously.
+Ensure you’ve added tools like <code class="docutils literal notranslate"><span class="pre">tenes</span></code> to your PATH, then initiate the calculations with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
+</pre></div>
+</div>
+<p>The computation should complete in about a minute.
+Since specific heat is difficult to calculate directly, it is calculated from the energy by numerical differentiation.
+<code class="docutils literal notranslate"><span class="pre">calcspec.py</span></code> is a script to calculate specific heat from the energy by using the spline interpolation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python3 calcspec.py
+</pre></div>
+</div>
+<p>To visualize the results, scripts have been prepared to plot energy, heat capacity, and magnetization (<span class="math notranslate nohighlight">\(S_x\)</span>, <span class="math notranslate nohighlight">\(S_z\)</span>): <code class="docutils literal notranslate"><span class="pre">plot_e.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_c.plt</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_mx.plt</span></code>, and <code class="docutils literal notranslate"><span class="pre">plot_mz.plt</span></code>.
+Running the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gnuplot -persist plot_e.plt
+gnuplot -persist plot_c.plt
+gnuplot -persist plot_mx.plt
+gnuplot -persist plot_mz.plt
+</pre></div>
+</div>
+<p>will display plots for energy, heat capacity, and magnetizations (<span class="math notranslate nohighlight">\(m_x\)</span> and <span class="math notranslate nohighlight">\(m_z\)</span>). The resulting plots are illustrated in <a class="reference internal" href="#fig-tutorial3-finitetemperature"><span class="std std-numref">Fig. 4.4</span></a>. For comparison, results obtained using Quantum Monte Carlo calculations are also shown (using <code class="docutils literal notranslate"><span class="pre">DSQSS/dla</span></code>).</p>
+<figure class="align-default" id="fig-tutorial3-finitetemperature">
+<a class="reference internal image-reference" href="../_images/tutorial_03_finitetemperature.png"><img alt="../_images/tutorial_03_finitetemperature.png" src="../_images/tutorial_03_finitetemperature.png" style="width: 600px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 4.4 </span><span class="caption-text">Graphs for the finite temperature calculations of the Ising model: (a) energy, (b) heat capacity, (c) transverse magnetization, and (d) longitudinal magnetization. The vertical axis represents the physical quantity, and the horizontal axis denotes temperature.
+Curves are results by TeNeS and squares are results by DSQSS/dla (longitudinal magnetization is zero from symmetry).</span><a class="headerlink" href="#fig-tutorial3-finitetemperature" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_magnetization.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
+      <li>Previous: <a href="02_time_evolution.html" title="previous chapter"><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model</a></li>
+      <li>Next: <a href="04_magnetization.html" title="next chapter"><span class="section-number">4.4. </span>Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/tutorial/03_finite_temperature.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

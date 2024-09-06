@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html lang="ja" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程 &#8212; TeNeS 2.1.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=1d00055d"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=91613774"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="4.5. 三角格子上のハードコアボゾン模型の相図" href="05_hardcore_boson_triangular.html" />
+    <link rel="prev" title="4.3. 横磁場イジング模型の有限温度計算" href="03_finite_temperature.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1><span class="section-number">4.4. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
+<p>次に三角格子上で定義されたスピン<span class="math notranslate nohighlight">\(S=1/2\)</span>の量子ハイゼンベルク模型の磁化過程の計算を紹介します。
+ハミルトニアンは以下のようになります:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+H = J \sum_{\langle i,j \rangle}\sum_{\alpha}^{x,y,z} {S}_i^{\alpha} {S}_j^{\alpha} - h \sum_i S_i^z\end{aligned}\]</div>
+<p>ここで<span class="math notranslate nohighlight">\(\langle i, j\rangle\)</span>は隣接サイトの組を表し、<span class="math notranslate nohighlight">\(h\)</span>は<span class="math notranslate nohighlight">\(z\)</span>方向にかけられた外部磁場の大きさを表します。
+この模型の基底状態を計算し、ユニットセルの平均磁化 <span class="math notranslate nohighlight">\(\langle S_z \rangle\equiv \frac{1}{N_u}\sum_i^{N_u} \langle S_i^z \rangle\)</span>を磁場<span class="math notranslate nohighlight">\(h\)</span>の関数として求めてみましょう ( <span class="math notranslate nohighlight">\(N_u\)</span> はユニットセル内のサイト数)。</p>
+<p>この計算を行うには、 <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> のディレクトリ内にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> を利用します。 <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> ファイルには、模型の設定やパラメータなどが記述されています。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 200
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+iteration_max = 100
+dimension = 10
+
+[lattice]
+type = &quot;triangular lattice&quot;
+L = 3
+W = 3
+virtual_dim = 2
+initial = &quot;random&quot;
+
+[model]
+type = &quot;spin&quot;
+J = 1.0
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクションで三角格子を指定しており、ユニットセルの大きさは<span class="math notranslate nohighlight">\(3\times 3\)</span>を指定しています。
+ここでは計算を軽くするために、 <code class="docutils literal notranslate"><span class="pre">simple</span> <span class="pre">update</span></code> だけを行っており、虚時間の刻み幅<span class="math notranslate nohighlight">\(\tau\)</span>は<span class="math notranslate nohighlight">\(\tau = 0.01\)</span>としています。また簡単のため、<span class="math notranslate nohighlight">\(J=1\)</span>としています。この基本設定ファイルを用いて、 <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization.py</span></code> では磁場を掃引したときの磁化を計算します。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>import subprocess
+from os.path import join
+import numpy as np
+import toml
+
+MPI_cmd = &quot;&quot;  # e.g., &quot;mpiexec -np 1&quot;
+
+num_h = 21
+min_h = 0.0
+max_h = 5.0
+num_step_table = [100, 200, 500, 1000, 2000]
+
+fmag = open(&quot;magnetization.dat&quot;, &quot;w&quot;)
+fene = open(&quot;energy.dat&quot;, &quot;w&quot;)
+
+for f in (fmag, fene):
+    f.write(&quot;# $1: hz\n&quot;)
+    for i, num_step in enumerate(num_step_table, 2):
+        f.write(f&quot;# ${i}: num_step={num_step}\n&quot;)
+    f.write(&quot;\n&quot;)
+
+for idx, h in enumerate(np.linspace(min_h, max_h, num=num_h)):
+    print(f&quot;Calculation Process: {idx+1}/{num_h}&quot;)
+    inum = 0
+    num_pre = 0
+    fmag.write(f&quot;{h} &quot;)
+    fene.write(f&quot;{h} &quot;)
+    for num_step in num_step_table:
+        ns = num_step - num_pre
+        print(f&quot;Steps: {num_step}&quot;)
+        with open(&quot;basic.toml&quot;) as f:
+            dict_toml = toml.load(f)
+
+        output_dir = f&quot;output_{idx}_{num_step}&quot;
+
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = output_dir
+        dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_save&quot;] = &quot;tensor_save&quot;
+        dict_toml[&quot;model&quot;][&quot;hz&quot;] = float(h)
+        dict_toml[&quot;parameter&quot;][&quot;simple_update&quot;][&quot;num_step&quot;] = ns
+        if inum &gt; 0:
+            dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;tensor_load&quot;] = &quot;tensor_save&quot;
+
+        simple_toml = f&quot;simple_{idx}_{num_step}.toml&quot;
+        std_toml = f&quot;std_{idx}_{num_step}.toml&quot;
+        input_toml = f&quot;input_{idx}_{num_step}.toml&quot;
+
+        with open(simple_toml, &quot;w&quot;) as f:
+            toml.dump(dict_toml, f)
+        cmd = f&quot;tenes_simple {simple_toml} -o {std_toml}&quot;
+        subprocess.call(cmd.split())
+
+        cmd = f&quot;tenes_std {std_toml} -o {input_toml}&quot;
+        subprocess.call(cmd.split())
+
+        cmd = f&quot;{MPI_cmd} tenes {input_toml}&quot;
+        subprocess.call(cmd.split())
+
+        ene = 0.0
+        mag_sz = 0.0
+        with open(join(output_dir, &quot;density.dat&quot;)) as f:
+            for line in f:
+                name, vals = line.split(&quot;=&quot;)
+                if name.strip() == &quot;Energy&quot;:
+                    re, im = vals.split()
+                    ene += float(re)
+                elif name.strip() == &quot;Sz&quot;:
+                    re, im = vals.split()
+                    mag_sz += float(re)
+        fene.write(f&quot;{ene} &quot;)
+        fmag.write(f&quot;{mag_sz} &quot;)
+        inum = inum + 1
+        num_pre = num_step
+    fene.write(&quot;\n&quot;)
+    fmag.write(&quot;\n&quot;)
+fene.close()
+fmag.close()
+</pre></div>
+</div>
+<p>このスクリプトでは、磁場<span class="math notranslate nohighlight">\(h\)</span>を0から5まで0.25刻みで変化させ、基底状態のエネルギーと<span class="math notranslate nohighlight">\(\langle S_z \rangle\)</span>を計算して、 <code class="docutils literal notranslate"><span class="pre">energy.dat</span></code> および <code class="docutils literal notranslate"><span class="pre">magnetization.dat</span></code> に出力します。 <code class="docutils literal notranslate"><span class="pre">simple</span> <span class="pre">update</span></code> の時間ステップ数を<span class="math notranslate nohighlight">\(100\)</span>, <span class="math notranslate nohighlight">\(200\)</span>, <span class="math notranslate nohighlight">\(500\)</span>, <span class="math notranslate nohighlight">\(1000\)</span>, <span class="math notranslate nohighlight">\(2000\)</span>と変化させたときの様子を見るために、各磁場でステップ数を変えた計算も行っています。
+計算量を減らすために、少ないステップ数で得られた波動関数の情報を <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> に保存し、それをより多いステップ数の計算の初期状態としてとっています。例えば、最初に時間ステップ数を100とした計算を行って結果を出力したあと、ステップ数100の計算終了時の波動関数からさらにステップ数100の計算を行って、結果的にステップ数200の計算結果を得ます。</p>
+<p>実際に実行してみましょう。あらかじめ <code class="docutils literal notranslate"><span class="pre">tenes</span></code> などにパスを通した上で</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python tutorial_magnetization.py
+</pre></div>
+</div>
+<p>により計算を実行します。ノートPC(シングルプロセッサ)では数時間程度の計算量となります。
+計算が終了したら、gnuplotを起動し、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot.gp&#39;
+</pre></div>
+</div>
+<p>とすれば、<a class="reference internal" href="#fig-tutorial5-triangular"><span class="std std-numref">図 4.5</span></a> の右図のような磁化カーブが得られます。同様に</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot_ene.gp&#39;
+</pre></div>
+</div>
+<p>とすれば、<a class="reference internal" href="#fig-tutorial5-triangular"><span class="std std-numref">図 4.5</span></a> の左図のような基底エネルギーのグラフが得られます。</p>
+<p>十分なステップ数(例えばステップ数2000)の計算結果からわかるように、磁化過程には飽和磁化<span class="math notranslate nohighlight">\(\langle S_z \rangle=0.5\)</span>の<span class="math notranslate nohighlight">\(1/3\)</span>の磁化のところで、プラトー構造が生じます。
+このプラトー上では、3つの格子上のスピンが<span class="math notranslate nohighlight">\(\uparrow\)</span>,
+<span class="math notranslate nohighlight">\(\uparrow\)</span>,
+<span class="math notranslate nohighlight">\(\downarrow\)</span>と磁化した周期構造を形成し、スピンギャップが生じています。このプラトー構造は三角格子特有のものです。
+実際に計算精度がでているかどうかをみるには、エネルギーのステップ依存性が参考になります。
+理想的にはステップ数を増やすほど基底エネルギーが下がるはずですが、一部の磁場領域では逆に基底エネルギーが増加します。これは計算精度があまりでていない兆候です。
+ボンド次元を増やすなどして、より計算精度を高める必要があると推測されます。</p>
+<figure class="align-default" id="fig-tutorial5-triangular">
+<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png"><img alt="../_images/tutorial_5_triangular.png" src="../_images/tutorial_5_triangular.png" style="width: 600px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">図 4.5 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
+<code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> は、 <code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクションが以下のように変更されているほかは <code class="docutils literal notranslate"><span class="pre">basic.toml</span></code> と同じ内容です。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
+type = &quot;square lattice&quot;
+L = 2
+W = 2
+</pre></div>
+</div>
+<p>実際に計算を行うには、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python tutorial_magnetization_square.py
+</pre></div>
+</div>
+<p>とします。計算が終了したら、gnuplotを起動し、</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot_square.gp&#39;
+</pre></div>
+</div>
+<p>とすれば、 <a class="reference internal" href="#fig-tutorial5-square"><span class="std std-numref">図 4.6</span></a> の右図のような磁化カーブが得られます。同様に</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>load &#39;plot_square_ene.gp&#39;
+</pre></div>
+</div>
+<p>とすれば、<a class="reference internal" href="#fig-tutorial5-square"><span class="std std-numref">図 4.6</span></a> の左図のような基底エネルギーのグラフが得られます。</p>
+<figure class="align-default" id="fig-tutorial5-square">
+<a class="reference internal image-reference" href="../_images/tutorial_5_square.png"><img alt="../_images/tutorial_5_square.png" src="../_images/tutorial_5_square.png" style="width: 600px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">図 4.6 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>ステップ数2000でほぼ収束しており、三角格子ハイゼンベルク模型と異なり、プラトー構造は現れないことがわかります。
+エネルギーは概ね、ステップ数を増加させると減少するため、ある程度計算精度がでていると推測されます。</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. チュートリアル</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. 横磁場イジング模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. 横磁場イジング模型の実時間発展</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. 横磁場イジング模型の有限温度計算</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. 三角格子上のハードコアボゾン模型の相図</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_std_model.html">4.6. スタンダードモードによる格子・模型・演算子の定義</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>チュートリアル</a><ul>
+      <li>Previous: <a href="03_finite_temperature.html" title="前の章へ"><span class="section-number">4.3. </span>横磁場イジング模型の有限温度計算</a></li>
+      <li>Next: <a href="05_hardcore_boson_triangular.html" title="次の章へ"><span class="section-number">4.5. </span>三角格子上のハードコアボゾン模型の相図</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/tutorial/04_magnetization.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
