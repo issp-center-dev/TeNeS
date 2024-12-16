@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Algorithm>
+  <Comment> S=1/2 XXZ model </Comment>
+  <General>
+    <NSTYPE> 1 </NSTYPE>
+    <NITYPE> 1 </NITYPE>
+    <NVTYPE> 2 </NVTYPE>
+    <NXMAX> 2 </NXMAX>
+    <WDIAG>  0.250000000000000 </WDIAG>
+  </General>
+
+  <Site>
+    <STYPE> 0 </STYPE>
+    <NumberOfStates> 2 </NumberOfStates>
+    <LocalStates> -0.500000000000000  0.500000000000000 </LocalStates>
+    <VertexTypeOfSource> 0 </VertexTypeOfSource>
+
+    <InitialConfiguration>
+      <State> 0 </State>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 0 1  0.500000000000000 </Channel>
+      <Channel> 1 1  0.500000000000000 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 </State>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 0 0  0.500000000000000 </Channel>
+      <Channel> 1 0  0.500000000000000 </Channel>
+    </InitialConfiguration>
+  </Site>
+
+  <Interaction>
+    <ITYPE> 0 </ITYPE>
+    <VTYPE> 1 </VTYPE>
+    <NBODY> 2 </NBODY>
+    <EBASE>  0.500000000000000 </EBASE>
+    <VertexDensity> 0 1  0.500000000000000 </VertexDensity>
+    <VertexDensity> 1 0  0.500000000000000 </VertexDensity>
+    <VertexDensity> 1 1  1.000000000000000 </VertexDensity>
+    <Sign> 0 1 0 1 1.0 </Sign>
+    <Sign> 0 1 1 0 1.0 </Sign>
+    <Sign> 1 0 0 1 1.0 </Sign>
+    <Sign> 1 0 1 0 1.0 </Sign>
+  </Interaction>
+
+  <Vertex>
+    <VTYPE> 0 </VTYPE>
+    <VCATEGORY> 1 </VCATEGORY>
+    <NBODY> 1 </NBODY>
+    <NumberOfInitialConfigurations> 4 </NumberOfInitialConfigurations>
+
+    <InitialConfiguration>
+      <State> 0 1 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> -1 -1  1.000000000000000 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> -1 -1  1.000000000000000 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> -1 -1  1.000000000000000 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> -1 -1  1.000000000000000 </Channel>
+    </InitialConfiguration>
+  </Vertex>
+
+  <Vertex>
+    <VTYPE> 1 </VTYPE>
+    <VCATEGORY> 2 </VCATEGORY>
+    <NBODY> 2 </NBODY>
+    <NumberOfInitialConfigurations> 28 </NumberOfInitialConfigurations>
+
+    <InitialConfiguration>
+      <State> 0 1 0 1 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 2 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 0 1 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 2 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 0 1 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 0 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 0 1 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 0 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 1 0 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 3 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 1 0 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 3 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 1 0 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 0 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 1 1 0 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 0 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 0 1 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 2 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 0 1 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 2 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 0 1 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 1 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 0 1 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 1 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 1 0 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 3 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 1 0 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 3 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 1 0 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 1 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 0 1 0 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 1 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 0 1 1 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 1 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 0 1 1 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 0 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 0 1 1 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 0 1 0.5 </Channel>
+      <Channel> 1 1 0.5 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 0 0 1 1 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 0 1 0.5 </Channel>
+      <Channel> 1 1 0.5 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 0 0 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 2 1 0.5 </Channel>
+      <Channel> 3 1 0.5 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 0 0 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 2 </NumberOfChannels>
+      <Channel> 2 1 0.5 </Channel>
+      <Channel> 3 1 0.5 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 0 0 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 3 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 0 0 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 1 </NewState>
+      <NumberOfChannels> 1 </NumberOfChannels>
+      <Channel> 2 1 1.0 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 1 1 </State>
+      <IncomingDirection> 0 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 3 </NumberOfChannels>
+      <Channel> 1 0 0.5 </Channel>
+      <Channel> 2 0 0.25 </Channel>
+      <Channel> 3 0 0.25 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 1 1 </State>
+      <IncomingDirection> 1 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 3 </NumberOfChannels>
+      <Channel> 0 0 0.5 </Channel>
+      <Channel> 2 0 0.25 </Channel>
+      <Channel> 3 0 0.25 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 1 1 </State>
+      <IncomingDirection> 2 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 3 </NumberOfChannels>
+      <Channel> 0 0 0.25 </Channel>
+      <Channel> 1 0 0.25 </Channel>
+      <Channel> 3 0 0.5 </Channel>
+    </InitialConfiguration>
+
+    <InitialConfiguration>
+      <State> 1 1 1 1 </State>
+      <IncomingDirection> 3 </IncomingDirection>
+      <NewState> 0 </NewState>
+      <NumberOfChannels> 3 </NumberOfChannels>
+      <Channel> 0 0 0.25 </Channel>
+      <Channel> 1 0 0.25 </Channel>
+      <Channel> 2 0 0.5 </Channel>
+    </InitialConfiguration>
+  </Vertex>
+
+</Algorithm>
