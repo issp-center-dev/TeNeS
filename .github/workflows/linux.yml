@@ -13,15 +13,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04", "ubuntu-22.04"]
-        python-version: ["3.10"]
-        compiler: ["g++-12", "g++-9"]
-        exclude:
-          - os: "ubuntu-20.04"
-            compiler: "g++-12"
+        os: ["ubuntu-22.04", "ubuntu-24.04"]
+        python-version: ["3.9"]
+        compiler: ["g++-12"]
         include:
           - os: "ubuntu-22.04"
-            python-version: "3.7"
+            python-version: "3.9"
+            compiler: "g++-9"
+          - os: "ubuntu-24.04"
+            python-version: "3.9"
+            compiler: "g++-14"
+          - os: "ubuntu-24.04"
+            python-version: "3.13"
             compiler: "g++-12"
 
     steps:
@@ -35,7 +38,7 @@ jobs:
       - name: apt
         run: |
           sudo apt update
-          sudo apt install openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
+          sudo apt install libblas-dev liblapack-dev openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
 
       - name: pip install
         run: |
