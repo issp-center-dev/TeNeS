@@ -32,6 +32,12 @@ jobs:
       with:
         python-version: '3.13'
 
+    # ubuntu-24.04 seems not to have liblapack-dev?
+    - name: apt
+      run: |
+        sudo apt update
+        sudo apt install libblas-dev liblapack-dev
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
