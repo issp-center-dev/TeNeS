@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-13]
+        os: [macos-latest, macos-13]
         compiler: [c++, g++-14, g++-12]
 
     steps:
