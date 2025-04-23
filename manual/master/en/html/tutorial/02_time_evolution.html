@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>4.2. Real-Time Evolution of the Transverse Field Ising Model &#8212; TeNeS 2.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=0218eca2"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <title>4.2. Real-Time Evolution of the Transverse Field Ising Model &#8212; TeNeS 2.1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=841abef3"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -19,8 +20,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -33,7 +35,7 @@
           <div class="body" role="main">
             
   <section id="real-time-evolution-of-the-transverse-field-ising-model">
-<h1><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model<a class="headerlink" href="#real-time-evolution-of-the-transverse-field-ising-model" title="Permalink to this heading">¶</a></h1>
+<h1><span class="section-number">4.2. </span>Real-Time Evolution of the Transverse Field Ising Model<a class="headerlink" href="#real-time-evolution-of-the-transverse-field-ising-model" title="Link to this heading">¶</a></h1>
 <p>Here, we introduce a calculation example for the real-time evolution of the Ising model on a square lattice when a transverse magnetic field, denoted by <code class="docutils literal notranslate"><span class="pre">hx</span></code>, is applied.
 The Hamiltonian is</p>
 <div class="math notranslate nohighlight">
@@ -158,17 +160,19 @@ Additionally, there’s a script named <code class="docutils literal notranslate
 </div>
 <p>This will plot the temporal evolution of magnetization, <span class="math notranslate nohighlight">\(S_z\)</span>. The result is displayed in <a class="reference internal" href="#fig-tutorial7-timeevolution"><span class="std std-numref">Fig. 4.2</span></a>.</p>
 <figure class="align-default" id="fig-tutorial7-timeevolution">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Graph illustrating the real-time evolution of the Ising model. The vertical axis represents magnetization, and the horizontal axis represents time.</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.2 </span><span class="caption-text">Graph illustrating the real-time evolution of the Ising model. The vertical axis represents magnetization, and the horizontal axis represents time.</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>When the strength of the transverse-field exceeds the quantum phase transition point, the magnetization oscillates beyond 0 <a class="reference internal" href="#ref-dqpt"><span class="std std-ref">[DQPT]</span></a>.</p>
 <p>As time evolution progresses, the entanglement increases. At a certain point, the tensor network’s capacity may be insufficient to express the wave function. In our case, the jump at <code class="docutils literal notranslate"><span class="pre">t=4.25</span></code> for <code class="docutils literal notranslate"><span class="pre">hx=2.0</span></code> indicates this issue. When applying this in practice, ensure no such discontinuities exist. If jumps are observed, steps like increasing the <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span></code> might be necessary. For instance, adjusting it to <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> and redoing the calculation as described above will eliminate the discontinuity, as can be seen in <a class="reference internal" href="#fig-tutorial7-te-d10"><span class="std std-numref">Fig. 4.3</span></a>.</p>
 <figure class="align-default" id="fig-tutorial7-te-d10">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Graph showcasing the real-time evolution of the Ising model. The vertical axis denotes magnetization, while the horizontal axis represents time. Results when <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> are applied.</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="Permalink to this image">¶</a></p>
+<p><span class="caption-number">Fig. 4.3 </span><span class="caption-text">Graph showcasing the real-time evolution of the Ising model. The vertical axis denotes magnetization, while the horizontal axis represents time. Results when <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> are applied.</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p class="rubric">Reference</p>
@@ -181,11 +185,11 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -229,7 +233,7 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -237,7 +241,7 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -252,11 +256,11 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/02_time_evolution.rst.txt"

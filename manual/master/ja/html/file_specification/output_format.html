@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>5.5. 出力ファイル &#8212; TeNeS 2.1.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <title>5.5. 出力ファイル &#8212; TeNeS 2.1.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=1d00055d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,13 +36,13 @@
           <div class="body" role="main">
             
   <section id="sec-output-format">
-<span id="id1"></span><h1><span class="section-number">5.5. </span>出力ファイル<a class="headerlink" href="#sec-output-format" title="この見出しへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1><span class="section-number">5.5. </span>出力ファイル<a class="headerlink" href="#sec-output-format" title="Link to this heading">¶</a></h1>
 <p>各種計算結果は <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリ以下に保存されます。
 また、入力ファイルとして使ったファイルがコピーされます。</p>
 <section id="id2">
-<h2><span class="section-number">5.5.1. </span>全モード共通<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.5.1. </span>全モード共通<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <section id="parameters-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameters.dat</span></code><a class="headerlink" href="#parameters-dat" title="Link to this heading">¶</a></h3>
 <p>実際に計算に使われたパラメータおよび実行日時が出力されます。</p>
 <p>例:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>simple_num_step = [10]
@@ -86,7 +88,7 @@ start_datetime =  2023-06-08T16:41:50+09:00
 </div>
 </section>
 <section id="time-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">time.dat</span></code><a class="headerlink" href="#time-dat" title="Link to this heading">¶</a></h3>
 <p>計算時間が出力されます。</p>
 <p>例:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>time simple update = 1.64429
@@ -98,9 +100,9 @@ time observable    = 0.104487
 </section>
 </section>
 <section id="id3">
-<h2><span class="section-number">5.5.2. </span>基底状態計算モード<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.5.2. </span>基底状態計算モード<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <section id="density-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">density.dat</span></code><a class="headerlink" href="#density-dat" title="Link to this heading">¶</a></h3>
 <p>各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
 各演算子の名前 <code class="docutils literal notranslate"><span class="pre">name</span></code> が空だった場合はかわりに演算子番号が出力されます。
 なお、 <code class="docutils literal notranslate"><span class="pre">Energy</span></code> は <code class="docutils literal notranslate"><span class="pre">site</span> <span class="pre">hamiltonian</span></code> と <code class="docutils literal notranslate"><span class="pre">bond</span> <span class="pre">hamiltonian</span></code> の和です。</p>
@@ -118,7 +120,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="onesite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code><a class="headerlink" href="#onesite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>onesite 演算子の期待値 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i\rangle = \langle\Psi | \hat{A}^\alpha_i | \Psi \rangle / \langle\Psi | \Psi \rangle\)</span> が出力されます。
 各行4列からなります。</p>
 <ol class="arabic simple">
@@ -157,7 +159,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="twosite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>twosite 演算子の期待値が出力されます。
 各行6列からなります。</p>
 <ol class="arabic simple">
@@ -198,7 +200,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="multisite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">multisite_obs_#.dat</span></code><a class="headerlink" href="#multisite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">multisite_obs_#.dat</span></code><a class="headerlink" href="#multisite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>multisite 演算子の期待値が出力されます。
 ファイル名の <code class="docutils literal notranslate"><span class="pre">#</span></code> にはサイト数 <span class="math notranslate nohighlight">\(N\)</span> が入ります。
 各行 <span class="math notranslate nohighlight">\(4+2(N-1)\)</span> 列からなります。</p>
@@ -208,7 +210,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 最後の2列は期待値の実部と虚部です。</p>
 </section>
 <section id="correlation-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Link to this heading">¶</a></h3>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
 各行7列から構成されます。</p>
 <ol class="arabic simple">
@@ -247,7 +249,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="correlation-length-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">correlation_length.dat</span></code><a class="headerlink" href="#correlation-length-dat" title="Link to this heading">¶</a></h3>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> が出力されます。
 各行3+n列から構成されます。</p>
 <ol class="arabic simple">
@@ -275,9 +277,9 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </section>
 </section>
 <section id="id4">
-<h2><span class="section-number">5.5.3. </span>実時間発展計算モード<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.5.3. </span>実時間発展計算モード<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h2>
 <section id="te-density-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_density.dat</span></code><a class="headerlink" href="#te-density-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_density.dat</span></code><a class="headerlink" href="#te-density-dat" title="Link to this heading">¶</a></h3>
 <p>各種演算子のサイトあたりの期待値(実部と虚部)が出力されます。
 各行4列から構成されます。</p>
 <ol class="arabic simple">
@@ -313,7 +315,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="te-onesite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_onesite_obs.dat</span></code><a class="headerlink" href="#te-onesite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_onesite_obs.dat</span></code><a class="headerlink" href="#te-onesite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>onesite 演算子の期待値 <span class="math notranslate nohighlight">\(\langle\hat{A}^\alpha_i\rangle = \langle\Psi | \hat{A}^\alpha_i | \Psi \rangle / \langle\Psi | \Psi \rangle\)</span> が出力されます。
 各行5列からなります。</p>
 <ol class="arabic simple">
@@ -353,7 +355,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="te-twosite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_twosite_obs.dat</span></code><a class="headerlink" href="#te-twosite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_twosite_obs.dat</span></code><a class="headerlink" href="#te-twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>twosite 演算子の期待値が出力されます。
 各行7列からなります。</p>
 <ol class="arabic simple">
@@ -395,7 +397,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="te-multisite-obs-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_multisite_obs_#.dat</span></code><a class="headerlink" href="#te-multisite-obs-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_multisite_obs_#.dat</span></code><a class="headerlink" href="#te-multisite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>multisite 演算子の期待値が出力されます。
 ファイル名の <code class="docutils literal notranslate"><span class="pre">#</span></code> にはサイト数 <span class="math notranslate nohighlight">\(N\)</span> が入ります。
 各行 <span class="math notranslate nohighlight">\(5+2(N-1)\)</span> 列からなります。</p>
@@ -406,7 +408,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 最後の2列は期待値の実部と虚部です。</p>
 </section>
 <section id="te-correlation-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_correlation.dat</span></code><a class="headerlink" href="#te-correlation-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_correlation.dat</span></code><a class="headerlink" href="#te-correlation-dat" title="Link to this heading">¶</a></h3>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
 各行8列から構成されます。</p>
 <ol class="arabic simple">
@@ -446,7 +448,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </div>
 </section>
 <section id="te-correlation-length-dat">
-<h3><code class="docutils literal notranslate"><span class="pre">TE_correlation_length.dat</span></code><a class="headerlink" href="#te-correlation-length-dat" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">TE_correlation_length.dat</span></code><a class="headerlink" href="#te-correlation-length-dat" title="Link to this heading">¶</a></h3>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> が出力されます。
 各行4+n列から構成されます。</p>
 <ol class="arabic simple">
@@ -486,7 +488,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </section>
 </section>
 <section id="id5">
-<h2><span class="section-number">5.5.4. </span>有限温度計算モード<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.5.4. </span>有限温度計算モード<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
 <p>実時間発展計算モードと同様のファイルが出力されます。
 ファイル名の先頭が <code class="docutils literal notranslate"><span class="pre">TE_</span></code> のかわりに <code class="docutils literal notranslate"><span class="pre">FT_</span></code> になっていることと、1列目が時間 <span class="math notranslate nohighlight">\(t\)</span> ではなく逆温度 <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> になっていることが異なります。</p>
 </section>
@@ -497,11 +499,11 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -544,7 +546,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -552,7 +554,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -567,11 +569,11 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/file_specification/output_format.rst.txt"

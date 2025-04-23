@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>4.2. 横磁場イジング模型の実時間発展 &#8212; TeNeS 2.1.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <title>4.2. 横磁場イジング模型の実時間発展 &#8212; TeNeS 2.1.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=1d00055d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1><span class="section-number">4.2. </span>横磁場イジング模型の実時間発展<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">4.2. </span>横磁場イジング模型の実時間発展<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <p>ここでは正方格子のイジングモデルに対して、横磁場 <code class="docutils literal notranslate"><span class="pre">hx</span></code> をかけた場合の実時間発展の計算例について紹介します。
 ハミルトニアンは</p>
 <div class="math notranslate nohighlight">
@@ -168,9 +170,10 @@ hx = 2.0
 <p>とすれば、 磁化 <span class="math notranslate nohighlight">\(m^z\)</span> の時間発展の様子がプロットされます。
 その結果を <a class="reference internal" href="#fig-tutorial7-timeevolution"><span class="std std-numref">図 4.2</span></a> に示します。</p>
 <figure class="align-default" id="fig-tutorial7-timeevolution">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution.png"><img alt="../_images/tutorial_07_timeevolution.png" src="../_images/tutorial_07_timeevolution.png" style="width: 600px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.2 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.2 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。</span><a class="headerlink" href="#fig-tutorial7-timeevolution" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>横磁場を強くしていくと磁化の振動が大きくなり、量子相転移点を超えると <span class="math notranslate nohighlight">\(m^z = 0\)</span> を超えて振動するようになります <a class="reference internal" href="#ref-dqpt"><span class="std std-ref">[DQPT]</span></a> 。</p>
@@ -181,10 +184,11 @@ hx = 2.0
 例えば、 <code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> に変更して上述の計算を行うと、
 <a class="reference internal" href="#fig-tutorial7-te-d10"><span class="std std-numref">図 4.3</span></a> に示すように不連続性が消えることがわかります。</p>
 <figure class="align-default" id="fig-tutorial7-te-d10">
-<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_07_timeevolution_D10.png"><img alt="../_images/tutorial_07_timeevolution_D10.png" src="../_images/tutorial_07_timeevolution_D10.png" style="width: 600px;" />
+</a>
 <figcaption>
 <p><span class="caption-number">図 4.3 </span><span class="caption-text">イジング模型の実時間発展の図. 縦軸は磁化、横軸は時間を表す。
-<code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> とした場合の結果。</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="この画像へのパーマリンク">¶</a></p>
+<code class="docutils literal notranslate"><span class="pre">virtual_dimension</span> <span class="pre">=</span> <span class="pre">10</span></code> とした場合の結果。</span><a class="headerlink" href="#fig-tutorial7-te-d10" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p class="rubric">参考文献</p>
@@ -197,11 +201,11 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -245,7 +249,7 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -253,7 +257,7 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -268,11 +272,11 @@ M. Heyl, A. polkovnikov, and S. Kehrein, <em>Dynamical Quantum Phase Transitions
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/02_time_evolution.rst.txt"

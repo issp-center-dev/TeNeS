@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程 &#8212; TeNeS 2.1.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <title>4.4. 三角格子・正方格子ハイゼンベルク模型の磁化過程 &#8212; TeNeS 2.1.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=1d00055d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1><span class="section-number">4.4. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<h1><span class="section-number">4.4. </span>三角格子・正方格子ハイゼンベルク模型の磁化過程<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <p>次に三角格子上で定義されたスピン<span class="math notranslate nohighlight">\(S=1/2\)</span>の量子ハイゼンベルク模型の磁化過程の計算を紹介します。
 ハミルトニアンは以下のようになります:</p>
 <div class="math notranslate nohighlight">
@@ -175,9 +177,10 @@ fmag.close()
 理想的にはステップ数を増やすほど基底エネルギーが下がるはずですが、一部の磁場領域では逆に基底エネルギーが増加します。これは計算精度があまりでていない兆候です。
 ボンド次元を増やすなどして、より計算精度を高める必要があると推測されます。</p>
 <figure class="align-default" id="fig-tutorial5-triangular">
-<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png"><img alt="../_images/tutorial_5_triangular.png" src="../_images/tutorial_5_triangular.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_5_triangular.png"><img alt="../_images/tutorial_5_triangular.png" src="../_images/tutorial_5_triangular.png" style="width: 600px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.5 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.5 </span><span class="caption-text">三角格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-triangular" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>では正方格子でも同じことをやってみましょう。 <code class="docutils literal notranslate"><span class="pre">sample/04_magnetization</span></code> のディレクトリ中にある toml ファイル <code class="docutils literal notranslate"><span class="pre">basic_square.toml</span></code> と、pythonスクリプト <code class="docutils literal notranslate"><span class="pre">tutorial_magnetization_square.py</span></code> を利用します。
@@ -202,9 +205,10 @@ W = 2
 </div>
 <p>とすれば、<a class="reference internal" href="#fig-tutorial5-square"><span class="std std-numref">図 4.6</span></a> の左図のような基底エネルギーのグラフが得られます。</p>
 <figure class="align-default" id="fig-tutorial5-square">
-<a class="reference internal image-reference" href="../_images/tutorial_5_square.png"><img alt="../_images/tutorial_5_square.png" src="../_images/tutorial_5_square.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial_5_square.png"><img alt="../_images/tutorial_5_square.png" src="../_images/tutorial_5_square.png" style="width: 600px;" />
+</a>
 <figcaption>
-<p><span class="caption-number">図 4.6 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-number">図 4.6 </span><span class="caption-text">正方格子量子ハイゼンベルク模型のエネルギー(左図)と磁化過程(右図)</span><a class="headerlink" href="#fig-tutorial5-square" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>ステップ数2000でほぼ収束しており、三角格子ハイゼンベルク模型と異なり、プラトー構造は現れないことがわかります。
@@ -216,11 +220,11 @@ W = 2
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -264,7 +268,7 @@ W = 2
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -272,7 +276,7 @@ W = 2
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -287,11 +291,11 @@ W = 2
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/tutorial/04_magnetization.rst.txt"

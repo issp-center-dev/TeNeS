@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>5.2. tenes_simple の入力ファイル &#8212; TeNeS 2.1.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=9b02570c"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <title>5.2. tenes_simple の入力ファイル &#8212; TeNeS 2.1.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=1d00055d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -20,8 +21,9 @@
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,7 +36,7 @@
           <div class="body" role="main">
             
   <section id="tenes-simple">
-<span id="sec-simple-format"></span><h1><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル<a class="headerlink" href="#tenes-simple" title="この見出しへのパーマリンク">¶</a></h1>
+<span id="sec-simple-format"></span><h1><span class="section-number">5.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の入力ファイル<a class="headerlink" href="#tenes-simple" title="Link to this heading">¶</a></h1>
 <ul class="simple">
 <li><p>ファイルフォーマットは
 <a class="reference external" href="https://github.com/toml-lang/toml/blob/master/versions/ja/toml-v0.5.0.md">TOML</a> 形式</p></li>
@@ -46,7 +48,7 @@
 </li>
 </ul>
 <section id="model">
-<h2><span class="section-number">5.2.1. </span><code class="docutils literal notranslate"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.2.1. </span><code class="docutils literal notranslate"><span class="pre">model</span></code> セクション<a class="headerlink" href="#model" title="Link to this heading">¶</a></h2>
 <p>計算する模型を指定します。
 スピン系 (spin) および ボソン系 (boson) が定義済みです。</p>
 <table class="docutils align-default">
@@ -73,7 +75,7 @@
 </table>
 <p>模型の種類によって相互作用などのパラメータ名が変わります。</p>
 <section id="spin">
-<h3>スピン系 spin<a class="headerlink" href="#spin" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>スピン系 spin<a class="headerlink" href="#spin" title="Link to this heading">¶</a></h3>
 <p>スピン系</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H} = \sum_{i &lt; j}\left[\sum_\alpha^{x,y,z} J^\alpha_{ij} S^\alpha_i S^\alpha_j + B_{ij} \left(\vec{S}_i\cdot\vec{S}_j\right)^2 \right] - \sum_i \sum_\alpha^{x,y,z} h^\alpha S^\alpha_i - D \sum_i \left(S^z_i\right)^2\]</div>
@@ -189,7 +191,8 @@
 方向を示す番号を省略することで、すべての方向について一度に指定できます。
 また、最後に <cite>xyz</cite> のうち一文字を追加するとイジング的な相互作用を指定できます。
 同一ボンド・同一成分を2回以上指定するとエラー終了します。</p>
-<a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" /></a>
+<a class="reference internal image-reference" href="../_images/J.png"><img alt="../_images/J.png" class="align-center" src="../_images/J.png" style="width: 300px;" />
+</a>
 <p>双二次相互作用 <span class="math notranslate nohighlight">\(B\)</span> も <span class="math notranslate nohighlight">\(J\)</span> と同様にボンド依存性をもたせられます。</p>
 <table class="docutils align-default">
 <colgroup>
@@ -262,7 +265,7 @@
 ここで、ボンドハミルトニアンのうち、 <span class="math notranslate nohighlight">\(z\)</span> はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。</p>
 </section>
 <section id="boson">
-<h3>ボソン系 boson<a class="headerlink" href="#boson" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ボソン系 boson<a class="headerlink" href="#boson" title="Link to this heading">¶</a></h3>
 <p>ボソン系</p>
 <div class="math notranslate nohighlight">
 \[\mathcal{H} = \sum_{i&lt;j}\left[ -t_{ij} \left(b^\dagger_i b_j + b^\dagger_j b_i \right) + V_{ij} n_i n_j \right] + \sum_i \left[U\frac{n_i(n_i-1)}{2} - \mu n_i\right]\]</div>
@@ -421,7 +424,7 @@
 </section>
 </section>
 <section id="lattice">
-<h2><span class="section-number">5.2.2. </span><code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.2.2. </span><code class="docutils literal notranslate"><span class="pre">lattice</span></code> セクション<a class="headerlink" href="#lattice" title="Link to this heading">¶</a></h2>
 <p>計算する格子を指定します。
 正方格子 (square) と 三角格子 (triangular), 蜂の巣格子 (honeycomb) , かごめ格子 (kagome) が定義されています。
 TeNeS では波動関数を正方格子状に並べられたテンソルによるテンソル積状態で表現し、計算を行います。
@@ -508,25 +511,26 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </li>
 </ul>
 <section id="square-lattice">
-<h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="Link to this heading">¶</a></h3>
 <p>正方格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math notranslate nohighlight">\((1,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((0,1)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、 <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-square-lattice"><span class="std std-numref">図 5.1</span></a> (a) に示します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
 <a class="reference internal" href="#fig-square-lattice"><span class="std std-numref">図 5.1</span></a> (b), (c), (d) にそれぞれ示します。
 青線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを, 赤線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを表します。</p>
 <figure class="align-center" id="fig-square-lattice">
-<a class="reference internal image-reference" href="../_images/SquareLattice.png"><img alt="../_images/SquareLattice.png" src="../_images/SquareLattice.png" style="width: 550px;" /></a>
+<a class="reference internal image-reference" href="../_images/SquareLattice.png"><img alt="../_images/SquareLattice.png" src="../_images/SquareLattice.png" style="width: 550px;" />
+</a>
 <figcaption>
 <p><span class="caption-number">図 5.1 </span><span class="caption-text">正方格子 (square) のサイト・ボンド。
 (a) <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
 (b) 最近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 90度方向に伸びる。
 (c) 次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 45 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は -45度方向に伸びる。
-(d) 三次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 90度方向に伸びる。</span><a class="headerlink" href="#fig-square-lattice" title="この画像へのパーマリンク">¶</a></p>
+(d) 三次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 90度方向に伸びる。</span><a class="headerlink" href="#fig-square-lattice" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="triangular-lattice">
-<h3>三角格子 triangular lattice<a class="headerlink" href="#triangular-lattice" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>三角格子 triangular lattice<a class="headerlink" href="#triangular-lattice" title="Link to this heading">¶</a></h3>
 <p>三角格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;triangular</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math notranslate nohighlight">\((1,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、 <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-triangular-lattice"><span class="std std-numref">図 5.2</span></a> (a) に示します。
 また、最近接、次近接、三次近接のボンドタイプの定義を
@@ -534,19 +538,20 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 青線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを、 緑線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">2</span></code> のボンドを、それぞれ表します。
 <a class="reference internal" href="#fig-triangular-lattice"><span class="std std-numref">図 5.2</span></a> (e) 図は (a) に等価な正方格子をあらわしています。</p>
 <figure class="align-center" id="fig-triangular-lattice">
-<a class="reference internal image-reference" href="../_images/TriangularLattice.png"><img alt="../_images/TriangularLattice.png" src="../_images/TriangularLattice.png" style="width: 550px;" /></a>
+<a class="reference internal image-reference" href="../_images/TriangularLattice.png"><img alt="../_images/TriangularLattice.png" src="../_images/TriangularLattice.png" style="width: 550px;" />
+</a>
 <figcaption>
 <p><span class="caption-number">図 5.2 </span><span class="caption-text">三角格子 (triangular) のサイト・ボンド。
 (a) <code class="docutils literal notranslate"><span class="pre">L=3,</span> <span class="pre">W=3</span></code> としたときのサイトの並び。
 (b) 最近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
 (c) 次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 90 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は -30度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (緑)は 30度方向にそれぞれ伸びる。
 (d) 三次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 0 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (緑)は 120度方向にそれぞれ伸びる。
-(e) 正方格子テンソル積状態との対応。</span><a class="headerlink" href="#fig-triangular-lattice" title="この画像へのパーマリンク">¶</a></p>
+(e) 正方格子テンソル積状態との対応。</span><a class="headerlink" href="#fig-triangular-lattice" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="honeycomb-lattice">
-<h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>蜂の巣格子 honeycomb lattice<a class="headerlink" href="#honeycomb-lattice" title="Link to this heading">¶</a></h3>
 <p>蜂の巣格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;honeycomb</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math notranslate nohighlight">\((0, 0)\)</span> と <span class="math notranslate nohighlight">\((\sqrt{3}/2, 1/2)\)</span> の2つのサイトからなるユニットが、 <span class="math notranslate nohighlight">\((\sqrt{3},0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1/2, 3/2)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、<code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-honeycomb-lattice"><span class="std std-numref">図 5.3</span></a> (a) に示します。
 破線はユニットを表します。
@@ -556,7 +561,8 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <a class="reference internal" href="#fig-honeycomb-lattice"><span class="std std-numref">図 5.3</span></a> (e) 図は (a) に等価な正方格子をあらわしています。
 青サイトから上に伸びるボンドなど、正方格子にはあるものの蜂の巣格子には存在しないものは、ボンド次元が 1 のボンドとして表現されます。</p>
 <figure class="align-center" id="fig-honeycomb-lattice">
-<a class="reference internal image-reference" href="../_images/HoneycombLattice.png"><img alt="../_images/HoneycombLattice.png" src="../_images/HoneycombLattice.png" style="width: 550px;" /></a>
+<a class="reference internal image-reference" href="../_images/HoneycombLattice.png"><img alt="../_images/HoneycombLattice.png" src="../_images/HoneycombLattice.png" style="width: 550px;" />
+</a>
 <figcaption>
 <p><span class="caption-number">図 5.3 </span><span class="caption-text">蜂の巣格子 (honeycomb) のサイト・ボンド。
 (a) <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal notranslate"><span class="pre">L</span></code> かける <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並ぶ。
@@ -564,12 +570,12 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 (c) 次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 120 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 60度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (緑)は 0度方向にそれぞれ伸びる。
 (d) 三次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は -30 度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は -150度方向に、 <code class="docutils literal notranslate"><span class="pre">bondtype=2</span></code> (緑)は 90度方向にそれぞれ伸びる。
 (e) 正方格子テンソル積状態との対応。大きな破線はユニットセルの境界を表し、周りにある薄いユニットセルは中心にあるユニットセルのコピーである。
-ユニットセルの並びが少しずれていること、また、 (a) で一番右上にあった赤いサイトが (e) では等価な左上に移動することに注意。</span><a class="headerlink" href="#fig-honeycomb-lattice" title="この画像へのパーマリンク">¶</a></p>
+ユニットセルの並びが少しずれていること、また、 (a) で一番右上にあった赤いサイトが (e) では等価な左上に移動することに注意。</span><a class="headerlink" href="#fig-honeycomb-lattice" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="kagome-lattice">
-<h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>かごめ格子 kagome lattice<a class="headerlink" href="#kagome-lattice" title="Link to this heading">¶</a></h3>
 <p>かごめ格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;kagome</span> <span class="pre">lattice&quot;</span></code> では、 座標 <span class="math notranslate nohighlight">\((0, 0)\)</span>, <span class="math notranslate nohighlight">\((1, 0)\)</span>, <span class="math notranslate nohighlight">\((1/2, \sqrt{3}/2)\)</span> の3つのサイトからなるユニット（上向き三角）が、 <span class="math notranslate nohighlight">\((2,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((1, \sqrt{3})\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
 具体例として、<code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> のときのサイトの並びを <a class="reference internal" href="#fig-kagome-lattice"><span class="std std-numref">図 5.4</span></a> (a) に示します。
 破線はユニットは破線を表します。
@@ -577,26 +583,27 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <a class="reference internal" href="#fig-kagome-lattice"><span class="std std-numref">図 5.4</span></a> (b), (c), (d) にそれぞれ示します。
 青線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">0</span></code> のボンドを、 赤線は <code class="docutils literal notranslate"><span class="pre">bondtype</span> <span class="pre">=</span> <span class="pre">1</span></code> のボンドを表します。</p>
 <figure class="align-center" id="fig-kagome-lattice">
-<a class="reference internal image-reference" href="../_images/KagomeLattice.png"><img alt="../_images/KagomeLattice.png" src="../_images/KagomeLattice.png" style="width: 550px;" /></a>
+<a class="reference internal image-reference" href="../_images/KagomeLattice.png"><img alt="../_images/KagomeLattice.png" src="../_images/KagomeLattice.png" style="width: 550px;" />
+</a>
 <figcaption>
 <p><span class="caption-number">図 5.4 </span><span class="caption-text">かごめ格子 (kagome) のサイト・ボンド。
 (a) <code class="docutils literal notranslate"><span class="pre">L=2,</span> <span class="pre">W=2</span></code> としたときのサイトの並び。 破線で表されるユニットが <code class="docutils literal notranslate"><span class="pre">L</span></code> かける <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並ぶ。
 (b) 最近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) は 上向き三角形を、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は 下向き三角形を作る。
 (c) 次近接ボンド。
 (d) 三次近接ボンド。 <code class="docutils literal notranslate"><span class="pre">bondtype=0</span></code> (青) はサイトを横切り、 <code class="docutils literal notranslate"><span class="pre">bondtype=1</span></code> (赤) は横切らない。
-(e) 正方格子テンソル積状態との対応。点線で描かれた白丸はすべての次元が1のダミーサイト。</span><a class="headerlink" href="#fig-kagome-lattice" title="この画像へのパーマリンク">¶</a></p>
+(e) 正方格子テンソル積状態との対応。点線で描かれた白丸はすべての次元が1のダミーサイト。</span><a class="headerlink" href="#fig-kagome-lattice" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 </section>
 <section id="parameter">
-<h2><span class="section-number">5.2.3. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.2.3. </span><code class="docutils literal notranslate"><span class="pre">parameter</span></code> セクション<a class="headerlink" href="#parameter" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では使われず、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとしてそのままコピーされます。</p>
 <p>更新回数など、 計算にあらわれる種々のパラメータを記述します。
 サブセクションとして <code class="docutils literal notranslate"><span class="pre">general</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_update</span></code>, <code class="docutils literal notranslate"><span class="pre">full_update</span></code>,
 <code class="docutils literal notranslate"><span class="pre">ctm</span></code>, <code class="docutils literal notranslate"><span class="pre">random</span></code> を持ちます。</p>
 <section id="parameter-general">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.general</span></code><a class="headerlink" href="#parameter-general" title="Link to this heading">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">tenes</span></code> の全般的な設定パラメータ</p>
 <table class="docutils align-default">
 <colgroup>
@@ -723,7 +730,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </ul>
 </section>
 <section id="parameter-simple-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code><a class="headerlink" href="#parameter-simple-update" title="Link to this heading">¶</a></h3>
 <p>simple update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
@@ -798,7 +805,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </ul>
 </section>
 <section id="parameter-full-update">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code><a class="headerlink" href="#parameter-full-update" title="Link to this heading">¶</a></h3>
 <p>full update に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
@@ -859,7 +866,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </table>
 </section>
 <section id="parameter-ctm">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Link to this heading">¶</a></h3>
 <p>角転送行列 (CTM) に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
@@ -921,7 +928,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
 </section>
 <section id="parameter-random">
-<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="この見出しへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">parameter.random</span></code><a class="headerlink" href="#parameter-random" title="Link to this heading">¶</a></h3>
 <p>疑似乱数生成器に関するパラメータ</p>
 <table class="docutils align-default">
 <colgroup>
@@ -948,7 +955,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <p>MPI 並列において、各プロセスは <code class="docutils literal notranslate"><span class="pre">seed</span></code> にプロセス番号を足した数を実際のシードとして持ちます。</p>
 </section>
 <section id="id1">
-<h3>例<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>例<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
@@ -966,12 +973,12 @@ dimension = 9 # CHI
 </section>
 </section>
 <section id="correlation">
-<h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では相関関数 <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">=</span> <span class="pre">&lt;A(0)B(r)&gt;</span></code> はデフォルトでは計算されません。
 相関関数を計算したい場合は、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルで指定する <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションと共通のフォーマットで指定することができます。詳細は、<a class="reference internal" href="expert_format.html"><span class="doc">tenes の入力ファイル</span></a> の <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションをご覧ください。</p>
 </section>
 <section id="correlation-length">
-<h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="この見出しへのパーマリンク">¶</a></h2>
+<h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では使われず、 <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルとしてそのままコピーされます。</p>
 <p>相関長 <span class="math notranslate nohighlight">\(\xi\)</span> の計算に関する情報を指定するセクションです。</p>
 <table class="docutils align-default">
@@ -1040,11 +1047,11 @@ dimension = 9 # CHI
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../index.html">
-    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo"/>
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
     
   </a>
 </p>
@@ -1087,7 +1094,7 @@ dimension = 9 # CHI
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -1095,7 +1102,7 @@ dimension = 9 # CHI
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -1110,11 +1117,11 @@ dimension = 9 # CHI
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2019-, Institute for Solid State Physics, University of Tokyo.
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="../_sources/file_specification/simple_format.rst.txt"
