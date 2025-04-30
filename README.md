@@ -60,7 +60,6 @@ The following external packages are required:
 - numpy
 - scipy
 - toml
-- typing (mandatory for python < 3.5)
 
 ## Install
 
@@ -135,38 +134,40 @@ cmake -DTENES_PYTHON_EXECUTABLE=<path to your interpreter> ../
 
 ### Use pre-defined model and lattice
 
-For example, the following file `simple.toml` represents the transverse field Ising model on the square lattice.
+For example, the following file `simple.toml` represents the transverse field Ising model on the square lattice ([sample/01_transverse_field_ising/simple.toml](sample/01_transverse_field_ising/simple.toml)).
 
-```
+``` toml
 [parameter]
 [parameter.general]
-is_real = true
+is_real = true  # Limit tensor elements in real (not complex)
 
 [parameter.simple_update]
-num_step = 1000
-tau = 0.01
+num_step = 1000 # Number of steps in simple update
+tau = 0.01      # Imaginary time slice
 
 [parameter.full_update]
-num_step = 0
-tau = 0.01
+num_step = 0    # Number of steps in full update
+tau = 0.01      # Imaginary time slice
 
 [parameter.ctm]
-iteration_max = 10
-dimension = 10
+meanfield_env = false # Use meanfield environment to contract iTNS
+iteration_max = 10    # Maximum number of iterations in CTMRG
+dimension = 10        # Bond dimension of corner transfer matrix
 
 [lattice]
-type = "square lattice"
-L = 2
-W = 2
-virtual_dim = 2
-initial = "ferro"
+type = "square lattice" # Type of lattice
+L = 2                   # X length of unit cell
+W = 2                   # Y length of unit cell
+virtual_dim = 2         # Bond dimension of bulk tensors
+initial = "ferro"       # Initial condition
 
 [model]
-type = "spin"
-Jz = -1.0 # negative for FM interaction
-Jx = 0.0
-Jy = 0.0
-hx = 1.0   # transverse field
+type = "spin" # Type of model
+Jz = -1.0     # Jz SzSz
+Jx = 0.0      # Jx SxSx
+Jy = 0.0      # Jy SySy
+hx = 0.0      # hx Sx
+
 ```
 
 `tenes_simple` is a utility tool for converting this file to another file, `std.toml`, denoting the operator tensors including bond hamiltonian.
@@ -196,13 +197,15 @@ tenes input.toml
 Results can be found in `output` directory.
 For example, expectation values of operators per site are stored in `output/densities.dat` as the following,
 
-```
-Sz          =  2.97866964051826333e-01  0.00000000000000000e+00
-Sx          =  3.86024172907023511e-01  0.00000000000000000e+00
-hamiltonian = -7.57303058659582140e-01  0.00000000000000000e+00
-SzSz        =  2.16869216589772901e-01  0.00000000000000000e+00
-SxSx        =  3.19350111777505108e-01  0.00000000000000000e+00
-SySy        = -4.77650003168152704e-02  0.00000000000000000e+00
+``` text
+Energy           = -5.00000000000000000e-01  0.00000000000000000e+00
+Sz               =  5.00000000000000000e-01  0.00000000000000000e+00
+Sx               = -1.28526262481784176e-13  0.00000000000000000e+00
+bond_hamiltonian = -5.00000000000000000e-01  0.00000000000000000e+00
+SzSz             =  5.00000000000000000e-01  0.00000000000000000e+00
+SxSx             = -1.73749199820346390e-18  0.00000000000000000e+00
+SySy             =  1.73749202732501919e-18  0.00000000000000000e+00
+
 ```
 
 The file format of input/output files is described in the manual page.
