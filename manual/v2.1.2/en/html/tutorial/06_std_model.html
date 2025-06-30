@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4.6. Definition of lattices, models, and operators using the standard mode &#8212; TeNeS 2.1.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=b3e23499"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="5. File format" href="../file_specification/index.html" />
+    <link rel="prev" title="4.5. Phase diagram of the hardcore boson model on a trianglar lattice" href="05_hardcore_boson_triangular.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="definition-of-lattices-models-and-operators-using-the-standard-mode">
+<h1><span class="section-number">4.6. </span>Definition of lattices, models, and operators using the standard mode<a class="headerlink" href="#definition-of-lattices-models-and-operators-using-the-standard-mode" title="Link to this heading">¶</a></h1>
+<p>By using the standard mode, users can define own lattices, models, and operators.
+In this section, we explain how to use the standard mode.</p>
+<section id="definition-of-unit-cell">
+<h2><span class="section-number">4.6.1. </span>Definition of unit cell<a class="headerlink" href="#definition-of-unit-cell" title="Link to this heading">¶</a></h2>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Tensor.png"><img alt="../_images/en_tutorial_1_Tensor.png" src="../_images/en_tutorial_1_Tensor.png" style="width: 400px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 4.8 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> and <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code></span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>Unit cells are defined using <code class="docutils literal notranslate"><span class="pre">[tensor]</span></code> and <code class="docutils literal notranslate"><span class="pre">[[tensor.unitcell]]</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[tensor]
+L_sub = [2, 2]          # 2x2 unitcell
+skew = 0                # Displacement in x direction
+                        # when go beyond a y-direction boundary
+
+[[tensor.unitcell]]
+virtual_dim = [4, 4, 4, 4] # Bond dimensions (←, ↑, →, ↓)
+index = [0, 3]             # Indices of tensors in the unit cell
+physical_dim = 2           # Physical bond dimensions
+initial_state = [1.0, 0.0] # Initial state coefficients
+noise = 0.01               # Fluctuation of elements in initial tensor
+</pre></div>
+</div>
+<p>The initial state <span class="math notranslate nohighlight">\(\ket{\Psi}\)</span> is prepared as the direct product state of the per-site initial states <span class="math notranslate nohighlight">\(\ket{\psi}_i\)</span> : <span class="math notranslate nohighlight">\(\ket{\psi} = \otimes_i \ket{\psi_i}\)</span>.
+<span class="math notranslate nohighlight">\(\ket{\psi}_i\)</span> can be specified as follows, with the elements of the <code class="docutils literal notranslate"><span class="pre">initial_state</span> <span class="pre">=</span> <span class="pre">[a0,</span> <span class="pre">a1,</span> <span class="pre">...,</span> <span class="pre">a_{d-1}]</span></code>,</p>
+<div class="math notranslate nohighlight">
+\[\Ket{\psi}_i \propto \sum_{k=0}^{d-1}a_k\Ket{k}\]</div>
+</section>
+<section id="definition-of-model-hamiltonian">
+<h2><span class="section-number">4.6.2. </span>Definition of model (Hamiltonian)<a class="headerlink" href="#definition-of-model-hamiltonian" title="Link to this heading">¶</a></h2>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Hamiltonian.png"><img alt="../_images/en_tutorial_1_Hamiltonian.png" src="../_images/en_tutorial_1_Hamiltonian.png" style="width: 400px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 4.9 </span><span class="caption-text">[[hamiltonian]]</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>TeNeS treats the Hamiltonian as the sum of bond Hamiltonians (two-site Hamiltonians) and site Hamiltonians (one-site Hamiltonians).</p>
+<div class="math notranslate nohighlight">
+\[mathcal{H} = \sum_{i,j}\mathcal{H}_{i,j} + \sum_{i} \mathcal{H}_i\]</div>
+<p>These local Hamiltonians are defined as pairs of (nonzero) elements of matrix and site/bond it acts on.
+A bond is a directed pair of two sites: source and target.
+To define matrix elements is to define a model, and to define bonds is to define a lattice.</p>
+<section id="bond-hamiltonian">
+<h3>Bond Hamiltonian<a class="headerlink" href="#bond-hamiltonian" title="Link to this heading">¶</a></h3>
+<p>In the input file of the standard mode, say <code class="docutils literal notranslate"><span class="pre">std.toml</span></code>, each local Hamiltonian is specified as <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code>.
+The bonds where the bond Hamiltonian acts are specified by <code class="docutils literal notranslate"><span class="pre">bonds</span></code> string:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
+bonds = &quot;&quot;&quot; # Set of acting bonds (1 bond per line)
+0 1 0       # Row 1: Number of the source in the unit cell
+1 1 0       # Row 2: x coordinate(displacement) of target from the source
+2 1 0       # Row 3: y coordinate(displacement) of target from the source
+3 1 0
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>One line of three integers corresponds one bond.
+The first integer is the index of the source site.
+The other two integers are x and y displacement of the target site from the source site.
+For example, <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span></code> means the pair of the site 0 and the right neighbor (x+=1 and y+=0), the site 1,
+and <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">1</span></code> means the pair of the site 1 and the top neighbor (x+=0 and y+=1), the site 3.</p>
+<p>The dimension of the bond Hamiltonian, i.e., the number of states of the source and target sites, is specified by <code class="docutils literal notranslate"><span class="pre">dim</span></code>, and
+the non-zero elements of the bond Hamiltonian is defined by <code class="docutils literal notranslate"><span class="pre">elements</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dim = [2, 2]       # Number of possible states of the acting bond [source, target]
+elements = &quot;&quot;&quot;     # (nonzero) matrix elements of the Hamiltonian (one element per row)
+0 0 0 0 0.25 0.0   # Field 1: State of source before action
+1 0 1 0 -0.25 0.0  # Field 2: State of target before action
+0 1 1 0 0.5 0.0    # Field 3: State of source after action
+1 0 0 1 0.5 0.0    # Field 4: State of target after action
+0 1 0 1 -0.25 0.0  # Field 5: Real part of element
+1 1 1 1 0.25 0.0   # Field 6: Imaginary part of element
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>One line of <code class="docutils literal notranslate"><span class="pre">elements</span></code> corresponds one element.
+The first two integers are the states of the source and target sites <strong>before</strong> the Hamiltonian acts on,
+and
+the following two integers are the states of the source and target sites <strong>after</strong> the Hamiltonian acts on.
+The remaining two numbers are the real and imaginary part of the element of the bond Hamiltonian.</p>
+</section>
+<section id="site-hamiltonian">
+<h3>Site Hamiltonian<a class="headerlink" href="#site-hamiltonian" title="Link to this heading">¶</a></h3>
+<p>A site Hamiltonian is defined as a pair of (non-zero) matrix element and site it acts on.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
+dim = [2]
+sites = []
+elements = &quot;&quot;&quot;
+1 0 -0.5 0.0
+0 1 -0.5 0.0
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>Site is specified by <code class="docutils literal notranslate"><span class="pre">sites</span></code> as a list of indices.
+An empty list means all the sites.</p>
+<p>Non-zero matrix elements are specified by <code class="docutils literal notranslate"><span class="pre">elements</span></code>, and how to define is the similar for bond Hamiltonians (Note that site Hamiltonians acts on only one site).</p>
+</section>
+</section>
+<section id="definition-of-operators">
+<h2><span class="section-number">4.6.3. </span>Definition of operators<a class="headerlink" href="#definition-of-operators" title="Link to this heading">¶</a></h2>
+<figure class="align-center" id="id3">
+<a class="reference internal image-reference" href="../_images/en_tutorial_1_Observable.png"><img alt="../_images/en_tutorial_1_Observable.png" src="../_images/en_tutorial_1_Observable.png" style="width: 400px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 4.10 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">[[observable.onesite]]</span></code></span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>Operators whose expected values are finally computed are defined in <code class="docutils literal notranslate"><span class="pre">[observable]</span></code>.
+The current version of TeNeS can evaluate onesite and twosites operators.
+The way to define operators is similar in Hamiltoninans, but an operator require the name (<code class="docutils literal notranslate"><span class="pre">name</span></code>) and identifier number (<code class="docutils literal notranslate"><span class="pre">group</span></code>).
+Although the energy operator is just the Hamiltonian (sum of the bond Hamiltonians),
+it should be defined in <code class="docutils literal notranslate"><span class="pre">[observable]</span></code> if users want to calculate.
+For convenience, <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> copies <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> in <code class="docutils literal notranslate"><span class="pre">[[observable]]</span></code> when operator with <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">=</span> <span class="pre">0</span></code> is not defined.</p>
+<p>For an example of onesite operator, the z-component of the spin operator</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>S^z = \begin{pmatrix}
+0.5 &amp; 0.0 \\
+0.0 &amp; -0.5 \\
+\end{pmatrix}
+</pre></div>
+</div>
+<p>is defined as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]] # onesite operator
+name = &quot;Sz&quot;            # Name
+group = 0              # 1-site operator identification number
+sites = []             # Indices of tensors on which the operator acts ([] means all)
+dim = 2                # Dimensions of operators
+elements = &quot;&quot;&quot;         # Non-zero elements of operator matrix (one element per line)
+0 0 0.5 0.0            # Fields 1 and 2: before and after action
+1 1 -0.5 0.0           # Fields 3 and 4: Real and imaginary parts of the element
+&quot;&quot;&quot;
+</pre></div>
+</div>
+<p>Non-zero elements of the matrix can be specified in the similar way of bond Hamiltonians.</p>
+<p>Twosites operators can be defined in the similar way how to define the bond Hamiltonian.
+As an example of twosites operator, spin-spin correlation on nearest neighbor bonds <span class="math notranslate nohighlight">\(S^z_i S^z_j\)</span> is defined as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable].twosite]] # twosite operator
+name = &quot;SzSz&quot;           # Name
+group = 1               # Index of twosite operator (independent of indices of onesite)
+dim = [2, 2]            # Dimension
+bonds = &quot;&quot;&quot;             # Bond that acts on
+0 1 0
+1 1 0
+2 1 0
+3 1 0
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+&quot;&quot;&quot;
+ops = [0, 0] # When it can be written as a direct product of onesite operators,
+             # their indices.
+             # In this case, &quot;Sz&quot; is the onesite operator with index 0.
+             # Matrix elements can also be written explicitly as elements
+</pre></div>
+</div>
+<p>When the twosites operator is written as the direct product of the two onesite operators,
+<code class="docutils literal notranslate"><span class="pre">ops</span></code> can be used to specify them.</p>
+</section>
+<section id="example-antiferromagnetic-heisenberg-model-in-staggered-field">
+<h2><span class="section-number">4.6.4. </span>Example: Antiferromagnetic Heisenberg model in staggered field<a class="headerlink" href="#example-antiferromagnetic-heisenberg-model-in-staggered-field" title="Link to this heading">¶</a></h2>
+<p>Let us consider the antiferromagnetic Heisenberg model in staggered field.
+The Hamiltonian is as follows</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H} = J \sum_{\braket{ij}} S_i \cdot S_j - h \sum_{i \in A} S_i^z + h \sum_{j \in B} S_j^z,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\sum_{\braket{ij}}\)</span> is summation over the nearest neighbor bonds
+and <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span> are the sublattices of the square lattice.
+The bond Hamiltonian <span class="math notranslate nohighlight">\(\mathcal{H}_{ij}\)</span> can be written as follows</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{split}
+\mathcal{H}_{ij}
+&amp;= J S_i \cdot S_j \\
+&amp;= \begin{pmatrix}
+J/4 &amp; 0 &amp; 0 &amp; 0 \\
+0 &amp; -J/4 &amp; J/2 &amp; 0 \\
+0 &amp; J/2 &amp; -J/4 &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; J/4 \\
+\end{pmatrix}
+\end{split}\end{split}\]</div>
+<p>and the site Hamiltonian <span class="math notranslate nohighlight">\(\mathcal{H}_i\)</span> can be written as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{split}
+\mathcal{H}_{i}
+&amp;= -h S_i^z \\
+&amp;= \begin{pmatrix}
+-h/2 &amp; 0 \\
+   0 &amp; h/2 \\
+\end{pmatrix}
+\end{split}\end{split}\]</div>
+<p>When <span class="math notranslate nohighlight">\(J = 0, h = 1\)</span>, for example, an input file of <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code>, <code class="docutils literal notranslate"><span class="pre">std.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">sample/06_std_model/std.toml</span></code>), is as follows</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
+[parameter.general]
+is_real = true
+tensor_save = &quot;tensor&quot;
+[parameter.simple_update]
+num_step = 1000
+tau = 0.01
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+[parameter.ctm]
+iteration_max = 10
+dimension = 10
+
+[tensor]
+type = &quot;square lattice&quot;
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+virtual_dim = [2, 2, 2, 2]
+index = [0, 3]
+physical_dim = 2
+initial_state = [1.0, 0.0]
+noise = 0.01
+
+[[tensor.unitcell]]
+virtual_dim = [2, 2, 2, 2]
+index = [1, 2]
+physical_dim = 2
+initial_state = [0.0, 1.0]
+noise = 0.01
+
+[[hamiltonian]]
+dim = [2]
+sites = [0, 3]
+elements = &quot;&quot;&quot;
+0 0 -0.5 0.0
+1 1 0.5 0.0
+&quot;&quot;&quot;
+
+[[hamiltonian]]
+dim = [2]
+sites = [1, 2]
+elements = &quot;&quot;&quot;
+0 0 0.5 0.0
+1 1 -0.5 0.0
+&quot;&quot;&quot;
+
+[observable]
+[[observable.onesite]]
+name = &quot;Sz&quot;
+group = 1
+sites = []
+dim = 2
+elements = &quot;&quot;&quot;
+0 0 0.5 0.0
+1 1 -0.5 0.0
+&quot;&quot;&quot;
+
+[[observable.twosite]]
+name = &quot;SzSz&quot;
+group = 1
+dim = [2, 2]
+bonds = &quot;&quot;&quot;
+0 1 0
+1 1 0
+2 1 0
+3 1 0
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+&quot;&quot;&quot;
+ops = [1, 1]
+</pre></div>
+</div>
+<p>We can calculate this model and obtain results as</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ tenes_std std.toml
+$ tenes input.toml
+
+   ... skipped ...
+
+Onesite observables per site:
+  hamiltonian = -0.5 0
+  Sz          = 0 0
+Twosite observables per site:
+  SzSz        = -0.5 0
+
+   ... skipped
+</pre></div>
+</div>
+<p>Especially, the expectation values of onesite operators written in <code class="docutils literal notranslate"><span class="pre">output/onesite_obs.dat</span></code> are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># $1: op_group
+# $2: site_index
+# $3: real
+# $4: imag
+
+0 0 -5.00000000000000000e-01 0.00000000000000000e+00
+0 1 -5.00000000000000000e-01 0.00000000000000000e+00
+0 2 -5.00000000000000000e-01 0.00000000000000000e+00
+0 3 -5.00000000000000000e-01 0.00000000000000000e+00
+1 0 5.00000000000000000e-01 0.00000000000000000e+00
+1 1 -5.00000000000000000e-01 0.00000000000000000e+00
+1 2 -5.00000000000000000e-01 0.00000000000000000e+00
+1 3 5.00000000000000000e-01 0.00000000000000000e+00
+-1 0 2.20256797875764860e+04 0.00000000000000000e+00
+-1 1 2.20198975366861232e+04 0.00000000000000000e+00
+-1 2 2.20294461413457539e+04 0.00000000000000000e+00
+-1 3 2.20236290136460302e+04 0.00000000000000000e+00
+</pre></div>
+</div>
+<p>Values of <span class="math notranslate nohighlight">\(S^z\)</span> (<code class="docutils literal notranslate"><span class="pre">op_group=</span></code>) show that
+spins on the A sublattice (<code class="docutils literal notranslate"><span class="pre">site_index=0,3</span></code>) are up (<code class="docutils literal notranslate"><span class="pre">0.5</span></code>) and those on the B (<code class="docutils literal notranslate"><span class="pre">site_index=1,2</span></code>) are down (<code class="docutils literal notranslate"><span class="pre">-0.5</span></code>).
+By imposing the staggered magnetic field (<span class="math notranslate nohighlight">\(J = 0, h = 1\)</span>), a tensor product state representing the Neel state is obtained.
+Tensors are saved into the <code class="docutils literal notranslate"><span class="pre">tensor</span></code> directory because we set <code class="docutils literal notranslate"><span class="pre">tensor_save</span> <span class="pre">=</span> <span class="pre">&quot;tensor&quot;</span></code>,
+and therefore we can use them as the initial states of another calculation by setting <code class="docutils literal notranslate"><span class="pre">tensor_load</span> <span class="pre">=</span> <span class="pre">&quot;tensor&quot;</span></code>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. What is TeNeS ?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_use/index.html">3. Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">4. Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_transverse_field_ising.html">4.1. Ising model with transverse magnetic field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_time_evolution.html">4.2. Real-Time Evolution of the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_finite_temperature.html">4.3. Finite Temperature Calculations for the Transverse Field Ising Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_magnetization.html">4.4. Magnetization process of the Heisenberg model on triangular and square lattices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_hardcore_boson_triangular.html">4.5. Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">4.6. Definition of lattices, models, and operators using the standard mode</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. File format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. Algorithm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. Acknowledgement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. Contacts</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">4. </span>Tutorial</a><ul>
+      <li>Previous: <a href="05_hardcore_boson_triangular.html" title="previous chapter"><span class="section-number">4.5. </span>Phase diagram of the hardcore boson model on a trianglar lattice</a></li>
+      <li>Next: <a href="../file_specification/index.html" title="next chapter"><span class="section-number">5. </span>File format</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/tutorial/06_std_model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

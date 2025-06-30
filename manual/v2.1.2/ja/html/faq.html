@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+
+<html lang="ja" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>7. FAQ &#8212; TeNeS 2.1.2 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=9814fe92" />
+    <script src="_static/documentation_options.js?v=2af88f37"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=4755f45a"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="8. 謝辞" href="acknowledge/index.html" />
+    <link rel="prev" title="6. アルゴリズム" href="algorithm/algorithms.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="faq">
+<h1><span class="section-number">7. </span>FAQ<a class="headerlink" href="#faq" title="Link to this heading">¶</a></h1>
+<p>ここでは, TeNeSの利用にあたりよく寄せられる質問について, 回答と一緒に紹介します.</p>
+<p>Q1. full updateの回数はどのようにとればいいですか？</p>
+<p>A1. full updateを行うことで、計算精度が上がりますが、計算に時間がかかるようになります。full updateの回数は計算機の性能やボンド次元、必要な計算精度の兼ね合いによって決めるとよいでしょう。様子を見るために、はじめはsimple updateだけを行ってみるのも一つの方法です。また、full updateの前にsimple updateを行い基底状態に近づいていると、full updateを効率的に行うことができます。ただし、複雑な量子状態（スピン液体など）で、simple updateでは正しい基底状態に近づけない場合には、初期からfull updateを行う必要があります。</p>
+<p>Q2. simple updateの回数はどのようにとればいいですか？</p>
+<p>A2. simple updateの回数を徐々に増やしていくと基底状態に近づくはずですが、回数が多ければよいというものでもなく、ボンド次元が小さいとupdateの途中で計算精度が悪くなってしまう場合もあります。計算がうまくいっているかどうかは、基底状態のエネルギーをsimple updateの回数を変えてプロットしてみるとわかります。updateの回数を増やしてエネルギーが最小になったところを計算結果として採用すると良いでしょう。別の方針として、updateを増やしてエネルギーがほぼ変わらなくなったところを計算結果として採用することもできますが、それはエネルギー最小とは限りません。</p>
+<p>Q3. ボンド次元はどのようにとればいいですか？</p>
+<p>A3. ボンド次元を増やすと計算精度が上がる代わりに計算時間が長くなります。計算機環境や求めたい物理量に要求される精度のバランスをみて、ボンド次元を決める必要があります。またボンド次元を変化させるときには、lattice.virtual_dimとparameter.ctm.dimensionを連動させて動かすことが重要です。典型的には、後者は前者の2乗以上の値を取ります。</p>
+<p>Q4. 基底状態の正しさを検討するにはどうすればいいでしょうか？
+A4. 確実に正しいということを保証するのは難しいですが、乱数の種を複数用意してよりエネルギーの低い状態がないかを確認するのが一番簡単なチェック方法になります。また、コストはかかりますが、外場をかけて基底状態の候補となる状態をいくつか用意して、それを初期配置として計算してエネルギー比較を行うというのも有効です。その他、ユニットセルの形状を変えて、他の低エネルギー状態が現れないか確認することも重要です。サイズの問題はありますが厳密対角化など他手法との比較を行うこともお勧めしています。(厳密対角化の計算はHΦを使えば簡単に簡単にできます。)</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/TeNeS_logo.png" alt="Logo" />
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">2. インストール方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_use/index.html">3. 使用方法</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="algorithm/algorithms.html" title="前の章へ"><span class="section-number">6. </span>アルゴリズム</a></li>
+      <li>Next: <a href="acknowledge/index.html" title="次の章へ"><span class="section-number">8. </span>謝辞</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/faq.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

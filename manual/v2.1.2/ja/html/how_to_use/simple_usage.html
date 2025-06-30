@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="ja" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>3.1. tenes_simple の使用方法 &#8212; TeNeS 2.1.2 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=9814fe92" />
+    <script src="../_static/documentation_options.js?v=2af88f37"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="3.2. tenes_std の使用方法" href="standard_usage.html" />
+    <link rel="prev" title="3. 使用方法" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="tenes-simple">
+<h1><span class="section-number">3.1. </span><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法<a class="headerlink" href="#tenes-simple" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> は定義済みの模型、格子に対する <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルを生成するツールです。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tenes_simple<span class="w"> </span>simple.toml
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>引数としてファイルを取ります</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の入力ファイルを出力します</p></li>
+<li><dl class="simple">
+<dt>コマンドラインオプションは以下の通りです</dt><dd><ul>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--help</span></code></dt><dd><ul>
+<li><p>ヘルプメッセージの表示</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--version</span></code></dt><dd><ul>
+<li><p>バージョン番号の表示</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--output=filename</span></code></dt><dd><ul>
+<li><p>出力するファイルの名前 <code class="docutils literal notranslate"><span class="pre">filename</span></code> を指定します</p></li>
+<li><p>デフォルトは <code class="docutils literal notranslate"><span class="pre">std.toml</span></code></p></li>
+<li><p>入力ファイル名と同じファイル名にすることはできません</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--coordinatefile=coordfile</span></code></dt><dd><ul>
+<li><p>サイトの座標情報を出力するファイル名 <code class="docutils literal notranslate"><span class="pre">coordfile</span></code> を指定します</p></li>
+<li><p>デフォルトは <code class="docutils literal notranslate"><span class="pre">coordinates.dat</span></code></p></li>
+<li><p>座標ファイルは1列目にサイト番号を、 2, 3列目に x, y 座標（デカルト座標系）を含みます</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--use-site-hamiltonian</span></code></dt><dd><ul>
+<li><p>ゼーマン項や化学ポテンシャル項などのオンサイト項をサイトハミルトニアンとして出力します</p></li>
+<li><p>指定しなかった場合、これらの項は最近接ボンドハミルトニアンに吸収されます</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>現在定義されている模型・格子は次の通り。</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>模型</dt><dd><ul>
+<li><p>スピン系</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>格子</dt><dd><ul>
+<li><p>正方格子</p></li>
+<li><p>三角格子</p></li>
+<li><p>蜂の巣格子</p></li>
+<li><p>かごめ格子</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>模型・格子や入力ファイルの詳細は <a class="reference internal" href="../file_specification/simple_format.html#sec-simple-format"><span class="std std-ref">tenes_simple の入力ファイル</span></a> を参照してください。
+以下、正方格子上で定義されたスピン1/2のハイゼンベルグ模型の入力ファイル例です。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[lattice]
+type = &quot;square lattice&quot; # type of lattice
+L = 2                   # size of unitcell
+W = 2                   # size of unitcell
+virtual_dim = 3         # bond dimension
+initial = &quot;antiferro&quot;   # initial state
+
+[model]
+type = &quot;spin&quot; # type of model
+J = 1.0       # Heisenberg interaction
+
+[parameter]
+[parameter.general]
+is_real = true # use real tensor
+
+[parameter.simple_update]
+num_step = 1000  # number of steps
+tau = 0.01       # imaginary time step
+
+[parameter.full_update]
+num_step = 0    # number of steps
+tau = 0.01      # imaginary time step
+
+[parameter.ctm]
+dimension = 9       # bond dimension
+</pre></div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/TeNeS_logo.png" alt="Logo" />
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about/index.html">1. TeNeS とは？</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">2. インストール方法</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">3. 使用方法</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">3.1. <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard_usage.html">3.2. <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の使用方法</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert_usage.html">3.3. <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の使用方法</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">4. チュートリアル</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../file_specification/index.html">5. ファイルフォーマット</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../algorithm/algorithms.html">6. アルゴリズム</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">7. FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledge/index.html">8. 謝辞</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact/index.html">9. お問い合わせ</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">3. </span>使用方法</a><ul>
+      <li>Previous: <a href="index.html" title="前の章へ"><span class="section-number">3. </span>使用方法</a></li>
+      <li>Next: <a href="standard_usage.html" title="次の章へ"><span class="section-number">3.2. </span><code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> の使用方法</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2019-, Institute for Solid State Physics, University of Tokyo.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/how_to_use/simple_usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
