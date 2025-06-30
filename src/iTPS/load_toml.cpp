@@ -614,7 +614,7 @@ EvolutionOperator<tensor> load_Evolution_operator(
   for (auto d : *dimensions) {
     shape.push(d);
   }
-  auto group = find_or<int>(param, "group", 0);
+  auto group = find<int>(param, "group");
 
   if (shape.size() == 2) {
     // siteoperator
