@@ -14,12 +14,14 @@ TeNeS is developed by the following members.
 - Satoshi Morita (Faculty of Science and Technology, Keio University)
 - Yuichi Motoyama (Institute for Solid State Physics, Univ. of Tokyo)
 - Kazuyoshi Yoshimi (Institute for Solid State Physics, Univ. of Tokyo)
+- Tatsumi Aoyama (Institute for Solid State Physics, Univ. of Tokyo)
 - Takeo Kato (Institute for Solid State Physics, Univ. of Tokyo)
 - Naoki Kawashima (Institute for Solid State Physics, Univ. of Tokyo)
 
 Version information
 ======================
 
+- ver. 2.1.2: released on 2025-06-30.
 - ver. 2.1.0: released on 2024-02-28.
 - ver. 2.0.0: released on 2023-11-17.
 - ver. 2.0-beta: released on 2023-10-25.
@@ -45,12 +47,12 @@ Papers
 
 When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
 
-`Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. 279, 108437 (2022) <https://www.sciencedirect.com/science/article/pii/S0010465522001564>`_
+- `Y. Motoyama, T. Okubo, K. Yoshimi, S. Morita, T. Kato, and N. Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. 279, 108437 (2022) <https://www.sciencedirect.com/science/article/pii/S0010465522001564>`_
+- `Y. Motoyama, T. Okubo, K. Yoshimi, S. Morita, T. Aoyama, T. Kato, and N. Kawashima, "TeNeS-v2: Enhancement for real-time and finite temperature simulations of quantum many-body systems", Comput. Phys. Commun. **315**, 109692 (2025) <https://www.sciencedirect.com/science/article/pii/S0010465525001948>`_
 
 Copyright
 ==================
 
 © *2019- The University of Tokyo. All rights reserved.*
 
-This software was developed with the support of \"*Project for advancement of software usability in materials science*\" of The Institute for Solid State Physics, The University of Tokyo. 
-     
+This software was developed with the support of \"*Project for advancement of software usability in materials science*\" of The Institute for Solid State Physics, The University of Tokyo.
