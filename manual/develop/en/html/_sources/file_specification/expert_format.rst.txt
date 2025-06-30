@@ -47,7 +47,7 @@ This section has two subsections: ``simple`` and ``full``.
    ``elements``,    "Non-zero elements of a tensor of imaginary time evolution operator", String
 
 
-``group`` specifies the group of the evolution operator (the default value is 0).
+``group`` specifies the group of the evolution operator.
 It corresponds to the index of ``tau`` and ``num_steps`` in ``parameter.simple_update`` and ``parameter.full_update``.
 
 ``site`` is available for one-site operator, and ``source_site`` and ``source_leg`` are for two-site operator.
@@ -64,6 +64,7 @@ Example ::
   
     # One site
     [[evolution.simple]]
+    group = 0
     site = 0
     dimensions = [2, 2]
     elements = """
@@ -73,6 +74,7 @@ Example ::
   
     # Two site
     [[evolution.simple]]
+    group = 0
     source_site = 0
     source_leg = 2
     dimensions = [2, 2, 2, 2]

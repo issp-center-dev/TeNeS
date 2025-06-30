@@ -860,7 +860,7 @@ This section has two subsections: <code class="docutils literal notranslate"><sp
 </tr>
 </tbody>
 </table>
-<p><code class="docutils literal notranslate"><span class="pre">group</span></code> specifies the group of the evolution operator (the default value is 0).
+<p><code class="docutils literal notranslate"><span class="pre">group</span></code> specifies the group of the evolution operator.
 It corresponds to the index of <code class="docutils literal notranslate"><span class="pre">tau</span></code> and <code class="docutils literal notranslate"><span class="pre">num_steps</span></code> in <code class="docutils literal notranslate"><span class="pre">parameter.simple_update</span></code> and <code class="docutils literal notranslate"><span class="pre">parameter.full_update</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">site</span></code> is available for one-site operator, and <code class="docutils literal notranslate"><span class="pre">source_site</span></code> and <code class="docutils literal notranslate"><span class="pre">source_leg</span></code> are for two-site operator.</p>
 <p><code class="docutils literal notranslate"><span class="pre">source_leg</span></code> is specified as an integer from 0 to 3.
@@ -872,6 +872,7 @@ The order of the legs is <code class="docutils literal notranslate"><span class=
 
 # One site
 [[evolution.simple]]
+group = 0
 site = 0
 dimensions = [2, 2]
 elements = &quot;&quot;&quot;
@@ -881,6 +882,7 @@ elements = &quot;&quot;&quot;
 
 # Two site
 [[evolution.simple]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2, 2, 2, 2]
