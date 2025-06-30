@@ -121,6 +121,7 @@ ops = [2, 2]
 
 [evolution]
 [[evolution.simple]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -133,6 +134,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 1
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -145,6 +147,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 2
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -157,6 +160,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 3
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -169,6 +173,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 0
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -181,6 +186,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 1
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -193,6 +199,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 2
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -205,6 +212,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.simple]]
+group = 0
 source_site = 3
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -217,6 +225,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -229,6 +238,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 1
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -241,6 +251,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 2
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -253,6 +264,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 3
 source_leg = 2
 dimensions = [2, 2, 2, 2]
@@ -265,6 +277,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 0
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -277,6 +290,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 1
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -289,6 +303,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 2
 source_leg = 1
 dimensions = [2, 2, 2, 2]
@@ -301,6 +316,7 @@ elements = """
 1 1 1 1  0.9975031223974601 0.0
 """
 [[evolution.full]]
+group = 0
 source_site = 3
 source_leg = 1
 dimensions = [2, 2, 2, 2]
