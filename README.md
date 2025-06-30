@@ -13,27 +13,27 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 ## Online manual
 
 - develop (Latest, UNSTABLE)
-    - [English][doc/develop/en/uri]
-    - [日本語][doc/develop/ja/uri]
+  - [English][doc/develop/en/uri]
+  - [日本語][doc/develop/ja/uri]
 - master (Latest, stable)
-    - [English][doc/master/en/uri]
-    - [日本語][doc/master/ja/uri]
+  - [English][doc/master/en/uri]
+  - [日本語][doc/master/ja/uri]
 
 ## Getting started
 
 - [Prerequisites and dependencies](#prerequisites-and-dependencies)
 - [Install](#install)
-    - [Simplest way to build](#simplest-way-to-build)
-    - [Install binaries and samples](#install-binaries-and-samples)
-    - [Specify compiler](#specify-compiler)
-    - [Disable MPI/ScaLAPACK parallelization](#disable-mpi/scalapack-parallelization)
-    - [Specify ScaLAPACK](#specify-scalapack)
-    - [Use the pre-built mptensor](#use-the-pre-built-mptensor)
-    - [Specify Python interpreter](#specify-python-interpreter)
+  - [Simplest way to build](#simplest-way-to-build)
+  - [Install binaries and samples](#install-binaries-and-samples)
+  - [Specify compiler](#specify-compiler)
+  - [Disable MPI/ScaLAPACK parallelization](#disable-mpiscalapack-parallelization)
+  - [Specify ScaLAPACK](#specify-scalapack)
+  - [Use the pre-built mptensor](#use-the-pre-built-mptensor)
+  - [Specify Python interpreter](#specify-python-interpreter)
 - [Usage](#usage)
-    - [Use pre-defined model and lattice](#use-pre-defined-model-and-lattice)
-    - [Calculate imaginary time evolution operators](#calculate-imaginary-time-evolution-operators)
-    - [Perform](#perform)
+  - [Use pre-defined model and lattice](#use-pre-defined-model-and-lattice)
+  - [Calculate imaginary time evolution operators](#calculate-imaginary-time-evolution-operators)
+  - [Perform](#perform)
 - [Question or comment](#question-or-comment)
 - [Contibution](#contibution)
 - [License](#license)
@@ -237,7 +237,8 @@ TeNeS is available under the GNU GPL v3.
 
 When you publish the results by using TeNeS, we would appreciate if you cite the following paper:
 
-[Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. **279**, 108437 (2022)][paper/tenes_1.2]
+- [Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Takeo Kato, and Naoki Kawashima, "TeNeS: Tensor Network Solver for Quantum Lattice Systems", Comput. Phys. Commun. **279**, 108437 (2022)][paper/tenes_1.2]
+- [Y. Motoyama, Tsuyoshi Okubo, Kazuyoshi Yoshimi, Satoshi Morita, Tatsumi Aoyama, Takeo Kato, and Naoki Kawashima, "TeNeS-v2: Enhancement for real-time and finite temperature simulations of quantum many-body systems", Comput. Phys. Commun. **315**, 109692 (2025)][paper/tenes_2.1]
 
 ## Acknowledgement
 
@@ -257,3 +258,4 @@ We also would also like to express our thanks for the support of the "Project fo
 [doc/develop/ja/uri]: https://issp-center-dev.github.io/TeNeS/manual/develop/ja/html/index.html
 
 [paper/tenes_1.2]: https://www.sciencedirect.com/science/article/pii/S0010465522001564
+[paper/tenes_2.1]: https://www.sciencedirect.com/science/article/pii/S0010465525001948
