@@ -1,5 +1,5 @@
 for L in 32; do
-  for G in 0.5 0.8 2.0; do
+  for G in 0.8; do
     file_ene=ene-L${L}-G${G}.dat
     file_magx=magx-L${L}-G${G}.dat
     file_spec=spec-L${L}-G${G}.dat

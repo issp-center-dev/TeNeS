@@ -16,3 +16,4 @@ seed = 31415
 sfoutfile = sf.dat
 simulationtime = 0.0
 wvfile = 
+beta = 4.0

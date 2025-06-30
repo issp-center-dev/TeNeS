@@ -951,9 +951,9 @@ def make_evolution_twosite(
         U = np.dot(U, np.diag(S))
         B = U.reshape((A.shape[0], A.shape[1], dofs[0], -1))
         A = Vt.reshape([B.shape[3]] + dofs[2:] + dofs[1:])
-        ret.append(NNOperator(bond, elements=B))
+        ret.append(NNOperator(bond, elements=B, group=group))
         dofs.pop(0)
-    ret.append(NNOperator(bonds[-1], elements=A))
+    ret.append(NNOperator(bonds[-1], elements=A, group=group))
     return ret
 
 
@@ -1273,7 +1273,7 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="2.1.1"
+        "-v", "--version", dest="version", action="version", version="2.1.2"
     )
 
     args = parser.parse_args()
