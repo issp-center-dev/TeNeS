@@ -19,7 +19,7 @@ jobs:
         include:
           - os: "ubuntu-22.04"
             python-version: "3.9"
-            compiler: "g++-9"
+            compiler: "g++-10"
           - os: "ubuntu-24.04"
             python-version: "3.9"
             compiler: "g++-14"
