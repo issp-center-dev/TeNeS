@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <vector>
 #include <mptensor/complex.hpp>
@@ -812,6 +813,26 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
   }
 }
 
+namespace {
+//! Distance between two sets of normalized singular values.
+/*! Returns infinity (treated as "not converged") when the two vectors have
+ *  different lengths. This happens when the number of singular values of a
+ *  corner tensor changes between CTM iterations; comparing them element-wise
+ *  would otherwise read out of bounds.
+ */
+inline double singular_value_distance(const std::vector<double> &lam_new,
+                                      const std::vector<double> &lam_old) {
+  if (lam_new.size() != lam_old.size()) {
+    return std::numeric_limits<double>::infinity();
+  }
+  double sig = 0.0;
+  for (size_t j = 0; j < lam_new.size(); ++j) {
+    sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
+  }
+  return std::sqrt(sig);
+}
+}  // unnamed namespace
+
 template <class tensor>
 bool Check_Convergence_CTM(
     const std::vector<tensor> &C1, const std::vector<tensor> &C2,
@@ -846,11 +867,7 @@ bool Check_Convergence_CTM(
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -882,11 +899,7 @@ bool Check_Convergence_CTM(
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -917,11 +930,7 @@ bool Check_Convergence_CTM(
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -951,11 +960,7 @@ bool Check_Convergence_CTM(
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
