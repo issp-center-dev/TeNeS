@@ -22,7 +22,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <numeric>
 #include <vector>
 #include <mptensor/complex.hpp>
@@ -815,19 +814,22 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
 
 namespace {
 //! Distance between two sets of normalized singular values.
-/*! Returns infinity (treated as "not converged") when the two vectors have
- *  different lengths. This happens when the number of singular values of a
- *  corner tensor changes between CTM iterations; comparing them element-wise
- *  would otherwise read out of bounds.
+/*! Singular values are in descending order and each vector is L2-normalized.
+ *  When the counts differ (the CTM bond dimension is still growing, or the
+ *  projector cutoff truncates a different number of values between iterations),
+ *  the shorter vector is padded with zeros. The missing entries are the
+ *  smallest singular values, so treating them as zero is consistent with the
+ *  truncation itself and avoids the out-of-bounds access of a naive
+ *  element-wise loop.
  */
 inline double singular_value_distance(const std::vector<double> &lam_new,
                                       const std::vector<double> &lam_old) {
-  if (lam_new.size() != lam_old.size()) {
-    return std::numeric_limits<double>::infinity();
-  }
+  const size_t n = std::max(lam_new.size(), lam_old.size());
   double sig = 0.0;
-  for (size_t j = 0; j < lam_new.size(); ++j) {
-    sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
+  for (size_t j = 0; j < n; ++j) {
+    const double a = j < lam_new.size() ? lam_new[j] : 0.0;
+    const double b = j < lam_old.size() ? lam_old[j] : 0.0;
+    sig += (a - b) * (a - b);
   }
   return std::sqrt(sig);
 }
