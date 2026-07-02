@@ -14,13 +14,13 @@ Prerequisites
 ======================
 The following tools are required for building TeNeS.
 
-1. C++11 compiler
+1. C++17 compiler
 2. CMake (>=3.6.0)
 3. BLAS and LAPACK
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
-1. `mptensor <https://github.com/smorita/mptensor>`_ 
+1. `mptensor <https://github.com/smorita/mptensor>`_ (>= v0.5.0)
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 
 TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.

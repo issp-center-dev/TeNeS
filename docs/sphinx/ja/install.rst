@@ -14,13 +14,13 @@ TeNeS のソースコードは `GitHub page <https://github.com/issp-center-dev/
 ======================
 TeNeSをコンパイルするには以下のライブラリ・環境が必要です。
 
-1. C++11 compiler
+1. C++17 compiler
 2. CMake (>=3.6.0)
 3. BLAS, LAPACK
 
 TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。
 
-1. `mptensor <https://github.com/smorita/mptensor>`_ 
+1. `mptensor <https://github.com/smorita/mptensor>`_ (>= v0.5.0)
 2. `cpptoml <https://github.com/skystrife/cpptoml>`_
 
 MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
