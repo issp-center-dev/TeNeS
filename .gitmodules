@@ -6,4 +6,4 @@
 	url = https://github.com/skystrife/cpptoml
 [submodule "deps/mptensor"]
 	path = deps/mptensor
-	url = https://github.com/smorita/mptensor
+	url = https://github.com/yomichi/mptensor
