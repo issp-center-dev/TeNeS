@@ -28,13 +28,16 @@ jobs:
           python3 -m pip install -U pip
           python3 -m pip install numpy scipy toml
 
+      - name: install libomp
+        run: brew install libomp
+
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: cmake
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: cmake -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+        run: cmake -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_VERBOSE_MAKEFILE=ON -DOpenMP_ROOT=$(brew --prefix libomp) $GITHUB_WORKSPACE
 
       - name: build
         working-directory: ${{runner.workspace}}/build
