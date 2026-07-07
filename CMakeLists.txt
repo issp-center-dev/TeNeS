@@ -113,6 +113,26 @@ else()
     endif()
 endif()
 
+# TeNeS requires mptensor >= 0.5.0
+set(TENES_REQUIRED_MPTENSOR_VERSION "0.5.0")
+set(MPTENSOR_VERSION_HEADER "${MPTENSOR_INCLUDE_DIR}/mptensor/version.hpp")
+if(NOT EXISTS ${MPTENSOR_VERSION_HEADER})
+    message(FATAL_ERROR
+        "mptensor version header not found at ${MPTENSOR_VERSION_HEADER}. "
+        "TeNeS requires mptensor >= ${TENES_REQUIRED_MPTENSOR_VERSION}.")
+endif()
+set(MPTENSOR_VERSION_REGEX "#define[ \t]+MPTENSOR_VERSION_STRING[ \t]+\"(.+)\"")
+file(STRINGS "${MPTENSOR_VERSION_HEADER}" MPTENSOR_VERSION_STRING
+     REGEX ${MPTENSOR_VERSION_REGEX})
+string(REGEX REPLACE ${MPTENSOR_VERSION_REGEX} "\\1"
+       MPTENSOR_VERSION_STRING "${MPTENSOR_VERSION_STRING}")
+message(STATUS "mptensor version: ${MPTENSOR_VERSION_STRING}")
+if(MPTENSOR_VERSION_STRING VERSION_LESS TENES_REQUIRED_MPTENSOR_VERSION)
+    message(FATAL_ERROR
+        "TeNeS requires mptensor >= ${TENES_REQUIRED_MPTENSOR_VERSION}, "
+        "but found ${MPTENSOR_VERSION_STRING} at ${MPTENSOR_INCLUDE_DIR}.")
+endif()
+
 if(CPPTOML_ROOT)
     set(CPPTOML_INCLUDE_DIR ${CPPTOML_ROOT}/include)
 else()
