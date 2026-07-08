@@ -994,21 +994,23 @@ class Model:
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
+        for name in ("tensor", "hamiltonian"):
+            if name not in param:
+                msg = '"{}" section is missing in the input'.format(name)
+                raise RuntimeError(msg)
         self.param = param
-        self.parameter = param["parameter"]
-        if "general" in self.parameter:
-            mode = self.parameter["general"].get("mode", "ground state").lower()
-        else:
-            mode = "ground state"
+        self.parameter = param.get("parameter", {})
+        mode = self.parameter.get("general", {}).get("mode", "ground state")
         if not isinstance(mode, str):
             raise ValueError("mode must be a string.")
+        mode = mode.lower()
         self.time_evolution = mode.startswith("time")
-        tau = self.parameter["simple_update"].get("tau", [0.01])
+        tau = self.parameter.get("simple_update", {}).get("tau", [0.01])
         if isinstance(tau, float):
             self.simple_tau = [tau]
         else:
             self.simple_tau = tau
-        tau = self.parameter["full_update"].get("tau", [0.01])
+        tau = self.parameter.get("full_update", {}).get("tau", [0.01])
         if isinstance(tau, float):
             self.full_tau = [tau]
         else:

@@ -26,6 +26,47 @@ sys.path.insert(
 import tenes_std
 
 
+def minimal_std_input():
+    """A minimal valid standard-mode input without a [parameter] section."""
+    bonds = "\n".join(
+        "{} {} {}".format(source, dx, dy)
+        for source in range(4)
+        for dx, dy in ((1, 0), (0, 1))
+    )
+    return {
+        "tensor": {
+            "l_sub": [2, 2],
+            "unitcell": [{"index": [], "physical_dim": 2, "virtual_dim": 2}],
+        },
+        "hamiltonian": [
+            {
+                "dim": [2, 2],
+                "bonds": bonds,
+                "elements": "0 0 0 0 1.0 0.0\n1 1 1 1 -1.0 0.0",
+            }
+        ],
+    }
+
+
+class TestModel:
+    def test_missing_parameter_section_is_allowed(self):
+        model = tenes_std.Model(minimal_std_input())
+        assert model.simple_tau == [0.01]
+        assert model.full_tau == [0.01]
+
+    def test_missing_tensor_section_raises(self):
+        param = minimal_std_input()
+        del param["tensor"]
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(param)
+
+    def test_missing_hamiltonian_section_raises(self):
+        param = minimal_std_input()
+        del param["hamiltonian"]
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(param)
+
+
 class TestMergeInputDict:
     def test_known_subsections_are_merged(self):
         d1 = {"parameter": {"general": {"is_real": True}}}
