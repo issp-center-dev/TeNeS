@@ -161,6 +161,7 @@ noise = 0.01
       auto toml = parse_str(R"(
 [evolution]
 [[evolution.simple]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2,2,2,4]
@@ -184,6 +185,7 @@ elements = """
       auto toml = parse_str(R"(
 [evolution]
 [[evolution.full]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2,2,2,4]
