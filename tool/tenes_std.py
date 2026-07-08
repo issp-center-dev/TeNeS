@@ -91,7 +91,7 @@ def value_to_str(v) -> str:
 def merge_input_dict(d1: dict, d2: dict) -> None:
     section1 = d1.get("parameter", {})
     section2 = d2.get("parameter", {})
-    subsection_names = ("general", "simple_update", "full_update", "ctm", "random")
+    subsection_names = sorted(set(section1.keys()) | set(section2.keys()))
     for name in subsection_names:
         sub1 = section1.get(name, {})
         sub2 = section2.get(name, {})

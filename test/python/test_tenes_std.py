@@ -26,6 +26,27 @@ sys.path.insert(
 import tenes_std
 
 
+class TestMergeInputDict:
+    def test_known_subsections_are_merged(self):
+        d1 = {"parameter": {"general": {"is_real": True}}}
+        d2 = {"parameter": {"simple_update": {"num_step": 100}}}
+        tenes_std.merge_input_dict(d1, d2)
+        assert d1["parameter"]["general"]["is_real"] is True
+        assert d1["parameter"]["simple_update"]["num_step"] == 100
+
+    def test_unknown_subsections_are_kept(self):
+        d1 = {"parameter": {"general": {"is_real": True}}}
+        d2 = {"parameter": {"tensor": {"save_dir": "ckpt"}}}
+        tenes_std.merge_input_dict(d1, d2)
+        assert d1["parameter"]["tensor"]["save_dir"] == "ckpt"
+
+    def test_conflicting_keys_raise(self):
+        d1 = {"parameter": {"general": {"is_real": True}}}
+        d2 = {"parameter": {"general": {"is_real": False}}}
+        with pytest.raises(RuntimeError):
+            tenes_std.merge_input_dict(d1, d2)
+
+
 class TestUnitcell:
     def test_valid_unitcell(self):
         unitcell = tenes_std.Unitcell(
