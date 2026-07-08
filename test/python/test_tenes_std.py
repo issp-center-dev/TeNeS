@@ -23,6 +23,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tool")
 )
 
+import numpy as np
+
 import tenes_std
 
 
@@ -46,6 +48,26 @@ def minimal_std_input():
             }
         ],
     }
+
+
+class TestIsHermite:
+    def test_hermitian(self):
+        A = np.array([[1.0, 1.0j], [-1.0j, 2.0]])
+        assert tenes_std.is_hermite(A)
+
+    def test_not_hermitian(self):
+        A = np.array([[0.0, 1.0], [0.0, 0.0]])
+        assert not tenes_std.is_hermite(A)
+
+    def test_tolerates_rounding_error(self):
+        A = np.array([[1.0, 0.5], [0.5 + 1e-16, 2.0]])
+        assert tenes_std.is_hermite(A)
+
+    def test_nonhermitian_hamiltonian_raises(self):
+        param = minimal_std_input()
+        param["hamiltonian"][0]["elements"] = "0 0 1 1 1.0 0.0"
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(param)
 
 
 class TestModel:

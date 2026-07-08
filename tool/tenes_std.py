@@ -249,7 +249,7 @@ def is_hermite(A: np.ndarray) -> bool:
     idir = int(np.prod(input_dirs))
     odir = int(np.prod(output_dirs))
     Amat = A.reshape((idir, odir))
-    return bool(np.all(Amat.conjugate().transpose() == Amat))
+    return bool(np.allclose(Amat.conjugate().transpose(), Amat))
 
 
 class LocalTensor:
@@ -1036,7 +1036,8 @@ class Model:
                     dims
                 )
                 elements = load_tensor(ham["elements"], dims + dims, atol=atol)
-                assert is_hermite(elements)
+                if not is_hermite(elements):
+                    raise RuntimeError("hamiltonian elements are not hermitian")
                 sites: List[int] = ham["sites"]
                 if len(sites) == 0:
                     sites = list(range(self.unitcell.numsites()))
@@ -1058,7 +1059,8 @@ class Model:
                     dims
                 )
                 elements = load_tensor(ham["elements"], dims + dims, atol=atol)
-                assert is_hermite(elements)
+                if not is_hermite(elements):
+                    raise RuntimeError("hamiltonian elements are not hermitian")
                 bonds: List[Bond] = []
                 for line in ham["bonds"].strip().splitlines():
                     b = parse_bond(line)
