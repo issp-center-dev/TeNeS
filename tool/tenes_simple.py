@@ -1296,7 +1296,7 @@ def tenes_simple(
         corparam = param["correlation"]
         ret.append("[correlation]")
         ret.append("r_max = {}".format(corparam["r_max"]))
-        if not "operators" in corparam:
+        if "operators" not in corparam:
             corparam["operators"] = []
             for g in groups:
                 corparam["operators"].append([g, g])

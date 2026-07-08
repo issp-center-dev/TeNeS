@@ -175,7 +175,7 @@ class Bond:
         return not self.is_site()
 
 
-def parse_bond(line: str) -> Bond:
+def parse_bond(line: str) -> Optional[Bond]:
     line = drop_comment(line)
     if not line:
         return None
@@ -202,7 +202,7 @@ class Multisite:
         return len(self.dx) + 1
 
 
-def parse_multisite(line: str) -> Multisite:
+def parse_multisite(line: str) -> Optional[Multisite]:
     line = drop_comment(line)
     if not line:
         return None
@@ -571,7 +571,7 @@ class LatticeGraph:
         return localsite + self.unitcell.numsites() * unitcell_index
 
     def graph_coords(self, index: int) -> Tuple[int, int, int]:
-        assert 0 <= index <= self.N
+        assert 0 <= index < self.N
 
         index, localsite = divmod(index, self.unitcell.numsites())
         offset_y, offset_x = divmod(index, self.offset_Lx)
@@ -645,7 +645,7 @@ class NNOperator:
     bond: Bond
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
-    group = Optional[int]
+    group: Optional[int]
 
     def __init__(
         self,
@@ -1126,11 +1126,11 @@ class Model:
             group = twosite["group"]
             if group == 0:
                 has_zero_twosite = True
-            bonds = [
-                parse_bond(line)
-                for line in twosite["bonds"].strip().splitlines()
-                if parse_bond(line) is not None
-            ]
+            bonds = []
+            for line in twosite["bonds"].strip().splitlines():
+                bond = parse_bond(line)
+                if bond is not None:
+                    bonds.append(bond)
             coeff = twosite.get("coeff", 1.0)
             coeff_im = twosite.get("coeff_im", 0.0)
             if "elements" in twosite:
@@ -1162,11 +1162,11 @@ class Model:
         for multisite in observable.get("multisite", []):
             name = multisite["name"]
             group = multisite["group"]
-            ms = [
-                parse_multisite(line)
-                for line in multisite["multisites"].strip().splitlines()
-                if parse_multisite(line) is not None
-            ]
+            ms = []
+            for line in multisite["multisites"].strip().splitlines():
+                m = parse_multisite(line)
+                if m is not None:
+                    ms.append(m)
             coeff = multisite.get("coeff", 1.0)
             coeff_im = multisite.get("coeff_im", 0.0)
             if "ops" not in multisite:

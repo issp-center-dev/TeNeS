@@ -50,6 +50,18 @@ def minimal_std_input():
     }
 
 
+class TestParseBond:
+    def test_valid_line(self):
+        bond = tenes_std.parse_bond("0 1 -1")
+        assert bond.source_site == 0
+        assert bond.dx == 1
+        assert bond.dy == -1
+
+    def test_comment_line_returns_none(self):
+        assert tenes_std.parse_bond("# comment") is None
+        assert tenes_std.parse_bond("") is None
+
+
 class TestIsHermite:
     def test_hermitian(self):
         A = np.array([[1.0, 1.0j], [-1.0j, 2.0]])
