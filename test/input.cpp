@@ -148,6 +148,46 @@ tau = 0.01
     CHECK(peps_parameters.tau_full_step[0] == 0.01);
   }
 
+  SUBCASE("saved mode string") {
+    INFO("saved mode string");
+
+    auto count_occurrences = [](std::string const &filename,
+                                std::string const &key) {
+      std::ifstream ifs(filename);
+      std::string line;
+      int n = 0;
+      while (std::getline(ifs, line)) {
+        if (line.find(key) != std::string::npos) {
+          ++n;
+        }
+      }
+      return n;
+    };
+
+    struct {
+      PEPS_Parameters::CalculationMode mode;
+      const char *name;
+    } cases[] = {
+        {PEPS_Parameters::CalculationMode::ground_state, "ground state"},
+        {PEPS_Parameters::CalculationMode::time_evolution, "time evolution"},
+        {PEPS_Parameters::CalculationMode::finite_temperature,
+         "finite temperature"},
+    };
+
+    for (auto const &c : cases) {
+      PEPS_Parameters peps_parameters;
+      peps_parameters.calcmode = c.mode;
+      const std::string filename = "output_parameters_test.dat";
+      peps_parameters.save(filename.c_str());
+
+      CHECK(count_occurrences(filename, std::string("mode = ") + c.name) == 1);
+      CHECK(count_occurrences(filename, "ground state") +
+                count_occurrences(filename, "time evolution") +
+                count_occurrences(filename, "finite temperature") ==
+            1);
+    }
+  }
+
   SUBCASE("tensor") {
     INFO("tensor");
     auto toml = parse_str(R"(

@@ -285,8 +285,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       break;
     case PEPS_Parameters::CalculationMode::time_evolution:
       ofs << "time evolution" << std::endl;
+      break;
     case PEPS_Parameters::CalculationMode::finite_temperature:
       ofs << "finite temperature" << std::endl;
+      break;
     default:
       break;
   }
