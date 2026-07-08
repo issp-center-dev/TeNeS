@@ -933,7 +933,7 @@ class BoseHubbardModel(Model):
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
         N, Bdagger, B = self.onesite_ops
         mu = params_onesite.get("mu", 0.0)
-        U = params_onesite.get("U", 0.0)
+        U = params_onesite.get("u", 0.0)
         ham = np.zeros([self.N] * 2, dtype=np.complex128)
         for input, output in product(range(self.N), repeat=2):
             ham[input, output] -= mu * N[input, output]
