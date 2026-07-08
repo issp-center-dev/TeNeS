@@ -35,6 +35,10 @@ else()
 endif()
 set_tests_properties(broken_input PROPERTIES WILL_FAIL TRUE)
 
+add_test(NAME python_unittest
+         COMMAND ${TENES_PYTHON_EXECUTABLE} -m pytest
+                 ${CMAKE_CURRENT_SOURCE_DIR}/python)
+
 foreach(name simple_mode std_mode)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in
                  ${CMAKE_CURRENT_BINARY_DIR}/${name}.py @ONLY)
