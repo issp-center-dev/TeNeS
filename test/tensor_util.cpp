@@ -21,6 +21,22 @@
 #include "../src/exception.hpp"
 #include "../src/mpi.hpp"
 
+TEST_CASE("identity") {
+  using mptensor::Index;
+
+  const std::size_t k = 3;
+  const double coeff = 2.0;
+  auto I = tenes::identity(k, coeff);
+  REQUIRE(I.shape() == mptensor::Shape(k, k));
+  double v;
+  for (std::size_t i = 0; i < k; ++i) {
+    for (std::size_t j = 0; j < k; ++j) {
+      I.get_value(Index(i, j), v);
+      CHECK(v == (i == j ? coeff : 0.0));
+    }
+  }
+}
+
 TEST_CASE("resize_tensor") {
   using tensor = tenes::real_tensor;
   using mptensor::Index;
