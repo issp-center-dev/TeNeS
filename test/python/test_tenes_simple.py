@@ -26,6 +26,11 @@ sys.path.insert(
 import tenes_simple
 
 
+def test_model_is_abstract():
+    with pytest.raises(TypeError):
+        tenes_simple.Model()
+
+
 class TestSpinModelFieldKeys:
     def test_conflicting_h_and_hz_raise(self):
         with pytest.raises(RuntimeError):

@@ -510,7 +510,7 @@ class KagomeLattice(Lattice):
         return a0 * x + a1 * y
 
 
-class Model(object):
+class Model(abc.ABC):
     N: int
     onesite_ops: List[np.ndarray]
     onesite_ops_name: List[str]
