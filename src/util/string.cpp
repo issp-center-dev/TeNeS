@@ -43,7 +43,7 @@ std::string lstrip(std::string const &str, std::string const &delim) {
   std::string ret("");
   auto index = str.find_first_not_of(delim);
   if (index != std::string::npos) {
-    ret = str.substr(index, str.size() - index + 1);
+    ret = str.substr(index);
   }
   return ret;
 }
