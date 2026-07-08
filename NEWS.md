@@ -1,5 +1,25 @@
 # TeNeS v2.1.x Release Notes
 
+## Changes between v2.1.3 and v2.1.2
+
+### Changes
+
+- `tenes`
+  - `group` keyword in `evolution.simple`/`evolution.full` sections is now mandatory ([#101][])
+
+### Bug fixes
+
+- `tenes`
+  - Fixed an out-of-bounds access in the convergence check of CTMRG ([#103][])
+
+### Development
+
+- Updated and pinned versions of GitHub Actions ([#102][])
+
+### Documentation and samples
+
+- Added new paper information
+
 ## Changes between v2.1.2 and v2.1.1
 
 ### Bug fixes
@@ -48,3 +68,6 @@
 [#97]: https://github.com/issp-center-dev/TeNeS/pull/97
 [#99]: https://github.com/issp-center-dev/TeNeS/pull/99
 [#100]: https://github.com/issp-center-dev/TeNeS/pull/100
+[#101]: https://github.com/issp-center-dev/TeNeS/pull/101
+[#102]: https://github.com/issp-center-dev/TeNeS/pull/102
+[#103]: https://github.com/issp-center-dev/TeNeS/pull/103
