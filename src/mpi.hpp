@@ -113,7 +113,7 @@ int bcast(std::vector<T> &val, int root, MPI_Comm comm) {
   if (rank != root) {
     val.resize(sz);
   }
-  ret = MPI_Bcast(&(val[0]), sz, datatype, root, comm);
+  ret = MPI_Bcast(val.data(), sz, datatype, root, comm);
 #endif
   return ret;
 }
@@ -134,12 +134,12 @@ int bcast(std::vector<std::complex<T>> &val, int root, MPI_Comm comm) {
     val.resize(sz);
   }
   std::vector<T> reim(2 * sz);
-  for (std::size_t i = 0; i < sz; ++i) {
+  for (int i = 0; i < sz; ++i) {
     reim[2 * i] = val[i].real();
     reim[2 * i + 1] = val[i].imag();
   }
-  ret = MPI_Bcast(&(reim[0]), 2 * sz, datatype, root, comm);
-  for (std::size_t i = 0; i < sz; ++i) {
+  ret = MPI_Bcast(reim.data(), 2 * sz, datatype, root, comm);
+  for (int i = 0; i < sz; ++i) {
     val[i] = std::complex<T>(reim[2 * i], reim[2 * i + 1]);
   }
 #endif
@@ -166,7 +166,7 @@ int allreduce_sum(std::vector<T> &val, MPI_Comm comm) {
   const MPI_Datatype datatype = get_MPI_Datatype<T>();
   int N = val.size();
   std::vector<T> recv(val);
-  int ret = MPI_Allreduce(&(val[0]), &(recv[0]), N, datatype, MPI_SUM, comm);
+  int ret = MPI_Allreduce(val.data(), recv.data(), N, datatype, MPI_SUM, comm);
   if (ret != 0) {
     return ret;
   }
