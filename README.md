@@ -44,6 +44,7 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 The following tools are required for building TeNeS.
 
 - C++17 compiler
+  - For Intel compilers, use the newer `icpx`; the classic `icpc` cannot compile mptensor.
 - CMake (>=3.6.0)
 - BLAS/LAPACK
 

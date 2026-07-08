@@ -15,6 +15,9 @@ Prerequisites
 The following tools are required for building TeNeS.
 
 1. C++17 compiler
+
+   - For Intel compilers, use the newer ``icpx``; the classic ``icpc`` cannot compile mptensor.
+
 2. CMake (>=3.6.0)
 3. BLAS and LAPACK
 

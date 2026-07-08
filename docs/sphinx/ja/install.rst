@@ -15,6 +15,9 @@ TeNeS のソースコードは `GitHub page <https://github.com/issp-center-dev/
 TeNeSをコンパイルするには以下のライブラリ・環境が必要です。
 
 1. C++17 compiler
+
+   - Intel コンパイラの場合、古い ``icpc`` では mptensor をビルドできないため、新しい ``icpx`` を利用してください。
+
 2. CMake (>=3.6.0)
 3. BLAS, LAPACK
 
