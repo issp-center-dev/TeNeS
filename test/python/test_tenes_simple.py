@@ -35,6 +35,10 @@ class TestBoseHubbardModel:
         assert ham[2, 2].imag == pytest.approx(0.0)
         assert ham[1, 1].real == pytest.approx(0.0)
 
+    def test_twosite_ops_names(self):
+        model = tenes_simple.BoseHubbardModel({"type": "boson"})
+        assert model.twosite_ops_name == ["NN", "BdaggerB", "BBdagger"]
+
     def test_site_hamiltonian_has_chemical_potential(self):
         model = tenes_simple.BoseHubbardModel({"type": "boson", "nmax": 2, "mu": 2.0})
         ham = model.sitehamiltonian()

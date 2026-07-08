@@ -919,7 +919,7 @@ class BoseHubbardModel(Model):
         for i, j in [(0, 0), (1, 2), (2, 1)]:
             self.twosite_ops.append((i, j))
             self.twosite_ops_name.append(
-                "{}{}".format(self.onesite_ops_name[i], self.onesite_ops[j])
+                "{}{}".format(self.onesite_ops_name[i], self.onesite_ops_name[j])
             )
         self.read_params(param)
 
