@@ -125,13 +125,13 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       std::cout << "   chi (CTM): " << CHI << std::endl;
       if (peps_parameters.calcmode ==
           PEPS_Parameters::CalculationMode::finite_temperature) {
-        if (CHI < Dmax) {
+        if (CHI < static_cast<std::size_t>(Dmax)) {
           std::cerr << "WARNING: CTM may be too small (chi < D) for "
                        "iTPO (finite_temperature mode)"
                     << std::endl;
         }
       } else {
-        if (CHI < Dmax * Dmax) {
+        if (CHI < static_cast<std::size_t>(Dmax * Dmax)) {
           std::cerr << "WARNING: CTM may be too small (chi < D*D) for iTPS"
                     << std::endl;
         }
@@ -439,7 +439,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   site_ops_indices.resize(N_UNIT, std::vector<int>(num_onesite_operators, -1));
-  for (int i = 0; i < onesite_operators.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(onesite_operators.size()); ++i) {
     auto const &op = onesite_operators[i];
     site_ops_indices[op.source_site][op.group] = i;
   }

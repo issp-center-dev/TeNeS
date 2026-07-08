@@ -168,7 +168,7 @@ void iTPS<ptensor>::load_tensors_v1() {
 
     std::getline(ifs, line);
     loaded_CHI = std::stoi(util::drop_comment(line));
-    if (CHI != loaded_CHI) {
+    if (CHI != static_cast<std::size_t>(loaded_CHI)) {
       if (peps_parameters.print_level >= PrintLevel::info) {
         std::cout << "WARNING: parameters.ctm.dimension is " << CHI
                   << " but loaded tensors have CHI = " << loaded_CHI
@@ -343,7 +343,7 @@ void iTPS<ptensor>::load_tensors_v0() {
   for (int i = 0; i < N_UNIT; ++i) {
     const Shape Tshape = Tn[i].shape();
     const int pdim = lattice.physical_dims[i];
-    if (pdim != Tshape[4]) {
+    if (static_cast<std::size_t>(pdim) != Tshape[4]) {
       std::stringstream ss;
       ss << "ERROR: dimension of the physical bond of the tensor " << i
          << " is " << pdim << " but loaded tensor has " << Tshape[4]

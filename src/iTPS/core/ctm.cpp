@@ -304,7 +304,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);
@@ -477,7 +477,7 @@ void Calc_projector_updown_blocks(
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);
@@ -852,20 +852,20 @@ bool Check_Convergence_CTM(
     // C1
     svd(C1[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C1_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
@@ -882,22 +882,22 @@ bool Check_Convergence_CTM(
     // C2
     svd(C2[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
 
     svd(C2_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
 
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
@@ -914,21 +914,21 @@ bool Check_Convergence_CTM(
     // C3
     svd(C3[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C3_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
 
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
@@ -945,20 +945,20 @@ bool Check_Convergence_CTM(
     // C4
     svd(C4[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C4_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
