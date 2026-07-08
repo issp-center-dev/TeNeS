@@ -26,6 +26,7 @@
 #include "../src/mpi.hpp"
 #include "../src/util/string.hpp"
 #include "../src/iTPS/load_toml.hpp"
+#include "../src/iTPS/iTPS.hpp"
 
 auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
   std::stringstream ss;
@@ -325,6 +326,31 @@ elements = """
         CHECK(std::imag(v) == 1.0);
       }
     }
+  }
+
+  SUBCASE("iTPS without evolution operators") {
+    INFO("iTPS without evolution operators");
+    // measurement-only setup: no [[evolution.simple]] / [[evolution.full]]
+    auto toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+initial_state = [1.0, 0.0]
+noise = 0.01
+    )");
+    PEPS_Parameters peps_parameters;
+    peps_parameters.print_level = PrintLevel::none;
+    peps_parameters.outdir = "output_itps_without_evolution";
+    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
+
+    CHECK_NOTHROW(iTPS<ptensor>(
+        MPI_COMM_WORLD, peps_parameters, lattice,
+        EvolutionOperators<ptensor>{}, EvolutionOperators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, Operators<ptensor>{},
+        CorrelationParameter{}, TransferMatrix_Parameters{}));
   }
 
   SUBCASE("correlation") {}
