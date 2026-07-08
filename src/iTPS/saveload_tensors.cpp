@@ -120,6 +120,9 @@ void iTPS<ptensor>::load_tensors() {
 template <class ptensor>
 void load_tensor(ptensor &A, std::string const& name, std::string const& directory, int iunit){
   std::string filename = directory + "/" + name + "_" + std::to_string(iunit) + ".dat";
+  if (!util::path_exists(filename)) {
+    throw tenes::load_error("ERROR: cannot find a tensor file: " + filename);
+  }
   ptensor temp;
   temp.load(filename.c_str());
   if (A.rank() != temp.rank()){
@@ -233,11 +236,16 @@ void iTPS<ptensor>::load_tensors_v1() {
   std::vector<double> ls;
   if (mpirank == 0) {
     for (int i = 0; i < N_UNIT; ++i) {
-      std::ifstream ifs(load_dir + "/lambda_" + std::to_string(i) + ".dat");
+      std::string lambda_filename =
+          load_dir + "/lambda_" + std::to_string(i) + ".dat";
+      std::ifstream ifs(lambda_filename.c_str());
       for (int j = 0; j < nleg; ++j) {
         for (int k = 0; k < loaded_shape[i][j]; ++k) {
           double temp = 0.0;
-          ifs >> temp;
+          if (!(ifs >> temp)) {
+            throw tenes::load_error(
+                "ERROR: failed to read lambda values from " + lambda_filename);
+          }
           ls.push_back(temp);
         }
       }
@@ -271,25 +279,37 @@ void iTPS<ptensor>::load_tensors_v0() {
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = load_dir + "/";
     std::string suffix = "_" + std::to_string(i) + ".dat";
-    Tn[i].load((filename + "T" + suffix).c_str());
-    eTt[i].load((filename + "Et" + suffix).c_str());
-    eTr[i].load((filename + "Er" + suffix).c_str());
-    eTb[i].load((filename + "Eb" + suffix).c_str());
-    eTl[i].load((filename + "El" + suffix).c_str());
-    C1[i].load((filename + "C1" + suffix).c_str());
-    C2[i].load((filename + "C2" + suffix).c_str());
-    C3[i].load((filename + "C3" + suffix).c_str());
-    C4[i].load((filename + "C4" + suffix).c_str());
+    auto load = [&filename, &suffix](ptensor &A, const char *name) {
+      std::string path = filename + name + suffix;
+      if (!util::path_exists(path)) {
+        throw tenes::load_error("ERROR: cannot find a tensor file: " + path);
+      }
+      A.load(path.c_str());
+    };
+    load(Tn[i], "T");
+    load(eTt[i], "Et");
+    load(eTr[i], "Er");
+    load(eTb[i], "Eb");
+    load(eTl[i], "El");
+    load(C1[i], "C1");
+    load(C2[i], "C2");
+    load(C3[i], "C3");
+    load(C4[i], "C4");
   }
   std::vector<double> ls;
   if (mpirank == 0) {
     for (int i = 0; i < N_UNIT; ++i) {
       const auto vdim = lattice.virtual_dims[i];
-      std::ifstream ifs(load_dir + "/lambda_" + std::to_string(i) + ".dat");
+      std::string lambda_filename =
+          load_dir + "/lambda_" + std::to_string(i) + ".dat";
+      std::ifstream ifs(lambda_filename.c_str());
       for (int j = 0; j < nleg; ++j) {
         for (int k = 0; k < vdim[j]; ++k) {
           double temp = 0.0;
-          ifs >> temp;
+          if (!(ifs >> temp)) {
+            throw tenes::load_error(
+                "ERROR: failed to read lambda values from " + lambda_filename);
+          }
           ls.push_back(temp);
         }
       }

@@ -7,7 +7,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 foreach(basename input simple_update full_update tensor_util util
-        correlation_length)
+        correlation_length saveload)
   set(testname "test_${basename}")
   add_executable(${testname} "${basename}.cpp")
 
