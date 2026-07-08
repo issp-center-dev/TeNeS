@@ -227,13 +227,13 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   // Simple update
   ofs << "simple_num_step = [";
-  for (int i = 0; i < num_simple_step.size(); ++i) {
+  for (std::size_t i = 0; i < num_simple_step.size(); ++i) {
     if (i != 0) ofs << ", ";
     ofs << num_simple_step[i];
   }
   ofs << "]" << std::endl;
   ofs << "simple_tau = [";
-  for (int i = 0; i < tau_simple_step.size(); ++i) {
+  for (std::size_t i = 0; i < tau_simple_step.size(); ++i) {
     if (i != 0) ofs << ", ";
     ofs << tau_simple_step[i];
   }
@@ -248,7 +248,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
 
   // Full update
   ofs << "full_num_step = [";
-  for (int i = 0; i < num_full_step.size(); ++i) {
+  for (std::size_t i = 0; i < num_full_step.size(); ++i) {
     if (i != 0) ofs << ", ";
     ofs << num_full_step[i];
   }
@@ -285,8 +285,10 @@ void PEPS_Parameters::save(const char *filename, bool append) {
       break;
     case PEPS_Parameters::CalculationMode::time_evolution:
       ofs << "time evolution" << std::endl;
+      break;
     case PEPS_Parameters::CalculationMode::finite_temperature:
       ofs << "finite temperature" << std::endl;
+      break;
     default:
       break;
   }

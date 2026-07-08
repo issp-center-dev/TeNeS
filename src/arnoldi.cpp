@@ -21,10 +21,12 @@
 #include <complex>     // for complex, ope...
 #include <functional>  // for function
 #include <ostream>
+#include <sstream>
 #include <vector>      // for __vector_bas...
 
 #include "util/abs.hpp"
 #include "tensor.hpp"
+#include "exception.hpp"
 
 using mptensor::Shape;
 using dcomplex = std::complex<double>;
@@ -59,17 +61,26 @@ void Arnoldi<ptensor>::run(std::function<void(ptensor&, ptensor const&)> A,
   if (mpisize < 0){
     throw std::runtime_error("Arnoldi::run: initialize() has not been called");
   }
-  if (mindim < nev) {
-    mindim = nev;
+  if (nev > maxvec) {
+    std::stringstream ss;
+    ss << "Arnoldi::run: the number of eigenvalues " << nev
+       << " exceeds the dimension of the Krylov subspace " << maxvec;
+    throw tenes::input_error(ss.str());
+  }
+  size_t minvec = mindim > 0 ? static_cast<size_t>(mindim) : 0;
+  if (minvec < nev) {
+    minvec = nev;
+  }
+  if (minvec > maxvec) {
+    minvec = maxvec;
   }
   this->nev = nev;
-  int iter = 0;
   for (size_t k = 1; k <= nev; ++k) {
     A(Q[k], Q[k - 1]);
     orthonormalize(k);
   }
   double res_nev = 1.0;
-  for (size_t iter = 1; iter <= maxiter; ++iter) {
+  for (int iter = 1; iter <= maxiter; ++iter) {
     for (size_t k = nev + 1; k <= maxvec; ++k) {
       A(Q[k], Q[k - 1]);
       orthonormalize(k);
@@ -82,7 +93,7 @@ void Arnoldi<ptensor>::run(std::function<void(ptensor&, ptensor const&)> A,
     if (res_nev <= rtol || iter == maxiter) {
       break;
     }
-    restart(mindim);
+    restart(minvec);
   }
 }
 
@@ -117,6 +128,9 @@ dcomplex real_if_real(dcomplex v, dcomplex) { return v; }
 template <class ptensor>
 void Arnoldi<ptensor>::restart(size_t minvec, double cutoff) {
   size_t k = maxvec;
+  if (minvec >= k) {
+    return;
+  }
   auto h = slice(H, 0, 0, maxvec);
   std::vector<dcomplex> eigvals, vecs_last;
   eigen(h, eigvals, vecs_last, maxvec);

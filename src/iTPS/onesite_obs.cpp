@@ -161,7 +161,7 @@ void iTPS<ptensor>::save_onesite(
     for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
       ofs << "# " << ilops << ": " << onesite_operator_names[ilops] << "\n";
     }
-    if (onesite_obs.size() == nlops + 1) {
+    if (onesite_obs.size() == static_cast<std::size_t>(nlops) + 1) {
       ofs << "# -1: norm\n";
     }
     ofs << std::endl;
@@ -184,7 +184,7 @@ void iTPS<ptensor>::save_onesite(
           << std::endl;
     }
   }
-  if (onesite_obs.size() == nlops + 1) {
+  if (onesite_obs.size() == static_cast<std::size_t>(nlops) + 1) {
     // includes norm
     for (int i = 0; i < N_UNIT; ++i) {
       const auto v = onesite_obs[nlops][i];
