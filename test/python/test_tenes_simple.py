@@ -26,6 +26,26 @@ sys.path.insert(
 import tenes_simple
 
 
+class TestSpinModelFieldKeys:
+    def test_conflicting_h_and_hz_raise(self):
+        with pytest.raises(RuntimeError):
+            tenes_simple.SpinModel({"type": "spin", "h": 1.0, "hz": 2.0})
+
+    def test_conflicting_g_and_hx_raise(self):
+        with pytest.raises(RuntimeError):
+            tenes_simple.SpinModel({"type": "spin", "g": 1.0, "hx": 2.0})
+
+    def test_deprecated_h_maps_to_hz(self):
+        with pytest.warns(FutureWarning):
+            model = tenes_simple.SpinModel({"type": "spin", "h": 1.5})
+        assert model.params_onesite["hz"] == pytest.approx(1.5)
+
+    def test_deprecated_g_maps_to_hx(self):
+        with pytest.warns(FutureWarning):
+            model = tenes_simple.SpinModel({"type": "spin", "g": 0.5})
+        assert model.params_onesite["hx"] == pytest.approx(0.5)
+
+
 class TestBoseHubbardModel:
     def test_site_hamiltonian_has_onsite_repulsion(self):
         model = tenes_simple.BoseHubbardModel({"type": "boson", "nmax": 2, "u": 3.0})

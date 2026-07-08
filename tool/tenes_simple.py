@@ -15,6 +15,7 @@
 # along with this program. If not, see http://www.gnu.org/licenses
 
 import re
+import warnings
 
 from collections import namedtuple
 from itertools import chain, product
@@ -844,25 +845,25 @@ class SpinModel(Model):
                 update(types, ["b"], n, key)
 
         if "h" in modelparam:
-            print(
-                'WARNING: "h" for the longitudial field is deprecated, and will be removed in future.'
+            warnings.warn(
+                '"h" for the longitudinal field is deprecated, '
+                'and will be removed in future. Use "hz" instead.',
+                FutureWarning,
             )
-            print('         Use "hz" instead.')
             if "hz" in modelparam:
-                print('ERROR: Both "hz" and "h" are specified. Use "hz".')
-                sys.exit(1)
+                raise RuntimeError('Both "hz" and "h" are specified. Use "hz".')
             ret_onesite["hz"] = modelparam["h"]
         elif "hz" in modelparam:
             ret_onesite["hz"] = modelparam["hz"]
 
         if "g" in modelparam:
-            print(
-                'WARNING: "g" for the transverse field is deprecated, and will be removed in future.'
+            warnings.warn(
+                '"g" for the transverse field is deprecated, '
+                'and will be removed in future. Use "hx" instead.',
+                FutureWarning,
             )
-            print('         Use "hx" instead.')
             if "hx" in modelparam:
-                print('ERROR: Both "hx" and "g" are specified. Use "hx".')
-                sys.exit(1)
+                raise RuntimeError('Both "hx" and "g" are specified. Use "hx".')
             ret_onesite["hx"] = modelparam["g"]
         elif "hx" in modelparam:
             ret_onesite["hx"] = modelparam["hx"]
