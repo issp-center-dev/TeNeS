@@ -14,7 +14,7 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 
 #include <cstdio>
@@ -27,6 +27,14 @@
 #include "../src/exception.hpp"
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
+
+int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
+  doctest::Context context(argc, argv);
+  const int res = context.run();
+  MPI_Finalize();
+  return res;
+}
 
 namespace {
 
