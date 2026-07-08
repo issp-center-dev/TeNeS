@@ -455,11 +455,12 @@ class Unitcell:
             )
             raise RuntimeError(msg)
 
+        undefined = [i for i, site in enumerate(self.sites) if site is None]
+        if undefined:
+            msg = "sites {} are not defined".format(undefined)
+            raise RuntimeError(msg)
+
         failed = False
-        for i, site in enumerate(self.sites):
-            if site is None:
-                print("site {} is not defined".format(i))
-                failed = True
         for i, isite in enumerate(self.sites):
             for idir in (1, 2):
                 idim = isite.virtual_dim[idir]
