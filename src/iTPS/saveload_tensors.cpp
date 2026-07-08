@@ -150,7 +150,12 @@ void iTPS<ptensor>::load_tensors_v1() {
 
     std::getline(ifs, line);
     const int format_version = std::stoi(util::drop_comment(line));
-    assert(format_version == 1);
+    if (format_version != 1) {
+      std::stringstream ss;
+      ss << "ERROR: " << filename << " has format version " << format_version
+         << " but load_tensors_v1 supports only version 1";
+      throw tenes::load_error(ss.str());
+    }
 
     std::getline(ifs, line);
     const int loaded_N_UNIT = std::stoi(util::drop_comment(line));
