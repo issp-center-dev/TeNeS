@@ -370,7 +370,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   auto full = param->get_table("full_update");
   if (full != nullptr) {
     load_if(pparam.num_full_step, full, "num_step");
-    load_if(pparam.tau_full_step, simple, "tau");
+    load_if(pparam.tau_full_step, full, "tau");
     load_if(pparam.Full_Inverse_precision, full, "inverse_precision");
     load_if(pparam.Full_Convergence_Epsilon, full, "convergence_epsilon");
     load_if(pparam.Inverse_Env_cut, full, "env_cutoff");

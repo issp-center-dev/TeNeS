@@ -130,6 +130,24 @@ seed = 42)");
     CHECK(peps_parameters.seed == 42);
   }
 
+  SUBCASE("tau is read from its own section") {
+    INFO("tau");
+    auto toml = parse_str(R"(
+[parameter]
+[parameter.simple_update]
+tau = 0.1
+[parameter.full_update]
+tau = 0.01
+)");
+
+    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+
+    REQUIRE(peps_parameters.tau_simple_step.size() == 1);
+    CHECK(peps_parameters.tau_simple_step[0] == 0.1);
+    REQUIRE(peps_parameters.tau_full_step.size() == 1);
+    CHECK(peps_parameters.tau_full_step[0] == 0.01);
+  }
+
   SUBCASE("tensor") {
     INFO("tensor");
     auto toml = parse_str(R"(
