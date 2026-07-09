@@ -306,10 +306,10 @@ void iTPS<tensor>::simple_update_density_purification(
     tensor identity(
         comm, mptensor::Shape(Tn[source].shape()[5], Tn[target].shape()[5],
                               Tn[source].shape()[5], Tn[target].shape()[5]));
-    for (int j1 = 0; j1 < Tn[source].shape()[5]; ++j1) {
-      for (int k1 = 0; k1 < Tn[target].shape()[5]; ++k1) {
-        for (int j2 = 0; j2 < Tn[source].shape()[5]; ++j2) {
-          for (int k2 = 0; k2 < Tn[target].shape()[5]; ++k2) {
+    for (size_t j1 = 0; j1 < Tn[source].shape()[5]; ++j1) {
+      for (size_t k1 = 0; k1 < Tn[target].shape()[5]; ++k1) {
+        for (size_t j2 = 0; j2 < Tn[source].shape()[5]; ++j2) {
+          for (size_t k2 = 0; k2 < Tn[target].shape()[5]; ++k2) {
             identity.set_value(mptensor::Index(j1, k1, j2, k2),
                                (j1 == j2 && k1 == k2 ? 1.0 : 0.0));
           }

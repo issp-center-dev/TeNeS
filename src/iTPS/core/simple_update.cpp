@@ -62,7 +62,7 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
 
   for (int i = 0; i < 4; i++) {
     lambda1_inv[i] = std::vector<double>(lambda1[i].size());
-    for (int j = 0; j < lambda1_inv[i].size(); ++j) {
+    for (size_t j = 0; j < lambda1_inv[i].size(); ++j) {
       if (lambda1[i][j] > peps_parameters.Inverse_lambda_cut) {
         lambda1_inv[i][j] = 1.0 / lambda1[i][j];
       } else {
@@ -72,7 +72,7 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
   }
   for (int i = 0; i < 4; i++) {
     lambda2_inv[i] = std::vector<double>(lambda2[i].size());
-    for (int j = 0; j < lambda2_inv[i].size(); ++j) {
+    for (size_t j = 0; j < lambda2_inv[i].size(); ++j) {
       if (lambda2[i][j] > peps_parameters.Inverse_lambda_cut) {
         lambda2_inv[i][j] = 1.0 / lambda2[i][j];
       } else {

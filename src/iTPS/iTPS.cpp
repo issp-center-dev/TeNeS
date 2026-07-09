@@ -125,13 +125,13 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       std::cout << "   chi (CTM): " << CHI << std::endl;
       if (peps_parameters.calcmode ==
           PEPS_Parameters::CalculationMode::finite_temperature) {
-        if (CHI < Dmax) {
+        if (CHI < static_cast<std::size_t>(Dmax)) {
           std::cerr << "WARNING: CTM may be too small (chi < D) for "
                        "iTPO (finite_temperature mode)"
                     << std::endl;
         }
       } else {
-        if (CHI < Dmax * Dmax) {
+        if (CHI < static_cast<std::size_t>(Dmax * Dmax)) {
           std::cerr << "WARNING: CTM may be too small (chi < D*D) for iTPS"
                     << std::endl;
         }
@@ -202,7 +202,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     // }
     simple_update_groups.insert(g);
   }
-  num_simple_update_groups = *simple_update_groups.rbegin() + 1;
+  num_simple_update_groups =
+      simple_update_groups.empty() ? 0 : *simple_update_groups.rbegin() + 1;
   for (int g = 0; g < num_simple_update_groups; ++g) {
     auto it = simple_update_groups.find(g);
     if (it == simple_update_groups.end()) {
@@ -234,7 +235,8 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     // }
     full_update_groups.insert(g);
   }
-  num_full_update_groups = *full_update_groups.rbegin() + 1;
+  num_full_update_groups =
+      full_update_groups.empty() ? 0 : *full_update_groups.rbegin() + 1;
   for (int g = 0; g < num_full_update_groups; ++g) {
     auto it = full_update_groups.find(g);
     if (it == full_update_groups.end()) {
@@ -437,7 +439,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   site_ops_indices.resize(N_UNIT, std::vector<int>(num_onesite_operators, -1));
-  for (int i = 0; i < onesite_operators.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(onesite_operators.size()); ++i) {
     auto const &op = onesite_operators[i];
     site_ops_indices[op.source_site][op.group] = i;
   }

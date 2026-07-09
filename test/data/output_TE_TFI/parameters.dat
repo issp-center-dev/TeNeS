@@ -23,7 +23,6 @@ rsvd_oversampling_factor = 2
 meanfield_env = false
 
 mode = time evolution
-finite temperature
 simple
 Lcor = 0
 seed = 11

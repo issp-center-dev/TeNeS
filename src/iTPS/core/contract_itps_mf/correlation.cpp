@@ -74,7 +74,7 @@ typename tensor::value_type FinishCorrelation_iTPS_MF(const tensor &A,
   direction %= 4;
 
   Axes axes;
-  for(int d=0; d<4; ++d){
+  for(size_t d=0; d<4; ++d){
     if (d == direction) continue;
     axes.push(d);
   }

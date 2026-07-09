@@ -68,7 +68,7 @@ ptensor read_tensor(std::string const &str,
         msg << "\n" << line;
         if (linenum2 == linenum) {
           msg << "\n";
-          for (int i = 0; i < line.length(); ++i) {
+          for (std::size_t i = 0; i < line.length(); ++i) {
             msg << "^";
           }
         }

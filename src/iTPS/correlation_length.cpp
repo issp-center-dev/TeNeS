@@ -14,13 +14,29 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include <cmath>
 #include <functional>
 #include <iomanip>
+#include <limits>
 #include <memory>
+#include "correlation_length.hpp"
 #include "iTPS.hpp"
 
 namespace tenes {
 namespace itps {
+
+double calc_correlation_length(double e0_abs, double e1_abs, int L) {
+  if (!(e0_abs > 0.0)) {
+    // all eigenvalues vanish; the correlation length is undefined
+    return 0.0;
+  }
+  const double ratio = e1_abs / e0_abs;
+  if (ratio >= 1.0) {
+    // degenerate leading eigenvalues; the correlation length diverges
+    return std::numeric_limits<double>::infinity();
+  }
+  return -L / std::log(ratio);
+}
 
 template <class ptensor>
 std::vector<typename iTPS<ptensor>::transfer_matrix_eigenvalues_type>
@@ -110,8 +126,16 @@ void iTPS<ptensor>::save_correlation_length(
     const int L = dir == 0 ? lattice.LX_noskew : lattice.LY_noskew;
 
     const double e0 = std::abs(eigvals[0]);
-    const double e1 = std::abs(eigvals[1]) / e0;
-    const double correlation_length = -L / std::log(e1);
+    const double correlation_length =
+        calc_correlation_length(e0, std::abs(eigvals[1]), L);
+    if (!std::isfinite(correlation_length) &&
+        peps_parameters.print_level >= PrintLevel::warn) {
+      std::cerr << "WARNING: correlation length for direction " << dir
+                << ", coord " << x
+                << " diverges (the two largest eigenvalues of the transfer "
+                   "matrix are degenerate)"
+                << std::endl;
+    }
 
     if (time) {
       ofs << time.get() << " ";

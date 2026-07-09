@@ -328,7 +328,7 @@ void iTPS<ptensor>::save_twosite(
     for (int ilops = 0; ilops < num_twosite_operators; ++ilops) {
       ofs << "# " << ilops << ": " << twosite_operator_names[ilops] << "\n";
     }
-    if (twosite_obs.size() == nlops + 1) {
+    if (twosite_obs.size() == static_cast<std::size_t>(nlops) + 1) {
       ofs << "# -1: norm\n";
     }
     ofs << std::endl;
@@ -350,7 +350,7 @@ void iTPS<ptensor>::save_twosite(
     }
   }
 
-  if (twosite_obs.size() == nlops + 1) {
+  if (twosite_obs.size() == static_cast<std::size_t>(nlops) + 1) {
     // includes norm
     for (const auto &r : twosite_obs[nlops]) {
       auto bond = r.first;

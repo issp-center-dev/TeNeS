@@ -96,7 +96,7 @@ void iTPS<ptensor>::initialize_tensors() {
       std::vector<double> ran_re(ndim);
       std::vector<double> ran_im(ndim);
 
-      for (int j = 0; j < ndim; j++) {
+      for (size_t j = 0; j < ndim; j++) {
         ran_re[j] = dist(gen);
         ran_im[j] = dist(gen_im);
       }
@@ -112,7 +112,7 @@ void iTPS<ptensor>::initialize_tensors() {
         }
       }
 
-      for (int n = 0; n < Tn[i].local_size(); ++n) {
+      for (size_t n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
           auto v = std::complex<double>(dir[index[4]], dir_im[index[4]]);
@@ -192,7 +192,7 @@ void iTPS<ptensor>::initialize_tensors_density() {
       const auto pdim = lattice.physical_dims[i];
       const auto vdim = lattice.virtual_dims[i];
 
-      for (int n = 0; n < Tn[i].local_size(); ++n) {
+      for (size_t n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0 &&
             index[4] == index[5]) {

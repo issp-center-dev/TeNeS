@@ -28,8 +28,8 @@ void iTPS<tensor>::time_evolution() {
   const bool su = peps_parameters.num_simple_step[0] > 0;
   const int num_groups = su ? num_simple_update_groups : num_full_update_groups;
 
-  if (peps_parameters.measure_interval.size() < num_groups){
-    while(peps_parameters.measure_interval.size() < num_groups){
+  if (peps_parameters.measure_interval.size() < static_cast<std::size_t>(num_groups)){
+    while(peps_parameters.measure_interval.size() < static_cast<std::size_t>(num_groups)){
       peps_parameters.measure_interval.push_back(*peps_parameters.measure_interval.rbegin());
     }
   }

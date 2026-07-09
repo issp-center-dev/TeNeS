@@ -66,6 +66,9 @@ std::string joinpath(std::vector<std::string> const& xs) {
 
 std::string basename(const std::string& path) {
   auto xs = util::split(path, "/");
+  if (xs.empty()) {
+    return std::string("");
+  }
   return xs[xs.size() - 1];
 }
 

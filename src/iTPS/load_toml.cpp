@@ -370,7 +370,7 @@ PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param) {
   auto full = param->get_table("full_update");
   if (full != nullptr) {
     load_if(pparam.num_full_step, full, "num_step");
-    load_if(pparam.tau_full_step, simple, "tau");
+    load_if(pparam.tau_full_step, full, "tau");
     load_if(pparam.Full_Inverse_precision, full, "inverse_precision");
     load_if(pparam.Full_Convergence_Epsilon, full, "convergence_epsilon");
     load_if(pparam.Inverse_Env_cut, full, "env_cutoff");
@@ -427,7 +427,7 @@ std::tuple<int, std::vector<int>, std::vector<int>> read_multisites(
   }
 
   std::vector<int> dx, dy;
-  for (int i = 1; i < words.size(); i += 2) {
+  for (std::size_t i = 1; i < words.size(); i += 2) {
     dx.push_back(stoi(words[i]));
     dy.push_back(stoi(words[i + 1]));
   }
@@ -493,7 +493,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
     auto dim_arr = param->get_array_of<int64_t>("dim");
     auto dim_int = param->get_as<int>("dim");
     if (dim_arr) {
-      if (dim_arr->size() != nbody) {
+      if (dim_arr->size() != static_cast<std::size_t>(nbody)) {
         std::stringstream ss;
         ss << "operator is " << nbody << "-sites but dim has "
            << dim_arr->size() << " integers";
