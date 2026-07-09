@@ -1350,7 +1350,7 @@ if __name__ == "__main__":
         help="Save onsite terms as site Hamiltonians",
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="2.1.3"
+        "-v", "--version", dest="version", action="version", version="2.2-dev"
     )
 
     args = parser.parse_args()
