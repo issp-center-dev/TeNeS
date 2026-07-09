@@ -46,7 +46,7 @@ simple update, full update で使う(虚)時間発展演算子を記述します
    ``dimensions``,  "虚時間発展演算子テンソルの次元",          整数のリスト
    ``elements``,    "虚時間発展演算子テンソルの非ゼロ要素",    文字列
 
-``group`` は時間発展演算子のグループを指定します（省略した場合 0とみなされます）。
+``group`` は時間発展演算子のグループを指定します。
 ``parameter.simple_update`` および ``parameter.full_update`` における ``tau`` や ``num_steps`` で刻み幅やステップ数をリストを用いて複数指定したときに、そのインデックスに対応します。
 
 ``site`` は1サイト演算子に、 ``source_site`` と ``source_leg`` は2サイト演算子に使用します。
