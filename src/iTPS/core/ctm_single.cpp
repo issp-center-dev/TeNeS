@@ -43,7 +43,7 @@ using mptensor::Shape;
 template <class tensor>
 std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn){
   std::vector<tensor> Tn_single;
-  for (int num = 0; num < Tn.size(); ++num) {
+  for (size_t num = 0; num < Tn.size(); ++num) {
     Tn_single.push_back(mptensor::contract(Tn[num], Axes(4), Axes(5)));
   }
   return Tn_single;
@@ -185,7 +185,7 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
       std::vector<double> s_c;
       s_c.resize(cut);
 
-      for (int i = 0; i < s_c.size(); ++i) {
+      for (int i = 0; i < static_cast<int>(s_c.size()); ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
@@ -251,7 +251,7 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);
@@ -356,7 +356,7 @@ void Calc_projector_updown_blocks_single(
       std::vector<double> s_c;
       s_c.resize(cut);
 
-      for (int i = 0; i < s.size(); ++i) {
+      for (int i = 0; i < static_cast<int>(s.size()); ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
@@ -422,7 +422,7 @@ void Calc_projector_updown_blocks_single(
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);

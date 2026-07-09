@@ -91,7 +91,7 @@ def value_to_str(v) -> str:
 def merge_input_dict(d1: dict, d2: dict) -> None:
     section1 = d1.get("parameter", {})
     section2 = d2.get("parameter", {})
-    subsection_names = ("general", "simple_update", "full_update", "ctm", "random")
+    subsection_names = sorted(set(section1.keys()) | set(section2.keys()))
     for name in subsection_names:
         sub1 = section1.get(name, {})
         sub2 = section2.get(name, {})
@@ -175,7 +175,7 @@ class Bond:
         return not self.is_site()
 
 
-def parse_bond(line: str) -> Bond:
+def parse_bond(line: str) -> Optional[Bond]:
     line = drop_comment(line)
     if not line:
         return None
@@ -202,7 +202,7 @@ class Multisite:
         return len(self.dx) + 1
 
 
-def parse_multisite(line: str) -> Multisite:
+def parse_multisite(line: str) -> Optional[Multisite]:
     line = drop_comment(line)
     if not line:
         return None
@@ -249,7 +249,7 @@ def is_hermite(A: np.ndarray) -> bool:
     idir = int(np.prod(input_dirs))
     odir = int(np.prod(output_dirs))
     Amat = A.reshape((idir, odir))
-    return bool(np.all(Amat.conjugate().transpose() == Amat))
+    return bool(np.allclose(Amat.conjugate().transpose(), Amat))
 
 
 class LocalTensor:
@@ -455,11 +455,12 @@ class Unitcell:
             )
             raise RuntimeError(msg)
 
+        undefined = [i for i, site in enumerate(self.sites) if site is None]
+        if undefined:
+            msg = "sites {} are not defined".format(undefined)
+            raise RuntimeError(msg)
+
         failed = False
-        for i, site in enumerate(self.sites):
-            if site is None:
-                print("site {} is not defined".format(i))
-                failed = True
         for i, isite in enumerate(self.sites):
             for idir in (1, 2):
                 idim = isite.virtual_dim[idir]
@@ -570,7 +571,7 @@ class LatticeGraph:
         return localsite + self.unitcell.numsites() * unitcell_index
 
     def graph_coords(self, index: int) -> Tuple[int, int, int]:
-        assert 0 <= index <= self.N
+        assert 0 <= index < self.N
 
         index, localsite = divmod(index, self.unitcell.numsites())
         offset_y, offset_x = divmod(index, self.offset_Lx)
@@ -644,7 +645,7 @@ class NNOperator:
     bond: Bond
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
-    group = Optional[int]
+    group: Optional[int]
 
     def __init__(
         self,
@@ -993,21 +994,23 @@ class Model:
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
         param = lower_dict(param)
+        for name in ("tensor", "hamiltonian"):
+            if name not in param:
+                msg = '"{}" section is missing in the input'.format(name)
+                raise RuntimeError(msg)
         self.param = param
-        self.parameter = param["parameter"]
-        if "general" in self.parameter:
-            mode = self.parameter["general"].get("mode", "ground state").lower()
-        else:
-            mode = "ground state"
+        self.parameter = param.get("parameter", {})
+        mode = self.parameter.get("general", {}).get("mode", "ground state")
         if not isinstance(mode, str):
             raise ValueError("mode must be a string.")
+        mode = mode.lower()
         self.time_evolution = mode.startswith("time")
-        tau = self.parameter["simple_update"].get("tau", [0.01])
+        tau = self.parameter.get("simple_update", {}).get("tau", [0.01])
         if isinstance(tau, float):
             self.simple_tau = [tau]
         else:
             self.simple_tau = tau
-        tau = self.parameter["full_update"].get("tau", [0.01])
+        tau = self.parameter.get("full_update", {}).get("tau", [0.01])
         if isinstance(tau, float):
             self.full_tau = [tau]
         else:
@@ -1033,7 +1036,8 @@ class Model:
                     dims
                 )
                 elements = load_tensor(ham["elements"], dims + dims, atol=atol)
-                assert is_hermite(elements)
+                if not is_hermite(elements):
+                    raise RuntimeError("hamiltonian elements are not hermitian")
                 sites: List[int] = ham["sites"]
                 if len(sites) == 0:
                     sites = list(range(self.unitcell.numsites()))
@@ -1055,7 +1059,8 @@ class Model:
                     dims
                 )
                 elements = load_tensor(ham["elements"], dims + dims, atol=atol)
-                assert is_hermite(elements)
+                if not is_hermite(elements):
+                    raise RuntimeError("hamiltonian elements are not hermitian")
                 bonds: List[Bond] = []
                 for line in ham["bonds"].strip().splitlines():
                     b = parse_bond(line)
@@ -1121,11 +1126,11 @@ class Model:
             group = twosite["group"]
             if group == 0:
                 has_zero_twosite = True
-            bonds = [
-                parse_bond(line)
-                for line in twosite["bonds"].strip().splitlines()
-                if parse_bond(line) is not None
-            ]
+            bonds = []
+            for line in twosite["bonds"].strip().splitlines():
+                bond = parse_bond(line)
+                if bond is not None:
+                    bonds.append(bond)
             coeff = twosite.get("coeff", 1.0)
             coeff_im = twosite.get("coeff_im", 0.0)
             if "elements" in twosite:
@@ -1157,11 +1162,11 @@ class Model:
         for multisite in observable.get("multisite", []):
             name = multisite["name"]
             group = multisite["group"]
-            ms = [
-                parse_multisite(line)
-                for line in multisite["multisites"].strip().splitlines()
-                if parse_multisite(line) is not None
-            ]
+            ms = []
+            for line in multisite["multisites"].strip().splitlines():
+                m = parse_multisite(line)
+                if m is not None:
+                    ms.append(m)
             coeff = multisite.get("coeff", 1.0)
             coeff_im = multisite.get("coeff_im", 0.0)
             if "ops" not in multisite:
@@ -1273,7 +1278,7 @@ if __name__ == "__main__":
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
     parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="2.1.2"
+        "-v", "--version", dest="version", action="version", version="2.1.3"
     )
 
     args = parser.parse_args()

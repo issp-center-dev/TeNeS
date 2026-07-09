@@ -58,7 +58,7 @@ template <class T>
 small_tensor<T> identity(std::size_t k, T v) {
   small_tensor<T> ret{mptensor::Shape(k, k)};
   for (std::size_t i = 0; i < k; ++i) {
-    ret.set_value({k, k}, v);
+    ret.set_value({i, i}, v);
   }
   return ret;
 }

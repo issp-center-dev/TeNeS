@@ -81,21 +81,27 @@ int main2(int argc, char **argv) {
   try {
     status =
         tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, print_level);
-  } catch (const tenes::input_error e) {
+  } catch (const tenes::input_error &e) {
     if (mpirank == 0) {
       std::cerr << "[INPUT ERROR]" << std::endl;
       std::cerr << e.what() << std::endl;
     }
     status = 1;
-  } catch (const tenes::load_error e) {
+  } catch (const tenes::load_error &e) {
     if (mpirank == 0) {
       std::cerr << "[TENSOR LOAD ERROR]" << std::endl;
       std::cerr << e.what() << std::endl;
     }
     status = 1;
-  } catch (const tenes::runtime_error e) {
+  } catch (const tenes::runtime_error &e) {
     if (mpirank == 0) {
       std::cerr << "[ERROR]" << std::endl;
+      std::cerr << e.what() << std::endl;
+    }
+    status = 1;
+  } catch (const std::exception &e) {
+    if (mpirank == 0) {
+      std::cerr << "[UNEXPECTED ERROR]" << std::endl;
       std::cerr << e.what() << std::endl;
     }
     status = 1;

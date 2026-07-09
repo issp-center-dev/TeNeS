@@ -108,7 +108,7 @@ void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
   W2.multiply_vector(D2inv, 1);
 
   std::vector<double> lambda1_inv(dc);
-  for (size_t i = 0; i < dc; ++i) {
+  for (size_t i = 0; i < static_cast<size_t>(dc); ++i) {
     if (lambda1[connect1][i] > peps_parameters.Inverse_lambda_cut) {
       lambda1_inv[i] = 1.0 / lambda1[connect1][i];
     } else {
@@ -132,7 +132,7 @@ void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
   Tn1_new.multiply_vector(lambda_c, connect1);
 
   std::vector<double> lambda2_inv(dc);
-  for (size_t i = 0; i < dc; ++i) {
+  for (size_t i = 0; i < static_cast<size_t>(dc); ++i) {
     if (lambda1[connect2][i] > peps_parameters.Inverse_lambda_cut) {
       lambda2_inv[i] = 1.0 / lambda2[connect2][i];
     } else {

@@ -6,7 +6,8 @@ endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-foreach(basename input simple_update full_update)
+foreach(basename input simple_update full_update tensor_util util
+        correlation_length saveload arnoldi)
   set(testname "test_${basename}")
   add_executable(${testname} "${basename}.cpp")
 
@@ -20,6 +21,23 @@ foreach(basename input simple_update full_update)
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
   endif()
 endforeach()
+
+# A syntactically broken input file must lead to a clean error exit,
+# not to an abort by an uncaught exception (WILL_FAIL passes on a
+# nonzero exit code but still fails if the process dies on a signal).
+if(ENABLE_MPI)
+  add_test(NAME broken_input
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:tenes>
+                   data/broken.toml)
+else()
+  add_test(NAME broken_input COMMAND $<TARGET_FILE:tenes> data/broken.toml)
+endif()
+set_tests_properties(broken_input PROPERTIES WILL_FAIL TRUE)
+
+add_test(NAME python_unittest
+         COMMAND ${TENES_PYTHON_EXECUTABLE} -m pytest
+                 ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
 foreach(name simple_mode std_mode)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in

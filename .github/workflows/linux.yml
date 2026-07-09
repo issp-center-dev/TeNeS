@@ -43,7 +43,7 @@ jobs:
       - name: pip install
         run: |
           python -m pip install -U pip
-          python -m pip install numpy scipy toml
+          python -m pip install numpy scipy toml pytest
 
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build

@@ -25,8 +25,8 @@ void iTPS<tensor>::finite_temperature() {
   measure_density(beta, "FT_");
 
   const int num_groups = num_simple_update_groups;
-  if (peps_parameters.measure_interval.size() < num_groups){
-    while(peps_parameters.measure_interval.size() < num_groups){
+  if (peps_parameters.measure_interval.size() < static_cast<std::size_t>(num_groups)){
+    while(peps_parameters.measure_interval.size() < static_cast<std::size_t>(num_groups)){
       peps_parameters.measure_interval.push_back(*peps_parameters.measure_interval.rbegin());
     }
   }

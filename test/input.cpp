@@ -26,6 +26,7 @@
 #include "../src/mpi.hpp"
 #include "../src/util/string.hpp"
 #include "../src/iTPS/load_toml.hpp"
+#include "../src/iTPS/iTPS.hpp"
 
 auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
   std::stringstream ss;
@@ -130,6 +131,64 @@ seed = 42)");
     CHECK(peps_parameters.seed == 42);
   }
 
+  SUBCASE("tau is read from its own section") {
+    INFO("tau");
+    auto toml = parse_str(R"(
+[parameter]
+[parameter.simple_update]
+tau = 0.1
+[parameter.full_update]
+tau = 0.01
+)");
+
+    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+
+    REQUIRE(peps_parameters.tau_simple_step.size() == 1);
+    CHECK(peps_parameters.tau_simple_step[0] == 0.1);
+    REQUIRE(peps_parameters.tau_full_step.size() == 1);
+    CHECK(peps_parameters.tau_full_step[0] == 0.01);
+  }
+
+  SUBCASE("saved mode string") {
+    INFO("saved mode string");
+
+    auto count_occurrences = [](std::string const &filename,
+                                std::string const &key) {
+      std::ifstream ifs(filename);
+      std::string line;
+      int n = 0;
+      while (std::getline(ifs, line)) {
+        if (line.find(key) != std::string::npos) {
+          ++n;
+        }
+      }
+      return n;
+    };
+
+    struct {
+      PEPS_Parameters::CalculationMode mode;
+      const char *name;
+    } cases[] = {
+        {PEPS_Parameters::CalculationMode::ground_state, "ground state"},
+        {PEPS_Parameters::CalculationMode::time_evolution, "time evolution"},
+        {PEPS_Parameters::CalculationMode::finite_temperature,
+         "finite temperature"},
+    };
+
+    for (auto const &c : cases) {
+      PEPS_Parameters peps_parameters;
+      peps_parameters.calcmode = c.mode;
+      const std::string filename = "output_parameters_test.dat";
+      peps_parameters.save(filename.c_str());
+
+      CHECK(count_occurrences(filename, std::string("mode = ") + c.name) == 1);
+      CHECK(count_occurrences(filename, "ground state") +
+                count_occurrences(filename, "time evolution") +
+                count_occurrences(filename, "finite temperature") ==
+            1);
+    }
+  }
+
   SUBCASE("tensor") {
     INFO("tensor");
     auto toml = parse_str(R"(
@@ -161,6 +220,7 @@ noise = 0.01
       auto toml = parse_str(R"(
 [evolution]
 [[evolution.simple]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2,2,2,4]
@@ -184,6 +244,7 @@ elements = """
       auto toml = parse_str(R"(
 [evolution]
 [[evolution.full]]
+group = 0
 source_site = 0
 source_leg = 2
 dimensions = [2,2,2,4]
@@ -265,6 +326,31 @@ elements = """
         CHECK(std::imag(v) == 1.0);
       }
     }
+  }
+
+  SUBCASE("iTPS without evolution operators") {
+    INFO("iTPS without evolution operators");
+    // measurement-only setup: no [[evolution.simple]] / [[evolution.full]]
+    auto toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+initial_state = [1.0, 0.0]
+noise = 0.01
+    )");
+    PEPS_Parameters peps_parameters;
+    peps_parameters.print_level = PrintLevel::none;
+    peps_parameters.outdir = "output_itps_without_evolution";
+    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
+
+    CHECK_NOTHROW(iTPS<ptensor>(
+        MPI_COMM_WORLD, peps_parameters, lattice,
+        EvolutionOperators<ptensor>{}, EvolutionOperators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, Operators<ptensor>{},
+        CorrelationParameter{}, TransferMatrix_Parameters{}));
   }
 
   SUBCASE("correlation") {}

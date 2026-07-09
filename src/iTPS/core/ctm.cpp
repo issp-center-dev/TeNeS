@@ -304,7 +304,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);
@@ -477,7 +477,7 @@ void Calc_projector_updown_blocks(
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
-    for (int i = 0; i < identity_matrix.local_size(); i++) {
+    for (size_t i = 0; i < identity_matrix.local_size(); i++) {
       index = identity_matrix.global_index(i);
       if (index[0] == index[1]) {
         identity_matrix.set_value(index, 1.0);
@@ -812,6 +812,29 @@ void Bottom_move(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
   }
 }
 
+namespace {
+//! Distance between two sets of normalized singular values.
+/*! Singular values are in descending order and each vector is L2-normalized.
+ *  When the counts differ (the CTM bond dimension is still growing, or the
+ *  projector cutoff truncates a different number of values between iterations),
+ *  the shorter vector is padded with zeros. The missing entries are the
+ *  smallest singular values, so treating them as zero is consistent with the
+ *  truncation itself and avoids the out-of-bounds access of a naive
+ *  element-wise loop.
+ */
+inline double singular_value_distance(const std::vector<double> &lam_new,
+                                      const std::vector<double> &lam_old) {
+  const size_t n = std::max(lam_new.size(), lam_old.size());
+  double sig = 0.0;
+  for (size_t j = 0; j < n; ++j) {
+    const double a = j < lam_new.size() ? lam_new[j] : 0.0;
+    const double b = j < lam_old.size() ? lam_old[j] : 0.0;
+    sig += (a - b) * (a - b);
+  }
+  return std::sqrt(sig);
+}
+}  // unnamed namespace
+
 template <class tensor>
 bool Check_Convergence_CTM(
     const std::vector<tensor> &C1, const std::vector<tensor> &C2,
@@ -829,28 +852,24 @@ bool Check_Convergence_CTM(
     // C1
     svd(C1[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C1_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -863,30 +882,26 @@ bool Check_Convergence_CTM(
     // C2
     svd(C2[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
 
     svd(C2_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
 
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -899,29 +914,25 @@ bool Check_Convergence_CTM(
     // C3
     svd(C3[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C3_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
 
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;
@@ -934,28 +945,24 @@ bool Check_Convergence_CTM(
     // C4
     svd(C4[i], lam_new);
     norm = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
+    for (size_t j = 0; j < lam_new.size(); ++j) {
       norm += lam_new[j] * lam_new[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_new.size(); ++k) {
+    for (size_t k = 0; k < lam_new.size(); ++k) {
       lam_new[k] /= norm;
     }
     svd(C4_old[i], lam_old);
     norm = 0.0;
-    for (int j = 0; j < lam_old.size(); ++j) {
+    for (size_t j = 0; j < lam_old.size(); ++j) {
       norm += lam_old[j] * lam_old[j];
     }
     norm = sqrt(norm);
-    for (int k = 0; k < lam_old.size(); ++k) {
+    for (size_t k = 0; k < lam_old.size(); ++k) {
       lam_old[k] /= norm;
     }
 
-    sig = 0.0;
-    for (int j = 0; j < lam_new.size(); ++j) {
-      sig += (lam_new[j] - lam_old[j]) * (lam_new[j] - lam_old[j]);
-    }
-    sig = sqrt(sig);
+    sig = singular_value_distance(lam_new, lam_old);
 
     if (sig > peps_parameters.CTM_Convergence_Epsilon) {
       sig_max = sig;

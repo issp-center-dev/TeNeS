@@ -119,7 +119,7 @@ tensor resize_tensor(tensor const& src, mptensor::Shape target_shape) {
     std::stringstream ss;
     ss << "dimension mismatch in resize_tensor: source = " << ndim
        << ", target = " << target_shape.size();
-    tenes::logic_error(ss.str());
+    throw tenes::logic_error(ss.str());
   }
   mptensor::Shape zero = shape;
 

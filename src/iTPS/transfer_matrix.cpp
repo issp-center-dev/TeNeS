@@ -98,7 +98,7 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
   // for debug output
   // const auto mpirank = this->Tn[0].get_comm_rank();
 
-  if (N <= params.maxdim_dense_eigensolver) {
+  if (N <= static_cast<size_t>(params.maxdim_dense_eigensolver)) {
     ptensor matrix = dir == 0 ? matrix_horizontal(fixed_coord)
                               : matrix_vertical(fixed_coord);
 
@@ -115,7 +115,7 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
   } else {  // use Arnoldi
     auto maxvec = params.arnoldi_maxdim;
     auto maxiter = params.arnoldi_maxiter;
-    if (N < maxvec) {
+    if (N < static_cast<size_t>(maxvec)) {
       maxvec = N;
       maxiter = 1;
     }
