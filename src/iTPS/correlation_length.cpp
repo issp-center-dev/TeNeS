@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <functional>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include "correlation_length.hpp"

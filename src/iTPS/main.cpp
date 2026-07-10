@@ -39,10 +39,9 @@ int tenes_itps_main(const char* input_filename, MPI_Comm comm,
 }
 
 namespace {
-tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
-    tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type,
-                                      std::complex<double>>> const& ops) {
-  tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> ret;
+tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> to_real(
+    tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<std::complex<double>>>> const& ops) {
+  tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> ret;
   if (ops.empty()) {
     return ret;
   }
@@ -50,14 +49,14 @@ tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
   for (auto const& op : ops) {
     double coeff = std::real(op.coeff);
     if (op.is_onesite()) {
-      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+      mptensor::Tensor<tenes::mptensor_matrix_type<double>> A(comm,
                                                               op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
       ret.emplace_back(op.name, op.group, op.source_site, A, coeff);
     } else if (op.ops_indices.empty()) {
-      mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+      mptensor::Tensor<tenes::mptensor_matrix_type<double>> A(comm,
                                                               op.op.shape());
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
@@ -72,7 +71,7 @@ tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type, double>> to_real(
 }
 
 bool is_real(tenes::Operators<mptensor::Tensor<
-                 tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
+                 tenes::mptensor_matrix_type<std::complex<double>>>> const& ops,
              double tol) {
   for (auto const& op : ops) {
     if (!op.ops_indices.empty()) {
@@ -93,18 +92,18 @@ bool is_real(tenes::Operators<mptensor::Tensor<
   return true;
 }
 
-tenes::EvolutionOperators<mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+tenes::EvolutionOperators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>>
 to_real(tenes::EvolutionOperators<mptensor::Tensor<
-            tenes::mptensor_matrix_type, std::complex<double>>> const& ops) {
+            tenes::mptensor_matrix_type<std::complex<double>>>> const& ops) {
   tenes::EvolutionOperators<
-      mptensor::Tensor<tenes::mptensor_matrix_type, double>>
+      mptensor::Tensor<tenes::mptensor_matrix_type<double>>>
       ret;
   if (ops.empty()) {
     return ret;
   }
   MPI_Comm comm = ops[0].op.get_comm();
   for (auto const& op : ops) {
-    mptensor::Tensor<tenes::mptensor_matrix_type, double> A(comm,
+    mptensor::Tensor<tenes::mptensor_matrix_type<double>> A(comm,
                                                             op.op.shape());
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       A[lindex] = op.op[lindex].real();
@@ -115,7 +114,7 @@ to_real(tenes::EvolutionOperators<mptensor::Tensor<
 }
 
 bool is_real(tenes::EvolutionOperators<mptensor::Tensor<
-                 tenes::mptensor_matrix_type, std::complex<double>>> const& ops,
+                 tenes::mptensor_matrix_type<std::complex<double>>>> const& ops,
              double tol) {
   for (auto const& op : ops) {
     int res = 0;
@@ -208,7 +207,7 @@ int itps_main(const char* input_filename, MPI_Comm comm,
 int itps_main(std::string input_filename, MPI_Comm comm,
               PrintLevel print_level) {
   using tensor_complex =
-      mptensor::Tensor<mptensor_matrix_type, std::complex<double>>;
+      mptensor::Tensor<mptensor_matrix_type<std::complex<double>>>;
 
   int mpisize = 0, mpirank = 0;
   MPI_Comm_rank(comm, &mpirank);

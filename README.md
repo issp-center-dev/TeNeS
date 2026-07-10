@@ -43,13 +43,14 @@ TeNeS can make use of many CPU/nodes through an OpenMP/MPI hybirid parallel tens
 
 The following tools are required for building TeNeS.
 
-- C++11 compiler
+- C++17 compiler
+  - For Intel compilers, use the newer `icpx`; the classic `icpc` cannot compile mptensor.
 - CMake (>=3.6.0)
 - BLAS/LAPACK
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
-- [mptensor](https://github.com/smorita/mptensor)
+- [mptensor](https://github.com/smorita/mptensor) (>= v0.5.0)
 - [cpptoml](https://github.com/skystrife/cpptoml)
 
 TeNeS can be parallerized by using MPI and ScaLAPACK.
@@ -112,7 +113,7 @@ In such a case, `-DSCALAPACK_ROOT=<path>` option specifies the path to the ScaLA
 
 ### Use the pre-built mptensor
 
-TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) (>= v0.3).
+TeNeS is based on the parallerized tensor library, [mptensor](https://github.com/smorita/mptensor) (>= v0.5.0).
 The build system of TeNeS installs this automatically, but you can use the extra pre-built mptensor by the following way.
 
 ``` bash

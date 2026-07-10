@@ -37,12 +37,12 @@ using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
 #endif  // USE_MPI
 
 template <class T>
-using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type, T>;
+using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type<T>>;
 
 /*! @brief Non-distributed tensor even in the MPI mode
  */
 template <class T>
-using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix, T>;
+using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix<T>>;
 
 using real_tensor = mptensor_tensor_type<double>;
 using complex_tensor = mptensor_tensor_type<std::complex<double>>;

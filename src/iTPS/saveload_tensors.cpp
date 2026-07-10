@@ -24,6 +24,8 @@
 
 #include "iTPS.hpp"
 
+#include <mptensor/file_io/file_io.hpp>
+
 #include "../tensor.hpp"
 
 #include "../printlevel.hpp"
