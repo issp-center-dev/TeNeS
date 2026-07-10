@@ -17,7 +17,6 @@
 #ifndef TENES_SRC_UTIL_FILE_HPP_
 #define TENES_SRC_UTIL_FILE_HPP_
 
-#include <vector>
 #include <string>
 
 namespace tenes {
@@ -25,8 +24,11 @@ namespace util {
 
 bool path_exists(const std::string& path);
 bool isdir(const std::string& path);
+
+//! Create a directory (and its parents if necessary).
+//! @return true if the directory exists when this function returns.
 bool mkdir(const std::string& path);
-std::string joinpath(std::vector<std::string> const& xs);
+
 std::string basename(const std::string& path);
 
 }  // end of namespace util
