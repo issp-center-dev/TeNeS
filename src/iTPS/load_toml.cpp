@@ -22,6 +22,7 @@
 #include <iterator>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <typeinfo>
 #include <vector>
 
@@ -76,30 +77,32 @@ std::string type_name<std::string>() {
 
 template <class T>
 struct bittype {
-  typedef T type;
+  using type = T;
 };
 
 template <>
 struct bittype<short int> {
-  typedef int64_t type;
+  using type = int64_t;
 };
 
 template <>
 struct bittype<int> {
-  typedef int64_t type;
+  using type = int64_t;
 };
 
 template <>
 struct bittype<long long int> {
-  typedef int64_t type;
+  using type = int64_t;
 };
 
 template <class T>
-T reduce(double re, double im);
-template <>
-std::complex<double> reduce<std::complex<double>>(double re, double im) { return std::complex<double>(re, im); }
-template <>
-double reduce<double>(double re, double im) { return re; }
+T reduce(double re, double im) {
+  if constexpr (std::is_floating_point_v<T>) {
+    return re;
+  } else {
+    return T(re, im);
+  }
+}
 
 }  // end of namespace detail
 
