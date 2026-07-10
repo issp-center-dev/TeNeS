@@ -47,7 +47,9 @@
 <ol class="arabic simple">
 <li><p>C++17 compiler</p>
 <ul class="simple">
-<li><p>Intel コンパイラの場合、古い <code class="docutils literal notranslate"><span class="pre">icpc</span></code> では mptensor をビルドできないため、新しい <code class="docutils literal notranslate"><span class="pre">icpx</span></code> を利用してください。</p></li>
+<li><p>Intel コンパイラの場合、古い <code class="docutils literal notranslate"><span class="pre">icpc</span></code> では mptensor をビルドできないため、新しい <code class="docutils literal notranslate"><span class="pre">icpx</span></code> を利用してください。
+なお、 <code class="docutils literal notranslate"><span class="pre">icpx</span></code> はデフォルトで <code class="docutils literal notranslate"><span class="pre">-fp-model=fast</span></code> が有効になっており Inf/NaN の扱いが壊れるため、
+TeNeS のビルドでは自動的に <code class="docutils literal notranslate"><span class="pre">-fp-model=precise</span></code> を付加します。</p></li>
 </ul>
 </li>
 <li><p>CMake (&gt;=3.6.0)</p></li>

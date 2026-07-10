@@ -47,7 +47,9 @@ If you have git installed on your machine, type the following command to start d
 <ol class="arabic simple">
 <li><p>C++17 compiler</p>
 <ul class="simple">
-<li><p>For Intel compilers, use the newer <code class="docutils literal notranslate"><span class="pre">icpx</span></code>; the classic <code class="docutils literal notranslate"><span class="pre">icpc</span></code> cannot compile mptensor.</p></li>
+<li><p>For Intel compilers, use the newer <code class="docutils literal notranslate"><span class="pre">icpx</span></code>; the classic <code class="docutils literal notranslate"><span class="pre">icpc</span></code> cannot compile mptensor.
+Note that <code class="docutils literal notranslate"><span class="pre">icpx</span></code> enables <code class="docutils literal notranslate"><span class="pre">-fp-model=fast</span></code> by default, which breaks Inf/NaN handling;
+the TeNeS build automatically adds <code class="docutils literal notranslate"><span class="pre">-fp-model=precise</span></code> to avoid this.</p></li>
 </ul>
 </li>
 <li><p>CMake (&gt;=3.6.0)</p></li>
