@@ -75,7 +75,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_correlation_length(
     std::vector<typename iTPS<ptensor>::transfer_matrix_eigenvalues_type> const
         &lambdas,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -117,7 +117,7 @@ void iTPS<ptensor>::save_correlation_length(
     std::tie(dir, x, eigvals) = lambda;
     if(eigvals.size() == 1){
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << dir << " " << x << " " << 0.0 << std::endl;
       continue;
@@ -138,7 +138,7 @@ void iTPS<ptensor>::save_correlation_length(
     }
 
     if (time) {
-      ofs << time.get() << " ";
+      ofs << (*time) << " ";
     }
     ofs << dir << " " << x << " " << correlation_length;
     for (size_t i = 1; i < eigvals.size(); ++i) {

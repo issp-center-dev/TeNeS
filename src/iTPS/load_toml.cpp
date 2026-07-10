@@ -25,7 +25,10 @@
 #include <typeinfo>
 #include <vector>
 
-#include <boost/core/demangle.hpp>
+#if defined(__GNUG__)
+#include <cxxabi.h>
+#include <cstdlib>
+#endif
 
 #include "../exception.hpp"
 #include "../util/read_tensor.hpp"
@@ -48,9 +51,22 @@ std::string msg_cannot_find(std::string key, std::string section = "") {
   return ss.str();
 }
 
+inline std::string demangle(const char *name) {
+#if defined(__GNUG__)
+  int status = 0;
+  char *demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
+  if (demangled != nullptr) {
+    std::string ret(demangled);
+    std::free(demangled);
+    return ret;
+  }
+#endif
+  return name;
+}
+
 template <class T>
 std::string type_name() {
-  return boost::core::demangle(typeid(T).name());
+  return demangle(typeid(T).name());
 }
 
 template <>

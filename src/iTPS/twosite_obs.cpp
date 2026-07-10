@@ -292,7 +292,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_twosite(
     std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> const
         &twosite_obs,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -342,7 +342,7 @@ void iTPS<ptensor>::save_twosite(
       auto bond = r.first;
       auto value = r.second;
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << ilops << " " << bond.source_site << " " << bond.dx << " "
           << bond.dy << " " << std::real(value) << " " << std::imag(value)
@@ -356,7 +356,7 @@ void iTPS<ptensor>::save_twosite(
       auto bond = r.first;
       auto value = r.second;
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << "-1 " << bond.source_site << " " << bond.dx << " " << bond.dy
           << " " << std::real(value) << " " << std::imag(value) << std::endl;

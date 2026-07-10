@@ -32,7 +32,7 @@ void iTPS<ptensor>::save_density(
     std::vector<std::vector<tensor_type>> const &onesite_obs,
     std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
     std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -123,7 +123,7 @@ void iTPS<ptensor>::save_density(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   if (time) {
-    ofs << time.get() << " 0 "; // 0 means the index of "Energy"
+    ofs << (*time) << " 0 "; // 0 means the index of "Energy"
   } else {
     size_t namesize = onesite_operator_names[0].size();
     std::string s = "Energy";
@@ -145,7 +145,7 @@ void iTPS<ptensor>::save_density(
     }
     const auto v = loc_obs[ilops] * invV;
     if (time) {
-      ofs << time.get() << " " << index++ << " ";
+      ofs << (*time) << " " << index++ << " ";
     } else {
       ofs << onesite_operator_names[ilops] << " = ";
     }
@@ -164,7 +164,7 @@ void iTPS<ptensor>::save_density(
       continue;
     }
     if (time) {
-      ofs << time.get() << " " << index++ << " ";
+      ofs << (*time) << " " << index++ << " ";
     } else {
       ofs << twosite_operator_names[ilops] << " = ";
     }
@@ -184,7 +184,7 @@ void iTPS<ptensor>::save_density(
       continue;
     }
     if (time) {
-      ofs << time.get() << " " << index++ << " ";
+      ofs << (*time) << " " << index++ << " ";
     } else {
       ofs << multisite_operator_names[ilops] << " = ";
     }

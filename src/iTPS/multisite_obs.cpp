@@ -236,7 +236,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_multisite(
     std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> const
         &multisite_obs,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -304,7 +304,7 @@ void iTPS<ptensor>::save_multisite(
       auto multi = r.first;
       auto value = r.second;
       if (time) {
-        ofs[nsites] << time.get() << " ";
+        ofs[nsites] << (*time) << " ";
       }
       ofs[nsites] << ilops << " " << multi.source_site;
       for (int other = 0; other < nsites - 1; ++other) {

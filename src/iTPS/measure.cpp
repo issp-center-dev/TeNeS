@@ -28,7 +28,7 @@ namespace tenes {
 namespace itps {
 
 template <class ptensor>
-void iTPS<ptensor>::measure(boost::optional<double> time,
+void iTPS<ptensor>::measure(std::optional<double> time,
                             std::string filename_prefix) {
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;

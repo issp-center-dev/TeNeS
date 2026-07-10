@@ -348,7 +348,7 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
 
 template <class ptensor>
 void iTPS<ptensor>::save_correlation(
-    std::vector<Correlation> const &correlations, boost::optional<double> time,
+    std::vector<Correlation> const &correlations, std::optional<double> time,
     std::string filename_prefix) {
   if (mpirank != 0) {
     return;
@@ -393,7 +393,7 @@ void iTPS<ptensor>::save_correlation(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
   for (auto const &cor : correlations) {
     if (time) {
-      ofs << time.get() << " ";
+      ofs << (*time) << " ";
     }
     ofs << cor.left_op << " " << cor.left_index << " " << cor.right_op << " "
         << cor.right_dx << " " << cor.right_dy << " " << cor.real << " "
