@@ -17,6 +17,8 @@ TeNeSをコンパイルするには以下のライブラリ・環境が必要で
 1. C++17 compiler
 
    - Intel コンパイラの場合、古い ``icpc`` では mptensor をビルドできないため、新しい ``icpx`` を利用してください。
+     なお、 ``icpx`` はデフォルトで ``-fp-model=fast`` が有効になっており Inf/NaN の扱いが壊れるため、
+     TeNeS のビルドでは自動的に ``-fp-model=precise`` を付加します。
 
 2. CMake (>=3.6.0)
 3. BLAS, LAPACK

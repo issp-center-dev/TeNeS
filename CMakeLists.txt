@@ -9,6 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# icpx defaults to -fp-model=fast, whose finite-math-only assumption breaks
+# Inf/NaN handling (e.g. divergent correlation lengths and std::isinf/isnan).
+# Force the precise model; add_compile_options here also covers mptensor.
+# The path match is a fallback for CMake < 3.20, which does not know the
+# IntelLLVM compiler id.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" OR CMAKE_CXX_COMPILER MATCHES "icpx")
+    add_compile_options(-fp-model=precise)
+endif()
+
 option(GIT_SUBMODULE "Check submodules during build" ON)
 option(MPTENSOR_ROOT "External directory where mptensor is installed into" OFF)
 option(CPPTOML_ROOT "External directory where cpptoml is download into" OFF)
