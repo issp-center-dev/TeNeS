@@ -24,9 +24,7 @@
 
 //! @cond
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 template TENSOR_TYPE::value_type Contract_iTPS_CTM(
     const std::vector<const TENSOR_TYPE *> &C,
@@ -79,8 +77,6 @@ template TENSOR_TYPE::value_type Contract_four_sites_iTPS_CTM(
     const TENSOR_TYPE &Tn1, const TENSOR_TYPE &Tn2, const TENSOR_TYPE &Tn3,
     const TENSOR_TYPE &Tn4, const TENSOR_TYPE &op1, const TENSOR_TYPE &op2,
     const TENSOR_TYPE &op3, const TENSOR_TYPE &op4);
-}  // namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 //! @endcond

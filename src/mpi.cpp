@@ -60,15 +60,14 @@ int bcast(std::string& val, int root, MPI_Comm comm) {
   MPI_Comm_rank(comm, &mpirank);
   int sz = val.size() + 1;
   bcast(sz, root, comm);
-  char* buf = new char[sz];
+  std::vector<char> buf(sz);
   if (mpirank == root) {
-    std::strncpy(buf, val.c_str(), sz);
+    std::strncpy(buf.data(), val.c_str(), sz);
   }
-  ret = MPI_Bcast(buf, sz, MPI_CHAR, root, comm);
+  ret = MPI_Bcast(buf.data(), sz, MPI_CHAR, root, comm);
   if (mpirank != root) {
-    val = buf;
+    val = buf.data();
   }
-  delete[] buf;
 #endif
   return ret;
 }

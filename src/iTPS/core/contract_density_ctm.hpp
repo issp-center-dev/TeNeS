@@ -28,9 +28,7 @@
 #include <vector>
 #include <cstddef>
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 /*! @brief contract tensors with CTM
  *
@@ -151,8 +149,6 @@ typename tensor::value_type FinishCorrelation_density_CTM(
 template <class tensor>
 void TransferMatrix_MatVec_density_CTM(tensor &inoutvec, const tensor &eT1);
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 #endif  // TENES_SRC_ITPS_CORE_CONTRACT_CTM_HPP_

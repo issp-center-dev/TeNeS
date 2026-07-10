@@ -16,8 +16,7 @@
 
 #include "iTPS.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 void iTPS<tensor>::time_evolution() {
@@ -93,5 +92,4 @@ void iTPS<tensor>::time_evolution() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

@@ -20,8 +20,7 @@
 
 #include "file.hpp"
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 namespace fs = std::filesystem;
 
@@ -39,5 +38,4 @@ std::string basename(const std::string& path) {
   return fs::path(path).filename().string();
 }
 
-}  // end of namespace util
-}  // end of namespace tenes
+}  // end of namespace tenes::util

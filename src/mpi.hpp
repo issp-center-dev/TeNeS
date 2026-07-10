@@ -61,11 +61,11 @@ namespace tenes {
 
 template <class T>
 MPI_Datatype get_MPI_Datatype() {
-  if (std::is_same<T, int>::value) {
+  if constexpr (std::is_same_v<T, int>) {
     return MPI_INT;
-  } else if (std::is_same<T, bool>::value) {
+  } else if constexpr (std::is_same_v<T, bool>) {
     return MPI_INT;
-  } else if (std::is_same<T, double>::value) {
+  } else if constexpr (std::is_same_v<T, double>) {
     return MPI_DOUBLE;
   } else {
     throw tenes::unimplemented_error("");

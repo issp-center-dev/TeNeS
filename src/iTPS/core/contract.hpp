@@ -32,9 +32,7 @@
 #include "contract_itps_mf.hpp"
 #include "contract_density_ctm.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 /*! @brief contract tensors with CTM
  *
@@ -295,8 +293,6 @@ void TransferMatrix_MatVec(tensor &inoutvec, const tensor &eT1, bool is_density,
   }
 };
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 #endif  // TENES_SRC_ITPS_CORE_CONTRACT_CTM_HPP_

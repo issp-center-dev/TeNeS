@@ -29,8 +29,7 @@
 
 #include "core/contract.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 auto iTPS<tensor>::measure_onesite()
@@ -272,5 +271,4 @@ auto iTPS<tensor>::measure_onesite_density()
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

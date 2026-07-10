@@ -19,8 +19,7 @@
 
 #include <complex>
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 template <class T>
 inline T abs2(T v) {
@@ -33,7 +32,6 @@ inline T abs2(std::complex<T> const& v) {
   return re * re + im * im;
 }
 
-}  // namespace util
-}  // namespace tenes
+}  // namespace tenes::util
 
 #endif  // TENES_SRC_UTIL_ABS_HPP_

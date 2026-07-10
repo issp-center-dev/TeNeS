@@ -16,8 +16,7 @@
 
 #include "datetime.hpp"
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 std::string datetime(std::time_t const &t) {
   std::tm *lt = std::localtime(&t);
@@ -39,6 +38,4 @@ std::string datetime() {
   return datetime(t);
 }
 
-}  // end of namespace util
-
-}  // end of namespace tenes
+}  // end of namespace tenes::util

@@ -19,8 +19,7 @@
 
 #include <string>
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 bool path_exists(const std::string& path);
 bool isdir(const std::string& path);
@@ -31,7 +30,6 @@ bool mkdir(const std::string& path);
 
 std::string basename(const std::string& path);
 
-}  // end of namespace util
-}  // end of namespace tenes
+}  // end of namespace tenes::util
 
 #endif  // TENES_SRC_UTIL_FILE_HPP_

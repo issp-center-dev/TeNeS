@@ -41,9 +41,7 @@
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 using mptensor::Shape;
@@ -481,6 +479,4 @@ template void Full_update_bond(
     const PEPS_Parameters peps_parameters, complex_tensor &Tn1_new,
     complex_tensor &Tn2_new);
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core

@@ -25,9 +25,7 @@
 #include "../contract_itps_mf.hpp"
 #include "../../../tensor.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 
@@ -110,6 +108,4 @@ template typename complex_tensor::value_type FinishCorrelation_iTPS_MF(
     const complex_tensor &A, const complex_tensor &Tn, const complex_tensor &op,
     size_t direction);
 
-}  // namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core

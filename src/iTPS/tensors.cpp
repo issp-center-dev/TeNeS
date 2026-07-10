@@ -32,8 +32,7 @@
 
 using std::size_t;
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::initialize_tensors() {
@@ -215,5 +214,4 @@ void iTPS<ptensor>::initialize_tensors_density() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

@@ -38,8 +38,7 @@
 
 #include "PEPS_Parameters.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 namespace detail {
 std::string msg_cannot_find(std::string key, std::string section = "") {
@@ -545,7 +544,7 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   auto coeff_re = find_or(param, "coeff", 1.0);
   auto coeff_im = find_or(param, "coeff_im", 0.0);
   typename tensor::value_type coeff = detail::reduce<typename tensor::value_type>(coeff_re, coeff_im);
-  auto is_real = std::is_same<typename tensor::value_type, double>::value;
+  auto is_real = std::is_same_v<typename tensor::value_type, double>;
   if(is_real && coeff_im != 0.0){
     std::stringstream ss;
     ss << "parameter.general.is_real is true but coeff_im is not zero in a section " << tablename;
@@ -575,25 +574,21 @@ Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
   } else if (nbody == 2) {
     auto bonds_str = find<std::string>(param, "bonds");
     auto bonds = read_bonds(bonds_str);
-    for (auto bond : bonds) {
+    for (const auto &[source, dx, dy] : bonds) {
       if (elements) {
-        ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), A, coeff);
+        ret.emplace_back(name, group, source, dx, dy, A, coeff);
       } else {
-        ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), op_ind, coeff);
+        ret.emplace_back(name, group, source, dx, dy, op_ind, coeff);
       }
     }
   } else {
     auto ms_str = find<std::string>(param, "multisites");
     auto mss = read_multisitesset(ms_str);
-    for (auto ms : mss) {
+    for (const auto &[source, dx, dy] : mss) {
       if (elements) {
-        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), A, coeff);
+        ret.emplace_back(name, group, source, dx, dy, A, coeff);
       } else {
-        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), op_ind, coeff);
+        ret.emplace_back(name, group, source, dx, dy, op_ind, coeff);
       }
     }
   }
@@ -720,5 +715,4 @@ template EvolutionOperators<real_tensor> load_full_updates(
 template EvolutionOperators<complex_tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol);
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

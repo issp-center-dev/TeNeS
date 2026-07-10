@@ -26,9 +26,7 @@
 
 #include "../../../tensor.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 
@@ -579,9 +577,7 @@ typename tensor::value_type Contract_two_sites_vertical_op12_density_iTPS_CTM(
       Axes(0, 1, 2, 3), Axes(0, 2, 1, 3));
 }
 
-}  // namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 #undef TENSOR_TYPE
 #define TENSOR_TYPE real_tensor

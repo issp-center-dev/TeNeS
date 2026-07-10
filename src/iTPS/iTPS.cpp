@@ -43,8 +43,7 @@ int omp_get_max_threads() { return 1; }
 #include "transfer_matrix.hpp"
 #include "core/ctm.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
@@ -205,8 +204,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   num_simple_update_groups =
       simple_update_groups.empty() ? 0 : *simple_update_groups.rbegin() + 1;
   for (int g = 0; g < num_simple_update_groups; ++g) {
-    auto it = simple_update_groups.find(g);
-    if (it == simple_update_groups.end()) {
+    if (simple_update_groups.count(g) == 0) {
       std::stringstream ss;
       ss << "ERROR: no simple update with group number " << g;
       throw std::runtime_error(ss.str());
@@ -238,8 +236,7 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   num_full_update_groups =
       full_update_groups.empty() ? 0 : *full_update_groups.rbegin() + 1;
   for (int g = 0; g < num_full_update_groups; ++g) {
-    auto it = full_update_groups.find(g);
-    if (it == full_update_groups.end()) {
+    if (full_update_groups.count(g) == 0) {
       std::stringstream ss;
       ss << "ERROR: no full update with group number " << g;
       throw std::runtime_error(ss.str());
@@ -470,5 +467,4 @@ std::vector<ptensor> iTPS<ptensor>::make_single_tensor_density() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

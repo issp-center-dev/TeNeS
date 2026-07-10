@@ -27,8 +27,7 @@
 
 #include <vector>
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 class PEPS_Parameters;
 
 namespace core {
@@ -64,7 +63,6 @@ tensor boundary_tensor(const tensor &Tn1,
                        const PEPS_Parameters peps_parameters);
 
 }  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_CORE_LOCAL_GAUGE_HPP_

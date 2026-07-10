@@ -35,8 +35,7 @@
 #include "PEPS_Parameters.hpp"
 // IWYU pragma: end_exports
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
                           const char *tablename = "tensor");
@@ -80,7 +79,6 @@ template <class tensor>
 EvolutionOperators<tensor> load_full_updates(
     decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_LOAD_TOML_HPP_

@@ -24,8 +24,7 @@
 #include "iTPS.hpp"
 #include "../util/datetime.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::save_density(
@@ -48,14 +47,14 @@ void iTPS<ptensor>::save_density(
   }
   std::vector<tensor_type> two_obs(num_twosite_operators);
   for (int iops = 0; iops < num_twosite_operators; ++iops) {
-    for (const auto &obs : twosite_obs[iops]) {
-      two_obs[iops] += obs.second;
+    for (const auto &[bond, value] : twosite_obs[iops]) {
+      two_obs[iops] += value;
     }
   }
   std::vector<tensor_type> multi_obs(num_multisite_operators);
   for (int iops = 0; iops < num_multisite_operators; ++iops) {
-    for (const auto &obs : multisite_obs[iops]) {
-      multi_obs[iops] += obs.second;
+    for (const auto &[multi, value] : multisite_obs[iops]) {
+      multi_obs[iops] += value;
     }
   }
 
@@ -123,7 +122,7 @@ void iTPS<ptensor>::save_density(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   if (time) {
-    ofs << (*time) << " 0 "; // 0 means the index of "Energy"
+    ofs << (*time) << " 0 ";  // 0 means the index of "Energy"
   } else {
     size_t namesize = onesite_operator_names[0].size();
     std::string s = "Energy";
@@ -231,5 +230,4 @@ void iTPS<ptensor>::save_density(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

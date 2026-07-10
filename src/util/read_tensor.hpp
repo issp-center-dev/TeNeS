@@ -28,9 +28,7 @@
 #include "../exception.hpp"
 #include "../mpi.hpp"
 
-namespace tenes {
-
-namespace util {
+namespace tenes::util {
 
 template <class ptensor>
 ptensor read_tensor(std::string const &str, 
@@ -41,7 +39,6 @@ ptensor read_tensor(std::string const &str,
   ptensor ret(comm, dims);
   const size_t rank = ret.rank();
 
-  static const std::string delim = " \t";
   std::string line;
 
   std::stringstream ss(str);
@@ -91,7 +88,6 @@ ptensor read_tensor(std::string const &str,
   return ret;
 }
 
-}  // namespace util
-}  // namespace tenes
+}  // namespace tenes::util
 
 #endif  // TENES_SRC_UTIL_READ_TENSOR_HPP_

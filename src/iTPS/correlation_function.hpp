@@ -20,8 +20,7 @@
 #include <tuple>
 #include <vector>
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 struct Correlation {
   int left_index;
@@ -38,7 +37,6 @@ struct CorrelationParameter {
       : r_max(r_max), operators(ops) {}
 };
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_CORRELATION_HPP_

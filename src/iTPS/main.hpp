@@ -26,13 +26,11 @@ extern "C" {
 int tenes_itps_main(const char* input_filename, MPI_Comm comm, int print_level);
 }
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 int itps_main(const char* input_filename, MPI_Comm comm,
               PrintLevel print_level = PrintLevel::info);
 int itps_main(std::string input_filename, MPI_Comm comm,
               PrintLevel print_level = PrintLevel::info);
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_MAIN_HPP_

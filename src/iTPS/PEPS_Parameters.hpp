@@ -23,8 +23,7 @@
 #include "../mpi.hpp"
 #include "../printlevel.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 struct PEPS_Parameters {
   // Tensor
@@ -93,6 +92,5 @@ struct PEPS_Parameters {
   void check() const;  // may throw tenes::input_error
 };
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 #endif  // TENES_SRC_PEPS_PARAMETERS_HPP_

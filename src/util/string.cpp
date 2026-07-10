@@ -20,8 +20,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 std::vector<std::string> split(std::string const &str,
                                std::string const &delim) {
@@ -74,5 +73,4 @@ bool endswith(std::string const &str, std::string const &suffix) {
   return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
 
-}  // namespace util
-}  // namespace tenes
+}  // namespace tenes::util

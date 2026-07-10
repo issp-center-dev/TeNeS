@@ -26,8 +26,7 @@
 
 #include "core/contract.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 auto iTPS<ptensor>::measure_multisite()
@@ -209,9 +208,9 @@ auto iTPS<ptensor>::measure_multisite()
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
-  for (auto &r : norms) {
-    double norm_re = std::real(r.second);
-    double norm_im = std::imag(r.second);
+  for (const auto &[multi, norm] : norms) {
+    double norm_re = std::real(norm);
+    double norm_im = std::imag(norm);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
@@ -300,9 +299,7 @@ void iTPS<ptensor>::save_multisite(
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
     const int nsites = multisite_operator_nsites[ilops];
-    for (const auto &r : multisite_obs[ilops]) {
-      auto multi = r.first;
-      auto value = r.second;
+    for (const auto &[multi, value] : multisite_obs[ilops]) {
       if (time) {
         ofs[nsites] << (*time) << " ";
       }
@@ -327,5 +324,4 @@ auto iTPS<ptensor>::measure_multisite_density()
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

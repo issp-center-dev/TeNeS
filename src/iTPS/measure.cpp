@@ -24,8 +24,7 @@
 #include "iTPS.hpp"
 #include "../util/datetime.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::measure(std::optional<double> time,
@@ -147,5 +146,4 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

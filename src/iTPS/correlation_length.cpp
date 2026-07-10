@@ -22,8 +22,7 @@
 #include "correlation_length.hpp"
 #include "iTPS.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 double calc_correlation_length(double e0_abs, double e1_abs, int L) {
   if (!(e0_abs > 0.0)) {
@@ -52,19 +51,19 @@ iTPS<ptensor>::measure_transfer_matrix_eigenvalues() {
   std::mt19937 gen(peps_parameters.seed * 137 + 31415);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
 
-  std::shared_ptr<TransferMatrix<ptensor>> clength;
+  std::unique_ptr<TransferMatrix<ptensor>> clength;
   if (peps_parameters.MeanField_Env) {
-    clength = std::make_shared<TransferMatrix_mf<ptensor>>(lattice, Tn,
+    clength = std::make_unique<TransferMatrix_mf<ptensor>>(lattice, Tn,
                                                            lambda_tensor);
   } else {
-    clength = std::make_shared<TransferMatrix_ctm<ptensor>>(
+    clength = std::make_unique<TransferMatrix_ctm<ptensor>>(
         lattice, Tn, C1, C2, C3, C4, eTl, eTt, eTr, eTb);
   }
   for (int dir = 0; dir < 2; ++dir) {
     int W = dir == 0 ? LY : LX;
     for (int fixed = 0; fixed < W; ++fixed) {
       auto eigvals = clength->eigenvalues(dir, fixed, tmatrix_param, gen);
-      res.push_back(std::make_tuple(dir, fixed, eigvals));
+      res.emplace_back(dir, fixed, std::move(eigvals));
     }
   }
 
@@ -111,10 +110,7 @@ void iTPS<ptensor>::save_correlation_length(
   ofs << std::scientific
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
-  for (const auto &lambda : lambdas) {
-    int dir, x;
-    std::vector<std::complex<double>> eigvals;
-    std::tie(dir, x, eigvals) = lambda;
+  for (const auto &[dir, x, eigvals] : lambdas) {
     if(eigvals.size() == 1){
       if (time) {
         ofs << (*time) << " ";
@@ -153,5 +149,4 @@ void iTPS<ptensor>::save_correlation_length(
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

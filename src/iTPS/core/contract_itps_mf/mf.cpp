@@ -28,9 +28,7 @@
 #include "../contract_itps_mf.hpp"
 #include "../../../tensor.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 
@@ -205,9 +203,7 @@ typename tensor::value_type Contract_four_sites_iTPS_MF(
       Axes(0, 1), Axes(0, 1));
 }
 
-}  // namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 #undef TENSOR_TYPE
 #define TENSOR_TYPE real_tensor
