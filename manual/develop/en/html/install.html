@@ -45,13 +45,17 @@ If you have git installed on your machine, type the following command to start d
 <h2><span class="section-number">2.2. </span>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
 <p>The following tools are required for building TeNeS.</p>
 <ol class="arabic simple">
-<li><p>C++11 compiler</p></li>
+<li><p>C++17 compiler</p>
+<ul class="simple">
+<li><p>For Intel compilers, use the newer <code class="docutils literal notranslate"><span class="pre">icpx</span></code>; the classic <code class="docutils literal notranslate"><span class="pre">icpc</span></code> cannot compile mptensor.</p></li>
+</ul>
+</li>
 <li><p>CMake (&gt;=3.6.0)</p></li>
 <li><p>BLAS and LAPACK</p></li>
 </ol>
 <p>TeNeS depends on the following libraries, but these are downloaded automatically through the build process.</p>
 <ol class="arabic simple">
-<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
+<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a> (&gt;= v0.5.0)</p></li>
 <li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
 </ol>
 <p>TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.

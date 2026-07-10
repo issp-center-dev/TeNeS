@@ -45,13 +45,17 @@
 <h2><span class="section-number">2.2. </span>必要なライブラリ・環境<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <p>TeNeSをコンパイルするには以下のライブラリ・環境が必要です。</p>
 <ol class="arabic simple">
-<li><p>C++11 compiler</p></li>
+<li><p>C++17 compiler</p>
+<ul class="simple">
+<li><p>Intel コンパイラの場合、古い <code class="docutils literal notranslate"><span class="pre">icpc</span></code> では mptensor をビルドできないため、新しい <code class="docutils literal notranslate"><span class="pre">icpx</span></code> を利用してください。</p></li>
+</ul>
+</li>
 <li><p>CMake (&gt;=3.6.0)</p></li>
 <li><p>BLAS, LAPACK</p></li>
 </ol>
 <p>TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。</p>
 <ol class="arabic simple">
-<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a></p></li>
+<li><p><a class="reference external" href="https://github.com/smorita/mptensor">mptensor</a> (&gt;= v0.5.0)</p></li>
 <li><p><a class="reference external" href="https://github.com/skystrife/cpptoml">cpptoml</a></p></li>
 </ol>
 <p>MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
