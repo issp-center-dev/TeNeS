@@ -1055,6 +1055,11 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
   
 // template instantiate
 
+template std::vector<real_tensor> Make_single_tensor_density(
+    const std::vector<real_tensor> &Tn);
+template std::vector<complex_tensor> Make_single_tensor_density(
+    const std::vector<complex_tensor> &Tn);
+
 template void Calc_projector_left_block_single(
     const real_tensor &C1, const real_tensor &C4, const real_tensor &eT1,
     const real_tensor &eT6, const real_tensor &eT7, const real_tensor &eT8,
