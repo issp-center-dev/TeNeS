@@ -20,8 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 std::vector<std::string> split(std::string const &str,
                                std::string const &delim = " \t");
@@ -37,7 +36,6 @@ std::string drop_comment(std::string const &str);
 bool startswith(std::string const &str, std::string const &prefix);
 bool endswith(std::string const &str, std::string const &suffix);
 
-}  // namespace util
-}  // namespace tenes
+}  // namespace tenes::util
 
 #endif  // TENES_SRC_UTIL_STRING_HPP_

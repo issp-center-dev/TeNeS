@@ -32,9 +32,7 @@
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 using mptensor::Index;
@@ -1418,6 +1416,4 @@ template int Calc_CTM_Environment(
     const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     bool initialize);
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core

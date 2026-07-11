@@ -17,9 +17,7 @@
 #include "../contract_density_ctm.hpp"
 #include "instantiate.hpp"
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 using mptensor::Axes;
 
 template <class tensor>
@@ -110,6 +108,4 @@ INSTANTIATE_CONTRACT_DENSITY(real_tensor, 4, 1);
 INSTANTIATE_CONTRACT_DENSITY(complex_tensor, 4, 1);
 //! @endcond
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core

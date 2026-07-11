@@ -19,8 +19,7 @@
 #include "core/simple_update.hpp"
 #include "core/local_gauge.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
@@ -380,5 +379,4 @@ void iTPS<tensor>::simple_update_density_purification() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

@@ -136,8 +136,7 @@ bool is_real(tenes::EvolutionOperators<mptensor::Tensor<
 
 }  // end of unnamed namespace
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 int run_groundstate(MPI_Comm comm, PEPS_Parameters peps_parameters,
@@ -369,5 +368,4 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
 }
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

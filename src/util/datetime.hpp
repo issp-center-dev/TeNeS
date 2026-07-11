@@ -20,14 +20,11 @@
 #include <ctime>  // IWYU pragma: export
 #include <string> // IWYU pragma: export
 
-namespace tenes {
-namespace util {
+namespace tenes::util {
 
 std::string datetime(std::time_t const &t);
 std::string datetime();
 
-}  // end of namespace util
-
-}  // end of namespace tenes
+}  // end of namespace tenes::util
 
 #endif // TENES_SRC_UTIL_DATETIME_HPP_

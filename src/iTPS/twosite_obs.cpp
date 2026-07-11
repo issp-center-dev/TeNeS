@@ -26,8 +26,7 @@
 
 #include "core/contract.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 auto iTPS<ptensor>::measure_twosite()
@@ -265,9 +264,9 @@ auto iTPS<ptensor>::measure_twosite()
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
-  for (auto &r : norms) {
-    double norm_re = std::real(r.second);
-    double norm_im = std::imag(r.second);
+  for (const auto &[bond, norm] : norms) {
+    double norm_re = std::real(norm);
+    double norm_im = std::imag(norm);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
@@ -292,7 +291,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_twosite(
     std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> const
         &twosite_obs,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -338,11 +337,9 @@ void iTPS<ptensor>::save_twosite(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   for (int ilops = 0; ilops < nlops; ++ilops) {
-    for (const auto &r : twosite_obs[ilops]) {
-      auto bond = r.first;
-      auto value = r.second;
+    for (const auto &[bond, value] : twosite_obs[ilops]) {
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << ilops << " " << bond.source_site << " " << bond.dx << " "
           << bond.dy << " " << std::real(value) << " " << std::imag(value)
@@ -352,11 +349,9 @@ void iTPS<ptensor>::save_twosite(
 
   if (twosite_obs.size() == static_cast<std::size_t>(nlops) + 1) {
     // includes norm
-    for (const auto &r : twosite_obs[nlops]) {
-      auto bond = r.first;
-      auto value = r.second;
+    for (const auto &[bond, value] : twosite_obs[nlops]) {
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << "-1 " << bond.source_site << " " << bond.dx << " " << bond.dy
           << " " << std::real(value) << " " << std::imag(value) << std::endl;
@@ -590,9 +585,9 @@ auto iTPS<ptensor>::measure_twosite_density()
 
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
-  for (auto &r : norms) {
-    double norm_re = std::real(r.second);
-    double norm_im = std::imag(r.second);
+  for (const auto &[bond, norm] : norms) {
+    double norm_re = std::real(norm);
+    double norm_im = std::imag(norm);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
@@ -617,5 +612,4 @@ auto iTPS<ptensor>::measure_twosite_density()
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

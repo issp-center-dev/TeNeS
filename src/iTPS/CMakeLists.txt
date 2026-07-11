@@ -5,7 +5,7 @@ target_link_libraries(PEPS_Parameters PUBLIC tenes_mpi)
 
 add_library(load_toml STATIC load_toml.cpp)
 target_link_libraries(load_toml PUBLIC tenes_mpi tensor SquareLattice PEPS_Parameters)
-target_include_directories(load_toml PUBLIC ${TOML11_INCLUDE_DIR} ${BOOST_INCLUDE_DIR})
+target_include_directories(load_toml PUBLIC ${TOML11_INCLUDE_DIR})
 
 add_library(
   iTPS_impl STATIC

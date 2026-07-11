@@ -34,8 +34,7 @@
 
 using std::size_t;
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::save_tensors() const {
@@ -371,5 +370,4 @@ void iTPS<ptensor>::load_tensors_v0() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

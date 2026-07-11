@@ -217,19 +217,16 @@ void SquareLattice::check_dims() const {
   std::vector<std::tuple<int, int, int, int>> fails;
   for (int i = 0; i < N_UNIT; ++i) {
     if (virtual_dims[i][0] != virtual_dims[left(i)][2]) {
-      fails.push_back(std::make_tuple(i, 0, left(i), 2));
+      fails.emplace_back(i, 0, left(i), 2);
     }
     if (virtual_dims[i][1] != virtual_dims[top(i)][3]) {
-      fails.push_back(std::make_tuple(i, 1, top(i), 3));
+      fails.emplace_back(i, 1, top(i), 3);
     }
   }
   if (!fails.empty()) {
-    int i, j;
-    int i_leg, j_leg;
     std::stringstream ss;
     ss << "virtual dimension mismatch :\n";
-    for (auto const& tpl : fails) {
-      std::tie(i, i_leg, j, j_leg) = tpl;
+    for (auto const& [i, i_leg, j, j_leg] : fails) {
       ss << "  " << i_leg << " bond of " << i << " site and " << j_leg
          << " bond of " << j << " site\n";
     }

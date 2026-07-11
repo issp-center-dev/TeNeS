@@ -23,8 +23,7 @@
 #include "../tensor.hpp"
 #include "../SquareLattice.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 struct TransferMatrix_Parameters {
   bool to_calculate;
@@ -138,7 +137,6 @@ class TransferMatrix_mf : public TransferMatrix<ptensor> {
   size_t dim(int dir, int fixed_coord) const override;
 };
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_TRANSFER_MATRIX_HPP_

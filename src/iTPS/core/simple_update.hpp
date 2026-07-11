@@ -27,8 +27,7 @@
 
 #include <vector>
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 class PEPS_Parameters;
 
 namespace core {
@@ -58,7 +57,6 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
                         const PEPS_Parameters peps_parameters, tensor &Tn1_new,
                         tensor &Tn2_new, std::vector<double> &lambda_c);
 }  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_CORE_SIMPLE_UPDATE_HPP_

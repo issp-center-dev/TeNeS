@@ -28,9 +28,7 @@
 #include <vector>
 #include <cstddef>
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 /*! @brief contract tensors with mean field environment
  *
@@ -127,8 +125,6 @@ typename tensor::value_type FinishCorrelation_iTPS_MF(const tensor &A,
                                                       const tensor &op,
                                                       size_t direction);
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core
 
 #endif  // TENES_SRC_ITPS_CORE_CONTRACT_iTPS_MF_HPP_

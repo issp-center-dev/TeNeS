@@ -25,8 +25,7 @@
 #ifndef TENES_SRC_ITPS_CORE_FULL_UPDATE_HPP_
 #define TENES_SRC_ITPS_CORE_FULL_UPDATE_HPP_
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 class PEPS_Parameters;
 namespace core {
 
@@ -79,7 +78,6 @@ void Full_update_bond(const tensor &C1, const tensor &C2, const tensor &C3,
                       tensor &Tn2_new);
 
 }  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_CORE_FULL_UPDATE_HPP_

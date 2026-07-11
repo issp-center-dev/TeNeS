@@ -29,8 +29,7 @@
 
 #include "core/contract.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 auto iTPS<tensor>::measure_onesite()
@@ -126,7 +125,7 @@ template <class ptensor>
 void iTPS<ptensor>::save_onesite(
     std::vector<std::vector<typename iTPS<ptensor>::tensor_type>> const
         &onesite_obs,
-    boost::optional<double> time, std::string filename_prefix) {
+    std::optional<double> time, std::string filename_prefix) {
   if (mpirank != 0) {
     return;
   }
@@ -178,7 +177,7 @@ void iTPS<ptensor>::save_onesite(
         continue;
       }
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << ilops << " " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
@@ -192,7 +191,7 @@ void iTPS<ptensor>::save_onesite(
         continue;
       }
       if (time) {
-        ofs << time.get() << " ";
+        ofs << (*time) << " ";
       }
       ofs << "-1 " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
@@ -272,5 +271,4 @@ auto iTPS<tensor>::measure_onesite_density()
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

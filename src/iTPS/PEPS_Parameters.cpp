@@ -23,8 +23,7 @@
 
 #include "../exception.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 PEPS_Parameters::PEPS_Parameters() {
   // Tensor
@@ -314,5 +313,4 @@ void PEPS_Parameters::check() const {
   }
 }
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

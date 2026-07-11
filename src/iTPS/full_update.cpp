@@ -23,8 +23,7 @@
 #include "core/ctm.hpp"
 #include "../tensor.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class tensor>
 void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
@@ -189,5 +188,4 @@ void iTPS<ptensor>::full_update() {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

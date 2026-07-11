@@ -17,8 +17,7 @@
 #ifndef TENES_SRC_ITPS_CORRELATION_LENGTH_HPP_
 #define TENES_SRC_ITPS_CORRELATION_LENGTH_HPP_
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 /*! @brief Computes the correlation length from transfer matrix eigenvalues.
  *
@@ -32,7 +31,6 @@ namespace itps {
  */
 double calc_correlation_length(double e0_abs, double e1_abs, int L);
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_CORRELATION_LENGTH_HPP_

@@ -26,7 +26,7 @@
 #include <vector>
 #include <set>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 // IWYU pragma begin_exports
 #include "../mpi.hpp"
@@ -44,8 +44,7 @@
 #include "PEPS_Parameters.hpp"
 // IWYU pragma end_exports
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 struct Bond {
   int source_site;
@@ -74,8 +73,7 @@ template <class tensor>
 class iTPS {
  public:
   using tensor_type = typename tensor::value_type;
-  static constexpr bool is_tensor_real =
-      std::is_floating_point<tensor_type>::value;
+  static constexpr bool is_tensor_real = std::is_floating_point_v<tensor_type>;
 
   using transfer_matrix_eigenvalues_type =
       std::tuple<int, int, std::vector<std::complex<double>>>;
@@ -130,7 +128,7 @@ class iTPS {
   //void optimize_density();
 
   //! measure expectation value of observables
-  void measure(boost::optional<double> time = boost::optional<double>(),
+  void measure(std::optional<double> time = std::nullopt,
                std::string filename_prefix = "");
   void measure_density(double beta, std::string filename_prefix = "FT_");
 
@@ -167,7 +165,7 @@ class iTPS {
    *  @param[in] filename_prefix
    */
   void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs,
-                    boost::optional<double> time = boost::optional<double>(),
+                    std::optional<double> time = std::nullopt,
                     std::string filename_prefix = "");
 
   /*! @brief write measured twosite observables
@@ -177,7 +175,7 @@ class iTPS {
    *  @param[in] filename_prefix
    */
   void save_twosite(std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
-                    boost::optional<double> time = boost::optional<double>(),
+                    std::optional<double> time = std::nullopt,
                     std::string filename_prefix = "");
 
   /*! @brief write measured multisite observables
@@ -188,7 +186,7 @@ class iTPS {
    */
   void save_multisite(
       std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
-      boost::optional<double> time = boost::optional<double>(),
+      std::optional<double> time = std::nullopt,
       std::string filename_prefix = "");
 
   /*! @brief write measured correlation functions
@@ -197,10 +195,9 @@ class iTPS {
    *  @param[in] time
    *  @param[in] filename_prefix
    */
-  void save_correlation(
-      std::vector<Correlation> const &correlations,
-      boost::optional<double> time = boost::optional<double>(),
-      std::string filename_prefix = "");
+  void save_correlation(std::vector<Correlation> const &correlations,
+                        std::optional<double> time = std::nullopt,
+                        std::string filename_prefix = "");
 
   /*! @brief calculate and write correlation length
    *
@@ -210,7 +207,7 @@ class iTPS {
    */
   void save_correlation_length(
       std::vector<transfer_matrix_eigenvalues_type> const &eigvals,
-      boost::optional<double> time = boost::optional<double>(),
+      std::optional<double> time = std::nullopt,
       std::string filename_prefix = "");
 
   /*! @brief calculate and write correlation length
@@ -221,11 +218,12 @@ class iTPS {
    *  @param[in] time
    *  @param[in] filename_prefix
    */
-  void save_density(std::vector<std::vector<tensor_type>> const &onesite_obs,
-                    std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
-                    std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
-                    boost::optional<double> time = boost::optional<double>(),
-                    std::string filename_prefix = "");
+  void save_density(
+      std::vector<std::vector<tensor_type>> const &onesite_obs,
+      std::vector<std::map<Bond, tensor_type>> const &twosite_obs,
+      std::vector<std::map<Multisites, tensor_type>> const &multisite_obs,
+      std::optional<double> time = std::nullopt,
+      std::string filename_prefix = "");
 
   //! save optimized tensors into files
   void save_tensors() const;
@@ -331,7 +329,6 @@ class iTPS {
   double time_observable;
 };
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
 
 #endif  //  TENES_SRC_ITPS_ITPS_HPP_

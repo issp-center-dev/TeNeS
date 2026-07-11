@@ -34,9 +34,7 @@
 #undef TENES_DEBUG_LOCAL_GAUGE_FIXING
 // #define TENES_DEBUG_LOCAL_GAUGE_FIXING
 
-namespace tenes {
-namespace itps {
-namespace core {
+namespace tenes::itps::core {
 
 using mptensor::Axes;
 using mptensor::Shape;
@@ -246,6 +244,4 @@ template complex_tensor boundary_tensor(
     const complex_tensor &Tn, const std::vector<std::vector<double>> &lambda,
     const int connect, const PEPS_Parameters peps_parameters);
 
-}  // end of namespace core
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps::core

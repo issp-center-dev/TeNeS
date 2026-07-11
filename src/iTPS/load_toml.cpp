@@ -32,8 +32,7 @@
 
 #include "PEPS_Parameters.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 namespace detail {
 std::string msg_cannot_find(std::string key, std::string section = "") {
@@ -48,11 +47,11 @@ std::string msg_cannot_find(std::string key, std::string section = "") {
 
 template <class T>
 const char *type_name() {
-  if (std::is_same<T, bool>::value) {
+  if constexpr (std::is_same_v<T, bool>) {
     return "boolean";
-  } else if (std::is_integral<T>::value) {
+  } else if constexpr (std::is_integral_v<T>) {
     return "integer";
-  } else if (std::is_floating_point<T>::value) {
+  } else if constexpr (std::is_floating_point_v<T>) {
     return "float";
   } else {
     return "string";
@@ -69,11 +68,11 @@ const char *type_name() {
  */
 template <class T>
 T as_value(const toml::value &v) {
-  if (std::is_same<T, bool>::value) {
+  if constexpr (std::is_same_v<T, bool>) {
     if (v.is_boolean()) {
       return static_cast<T>(v.as_boolean());
     }
-  } else if (std::is_integral<T>::value) {
+  } else if constexpr (std::is_integral_v<T>) {
     if (v.is_integer()) {
       return static_cast<T>(v.as_integer());
     }
@@ -155,14 +154,12 @@ const toml::value *opt_table(const toml::value &param, const char *key) {
 }
 
 template <class T>
-T reduce(double re, double im);
-template <>
-std::complex<double> reduce<std::complex<double>>(double re, double im) {
-  return std::complex<double>(re, im);
-}
-template <>
-double reduce<double>(double re, double im) {
-  return re;
+T reduce(double re, double im) {
+  if constexpr (std::is_floating_point_v<T>) {
+    return re;
+  } else {
+    return T(re, im);
+  }
 }
 
 }  // end of namespace detail
@@ -603,7 +600,7 @@ Operators<tensor> load_operator(const toml::value &param, MPI_Comm comm,
   auto coeff_im = find_or(param, "coeff_im", 0.0);
   typename tensor::value_type coeff =
       detail::reduce<typename tensor::value_type>(coeff_re, coeff_im);
-  auto is_real = std::is_same<typename tensor::value_type, double>::value;
+  auto is_real = std::is_same_v<typename tensor::value_type, double>;
   if (is_real && coeff_im != 0.0) {
     std::stringstream ss;
     ss << "parameter.general.is_real is true but coeff_im is not zero in a "
@@ -636,25 +633,21 @@ Operators<tensor> load_operator(const toml::value &param, MPI_Comm comm,
   } else if (nbody == 2) {
     auto bonds_str = find<std::string>(param, "bonds");
     auto bonds = read_bonds(bonds_str);
-    for (auto bond : bonds) {
+    for (const auto &[source, dx, dy] : bonds) {
       if (has_elements) {
-        ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), A, coeff);
+        ret.emplace_back(name, group, source, dx, dy, A, coeff);
       } else {
-        ret.emplace_back(name, group, std::get<0>(bond), std::get<1>(bond),
-                         std::get<2>(bond), op_ind, coeff);
+        ret.emplace_back(name, group, source, dx, dy, op_ind, coeff);
       }
     }
   } else {
     auto ms_str = find<std::string>(param, "multisites");
     auto mss = read_multisitesset(ms_str);
-    for (auto ms : mss) {
+    for (const auto &[source, dx, dy] : mss) {
       if (has_elements) {
-        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), A, coeff);
+        ret.emplace_back(name, group, source, dx, dy, A, coeff);
       } else {
-        ret.emplace_back(name, group, std::get<0>(ms), std::get<1>(ms),
-                         std::get<2>(ms), op_ind, coeff);
+        ret.emplace_back(name, group, source, dx, dy, op_ind, coeff);
       }
     }
   }
@@ -806,5 +799,4 @@ template EvolutionOperators<real_tensor> load_full_updates(
 template EvolutionOperators<complex_tensor> load_full_updates(
     const toml::value &param, MPI_Comm comm, double atol);
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps

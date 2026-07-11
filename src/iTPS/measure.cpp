@@ -24,11 +24,10 @@
 #include "iTPS.hpp"
 #include "../util/datetime.hpp"
 
-namespace tenes {
-namespace itps {
+namespace tenes::itps {
 
 template <class ptensor>
-void iTPS<ptensor>::measure(boost::optional<double> time,
+void iTPS<ptensor>::measure(std::optional<double> time,
                             std::string filename_prefix) {
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;
@@ -147,5 +146,4 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
 
-}  // namespace itps
-}  // namespace tenes
+}  // namespace tenes::itps
