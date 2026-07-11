@@ -28,12 +28,7 @@
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
 
-auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
-  std::stringstream ss;
-  ss << str;
-  cpptoml::parser p{ss};
-  return p.parse();
-}
+toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
 
 TEST_CASE("input") {
   using namespace tenes;
@@ -44,7 +39,7 @@ TEST_CASE("input") {
     INFO("parameter_default");
     auto toml = parse_str(R"([parameter])");
 
-    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+    PEPS_Parameters peps_parameters = gen_param(toml.at("parameter"));
 
     CHECK(peps_parameters.CHI == 2);
 
@@ -104,7 +99,7 @@ rsvd_oversampling_factor = 3.0
 [parameter.random]
 seed = 42)");
 
-    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+    PEPS_Parameters peps_parameters = gen_param(toml.at("parameter"));
 
     CHECK(peps_parameters.CHI == 16);
 
@@ -141,7 +136,7 @@ tau = 0.1
 tau = 0.01
 )");
 
-    PEPS_Parameters peps_parameters = gen_param(toml->get_table("parameter"));
+    PEPS_Parameters peps_parameters = gen_param(toml.at("parameter"));
 
     REQUIRE(peps_parameters.tau_simple_step.size() == 1);
     CHECK(peps_parameters.tau_simple_step[0] == 0.1);
@@ -208,7 +203,7 @@ virtual_dim = [4, 1, 4, 1]
 initial_state = [0.0, 1.0]
 noise = 0.01
     )");
-    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
+    SquareLattice lattice = gen_lattice(toml.at("tensor"));
     CHECK(lattice.LX == 4);
     CHECK(lattice.LY == 1);
     CHECK(lattice.skew == 2);
@@ -228,7 +223,8 @@ elements = """
 0 0 0 0 1.0 0.0
 """
       )");
-      const auto simple_updates = tenes::itps::load_simple_updates<ptensor>(toml, MPI_COMM_WORLD);
+      const auto simple_updates =
+          tenes::itps::load_simple_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(simple_updates[0].source_site == 0);
       CHECK(simple_updates[0].source_leg == 2);
       CHECK(simple_updates[0].group == 0);
@@ -252,7 +248,8 @@ elements = """
 0 0 0 0 0.0 1.0
 """
       )");
-      const auto full_updates = tenes::itps::load_full_updates<ptensor>(toml, MPI_COMM_WORLD);
+      const auto full_updates =
+          tenes::itps::load_full_updates<ptensor>(toml, MPI_COMM_WORLD);
       CHECK(full_updates[0].source_site == 0);
       CHECK(full_updates[0].source_leg == 2);
       CHECK(full_updates[0].group == 0);
@@ -280,8 +277,8 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 1;
-      auto onesites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites, nbody, 0.0,
-                                              "observable.onesite");
+      auto onesites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites,
+                                              nbody, 0.0, "observable.onesite");
       for (int i = 0; i < 2; ++i) {
         auto const &on = onesites[i];
         CHECK(on.group == 0);
@@ -311,8 +308,8 @@ elements = """
       )");
       const int nsites = 2;
       const int nbody = 2;
-      auto twosites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites, nbody, 0.0,
-                                              "observable.twosite");
+      auto twosites = load_operators<ptensor>(toml, MPI_COMM_WORLD, nsites,
+                                              nbody, 0.0, "observable.twosite");
       for (int i = 0; i < 2; ++i) {
         auto const &on = twosites[i];
         CHECK(on.group == 0);
@@ -344,13 +341,13 @@ noise = 0.01
     PEPS_Parameters peps_parameters;
     peps_parameters.print_level = PrintLevel::none;
     peps_parameters.outdir = "output_itps_without_evolution";
-    SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
+    SquareLattice lattice = gen_lattice(toml.at("tensor"));
 
     CHECK_NOTHROW(iTPS<ptensor>(
-        MPI_COMM_WORLD, peps_parameters, lattice,
-        EvolutionOperators<ptensor>{}, EvolutionOperators<ptensor>{},
-        Operators<ptensor>{}, Operators<ptensor>{}, Operators<ptensor>{},
-        CorrelationParameter{}, TransferMatrix_Parameters{}));
+        MPI_COMM_WORLD, peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{},
+        TransferMatrix_Parameters{}));
   }
 
   SUBCASE("correlation") {}

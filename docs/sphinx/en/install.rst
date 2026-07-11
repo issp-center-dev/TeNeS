@@ -26,7 +26,7 @@ The following tools are required for building TeNeS.
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ (>= v0.5.0)
-2. `cpptoml <https://github.com/skystrife/cpptoml>`_
+2. `toml11 <https://github.com/ToruNiina/toml11>`_ (>= v4.0.0)
 
 TeNeS can use MPI and ScaLAPACK for parallel operations of tensors.
 MPI and ScaLAPACK must be installed by yourself.
