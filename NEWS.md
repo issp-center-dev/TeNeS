@@ -1,4 +1,32 @@
-# TeNeS v2.1.x Release Notes
+# TeNeS Release Notes
+
+## Changes between develop branch (2026-07-11) and v2.1.3
+
+### Changes
+
+- Building TeNeS now requires a C++17 compiler and mptensor v0.5.0 or later ([#104][], [#109][])
+- `tenes`
+  - Replaced the TOML parser cpptoml (archived, TOML v0.5.0) with toml11 v4.4.0 (TOML v1.0.0); input errors now report the file name, the line number, and the offending value ([#108][])
+  - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
+  - CMake option `CPPTOML_ROOT` is renamed to `TOML11_ROOT` ([#108][])
+
+### Bug fixes
+
+- `tenes`
+  - Fixed a link error (undefined reference to `Make_single_tensor_density`) with some compilers, e.g. GCC 13 on Linux ([#107][])
+  - Fixed Inf/NaN handling with the Intel icpx compiler: the default `-fp-model=fast` broke the detection of divergent correlation lengths and could leak `nan` rows of unmeasured sites into `onesite_obs.dat` / `density.dat`; `-fp-model=precise` is now enforced for icpx builds ([#107][])
+  - Fixed an undefined behavior (null-pointer dereference) when the input file has no `[[evolution.simple]]` / `[[evolution.full]]` sections; they are now treated as an empty list of evolution operators ([#108][])
+  - Fixed an out-of-bounds access in mptensor (`make_l2g_map`) that aborted finite-temperature calculations in Debug builds, by updating mptensor to v0.5.0 ([#104][])
+
+### Development
+
+- Modernized the C++ core to C++17: removed the vendored boost headers (`boost::optional` → `std::optional`), reimplemented `util/file` with `std::filesystem`, and replaced SFINAE-based type traits with `if constexpr` ([#109][])
+- Updated the bundled mptensor to v0.5.0 ([#104][])
+- Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
+
+### Documentation and samples
+
+- Updated the requirements in README and the install guides: C++17, mptensor >= v0.5.0, dependency list, and notes for Intel compilers ([#104][], [#107][], [#108][])
 
 ## Changes between v2.1.3 and v2.1.2
 
@@ -85,5 +113,9 @@
 [#101]: https://github.com/issp-center-dev/TeNeS/pull/101
 [#102]: https://github.com/issp-center-dev/TeNeS/pull/102
 [#103]: https://github.com/issp-center-dev/TeNeS/pull/103
+[#104]: https://github.com/issp-center-dev/TeNeS/pull/104
 [#105]: https://github.com/issp-center-dev/TeNeS/pull/105
 [#106]: https://github.com/issp-center-dev/TeNeS/pull/106
+[#107]: https://github.com/issp-center-dev/TeNeS/pull/107
+[#108]: https://github.com/issp-center-dev/TeNeS/pull/108
+[#109]: https://github.com/issp-center-dev/TeNeS/pull/109
