@@ -26,7 +26,7 @@ TeNeSをコンパイルするには以下のライブラリ・環境が必要で
 TeNeSは以下のライブラリに依存していますが、自動でダウンロードおよびビルドがされます。
 
 1. `mptensor <https://github.com/smorita/mptensor>`_ (>= v0.5.0)
-2. `cpptoml <https://github.com/skystrife/cpptoml>`_
+2. `toml11 <https://github.com/ToruNiina/toml11>`_ (>= v4.0.0)
 
 MPI および ScaLAPACK を利用することでテンソル演算を並列化できます。
 MPI, ScaLAPACKについては自身でインストールする必要があります。
