@@ -23,7 +23,7 @@
 #include <string>
 
 #include <limits>
-#include "cpptoml.h"  // IWYU pragma: export
+#include <toml.hpp>  // IWYU pragma: export
 
 // IWYU pragma: begin_exports
 #include "../SquareLattice.hpp"
@@ -38,47 +38,45 @@
 namespace tenes {
 namespace itps {
 
-SquareLattice gen_lattice(decltype(cpptoml::parse_file("")) toml,
+SquareLattice gen_lattice(const toml::value &toml,
                           const char *tablename = "tensor");
 
-CorrelationParameter gen_corparam(decltype(cpptoml::parse_file("")) toml,
+CorrelationParameter gen_corparam(const toml::value &toml,
                                   const char *tablename = "correlation");
 
 TransferMatrix_Parameters gen_transfer_matrix_parameter(
-    decltype(cpptoml::parse_file("")) toml,
-    const char *tablename = "correlation_length");
+    const toml::value &toml, const char *tablename = "correlation_length");
 
-PEPS_Parameters gen_param(decltype(cpptoml::parse_file("")) param);
+PEPS_Parameters gen_param(const toml::value &param);
 
 std::tuple<int, int, int> read_bond(std::string line);
 std::vector<std::tuple<int, int, int>> read_bonds(std::string str);
 
 template <class tensor>
-Operators<tensor> load_operator(decltype(cpptoml::parse_file("")) param,
-                                MPI_Comm comm, int nsites, int nbody,
-                                double atol = 0.0,
+Operators<tensor> load_operator(const toml::value &param, MPI_Comm comm,
+                                int nsites, int nbody, double atol = 0.0,
                                 const char *tablename = "observable.onesite");
 
 template <class tensor>
-Operators<tensor> load_operators(decltype(cpptoml::parse_file("")) param,
-                                 MPI_Comm comm, int nsites, int nbody,
-                                 double atol, std::string const &key);
+Operators<tensor> load_operators(const toml::value &param, MPI_Comm comm,
+                                 int nsites, int nbody, double atol,
+                                 std::string const &key);
 
 template <class tensor>
 EvolutionOperator<tensor> load_Evolution_operator(
-    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0,
+    const toml::value &param, MPI_Comm comm, double atol = 0.0,
     const char *tablename = "evolution.simple");
 
 template <class tensor>
-EvolutionOperators<tensor> load_updates(decltype(cpptoml::parse_file("")) param,
-                                        MPI_Comm comm, double atol,
-                                        std::string const &key);
+EvolutionOperators<tensor> load_updates(const toml::value &param, MPI_Comm comm,
+                                        double atol, std::string const &key);
 template <class tensor>
-EvolutionOperators<tensor> load_simple_updates(
-    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
+EvolutionOperators<tensor> load_simple_updates(const toml::value &param,
+                                               MPI_Comm comm,
+                                               double atol = 0.0);
 template <class tensor>
-EvolutionOperators<tensor> load_full_updates(
-    decltype(cpptoml::parse_file("")) param, MPI_Comm comm, double atol = 0.0);
+EvolutionOperators<tensor> load_full_updates(const toml::value &param,
+                                             MPI_Comm comm, double atol = 0.0);
 
 }  // namespace itps
 }  // namespace tenes

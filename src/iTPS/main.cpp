@@ -31,7 +31,7 @@
 using std::size_t;
 
 extern "C" {
-int tenes_itps_main(const char* input_filename, MPI_Comm comm,
+int tenes_itps_main(const char *input_filename, MPI_Comm comm,
                     int print_level) {
   return tenes::itps::itps_main(input_filename, comm,
                                 static_cast<tenes::PrintLevel>(print_level));
@@ -40,13 +40,14 @@ int tenes_itps_main(const char* input_filename, MPI_Comm comm,
 
 namespace {
 tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> to_real(
-    tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<std::complex<double>>>> const& ops) {
+    tenes::Operators<mptensor::Tensor<
+        tenes::mptensor_matrix_type<std::complex<double>>>> const &ops) {
   tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> ret;
   if (ops.empty()) {
     return ret;
   }
   MPI_Comm comm = ops[0].op.get_comm();
-  for (auto const& op : ops) {
+  for (auto const &op : ops) {
     double coeff = std::real(op.coeff);
     if (op.is_onesite()) {
       mptensor::Tensor<tenes::mptensor_matrix_type<double>> A(comm,
@@ -61,7 +62,8 @@ tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> to_real(
       for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
         A[lindex] = op.op[lindex].real();
       }
-      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, A, coeff);
+      ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy, A,
+                       coeff);
     } else {
       ret.emplace_back(op.name, op.group, op.source_site, op.dx, op.dy,
                        op.ops_indices, coeff);
@@ -71,9 +73,9 @@ tenes::Operators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>> to_real(
 }
 
 bool is_real(tenes::Operators<mptensor::Tensor<
-                 tenes::mptensor_matrix_type<std::complex<double>>>> const& ops,
+                 tenes::mptensor_matrix_type<std::complex<double>>>> const &ops,
              double tol) {
-  for (auto const& op : ops) {
+  for (auto const &op : ops) {
     if (!op.ops_indices.empty()) {
       continue;
     }
@@ -94,7 +96,7 @@ bool is_real(tenes::Operators<mptensor::Tensor<
 
 tenes::EvolutionOperators<mptensor::Tensor<tenes::mptensor_matrix_type<double>>>
 to_real(tenes::EvolutionOperators<mptensor::Tensor<
-            tenes::mptensor_matrix_type<std::complex<double>>>> const& ops) {
+            tenes::mptensor_matrix_type<std::complex<double>>>> const &ops) {
   tenes::EvolutionOperators<
       mptensor::Tensor<tenes::mptensor_matrix_type<double>>>
       ret;
@@ -102,7 +104,7 @@ to_real(tenes::EvolutionOperators<mptensor::Tensor<
     return ret;
   }
   MPI_Comm comm = ops[0].op.get_comm();
-  for (auto const& op : ops) {
+  for (auto const &op : ops) {
     mptensor::Tensor<tenes::mptensor_matrix_type<double>> A(comm,
                                                             op.op.shape());
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
@@ -114,9 +116,9 @@ to_real(tenes::EvolutionOperators<mptensor::Tensor<
 }
 
 bool is_real(tenes::EvolutionOperators<mptensor::Tensor<
-                 tenes::mptensor_matrix_type<std::complex<double>>>> const& ops,
+                 tenes::mptensor_matrix_type<std::complex<double>>>> const &ops,
              double tol) {
-  for (auto const& op : ops) {
+  for (auto const &op : ops) {
     int res = 0;
     for (size_t lindex = 0; lindex < op.op.local_size(); ++lindex) {
       if (std::abs(op.op[lindex].imag()) > tol) {
@@ -180,14 +182,14 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
 
 template <class tensor>
 int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
-			  SquareLattice lattice,
-			  EvolutionOperators<tensor> simple_updates,
-			  EvolutionOperators<tensor> full_updates,
-			  Operators<tensor> onesite_operators,
-			  Operators<tensor> twosite_operators,
-			  Operators<tensor> multisite_operators,
-			  CorrelationParameter corparam,
-			  TransferMatrix_Parameters clength_param) {
+                          SquareLattice lattice,
+                          EvolutionOperators<tensor> simple_updates,
+                          EvolutionOperators<tensor> full_updates,
+                          Operators<tensor> onesite_operators,
+                          Operators<tensor> twosite_operators,
+                          Operators<tensor> multisite_operators,
+                          CorrelationParameter corparam,
+                          TransferMatrix_Parameters clength_param) {
   iTPS<tensor> tns(comm, peps_parameters, lattice, simple_updates, full_updates,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
@@ -197,9 +199,7 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
   return 0;
 }
 
-
-  
-int itps_main(const char* input_filename, MPI_Comm comm,
+int itps_main(const char *input_filename, MPI_Comm comm,
               PrintLevel print_level) {
   return itps_main(std::string(input_filename), comm, print_level);
 }
@@ -219,24 +219,45 @@ int itps_main(std::string input_filename, MPI_Comm comm,
     throw tenes::input_error(ss.str());
   }
 
-  auto input_toml = cpptoml::parse_file(input_filename);
+  toml::value input_toml;
+  try {
+    input_toml = toml::parse(input_filename);
+  } catch (const toml::syntax_error &e) {
+    throw tenes::input_error(e.what());
+  } catch (const toml::file_io_error &e) {
+    throw tenes::input_error(e.what());
+  }
+
+  // returns the section table, or nullptr if the section is not defined
+  auto section = [&input_toml](const char *key) -> const toml::value * {
+    if (!input_toml.contains(key)) {
+      return nullptr;
+    }
+    const toml::value &v = input_toml.at(key);
+    if (!v.is_table()) {
+      throw tenes::input_error(toml::format_error(
+          std::string("[error] [") + key + "] should be a table", v,
+          "given here"));
+    }
+    return &v;
+  };
 
   // Parameters
-  auto toml_param = input_toml->get_table("parameter");
+  const toml::value *toml_param = section("parameter");
   PEPS_Parameters peps_parameters =
-      (toml_param != nullptr ? gen_param(toml_param) : PEPS_Parameters());
+      (toml_param != nullptr ? gen_param(*toml_param) : PEPS_Parameters());
   peps_parameters.print_level = print_level;
   peps_parameters.Bcast(comm);
 
-  auto toml_lattice = input_toml->get_table("tensor");
+  const toml::value *toml_lattice = section("tensor");
   if (toml_lattice == nullptr) {
     throw tenes::input_error("[tensor] not found");
   }
-  SquareLattice lattice = gen_lattice(toml_lattice);
+  SquareLattice lattice = gen_lattice(*toml_lattice);
   lattice.Bcast(comm);
 
   // time evolution
-  auto toml_evolution = input_toml->get_table("evolution");
+  const toml::value *toml_evolution = section("evolution");
   if (toml_evolution == nullptr) {
     throw tenes::input_error("[evolution] not found");
   }
@@ -247,7 +268,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   const auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
 
   // observable
-  auto toml_observable = input_toml->get_table("observable");
+  const toml::value *toml_observable = section("observable");
   if (toml_observable == nullptr) {
     throw tenes::input_error("[observable] not found");
   }
@@ -261,16 +282,16 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       input_toml, comm, lattice.N_UNIT, 3, tol, "observable.multisite");
 
   // correlation
-  auto toml_correlation = input_toml->get_table("correlation");
+  const toml::value *toml_correlation = section("correlation");
   const auto corparam = (toml_correlation != nullptr
-                             ? gen_corparam(toml_correlation, "correlation")
+                             ? gen_corparam(*toml_correlation, "correlation")
                              : CorrelationParameter());
 
   // correlation length
-  auto toml_clength = input_toml->get_table("correlation_length");
+  const toml::value *toml_clength = section("correlation_length");
   const auto clength_param =
       (toml_clength != nullptr
-           ? gen_transfer_matrix_parameter(toml_clength, "correlation_length")
+           ? gen_transfer_matrix_parameter(*toml_clength, "correlation_length")
            : TransferMatrix_Parameters());
 
   bool is_real = peps_parameters.is_real;
@@ -334,17 +355,16 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   } else if (peps_parameters.calcmode ==
              PEPS_Parameters::CalculationMode::finite_temperature) {
     if (is_real) {
-      return run_finitetemperature(comm, peps_parameters, lattice,
-                             to_real(simple_updates), to_real(full_updates),
-                             to_real(onesite_obs), to_real(twosite_obs),
-                             to_real(multisite_obs), corparam, clength_param);
+      return run_finitetemperature(
+          comm, peps_parameters, lattice, to_real(simple_updates),
+          to_real(full_updates), to_real(onesite_obs), to_real(twosite_obs),
+          to_real(multisite_obs), corparam, clength_param);
     } else {
-      return run_finitetemperature(comm, peps_parameters, lattice, simple_updates,
-                             full_updates, onesite_obs, twosite_obs,
-                             multisite_obs, corparam, clength_param);
+      return run_finitetemperature(
+          comm, peps_parameters, lattice, simple_updates, full_updates,
+          onesite_obs, twosite_obs, multisite_obs, corparam, clength_param);
     }
   } else {
-   
     return 1;
   }
 }

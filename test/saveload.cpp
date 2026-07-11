@@ -38,12 +38,7 @@ int main(int argc, char **argv) {
 
 namespace {
 
-auto parse_str(std::string const &str) -> decltype(cpptoml::parse_file("")) {
-  std::stringstream ss;
-  ss << str;
-  cpptoml::parser p{ss};
-  return p.parse();
-}
+toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
 
 }  // namespace
 
@@ -64,7 +59,7 @@ virtual_dim = 2
 initial_state = [1.0, 0.0]
 noise = 0.01
   )");
-  SquareLattice lattice = gen_lattice(toml->get_table("tensor"));
+  SquareLattice lattice = gen_lattice(toml.at("tensor"));
 
   PEPS_Parameters save_params;
   save_params.print_level = PrintLevel::none;

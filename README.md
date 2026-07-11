@@ -53,7 +53,7 @@ The following tools are required for building TeNeS.
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
 
 - [mptensor](https://github.com/smorita/mptensor) (>= v0.5.0)
-- [cpptoml](https://github.com/skystrife/cpptoml)
+- [toml11](https://github.com/ToruNiina/toml11) (>= v4.0.0)
 
 TeNeS can be parallerized by using MPI and ScaLAPACK.
 
