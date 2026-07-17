@@ -17,6 +17,7 @@
 #include "timer.hpp"
 
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <vector>
 
@@ -31,6 +32,31 @@ std::map<std::string, TimerAggregate> aggregate_timers(
   for (auto const &kv : registry.entries()) {
     sums.push_back(kv.second.sum);
   }
+
+  // All ranks must agree on the number of recorded timers before the
+  // element-wise reductions below; a mismatched count in MPI_Allreduce
+  // would be undefined behavior. On disagreement, fall back to local
+  // values (max_rank == min_rank == sum) instead of crashing or hanging.
+  std::vector<double> max_sizes{static_cast<double>(sums.size())};
+  std::vector<double> min_sizes = max_sizes;
+  allreduce_max(max_sizes, comm);
+  allreduce_min(min_sizes, comm);
+  if (max_sizes[0] != min_sizes[0]) {
+    int rank = 0;
+    MPI_Comm_rank(comm, &rank);
+    if (rank == 0) {
+      std::cerr << "WARNING: timer names differ across MPI ranks; "
+                   "skipping cross-rank aggregation in timers.json"
+                << std::endl;
+    }
+    std::map<std::string, TimerAggregate> result;
+    for (auto const &kv : registry.entries()) {
+      result[kv.first] = TimerAggregate{kv.second.count, kv.second.sum,
+                                        kv.second.sum, kv.second.sum};
+    }
+    return result;
+  }
+
   std::vector<double> maxs = sums;
   std::vector<double> mins = sums;
   allreduce_max(maxs, comm);

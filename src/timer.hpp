@@ -101,6 +101,8 @@ struct TimerAggregate {
  *
  * Assumes every rank recorded the same set of names
  * (tensor operations are collective).
+ * If ranks disagree on the recorded names, falls back to local values
+ * (max_rank == min_rank == sum) with a warning on rank 0.
  */
 std::map<std::string, TimerAggregate> aggregate_timers(
     TimerRegistry const &registry, MPI_Comm comm);
