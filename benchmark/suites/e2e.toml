@@ -1,0 +1,12 @@
+# Representative end-to-end workloads based on existing inputs.
+[suite]
+name = "e2e"
+repeat = 3
+
+[[case]]
+name = "honeycomb"
+input = "../../test/data/Honeycomb.toml"
+
+[[case]]
+name = "afh_square_sample"
+input = "../../sample/AFH_square/simple.toml"

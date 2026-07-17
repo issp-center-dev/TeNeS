@@ -1,0 +1,10 @@
+# Reduced suite for GitHub Actions (reference values only).
+[suite]
+name = "ci"
+repeat = 3
+
+[[case]]
+name = "afh_square_${L}x${W}_D${D}_chi${chi}"
+template = "../templates/afh_square.toml"
+params = { simple_steps = 50 }
+sweep = { Lsub = [[2, 1], [2, 2]], D = [2], chi_ratio = [2] }

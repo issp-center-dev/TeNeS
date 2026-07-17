@@ -1,0 +1,10 @@
+# Unit-cell size x D x chi sweep for contraction-kernel benchmarking.
+[suite]
+name = "contraction"
+repeat = 3
+
+[[case]]
+name = "afh_square_${L}x${W}_D${D}_chi${chi}"
+template = "../templates/afh_square.toml"
+params = { simple_steps = 100 }
+sweep = { Lsub = [[2, 1], [2, 2], [3, 3], [4, 4]], D = [2, 3], chi_ratio = [2] }
