@@ -23,6 +23,11 @@
 
 #include "iTPS.hpp"
 #include "../util/datetime.hpp"
+#include "../timer.hpp"
+#include "../version.hpp"
+#ifndef _NO_OMP
+#include <omp.h>
+#endif
 
 namespace tenes::itps {
 
@@ -79,6 +84,18 @@ void iTPS<ptensor>::measure(std::optional<double> time,
 
 template <class ptensor>
 void iTPS<ptensor>::summary() const {
+  auto &registry = TimerRegistry::instance();
+  registry.add("total", timer_all.elapsed());
+  registry.add("phase/simple_update", time_simple_update);
+  registry.add("phase/full_update", time_full_update);
+  registry.add("phase/environment", time_environment);
+  registry.add("phase/observable", time_observable);
+#ifndef _NO_OMP
+  const int omp_threads = omp_get_max_threads();
+#else
+  const int omp_threads = 1;
+#endif
+  const auto aggregated = aggregate_timers(registry, comm);
   if (mpirank == 0) {
     const double time_all = timer_all.elapsed();
     {
@@ -93,6 +110,14 @@ void iTPS<ptensor>::summary() const {
         std::cout << "    Save elapsed times to " << filename << std::endl;
       }
     }
+    {
+      std::string filename = outdir + "/timers.json";
+      std::ofstream ofs(filename.c_str());
+      ofs << timers_to_json(aggregated, TENES_VERSION, mpisize, omp_threads);
+      if (peps_parameters.print_level >= PrintLevel::info) {
+        std::cout << "    Save timers to " << filename << std::endl;
+      }
+    }
     if (peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "Wall times [sec.]:" << std::endl;
       std::cout << "  all           = " << time_all << std::endl;
@@ -105,10 +130,9 @@ void iTPS<ptensor>::summary() const {
   }
 }
 
-
 template <class ptensor>
 void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
-  //if (!peps_parameters.MeanField_Env) {
+  // if (!peps_parameters.MeanField_Env) {
   update_CTM_density();
   //  }
 
@@ -120,8 +144,8 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   auto twosite_obs = measure_twosite();
   save_twosite(twosite_obs, beta, filename_prefix);
 
-  // In finite temperature simplation, multisite operators are not supported so far.
-  // auto multisite_obs = measure_multisite_density();
+  // In finite temperature simplation, multisite operators are not supported so
+  // far. auto multisite_obs = measure_multisite_density();
   auto multisite_obs = measure_multisite();
   if (multisite_operators.size() > 0) {
     save_multisite(multisite_obs, beta, filename_prefix);
@@ -133,7 +157,7 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   }
 
   if (tmatrix_param.to_calculate) {
-    if(beta > 0.0){
+    if (beta > 0.0) {
       // the method is unstable at beta = 0.0, so we skip it.
       auto correlation_length = measure_transfer_matrix_eigenvalues();
       save_correlation_length(correlation_length, beta, filename_prefix);
@@ -141,7 +165,7 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   }
   save_density(onesite_obs, twosite_obs, multisite_obs, beta, filename_prefix);
 }
-  
+
 // template specialization
 template class iTPS<real_tensor>;
 template class iTPS<complex_tensor>;
