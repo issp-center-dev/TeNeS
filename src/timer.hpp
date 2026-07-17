@@ -23,6 +23,8 @@
 #include <string>
 #include <utility>
 
+#include "mpi.hpp"
+
 namespace tenes {
 
 template <class CT = std::chrono::high_resolution_clock>
@@ -86,6 +88,27 @@ class ScopedTimer {
   TimerRegistry &registry_;
   Timer<> timer_;
 };
+
+//! Cross-rank view of one timer (times in seconds).
+struct TimerAggregate {
+  std::size_t count = 0;
+  double sum = 0.0;       //!< value on the calling rank
+  double max_rank = 0.0;  //!< maximum over MPI ranks
+  double min_rank = 0.0;  //!< minimum over MPI ranks
+};
+
+/*! @brief Aggregate timer sums across MPI ranks (collective call)
+ *
+ * Assumes every rank recorded the same set of names
+ * (tensor operations are collective).
+ */
+std::map<std::string, TimerAggregate> aggregate_timers(
+    TimerRegistry const &registry, MPI_Comm comm);
+
+//! Render aggregated timers and metadata as a JSON document.
+std::string timers_to_json(std::map<std::string, TimerAggregate> const &timers,
+                           std::string const &tenes_version, int mpi_size,
+                           int omp_threads);
 
 }  // end of namespace tenes
 

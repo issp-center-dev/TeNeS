@@ -44,12 +44,11 @@ int MPI_Barrier(MPI_Comm);
 int MPI_Finalize();
 int MPI_Bcast(void *, int, MPI_Datatype, int, MPI_Comm);
 int MPI_Send(const void *, int, MPI_Datatype, int, int, MPI_Comm);
-int MPI_Comm_disconnect(MPI_Comm*);
+int MPI_Comm_disconnect(MPI_Comm *);
 
-int MPI_Comm_size(MPI_Comm, int *);  // return 1 as size
-int MPI_Comm_rank(MPI_Comm, int *);  // return 0 as rank
-int MPI_Comm_get_parent(MPI_Comm*);  // return MPI_COMM_NULL
-
+int MPI_Comm_size(MPI_Comm, int *);   // return 1 as size
+int MPI_Comm_rank(MPI_Comm, int *);   // return 0 as rank
+int MPI_Comm_get_parent(MPI_Comm *);  // return MPI_COMM_NULL
 
 #else
 
@@ -184,6 +183,36 @@ template <class T>
 int allreduce_sum(std::vector<std::complex<T>> /* &val */,
                   MPI_Comm /* comm */) {
   throw tenes::unimplemented_error("allreduce for complex is not implemented");
+}
+
+template <class T>
+int allreduce_max(std::vector<T> &val, MPI_Comm comm) {
+#ifndef _NO_MPI
+  const MPI_Datatype datatype = get_MPI_Datatype<T>();
+  int N = val.size();
+  std::vector<T> recv(val);
+  int ret = MPI_Allreduce(val.data(), recv.data(), N, datatype, MPI_MAX, comm);
+  if (ret != 0) {
+    return ret;
+  }
+  val.assign(recv.begin(), recv.end());
+#endif
+  return 0;
+}
+
+template <class T>
+int allreduce_min(std::vector<T> &val, MPI_Comm comm) {
+#ifndef _NO_MPI
+  const MPI_Datatype datatype = get_MPI_Datatype<T>();
+  int N = val.size();
+  std::vector<T> recv(val);
+  int ret = MPI_Allreduce(val.data(), recv.data(), N, datatype, MPI_MIN, comm);
+  if (ret != 0) {
+    return ret;
+  }
+  val.assign(recv.begin(), recv.end());
+#endif
+  return 0;
 }
 
 }  // namespace tenes

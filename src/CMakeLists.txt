@@ -5,7 +5,7 @@ if(OpenMP_CXX_LIBRARY_DIRS)
   link_directories(${OpenMP_CXX_LIBRARY_DIRS})
 endif()
 
-add_library(tenes_mpi STATIC mpi.cpp)
+add_library(tenes_mpi STATIC mpi.cpp timer.cpp)
 
 target_compile_options(tenes_mpi PUBLIC -Wall)
 target_compile_options(

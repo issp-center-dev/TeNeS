@@ -60,3 +60,32 @@ TEST_CASE("TimerRegistry::instance returns a singleton") {
   auto &b = tenes::TimerRegistry::instance();
   CHECK(&a == &b);
 }
+
+TEST_CASE("aggregate_timers with a single process") {
+  tenes::TimerRegistry registry;
+  registry.add("a", 1.0);
+  registry.add("a", 2.0);
+  registry.add("b", 4.0);
+
+  auto agg = tenes::aggregate_timers(registry, MPI_COMM_WORLD);
+  REQUIRE(agg.size() == 2);
+  CHECK(agg.at("a").count == 2);
+  CHECK(agg.at("a").sum == doctest::Approx(3.0));
+  CHECK(agg.at("a").max_rank == doctest::Approx(3.0));
+  CHECK(agg.at("a").min_rank == doctest::Approx(3.0));
+  CHECK(agg.at("b").sum == doctest::Approx(4.0));
+}
+
+TEST_CASE("timers_to_json renders the expected fields") {
+  std::map<std::string, tenes::TimerAggregate> timers;
+  timers["total"] = tenes::TimerAggregate{1, 1.5, 1.5, 1.5};
+  timers["contract/itps_ctm/2x2"] = tenes::TimerAggregate{48, 4.5, 5.0, 4.0};
+  const std::string json = tenes::timers_to_json(timers, "2.2-dev", 1, 8);
+  CHECK(json.find("\"tenes_version\": \"2.2-dev\"") != std::string::npos);
+  CHECK(json.find("\"mpi_size\": 1") != std::string::npos);
+  CHECK(json.find("\"omp_threads\": 8") != std::string::npos);
+  CHECK(json.find("\"total\": {\"count\": 1, \"sum\": 1.5") !=
+        std::string::npos);
+  CHECK(json.find("\"contract/itps_ctm/2x2\": {\"count\": 48") !=
+        std::string::npos);
+}
