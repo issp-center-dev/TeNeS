@@ -1,0 +1,54 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "suite file under benchmark/suites/"
+        default: "ci.toml"
+      label:
+        description: "label for this run"
+        default: "ci"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: apt
+        run: |
+          sudo apt update
+          sudo apt install libblas-dev liblapack-dev
+
+      - name: pip install
+        run: |
+          python -m pip install -U pip
+          python -m pip install numpy scipy toml
+
+      - name: cmake
+        run: |
+          cmake -E make_directory build
+          cmake -B build -DENABLE_MPI=OFF -DTesting=OFF .
+
+      - name: build
+        run: cmake --build build -j4
+
+      - name: run benchmark
+        run: |
+          python benchmark/bench.py run \
+            "benchmark/suites/${{ github.event.inputs.suite }}" \
+            --label "${{ github.event.inputs.label }}" \
+            --tenes-dir build/src --tool-dir build/tool
+
+      - name: upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark/results/
