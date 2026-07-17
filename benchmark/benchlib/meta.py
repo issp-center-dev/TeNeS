@@ -37,11 +37,11 @@ def collect_meta(tenes_bin, repo_dir, launcher=None):
     try:
         result["git_commit"] = _run(["git", "rev-parse", "HEAD"], cwd=repo_dir)
         result["git_dirty"] = bool(_run(["git", "status", "--porcelain"], cwd=repo_dir))
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, OSError):
         result["git_commit"] = None
         result["git_dirty"] = None
     try:
         result["tenes_version"] = _run([str(tenes_bin), "--version"])
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+    except (subprocess.CalledProcessError, OSError):
         result["tenes_version"] = None
     return result
