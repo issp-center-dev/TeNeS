@@ -50,6 +50,16 @@ def stub_tools(tmp_path):
     return tenes_dir, tool_dir
 
 
+def test_run_context_resolves_relative_dirs(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    ctx = runner.RunContext(
+        tenes_dir="rel/src", tool_dir="rel/tool", results_dir="rel/res"
+    )
+    assert ctx.tenes_dir.is_absolute()
+    assert ctx.tool_dir.is_absolute()
+    assert ctx.results_dir.is_absolute()
+
+
 def test_collect_meta_in_git_repo(tmp_path):
     repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
     got = meta.collect_meta(tmp_path / "no_such_tenes", repo_dir=repo)

@@ -25,9 +25,11 @@ from . import suite as suite_mod
 
 class RunContext:
     def __init__(self, tenes_dir, tool_dir, results_dir, launcher=None, repeat=None):
-        self.tenes_dir = Path(tenes_dir)
-        self.tool_dir = Path(tool_dir)
-        self.results_dir = Path(results_dir)
+        # Resolve to absolute paths: commands run with cwd=workdir, so
+        # relative paths given on the command line would not survive.
+        self.tenes_dir = Path(tenes_dir).resolve()
+        self.tool_dir = Path(tool_dir).resolve()
+        self.results_dir = Path(results_dir).resolve()
         self.launcher = launcher
         self.repeat = repeat  # None -> suite default
 
