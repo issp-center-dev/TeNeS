@@ -24,7 +24,10 @@
 
 #include "../contract_density_ctm.hpp"
 
+#include <string>
+
 #include "../../../tensor.hpp"
+#include "../../../timer.hpp"
 
 namespace tenes::itps::core {
 
@@ -51,6 +54,8 @@ typename tensor::value_type Contract_density_CTM(
     const std::vector<std::vector<const tensor *>> &op) {
   const size_t nrow = Tn.size();
   const size_t ncol = Tn[0].size();
+  ScopedTimer scoped_timer("contract/density_ctm/" + std::to_string(nrow) +
+                           "x" + std::to_string(ncol));
 
 #define CALL_CONTRACT(NROW, NCOL)                                              \
   do {                                                                         \
