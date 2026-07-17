@@ -116,3 +116,28 @@ def test_compare_results_flags_count_mismatch(tmp_path):
     dir_b = _write_label(tmp_path, "new", [1.0], count=20)
     report = compare.compare_results(dir_a, dir_b)
     assert "count differs" in report
+
+
+def test_format_row_one_side_only_column_order():
+    stat = {
+        "count": 1,
+        "count_varies": False,
+        "median": 42.0,
+        "min": 40.0,
+        "max": 44.0,
+    }
+    rows = compare.compare_timers({}, {"x": stat})
+    cells = [
+        c.strip() for c in compare._format_row("case1", rows[0]).strip("|").split("|")
+    ]
+    assert cells[2] == "(absent)"
+    assert cells[3].startswith("42")
+    assert cells[6] == "B only"
+
+    rows = compare.compare_timers({"x": stat}, {})
+    cells = [
+        c.strip() for c in compare._format_row("case1", rows[0]).strip("|").split("|")
+    ]
+    assert cells[2].startswith("42")
+    assert cells[3] == "(absent)"
+    assert cells[6] == "A only"

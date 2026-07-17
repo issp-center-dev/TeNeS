@@ -80,7 +80,7 @@ def _stat_cell(s):
 def _format_row(case, row):
     a, b = row["a"], row["b"]
     if a is None:
-        return "| {} | {} | {} | (absent) | n/a |  | B only |".format(
+        return "| {} | {} | (absent) | {} | n/a |  | B only |".format(
             case, row["name"], _stat_cell(b)
         )
     if b is None:
