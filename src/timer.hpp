@@ -18,6 +18,10 @@
 #define TENES_SRC_TIMER_HPP_
 
 #include <chrono>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <utility>
 
 namespace tenes {
 
@@ -37,6 +41,50 @@ class Timer {
 
  private:
   typename clock_type::time_point start;
+};
+
+//! @brief Process-wide accumulator of named timers
+//!
+//! Names are hierarchical, slash-separated (e.g. "contract/itps_ctm/2x2").
+class TimerRegistry {
+ public:
+  struct Entry {
+    std::size_t count = 0;
+    double sum = 0.0;  //!< accumulated time in seconds
+  };
+
+  void add(std::string const &name, double seconds) {
+    Entry &e = entries_[name];
+    e.count += 1;
+    e.sum += seconds;
+  }
+
+  std::map<std::string, Entry> const &entries() const { return entries_; }
+
+  //! Registry used by instrumentation points across the process.
+  static TimerRegistry &instance() {
+    static TimerRegistry registry;
+    return registry;
+  }
+
+ private:
+  std::map<std::string, Entry> entries_;
+};
+
+//! RAII helper: measures from construction to destruction.
+class ScopedTimer {
+ public:
+  explicit ScopedTimer(std::string name,
+                       TimerRegistry &registry = TimerRegistry::instance())
+      : name_(std::move(name)), registry_(registry) {}
+  ~ScopedTimer() { registry_.add(name_, timer_.elapsed()); }
+  ScopedTimer(ScopedTimer const &) = delete;
+  ScopedTimer &operator=(ScopedTimer const &) = delete;
+
+ private:
+  std::string name_;
+  TimerRegistry &registry_;
+  Timer<> timer_;
 };
 
 }  // end of namespace tenes
