@@ -126,6 +126,9 @@ rejects 1x1 square lattices), so unit-cell sweeps in `contraction.toml`,
 - Each case runs `repeat` times; the report shows median [min, max] and
   the ratio of medians (B/A). If the min-max intervals overlap, the row
   is marked "no sig. diff".
+- The time entering the statistics is the slowest rank's cumulative time
+  (`max_rank`, falling back to `sum` when absent), so MPI comparisons
+  reflect the wall-clock bottleneck rather than rank 0's share.
 - If call counts differ between A and B ("count differs"), the algorithm
   changed and time ratios should be interpreted accordingly.
 - Observables (`output/*.dat` except `time.dat` / `parameters.dat`) of

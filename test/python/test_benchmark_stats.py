@@ -43,6 +43,18 @@ def test_aggregate_runs_median_min_max():
     assert got["a"]["count_varies"] is False
 
 
+def test_aggregate_runs_uses_slowest_rank_time():
+    """MPI 実行では rank 0 の sum ではなく最遅 rank (max_rank) を統計に使う"""
+    runs = [
+        {"a": {"count": 10, "sum": 1.0, "max_rank": 3.0, "min_rank": 0.5}},
+        {"a": {"count": 10, "sum": 1.2, "max_rank": 2.0, "min_rank": 0.4}},
+    ]
+    got = stats.aggregate_runs(runs)
+    assert got["a"]["median"] == 2.5
+    assert got["a"]["min"] == 2.0
+    assert got["a"]["max"] == 3.0
+
+
 def test_aggregate_runs_missing_name_and_count_change():
     runs = [
         {"a": _t(10, 1.0), "b": _t(1, 5.0)},

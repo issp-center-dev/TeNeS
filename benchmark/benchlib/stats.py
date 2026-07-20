@@ -23,6 +23,10 @@ def aggregate_runs(run_timers):
     run_timers: list of timer dicts (name -> {"count": int, "sum": float, ...}).
     Returns name -> {"count", "count_varies", "median", "min", "max"}.
     Names missing from some runs are aggregated over the runs that have them.
+
+    The statistics use the slowest rank's cumulative time (max_rank) so that
+    MPI comparisons reflect the wall-clock bottleneck, not rank 0's share;
+    entries without max_rank fall back to sum (identical for single-rank runs).
     """
     names = []
     for timers in run_timers:
@@ -31,13 +35,15 @@ def aggregate_runs(run_timers):
                 names.append(name)
     result = {}
     for name in names:
-        sums = [t[name]["sum"] for t in run_timers if name in t]
+        elapsed = [
+            t[name].get("max_rank", t[name]["sum"]) for t in run_timers if name in t
+        ]
         counts = [t[name]["count"] for t in run_timers if name in t]
         result[name] = {
             "count": counts[0],
-            "count_varies": len(set(counts)) > 1 or len(sums) != len(run_timers),
-            "median": statistics.median(sums),
-            "min": min(sums),
-            "max": max(sums),
+            "count_varies": len(set(counts)) > 1 or len(elapsed) != len(run_timers),
+            "median": statistics.median(elapsed),
+            "min": min(elapsed),
+            "max": max(elapsed),
         }
     return result
