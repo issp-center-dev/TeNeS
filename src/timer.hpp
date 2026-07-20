@@ -18,6 +18,12 @@
 #define TENES_SRC_TIMER_HPP_
 
 #include <chrono>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <utility>
+
+#include "mpi.hpp"
 
 namespace tenes {
 
@@ -38,6 +44,73 @@ class Timer {
  private:
   typename clock_type::time_point start;
 };
+
+//! @brief Process-wide accumulator of named timers
+//!
+//! Names are hierarchical, slash-separated (e.g. "contract/itps_ctm/2x2").
+class TimerRegistry {
+ public:
+  struct Entry {
+    std::size_t count = 0;
+    double sum = 0.0;  //!< accumulated time in seconds
+  };
+
+  void add(std::string const &name, double seconds) {
+    Entry &e = entries_[name];
+    e.count += 1;
+    e.sum += seconds;
+  }
+
+  std::map<std::string, Entry> const &entries() const { return entries_; }
+
+  //! Registry used by instrumentation points across the process.
+  static TimerRegistry &instance() {
+    static TimerRegistry registry;
+    return registry;
+  }
+
+ private:
+  std::map<std::string, Entry> entries_;
+};
+
+//! RAII helper: measures from construction to destruction.
+class ScopedTimer {
+ public:
+  explicit ScopedTimer(std::string name,
+                       TimerRegistry &registry = TimerRegistry::instance())
+      : name_(std::move(name)), registry_(registry) {}
+  ~ScopedTimer() { registry_.add(name_, timer_.elapsed()); }
+  ScopedTimer(ScopedTimer const &) = delete;
+  ScopedTimer &operator=(ScopedTimer const &) = delete;
+
+ private:
+  std::string name_;
+  TimerRegistry &registry_;
+  Timer<> timer_;
+};
+
+//! Cross-rank view of one timer (times in seconds).
+struct TimerAggregate {
+  std::size_t count = 0;
+  double sum = 0.0;       //!< value on the calling rank
+  double max_rank = 0.0;  //!< maximum over MPI ranks
+  double min_rank = 0.0;  //!< minimum over MPI ranks
+};
+
+/*! @brief Aggregate timer sums across MPI ranks (collective call)
+ *
+ * Assumes every rank recorded the same set of names
+ * (tensor operations are collective).
+ * If ranks disagree on the recorded names, falls back to local values
+ * (max_rank == min_rank == sum) with a warning on rank 0.
+ */
+std::map<std::string, TimerAggregate> aggregate_timers(
+    TimerRegistry const &registry, MPI_Comm comm);
+
+//! Render aggregated timers and metadata as a JSON document.
+std::string timers_to_json(std::map<std::string, TimerAggregate> const &timers,
+                           std::string const &tenes_version, int mpi_size,
+                           int omp_threads);
 
 }  // end of namespace tenes
 

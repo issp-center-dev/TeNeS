@@ -9,6 +9,7 @@
   - Replaced the TOML parser cpptoml (archived, TOML v0.5.0) with toml11 v4.4.0 (TOML v1.0.0); input errors now report the file name, the line number, and the offending value ([#108][])
   - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
   - CMake option `CPPTOML_ROOT` is renamed to `TOML11_ROOT` ([#108][])
+  - Now always writes `output/timers.json`: cumulative wall times per hierarchical timer name (total / phase/* / contract/*), with per-MPI-rank max/min ([#110][])
 
 ### Bug fixes
 
@@ -23,6 +24,7 @@
 - Modernized the C++ core to C++17: removed the vendored boost headers (`boost::optional` → `std::optional`), reimplemented `util/file` with `std::filesystem`, and replaced SFINAE-based type traits with `if constexpr` ([#109][])
 - Updated the bundled mptensor to v0.5.0 ([#104][])
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
+- Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
 
 ### Documentation and samples
 
@@ -119,3 +121,4 @@
 [#107]: https://github.com/issp-center-dev/TeNeS/pull/107
 [#108]: https://github.com/issp-center-dev/TeNeS/pull/108
 [#109]: https://github.com/issp-center-dev/TeNeS/pull/109
+[#110]: https://github.com/issp-center-dev/TeNeS/pull/110

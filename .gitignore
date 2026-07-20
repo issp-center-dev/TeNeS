@@ -382,3 +382,4 @@ dmypy.json
 cython_debug/
 
 
+benchmark/results/

@@ -1,0 +1,76 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+SOURCE_DIR = "@CMAKE_SOURCE_DIR@"
+BINARY_DIR = "@CMAKE_BINARY_DIR@"
+LAUNCHER = "@BENCH_SMOKE_LAUNCHER@"
+
+resdir = join("@CMAKE_CURRENT_BINARY_DIR@", "bench_smoke_results")
+if os.path.exists(resdir):
+    shutil.rmtree(resdir)
+
+bench = join(SOURCE_DIR, "benchmark", "bench.py")
+cmd = [
+    sys.executable,
+    bench,
+    "run",
+    join(SOURCE_DIR, "benchmark", "suites", "smoke.toml"),
+    "--label",
+    "smoke",
+    "--tenes-dir",
+    join(BINARY_DIR, "src"),
+    "--tool-dir",
+    join(BINARY_DIR, "tool"),
+    "--results-dir",
+    resdir,
+]
+if LAUNCHER:
+    cmd += ["--launcher", LAUNCHER]
+subprocess.run(cmd, check=True)
+
+labeldir = join(resdir, "smoke")
+casedirs = [
+    d
+    for d in os.listdir(labeldir)
+    if os.path.isdir(join(labeldir, d))
+]
+assert casedirs, "no case directory produced"
+timers_path = join(labeldir, casedirs[0], "run_0", "timers.json")
+with open(timers_path) as f:
+    data = json.load(f)
+timers = data["timers"]
+assert "total" in timers, "total timer missing"
+assert any(
+    name.startswith("contract/") for name in timers
+), "no contraction timers recorded"
+
+report = subprocess.run(
+    [sys.executable, bench, "compare", labeldir, labeldir],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout
+assert "total" in report
+assert "WARNING" not in report, "self-comparison must not warn"
+
+print("benchmark smoke test passed")

@@ -7,7 +7,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 foreach(basename input simple_update full_update tensor_util util
-        correlation_length saveload arnoldi)
+        correlation_length saveload arnoldi timer_registry)
   set(testname "test_${basename}")
   add_executable(${testname} "${basename}.cpp")
 
@@ -68,3 +68,15 @@ foreach(
   add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
                                 ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
+
+if(ENABLE_MPI)
+  set(BENCH_SMOKE_LAUNCHER
+      "${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_POSTFLAGS}")
+else()
+  set(BENCH_SMOKE_LAUNCHER "")
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/benchmark_smoke.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/benchmark_smoke.py @ONLY)
+add_test(NAME benchmark_smoke
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/benchmark_smoke.py)

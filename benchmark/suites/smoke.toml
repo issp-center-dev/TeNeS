@@ -1,0 +1,10 @@
+# Minimal suite for CI smoke testing (a few seconds).
+[suite]
+name = "smoke"
+repeat = 1
+
+[[case]]
+name = "smoke_${L}x${W}_D${D}_chi${chi}"
+template = "../templates/afh_square.toml"
+params = { simple_steps = 10 }
+sweep = { Lsub = [[2, 1]], D = [2], chi_ratio = [2] }
