@@ -37,7 +37,7 @@ from benchlib import runner, suite
 
 
 def cmd_run(args):
-    s = suite.load_suite(args.suite)
+    suites = [suite.load_suite(path) for path in args.suite]
     results_dir = Path(args.results_dir) / args.label
     if results_dir.exists():
         sys.exit("error: {} already exists; use a new label".format(results_dir))
@@ -48,7 +48,10 @@ def cmd_run(args):
         launcher=args.launcher,
         repeat=args.repeat,
     )
-    runner.run_suite(s, ctx)
+    try:
+        runner.run_suites(suites, ctx)
+    except ValueError as e:
+        sys.exit("error: {}".format(e))
     print("results saved to {}".format(results_dir))
 
 
@@ -67,8 +70,10 @@ def main():
     parser = argparse.ArgumentParser(description="TeNeS benchmark harness")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_run = sub.add_parser("run", help="run a benchmark suite")
-    p_run.add_argument("suite", help="path to a suite TOML file")
+    p_run = sub.add_parser("run", help="run one or more benchmark suites")
+    p_run.add_argument(
+        "suite", nargs="+", help="path(s) to suite TOML files (run sequentially)"
+    )
     p_run.add_argument("--label", required=True, help="identifier of this run")
     p_run.add_argument("--tenes-dir", default=str(REPO_DIR / "build" / "src"))
     p_run.add_argument("--tool-dir", default=str(REPO_DIR / "build" / "tool"))

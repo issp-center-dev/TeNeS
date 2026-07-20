@@ -24,6 +24,15 @@ python3 benchmark/bench.py compare \
 
 Alternatively keep two build directories and switch `--tenes-dir`.
 
+Multiple suite files can be given in one invocation; they run sequentially
+under the same label (case names must be unique across the suites):
+
+```bash
+python3 benchmark/bench.py run \
+    benchmark/suites/contraction.toml benchmark/suites/e2e.toml \
+    --label baseline --tenes-dir build/src --tool-dir build/tool
+```
+
 ## Timers
 
 `tenes` always writes `output/timers.json`: cumulative wall times keyed by
