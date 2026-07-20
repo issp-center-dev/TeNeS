@@ -41,14 +41,17 @@ jobs:
         run: cmake --build build -j4
 
       - name: run benchmark
+        env:
+          SUITE: ${{ github.event.inputs.suite }}
+          LABEL: ${{ github.event.inputs.label }}
         run: |
           python benchmark/bench.py run \
-            "benchmark/suites/${{ github.event.inputs.suite }}" \
-            --label "${{ github.event.inputs.label }}" \
+            "benchmark/suites/${SUITE}" \
+            --label "${LABEL}" \
             --tenes-dir build/src --tool-dir build/tool
 
       - name: upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: benchmark-results
           path: benchmark/results/
