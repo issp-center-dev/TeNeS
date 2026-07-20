@@ -80,15 +80,27 @@ def run_case(case, repeat, ctx):
             )
 
 
-def run_suite(s, ctx):
+def run_suites(suites, ctx):
+    """Run multiple suites sequentially under one label directory."""
+    names = [case.name for s in suites for case in s.cases]
+    duplicates = sorted({n for n in names if names.count(n) > 1})
+    if duplicates:
+        raise ValueError(
+            "case names collide across suites: {}".format(", ".join(duplicates))
+        )
     ctx.results_dir.mkdir(parents=True, exist_ok=True)
     repo_dir = Path(__file__).resolve().parents[2]
     result = meta_mod.collect_meta(
         ctx.tenes_dir / "tenes", repo_dir=repo_dir, launcher=ctx.launcher
     )
-    result["suite"] = s.name
+    result["suite"] = ",".join(s.name for s in suites)
     (ctx.results_dir / "meta.json").write_text(json.dumps(result, indent=2))
-    repeat = ctx.repeat if ctx.repeat is not None else s.repeat
-    for case in s.cases:
-        print("== case: {} (repeat={}) ==".format(case.name, repeat), flush=True)
-        run_case(case, repeat, ctx)
+    for s in suites:
+        repeat = ctx.repeat if ctx.repeat is not None else s.repeat
+        for case in s.cases:
+            print("== case: {} (repeat={}) ==".format(case.name, repeat), flush=True)
+            run_case(case, repeat, ctx)
+
+
+def run_suite(s, ctx):
+    run_suites([s], ctx)

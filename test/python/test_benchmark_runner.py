@@ -134,3 +134,55 @@ def test_run_suite_writes_meta(tmp_path, stub_tools):
     got = json.loads((tmp_path / "results" / "meta.json").read_text())
     assert got["suite"] == "s"
     assert "git_commit" in got
+
+
+def _stub_suite(tmp_path, name, case_names, repeat=1):
+    tpl = tmp_path / "tpl_shared.toml"
+    if not tpl.exists():
+        tpl.write_text("")
+    return suite.Suite(
+        name=name,
+        repeat=repeat,
+        cases=[
+            suite.Case(name=c, kind="template", source=tpl, params={})
+            for c in case_names
+        ],
+    )
+
+
+def test_run_suites_merges_cases_under_one_label(tmp_path, stub_tools):
+    tenes_dir, tool_dir = stub_tools
+    s1 = _stub_suite(tmp_path, "s1", ["a"])
+    s2 = _stub_suite(tmp_path, "s2", ["b"])
+    ctx = runner.RunContext(
+        tenes_dir=tenes_dir, tool_dir=tool_dir, results_dir=tmp_path / "results"
+    )
+    runner.run_suites([s1, s2], ctx)
+    meta_data = json.loads((tmp_path / "results" / "meta.json").read_text())
+    assert meta_data["suite"] == "s1,s2"
+    assert (tmp_path / "results" / "a" / "run_0" / "timers.json").exists()
+    assert (tmp_path / "results" / "b" / "run_0" / "timers.json").exists()
+
+
+def test_run_suites_honors_per_suite_repeat(tmp_path, stub_tools):
+    tenes_dir, tool_dir = stub_tools
+    s1 = _stub_suite(tmp_path, "s1", ["a"], repeat=2)
+    s2 = _stub_suite(tmp_path, "s2", ["b"], repeat=1)
+    ctx = runner.RunContext(
+        tenes_dir=tenes_dir, tool_dir=tool_dir, results_dir=tmp_path / "results"
+    )
+    runner.run_suites([s1, s2], ctx)
+    assert (tmp_path / "results" / "a" / "run_1").exists()
+    assert not (tmp_path / "results" / "b" / "run_1").exists()
+
+
+def test_run_suites_rejects_cross_suite_duplicate_names(tmp_path, stub_tools):
+    tenes_dir, tool_dir = stub_tools
+    s1 = _stub_suite(tmp_path, "s1", ["same"])
+    s2 = _stub_suite(tmp_path, "s2", ["same"])
+    ctx = runner.RunContext(
+        tenes_dir=tenes_dir, tool_dir=tool_dir, results_dir=tmp_path / "results"
+    )
+    with pytest.raises(ValueError, match="same"):
+        runner.run_suites([s1, s2], ctx)
+    assert not (tmp_path / "results").exists()
