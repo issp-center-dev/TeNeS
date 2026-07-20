@@ -36,6 +36,29 @@ python3 benchmark/bench.py run \
 `run` refuses to overwrite an existing label directory; pass `--force` to
 delete it and rerun from scratch.
 
+## Results layout
+
+`bench.py run --label <label>` writes into `benchmark/results/<label>/`
+(configurable with `--results-dir`):
+
+```
+results/<label>/
+  meta.json              # provenance: git commit/dirty, hostname, date,
+                         # OMP_NUM_THREADS, launcher, suite name(s)
+  <case_name>/
+    work/                # pipeline scratch: simple.toml, std.toml,
+                         # input.toml, and the live output/ of the last run
+    run_0/               # copies of output/*.dat and output/*.json
+    run_1/               # taken after each repetition
+    ...
+```
+
+The index in `run_<i>` is the **repetition index** (`i = 0 .. repeat-1`),
+not an MPI rank: each case is executed `repeat` times in a row, and the
+solver output is copied into `run_<i>/` after the i-th execution. An MPI
+run still produces one `run_<i>/` per repetition — rank-resolved timing
+information is inside `timers.json` (see below), written by rank 0.
+
 ## Timers
 
 `tenes` always writes `output/timers.json`: cumulative wall times keyed by
@@ -46,7 +69,33 @@ hierarchical names.
   meaningless (always 1) for these entries
 - `contract/<backend>/<N>x<M>` — contraction kernels per unit-cell shape;
   backends: `itps_ctm`, `itps_mf`, `density_ctm`
-- `max_rank` / `min_rank` — per-rank extrema under MPI (load imbalance)
+
+### timers.json format
+
+```json
+{
+  "meta": {"tenes_version": "2.2-dev", "mpi_size": 4, "omp_threads": 8},
+  "timers": {
+    "contract/itps_ctm/2x2": {
+      "count": 4800, "sum": 45.6, "max_rank": 46.0, "min_rank": 44.9
+    }
+  }
+}
+```
+
+Per-timer fields (times are wall-clock seconds, accumulated over the
+whole process lifetime):
+
+- `count` — how many times the timer was recorded. Tensor operations are
+  collective, so the count is identical on every MPI rank.
+- `sum` — cumulative time measured on the rank that writes the file
+  (rank 0).
+- `max_rank` / `min_rank` — maximum / minimum over all MPI ranks of each
+  rank's cumulative time (`MPI_Allreduce` of the per-rank sums). The
+  spread between them indicates load imbalance; in TeNeS it is usually
+  small because the instrumented operations are collective and ranks
+  synchronize inside them. In a non-MPI build or a single-rank run,
+  `sum == max_rank == min_rank`.
 
 To add a new instrumentation point, place
 `ScopedTimer scoped_timer("your/name");` (declared in `src/timer.hpp`)
