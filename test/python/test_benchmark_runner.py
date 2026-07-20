@@ -98,6 +98,26 @@ def test_run_case_stores_outputs_per_run(tmp_path, stub_tools):
         assert (rundir / "density.dat").exists()
 
 
+def test_run_case_raises_when_output_missing(tmp_path):
+    """tenes が output/ を作らない場合は空の run_N/ を残さず例外にする"""
+    tool_dir = tmp_path / "tool"
+    tool_dir.mkdir()
+    _make_stub(tool_dir / "tenes_simple", "touch std.toml")
+    _make_stub(tool_dir / "tenes_std", "touch input.toml")
+    tenes_dir = tmp_path / "src"
+    tenes_dir.mkdir()
+    _make_stub(tenes_dir / "tenes", "true")
+
+    tpl = tmp_path / "tpl.toml"
+    tpl.write_text("D = ${D}\n")
+    case = suite.Case(name="c_no_output", kind="template", source=tpl, params={"D": 2})
+    ctx = runner.RunContext(
+        tenes_dir=tenes_dir, tool_dir=tool_dir, results_dir=tmp_path / "results"
+    )
+    with pytest.raises(RuntimeError, match="timers.json"):
+        runner.run_case(case, repeat=1, ctx=ctx)
+
+
 def test_run_suite_writes_meta(tmp_path, stub_tools):
     tenes_dir, tool_dir = stub_tools
     tpl = tmp_path / "tpl.toml"

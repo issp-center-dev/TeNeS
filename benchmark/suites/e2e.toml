@@ -4,8 +4,8 @@ name = "e2e"
 repeat = 3
 
 [[case]]
-name = "honeycomb"
-input = "../../test/data/Honeycomb.toml"
+name = "tfi_square_sample"
+input = "../../sample/01_transverse_field_ising/simple.toml"
 
 [[case]]
 name = "afh_square_sample"

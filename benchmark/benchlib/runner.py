@@ -71,6 +71,13 @@ def run_case(case, repeat, ctx):
         outdir = workdir / "output"
         for f in sorted(outdir.glob("*.dat")) + sorted(outdir.glob("*.json")):
             shutil.copy(f, rundir / f.name)
+        if not (rundir / "timers.json").exists():
+            raise RuntimeError(
+                "case {}: no timers.json found under {} after run {} "
+                "(does the input override parameter.general.output?)".format(
+                    case.name, outdir, i
+                )
+            )
 
 
 def run_suite(s, ctx):
