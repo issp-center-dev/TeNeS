@@ -33,6 +33,9 @@ python3 benchmark/bench.py run \
     --label baseline --tenes-dir build/src --tool-dir build/tool
 ```
 
+`run` refuses to overwrite an existing label directory; pass `--force` to
+delete it and rerun from scratch.
+
 ## Timers
 
 `tenes` always writes `output/timers.json`: cumulative wall times keyed by

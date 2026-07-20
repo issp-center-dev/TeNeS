@@ -25,6 +25,7 @@ Compare two result sets:
 """
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
@@ -40,7 +41,14 @@ def cmd_run(args):
     suites = [suite.load_suite(path) for path in args.suite]
     results_dir = Path(args.results_dir) / args.label
     if results_dir.exists():
-        sys.exit("error: {} already exists; use a new label".format(results_dir))
+        if args.force:
+            shutil.rmtree(results_dir)
+        else:
+            sys.exit(
+                "error: {} already exists; use a new label or --force".format(
+                    results_dir
+                )
+            )
     ctx = runner.RunContext(
         tenes_dir=args.tenes_dir,
         tool_dir=args.tool_dir,
@@ -80,6 +88,11 @@ def main():
     p_run.add_argument("--results-dir", default=str(BENCH_DIR / "results"))
     p_run.add_argument("--launcher", default=None, help='e.g. "mpirun -np 4"')
     p_run.add_argument("--repeat", type=int, default=None, help="override suite repeat")
+    p_run.add_argument(
+        "--force",
+        action="store_true",
+        help="delete an existing label directory before running",
+    )
     p_run.set_defaults(func=cmd_run)
 
     p_cmp = sub.add_parser("compare", help="compare two result directories")
