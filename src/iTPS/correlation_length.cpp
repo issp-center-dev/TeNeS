@@ -21,6 +21,7 @@
 #include <memory>
 #include "correlation_length.hpp"
 #include "iTPS.hpp"
+#include "../timer.hpp"
 
 namespace tenes::itps {
 
@@ -40,6 +41,8 @@ double calc_correlation_length(double e0_abs, double e1_abs, int L) {
 template <class ptensor>
 std::vector<typename iTPS<ptensor>::transfer_matrix_eigenvalues_type>
 iTPS<ptensor>::measure_transfer_matrix_eigenvalues() {
+  ScopedTimer scoped_timer("measure/correlation_length");
+
   // res[id][0]: direction
   // res[id][1]: coord
   // res[id][2]: value

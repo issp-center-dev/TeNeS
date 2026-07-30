@@ -20,6 +20,7 @@
 
 #include "../tensor.hpp"
 #include "../arnoldi.hpp"
+#include "../arpack_solver.hpp"
 
 #include "../util/abs.hpp"
 
@@ -114,7 +115,7 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     }
     std::vector<std::complex<double>> evecs;
     eigen(matrix_2, eigvals, evecs, nev);
-  } else {  // use Arnoldi
+  } else {  // use an iterative eigensolver (ARPACK-NG or builtin Arnoldi)
     auto maxvec = params.arnoldi_maxdim;
     auto maxiter = params.arnoldi_maxiter;
     if (N < static_cast<size_t>(maxvec)) {
@@ -123,22 +124,31 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     }
 
     ptensor initial_vec = initial_vector(dir, fixed_coord, rng);
-    Arnoldi<ptensor> arnoldi(N, maxvec);
-    arnoldi.initialize(initial_vec);
+    std::function<void(ptensor &, ptensor const &)> matvec;
     if (dir == 0) {
-      arnoldi.run(
-          [&](ptensor &out, ptensor const &in) {
-            matvec_horizontal(out, in, fixed_coord);
-          },
-          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+      matvec = [&](ptensor &out, ptensor const &in) {
+        matvec_horizontal(out, in, fixed_coord);
+      };
     } else {
-      arnoldi.run(
-          [&](ptensor &out, ptensor const &in) {
-            matvec_vertical(out, in, fixed_coord);
-          },
-          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+      matvec = [&](ptensor &out, ptensor const &in) {
+        matvec_vertical(out, in, fixed_coord);
+      };
     }
-    eigvals = arnoldi.eigenvalues();
+
+    const bool use_arpack =
+        params.eigensolver == TransferMatrixEigensolver::arpack ||
+        (params.eigensolver == TransferMatrixEigensolver::automatic &&
+         arpack_available());
+    if (use_arpack) {
+      eigvals = arpack_eigenvalues<ptensor>(matvec, initial_vec, nev, maxvec,
+                                            maxiter, params.arnoldi_rtol);
+    } else {
+      Arnoldi<ptensor> arnoldi(N, maxvec);
+      arnoldi.initialize(initial_vec);
+      arnoldi.run(matvec, nev, params.arnoldi_restartdim, maxiter,
+                  params.arnoldi_rtol);
+      eigvals = arnoldi.eigenvalues();
+    }
   }
   return eigvals;
 }
