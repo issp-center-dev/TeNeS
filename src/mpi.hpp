@@ -180,9 +180,27 @@ int allreduce_sum(std::complex<T> /* &val */, MPI_Comm /* comm */) {
 }
 
 template <class T>
-int allreduce_sum(std::vector<std::complex<T>> /* &val */,
-                  MPI_Comm /* comm */) {
-  throw tenes::unimplemented_error("allreduce for complex is not implemented");
+int allreduce_sum(std::vector<std::complex<T>> &val, MPI_Comm comm) {
+  int ret = 0;
+#ifndef _NO_MPI
+  const MPI_Datatype datatype = get_MPI_Datatype<T>();
+  const int sz = static_cast<int>(val.size());
+  std::vector<T> reim(2 * sz);
+  for (int i = 0; i < sz; ++i) {
+    reim[2 * i] = val[i].real();
+    reim[2 * i + 1] = val[i].imag();
+  }
+  std::vector<T> recv(reim);
+  ret = MPI_Allreduce(reim.data(), recv.data(), 2 * sz, datatype, MPI_SUM,
+                      comm);
+  if (ret != 0) {
+    return ret;
+  }
+  for (int i = 0; i < sz; ++i) {
+    val[i] = std::complex<T>(recv[2 * i], recv[2 * i + 1]);
+  }
+#endif
+  return ret;
 }
 
 template <class T>
