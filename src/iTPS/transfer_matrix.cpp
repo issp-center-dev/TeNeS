@@ -183,15 +183,16 @@ ptensor TransferMatrix_ctm<ptensor>::initial_vector(int dir, int fixed_coord,
     ptensor left_bottom = C4[lattice.top(site)];
     const size_t CHI_top = left_top.shape()[1];
     const size_t CHI_bottom = left_bottom.shape()[0];
-    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {CHI_top * CHI_bottom});
+    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}),
+                          {CHI_top * CHI_bottom});
   } else {
     int site = lattice.index(fixed_coord, 0);
     auto left_bottom = C4[site];
     auto right_bottom = C3[lattice.left(site)];
     const size_t CHI_left = left_bottom.shape()[1];
     const size_t CHI_right = right_bottom.shape()[0];
-    initial_vec =
-        reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {CHI_left * CHI_right});
+    initial_vec = reshape(tensordot(left_bottom, right_bottom, {0}, {1}),
+                          {CHI_left * CHI_right});
   }
   return initial_vec;
 }
@@ -408,7 +409,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   }
   res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
   const size_t rank = top.rank();
-  if (rank == 3) { // iTPO
+  if (rank == 3) {  // iTPO
     res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
       int site = lattice.index(x, y);
@@ -417,7 +418,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
       res = tensordot(res, tensordot(top, bottom, Axes(2), Axes(2)), Axes(2, 3),
                       Axes(0, 3));
     }
-  } else if (rank == 4) { // iTPS
+  } else if (rank == 4) {  // iTPS
     res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
                     Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
@@ -547,13 +548,13 @@ size_t TransferMatrix_ctm<ptensor>::dim(int dir, int fixed_coord) const {
   const auto &lattice = this->lattice;
   // for debug output
   const auto mpirank = this->Tn[0].get_comm_rank();
-  if(dir == 0){
+  if (dir == 0) {
     const int s0 = lattice.index(0, fixed_coord);
     const int s1 = lattice.top(s0);
     const size_t CHI0 = eTt[s0].shape()[0];
     const size_t CHI1 = eTb[s1].shape()[1];
     return CHI0 * CHI1;
-  }else{
+  } else {
     const int s0 = lattice.index(fixed_coord, 0);
     const int s1 = lattice.left(s0);
     const size_t CHI0 = eTl[s0].shape()[0];

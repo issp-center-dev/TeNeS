@@ -114,7 +114,7 @@ void iTPS<ptensor>::save_correlation_length(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   for (const auto &[dir, x, eigvals] : lambdas) {
-    if(eigvals.size() == 1){
+    if (eigvals.size() == 1) {
       if (time) {
         ofs << (*time) << " ";
       }

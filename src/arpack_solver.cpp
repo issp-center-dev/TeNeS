@@ -44,15 +44,14 @@ void dnaupd_(int *ido, const char *bmat, const int *n, const char *which,
              double *v, const int *ldv, int *iparam, int *ipntr, double *workd,
              double *workl, const int *lworkl, int *info, std::size_t bmat_len,
              std::size_t which_len);
-void dneupd_(const int *rvec, const char *howmny, const int *select,
-             double *dr, double *di, double *z, const int *ldz,
-             const double *sigmar, const double *sigmai, double *workev,
-             const char *bmat, const int *n, const char *which, const int *nev,
-             const double *tol, double *resid, const int *ncv, double *v,
-             const int *ldv, int *iparam, int *ipntr, double *workd,
-             double *workl, const int *lworkl, int *info,
-             std::size_t howmny_len, std::size_t bmat_len,
-             std::size_t which_len);
+void dneupd_(const int *rvec, const char *howmny, const int *select, double *dr,
+             double *di, double *z, const int *ldz, const double *sigmar,
+             const double *sigmai, double *workev, const char *bmat,
+             const int *n, const char *which, const int *nev, const double *tol,
+             double *resid, const int *ncv, double *v, const int *ldv,
+             int *iparam, int *ipntr, double *workd, double *workl,
+             const int *lworkl, int *info, std::size_t howmny_len,
+             std::size_t bmat_len, std::size_t which_len);
 void znaupd_(int *ido, const char *bmat, const int *n, const char *which,
              const int *nev, const double *tol, std::complex<double> *resid,
              const int *ncv, std::complex<double> *v, const int *ldv,
@@ -184,9 +183,8 @@ std::vector<dcomplex> run_arpack(serial_matvec_real const &av,
 }
 
 std::vector<dcomplex> run_arpack(serial_matvec_complex const &av,
-                                 std::vector<dcomplex> &resid, int nev,
-                                 int ncv, int maxiter, double tol,
-                                 bool print_warn) {
+                                 std::vector<dcomplex> &resid, int nev, int ncv,
+                                 int maxiter, double tol, bool print_warn) {
   const int n = static_cast<int>(resid.size());
   int ido = 0;
   int info = 1;  // resid contains the initial vector

@@ -138,8 +138,8 @@ TEST_CASE("arpack_eigenvalues, real") {
   const std::size_t nev = 2;
   auto A = [](rtensor &out, rtensor const &in) { matvec_real(out, in, N); };
 
-  auto ev = tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 10,
-                                               1.0e-10);
+  auto ev =
+      tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 10, 1.0e-10);
   REQUIRE(ev.size() == nev);
   CHECK(std::abs(ev[0]) == doctest::Approx(16.0).epsilon(1.0e-8));
   CHECK(std::abs(ev[1]) == doctest::Approx(8.0).epsilon(1.0e-8));
@@ -165,8 +165,8 @@ TEST_CASE("arpack agrees with the builtin Arnoldi") {
   const std::size_t nev = 2;
   auto A = [](rtensor &out, rtensor const &in) { matvec_real(out, in, N); };
 
-  auto ev_arpack = tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10,
-                                                      10, 1.0e-10);
+  auto ev_arpack =
+      tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 10, 1.0e-10);
 
   tenes::Arnoldi<rtensor> arnoldi(N, 10);
   arnoldi.initialize(ones_real(N));
@@ -188,8 +188,8 @@ TEST_CASE(
     matvec_conjugate_pair(out, in, N);
   };
 
-  auto ev = tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 50,
-                                               1.0e-10);
+  auto ev =
+      tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 50, 1.0e-10);
   REQUIRE(ev.size() == nev);
   // dominant, isolated eigenvalue must survive the nev+1 -> nev truncation
   CHECK(std::abs(ev[0]) == doctest::Approx(10.0).epsilon(1.0e-6));

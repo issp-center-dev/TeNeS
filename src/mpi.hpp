@@ -191,8 +191,8 @@ int allreduce_sum(std::vector<std::complex<T>> &val, MPI_Comm comm) {
     reim[2 * i + 1] = val[i].imag();
   }
   std::vector<T> recv(reim);
-  ret = MPI_Allreduce(reim.data(), recv.data(), 2 * sz, datatype, MPI_SUM,
-                      comm);
+  ret =
+      MPI_Allreduce(reim.data(), recv.data(), 2 * sz, datatype, MPI_SUM, comm);
   if (ret != 0) {
     return ret;
   }
