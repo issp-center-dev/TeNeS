@@ -6,8 +6,12 @@ endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-foreach(basename input simple_update full_update tensor_util util
-        correlation_length saveload arnoldi timer_registry)
+set(tenes_unit_tests input simple_update full_update tensor_util util
+    correlation_length saveload arnoldi timer_registry)
+if(TENES_ARPACK_FOUND)
+  list(APPEND tenes_unit_tests arpack)
+endif()
+foreach(basename IN LISTS tenes_unit_tests)
   set(testname "test_${basename}")
   add_executable(${testname} "${basename}.cpp")
 

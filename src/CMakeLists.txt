@@ -19,10 +19,11 @@ target_include_directories(tenes_mpi PUBLIC ${MPI_CXX_INCLUDE_DIRS}
 target_link_libraries(tenes_mpi INTERFACE ${MPI_CXX_LIBRARIES}
                                           ${OpenMP_CXX_LIBRARIES})
 
-add_library(tensor STATIC tensor.cpp arnoldi.cpp)
+add_library(tensor STATIC tensor.cpp arnoldi.cpp arpack_solver.cpp)
 target_include_directories(tensor PUBLIC ${MPTENSOR_INCLUDE_DIR})
 target_link_libraries(tensor INTERFACE ${SCALAPACK_LIBRARIES}
-                                       ${LAPACK_LIBRARIES} mptensor)
+                                       ${LAPACK_LIBRARIES}
+                                       ${TENES_ARPACK_LIBRARIES} mptensor)
 target_link_libraries(tensor PUBLIC tenes_mpi)
 
 add_library(SquareLattice STATIC SquareLattice.cpp)
