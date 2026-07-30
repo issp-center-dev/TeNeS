@@ -1,0 +1,18 @@
+# A/B comparison of the transfer-matrix eigensolver
+# (builtin Arnoldi vs ARPACK-NG).
+# The "arpack" cases require a binary built with ARPACK-NG (ENABLE_ARPACK);
+# without it they fail at input loading.
+# Compare the measure/correlation_length timer between the two cases of the
+# SAME run; `bench.py compare` is for commit-to-commit comparison.
+[suite]
+name = "correlation_length"
+repeat = 3
+
+[[case]]
+name = "clength_${eigensolver}_D${D}_chi${chi}"
+template = "../templates/afh_square_clength.toml"
+params = { simple_steps = 100 }
+sweep = { Lsub = [[2, 1]], D = [3], chi_ratio = [3], eigensolver = ["builtin", "arpack"] }
+
+# chi = chi_ratio x D^2 = 27 -> transfer-matrix dimension N = 729 > 50,
+# so both cases take the iterative eigensolver path.

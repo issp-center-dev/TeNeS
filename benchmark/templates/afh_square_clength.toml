@@ -1,0 +1,36 @@
+# Antiferromagnetic Heisenberg model on the square lattice,
+# with the correlation-length measurement enabled.
+# Placeholders: ${simple_steps} ${chi} ${L} ${W} ${D} ${eigensolver}
+[parameter]
+[parameter.general]
+output = "output"
+
+[parameter.simple_update]
+num_step = ${simple_steps}
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
+
+[parameter.ctm]
+dimension = ${chi}
+iteration_max = 10
+meanfield_env = false
+
+[correlation_length]
+measure = true
+# force the iterative (Arnoldi/ARPACK) path even for moderate chi
+maxdim_dense_eigensolver = 50
+eigensolver = "${eigensolver}"
+
+[lattice]
+type = "square lattice"
+L = ${L}
+W = ${W}
+initial = "antiferro"
+virtual_dim = ${D}
+
+[model]
+type = "spin"
+J = 1.0
