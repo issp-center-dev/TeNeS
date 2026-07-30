@@ -116,8 +116,14 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     std::vector<std::complex<double>> evecs;
     eigen(matrix_2, eigvals, evecs, nev);
   } else {  // use an iterative eigensolver (ARPACK-NG or builtin Arnoldi)
-    auto maxvec = params.arnoldi_maxdim;
-    auto maxiter = params.arnoldi_maxiter;
+    const bool use_arpack =
+        params.eigensolver == TransferMatrixEigensolver::arpack ||
+        (params.eigensolver == TransferMatrixEigensolver::automatic &&
+         arpack_available());
+
+    int maxvec = effective_arnoldi_maxdim(params.arnoldi_maxdim,
+                                          static_cast<int>(nev), use_arpack);
+    int maxiter = effective_arnoldi_maxiter(params.arnoldi_maxiter, use_arpack);
     if (N < static_cast<size_t>(maxvec)) {
       maxvec = N;
       maxiter = 1;
@@ -134,19 +140,16 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
         matvec_vertical(out, in, fixed_coord);
       };
     }
-
-    const bool use_arpack =
-        params.eigensolver == TransferMatrixEigensolver::arpack ||
-        (params.eigensolver == TransferMatrixEigensolver::automatic &&
-         arpack_available());
     if (use_arpack) {
       eigvals = arpack_eigenvalues<ptensor>(matvec, initial_vec, nev, maxvec,
                                             maxiter, params.arnoldi_rtol);
     } else {
       Arnoldi<ptensor> arnoldi(N, maxvec);
       arnoldi.initialize(initial_vec);
-      arnoldi.run(matvec, nev, params.arnoldi_restartdim, maxiter,
-                  params.arnoldi_rtol);
+      arnoldi.run(matvec, nev,
+                  effective_arnoldi_restartdim(params.arnoldi_restartdim,
+                                               static_cast<int>(nev), maxvec),
+                  maxiter, params.arnoldi_rtol);
       eigvals = arnoldi.eigenvalues();
     }
   }

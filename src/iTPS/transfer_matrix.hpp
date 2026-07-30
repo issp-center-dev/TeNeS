@@ -17,6 +17,7 @@
 #ifndef TENES_SRC_ITPS_TRANSFER_MATRIX_HPP_
 #define TENES_SRC_ITPS_TRANSFER_MATRIX_HPP_
 
+#include <algorithm>
 #include <vector>
 #include <random>
 
@@ -24,6 +25,39 @@
 #include "../SquareLattice.hpp"
 
 namespace tenes::itps {
+
+//! Resolve the automatic (non-positive) arnoldi_maxdim.
+//!
+//! The subspace dimension scales with the number of requested eigenvalues,
+//! and the floor depends on the solver: ARPACK-NG converges reliably from a
+//! small subspace by restarting, while the builtin solver has a weak restart
+//! and needs a subspace large enough to converge in a single sweep.
+inline int effective_arnoldi_maxdim(int arnoldi_maxdim, int num_eigvals,
+                                    bool use_arpack) {
+  if (arnoldi_maxdim > 0) {
+    return arnoldi_maxdim;
+  }
+  return std::max(2 * num_eigvals + 1, use_arpack ? 25 : 50);
+}
+
+//! Resolve the automatic (non-positive) arnoldi_maxiterations: ARPACK-NG
+//! is given room to restart; the builtin solver is not (see above).
+inline int effective_arnoldi_maxiter(int arnoldi_maxiter, bool use_arpack) {
+  if (arnoldi_maxiter > 0) {
+    return arnoldi_maxiter;
+  }
+  return use_arpack ? 10 : 1;
+}
+
+//! Resolve the automatic (non-positive) arnoldi_restartdim: keep half of
+//! the Krylov subspace on restart (at least num_eigvals + 1 vectors).
+inline int effective_arnoldi_restartdim(int arnoldi_restartdim, int num_eigvals,
+                                        int maxdim) {
+  if (arnoldi_restartdim > 0) {
+    return arnoldi_restartdim;
+  }
+  return std::max(num_eigvals + 1, maxdim / 2);
+}
 
 //! How to solve the transfer-matrix eigenproblem (when larger than
 //! maxdim_dense_eigensolver)
@@ -47,9 +81,9 @@ struct TransferMatrix_Parameters {
       : to_calculate(true),
         num_eigvals(4),
         maxdim_dense_eigensolver(200),
-        arnoldi_maxdim(50),
-        arnoldi_restartdim(20),
-        arnoldi_maxiter(1),
+        arnoldi_maxdim(0),      // 0 means automatic
+        arnoldi_restartdim(0),  // 0 means automatic
+        arnoldi_maxiter(0),     // 0 means automatic
         arnoldi_rtol(1.0e-10),
         eigensolver(TransferMatrixEigensolver::automatic) {}
   void Bcast(MPI_Comm comm, int root = 0);
