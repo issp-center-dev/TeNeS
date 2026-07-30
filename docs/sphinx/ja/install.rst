@@ -38,6 +38,25 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
 
 でインストールすることが可能です。それ以外の方は、Open MPI などのMPI実装ならびに ScaLAPACKのホームページを参照の上、インストールをしてください。
 
+また、TeNeS は任意の依存ライブラリとして `ARPACK-NG <https://github.com/opencollab/arpack-ng>`_ を利用できます。
+インストールされていれば CMake が自動的に検出・リンクし、相関長計算における転送行列の
+固有値ソルバとして使われます(入力ファイルの ``correlation_length`` セクションの
+``eigensolver`` パラメータを参照)。なくてもビルド・実行に支障はありません
+(組み込みのソルバが使われます)。
+Debian GNU/Linux (やその派生ディストリビューション)では
+
+.. code::
+
+   sudo apt install libarpack2-dev
+
+macOS (Homebrew) では
+
+.. code::
+
+   brew install arpack
+
+でインストールすることが可能です。
+
 入力ファイル作成ツールの使用には Python (>= 3.0.0) および
 以下の Python パッケージが必要です。
 
@@ -104,6 +123,19 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
   ::
 
     $ cmake -DSCALAPACK_ROOT=<path> ../
+
+
+.. admonition:: ARPACK-NG の検出の制御
+
+   CMake は自動で ARPACK-NG を検出します(見つからない場合は組み込みソルバのみでビルドされます)。
+   検出の挙動は ``-DENABLE_ARPACK=AUTO/ON/OFF`` で制御できます
+   (デフォルトは ``AUTO`` 。 ``ON`` では見つからない場合にエラーになり、
+   ``OFF`` では検出を行いません)。
+   特定の場所にインストールされた ARPACK-NG (``<path>/lib/libarpack.so``)を
+   利用したい場合には以下のようにオプションを追加してください。
+   ::
+
+      $ cmake -DARPACK_ROOT=<path> ../
 
 
 .. admonition:: mptensor の指定

@@ -39,6 +39,23 @@ you can easily install them by the following:
 
 For others, see the official instruction of some MPI implementation and ScaLAPACK.
 
+TeNeS can also use `ARPACK-NG <https://github.com/opencollab/arpack-ng>`_ as an optional dependency.
+When it is installed, CMake detects and links it automatically, and it is used as the
+eigensolver for the transfer matrices in the correlation-length measurement
+(see the ``eigensolver`` parameter of the ``correlation_length`` section of the input file).
+TeNeS builds and runs fine without it (the builtin solver is used instead).
+On Debian GNU/Linux (or Debian based systems such as Ubuntu), it can be installed by
+
+.. code::
+
+   sudo apt install libarpack2-dev
+
+and on macOS (Homebrew) by
+
+.. code::
+
+   brew install arpack
+
 Python3 is required for the input file generators, ``tenes_simple`` and ``tenes_std`` .
 Additionary, the following python packages are also required.
 
@@ -103,6 +120,20 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
   ::
 
     $ cmake -DSCALAPACK_ROOT=<path> ../
+
+.. admonition:: Control the detection of ARPACK-NG
+
+   CMake detects ARPACK-NG automatically (when it is not found, TeNeS is built
+   with the builtin solver only). The behavior can be controlled by
+   ``-DENABLE_ARPACK=AUTO/ON/OFF`` (default ``AUTO``; ``ON`` raises an error
+   when ARPACK-NG is not found, and ``OFF`` disables the detection).
+   If you want to use ARPACK-NG installed in a specific location
+   (``<path>/lib/libarpack.so``), add the following option:
+
+   ::
+
+      $ cmake -DARPACK_ROOT=<path> ../
+
 
 .. admonition:: Use the pre-built mptensor
 
