@@ -141,8 +141,11 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
       };
     }
     if (use_arpack) {
+      // in automatic mode, let ARPACK grow the subspace and retry instead
+      // of reporting NaN when it fails to converge
       eigvals = arpack_eigenvalues<ptensor>(matvec, initial_vec, nev, maxvec,
-                                            maxiter, params.arnoldi_rtol);
+                                            maxiter, params.arnoldi_rtol,
+                                            params.arnoldi_maxdim <= 0);
     } else {
       Arnoldi<ptensor> arnoldi(N, maxvec);
       arnoldi.initialize(initial_vec);

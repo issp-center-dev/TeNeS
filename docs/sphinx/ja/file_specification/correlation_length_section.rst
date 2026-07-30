@@ -38,7 +38,10 @@ IRA 法では、 Arnoldi 過程によって大きさ ``arnoldi_maxdim`` のHesse
 ほとんど依存しません。相関長が大きい(臨界点に近い)系では転送行列のスペクトルが
 密になり収束が遅くなるため、 ``arnoldi_maxdim`` を増やすか、restart 回数
 ``arnoldi_maxiterations`` を増やしてください。
-ARPACK-NG 使用時に部分空間が不足すると、未収束の固有値は NaN として出力されます
+ARPACK-NG 使用時に部分空間が不足すると、 ``arnoldi_maxdim`` が自動(0 以下)の
+場合は部分空間を 2 倍(上限は行列サイズ)にしながら収束するまで自動的に再試行します。
+``arnoldi_maxdim`` を明示的に指定した場合は再試行せず、未収束の固有値は NaN として
+出力され、相関長 :math:`\xi` の列も NaN になります
 (組み込みソルバは未収束でも近似値をそのまま返します)。
 
 行列サイズが ``maxdim_dense_eigensolver`` より大きい場合に使う反復固有値ソルバは

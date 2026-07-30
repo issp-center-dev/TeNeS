@@ -42,8 +42,13 @@ of the eigenvalues and is almost independent of the matrix size.
 For systems with a large correlation length (close to criticality), the spectrum
 of the transfer matrix becomes dense and convergence slows down; increase
 ``arnoldi_maxdim`` or the number of restarts ``arnoldi_maxiterations`` in that case.
-With ARPACK-NG, eigenvalues that fail to converge within the subspace are
-reported as NaN (the builtin solver returns unconverged approximants as-is).
+When ARPACK-NG fails to converge within the subspace and ``arnoldi_maxdim``
+is automatic (zero or negative), the subspace is doubled (capped at the
+matrix size) and the computation is retried automatically until convergence.
+With an explicitly specified ``arnoldi_maxdim`` there is no retry: eigenvalues
+that fail to converge are reported as NaN and the correlation length
+:math:`\xi` column becomes NaN as well (the builtin solver returns
+unconverged approximants as-is).
 
 The iterative eigensolver used when the matrix size exceeds
 ``maxdim_dense_eigensolver`` can be chosen by ``eigensolver``.

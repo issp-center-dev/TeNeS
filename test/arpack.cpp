@@ -239,3 +239,22 @@ TEST_CASE(
     CHECK(std::isnan(ev[i].imag()));
   }
 }
+
+TEST_CASE("arpack grows the subspace and retries when grow_ncv is set") {
+  const std::size_t N = 20;
+  const std::size_t nev = 2;
+  auto A = [](rtensor &out, rtensor const &in) { matvec_real(out, in, N); };
+
+  // ncv = 4 with a single sweep (maxiter = 1) cannot reach tol = 1e-12 for
+  // this spectrum, so the first attempt fails. With grow_ncv the solver
+  // doubles the subspace and retries; at the cap ncv = N the Krylov space
+  // spans the full space and convergence is exact, so the loop terminates
+  // deterministically with the correct eigenvalues.
+  auto ev = tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 4, 1,
+                                               1.0e-12, true);
+  REQUIRE(ev.size() == nev);
+  CHECK(std::abs(ev[0]) == doctest::Approx(16.0).epsilon(1.0e-8));
+  CHECK(std::abs(ev[1]) == doctest::Approx(8.0).epsilon(1.0e-8));
+  CHECK_FALSE(std::isnan(ev[0].real()));
+  CHECK_FALSE(std::isnan(ev[1].real()));
+}

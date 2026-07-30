@@ -268,7 +268,7 @@ std::vector<dcomplex> run_arpack(serial_matvec_complex const &av,
 template <class ptensor>
 std::vector<std::complex<double>> arpack_eigenvalues(
     std::function<void(ptensor &, ptensor const &)> A, ptensor const &initial,
-    std::size_t nev, int ncv, int maxiter, double tol) {
+    std::size_t nev, int ncv, int maxiter, double tol, bool grow_ncv) {
   using value_type = typename ptensor::value_type;
   const int N = static_cast<int>(initial.shape()[0]);
   const int nev_ = static_cast<int>(nev);
@@ -289,7 +289,6 @@ std::vector<std::complex<double>> arpack_eigenvalues(
   }
 
   const MPI_Comm comm = initial.get_comm();
-  std::vector<value_type> resid = gather_vector(initial);
   auto serial_matvec = [&](std::vector<value_type> &out,
                            std::vector<value_type> const &in) {
     ptensor x(comm, mptensor::Shape(N));
@@ -299,8 +298,26 @@ std::vector<std::complex<double>> arpack_eigenvalues(
     out = gather_vector(y);
   };
 
-  std::vector<dcomplex> ev =
-      run_arpack(serial_matvec, resid, nev_, ncv_, maxiter, tol, print_warn);
+  std::vector<dcomplex> ev;
+  while (true) {
+    // run_arpack overwrites resid, so regather the initial vector per attempt
+    std::vector<value_type> resid = gather_vector(initial);
+    ev = run_arpack(serial_matvec, resid, nev_, ncv_, maxiter, tol, print_warn);
+    if (static_cast<int>(ev.size()) >= nev_ || !grow_ncv || ncv_ >= N) {
+      break;
+    }
+    // At ncv == N the Krylov space spans the full space and convergence is
+    // exact, so this retry loop terminates deterministically.
+    const int ncv_new = std::min(2 * ncv_, N);
+    if (print_warn) {
+      std::cerr << "WARNING: ARPACK converged only " << ev.size() << " of "
+                << nev
+                << " eigenvalues; retrying with the Krylov subspace "
+                   "grown from "
+                << ncv_ << " to " << ncv_new << std::endl;
+    }
+    ncv_ = ncv_new;
+  }
 
   std::sort(ev.begin(), ev.end(), [](dcomplex const &a, dcomplex const &b) {
     return util::abs2(a) > util::abs2(b);
@@ -328,7 +345,7 @@ template <class ptensor>
 std::vector<std::complex<double>> arpack_eigenvalues(
     std::function<void(ptensor &, ptensor const &)> /* A */,
     ptensor const & /* initial */, std::size_t /* nev */, int /* ncv */,
-    int /* maxiter */, double /* tol */) {
+    int /* maxiter */, double /* tol */, bool /* grow_ncv */) {
   throw std::logic_error(
       "internal error: arpack_eigenvalues is called, but TeNeS was built "
       "without ARPACK-NG");
@@ -338,9 +355,9 @@ std::vector<std::complex<double>> arpack_eigenvalues(
 
 template std::vector<std::complex<double>> arpack_eigenvalues<real_tensor>(
     std::function<void(real_tensor &, real_tensor const &)>,
-    real_tensor const &, std::size_t, int, int, double);
+    real_tensor const &, std::size_t, int, int, double, bool);
 template std::vector<std::complex<double>> arpack_eigenvalues<complex_tensor>(
     std::function<void(complex_tensor &, complex_tensor const &)>,
-    complex_tensor const &, std::size_t, int, int, double);
+    complex_tensor const &, std::size_t, int, int, double, bool);
 
 }  // end of namespace tenes

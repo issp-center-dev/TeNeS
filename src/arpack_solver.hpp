@@ -50,6 +50,9 @@ constexpr bool arpack_available() {
  * @param[in] maxiter Maximum number of implicit restarts
  * @param[in] tol Relative tolerance on the Ritz values (<= 0 means
  *                machine epsilon)
+ * @param[in] grow_ncv If true and fewer than nev eigenvalues converge,
+ *                     double ncv (capped at N, where convergence is exact)
+ *                     and retry until all nev converge or ncv reaches N.
  * @return Eigenvalues sorted by decreasing magnitude, size nev. If fewer
  *         than nev eigenvalues converge, the tail is NaN and a warning is
  *         printed on rank 0.
@@ -60,7 +63,7 @@ constexpr bool arpack_available() {
 template <class ptensor>
 std::vector<std::complex<double>> arpack_eigenvalues(
     std::function<void(ptensor &, ptensor const &)> A, ptensor const &initial,
-    std::size_t nev, int ncv, int maxiter, double tol);
+    std::size_t nev, int ncv, int maxiter, double tol, bool grow_ncv = false);
 
 }  // end of namespace tenes
 
