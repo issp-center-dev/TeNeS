@@ -10,9 +10,9 @@
   - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
   - CMake option `CPPTOML_ROOT` is renamed to `TOML11_ROOT` ([#108][])
   - Now always writes `output/timers.json`: cumulative wall times per hierarchical timer name (total / phase/* / contract/*), with per-MPI-rank max/min ([#110][])
-  - The transfer-matrix eigensolver for the correlation length can now use ARPACK-NG; TeNeS links it automatically when found (CMake option `ENABLE_ARPACK=AUTO/ON/OFF`, hint `ARPACK_ROOT`), and the solver can be chosen per run by `correlation_length.eigensolver = "auto" / "arpack" / "builtin"`
-  - `correlation_length.arnoldi_maxdim`, `arnoldi_restartdim`, and `arnoldi_maxiterations` now default to 0, meaning a solver-dependent automatic value scaled by `num_eigvals` (ARPACK-NG: small subspace with restarts; builtin: a large single sweep reproducing the previous defaults); explicit values are used as-is
-  - When ARPACK-NG fails to converge with an automatic `arnoldi_maxdim`, the Krylov subspace is doubled (up to the matrix size) and the computation retried; with an explicit `arnoldi_maxdim`, unconverged eigenvalues and the resulting correlation length are reported as NaN instead of a misleading finite value
+  - The transfer-matrix eigensolver for the correlation length can now use ARPACK-NG; TeNeS links it automatically when found (CMake option `ENABLE_ARPACK=AUTO/ON/OFF`, hint `ARPACK_ROOT`), and the solver can be chosen per run by `correlation_length.eigensolver = "auto" / "arpack" / "builtin"` ([#111][])
+  - `correlation_length.arnoldi_maxdim`, `arnoldi_restartdim`, and `arnoldi_maxiterations` now default to 0, meaning a solver-dependent automatic value scaled by `num_eigvals` (ARPACK-NG: small subspace with restarts; builtin: a large single sweep reproducing the previous defaults); explicit values are used as-is ([#111][])
+  - When ARPACK-NG fails to converge with an automatic `arnoldi_maxdim`, the Krylov subspace is doubled (up to the matrix size) and the computation retried; with an explicit `arnoldi_maxdim`, unconverged eigenvalues and the resulting correlation length are reported as NaN instead of a misleading finite value ([#111][])
 
 ### Bug fixes
 
@@ -28,7 +28,7 @@
 - Updated the bundled mptensor to v0.5.0 ([#104][])
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
 - Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
-- Added a `correlation_length` benchmark suite comparing the builtin Arnoldi and ARPACK-NG eigensolvers within one run
+- Added a `correlation_length` benchmark suite comparing the builtin Arnoldi and ARPACK-NG eigensolvers within one run ([#111][])
 
 ### Documentation and samples
 
@@ -126,3 +126,4 @@
 [#108]: https://github.com/issp-center-dev/TeNeS/pull/108
 [#109]: https://github.com/issp-center-dev/TeNeS/pull/109
 [#110]: https://github.com/issp-center-dev/TeNeS/pull/110
+[#111]: https://github.com/issp-center-dev/TeNeS/pull/111
