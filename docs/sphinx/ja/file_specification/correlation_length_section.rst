@@ -13,6 +13,7 @@
    ``arnoldi_restartdim``,       "Arnoldi 法のリスタートで生成する初期ベクトルの本数", 整数,   20
    ``arnoldi_maxiterations``,    "Arnoldi 法の最大イテレーション回数",                 整数,   1
    ``arnoldi_rtol``,             "Arnoldi 法で目指す相対残差",                         実数,   1e-10
+   ``eigensolver``,              "転送行列の固有値ソルバ(auto / arpack / builtin)",   文字列, auto
 
 
 相関長は転送行列の固有値から計算されます。
@@ -22,3 +23,17 @@
 IRA 法では、 Arnoldi 過程によって大きさ ``arnoldi_maxdim`` のHessenberg 行列を生成し、その固有値を計算します。
 収束していない場合は、新たに ``arnoldi_restartdim`` 本の初期ベクトルを作成し、 Arnodi 過程をやり直します (restart)。
 転送行列の場合は、多くの場合で restart をする必要はありません (``arnoldi_maxiterations = 1``)。
+
+行列サイズが ``maxdim_dense_eigensolver`` より大きい場合に使う反復固有値ソルバは
+``eigensolver`` で選べます。
+
+- ``"auto"`` (デフォルト): ARPACK-NG 付きでビルドされていれば ARPACK-NG を、
+  そうでなければ組み込みの IRA 法を使います。
+- ``"arpack"``: ARPACK-NG を使います。ARPACK-NG なしでビルドされたバイナリでは
+  入力エラーになります(CMake オプション ``-DENABLE_ARPACK=ON`` でビルドしてください)。
+- ``"builtin"``: 組み込みの IRA 法を使います。
+
+ARPACK-NG を使う場合、 ``arnoldi_maxdim`` は Krylov 部分空間の次元 (ncv)、
+``arnoldi_maxiterations`` は implicit restart の最大回数、 ``arnoldi_rtol`` は
+Ritz 値の相対残差の許容値として引き継がれます。
+``arnoldi_restartdim`` は組み込みソルバでのみ意味を持ちます。
