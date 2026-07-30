@@ -17,7 +17,6 @@
 #include "arpack_solver.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <complex>
 #include <iostream>
 #include <limits>
@@ -36,6 +35,9 @@ namespace tenes {
 // Direct declarations of the four ARPACK-NG routines (arpack++ style).
 // The trailing std::size_t arguments are the hidden lengths of the
 // CHARACTER dummy arguments appended by Fortran compilers (gfortran etc.).
+// All INTEGER arguments (n, nev, ncv, iparam, ipntr, info, ...) are assumed
+// to be 32-bit (standard/"LP64" ARPACK-NG, not ILP64), consistent with the
+// 32-bit LAPACK/BLAS integers TeNeS already assumes elsewhere.
 extern "C" {
 void dnaupd_(int *ido, const char *bmat, const int *n, const char *which,
              const int *nev, const double *tol, double *resid, const int *ncv,
@@ -165,7 +167,14 @@ std::vector<dcomplex> run_arpack(serial_matvec_real const &av,
     throw_arpack_error("dneupd", ierr);
   }
 
-  const int nconv = std::min(iparam[4], nev);
+  // ARPACK does not return dr/di sorted by decreasing |lambda|, and when
+  // the nev-th and (nev+1)-th Ritz values form a complex-conjugate pair,
+  // dngets bumps the internal nev up by one to keep the pair together, so
+  // iparam[4] ("nconv") can be nev + 1. Read every value ARPACK actually
+  // wrote (dr/di are sized nev + 1) rather than blindly slicing the first
+  // nev, or the true largest-magnitude eigenvalue can be dropped; the
+  // caller sorts by |lambda| and truncates to nev afterwards.
+  const int nconv = std::min(iparam[4], nev + 1);
   std::vector<dcomplex> ev;
   ev.reserve(nconv);
   for (int i = 0; i < nconv; ++i) {
@@ -225,7 +234,10 @@ std::vector<dcomplex> run_arpack(serial_matvec_complex const &av,
     throw_arpack_error("zneupd", ierr);
   }
 
-  const int nconv = std::min(iparam[4], nev);
+  // See the real overload above: nconv (iparam[4]) can be nev + 1 when a
+  // conjugate pair straddles the requested nev, and d is sized nev + 1 to
+  // allow for that.
+  const int nconv = std::min(iparam[4], nev + 1);
   return std::vector<dcomplex>(d.begin(), d.begin() + nconv);
 }
 
@@ -277,9 +289,14 @@ std::vector<std::complex<double>> arpack_eigenvalues(
                 << nev << " eigenvalues; the rest are reported as NaN"
                 << std::endl;
     }
-    ev.resize(nev, dcomplex(std::numeric_limits<double>::quiet_NaN(),
-                            std::numeric_limits<double>::quiet_NaN()));
   }
+  // Unconditional: run_arpack() may return up to nev + 1 entries (see the
+  // comment at its nconv computation), so this both pads (fewer than nev
+  // converged) and truncates (a conjugate pair pushed nconv to nev + 1) to
+  // exactly nev, keeping the nev largest-|lambda| values now that ev is
+  // sorted.
+  ev.resize(nev, dcomplex(std::numeric_limits<double>::quiet_NaN(),
+                          std::numeric_limits<double>::quiet_NaN()));
   return ev;
 }
 

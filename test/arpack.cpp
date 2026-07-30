@@ -20,6 +20,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <vector>
 
 #include "../src/arpack_solver.hpp"
 #include "../src/arnoldi.hpp"
@@ -39,25 +40,78 @@ namespace {
 using rtensor = tenes::real_tensor;
 using ctensor = tenes::complex_tensor;
 
-// A x for the diagonal matrix A = diag(2^0, 2^-1, ..., 2^-(N-1)), scaled by 16
+// The matvec functions below are written to be safe to run with more than
+// one rank (even though this build/test only ever exercises a single rank:
+// ENABLE_MPI is off on this platform). They only touch entries of `out`
+// that `out.local_size()`/`out.global_index()` say this rank owns, and
+// initialize scratch values before a possibly-failing `get_value()`
+// (get_value returns false, leaving its output argument untouched, for an
+// index this rank does not own) instead of reading uninitialized memory.
+
+// A x for the diagonal matrix A = diag(2^0, 2^-1, ..., 2^-(N-1)), scaled by
+// 16. Diagonal, so `out`'s and `in`'s local entries line up index-for-index
+// (both share the same shape and comm, hence the same distribution).
 void matvec_real(rtensor &out, rtensor const &in, std::size_t N) {
-  out = rtensor(mptensor::Shape(N));
-  for (std::size_t i = 0; i < N; ++i) {
-    double v;
-    in.get_value({i}, v);
-    out.set_value({i}, 16.0 * std::pow(2.0, -static_cast<double>(i)) * v);
+  out = rtensor(in.get_comm(), mptensor::Shape(N));
+  for (std::size_t n = 0; n < out.local_size(); ++n) {
+    const auto index = out.global_index(n);
+    double v = 0.0;
+    in.get_value(index, v);
+    out.set_value(index,
+                  16.0 * std::pow(2.0, -static_cast<double>(index[0])) * v);
   }
 }
 
 // the same spectrum rotated to the imaginary axis: A = diag(16i * 2^-i)
 void matvec_complex(ctensor &out, ctensor const &in, std::size_t N) {
-  out = ctensor(mptensor::Shape(N));
+  out = ctensor(in.get_comm(), mptensor::Shape(N));
   const std::complex<double> I(0.0, 1.0);
-  for (std::size_t i = 0; i < N; ++i) {
-    std::complex<double> v;
-    in.get_value({i}, v);
-    out.set_value({i},
-                  16.0 * I * std::pow(2.0, -static_cast<double>(i)) * v);
+  for (std::size_t n = 0; n < out.local_size(); ++n) {
+    const auto index = out.global_index(n);
+    std::complex<double> v(0.0, 0.0);
+    in.get_value(index, v);
+    out.set_value(index,
+                  16.0 * I * std::pow(2.0, -static_cast<double>(index[0])) * v);
+  }
+}
+
+// gather a distributed rank-1 real tensor into a full copy on every rank.
+// Needed (unlike the diagonal matvecs above) because the conjugate-pair
+// matvec below couples entries 1 and 2, which is not guaranteed to be a
+// purely-local operation once run with more than one rank.
+std::vector<double> gather_real(rtensor const &t, std::size_t N) {
+  std::vector<double> buf(N, 0.0);
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const auto index = t.global_index(n);
+    double v = 0.0;
+    if (t.get_value(index, v)) {
+      buf[index[0]] = v;
+    }
+  }
+  tenes::allreduce_sum(buf, t.get_comm());
+  return buf;
+}
+
+// A with an isolated eigenvalue 10 and a complex-conjugate pair 8 +/- 1i
+// coming from the 2x2 block [[8, 1], [-1, 8]] (char. poly (8-l)^2 + 1 = 0),
+// with all remaining eigenvalues much smaller in magnitude. Regression case
+// for ARPACK converging nconv = nev + 1: requesting nev = 2 largest-|l|
+// eigenvalues would otherwise split the conjugate pair, so ARPACK reports
+// all three of {10, 8+1i, 8-1i} and a naive "keep the first nev" slice
+// (before sorting by magnitude) can drop the dominant eigenvalue 10.
+void matvec_conjugate_pair(rtensor &out, rtensor const &in, std::size_t N) {
+  out = rtensor(in.get_comm(), mptensor::Shape(N));
+  std::vector<double> x = gather_real(in, N);
+  std::vector<double> y(N, 0.0);
+  y[0] = 10.0 * x[0];
+  y[1] = 8.0 * x[1] + 1.0 * x[2];
+  y[2] = -1.0 * x[1] + 8.0 * x[2];
+  for (std::size_t i = 3; i < N; ++i) {
+    y[i] = std::pow(2.0, -static_cast<double>(i - 3)) * x[i];
+  }
+  for (std::size_t n = 0; n < out.local_size(); ++n) {
+    const auto index = out.global_index(n);
+    out.set_value(index, y[index[0]]);
   }
 }
 
@@ -123,4 +177,22 @@ TEST_CASE("arpack agrees with the builtin Arnoldi") {
     CHECK(std::abs(ev_arpack[i]) ==
           doctest::Approx(std::abs(ev_builtin[i])).epsilon(1.0e-6));
   }
+}
+
+TEST_CASE(
+    "arpack_eigenvalues keeps the dominant eigenvalue when a conjugate pair "
+    "makes ARPACK converge nev + 1 Ritz values") {
+  const std::size_t N = 20;
+  const std::size_t nev = 2;
+  auto A = [](rtensor &out, rtensor const &in) {
+    matvec_conjugate_pair(out, in, N);
+  };
+
+  auto ev = tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 10, 50,
+                                               1.0e-10);
+  REQUIRE(ev.size() == nev);
+  // dominant, isolated eigenvalue must survive the nev+1 -> nev truncation
+  CHECK(std::abs(ev[0]) == doctest::Approx(10.0).epsilon(1.0e-6));
+  // one of the 8 +/- 1i conjugate pair
+  CHECK(std::abs(ev[1]) == doctest::Approx(std::sqrt(65.0)).epsilon(1.0e-6));
 }
