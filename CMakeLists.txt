@@ -73,6 +73,39 @@ endif()
 
 find_package(LAPACK REQUIRED)
 
+# ARPACK-NG (optional): eigensolver for the transfer matrix.
+# AUTO: use if found / ON: required / OFF: do not search
+set(ENABLE_ARPACK "AUTO" CACHE STRING
+    "Use ARPACK-NG for the transfer-matrix eigensolver (AUTO/ON/OFF)")
+set_property(CACHE ENABLE_ARPACK PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER "${ENABLE_ARPACK}" _enable_arpack)
+set(TENES_ARPACK_FOUND OFF)
+set(TENES_ARPACK_LIBRARIES "")
+if(NOT _enable_arpack STREQUAL "OFF")
+    find_package(arpackng QUIET CONFIG NAMES arpackng arpack-ng
+                 HINTS ${ARPACK_ROOT})
+    if(TARGET ARPACK::ARPACK)
+        set(TENES_ARPACK_FOUND ON)
+        set(TENES_ARPACK_LIBRARIES ARPACK::ARPACK)
+    else()
+        find_library(ARPACK_LIBRARY NAMES arpack
+                     HINTS ${ARPACK_ROOT} PATH_SUFFIXES lib lib64)
+        if(ARPACK_LIBRARY)
+            set(TENES_ARPACK_FOUND ON)
+            set(TENES_ARPACK_LIBRARIES ${ARPACK_LIBRARY})
+        endif()
+    endif()
+    if(TENES_ARPACK_FOUND)
+        message(STATUS "ARPACK-NG: ${TENES_ARPACK_LIBRARIES}")
+    elseif(_enable_arpack STREQUAL "ON")
+        message(FATAL_ERROR
+            "ENABLE_ARPACK=ON but ARPACK-NG was not found "
+            "(hint: -DARPACK_ROOT=<prefix>)")
+    else()
+        message(STATUS "ARPACK-NG: not found (builtin Arnoldi only)")
+    endif()
+endif()
+
 if(ENABLE_MPI)
     if(APPLE)
         message(WARNING "Apple Accelerate BLAS/LAPACK + ScaLAPACK may fail. We STRONGLY recommend disabling MPI")
@@ -162,6 +195,10 @@ endif()
 
 if(NOT ENABLE_MPI)
     set(TENES_COMPILE_OPTIONS -D_NO_MPI ${TENES_COMPILE_OPTIONS})
+endif()
+
+if(TENES_ARPACK_FOUND)
+    set(TENES_COMPILE_OPTIONS -DTENES_USE_ARPACK ${TENES_COMPILE_OPTIONS})
 endif()
 
 message(STATUS "TENES_COMPILE_OPTIONS: ${TENES_COMPILE_OPTIONS}")
