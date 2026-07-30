@@ -115,6 +115,24 @@ void matvec_conjugate_pair(rtensor &out, rtensor const &in, std::size_t N) {
   }
 }
 
+// A single N x N Jordan block for eigenvalue 0: A e_i = e_{i-1} (the
+// superdiagonal is 1, everywhere else 0). This operator is nilpotent
+// (A^N = 0, all eigenvalues are exactly 0) and defective (only one
+// linearly independent eigenvector regardless of N), which makes it
+// adversarial for Krylov methods: resolving more than one Ritz pair
+// requires restarts. Used below to force ARPACK to report zero converged
+// Ritz values (dneupd ierr = -14) deterministically, by combining it with
+// maxiter = 1 (no restarts allowed) and a very tight tolerance.
+void matvec_jordan_block(rtensor &out, rtensor const &in, std::size_t N) {
+  out = rtensor(in.get_comm(), mptensor::Shape(N));
+  std::vector<double> x = gather_real(in, N);
+  for (std::size_t n = 0; n < out.local_size(); ++n) {
+    const auto index = out.global_index(n);
+    const std::size_t i = index[0];
+    out.set_value(index, (i + 1 < N) ? x[i + 1] : 0.0);
+  }
+}
+
 rtensor ones_real(std::size_t N) {
   rtensor v{mptensor::Shape(N)};
   for (std::size_t i = 0; i < N; ++i) {
@@ -195,4 +213,29 @@ TEST_CASE(
   CHECK(std::abs(ev[0]) == doctest::Approx(10.0).epsilon(1.0e-6));
   // one of the 8 +/- 1i conjugate pair
   CHECK(std::abs(ev[1]) == doctest::Approx(std::sqrt(65.0)).epsilon(1.0e-6));
+}
+
+TEST_CASE(
+    "arpack_eigenvalues returns a NaN-padded vector (not an exception) when "
+    "ARPACK converges zero Ritz values") {
+  // A Jordan block with maxiter = 1 (no restarts) and a very tight tolerance
+  // reliably makes ARPACK-NG's dneupd report ierr = -14 ("no eigenvalues of
+  // sufficient accuracy") on the first call, since resolving nev > 1 Ritz
+  // pairs of a defective operator needs at least one restart. Verified to
+  // reproduce deterministically (same nconv = 0 every time, no randomness
+  // involved) via a standalone probe against libarpack directly before
+  // being written up as this test.
+  const std::size_t N = 12;
+  const std::size_t nev = 4;
+  auto A = [](rtensor &out, rtensor const &in) {
+    matvec_jordan_block(out, in, N);
+  };
+
+  auto ev =
+      tenes::arpack_eigenvalues<rtensor>(A, ones_real(N), nev, 6, 1, 1.0e-14);
+  REQUIRE(ev.size() == nev);
+  for (std::size_t i = 0; i < nev; ++i) {
+    CHECK(std::isnan(ev[i].real()));
+    CHECK(std::isnan(ev[i].imag()));
+  }
 }

@@ -69,6 +69,9 @@ hierarchical names.
   meaningless (always 1) for these entries
 - `contract/<backend>/<N>x<M>` — contraction kernels per unit-cell shape;
   backends: `itps_ctm`, `itps_mf`, `density_ctm`
+- `measure/correlation_length` — transfer-matrix eigensolver time inside
+  correlation-length measurement (builtin Arnoldi or ARPACK-NG, see
+  `eigensolver` in `correlation_length_section.rst`)
 
 ### timers.json format
 

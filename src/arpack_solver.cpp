@@ -129,6 +129,10 @@ std::vector<dcomplex> run_arpack(serial_matvec_real const &av,
   iparam[0] = 1;        // exact shifts
   iparam[2] = maxiter;  // max implicit restarts
   iparam[6] = 1;        // mode 1: standard eigenvalue problem
+  // Assumes 3*ncv*ncv + 6*ncv fits in a 32-bit int, i.e. arnoldi_maxdim
+  // (ncv) stays below ~26800; ARPACK-NG's own INTEGER workl size argument
+  // is 32-bit anyway (see the LP64 assumption noted above), so this is not
+  // a practical restriction beyond what ARPACK-NG itself imposes.
   const int lworkl = 3 * ncv * ncv + 6 * ncv;
   std::vector<double> v(static_cast<std::size_t>(n) * ncv), workd(3 * n),
       workl(lworkl);
@@ -162,6 +166,15 @@ std::vector<dcomplex> run_arpack(serial_matvec_real const &av,
           &sigmar, &sigmai, workev.data(), "I", &n, "LM", &nev, &tol,
           resid.data(), &ncv, v.data(), &n, iparam, ipntr, workd.data(),
           workl.data(), &lworkl, &ierr, 1, 1, 2);
+  if (ierr == -14) {
+    // "Zero Ritz values converged" is not a hard failure: honor the header
+    // contract (NaN-padded tail) instead of aborting the whole run.
+    if (print_warn) {
+      std::cerr << "WARNING: ARPACK (dneupd) converged 0 of " << nev
+                << " eigenvalues (ierr = -14)" << std::endl;
+    }
+    return {};
+  }
   if (ierr != 0) {
     throw_arpack_error("dneupd", ierr);
   }
@@ -193,6 +206,8 @@ std::vector<dcomplex> run_arpack(serial_matvec_complex const &av,
   iparam[0] = 1;        // exact shifts
   iparam[2] = maxiter;  // max implicit restarts
   iparam[6] = 1;        // mode 1: standard eigenvalue problem
+  // Assumes 3*ncv*ncv + 5*ncv fits in a 32-bit int, i.e. arnoldi_maxdim
+  // (ncv) stays below ~26800; see the real overload above.
   const int lworkl = 3 * ncv * ncv + 5 * ncv;
   std::vector<dcomplex> v(static_cast<std::size_t>(n) * ncv), workd(3 * n),
       workl(lworkl);
@@ -228,6 +243,15 @@ std::vector<dcomplex> run_arpack(serial_matvec_complex const &av,
           workev.data(), "I", &n, "LM", &nev, &tol, resid.data(), &ncv,
           v.data(), &n, iparam, ipntr, workd.data(), workl.data(), &lworkl,
           rwork.data(), &ierr, 1, 1, 2);
+  if (ierr == -14) {
+    // "Zero Ritz values converged" is not a hard failure: honor the header
+    // contract (NaN-padded tail) instead of aborting the whole run.
+    if (print_warn) {
+      std::cerr << "WARNING: ARPACK (zneupd) converged 0 of " << nev
+                << " eigenvalues (ierr = -14)" << std::endl;
+    }
+    return {};
+  }
   if (ierr != 0) {
     throw_arpack_error("zneupd", ierr);
   }

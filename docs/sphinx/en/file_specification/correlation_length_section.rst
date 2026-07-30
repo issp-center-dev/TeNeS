@@ -29,8 +29,8 @@ The iterative eigensolver used when the matrix size exceeds
 
 - ``"auto"`` (default): use ARPACK-NG if TeNeS is built with it,
   otherwise the builtin IRA solver.
-- ``"arpack"``: use ARPACK-NG. This is an input error for binaries built
-  without ARPACK-NG (configure with ``-DENABLE_ARPACK=ON``).
+- ``"arpack"``: use ARPACK-NG. Specifying this in a binary built without
+  ARPACK-NG is an input error (configure with ``-DENABLE_ARPACK=ON``).
 - ``"builtin"``: use the builtin IRA solver.
 
 With ARPACK-NG, ``arnoldi_maxdim`` is used as the dimension of the Krylov

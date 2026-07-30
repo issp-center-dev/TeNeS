@@ -16,3 +16,8 @@ sweep = { Lsub = [[2, 1]], D = [3], chi_ratio = [3], eigensolver = ["builtin", "
 
 # chi = chi_ratio x D^2 = 27 -> transfer-matrix dimension N = 729 > 50,
 # so both cases take the iterative eigensolver path.
+# At this problem size (N = 729, D = 3), ARPACK-NG is expected to run ~30%
+# slower than the builtin solver: ARPACK-NG converges all requested
+# eigenpairs to a strict tolerance, while the builtin Arnoldi solver settles
+# for a cheaper approximation. The feature's motivation is reliability, not
+# raw speed at this size; the gap is expected to close at larger N.

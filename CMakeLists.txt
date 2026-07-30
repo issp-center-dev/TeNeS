@@ -79,6 +79,16 @@ set(ENABLE_ARPACK "AUTO" CACHE STRING
     "Use ARPACK-NG for the transfer-matrix eigensolver (AUTO/ON/OFF)")
 set_property(CACHE ENABLE_ARPACK PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER "${ENABLE_ARPACK}" _enable_arpack)
+# Normalize CMake's idiomatic boolean spellings so -DENABLE_ARPACK=TRUE/YES/1
+# and =FALSE/NO/0 behave the same as ON/OFF instead of falling through to AUTO.
+if(_enable_arpack MATCHES "^(TRUE|YES|1)$")
+    set(_enable_arpack "ON")
+elseif(_enable_arpack MATCHES "^(FALSE|NO|0)$")
+    set(_enable_arpack "OFF")
+elseif(NOT _enable_arpack MATCHES "^(AUTO|ON|OFF)$")
+    message(FATAL_ERROR
+        "ENABLE_ARPACK must be one of AUTO/ON/OFF (got '${ENABLE_ARPACK}')")
+endif()
 set(TENES_ARPACK_FOUND OFF)
 set(TENES_ARPACK_LIBRARIES "")
 if(NOT _enable_arpack STREQUAL "OFF")

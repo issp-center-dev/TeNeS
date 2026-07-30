@@ -6,7 +6,7 @@
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 15, 30, 20, 20
 
-   ``measure``,                  "相関長を測るかどうか",                               真偽値, false
+   ``measure``,                  "相関長を測るかどうか",                               真偽値, true
    ``num_eigvals``,              "計算する転送行列の固有値の数",                       整数,   4
    ``maxdim_dense_eigensolver``, "密行列の対角化手法を用いる最大行列サイズ",           整数,   200
    ``arnoldi_maxdim``,           "Arnoldi 法で生成する Hessenberg 行列の次元",         整数,   50
