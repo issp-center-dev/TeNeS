@@ -37,6 +37,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     I_arnoldi_maxdim,
     I_arnoldi_restartdim,
     I_arnoldi_maxiter,
+    I_eigensolver,
 
     N_PARAMS_INT_INDEX,
   };
@@ -60,6 +61,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(arnoldi_restartdim, int);
     SAVE_PARAM(arnoldi_maxiter, int);
     SAVE_PARAM(arnoldi_rtol, double);
+    SAVE_PARAM(eigensolver, int);
 
     bcast(params_int, 0, comm);
     bcast(params_double, 0, comm);
@@ -74,6 +76,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(arnoldi_restartdim, int);
     LOAD_PARAM(arnoldi_maxiter, int);
     LOAD_PARAM(arnoldi_rtol, double);
+    LOAD_PARAM(eigensolver, int);
   }
 }
 

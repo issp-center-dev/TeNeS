@@ -25,8 +25,10 @@
 #include "../src/tensor.hpp"
 #include "../src/mpi.hpp"
 #include "../src/util/string.hpp"
+#include "../src/arpack_solver.hpp"
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
+#include "../src/iTPS/transfer_matrix.hpp"
 
 toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
 
@@ -351,4 +353,44 @@ noise = 0.01
   }
 
   SUBCASE("correlation") {}
+
+  SUBCASE("correlation_length eigensolver") {
+    INFO("correlation_length eigensolver");
+    auto toml_default = parse_str(R"([correlation_length])");
+    auto p_default = gen_transfer_matrix_parameter(
+        toml_default.at("correlation_length"), "correlation_length");
+    CHECK(p_default.eigensolver == TransferMatrixEigensolver::automatic);
+
+    auto toml_builtin = parse_str(R"(
+[correlation_length]
+eigensolver = "builtin"
+)");
+    auto p_builtin = gen_transfer_matrix_parameter(
+        toml_builtin.at("correlation_length"), "correlation_length");
+    CHECK(p_builtin.eigensolver == TransferMatrixEigensolver::builtin);
+
+    auto toml_arpack = parse_str(R"(
+[correlation_length]
+eigensolver = "arpack"
+)");
+    if (tenes::arpack_available()) {
+      auto p_arpack = gen_transfer_matrix_parameter(
+          toml_arpack.at("correlation_length"), "correlation_length");
+      CHECK(p_arpack.eigensolver == TransferMatrixEigensolver::arpack);
+    } else {
+      CHECK_THROWS_AS(
+          gen_transfer_matrix_parameter(toml_arpack.at("correlation_length"),
+                                        "correlation_length"),
+          tenes::input_error);
+    }
+
+    auto toml_bad = parse_str(R"(
+[correlation_length]
+eigensolver = "lapack"
+)");
+    CHECK_THROWS_AS(
+        gen_transfer_matrix_parameter(toml_bad.at("correlation_length"),
+                                      "correlation_length"),
+        tenes::input_error);
+  }
 }

@@ -25,6 +25,14 @@
 
 namespace tenes::itps {
 
+//! How to solve the transfer-matrix eigenproblem (when larger than
+//! maxdim_dense_eigensolver)
+enum class TransferMatrixEigensolver : int {
+  automatic = 0,  //!< ARPACK-NG if built in, otherwise builtin
+  arpack = 1,     //!< ARPACK-NG (input error if not built in)
+  builtin = 2,    //!< builtin implicit-restart Arnoldi
+};
+
 struct TransferMatrix_Parameters {
   bool to_calculate;
   int num_eigvals;
@@ -33,6 +41,7 @@ struct TransferMatrix_Parameters {
   int arnoldi_restartdim;
   int arnoldi_maxiter;
   double arnoldi_rtol;
+  TransferMatrixEigensolver eigensolver;
 
   TransferMatrix_Parameters()
       : to_calculate(true),
@@ -41,7 +50,8 @@ struct TransferMatrix_Parameters {
         arnoldi_maxdim(50),
         arnoldi_restartdim(20),
         arnoldi_maxiter(1),
-        arnoldi_rtol(1.0e-10) {}
+        arnoldi_rtol(1.0e-10),
+        eigensolver(TransferMatrixEigensolver::automatic) {}
   void Bcast(MPI_Comm comm, int root = 0);
 };
 
