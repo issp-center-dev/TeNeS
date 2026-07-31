@@ -47,7 +47,7 @@ The following tools are required for building TeNeS.
   - For Intel compilers, use the newer `icpx`; the classic `icpc` cannot compile mptensor.
     `icpx` enables `-fp-model=fast` by default, which breaks Inf/NaN handling; the TeNeS build
     automatically adds `-fp-model=precise`.
-- CMake (>=3.6.0)
+- CMake (>=3.8.0)
 - BLAS/LAPACK
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
