@@ -22,7 +22,7 @@
 ### Development
 
 - Modernized the C++ core to C++17: removed the vendored boost headers (`boost::optional` → `std::optional`), reimplemented `util/file` with `std::filesystem`, and replaced SFINAE-based type traits with `if constexpr` ([#109][])
-- CMake now probes at configure time whether `std::filesystem` needs a separate library (`stdc++fs` / `c++fs`) and links it automatically; this fixes a link error (undefined reference to `std::filesystem::status` etc.) with icpx or clang picking up GCC 8's libstdc++, e.g. on RHEL 8 without a gcc-toolset
+- CMake now probes at configure time whether `std::filesystem` needs a separate library (`stdc++fs` / `c++fs`) and links it automatically; this fixes a link error (undefined reference to `std::filesystem::status` etc.) with icpx or clang picking up GCC 8's libstdc++, e.g. on RHEL 8 without a gcc-toolset ([#112][])
 - Updated the bundled mptensor to v0.5.0 ([#104][])
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
 - Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
@@ -123,3 +123,4 @@
 [#108]: https://github.com/issp-center-dev/TeNeS/pull/108
 [#109]: https://github.com/issp-center-dev/TeNeS/pull/109
 [#110]: https://github.com/issp-center-dev/TeNeS/pull/110
+[#112]: https://github.com/issp-center-dev/TeNeS/pull/112
