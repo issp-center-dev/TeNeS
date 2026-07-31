@@ -22,6 +22,7 @@
   - Fixed Inf/NaN handling with the Intel icpx compiler: the default `-fp-model=fast` broke the detection of divergent correlation lengths and could leak `nan` rows of unmeasured sites into `onesite_obs.dat` / `density.dat`; `-fp-model=precise` is now enforced for icpx builds ([#107][])
   - Fixed an undefined behavior (null-pointer dereference) when the input file has no `[[evolution.simple]]` / `[[evolution.full]]` sections; they are now treated as an empty list of evolution operators ([#108][])
   - Fixed an out-of-bounds access in mptensor (`make_l2g_map`) that aborted finite-temperature calculations in Debug builds, by updating mptensor to v0.5.0 ([#104][])
+  - `tenes --version` / `--help` no longer initialize MPI, fixing a hang of MPI-linked binaries where the launcher infrastructure is unavailable, e.g. on cluster login nodes ([#111][])
 
 ### Development
 
@@ -31,6 +32,7 @@
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
 - Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
 - Added a `correlation_length` benchmark suite comparing the builtin Arnoldi and ARPACK-NG eigensolvers within one run ([#111][])
+- The benchmark harness now applies a 10-second timeout when collecting `tenes --version` for provenance, so a non-returning binary cannot wedge the whole run ([#111][])
 
 ### Documentation and samples
 

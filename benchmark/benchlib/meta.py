@@ -20,9 +20,9 @@ import subprocess
 from datetime import datetime, timezone
 
 
-def _run(cmd, cwd=None):
+def _run(cmd, cwd=None, timeout=None):
     return subprocess.run(
-        cmd, cwd=cwd, check=True, capture_output=True, text=True
+        cmd, cwd=cwd, check=True, capture_output=True, text=True, timeout=timeout
     ).stdout.strip()
 
 
@@ -41,7 +41,10 @@ def collect_meta(tenes_bin, repo_dir, launcher=None):
         result["git_commit"] = None
         result["git_dirty"] = None
     try:
-        result["tenes_version"] = _run([str(tenes_bin), "--version"])
-    except (subprocess.CalledProcessError, OSError):
+        # An MPI-linked tenes older than the pre-MPI_Init --version fix can
+        # hang here when the MPI runtime is unavailable (e.g. login nodes);
+        # never let provenance collection wedge the whole benchmark run.
+        result["tenes_version"] = _run([str(tenes_bin), "--version"], timeout=10)
+    except (subprocess.CalledProcessError, OSError, subprocess.TimeoutExpired):
         result["tenes_version"] = None
     return result
