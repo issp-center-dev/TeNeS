@@ -20,7 +20,7 @@ The following tools are required for building TeNeS.
      Note that ``icpx`` enables ``-fp-model=fast`` by default, which breaks Inf/NaN handling;
      the TeNeS build automatically adds ``-fp-model=precise`` to avoid this.
 
-2. CMake (>=3.6.0)
+2. CMake (>=3.8.0)
 3. BLAS and LAPACK
 
 TeNeS depends on the following libraries, but these are downloaded automatically through the build process.
