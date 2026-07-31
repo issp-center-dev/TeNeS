@@ -5,6 +5,7 @@
 ### Changes
 
 - Building TeNeS now requires a C++17 compiler and mptensor v0.5.0 or later ([#104][], [#109][])
+- The minimum required CMake version is raised from 3.6 to 3.8, so that the language standard is honored in configure-time checks (CMP0067); note that the bundled toml11 requires CMake 3.16 or later anyway ([#112][])
 - `tenes`
   - Replaced the TOML parser cpptoml (archived, TOML v0.5.0) with toml11 v4.4.0 (TOML v1.0.0); input errors now report the file name, the line number, and the offending value ([#108][])
   - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
@@ -25,6 +26,7 @@
 ### Development
 
 - Modernized the C++ core to C++17: removed the vendored boost headers (`boost::optional` → `std::optional`), reimplemented `util/file` with `std::filesystem`, and replaced SFINAE-based type traits with `if constexpr` ([#109][])
+- CMake now probes at configure time whether `std::filesystem` needs a separate library (`stdc++fs` / `c++fs`) and links it automatically; this fixes a link error (undefined reference to `std::filesystem::status` etc.) with icpx or clang picking up GCC 8's libstdc++, e.g. on RHEL 8 without a gcc-toolset ([#112][])
 - Updated the bundled mptensor to v0.5.0 ([#104][])
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
 - Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
@@ -127,3 +129,4 @@
 [#109]: https://github.com/issp-center-dev/TeNeS/pull/109
 [#110]: https://github.com/issp-center-dev/TeNeS/pull/110
 [#111]: https://github.com/issp-center-dev/TeNeS/pull/111
+[#112]: https://github.com/issp-center-dev/TeNeS/pull/112
