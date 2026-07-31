@@ -141,3 +141,59 @@ def test_format_row_one_side_only_column_order():
     assert cells[2].startswith("42")
     assert cells[3] == "(absent)"
     assert cells[6] == "A only"
+
+
+def _write_ab_label(root, cases):
+    """テスト用のラベルディレクトリ(ケース名 -> 反復ごとのスケール係数)を作る"""
+    labeldir = root / "lbl"
+    for case, sums in cases.items():
+        for i, s in enumerate(sums):
+            rundir = labeldir / case / "run_{}".format(i)
+            rundir.mkdir(parents=True)
+            timers = {
+                "total": {
+                    "count": 1,
+                    "sum": 10 * s,
+                    "max_rank": 10 * s,
+                    "min_rank": 10 * s,
+                },
+                "measure/correlation_length": {
+                    "count": 1,
+                    "sum": s,
+                    "max_rank": s,
+                    "min_rank": s,
+                },
+            }
+            (rundir / "timers.json").write_text(
+                json.dumps({"meta": {}, "timers": timers})
+            )
+    (labeldir / "meta.json").write_text(json.dumps({"hostname": "h", "suite": "s"}))
+    return labeldir
+
+
+def test_show_results_pairs_ab_cases(tmp_path):
+    labeldir = _write_ab_label(
+        tmp_path,
+        {"cl_builtin_D3": [1.0, 1.0], "cl_arpack_D3": [0.5, 0.5]},
+    )
+    report = compare.show_results(labeldir)
+    assert "cl_builtin_D3 vs cl_arpack_D3" in report
+    assert "measure/correlation_length" in report
+    assert "0.500" in report  # arpack/builtin の比
+    assert "hostname" in report
+
+
+def test_show_results_unpaired_case_gets_plain_table(tmp_path):
+    labeldir = _write_ab_label(tmp_path, {"solo_case": [2.0]})
+    report = compare.show_results(labeldir)
+    assert "## solo_case" in report
+    assert "vs" not in report
+    assert "total" in report
+
+
+def test_show_results_ab_disabled(tmp_path):
+    labeldir = _write_ab_label(tmp_path, {"cl_builtin": [1.0], "cl_arpack": [1.0]})
+    report = compare.show_results(labeldir, ab=("", ""))
+    assert "vs" not in report
+    assert "## cl_arpack" in report
+    assert "## cl_builtin" in report

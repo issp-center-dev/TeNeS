@@ -3,7 +3,8 @@
 # The "arpack" cases require a binary built with ARPACK-NG (ENABLE_ARPACK);
 # without it they fail at input loading.
 # Compare the measure/correlation_length timer between the two cases of the
-# SAME run; `bench.py compare` is for commit-to-commit comparison.
+# SAME run with `bench.py show results/<label>`; `bench.py compare` is for
+# commit-to-commit comparison.
 [suite]
 name = "correlation_length"
 repeat = 3

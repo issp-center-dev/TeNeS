@@ -36,6 +36,23 @@ python3 benchmark/bench.py run \
 `run` refuses to overwrite an existing label directory; pass `--force` to
 delete it and rerun from scratch.
 
+## Viewing one run (`bench.py show`)
+
+`compare` matches cases by name across two labels, so it cannot render a
+suite whose A/B comparison lives *inside* one run (e.g.
+`correlation_length`, whose sweep produces `clength_builtin_*` and
+`clength_arpack_*` cases). Use `show` for that:
+
+```bash
+python3 benchmark/bench.py show benchmark/results/mylabel
+```
+
+Case pairs whose names map onto each other by replacing `builtin` with
+`arpack` are rendered side by side with an `arpack/builtin` ratio column;
+all remaining cases get a plain per-timer table. The pairing tokens can be
+changed with `--ab TOKEN_A,TOKEN_B` or disabled with `--ab ''`, and
+`--output report.md` writes the report to a file instead of stdout.
+
 ## Results layout
 
 `bench.py run --label <label>` writes into `benchmark/results/<label>/`

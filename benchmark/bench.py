@@ -22,6 +22,9 @@ Run a suite and store results:
 
 Compare two result sets:
     bench.py compare results/baseline results/cotengra
+
+Show one result set, pairing within-run A/B cases (builtin vs arpack):
+    bench.py show results/baseline
 """
 
 import argparse
@@ -63,6 +66,23 @@ def cmd_run(args):
     print("results saved to {}".format(results_dir))
 
 
+def cmd_show(args):
+    ab = ("", "")
+    if args.ab:
+        tokens = args.ab.split(",")
+        if len(tokens) != 2 or not all(tokens):
+            sys.exit(
+                "error: --ab expects two comma-separated tokens, e.g. 'builtin,arpack'"
+            )
+        ab = tuple(tokens)
+    report = compare_mod.show_results(args.label_dir, ab=ab)
+    if args.output:
+        Path(args.output).write_text(report)
+        print("report saved to {}".format(args.output))
+    else:
+        print(report)
+
+
 def cmd_compare(args):
     report = compare_mod.compare_results(
         args.dir_a, args.dir_b, rtol=args.rtol, atol=args.atol
@@ -102,6 +122,18 @@ def main():
     p_cmp.add_argument("--rtol", type=float, default=1e-3)
     p_cmp.add_argument("--atol", type=float, default=1e-4)
     p_cmp.set_defaults(func=cmd_compare)
+
+    p_show = sub.add_parser("show", help="render results of one label directory")
+    p_show.add_argument("label_dir")
+    p_show.add_argument(
+        "--ab",
+        default="builtin,arpack",
+        help="pair cases whose names differ by replacing TOKEN_A with TOKEN_B"
+        " and show them side by side with a ratio column"
+        " (default: 'builtin,arpack'; pass '' to disable pairing)",
+    )
+    p_show.add_argument("--output", default=None, help="write report to a file")
+    p_show.set_defaults(func=cmd_show)
 
     args = parser.parse_args()
     args.func(args)

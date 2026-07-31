@@ -90,3 +90,35 @@ def test_run_force_replaces_existing_label(tmp_path, stub_tools):
     assert not stale.exists()
     assert (label_dir / "meta.json").exists()
     assert (label_dir / "c" / "run_0" / "timers.json").exists()
+
+
+def _write_show_label(tmp_path):
+    import json
+
+    labeldir = tmp_path / "results" / "lbl"
+    for case, s in [("c_builtin", 1.0), ("c_arpack", 0.5)]:
+        rundir = labeldir / case / "run_0"
+        rundir.mkdir(parents=True)
+        timers = {"total": {"count": 1, "sum": s, "max_rank": s, "min_rank": s}}
+        (rundir / "timers.json").write_text(json.dumps({"meta": {}, "timers": timers}))
+    (labeldir / "meta.json").write_text("{}")
+    return labeldir
+
+
+def test_show_prints_ab_report(tmp_path, capsys):
+    labeldir = _write_show_label(tmp_path)
+    args = argparse.Namespace(label_dir=str(labeldir), ab="builtin,arpack", output=None)
+    bench.cmd_show(args)
+    out = capsys.readouterr().out
+    assert "c_builtin vs c_arpack" in out
+    assert "0.500" in out
+
+
+def test_show_writes_output_file(tmp_path, capsys):
+    labeldir = _write_show_label(tmp_path)
+    outfile = tmp_path / "report.md"
+    args = argparse.Namespace(
+        label_dir=str(labeldir), ab="builtin,arpack", output=str(outfile)
+    )
+    bench.cmd_show(args)
+    assert "c_builtin vs c_arpack" in outfile.read_text()
