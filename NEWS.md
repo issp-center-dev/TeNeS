@@ -11,6 +11,9 @@
   - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
   - CMake option `CPPTOML_ROOT` is renamed to `TOML11_ROOT` ([#108][])
   - Now always writes `output/timers.json`: cumulative wall times per hierarchical timer name (total / phase/* / contract/*), with per-MPI-rank max/min ([#110][])
+  - The transfer-matrix eigensolver for the correlation length can now use ARPACK-NG; TeNeS links it automatically when found (CMake option `ENABLE_ARPACK=AUTO/ON/OFF`, hint `ARPACK_ROOT`), and the solver can be chosen per run by `correlation_length.eigensolver = "auto" / "arpack" / "builtin"` ([#111][])
+  - `correlation_length.arnoldi_maxdim`, `arnoldi_restartdim`, and `arnoldi_maxiterations` now default to 0, meaning a solver-dependent automatic value scaled by `num_eigvals` (ARPACK-NG: small subspace with restarts; builtin: a large single sweep reproducing the previous defaults); explicit values are used as-is ([#111][])
+  - When ARPACK-NG fails to converge with an automatic `arnoldi_maxdim`, the Krylov subspace is doubled (up to the matrix size) and the computation retried; with an explicit `arnoldi_maxdim`, unconverged eigenvalues and the resulting correlation length are reported as NaN instead of a misleading finite value ([#111][])
 
 ### Bug fixes
 
@@ -19,6 +22,7 @@
   - Fixed Inf/NaN handling with the Intel icpx compiler: the default `-fp-model=fast` broke the detection of divergent correlation lengths and could leak `nan` rows of unmeasured sites into `onesite_obs.dat` / `density.dat`; `-fp-model=precise` is now enforced for icpx builds ([#107][])
   - Fixed an undefined behavior (null-pointer dereference) when the input file has no `[[evolution.simple]]` / `[[evolution.full]]` sections; they are now treated as an empty list of evolution operators ([#108][])
   - Fixed an out-of-bounds access in mptensor (`make_l2g_map`) that aborted finite-temperature calculations in Debug builds, by updating mptensor to v0.5.0 ([#104][])
+  - `tenes --version` / `--help` no longer initialize MPI, fixing a hang of MPI-linked binaries where the launcher infrastructure is unavailable, e.g. on cluster login nodes ([#111][])
 
 ### Development
 
@@ -27,6 +31,9 @@
 - Updated the bundled mptensor to v0.5.0 ([#104][])
 - Repaired the macOS CI: install `libomp` for mptensor's OpenMP requirement ([#104][])
 - Added a `benchmark/` harness for A/B performance comparison (`bench.py run` / `bench.py compare`); see `benchmark/README.md` ([#110][])
+- Added a `correlation_length` benchmark suite comparing the builtin Arnoldi and ARPACK-NG eigensolvers within one run ([#111][])
+- The benchmark harness now applies a 10-second timeout when collecting `tenes --version` for provenance, so a non-returning binary cannot wedge the whole run ([#111][])
+- Added `bench.py show <label-dir>` rendering the results of a single run, pairing within-run A/B cases (builtin vs arpack) side by side with a ratio column ([#111][])
 
 ### Documentation and samples
 
@@ -124,4 +131,5 @@
 [#108]: https://github.com/issp-center-dev/TeNeS/pull/108
 [#109]: https://github.com/issp-center-dev/TeNeS/pull/109
 [#110]: https://github.com/issp-center-dev/TeNeS/pull/110
+[#111]: https://github.com/issp-center-dev/TeNeS/pull/111
 [#112]: https://github.com/issp-center-dev/TeNeS/pull/112

@@ -28,6 +28,8 @@ namespace tenes::itps {
  *  @return xi = -L / log(e1_abs / e0_abs).
  *          Returns +infinity when the two eigenvalues are degenerate
  *          (e1_abs >= e0_abs) and 0.0 when e0_abs is not positive.
+ *          Returns NaN when either input is NaN (i.e. the eigensolver
+ *          did not converge).
  */
 double calc_correlation_length(double e0_abs, double e1_abs, int L);
 

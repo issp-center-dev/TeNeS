@@ -25,8 +25,10 @@
 #include "../src/tensor.hpp"
 #include "../src/mpi.hpp"
 #include "../src/util/string.hpp"
+#include "../src/arpack_solver.hpp"
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
+#include "../src/iTPS/transfer_matrix.hpp"
 
 toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
 
@@ -351,4 +353,75 @@ noise = 0.01
   }
 
   SUBCASE("correlation") {}
+
+  SUBCASE("correlation_length eigensolver") {
+    INFO("correlation_length eigensolver");
+    auto toml_default = parse_str(R"([correlation_length])");
+    auto p_default = gen_transfer_matrix_parameter(
+        toml_default.at("correlation_length"), "correlation_length");
+    CHECK(p_default.eigensolver == TransferMatrixEigensolver::automatic);
+
+    auto toml_builtin = parse_str(R"(
+[correlation_length]
+eigensolver = "builtin"
+)");
+    auto p_builtin = gen_transfer_matrix_parameter(
+        toml_builtin.at("correlation_length"), "correlation_length");
+    CHECK(p_builtin.eigensolver == TransferMatrixEigensolver::builtin);
+
+    auto toml_arpack = parse_str(R"(
+[correlation_length]
+eigensolver = "arpack"
+)");
+    if (tenes::arpack_available()) {
+      auto p_arpack = gen_transfer_matrix_parameter(
+          toml_arpack.at("correlation_length"), "correlation_length");
+      CHECK(p_arpack.eigensolver == TransferMatrixEigensolver::arpack);
+    } else {
+      CHECK_THROWS_AS(
+          gen_transfer_matrix_parameter(toml_arpack.at("correlation_length"),
+                                        "correlation_length"),
+          tenes::input_error);
+    }
+
+    auto toml_bad = parse_str(R"(
+[correlation_length]
+eigensolver = "lapack"
+)");
+    CHECK_THROWS_AS(
+        gen_transfer_matrix_parameter(toml_bad.at("correlation_length"),
+                                      "correlation_length"),
+        tenes::input_error);
+  }
+
+  SUBCASE("correlation_length arnoldi defaults are automatic") {
+    INFO("correlation_length arnoldi defaults are automatic");
+    TransferMatrix_Parameters p;
+    CHECK(p.arnoldi_maxdim == 0);      // 0 means automatic
+    CHECK(p.arnoldi_restartdim == 0);  // 0 means automatic
+    CHECK(p.arnoldi_maxiter == 0);     // 0 means automatic
+
+    // ARPACK relies on restarts: max(2 * num_eigvals + 1, 25)
+    CHECK(effective_arnoldi_maxdim(0, 4, true) == 25);
+    CHECK(effective_arnoldi_maxdim(0, 12, true) == 25);
+    CHECK(effective_arnoldi_maxdim(0, 15, true) == 31);
+    // builtin solves in one large sweep: max(2 * num_eigvals + 1, 50)
+    CHECK(effective_arnoldi_maxdim(0, 4, false) == 50);
+    CHECK(effective_arnoldi_maxdim(0, 30, false) == 61);
+    // explicit values are used as-is for both solvers
+    CHECK(effective_arnoldi_maxdim(40, 4, true) == 40);
+    CHECK(effective_arnoldi_maxdim(8, 15, false) == 8);
+
+    // automatic maxiter: 10 restarts for ARPACK, none for builtin
+    CHECK(effective_arnoldi_maxiter(0, true) == 10);
+    CHECK(effective_arnoldi_maxiter(0, false) == 1);
+    CHECK(effective_arnoldi_maxiter(3, true) == 3);
+    CHECK(effective_arnoldi_maxiter(3, false) == 3);
+
+    // automatic: max(num_eigvals + 1, maxdim / 2)
+    CHECK(effective_arnoldi_restartdim(0, 4, 50) == 25);
+    CHECK(effective_arnoldi_restartdim(0, 24, 31) == 25);
+    // explicit values are used as-is
+    CHECK(effective_arnoldi_restartdim(20, 4, 50) == 20);
+  }
 }

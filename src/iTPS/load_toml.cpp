@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "../arpack_solver.hpp"
 #include "../exception.hpp"
 #include "../util/read_tensor.hpp"
 #include "../util/string.hpp"
@@ -387,6 +388,27 @@ TransferMatrix_Parameters gen_transfer_matrix_parameter(const toml::value &toml,
   load_if(clength.arnoldi_restartdim, toml, "arnoldi_restartdim");
   load_if(clength.arnoldi_maxiter, toml, "arnoldi_maxiterations");
   load_if(clength.arnoldi_rtol, toml, "arnoldi_rtol");
+
+  std::string eigensolver_name = "auto";
+  load_if(eigensolver_name, toml, "eigensolver");
+  if (eigensolver_name == "auto") {
+    clength.eigensolver = TransferMatrixEigensolver::automatic;
+  } else if (eigensolver_name == "arpack") {
+    if (!arpack_available()) {
+      throw tenes::input_error(
+          "correlation_length.eigensolver = \"arpack\", but this TeNeS "
+          "binary is built without ARPACK-NG "
+          "(configure with -DENABLE_ARPACK=ON)");
+    }
+    clength.eigensolver = TransferMatrixEigensolver::arpack;
+  } else if (eigensolver_name == "builtin") {
+    clength.eigensolver = TransferMatrixEigensolver::builtin;
+  } else {
+    throw tenes::input_error(
+        "correlation_length.eigensolver must be \"auto\", \"arpack\", or "
+        "\"builtin\", but is \"" +
+        eigensolver_name + "\"");
+  }
   return clength;
 }
 

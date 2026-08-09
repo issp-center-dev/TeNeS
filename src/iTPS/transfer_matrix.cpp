@@ -20,6 +20,7 @@
 
 #include "../tensor.hpp"
 #include "../arnoldi.hpp"
+#include "../arpack_solver.hpp"
 
 #include "../util/abs.hpp"
 
@@ -37,6 +38,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     I_arnoldi_maxdim,
     I_arnoldi_restartdim,
     I_arnoldi_maxiter,
+    I_eigensolver,
 
     N_PARAMS_INT_INDEX,
   };
@@ -60,6 +62,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(arnoldi_restartdim, int);
     SAVE_PARAM(arnoldi_maxiter, int);
     SAVE_PARAM(arnoldi_rtol, double);
+    SAVE_PARAM(eigensolver, int);
 
     bcast(params_int, 0, comm);
     bcast(params_double, 0, comm);
@@ -74,6 +77,7 @@ void TransferMatrix_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(arnoldi_restartdim, int);
     LOAD_PARAM(arnoldi_maxiter, int);
     LOAD_PARAM(arnoldi_rtol, double);
+    LOAD_PARAM(eigensolver, int);
   }
 }
 
@@ -111,31 +115,46 @@ std::vector<std::complex<double>> TransferMatrix<ptensor>::eigenvalues(
     }
     std::vector<std::complex<double>> evecs;
     eigen(matrix_2, eigvals, evecs, nev);
-  } else {  // use Arnoldi
-    auto maxvec = params.arnoldi_maxdim;
-    auto maxiter = params.arnoldi_maxiter;
+  } else {  // use an iterative eigensolver (ARPACK-NG or builtin Arnoldi)
+    const bool use_arpack =
+        params.eigensolver == TransferMatrixEigensolver::arpack ||
+        (params.eigensolver == TransferMatrixEigensolver::automatic &&
+         arpack_available());
+
+    int maxvec = effective_arnoldi_maxdim(params.arnoldi_maxdim,
+                                          static_cast<int>(nev), use_arpack);
+    int maxiter = effective_arnoldi_maxiter(params.arnoldi_maxiter, use_arpack);
     if (N < static_cast<size_t>(maxvec)) {
       maxvec = N;
       maxiter = 1;
     }
 
     ptensor initial_vec = initial_vector(dir, fixed_coord, rng);
-    Arnoldi<ptensor> arnoldi(N, maxvec);
-    arnoldi.initialize(initial_vec);
+    std::function<void(ptensor &, ptensor const &)> matvec;
     if (dir == 0) {
-      arnoldi.run(
-          [&](ptensor &out, ptensor const &in) {
-            matvec_horizontal(out, in, fixed_coord);
-          },
-          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+      matvec = [&](ptensor &out, ptensor const &in) {
+        matvec_horizontal(out, in, fixed_coord);
+      };
     } else {
-      arnoldi.run(
-          [&](ptensor &out, ptensor const &in) {
-            matvec_vertical(out, in, fixed_coord);
-          },
-          nev, params.arnoldi_restartdim, maxiter, params.arnoldi_rtol);
+      matvec = [&](ptensor &out, ptensor const &in) {
+        matvec_vertical(out, in, fixed_coord);
+      };
     }
-    eigvals = arnoldi.eigenvalues();
+    if (use_arpack) {
+      // in automatic mode, let ARPACK grow the subspace and retry instead
+      // of reporting NaN when it fails to converge
+      eigvals = arpack_eigenvalues<ptensor>(matvec, initial_vec, nev, maxvec,
+                                            maxiter, params.arnoldi_rtol,
+                                            params.arnoldi_maxdim <= 0);
+    } else {
+      Arnoldi<ptensor> arnoldi(N, maxvec);
+      arnoldi.initialize(initial_vec);
+      arnoldi.run(matvec, nev,
+                  effective_arnoldi_restartdim(params.arnoldi_restartdim,
+                                               static_cast<int>(nev), maxvec),
+                  maxiter, params.arnoldi_rtol);
+      eigvals = arnoldi.eigenvalues();
+    }
   }
   return eigvals;
 }
@@ -170,15 +189,16 @@ ptensor TransferMatrix_ctm<ptensor>::initial_vector(int dir, int fixed_coord,
     ptensor left_bottom = C4[lattice.top(site)];
     const size_t CHI_top = left_top.shape()[1];
     const size_t CHI_bottom = left_bottom.shape()[0];
-    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}), {CHI_top * CHI_bottom});
+    initial_vec = reshape(tensordot(left_top, left_bottom, {0}, {1}),
+                          {CHI_top * CHI_bottom});
   } else {
     int site = lattice.index(fixed_coord, 0);
     auto left_bottom = C4[site];
     auto right_bottom = C3[lattice.left(site)];
     const size_t CHI_left = left_bottom.shape()[1];
     const size_t CHI_right = right_bottom.shape()[0];
-    initial_vec =
-        reshape(tensordot(left_bottom, right_bottom, {0}, {1}), {CHI_left * CHI_right});
+    initial_vec = reshape(tensordot(left_bottom, right_bottom, {0}, {1}),
+                          {CHI_left * CHI_right});
   }
   return initial_vec;
 }
@@ -395,7 +415,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
   }
   res = reshape(res, {CHI0, CHI1, CHI0, CHI1});
   const size_t rank = top.rank();
-  if (rank == 3) { // iTPO
+  if (rank == 3) {  // iTPO
     res = transpose(tensordot(top, bottom, Axes(2), Axes(2)), Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
       int site = lattice.index(x, y);
@@ -404,7 +424,7 @@ ptensor TransferMatrix_ctm<ptensor>::matrix_horizontal(int y) const {
       res = tensordot(res, tensordot(top, bottom, Axes(2), Axes(2)), Axes(2, 3),
                       Axes(0, 3));
     }
-  } else if (rank == 4) { // iTPS
+  } else if (rank == 4) {  // iTPS
     res = transpose(tensordot(top, bottom, Axes(2, 3), Axes(2, 3)),
                     Axes(0, 3, 1, 2));
     for (int x = 1; x < lattice.LX; ++x) {
@@ -534,13 +554,13 @@ size_t TransferMatrix_ctm<ptensor>::dim(int dir, int fixed_coord) const {
   const auto &lattice = this->lattice;
   // for debug output
   const auto mpirank = this->Tn[0].get_comm_rank();
-  if(dir == 0){
+  if (dir == 0) {
     const int s0 = lattice.index(0, fixed_coord);
     const int s1 = lattice.top(s0);
     const size_t CHI0 = eTt[s0].shape()[0];
     const size_t CHI1 = eTb[s1].shape()[1];
     return CHI0 * CHI1;
-  }else{
+  } else {
     const int s0 = lattice.index(fixed_coord, 0);
     const int s1 = lattice.left(s0);
     const size_t CHI0 = eTl[s0].shape()[0];

@@ -19,6 +19,7 @@
 
 #include <string>
 #include <vector>
+#include <complex>
 
 #include "../src/util/string.hpp"
 #include "../src/util/file.hpp"
@@ -111,4 +112,16 @@ TEST_CASE("read_tensor") {
         tenes::util::read_tensor<tensor>("0 0 1.0\n", mptensor::Shape(2, 2)),
         tenes::input_error);
   }
+}
+
+TEST_CASE("allreduce_sum for complex vectors") {
+  std::vector<std::complex<double>> v = {{1.0, 2.0}, {-3.0, 4.5}};
+  int mpisize = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpisize);
+  tenes::allreduce_sum(v, MPI_COMM_WORLD);
+  const double s = static_cast<double>(mpisize);
+  CHECK(v[0].real() == doctest::Approx(1.0 * s));
+  CHECK(v[0].imag() == doctest::Approx(2.0 * s));
+  CHECK(v[1].real() == doctest::Approx(-3.0 * s));
+  CHECK(v[1].imag() == doctest::Approx(4.5 * s));
 }

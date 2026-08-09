@@ -77,6 +77,18 @@ def _stat_cell(s):
     return "{:.4g} [{:.4g}, {:.4g}]".format(s["median"], s["min"], s["max"])
 
 
+def _row_notes(row):
+    a, b = row["a"], row["b"]
+    notes = []
+    if row["overlap"]:
+        notes.append("no sig. diff")
+    if row["count_mismatch"]:
+        notes.append("count differs")
+    if a.get("count_varies") or b.get("count_varies"):
+        notes.append("count varies across runs")
+    return ", ".join(notes)
+
+
 def _format_row(case, row):
     a, b = row["a"], row["b"]
     if a is None:
@@ -88,13 +100,6 @@ def _format_row(case, row):
             case, row["name"], _stat_cell(a)
         )
     ratio = "{:.3f}".format(row["ratio"]) if row["ratio"] is not None else "n/a"
-    notes = []
-    if row["overlap"]:
-        notes.append("no sig. diff")
-    if row["count_mismatch"]:
-        notes.append("count differs")
-    if a.get("count_varies") or b.get("count_varies"):
-        notes.append("count varies across runs")
     return "| {} | {} | {} | {} | {} | {}/{} | {} |".format(
         case,
         row["name"],
@@ -103,7 +108,7 @@ def _format_row(case, row):
         ratio,
         a["count"],
         b["count"],
-        ", ".join(notes),
+        _row_notes(row),
     )
 
 
@@ -163,5 +168,93 @@ def compare_results(dir_a, dir_b, rtol=1e-3, atol=1e-4):
         lines.append(_TABLE_HEADER)
         for case, row in groups[group]:
             lines.append(_format_row(case, row))
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _timer_sort_key(name):
+    group = _group_key(name)
+    return (group != "summary", group, name)
+
+
+def _format_show_row(row):
+    a, b = row["a"], row["b"]
+    if a is None:
+        return "| {} | (absent) | {} | n/a |  | B only |".format(
+            row["name"], _stat_cell(b)
+        )
+    if b is None:
+        return "| {} | {} | (absent) | n/a |  | A only |".format(
+            row["name"], _stat_cell(a)
+        )
+    ratio = "{:.3f}".format(row["ratio"]) if row["ratio"] is not None else "n/a"
+    return "| {} | {} | {} | {} | {}/{} | {} |".format(
+        row["name"],
+        _stat_cell(a),
+        _stat_cell(b),
+        ratio,
+        a["count"],
+        b["count"],
+        _row_notes(row),
+    )
+
+
+def show_results(label_dir, ab=("builtin", "arpack")):
+    """Render a Markdown report of one label directory.
+
+    Case pairs whose names map onto each other by replacing ab[0] with
+    ab[1] (the within-run A/B layout of e.g. the correlation_length
+    suite) are shown side by side with a ratio column; the remaining
+    cases each get a plain per-timer table.
+    """
+    label_dir = Path(label_dir)
+    meta, cases = load_label_dir(label_dir)
+    lines = []
+    lines.append("# Benchmark results: {}".format(label_dir.name))
+    lines.append("")
+    lines.append("| meta | value |")
+    lines.append("|---|---|")
+    for key in _META_KEYS:
+        lines.append("| {} | {} |".format(key, meta.get(key)))
+    lines.append("")
+
+    tok_a, tok_b = ab
+    pairs = {}
+    if tok_a and tok_b:
+        for name in sorted(cases):
+            partner = name.replace(tok_a, tok_b)
+            if tok_a in name and partner in cases:
+                pairs[name] = partner
+    paired_names = set(pairs) | set(pairs.values())
+
+    for name_a in sorted(pairs):
+        name_b = pairs[name_a]
+        rows = compare_timers(cases[name_a]["agg"], cases[name_b]["agg"])
+        rows.sort(key=lambda r: _timer_sort_key(r["name"]))
+        lines.append("## {} vs {}".format(name_a, name_b))
+        lines.append("")
+        lines.append(
+            "| timer | {a}: median [min, max] | {b}: median [min, max]"
+            " | ratio {b}/{a} | count {a}/{b} | note |".format(a=tok_a, b=tok_b)
+        )
+        lines.append("|---|---|---|---|---|---|")
+        for row in rows:
+            lines.append(_format_show_row(row))
+        lines.append("")
+
+    for name in sorted(cases):
+        if name in paired_names:
+            continue
+        lines.append("## {}".format(name))
+        lines.append("")
+        lines.append("| timer | median [min, max] | count | note |")
+        lines.append("|---|---|---|---|")
+        agg = cases[name]["agg"]
+        for tname in sorted(agg, key=_timer_sort_key):
+            s = agg[tname]
+            note = "count varies across runs" if s["count_varies"] else ""
+            lines.append(
+                "| {} | {} | {} | {} |".format(tname, _stat_cell(s), s["count"], note)
+            )
         lines.append("")
     return "\n".join(lines)

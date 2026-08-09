@@ -18,6 +18,7 @@
 #include "doctest.h"
 
 #include <cmath>
+#include <limits>
 
 #include "../src/iTPS/correlation_length.hpp"
 
@@ -55,9 +56,16 @@ TEST_CASE("calc_correlation_length") {
     CHECK(calc_correlation_length(1.0, 0.0, 4) == 0.0);
   }
 
-  SUBCASE("result is never NaN") {
+  SUBCASE("result is never NaN for finite eigenvalues") {
     CHECK_FALSE(std::isnan(calc_correlation_length(0.0, 0.0, 4)));
     CHECK_FALSE(std::isnan(calc_correlation_length(1.0, 1.0, 4)));
     CHECK_FALSE(std::isnan(calc_correlation_length(1.0, 0.0, 4)));
+  }
+
+  SUBCASE("NaN eigenvalues (unconverged eigensolver) give NaN, not 0") {
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    CHECK(std::isnan(calc_correlation_length(nan, nan, 4)));
+    CHECK(std::isnan(calc_correlation_length(nan, 1.0, 4)));
+    CHECK(std::isnan(calc_correlation_length(1.0, nan, 4)));
   }
 }

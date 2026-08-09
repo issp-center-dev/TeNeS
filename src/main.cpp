@@ -25,14 +25,15 @@
 #include "initialize_mptensor.hpp"
 #include "iTPS/main.hpp"
 
-int main2(int argc, char **argv) {
-  int mpirank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
-  int status = 0;
-
+// Handle the purely informational invocations (no args, --help, --version)
+// without MPI: MPI_Init can hang or abort when the launcher infrastructure is
+// unavailable (e.g. `tenes --version` on a cluster login node), and these
+// flags must not depend on it. Under mpirun every rank prints, which is
+// acceptable for these flags.
+bool handle_info_flags(int argc, char **argv) {
   std::string usage =
       R"(TeNeS: TEnsor NEtwork Solver for 2D quantum lattice system
-  
+
   Usage:
     tenes [--quiet] <input_toml>
     tenes --help
@@ -45,25 +46,33 @@ int main2(int argc, char **argv) {
   )";
 
   if (argc == 1) {
-    if (mpirank == 0) std::cout << usage << std::endl;
-    return 0;
+    std::cout << usage << std::endl;
+    return true;
   }
 
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-h" || opt == "--help") {
-      if (mpirank == 0) std::cout << usage << std::endl;
-      return 0;
+      std::cout << usage << std::endl;
+      return true;
     }
   }
 
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-v" || opt == "--version") {
-      if (mpirank == 0) std::cout << "TeNeS v" << TENES_VERSION << std::endl;
-      return 0;
+      std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+      return true;
     }
   }
+
+  return false;
+}
+
+int main2(int argc, char **argv) {
+  int mpirank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+  int status = 0;
 
   using PrintLevel = tenes::PrintLevel;
 
@@ -111,6 +120,9 @@ int main2(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+  if (handle_info_flags(argc, argv)) {
+    return 0;
+  }
   MPI_Init(&argc, &argv);
   tenes::initialize_mptensor();
   int status = main2(argc, argv);

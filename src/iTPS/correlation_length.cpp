@@ -21,10 +21,16 @@
 #include <memory>
 #include "correlation_length.hpp"
 #include "iTPS.hpp"
+#include "../timer.hpp"
 
 namespace tenes::itps {
 
 double calc_correlation_length(double e0_abs, double e1_abs, int L) {
+  if (std::isnan(e0_abs) || std::isnan(e1_abs)) {
+    // the eigensolver did not converge; propagate the failure instead of
+    // reporting a valid-looking value
+    return std::numeric_limits<double>::quiet_NaN();
+  }
   if (!(e0_abs > 0.0)) {
     // all eigenvalues vanish; the correlation length is undefined
     return 0.0;
@@ -40,6 +46,8 @@ double calc_correlation_length(double e0_abs, double e1_abs, int L) {
 template <class ptensor>
 std::vector<typename iTPS<ptensor>::transfer_matrix_eigenvalues_type>
 iTPS<ptensor>::measure_transfer_matrix_eigenvalues() {
+  ScopedTimer scoped_timer("measure/correlation_length");
+
   // res[id][0]: direction
   // res[id][1]: coord
   // res[id][2]: value
@@ -111,7 +119,7 @@ void iTPS<ptensor>::save_correlation_length(
       << std::setprecision(std::numeric_limits<double>::max_digits10);
 
   for (const auto &[dir, x, eigvals] : lambdas) {
-    if(eigvals.size() == 1){
+    if (eigvals.size() == 1) {
       if (time) {
         ofs << (*time) << " ";
       }
@@ -124,8 +132,16 @@ void iTPS<ptensor>::save_correlation_length(
     const double e0 = std::abs(eigvals[0]);
     const double correlation_length =
         calc_correlation_length(e0, std::abs(eigvals[1]), L);
-    if (!std::isfinite(correlation_length) &&
+    if (std::isnan(correlation_length) &&
         peps_parameters.print_level >= PrintLevel::warn) {
+      std::cerr << "WARNING: correlation length for direction " << dir
+                << ", coord " << x
+                << " is NaN (the eigensolver did not converge; increase "
+                   "correlation_length.arnoldi_maxdim or "
+                   "arnoldi_maxiterations)"
+                << std::endl;
+    } else if (!std::isfinite(correlation_length) &&
+               peps_parameters.print_level >= PrintLevel::warn) {
       std::cerr << "WARNING: correlation length for direction " << dir
                 << ", coord " << x
                 << " diverges (the two largest eigenvalues of the transfer "
