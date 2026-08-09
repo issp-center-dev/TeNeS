@@ -67,6 +67,20 @@ MPI, ScaLAPACKについては自身でインストールする必要がありま
 </pre></div>
 </div>
 <p>でインストールすることが可能です。それ以外の方は、Open MPI などのMPI実装ならびに ScaLAPACKのホームページを参照の上、インストールをしてください。</p>
+<p>また、TeNeS は任意の依存ライブラリとして <a class="reference external" href="https://github.com/opencollab/arpack-ng">ARPACK-NG</a> を利用できます。
+インストールされていれば CMake が自動的に検出・リンクし、相関長計算における転送行列の
+固有値ソルバとして使われます(入力ファイルの <code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクションの
+<code class="docutils literal notranslate"><span class="pre">eigensolver</span></code> パラメータを参照)。なくてもビルド・実行に支障はありません
+(組み込みのソルバが使われます)。
+Debian GNU/Linux (やその派生ディストリビューション)では</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span> <span class="n">install</span> <span class="n">libarpack2</span><span class="o">-</span><span class="n">dev</span>
+</pre></div>
+</div>
+<p>macOS (Homebrew) では</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">brew</span> <span class="n">install</span> <span class="n">arpack</span>
+</pre></div>
+</div>
+<p>でインストールすることが可能です。</p>
 <p>入力ファイル作成ツールの使用には Python (&gt;= 3.0.0) および
 以下の Python パッケージが必要です。</p>
 <ol class="arabic simple">
@@ -122,6 +136,18 @@ MPI 並列の無効化を推奨しています。</p>
 <code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libscalapack.so</span></code> を利用したい場合には以下のようにオプションを追加してください。</p>
 </div></blockquote>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DSCALAPACK_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-arpack-ng admonition">
+<p class="admonition-title">ARPACK-NG の検出の制御</p>
+<p>CMake は自動で ARPACK-NG を検出します(見つからない場合は組み込みソルバのみでビルドされます)。
+検出の挙動は <code class="docutils literal notranslate"><span class="pre">-DENABLE_ARPACK=AUTO/ON/OFF</span></code> で制御できます
+(デフォルトは <code class="docutils literal notranslate"><span class="pre">AUTO</span></code> 。 <code class="docutils literal notranslate"><span class="pre">ON</span></code> では見つからない場合にエラーになり、
+<code class="docutils literal notranslate"><span class="pre">OFF</span></code> では検出を行いません)。
+特定の場所にインストールされた ARPACK-NG (<code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libarpack.so</span></code>)を
+利用したい場合には以下のようにオプションを追加してください。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DARPACK_ROOT=&lt;path&gt; ../
 </pre></div>
 </div>
 </div>

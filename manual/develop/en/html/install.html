@@ -68,6 +68,19 @@ you can easily install them by the following:</p>
 </pre></div>
 </div>
 <p>For others, see the official instruction of some MPI implementation and ScaLAPACK.</p>
+<p>TeNeS can also use <a class="reference external" href="https://github.com/opencollab/arpack-ng">ARPACK-NG</a> as an optional dependency.
+When it is installed, CMake detects and links it automatically, and it is used as the
+eigensolver for the transfer matrices in the correlation-length measurement
+(see the <code class="docutils literal notranslate"><span class="pre">eigensolver</span></code> parameter of the <code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> section of the input file).
+TeNeS builds and runs fine without it (the builtin solver is used instead).
+On Debian GNU/Linux (or Debian based systems such as Ubuntu), it can be installed by</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span> <span class="n">install</span> <span class="n">libarpack2</span><span class="o">-</span><span class="n">dev</span>
+</pre></div>
+</div>
+<p>and on macOS (Homebrew) by</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">brew</span> <span class="n">install</span> <span class="n">arpack</span>
+</pre></div>
+</div>
 <p>Python3 is required for the input file generators, <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> and <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> .
 Additionary, the following python packages are also required.</p>
 <ol class="arabic simple">
@@ -122,6 +135,18 @@ and TeNeS ends in error. It is recommended to disable MPI parallel.</p>
 <p class="admonition-title">Specify ScaLAPACK</p>
 <p>CMake detects your ScaLAPACK library automatically but may fail. In this case, you can specify the ScaLAPACK library (<code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libscalapack.so</span></code>) in the following way,</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DSCALAPACK_ROOT=&lt;path&gt; ../
+</pre></div>
+</div>
+</div>
+<div class="admonition-control-the-detection-of-arpack-ng admonition">
+<p class="admonition-title">Control the detection of ARPACK-NG</p>
+<p>CMake detects ARPACK-NG automatically (when it is not found, TeNeS is built
+with the builtin solver only). The behavior can be controlled by
+<code class="docutils literal notranslate"><span class="pre">-DENABLE_ARPACK=AUTO/ON/OFF</span></code> (default <code class="docutils literal notranslate"><span class="pre">AUTO</span></code>; <code class="docutils literal notranslate"><span class="pre">ON</span></code> raises an error
+when ARPACK-NG is not found, and <code class="docutils literal notranslate"><span class="pre">OFF</span></code> disables the detection).
+If you want to use ARPACK-NG installed in a specific location
+(<code class="docutils literal notranslate"><span class="pre">&lt;path&gt;/lib/libarpack.so</span></code>), add the following option:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DARPACK_ROOT=&lt;path&gt; ../
 </pre></div>
 </div>
 </div>
