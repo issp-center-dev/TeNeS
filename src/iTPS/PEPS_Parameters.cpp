@@ -67,6 +67,7 @@ PEPS_Parameters::PEPS_Parameters() {
 
   // general
   is_real = false;
+  fermion = false;
   iszero_tol = 0.0;
   to_measure = true;
   tensor_load_dir = "";
@@ -99,6 +100,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Lcor,
     I_seed,
     I_is_real,
+    I_fermion,
     I_to_measure,
 
     N_PARAMS_INT_INDEX,
@@ -159,6 +161,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(RSVD_Oversampling_factor, double);
 
     SAVE_PARAM(is_real, int);
+    SAVE_PARAM(fermion, int);
     SAVE_PARAM(iszero_tol, double);
     SAVE_PARAM(to_measure, int);
     SAVE_PARAM(tensor_load_dir, string);
@@ -168,6 +171,20 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     bcast(params_int, 0, comm);
     bcast(params_double, 0, comm);
     bcast(params_string, 0, comm);
+    std::vector<int> parity_sizes;
+    parity_sizes.reserve(phys_parity.size());
+    for (const auto &site_parity : phys_parity) {
+      parity_sizes.push_back(static_cast<int>(site_parity.size()));
+    }
+    bcast(parity_sizes, 0, comm);
+    for (std::size_t site = 0; site < phys_parity.size(); ++site) {
+      std::vector<int> parity_values;
+      parity_values.reserve(phys_parity[site].size());
+      for (bool p : phys_parity[site]) {
+        parity_values.push_back(p ? 1 : 0);
+      }
+      bcast(parity_values, 0, comm);
+    }
     // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
     // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
     //           comm);
@@ -175,6 +192,17 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     bcast(params_int, 0, comm);
     bcast(params_double, 0, comm);
     bcast(params_string, 0, comm);
+    std::vector<int> parity_sizes;
+    bcast(parity_sizes, 0, comm);
+    phys_parity.assign(parity_sizes.size(), std::vector<bool>());
+    for (std::size_t site = 0; site < parity_sizes.size(); ++site) {
+      std::vector<int> parity_values(parity_sizes[site]);
+      bcast(parity_values, 0, comm);
+      phys_parity[site].resize(parity_values.size());
+      for (std::size_t i = 0; i < parity_values.size(); ++i) {
+        phys_parity[site][i] = (parity_values[i] != 0);
+      }
+    }
     // MPI_Bcast(&params_int.front(), N_PARAMS_INT_INDEX, MPI_INT, 0, comm);
     // MPI_Bcast(&params_double.front(), N_PARAMS_DOUBLE_INDEX, MPI_DOUBLE, 0,
     //           comm);
@@ -205,6 +233,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(RSVD_Oversampling_factor, double);
 
     LOAD_PARAM(is_real, int);
+    LOAD_PARAM(fermion, int);
     LOAD_PARAM(iszero_tol, double);
     LOAD_PARAM(to_measure, int);
     LOAD_PARAM(tensor_load_dir, string);
@@ -278,7 +307,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << std::endl;
 
   ofs << "mode = ";
-  switch(calcmode){
+  switch (calcmode) {
     case PEPS_Parameters::CalculationMode::ground_state:
       ofs << "ground state" << std::endl;
       break;
@@ -295,6 +324,7 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "Lcor = " << Lcor << std::endl;
   ofs << "seed = " << seed << std::endl;
   ofs << "is_real = " << is_real << std::endl;
+  ofs << "fermion = " << (fermion ? "true" : "false") << std::endl;
   ofs << "iszero_tol = " << iszero_tol << std::endl;
   ofs << "measure = " << to_measure << std::endl;
   ofs << "tensor_load_dir = " << tensor_load_dir << std::endl;

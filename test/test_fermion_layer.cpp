@@ -19,6 +19,7 @@
 
 #include <random>
 
+#include "../src/fermion/fermion_info.hpp"
 #include "../src/fermion/fops.hpp"
 #include "../src/fermion/ftensor.hpp"
 #include "../src/fermion/parity.hpp"
@@ -257,6 +258,39 @@ TEST_CASE("extend pads new parity entries as even") {
   CHECK(e.shape() == mptensor::Shape(3, 2));
   CHECK(e.parity[0] == tenes::fermion::parity_vector{false, true, false});
   CHECK(e.parity[1] == tenes::fermion::parity_vector{true, false});
+}
+
+TEST_CASE("FermionInfo wraps and unwraps Tn roundtrip") {
+  tenes::fermion::FermionInfo fi;
+  fi.enabled = true;
+  fi.phys = {{false, true}};
+  fi.virt = {{{tenes::fermion::parity_vector{false, true},
+               tenes::fermion::parity_vector{false, true},
+               tenes::fermion::parity_vector{false, true},
+               tenes::fermion::parity_vector{false, true}}}};
+
+  tenes::real_tensor raw(mptensor::Shape(2, 2, 2, 2, 2));
+  for (std::size_t n = 0; n < raw.local_size(); ++n) {
+    raw.set_value(raw.global_index(n), static_cast<double>(n + 1));
+  }
+
+  ft wrapped = tenes::fermion::wrap_Tn(raw, fi, 0);
+  REQUIRE(wrapped.parity.size() == 5);
+  CHECK(wrapped.parity[0] == fi.virt[0][0]);
+  CHECK(wrapped.parity[4] == fi.phys[0]);
+
+  tenes::real_tensor unwrapped(raw.shape());
+  tenes::fermion::FermionInfo fi_out = fi;
+  tenes::fermion::unwrap_Tn(wrapped, unwrapped, fi_out, 0);
+  for (std::size_t n = 0; n < raw.local_size(); ++n) {
+    auto idx = raw.global_index(n);
+    double before, after;
+    raw.get_value(idx, before);
+    unwrapped.get_value(idx, after);
+    CHECK(after == doctest::Approx(before));
+  }
+  CHECK(fi_out.virt[0][2] == fi.virt[0][2]);
+  CHECK(fi_out.phys[0] == fi.phys[0]);
 }
 
 TEST_CASE("reshape fuses adjacent leg parities") {

@@ -68,19 +68,20 @@ struct PEPS_Parameters {
 
   // general
   bool is_real;
+  bool fermion;
   double iszero_tol;
   bool to_measure;
   std::string tensor_load_dir;
   std::string tensor_save_dir;
   std::string outdir;
+  std::vector<std::vector<bool>> phys_parity;
 
   enum CalculationMode {
-      ground_state,
-      time_evolution,
-      finite_temperature,
+    ground_state,
+    time_evolution,
+    finite_temperature,
   };
   CalculationMode calcmode;
-
 
   PEPS_Parameters();
 

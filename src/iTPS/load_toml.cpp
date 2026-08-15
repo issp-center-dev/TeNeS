@@ -19,6 +19,7 @@
 #define _USE_MATH_DEFINES
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iterator>
 #include <string>
 #include <tuple>
@@ -419,6 +420,7 @@ PEPS_Parameters gen_param(const toml::value &param) {
   const toml::value *general = detail::opt_table(param, "general");
   if (general != nullptr) {
     load_if(pparam.is_real, *general, "is_real");
+    load_if(pparam.fermion, *general, "fermion");
     load_if(pparam.iszero_tol, *general, "iszero_tol");
     load_if(pparam.to_measure, *general, "measure");
     load_if(pparam.outdir, *general, "output");
@@ -489,6 +491,228 @@ PEPS_Parameters gen_param(const toml::value &param) {
   }
 
   return pparam;
+}
+
+std::vector<std::vector<bool>> gen_phys_parity(const toml::value &toml,
+                                               const SquareLattice &lattice,
+                                               const char *tablename) {
+  std::vector<std::vector<bool>> ret(lattice.N_UNIT);
+  if (!toml.contains("unitcell")) {
+    throw input_error(detail::msg_cannot_find("unitcell", tablename));
+  }
+  const toml::value &sites = toml.at("unitcell");
+  if (!sites.is_array()) {
+    throw input_error(toml::format_error(
+        "[error] unitcell should be an array of tables", sites, "given here"));
+  }
+  for (const auto &site : sites.as_array()) {
+    if (!site.is_table()) {
+      throw input_error(
+          toml::format_error("[error] an element of unitcell should be a table",
+                             site, "given here"));
+    }
+
+    auto indices = get_array_of<int64_t>(site, "index");
+    if (indices.empty()) {
+      for (int i = 0; i < lattice.N_UNIT; ++i) {
+        indices.push_back(i);
+      }
+    }
+    if (!site.contains("parity")) {
+      continue;
+    }
+    auto parity_int = get_array_of<int64_t>(site, "parity");
+    std::vector<bool> parity(parity_int.size());
+    for (std::size_t i = 0; i < parity_int.size(); ++i) {
+      if (parity_int[i] != 0 && parity_int[i] != 1) {
+        throw input_error("tensor.unitcell.parity entries must be 0 or 1");
+      }
+      parity[i] = (parity_int[i] == 1);
+    }
+
+    for (int index : indices) {
+      if (index < 0 || index >= lattice.N_UNIT) {
+        throw input_error("tensor.unitcell.index is out of range");
+      }
+      if (static_cast<int>(parity.size()) != lattice.physical_dims[index]) {
+        throw input_error(
+            "tensor.unitcell.parity length must match physical_dim");
+      }
+      ret[index] = parity;
+    }
+  }
+  return ret;
+}
+
+namespace {
+void throw_fermion_guard(std::string const &reason) {
+  throw tenes::input_error("fermion mode M1 does not support " + reason +
+                           "; disable fermion mode or remove this setting");
+}
+
+bool has_positive_steps(std::vector<int> const &steps) {
+  return std::any_of(steps.begin(), steps.end(), [](int n) { return n > 0; });
+}
+
+int count_index_odd(std::vector<std::vector<bool>> const &parity,
+                    mptensor::Index const &idx) {
+  int n = 0;
+  for (std::size_t ax = 0; ax < parity.size(); ++ax) {
+    n += parity[ax][idx[ax]] ? 1 : 0;
+  }
+  return n;
+}
+
+template <class tensor>
+bool has_odd_tensor_element(tensor const &t,
+                            std::vector<std::vector<bool>> const &parity) {
+  if (t.rank() == 0) {
+    return false;
+  }
+  double local = 0.0;
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    auto idx = t.global_index(n);
+    if (count_index_odd(parity, idx) % 2 == 1) {
+      typename tensor::value_type v;
+      t.get_value(idx, v);
+      local = std::max(local, std::abs(v));
+    }
+  }
+  std::vector<double> reduced{local};
+  tenes::allreduce_max(reduced, t.get_comm());
+  return reduced[0] > 0.0;
+}
+
+std::vector<std::vector<bool>> one_site_parity(
+    std::vector<std::vector<bool>> const &phys, int site) {
+  return {phys[site], phys[site]};
+}
+
+std::vector<std::vector<bool>> two_site_parity(
+    std::vector<std::vector<bool>> const &phys, int site0, int site1) {
+  return {phys[site0], phys[site1], phys[site0], phys[site1]};
+}
+
+bool is_nearest_neighbor_displacement(int dx, int dy) {
+  return std::abs(dx) + std::abs(dy) == 1;
+}
+}  // namespace
+
+template <class tensor>
+void validate_fermion_constraints(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    const EvolutionOperators<tensor> &simple_updates,
+    const EvolutionOperators<tensor> &full_updates,
+    const Operators<tensor> &onesite_operators,
+    const Operators<tensor> &twosite_operators,
+    const Operators<tensor> &multisite_operators,
+    const CorrelationParameter &corparam) {
+  if (!peps_parameters.fermion) {
+    return;
+  }
+
+  if (peps_parameters.phys_parity.size() !=
+      static_cast<std::size_t>(lattice.N_UNIT)) {
+    throw_fermion_guard("missing tensor.unitcell.parity metadata");
+  }
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    if (peps_parameters.phys_parity[site].empty()) {
+      throw_fermion_guard("missing tensor.unitcell.parity");
+    }
+    if (static_cast<int>(peps_parameters.phys_parity[site].size()) !=
+        lattice.physical_dims[site]) {
+      throw_fermion_guard("tensor.unitcell.parity with wrong length");
+    }
+  }
+  if (peps_parameters.calcmode != PEPS_Parameters::ground_state) {
+    throw_fermion_guard("non-ground-state mode");
+  }
+  if (has_positive_steps(peps_parameters.num_full_step)) {
+    throw_fermion_guard("full update");
+  }
+  if (peps_parameters.MeanField_Env) {
+    throw_fermion_guard("MeanField_Env=true");
+  }
+  if (peps_parameters.Simple_Gauge_Fix) {
+    throw_fermion_guard("Simple_Gauge_Fix=true");
+  }
+  if (peps_parameters.Use_RSVD) {
+    throw_fermion_guard("Use_RSVD=true");
+  }
+  if (corparam.r_max > 0) {
+    throw_fermion_guard("correlation.r_max > 0");
+  }
+  if (!peps_parameters.tensor_load_dir.empty() ||
+      !peps_parameters.tensor_save_dir.empty()) {
+    throw_fermion_guard("tensor load/save directories");
+  }
+  if (!multisite_operators.empty()) {
+    throw_fermion_guard("multisite operators");
+  }
+
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    const auto &init = lattice.initial_dirs[site];
+    for (std::size_t i = 0; i < init.size(); ++i) {
+      if (i < peps_parameters.phys_parity[site].size() &&
+          peps_parameters.phys_parity[site][i] && init[i] != 0.0) {
+        throw_fermion_guard("odd-parity product initial states");
+      }
+    }
+  }
+
+  for (const auto &op : onesite_operators) {
+    if (has_odd_tensor_element(
+            op.op,
+            one_site_parity(peps_parameters.phys_parity, op.source_site))) {
+      throw_fermion_guard("parity-odd one-site operators");
+    }
+  }
+  for (const auto &op : twosite_operators) {
+    if (!op.dx.empty() &&
+        !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
+      throw_fermion_guard("distance-2-or-longer two-site operators");
+    }
+    if (op.ops_indices.empty()) {
+      const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+      if (has_odd_tensor_element(op.op,
+                                 two_site_parity(peps_parameters.phys_parity,
+                                                 op.source_site, site1))) {
+        throw_fermion_guard("parity-odd two-site operators");
+      }
+    }
+  }
+  for (const auto &op : simple_updates) {
+    if (op.is_onesite()) {
+      if (has_odd_tensor_element(
+              op.op,
+              one_site_parity(peps_parameters.phys_parity, op.source_site))) {
+        throw_fermion_guard("parity-odd one-site gates");
+      }
+    } else {
+      const int site1 = lattice.neighbor(op.source_site, op.source_leg);
+      if (has_odd_tensor_element(op.op,
+                                 two_site_parity(peps_parameters.phys_parity,
+                                                 op.source_site, site1))) {
+        throw_fermion_guard("parity-odd two-site gates");
+      }
+    }
+  }
+  for (const auto &op : full_updates) {
+    if (op.is_onesite()) {
+      if (has_odd_tensor_element(
+              op.op,
+              one_site_parity(peps_parameters.phys_parity, op.source_site))) {
+        throw_fermion_guard("parity-odd one-site full-update gates");
+      }
+    } else {
+      const int site1 = lattice.neighbor(op.source_site, op.source_leg);
+      if (has_odd_tensor_element(op.op,
+                                 two_site_parity(peps_parameters.phys_parity,
+                                                 op.source_site, site1))) {
+        throw_fermion_guard("parity-odd two-site full-update gates");
+      }
+    }
+  }
 }
 
 std::tuple<int, int, int> read_bond(std::string line) {
@@ -820,5 +1044,22 @@ template EvolutionOperators<real_tensor> load_full_updates(
     const toml::value &param, MPI_Comm comm, double atol);
 template EvolutionOperators<complex_tensor> load_full_updates(
     const toml::value &param, MPI_Comm comm, double atol);
+
+template void validate_fermion_constraints(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    const EvolutionOperators<real_tensor> &simple_updates,
+    const EvolutionOperators<real_tensor> &full_updates,
+    const Operators<real_tensor> &onesite_operators,
+    const Operators<real_tensor> &twosite_operators,
+    const Operators<real_tensor> &multisite_operators,
+    const CorrelationParameter &corparam);
+template void validate_fermion_constraints(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    const EvolutionOperators<complex_tensor> &simple_updates,
+    const EvolutionOperators<complex_tensor> &full_updates,
+    const Operators<complex_tensor> &onesite_operators,
+    const Operators<complex_tensor> &twosite_operators,
+    const Operators<complex_tensor> &multisite_operators,
+    const CorrelationParameter &corparam);
 
 }  // namespace tenes::itps

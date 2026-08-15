@@ -32,6 +32,7 @@
 #include "../mpi.hpp"
 #include "../tensor.hpp"
 
+#include "../fermion/fermion_info.hpp"
 #include "../util/type_traits.hpp"
 
 #include "../timer.hpp"
@@ -45,6 +46,8 @@
 // IWYU pragma end_exports
 
 namespace tenes::itps {
+
+struct iTPSTestAccessor;
 
 struct Bond {
   int source_site;
@@ -71,6 +74,8 @@ inline bool operator<(const Multisites &a, const Multisites &b) {
 //! Solver main class
 template <class tensor>
 class iTPS {
+  friend struct iTPSTestAccessor;
+
  public:
   using tensor_type = typename tensor::value_type;
   static constexpr bool is_tensor_real = std::is_floating_point_v<tensor_type>;
@@ -104,7 +109,7 @@ class iTPS {
   void initialize_tensors();
   void initialize_tensors_density();
   std::vector<tensor> make_single_tensor_density();
-  
+
   //! update corner transfer matrices
   void update_CTM();
   void update_CTM_density();
@@ -125,7 +130,7 @@ class iTPS {
 
   //! optimize tensors
   void optimize();
-  //void optimize_density();
+  // void optimize_density();
 
   //! measure expectation value of observables
   void measure(std::optional<double> time = std::nullopt,
@@ -254,6 +259,7 @@ class iTPS {
 
   PEPS_Parameters peps_parameters;
   SquareLattice lattice;
+  std::vector<std::vector<bool>> phys_parity;
 
   EvolutionOperators<tensor> simple_updates;
   int num_simple_update_groups;
@@ -312,6 +318,7 @@ class iTPS {
   std::vector<tensor> C3;   //!< Right-bottom CTM for each center
   std::vector<tensor> C4;   //!< Left-bottom CTM for each center
   //!@}
+  tenes::fermion::FermionInfo finfo;
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 

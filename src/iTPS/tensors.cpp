@@ -34,6 +34,18 @@ using std::size_t;
 
 namespace tenes::itps {
 
+namespace {
+tenes::fermion::leg_parities make_Tn_parity(
+    tenes::fermion::FermionInfo const &finfo, int site) {
+  return tenes::fermion::Tn_parity(finfo, site);
+}
+
+bool is_even_parity_element(tenes::fermion::leg_parities const &parity,
+                            mptensor::Index const &index) {
+  return tenes::fermion::count_odd(parity, index) % 2 == 0;
+}
+}  // namespace
+
 template <class ptensor>
 void iTPS<ptensor>::initialize_tensors() {
   using mptensor::Shape;
@@ -48,10 +60,41 @@ void iTPS<ptensor>::initialize_tensors() {
   C3.clear();
   C4.clear();
   lambda_tensor.clear();
+  phys_parity = peps_parameters.phys_parity;
+  finfo = tenes::fermion::FermionInfo{};
+  if (peps_parameters.fermion) {
+    finfo.enabled = true;
+    finfo.phys.reserve(phys_parity.size());
+    for (const auto &site_parity : phys_parity) {
+      finfo.phys.push_back(site_parity);
+    }
+    finfo.virt.reserve(N_UNIT);
+    for (int e = 0; e < 4; ++e) {
+      finfo.C_par[e].resize(N_UNIT);
+      finfo.eT_par[e].resize(N_UNIT);
+    }
+  }
 
   for (int i = 0; i < N_UNIT; ++i) {
     const auto pdim = lattice.physical_dims[i];
     const auto vdim = lattice.virtual_dims[i];
+
+    if (peps_parameters.fermion) {
+      std::array<tenes::fermion::parity_vector, 4> virt;
+      for (int leg = 0; leg < nleg; ++leg) {
+        virt[leg] =
+            tenes::fermion::even_first_parity(static_cast<size_t>(vdim[leg]));
+      }
+      finfo.virt.push_back(virt);
+      const auto chi_parity = tenes::fermion::even_first_parity(CHI);
+      for (int e = 0; e < 4; ++e) {
+        finfo.C_par[e][i] = {chi_parity, chi_parity};
+      }
+      finfo.eT_par[0][i] = {chi_parity, chi_parity, virt[1], virt[1]};
+      finfo.eT_par[1][i] = {chi_parity, chi_parity, virt[2], virt[2]};
+      finfo.eT_par[2][i] = {chi_parity, chi_parity, virt[3], virt[3]};
+      finfo.eT_par[3][i] = {chi_parity, chi_parity, virt[0], virt[0]};
+    }
 
     Tn.push_back(
         ptensor(comm, Shape(vdim[0], vdim[1], vdim[2], vdim[3], pdim)));
@@ -90,6 +133,9 @@ void iTPS<ptensor>::initialize_tensors() {
     for (int i = 0; i < lattice.N_UNIT; ++i) {
       const auto pdim = lattice.physical_dims[i];
       const auto vdim = lattice.virtual_dims[i];
+      const auto parity = peps_parameters.fermion
+                              ? make_Tn_parity(finfo, i)
+                              : tenes::fermion::leg_parities{};
 
       const size_t ndim = vdim[0] * vdim[1] * vdim[2] * vdim[3] * pdim;
       std::vector<double> ran_re(ndim);
@@ -113,6 +159,10 @@ void iTPS<ptensor>::initialize_tensors() {
 
       for (size_t n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
+        if (peps_parameters.fermion && !is_even_parity_element(parity, index)) {
+          Tn[i].set_value(index, to_tensor_type(0.0));
+          continue;
+        }
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
           auto v = std::complex<double>(dir[index[4]], dir_im[index[4]]);
           Tn[i].set_value(index, to_tensor_type(v));

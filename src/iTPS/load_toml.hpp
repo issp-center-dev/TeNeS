@@ -48,6 +48,20 @@ TransferMatrix_Parameters gen_transfer_matrix_parameter(
 
 PEPS_Parameters gen_param(const toml::value &param);
 
+std::vector<std::vector<bool>> gen_phys_parity(
+    const toml::value &toml, const SquareLattice &lattice,
+    const char *tablename = "tensor");
+
+template <class tensor>
+void validate_fermion_constraints(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    const EvolutionOperators<tensor> &simple_updates,
+    const EvolutionOperators<tensor> &full_updates,
+    const Operators<tensor> &onesite_operators,
+    const Operators<tensor> &twosite_operators,
+    const Operators<tensor> &multisite_operators,
+    const CorrelationParameter &corparam);
+
 std::tuple<int, int, int> read_bond(std::string line);
 std::vector<std::tuple<int, int, int>> read_bonds(std::string str);
 

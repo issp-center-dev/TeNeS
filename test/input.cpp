@@ -24,6 +24,7 @@
 
 #include "../src/tensor.hpp"
 #include "../src/mpi.hpp"
+#include "../src/fermion/fops.hpp"
 #include "../src/util/string.hpp"
 #include "../src/arpack_solver.hpp"
 #include "../src/iTPS/load_toml.hpp"
@@ -31,6 +32,20 @@
 #include "../src/iTPS/transfer_matrix.hpp"
 
 toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
+
+namespace tenes::itps {
+struct iTPSTestAccessor {
+  template <class tensor>
+  static std::vector<tensor> const &Tn(iTPS<tensor> const &state) {
+    return state.Tn;
+  }
+
+  template <class tensor>
+  static tenes::fermion::FermionInfo const &finfo(iTPS<tensor> const &state) {
+    return state.finfo;
+  }
+};
+}  // namespace tenes::itps
 
 TEST_CASE("input") {
   using namespace tenes;
@@ -352,6 +367,39 @@ noise = 0.01
         TransferMatrix_Parameters{}));
   }
 
+  SUBCASE("fermion initialization masks odd-total Tn entries") {
+    INFO("fermion initialization masks odd-total Tn entries");
+    auto toml = parse_str(R"(
+[tensor]
+L_sub = [2, 1]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+    )");
+    PEPS_Parameters peps_parameters;
+    peps_parameters.fermion = true;
+    peps_parameters.print_level = PrintLevel::none;
+    SquareLattice lattice = gen_lattice(toml.at("tensor"));
+    peps_parameters.phys_parity = gen_phys_parity(toml.at("tensor"), lattice);
+
+    iTPS<ptensor> state(MPI_COMM_WORLD, peps_parameters, lattice,
+                        EvolutionOperators<ptensor>{},
+                        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+                        Operators<ptensor>{}, Operators<ptensor>{},
+                        CorrelationParameter{}, TransferMatrix_Parameters{});
+    const auto &fi = iTPSTestAccessor::finfo(state);
+    REQUIRE(fi.enabled);
+    const auto &tensors = iTPSTestAccessor::Tn(state);
+    REQUIRE(tensors.size() == static_cast<std::size_t>(lattice.N_UNIT));
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      auto ft = tenes::fermion::wrap_Tn(tensors[site], fi, site);
+      CHECK(tenes::fermion::parity_violation(ft) == doctest::Approx(0.0));
+    }
+  }
+
   SUBCASE("correlation") {}
 
   SUBCASE("correlation_length eigensolver") {
@@ -423,5 +471,100 @@ eigensolver = "lapack"
     CHECK(effective_arnoldi_restartdim(0, 24, 31) == 25);
     // explicit values are used as-is
     CHECK(effective_arnoldi_restartdim(20, 4, 50) == 20);
+  }
+
+  SUBCASE("fermion parity input loads") {
+    INFO("fermion parity input loads");
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [1, 1]
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    CHECK(peps_parameters.fermion == true);
+    REQUIRE(peps_parameters.phys_parity.size() == 1);
+    CHECK(peps_parameters.phys_parity[0] == std::vector<bool>{false, true});
+  }
+
+  SUBCASE("fermion rejects mean-field environment") {
+    INFO("fermion rejects mean-field environment");
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.ctm]
+meanfield_env = true
+)");
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [1, 1]
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    CHECK_THROWS_AS(
+        validate_fermion_constraints(
+            peps_parameters, lattice, EvolutionOperators<ptensor>{},
+            EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+            Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}),
+        tenes::input_error);
+  }
+
+  SUBCASE("fermion rejects odd one-site operator") {
+    INFO("fermion rejects odd one-site operator");
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [1, 1]
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    auto observable_toml = parse_str(R"(
+[observable]
+[[observable.onesite]]
+group = 0
+sites = [0]
+dim = 2
+elements = """
+0 1 1.0 0.0
+"""
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    auto onesite = load_operators<ptensor>(observable_toml, MPI_COMM_WORLD, 1,
+                                           1, 0.0, "observable.onesite");
+    CHECK_THROWS_AS(
+        validate_fermion_constraints(
+            peps_parameters, lattice, EvolutionOperators<ptensor>{},
+            EvolutionOperators<ptensor>{}, onesite, Operators<ptensor>{},
+            Operators<ptensor>{}, CorrelationParameter{}),
+        tenes::input_error);
   }
 }
