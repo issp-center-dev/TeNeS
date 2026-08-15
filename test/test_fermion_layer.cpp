@@ -17,13 +17,19 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+#include <array>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <random>
+#include <sstream>
 
 #include "../src/fermion/fermion_info.hpp"
 #include "../src/fermion/fops.hpp"
 #include "../src/fermion/ftensor.hpp"
 #include "../src/fermion/parity.hpp"
+#include "../src/fermion/reduced.hpp"
 #include "../src/SquareLattice.hpp"
 #include "../src/tensor.hpp"
 #include "../src/iTPS/PEPS_Parameters.hpp"

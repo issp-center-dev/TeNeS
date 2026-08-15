@@ -28,12 +28,14 @@ def label_occ(parity, label):
     raise ValueError(f"unsupported parity-vector length: {len(parity)}")
 
 
-def deterministic_tensor(site, parities):
+def deterministic_tensor(site, parities, seed=0):
     shape = tuple(len(p) for p in parities)
     out = np.zeros(shape, dtype=np.float64)
     for idx in product(*[range(n) for n in shape]):
         if sum(int(parities[ax][idx[ax]]) for ax in range(len(shape))) % 2 == 0:
-            x = (site + 2) * (1 + sum((ax + 3) * idx[ax] for ax in range(5)))
+            x = (site + 2) * (
+                1 + seed + sum((ax + 3 + seed % 5) * idx[ax] for ax in range(5))
+            )
             out[idx] = 0.19 * np.sin(x) + 0.13 * np.cos(0.37 * x)
     return out
 
@@ -211,7 +213,7 @@ def plain_boson_norm(patch, tensors):
     return float(total)
 
 
-def make_case(lx, ly, parity):
+def make_case(lx, ly, parity, seed=0):
     patch = Patch(lx, ly)
     even = [False]
     leg_parities = []
@@ -227,13 +229,14 @@ def make_case(lx, ly, parity):
                 ]
             )
     tensors = [
-        deterministic_tensor(site, leg_parities[site]) for site in range(patch.nsite)
+        deterministic_tensor(site, leg_parities[site], seed)
+        for site in range(patch.nsite)
     ]
     return patch, tensors, leg_parities
 
 
-def print_case(name, lx, ly, parity):
-    patch, tensors, leg_parities = make_case(lx, ly, parity)
+def print_case(name, lx, ly, parity, seed=0):
+    patch, tensors, leg_parities = make_case(lx, ly, parity, seed)
     oracle = Oracle(patch, tensors, leg_parities)
     norm, n, bonds = oracle.observables()
     print(f"{name}.norm = {norm:.17e}")
@@ -358,6 +361,9 @@ def main():
     print_case("horizontal_2site", 2, 1, [False, True])
     print_case("vertical_2site", 1, 2, [False, True])
     print_case("plaquette_2x2", 2, 2, [False, True])
+    print_case("seed173_horizontal_2site", 2, 1, [False, True], 173)
+    print_case("seed173_vertical_2site", 1, 2, [False, True], 173)
+    print_case("seed173_plaquette_2x2", 2, 2, [False, True], 173)
 
 
 if __name__ == "__main__":
