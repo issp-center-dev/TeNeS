@@ -286,3 +286,35 @@ core 層 3 ファイルの grep 全数調査(2026-08-15、`fermion` ブランチ
 - B. Bruognolo et al., SciPost Phys. Lect. Notes 25 (2021), arXiv:2006.08289 — フェルミオン iPEPS+CTMRG 実装手引き
 - M. M. Rams et al., SciPost Phys. Codebases 52 (2025), arXiv:2405.12196 — YASTN(swap gate 実装規約)
 - 調査レポート: https://claude.ai/code/artifact/653868dd-dff9-4fb7-9333-98a8fe81b69e
+
+## 改訂1(2026-08-15): 脚 arrow(dual フラグ)の導入
+
+**背景**: §4-3 の「arrow を持たず、必要箇所に明示挿入」という簡略化は、閉ループを含む
+ネットワーク(CTM 測定の χ リング等)で破綻することが E2E 検証で判明した。パリティ
+ベクトルだけでは「ket-ket ボンド縮約」と「ket-bra 物理縮約」を区別できず、奇セクターを
+通る閉ループが supertrace の (−1) を拾う(症状: ランダム偶 iPEPS のサイトノルムが負、
+密度が [0,1] を逸脱)。開いたネットワーク(Task 9 の JW 検証)や等長性(U†U=1)は
+現行実装でも正しい。
+
+**設計**(symmray/YASTN と同型の dual フラグ):
+
+1. `ftensor` に `std::vector<bool> dual;`(脚ごと、false=ket / true=dual)を追加。
+2. **縮約規則**: `tensordot`/`trace` は縮約脚対の dual が異なることを実行時検証
+   (同じならエラー)。A 側の縮約脚が ket(dual=false)の場合、その脚に
+   `apply_parity` を適用してから縮約する(coevaluation の向き補正)。A 側が dual なら
+   符号なし。この単一の局所規則が閉ループの supertrace を trace に直す。
+3. `conj`: 全脚の dual を反転+要素共役+既存の (−1)^{m(m−1)/2} twist。
+4. `transpose`: dual を parity と同時に並べ替え。`slice`/`extend`/`reshape` も同様に転送。
+5. `svd`/`qr`: 内部脚は U(最終脚)= ket、VT(先頭脚)= dual として生成
+   (U·VT の再構成縮約が規則 2 と整合)。
+6. **格子規約**: ket 層 Tn の脚 dual = {左: true, 上: true, 右: false, 下: false,
+   物理: false}(右・下が ket、左・上が dual。隣接ボンドは常に ket-dual 対になる)。
+   演算子 rank-4 は {in1, in2: dual=false→…} — 具体的には in 脚が ket-Tn の物理
+   (ket)と縮約されるため dual=true、out 脚が bra 物理(dual)と縮約されるため
+   dual=false。rank-2 も同様。
+7. 環境テンソル C/eT の dual は構成(縮約・分解)から自動的に伝播する。
+
+**検証**: (a) supertrace ミニテスト(単一奇ループの向き両方で ± を確認)、
+(b) 既存全単体テストのフラグ対応と Task 9 JW 物理値の再固定、
+(c) ランダム偶 iPEPS の CTM ノルム正・n∈[0,1] を回帰テスト化(今回の再現ケース)、
+(d) 自由フェルミオン E2E(最終判定)。
