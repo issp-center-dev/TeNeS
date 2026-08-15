@@ -49,6 +49,61 @@ namespace {
 template <class tensor>
 void enforce_even_parity(tensor &) {}
 
+int fermion_theta_log_limit() {
+  const char *raw = std::getenv("TENES_FERMION_THETA_LOG_LIMIT");
+  if (raw == nullptr) {
+    return 0;
+  }
+  return std::max(0, std::atoi(raw));
+}
+
+template <class tensor>
+void log_theta_blocks(const tensor &, const char *, const Axes &,
+                      const Axes &) {}
+
+template <class tensor>
+void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
+                      const char *label, const Axes &rows, const Axes &cols) {
+  static int theta_log_count = 0;
+  const int limit = fermion_theta_log_limit();
+  if (theta_log_count >= limit) {
+    return;
+  }
+  double even_norm2 = 0.0;
+  double odd_norm2 = 0.0;
+  double even_max = 0.0;
+  double odd_max = 0.0;
+  for (std::size_t n = 0; n < theta.t.local_size(); ++n) {
+    const auto idx = theta.t.global_index(n);
+    bool row_odd = false;
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+      row_odd = row_odd != theta.parity[rows[i]][idx[rows[i]]];
+    }
+    bool col_odd = false;
+    for (std::size_t i = 0; i < cols.size(); ++i) {
+      col_odd = col_odd != theta.parity[cols[i]][idx[cols[i]]];
+    }
+    if (row_odd != col_odd) {
+      continue;
+    }
+    typename tensor::value_type value{};
+    theta.t.get_value(idx, value);
+    const double abs_value = std::abs(value);
+    if (row_odd) {
+      odd_norm2 += abs_value * abs_value;
+      odd_max = std::max(odd_max, abs_value);
+    } else {
+      even_norm2 += abs_value * abs_value;
+      even_max = std::max(even_max, abs_value);
+    }
+  }
+  std::cerr << "TENES_FERMION_THETA call=" << theta_log_count
+            << " label=" << label << " even_norm=" << std::sqrt(even_norm2)
+            << " even_max=" << even_max << " odd_norm=" << std::sqrt(odd_norm2)
+            << " odd_max=" << odd_max << "\n";
+  ++theta_log_count;
+}
+
 template <class tensor>
 void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
   const double v = tenes::fermion::parity_violation(a);
@@ -150,8 +205,10 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
     # final_bond_order  (c1, c2, m1o, m2o)
     ##############################
   */
-  ptensor Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
-                            Axes(1, 3), Axes(0, 1));
+  ptensor Theta_before = tensordot(R1, R2, Axes(1), Axes(1));
+  log_theta_blocks(Theta_before, "before_gate", Axes(0, 1), Axes(2, 3));
+  ptensor Theta = tensordot(Theta_before, op12, Axes(1, 3), Axes(0, 1));
+  log_theta_blocks(Theta, "after_gate", Axes(0, 2), Axes(1, 3));
 
   // svd
   ptensor U, VT;

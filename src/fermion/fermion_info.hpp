@@ -19,8 +19,10 @@
 
 #include <array>
 #include <stdexcept>
+#include <sstream>
 #include <vector>
 
+#include "../SquareLattice.hpp"
 #include "ftensor.hpp"
 #include "parity.hpp"
 
@@ -34,6 +36,29 @@ struct FermionInfo {
   std::vector<std::array<parity_vector, 2>> C_par[4];
   std::vector<std::array<parity_vector, 4>> eT_par[4];
 };
+
+inline void validate_neighbor_consistency(const FermionInfo& fi,
+                                          const SquareLattice& lattice) {
+  if (!fi.enabled) {
+    return;
+  }
+  if (fi.virt.size() != static_cast<std::size_t>(lattice.N_UNIT)) {
+    throw std::runtime_error("FermionInfo: virtual ledger size mismatch");
+  }
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    for (int leg = 0; leg < 4; ++leg) {
+      const int neighbor = lattice.neighbor(site, leg);
+      const int neighbor_leg = (leg + 2) % 4;
+      if (fi.virt[site][leg] != fi.virt[neighbor][neighbor_leg]) {
+        std::stringstream ss;
+        ss << "FermionInfo: inconsistent virtual parity ledger at site " << site
+           << " leg " << leg << " versus neighbor " << neighbor << " leg "
+           << neighbor_leg;
+        throw std::runtime_error(ss.str());
+      }
+    }
+  }
+}
 
 inline parity_vector even_first_parity(std::size_t dim) {
   parity_vector p(dim, false);

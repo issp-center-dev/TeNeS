@@ -17,7 +17,9 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+#include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -30,15 +32,54 @@
 #include "../src/fermion/ftensor.hpp"
 #include "../src/fermion/parity.hpp"
 #include "../src/fermion/reduced.hpp"
+#include "../src/fermion/reduced_measure.hpp"
 #include "../src/SquareLattice.hpp"
 #include "../src/tensor.hpp"
 #include "../src/iTPS/PEPS_Parameters.hpp"
+#include "../src/iTPS/iTPS.hpp"
 #include "../src/iTPS/core/ctm.hpp"
+#include "../src/iTPS/core/contract.hpp"
 #include "../src/iTPS/core/contract_itps_ctm.hpp"
 
 using namespace tenes::fermion;
 
 using ft = tenes::fermion::ftensor<tenes::real_tensor>;
+
+namespace tenes::itps {
+struct iTPSTestAccessor {
+  template <class tensor>
+  static std::vector<tensor>& Tn(iTPS<tensor>& state) {
+    return state.Tn;
+  }
+
+  template <class tensor>
+  static std::vector<std::vector<std::vector<double>>>& lambda_tensor(
+      iTPS<tensor>& state) {
+    return state.lambda_tensor;
+  }
+
+  template <class tensor>
+  static tenes::fermion::FermionInfo& finfo(iTPS<tensor>& state) {
+    return state.finfo;
+  }
+
+  template <class tensor>
+  static std::vector<std::string>& twosite_operator_names(iTPS<tensor>& state) {
+    return state.twosite_operator_names;
+  }
+
+  template <class tensor>
+  static void update_reduced_density_environment(iTPS<tensor>& state) {
+    const std::vector<tensor> dressed =
+        tenes::fermion::lambda_dressed_tensors(state.Tn, state.lambda_tensor);
+    const std::vector<tensor> reduced =
+        tenes::fermion::build_reduced_density_tensors(dressed, state.finfo);
+    core::Calc_CTM_Environment_density(
+        state.C1, state.C2, state.C3, state.C4, state.eTt, state.eTr, state.eTb,
+        state.eTl, reduced, state.peps_parameters, state.lattice);
+  }
+};
+}  // namespace tenes::itps
 
 static ft make_random_ft(const mptensor::Shape& sh,
                          const tenes::fermion::leg_parities& p, unsigned seed) {
@@ -777,6 +818,903 @@ TEST_CASE("ftensor CTM measurement kernels produce finite positive norm") {
           eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
           hop);
   CHECK(std::isfinite(hop_value));
+}
+
+TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
+  namespace f = tenes::fermion;
+
+  tenes::SquareLattice lattice(2, 2);
+  tenes::itps::PEPS_Parameters params;
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 2;
+  params.CTM_Convergence_Epsilon = 1.0e-12;
+  params.Use_RSVD = false;
+
+  const f::parity_vector phys{false, true};
+  const f::parity_vector p_h{false, true};
+  const f::parity_vector p_v{false, true};
+
+  f::FermionInfo finfo;
+  finfo.enabled = true;
+  finfo.phys.assign(lattice.N_UNIT, phys);
+  finfo.virt.assign(lattice.N_UNIT,
+                    std::array<f::parity_vector, 4>{p_h, p_v, p_h, p_v});
+
+  std::vector<tenes::real_tensor> Tn;
+  Tn.reserve(lattice.N_UNIT);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    f::leg_parities parity = f::Tn_parity(finfo, site);
+    tenes::real_tensor t(mptensor::Shape(2, 2, 2, 2, 2));
+    for (std::size_t n = 0; n < t.local_size(); ++n) {
+      auto idx = t.global_index(n);
+      if (f::count_odd(parity, idx) % 2 == 0) {
+        const double x = static_cast<double>((site + 3) * (n + 7));
+        t.set_value(idx, 0.12 * std::sin(x) + 0.08 * std::cos(0.7 * x));
+      }
+    }
+    Tn.push_back(t);
+  }
+
+  std::vector<tenes::real_tensor> reduced =
+      f::build_reduced_density_tensors(Tn, finfo);
+  std::vector<tenes::real_tensor> C1(lattice.N_UNIT), C2(lattice.N_UNIT),
+      C3(lattice.N_UNIT), C4(lattice.N_UNIT), eTt(lattice.N_UNIT),
+      eTr(lattice.N_UNIT), eTb(lattice.N_UNIT), eTl(lattice.N_UNIT);
+  tenes::itps::core::Calc_CTM_Environment_density(
+      C1, C2, C3, C4, eTt, eTr, eTb, eTl, reduced, params, lattice);
+
+  tenes::real_tensor id(mptensor::Shape(phys.size(), phys.size()));
+  tenes::real_tensor number(mptensor::Shape(phys.size(), phys.size()));
+  id.set_value(mptensor::Index(0, 0), 1.0);
+  id.set_value(mptensor::Index(1, 1), 1.0);
+  number.set_value(mptensor::Index(1, 1), 1.0);
+
+  std::vector<double> density(lattice.N_UNIT);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    const double norm = tenes::itps::core::Contract_one_site_density_CTM(
+        C1[site], C2[site], C3[site], C4[site], eTt[site], eTr[site], eTb[site],
+        eTl[site], reduced[site], id);
+    const double n =
+        tenes::itps::core::Contract_one_site_density_CTM(
+            C1[site], C2[site], C3[site], C4[site], eTt[site], eTr[site],
+            eTb[site], eTl[site], reduced[site], number) /
+        norm;
+    density[site] = n;
+    CHECK(std::isfinite(norm));
+    CHECK(norm > 0.0);
+    CHECK(n >= doctest::Approx(0.0).epsilon(1.0e-12));
+    CHECK(n <= doctest::Approx(1.0).epsilon(1.0e-12));
+  }
+
+  tenes::real_tensor id2(
+      mptensor::Shape(phys.size(), phys.size(), phys.size(), phys.size()));
+  tenes::real_tensor density2(
+      mptensor::Shape(phys.size(), phys.size(), phys.size(), phys.size()));
+  for (std::size_t in_a = 0; in_a < phys.size(); ++in_a) {
+    for (std::size_t in_b = 0; in_b < phys.size(); ++in_b) {
+      id2.set_value(mptensor::Index(in_a, in_b, in_a, in_b), 1.0);
+      density2.set_value(mptensor::Index(in_a, in_b, in_a, in_b),
+                         static_cast<double>(in_a + in_b));
+    }
+  }
+  auto check_pair_density = [&](int first, int second,
+                                f::reduced_pair_direction direction) {
+    f::ftensor<tenes::real_tensor> fid{id2, {phys, phys, phys, phys}};
+    f::ftensor<tenes::real_tensor> fdensity{density2, {phys, phys, phys, phys}};
+    const tenes::real_tensor norm_blob = f::build_reduced_identity_pair(
+        f::wrap_Tn(Tn[first], finfo, first),
+        f::wrap_Tn(Tn[second], finfo, second), direction);
+    const tenes::real_tensor density_blob = f::build_reduced_pair(
+        f::wrap_Tn(Tn[first], finfo, first),
+        f::wrap_Tn(Tn[second], finfo, second), fdensity, direction);
+    double norm = 0.0;
+    double val = 0.0;
+    double ref_norm = 0.0;
+    if (direction == f::reduced_pair_direction::horizontal) {
+      norm = f::contract_reduced_pair_horizontal_density_CTM(
+          C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
+          eTr[second], eTb[second], eTb[first], eTl[first], norm_blob);
+      val = f::contract_reduced_pair_horizontal_density_CTM(
+          C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
+          eTr[second], eTb[second], eTb[first], eTl[first], density_blob);
+      ref_norm =
+          tenes::itps::core::Contract_two_sites_horizontal_op12_density_CTM(
+              C1[first], C2[second], C3[second], C4[first], eTt[first],
+              eTt[second], eTr[second], eTb[second], eTb[first], eTl[first],
+              reduced[first], reduced[second], id2);
+    } else {
+      norm = f::contract_reduced_pair_vertical_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first], norm_blob);
+      val = f::contract_reduced_pair_vertical_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first], density_blob);
+      ref_norm =
+          tenes::itps::core::Contract_two_sites_vertical_op12_density_CTM(
+              C1[first], C2[first], C3[second], C4[second], eTt[first],
+              eTr[first], eTr[second], eTb[second], eTl[second], eTl[first],
+              reduced[first], reduced[second], id2);
+    }
+    CHECK(norm > 0.0);
+    CHECK(norm == doctest::Approx(ref_norm).epsilon(1.0e-12));
+    CHECK(std::isfinite(val / norm));
+    CHECK(val / norm >= doctest::Approx(0.0).epsilon(1.0e-12));
+    CHECK(val / norm <= doctest::Approx(2.0).epsilon(1.0e-12));
+  };
+  check_pair_density(0, lattice.right(0),
+                     f::reduced_pair_direction::horizontal);
+  check_pair_density(0, lattice.bottom(0), f::reduced_pair_direction::vertical);
+}
+
+static tenes::real_tensor make_free_fermion_gate(double tau) {
+  tenes::real_tensor gate(mptensor::Shape(2, 2, 2, 2));
+  gate.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+  gate.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  gate.set_value(mptensor::Index(0, 1, 0, 1), std::cosh(tau));
+  gate.set_value(mptensor::Index(1, 0, 1, 0), std::cosh(tau));
+  gate.set_value(mptensor::Index(0, 1, 1, 0), std::sinh(tau));
+  gate.set_value(mptensor::Index(1, 0, 0, 1), std::sinh(tau));
+  return gate;
+}
+
+struct TensorDiffReport {
+  double max_abs = 0.0;
+  int site = -1;
+  mptensor::Index index;
+  double fermion_value = 0.0;
+  double boson_value = 0.0;
+};
+
+static TensorDiffReport max_tn_diff(
+    const std::vector<tenes::real_tensor>& fermion_tensors,
+    const std::vector<tenes::real_tensor>& boson_tensors) {
+  TensorDiffReport report;
+  for (std::size_t site = 0; site < fermion_tensors.size(); ++site) {
+    const auto& fT = fermion_tensors[site];
+    const auto& bT = boson_tensors[site];
+    for (std::size_t n = 0; n < fT.local_size(); ++n) {
+      const auto idx = fT.global_index(n);
+      double fv = 0.0;
+      double bv = 0.0;
+      fT.get_value(idx, fv);
+      bT.get_value(idx, bv);
+      const double diff = std::abs(fv - bv);
+      if (diff > report.max_abs) {
+        report.max_abs = diff;
+        report.site = static_cast<int>(site);
+        report.index = idx;
+        report.fermion_value = fv;
+        report.boson_value = bv;
+      }
+    }
+  }
+  return report;
+}
+
+static std::string index_to_string(const mptensor::Index& idx) {
+  std::ostringstream os;
+  os << "(";
+  for (std::size_t i = 0; i < idx.size(); ++i) {
+    if (i != 0) {
+      os << ",";
+    }
+    os << idx[i];
+  }
+  os << ")";
+  return os.str();
+}
+
+static std::vector<double> sorted_desc(std::vector<double> values) {
+  std::sort(values.begin(), values.end(), std::greater<double>());
+  return values;
+}
+
+static double lambda_relative_diff(const std::vector<double>& a,
+                                   const std::vector<double>& b) {
+  double diff = 0.0;
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    const double scale = std::max({1.0e-300, std::abs(a[i]), std::abs(b[i])});
+    diff = std::max(diff, std::abs(a[i] - b[i]) / scale);
+  }
+  return diff;
+}
+
+static std::string vector_to_string(const std::vector<double>& values) {
+  std::ostringstream os;
+  os << "[";
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (i != 0) {
+      os << ",";
+    }
+    os << std::setprecision(17) << values[i];
+  }
+  os << "]";
+  return os.str();
+}
+
+template <class Tensor>
+static std::pair<Tensor, Tensor> diagnostic_update_thetas(
+    const Tensor& Tn1, const Tensor& Tn2,
+    const std::vector<std::vector<double>>& lambda1,
+    const std::vector<std::vector<double>>& lambda2, const Tensor& op12,
+    int connect1) {
+  const int connect2 = (connect1 + 2) % 4;
+  Tensor Tn1_lambda = Tn1;
+  Tensor Tn2_lambda = Tn2;
+
+  if (connect1 == 0) {
+    Tn1_lambda.multiply_vector(lambda1[1], 1, lambda1[2], 2, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(1, 2, 3, 0, 4));
+  } else if (connect1 == 1) {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[2], 2, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(0, 2, 3, 1, 4));
+  } else if (connect1 == 2) {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[1], 1, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(0, 1, 3, 2, 4));
+  } else {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[1], 1, lambda1[2], 2);
+  }
+
+  if (connect2 == 0) {
+    Tn2_lambda.multiply_vector(lambda2[1], 1, lambda2[2], 2, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(1, 2, 3, 0, 4));
+  } else if (connect2 == 1) {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[2], 2, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(0, 2, 3, 1, 4));
+  } else if (connect2 == 2) {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[1], 1, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(0, 1, 3, 2, 4));
+  } else {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[1], 1, lambda2[2], 2);
+  }
+
+  Tensor Q1, R1, Q2, R2;
+  qr(Tn1_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q1, R1);
+  qr(Tn2_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q2, R2);
+  Tensor theta_before = tensordot(R1, R2, mptensor::Axes(1), mptensor::Axes(1));
+  Tensor theta =
+      tensordot(theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1));
+  return {theta_before, theta};
+}
+
+struct SectorSpectrum {
+  std::vector<double> even;
+  std::vector<double> odd;
+};
+
+static SectorSpectrum sector_spectrum(
+    const tenes::fermion::ftensor<tenes::real_tensor>& theta,
+    const mptensor::Axes& rows, const mptensor::Axes& cols) {
+  tenes::fermion::ftensor<tenes::real_tensor> u, vt;
+  std::vector<double> s;
+  tenes::fermion::svd(theta, rows, cols, u, s, vt);
+  SectorSpectrum out;
+  const auto& internal = u.parity.back();
+  for (std::size_t i = 0; i < s.size(); ++i) {
+    (internal[i] ? out.odd : out.even).push_back(s[i]);
+  }
+  return out;
+}
+
+static double off_block_max(
+    const tenes::fermion::ftensor<tenes::real_tensor>& theta,
+    const mptensor::Axes& rows, const mptensor::Axes& cols) {
+  double max_value = 0.0;
+  for (std::size_t n = 0; n < theta.t.local_size(); ++n) {
+    const auto idx = theta.t.global_index(n);
+    bool row_odd = false;
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+      row_odd = row_odd != theta.parity[rows[i]][idx[rows[i]]];
+    }
+    bool col_odd = false;
+    for (std::size_t i = 0; i < cols.size(); ++i) {
+      col_odd = col_odd != theta.parity[cols[i]][idx[cols[i]]];
+    }
+    if (row_odd == col_odd) {
+      continue;
+    }
+    double value = 0.0;
+    theta.t.get_value(idx, value);
+    max_value = std::max(max_value, std::abs(value));
+  }
+  return max_value;
+}
+
+static std::vector<double> normalized_lambda_from_s(std::vector<double> s) {
+  double norm2 = 0.0;
+  for (const double value : s) {
+    norm2 += value * value;
+  }
+  const double norm = std::sqrt(norm2);
+  for (double& value : s) {
+    value = std::sqrt(value / norm);
+  }
+  return s;
+}
+
+TEST_CASE("diagnostic horizontal-chain fermion/boson trajectory divergence") {
+  if (std::getenv("TENES_RUN_HORIZONTAL_TRAJECTORY_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  auto make_lattice = []() {
+    tenes::SquareLattice lattice(2, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 2;
+      lattice.virtual_dims[site] = {2, 1, 2, 1};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  auto make_params = [](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(4, f::parity_vector{false, true});
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 10;
+    params.CTM_Convergence_Epsilon = 1.0e-8;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  auto make_updates = []() {
+    std::vector<tenes::EvolutionOperator<tensor>> updates;
+    const tensor gate = make_free_fermion_gate(0.01);
+    for (int site = 0; site < 4; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, 2, 0, gate));
+    }
+    return updates;
+  };
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  const auto updates = make_updates();
+  auto fparams = make_params(true, "output_test_horizontal_diag_fermion");
+  auto bparams = make_params(false, "output_test_horizontal_diag_boson");
+  tenes::itps::iTPS<tensor> fstate(
+      MPI_COMM_WORLD, fparams, lattice_f, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(
+      MPI_COMM_WORLD, bparams, lattice_b, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto diff = max_tn_diff(fTn, bTn);
+  std::cout << std::setprecision(17)
+            << "horizontal trajectory raw-initial maxdiff=" << diff.max_abs
+            << " site=" << diff.site << " index=" << index_to_string(diff.index)
+            << " fermion=" << diff.fermion_value
+            << " boson=" << diff.boson_value << std::endl;
+
+  auto fparams2 =
+      make_params(true, "output_test_horizontal_diag_fermion_forced");
+  auto bparams2 =
+      make_params(false, "output_test_horizontal_diag_boson_forced");
+  auto lattice_f2 = make_lattice();
+  auto lattice_b2 = make_lattice();
+  tenes::itps::iTPS<tensor> fstate2(
+      MPI_COMM_WORLD, fparams2, lattice_f2, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate2(
+      MPI_COMM_WORLD, bparams2, lattice_b2, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  auto& fTn2 = tenes::itps::iTPSTestAccessor::Tn(fstate2);
+  auto& bTn2 = tenes::itps::iTPSTestAccessor::Tn(bstate2);
+  auto& flambda2 = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate2);
+  auto& blambda2 = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate2);
+  bTn2 = fTn2;
+  blambda2 = flambda2;
+  diff = max_tn_diff(fTn2, bTn2);
+  std::cout << std::setprecision(17)
+            << "horizontal trajectory forced-initial maxdiff=" << diff.max_abs
+            << std::endl;
+
+  bool found = false;
+  for (int step = 0; step < 3 && !found; ++step) {
+    for (std::size_t update_index = 0; update_index < updates.size();
+         ++update_index) {
+      fstate2.simple_update(updates[update_index]);
+      bstate2.simple_update(updates[update_index]);
+      diff = max_tn_diff(fTn2, bTn2);
+      std::cout << std::setprecision(17)
+                << "horizontal trajectory after step=" << step
+                << " update=" << update_index
+                << " source_site=" << updates[update_index].source_site
+                << " source_leg=" << updates[update_index].source_leg
+                << " maxdiff=" << diff.max_abs << " site=" << diff.site
+                << " index=" << index_to_string(diff.index)
+                << " fermion=" << diff.fermion_value
+                << " boson=" << diff.boson_value << std::endl;
+      if (diff.max_abs > 1.0e-10) {
+        found = true;
+        break;
+      }
+    }
+  }
+}
+
+TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
+  if (std::getenv("TENES_RUN_LAMBDA_TRAJECTORY_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  auto make_lattice = []() {
+    tenes::SquareLattice lattice(2, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 2;
+      lattice.virtual_dims[site] = {2, 1, 2, 1};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  auto make_params = [](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(4, f::parity_vector{false, true});
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 10;
+    params.CTM_Convergence_Epsilon = 1.0e-8;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  auto make_updates = []() {
+    std::vector<tenes::EvolutionOperator<tensor>> updates;
+    const tensor gate = make_free_fermion_gate(0.01);
+    for (int site = 0; site < 4; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, 2, 0, gate));
+    }
+    return updates;
+  };
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  const auto updates = make_updates();
+  auto fparams = make_params(true, "output_test_lambda_diag_fermion");
+  auto bparams = make_params(false, "output_test_lambda_diag_boson");
+  tenes::itps::iTPS<tensor> fstate(
+      MPI_COMM_WORLD, fparams, lattice_f, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(
+      MPI_COMM_WORLD, bparams, lattice_b, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto& flambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate);
+  auto& blambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate);
+  bTn = fTn;
+  blambda = flambda;
+
+  int first_step = -1;
+  int first_bond = -1;
+  double first_rel = 0.0;
+  int first_call_step = -1;
+  int first_call_update = -1;
+  int first_call_bond = -1;
+  double first_call_rel = 0.0;
+  double max_rel = 0.0;
+  int max_rel_step = 0;
+  int max_rel_bond = 0;
+  std::vector<double> first_fermion;
+  std::vector<double> first_boson;
+
+  for (int step = 0; step <= 300; ++step) {
+    for (int site = 0; site < lattice_f.N_UNIT; ++site) {
+      const auto fvals = sorted_desc(flambda[site][2]);
+      const auto bvals = sorted_desc(blambda[site][2]);
+      const double rel = lambda_relative_diff(fvals, bvals);
+      if (rel > max_rel) {
+        max_rel = rel;
+        max_rel_step = step;
+        max_rel_bond = site;
+      }
+      if (first_step < 0 && rel > 1.0e-8) {
+        first_step = step;
+        first_bond = site;
+        first_rel = rel;
+        first_fermion = fvals;
+        first_boson = bvals;
+      }
+    }
+    if (step == 300) {
+      break;
+    }
+    for (std::size_t update_index = 0; update_index < updates.size();
+         ++update_index) {
+      const auto& update = updates[update_index];
+      fstate.simple_update(update);
+      bstate.simple_update(update);
+      if (first_call_step < 0) {
+        for (int site = 0; site < lattice_f.N_UNIT; ++site) {
+          const auto fvals = sorted_desc(flambda[site][2]);
+          const auto bvals = sorted_desc(blambda[site][2]);
+          const double rel = lambda_relative_diff(fvals, bvals);
+          if (rel > 1.0e-8) {
+            first_call_step = step;
+            first_call_update = static_cast<int>(update_index);
+            first_call_bond = site;
+            first_call_rel = rel;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  std::cout << std::setprecision(17) << "lambda trajectory max_rel=" << max_rel
+            << " max_step=" << max_rel_step << " max_bond=" << max_rel_bond
+            << std::endl;
+  if (first_step < 0) {
+    std::cout << "lambda trajectory case=A all horizontal bond spectra match "
+                 "rtol=1e-8 through 300 steps"
+              << std::endl;
+    const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
+    for (int site = 0; site < lattice_f.N_UNIT; ++site) {
+      for (int leg = 0; leg < 4; ++leg) {
+        std::cout << "lambda trajectory final_finfo site=" << site
+                  << " leg=" << leg << " parity=[";
+        for (std::size_t i = 0; i < finfo.virt[site][leg].size(); ++i) {
+          if (i != 0) {
+            std::cout << ",";
+          }
+          std::cout << (finfo.virt[site][leg][i] ? 1 : 0);
+        }
+        std::cout << "]" << std::endl;
+      }
+    }
+  } else {
+    std::cout << "lambda trajectory case=B first_step=" << first_step
+              << " first_bond=" << first_bond << " rel=" << first_rel
+              << " fermion=[";
+    for (std::size_t i = 0; i < first_fermion.size(); ++i) {
+      if (i != 0) {
+        std::cout << ",";
+      }
+      std::cout << first_fermion[i];
+    }
+    std::cout << "] boson=[";
+    for (std::size_t i = 0; i < first_boson.size(); ++i) {
+      if (i != 0) {
+        std::cout << ",";
+      }
+      std::cout << first_boson[i];
+    }
+    std::cout << "]" << std::endl;
+    std::cout << "lambda trajectory first_divergent_call step="
+              << first_call_step << " update=" << first_call_update
+              << " source_site=" << updates[first_call_update].source_site
+              << " source_leg=" << updates[first_call_update].source_leg
+              << " changed_bond=" << first_call_bond
+              << " rel=" << first_call_rel << std::endl;
+
+    auto lattice_fd = make_lattice();
+    auto lattice_bd = make_lattice();
+    auto fparamsd =
+        make_params(true, "output_test_lambda_diag_fermion_first_call");
+    auto bparamsd =
+        make_params(false, "output_test_lambda_diag_boson_first_call");
+    tenes::itps::iTPS<tensor> fdiag(
+        MPI_COMM_WORLD, fparamsd, lattice_fd, updates,
+        tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+        tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+        tenes::itps::CorrelationParameter{},
+        tenes::itps::TransferMatrix_Parameters{});
+    tenes::itps::iTPS<tensor> bdiag(
+        MPI_COMM_WORLD, bparamsd, lattice_bd, updates,
+        tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+        tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+        tenes::itps::CorrelationParameter{},
+        tenes::itps::TransferMatrix_Parameters{});
+    auto& fdiag_tn = tenes::itps::iTPSTestAccessor::Tn(fdiag);
+    auto& bdiag_tn = tenes::itps::iTPSTestAccessor::Tn(bdiag);
+    auto& fdiag_lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fdiag);
+    auto& bdiag_lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bdiag);
+    bdiag_tn = fdiag_tn;
+    bdiag_lambda = fdiag_lambda;
+
+    for (int step = 0; step < first_call_step; ++step) {
+      for (const auto& update : updates) {
+        fdiag.simple_update(update);
+        bdiag.simple_update(update);
+      }
+    }
+    for (int update_index = 0; update_index < first_call_update;
+         ++update_index) {
+      fdiag.simple_update(updates[update_index]);
+      bdiag.simple_update(updates[update_index]);
+    }
+
+    const auto& first_update = updates[first_call_update];
+    const int source = first_update.source_site;
+    const int source_leg = first_update.source_leg;
+    const int target = lattice_fd.neighbor(source, source_leg);
+    const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fdiag);
+    const auto fTn1 = f::wrap_Tn(fdiag_tn[source], finfo, source);
+    const auto fTn2 = f::wrap_Tn(fdiag_tn[target], finfo, target);
+    const f::ftensor<tensor> fop{first_update.op,
+                                 {finfo.phys[source], finfo.phys[target],
+                                  finfo.phys[source], finfo.phys[target]}};
+    const auto ftheta =
+        diagnostic_update_thetas(fTn1, fTn2, fdiag_lambda[source],
+                                 fdiag_lambda[target], fop, source_leg);
+    const auto btheta = diagnostic_update_thetas(
+        bdiag_tn[source], bdiag_tn[target], bdiag_lambda[source],
+        bdiag_lambda[target], first_update.op, source_leg);
+    const f::ftensor<tensor> btheta_before_as_f{btheta.first,
+                                                ftheta.first.parity};
+    const f::ftensor<tensor> btheta_as_f{btheta.second, ftheta.second.parity};
+
+    const auto f_before_spec = sector_spectrum(
+        ftheta.first, mptensor::Axes(0, 1), mptensor::Axes(2, 3));
+    const auto b_before_spec = sector_spectrum(
+        btheta_before_as_f, mptensor::Axes(0, 1), mptensor::Axes(2, 3));
+    const auto f_after_spec = sector_spectrum(
+        ftheta.second, mptensor::Axes(0, 2), mptensor::Axes(1, 3));
+    const auto b_after_spec = sector_spectrum(btheta_as_f, mptensor::Axes(0, 2),
+                                              mptensor::Axes(1, 3));
+    std::cout << "lambda trajectory theta first_call before_gate "
+              << "fermion_even=" << vector_to_string(f_before_spec.even)
+              << " fermion_odd=" << vector_to_string(f_before_spec.odd)
+              << " boson_even=" << vector_to_string(b_before_spec.even)
+              << " boson_odd=" << vector_to_string(b_before_spec.odd)
+              << std::endl;
+    std::cout << "lambda trajectory theta first_call after_gate "
+              << "fermion_even=" << vector_to_string(f_after_spec.even)
+              << " fermion_odd=" << vector_to_string(f_after_spec.odd)
+              << " boson_even=" << vector_to_string(b_after_spec.even)
+              << " boson_odd=" << vector_to_string(b_after_spec.odd)
+              << std::endl;
+
+    tensor fU_plain, fVT_plain;
+    std::vector<double> f_plain_s;
+    mptensor::svd(ftheta.second.t, mptensor::Axes(0, 2), mptensor::Axes(1, 3),
+                  fU_plain, f_plain_s, fVT_plain);
+    std::cout << "lambda trajectory theta_f_invariants first_call "
+              << "parity_violation=" << f::parity_violation(ftheta.second)
+              << " off_block_max="
+              << off_block_max(ftheta.second, mptensor::Axes(0, 2),
+                               mptensor::Axes(1, 3))
+              << " raw_full_svd=" << vector_to_string(f_plain_s) << std::endl;
+
+    f::ftensor<tensor> fU, fVT, bU, bVT;
+    tensor bU_plain, bVT_plain;
+    std::vector<double> f_s, b_s;
+    std::vector<double> b_plain_s;
+    f::svd_trunc(ftheta.second, mptensor::Axes(0, 2), mptensor::Axes(1, 3), fU,
+                 f_s, fVT, 2);
+    f::svd_trunc(btheta_as_f, mptensor::Axes(0, 2), mptensor::Axes(1, 3), bU,
+                 b_s, bVT, 2);
+    mptensor::svd_trunc(btheta.second, mptensor::Axes(0, 2),
+                        mptensor::Axes(1, 3), bU_plain, b_plain_s, bVT_plain,
+                        2);
+    std::cout << "lambda trajectory fsvd_trunc_selected first_call "
+              << "fermion_s=" << vector_to_string(f_s)
+              << " boson_manual_sector_s=" << vector_to_string(b_s)
+              << " fermion_lambda="
+              << vector_to_string(normalized_lambda_from_s(f_s))
+              << " boson_manual_sector_lambda="
+              << vector_to_string(normalized_lambda_from_s(b_s)) << std::endl;
+    std::cout << "lambda trajectory plain_boson_svd_trunc first_call "
+              << "boson_plain_s=" << vector_to_string(b_plain_s)
+              << " boson_plain_lambda="
+              << vector_to_string(normalized_lambda_from_s(b_plain_s))
+              << std::endl;
+  }
+}
+
+TEST_CASE(
+    "reduced density measurement remains positive after fermion simple "
+    "update") {
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  tenes::SquareLattice lattice(2, 2);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    lattice.physical_dims[site] = 2;
+    lattice.virtual_dims[site] = {2, 2, 2, 2};
+    lattice.initial_dirs[site] = {0.0};
+    lattice.noises[site] = 1.0;
+  }
+
+  tenes::itps::PEPS_Parameters params;
+  params.fermion = true;
+  params.phys_parity.assign(lattice.N_UNIT, f::parity_vector{false, true});
+  params.print_level = tenes::PrintLevel::none;
+  params.outdir = "output_test_fermion_post_update_measurement";
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 10;
+  params.CTM_Convergence_Epsilon = 1.0e-8;
+  params.Use_RSVD = false;
+  params.seed = 11;
+
+  std::vector<tenes::EvolutionOperator<tensor>> updates;
+  const tensor gate = make_free_fermion_gate(0.01);
+  for (int leg : {2, 1}) {
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, leg, 0, gate));
+    }
+  }
+
+  tenes::itps::iTPS<tensor> state(
+      MPI_COMM_WORLD, params, lattice, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  for (int step = 0; step < 50; ++step) {
+    for (const auto& update : updates) {
+      state.simple_update(update);
+    }
+  }
+
+  auto& finfo = tenes::itps::iTPSTestAccessor::finfo(state);
+  f::validate_neighbor_consistency(finfo, lattice);
+  auto& Tn = tenes::itps::iTPSTestAccessor::Tn(state);
+  auto& lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(state);
+  std::vector<tensor> dressed = f::lambda_dressed_tensors(Tn, lambda);
+  std::vector<tensor> reduced =
+      f::build_reduced_density_tensors(dressed, finfo);
+  std::vector<tensor> C1(lattice.N_UNIT), C2(lattice.N_UNIT),
+      C3(lattice.N_UNIT), C4(lattice.N_UNIT), eTt(lattice.N_UNIT),
+      eTr(lattice.N_UNIT), eTb(lattice.N_UNIT), eTl(lattice.N_UNIT);
+  tenes::itps::core::Calc_CTM_Environment_density(
+      C1, C2, C3, C4, eTt, eTr, eTb, eTl, reduced, params, lattice);
+
+  tensor id(mptensor::Shape(2, 2));
+  tensor number(mptensor::Shape(2, 2));
+  id.set_value(mptensor::Index(0, 0), 1.0);
+  id.set_value(mptensor::Index(1, 1), 1.0);
+  number.set_value(mptensor::Index(1, 1), 1.0);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    const double norm = tenes::itps::core::Contract_one_site_density_CTM(
+        C1[site], C2[site], C3[site], C4[site], eTt[site], eTr[site], eTb[site],
+        eTl[site], reduced[site], id);
+    const double n =
+        tenes::itps::core::Contract_one_site_density_CTM(
+            C1[site], C2[site], C3[site], C4[site], eTt[site], eTr[site],
+            eTb[site], eTl[site], reduced[site], number) /
+        norm;
+    CHECK(norm > 0.0);
+    CHECK(n >= doctest::Approx(0.0).epsilon(1.0e-12));
+    CHECK(n <= doctest::Approx(1.0).epsilon(1.0e-12));
+  }
+}
+
+TEST_CASE("fermion twosite measurement is translation invariant across wraps") {
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  tenes::SquareLattice lattice(2, 2);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    lattice.physical_dims[site] = 2;
+    lattice.virtual_dims[site] = {2, 2, 2, 2};
+    lattice.initial_dirs[site] = {0.0};
+    lattice.noises[site] = 1.0;
+  }
+
+  tenes::itps::PEPS_Parameters params;
+  params.fermion = true;
+  params.phys_parity.assign(lattice.N_UNIT, f::parity_vector{false, true});
+  params.print_level = tenes::PrintLevel::none;
+  params.outdir = "output_test_fermion_wrapped_bond_translation";
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 100;
+  params.CTM_Convergence_Epsilon = 1.0e-12;
+  params.Use_RSVD = false;
+  params.seed = 17;
+
+  std::vector<tenes::EvolutionOperator<tensor>> updates;
+  const tensor gate = make_free_fermion_gate(0.01);
+  for (int leg : {2, 1}) {
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, leg, 0, gate));
+    }
+  }
+
+  tensor hopping(mptensor::Shape(2, 2, 2, 2));
+  hopping.set_value(mptensor::Index(0, 1, 0, 1), -0.175);
+  hopping.set_value(mptensor::Index(1, 0, 1, 0), -0.175);
+  hopping.set_value(mptensor::Index(1, 1, 1, 1), -0.35);
+  hopping.set_value(mptensor::Index(0, 1, 1, 0), -1.0);
+  hopping.set_value(mptensor::Index(1, 0, 0, 1), -1.0);
+  tenes::Operators<tensor> twosite_ops;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    twosite_ops.emplace_back("hop", 0, site, std::vector<int>{1},
+                             std::vector<int>{0}, hopping);
+    twosite_ops.emplace_back("hop", 0, site, std::vector<int>{0},
+                             std::vector<int>{1}, hopping);
+  }
+
+  tenes::itps::iTPS<tensor> state(MPI_COMM_WORLD, params, lattice, updates,
+                                  tenes::EvolutionOperators<tensor>{},
+                                  tenes::Operators<tensor>{}, twosite_ops,
+                                  tenes::Operators<tensor>{},
+                                  tenes::itps::CorrelationParameter{},
+                                  tenes::itps::TransferMatrix_Parameters{});
+  auto& finfo = tenes::itps::iTPSTestAccessor::finfo(state);
+  auto& Tn = tenes::itps::iTPSTestAccessor::Tn(state);
+  tensor uniform(mptensor::Shape(2, 2, 2, 2, 2));
+  const auto parity = f::Tn_parity(finfo, 0);
+  for (std::size_t n = 0; n < uniform.local_size(); ++n) {
+    const auto idx = uniform.global_index(n);
+    if (f::count_odd(parity, idx) % 2 == 0) {
+      uniform.set_value(idx, 0.125 * static_cast<double>(1 + n));
+    }
+  }
+  for (auto& site_tensor : Tn) {
+    site_tensor = uniform;
+  }
+  auto& lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(state);
+  for (auto& site_lambda : lambda) {
+    for (auto& leg_lambda : site_lambda) {
+      leg_lambda = {1.0, 0.75};
+    }
+  }
+  tenes::itps::iTPSTestAccessor::update_reduced_density_environment(state);
+  const auto measured = state.measure_twosite();
+  REQUIRE(measured.size() >= 1);
+
+  const auto& hop = measured[0];
+  const std::array<double, 4> hx = {
+      hop.at(tenes::itps::Bond{0, 1, 0}), hop.at(tenes::itps::Bond{1, 1, 0}),
+      hop.at(tenes::itps::Bond{2, 1, 0}), hop.at(tenes::itps::Bond{3, 1, 0})};
+  const std::array<double, 4> hy = {
+      hop.at(tenes::itps::Bond{0, 0, 1}), hop.at(tenes::itps::Bond{1, 0, 1}),
+      hop.at(tenes::itps::Bond{2, 0, 1}), hop.at(tenes::itps::Bond{3, 0, 1})};
+
+  std::cout << std::setprecision(17) << "fermion wrapped-bond translation hx=["
+            << hx[0] << ", " << hx[1] << ", " << hx[2] << ", " << hx[3]
+            << "] hy=[" << hy[0] << ", " << hy[1] << ", " << hy[2] << ", "
+            << hy[3] << "]" << std::endl;
+
+  const double horizontal_scale =
+      std::max({1.0e-12, std::abs(hx[0]), std::abs(hx[2])});
+  const double vertical_scale =
+      std::max({1.0e-12, std::abs(hy[0]), std::abs(hy[1])});
+  CHECK(std::abs(hx[1]) < 10.0 * horizontal_scale);
+  CHECK(std::abs(hx[3]) < 10.0 * horizontal_scale);
+  CHECK(std::abs(hy[2]) < 10.0 * vertical_scale);
+  CHECK(std::abs(hy[3]) < 10.0 * vertical_scale);
 }
 
 #include "fermion/r2_convention.cpp"

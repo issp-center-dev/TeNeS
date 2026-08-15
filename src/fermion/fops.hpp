@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <complex>
 #include <cmath>
+#include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -37,6 +39,14 @@ inline bool contains_axis(const mptensor::Axes& axes, std::size_t ax) {
     }
   }
   return false;
+}
+
+inline int fermion_svd_log_limit() {
+  const char* raw = std::getenv("TENES_FERMION_SVD_LOG_LIMIT");
+  if (raw == nullptr) {
+    return 0;
+  }
+  return std::max(0, std::atoi(raw));
 }
 
 inline mptensor::Axes tensordot_left_perm(std::size_t rank,
@@ -545,6 +555,29 @@ int svd_trunc(const ftensor<tensor>& a, const mptensor::Axes& rows,
     order[i] = i;
   }
   const parity_vector& full_internal = full_u.parity.back();
+  static int svd_log_count = 0;
+  const int svd_log_limit = detail::fermion_svd_log_limit();
+  if (svd_log_count < svd_log_limit) {
+    std::cerr << "TENES_FERMION_SVD call=" << svd_log_count << " dc=" << dc
+              << " full_size=" << full_s.size() << " even=[";
+    bool first = true;
+    for (std::size_t i = 0; i < full_s.size(); ++i) {
+      if (!full_internal[i]) {
+        std::cerr << (first ? "" : ",") << full_s[i];
+        first = false;
+      }
+    }
+    std::cerr << "] odd=[";
+    first = true;
+    for (std::size_t i = 0; i < full_s.size(); ++i) {
+      if (full_internal[i]) {
+        std::cerr << (first ? "" : ",") << full_s[i];
+        first = false;
+      }
+    }
+    std::cerr << "]\n";
+  }
+  ++svd_log_count;
   std::stable_sort(order.begin(), order.end(),
                    [&](std::size_t lhs, std::size_t rhs) {
                      if (full_s[lhs] != full_s[rhs]) {

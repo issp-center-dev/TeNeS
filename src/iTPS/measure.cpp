@@ -23,6 +23,7 @@
 
 #include "iTPS.hpp"
 #include "../fermion/fops.hpp"
+#include "../fermion/reduced_measure.hpp"
 #include "../util/datetime.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -43,40 +44,12 @@ void iTPS<ptensor>::measure(std::optional<double> time,
 
   if (!peps_parameters.MeanField_Env && finfo.enabled) {
     Timer<> timer;
-    using ftensor = tenes::fermion::ftensor<ptensor>;
-    std::vector<ftensor> fC1, fC2, fC3, fC4, feTt, feTr, feTb, feTl, fTn;
-    fC1.reserve(N_UNIT);
-    fC2.reserve(N_UNIT);
-    fC3.reserve(N_UNIT);
-    fC4.reserve(N_UNIT);
-    feTt.reserve(N_UNIT);
-    feTr.reserve(N_UNIT);
-    feTb.reserve(N_UNIT);
-    feTl.reserve(N_UNIT);
-    fTn.reserve(N_UNIT);
-    for (int site = 0; site < N_UNIT; ++site) {
-      fC1.push_back(tenes::fermion::wrap_C(C1[site], finfo, 0, site));
-      fC2.push_back(tenes::fermion::wrap_C(C2[site], finfo, 1, site));
-      fC3.push_back(tenes::fermion::wrap_C(C3[site], finfo, 2, site));
-      fC4.push_back(tenes::fermion::wrap_C(C4[site], finfo, 3, site));
-      feTt.push_back(tenes::fermion::wrap_eT(eTt[site], finfo, 0, site));
-      feTr.push_back(tenes::fermion::wrap_eT(eTr[site], finfo, 1, site));
-      feTb.push_back(tenes::fermion::wrap_eT(eTb[site], finfo, 2, site));
-      feTl.push_back(tenes::fermion::wrap_eT(eTl[site], finfo, 3, site));
-      fTn.push_back(tenes::fermion::wrap_Tn(Tn[site], finfo, site));
-    }
-    core::Calc_CTM_Environment(fC1, fC2, fC3, fC4, feTt, feTr, feTb, feTl, fTn,
-                               peps_parameters, lattice);
-    for (int site = 0; site < N_UNIT; ++site) {
-      tenes::fermion::unwrap_C(fC1[site], C1[site], finfo, 0, site);
-      tenes::fermion::unwrap_C(fC2[site], C2[site], finfo, 1, site);
-      tenes::fermion::unwrap_C(fC3[site], C3[site], finfo, 2, site);
-      tenes::fermion::unwrap_C(fC4[site], C4[site], finfo, 3, site);
-      tenes::fermion::unwrap_eT(feTt[site], eTt[site], finfo, 0, site);
-      tenes::fermion::unwrap_eT(feTr[site], eTr[site], finfo, 1, site);
-      tenes::fermion::unwrap_eT(feTb[site], eTb[site], finfo, 2, site);
-      tenes::fermion::unwrap_eT(feTl[site], eTl[site], finfo, 3, site);
-    }
+    const std::vector<ptensor> dressed_Tn =
+        tenes::fermion::lambda_dressed_tensors(Tn, lambda_tensor);
+    const std::vector<ptensor> reduced_Tn =
+        tenes::fermion::build_reduced_density_tensors(dressed_Tn, finfo);
+    core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
+                                       reduced_Tn, peps_parameters, lattice);
     time_environment += timer.elapsed();
   } else if (!peps_parameters.MeanField_Env) {
     update_CTM();

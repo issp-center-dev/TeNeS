@@ -16,14 +16,49 @@
 
 #include "iTPS.hpp"
 
+#include <cstdlib>
+#include <iostream>
+
 #include "../fermion/fops.hpp"
 #include "core/simple_update.hpp"
 #include "core/local_gauge.hpp"
 
 namespace tenes::itps {
 
+namespace {
+bool fermion_sector_log_enabled() {
+  return std::getenv("TENES_FERMION_SECTOR_LOG") != nullptr;
+}
+
+void log_fermion_sector_dimensions(const tenes::fermion::FermionInfo& finfo,
+                                   const SquareLattice& lattice, int n_unit,
+                                   int mpirank, int step) {
+  if (!fermion_sector_log_enabled() || !finfo.enabled || mpirank != 0) {
+    return;
+  }
+  for (int source = 0; source < n_unit; ++source) {
+    for (int leg : {2, 1}) {
+      const int target = lattice.neighbor(source, leg);
+      const auto& parity = finfo.virt[source][leg];
+      int even = 0;
+      int odd = 0;
+      for (bool p : parity) {
+        if (p) {
+          ++odd;
+        } else {
+          ++even;
+        }
+      }
+      std::cerr << "TENES_FERMION_SECTOR step=" << step << " source=" << source
+                << " leg=" << leg << " target=" << target << " Deven=" << even
+                << " Dodd=" << odd << "\n";
+    }
+  }
+}
+}  // namespace
+
 template <class tensor>
-void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
+void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     if (finfo.enabled) {
@@ -138,6 +173,7 @@ void iTPS<tensor>::simple_update() {
   const int nsteps = peps_parameters.num_simple_step[group];
   double next_report = 10.0;
 
+  log_fermion_sector_dimensions(finfo, lattice, N_UNIT, mpirank, 0);
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : simple_updates) {
       if (up.group != group) {
@@ -161,12 +197,16 @@ void iTPS<tensor>::simple_update() {
                   << nsteps << "] done" << std::endl;
       }
     }
+    const int step = int_tau + 1;
+    if (step == 10 || step == 50 || step == 100 || step == 300) {
+      log_fermion_sector_dimensions(finfo, lattice, N_UNIT, mpirank, step);
+    }
   }  // end of for (int_tau)
   time_simple_update += timer.elapsed();
 }
 
 template <class tensor>
-void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
+void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     Tn[source] =
@@ -318,7 +358,7 @@ void iTPS<tensor>::simple_update_density() {
 
 template <class tensor>
 void iTPS<tensor>::simple_update_density_purification(
-    EvolutionOperator<tensor> const &up) {
+    EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     Tn[source] =
