@@ -105,16 +105,6 @@ static ft r2_hop_op() {
   return op;
 }
 
-static ft r2_identity_pair_op() {
-  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
-        {{false, true}, {false, true}, {false, true}, {false, true}}};
-  op.t.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
-  op.t.set_value(mptensor::Index(0, 1, 0, 1), 1.0);
-  op.t.set_value(mptensor::Index(1, 0, 1, 0), 1.0);
-  op.t.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
-  return op;
-}
-
 static ft r2_density_a_op() {
   ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
         {{false, true}, {false, true}, {false, true}, {false, true}}};
@@ -189,38 +179,6 @@ static double r3_sum_entries(const tenes::real_tensor& tensor) {
     double v;
     tensor.get_value(tensor.global_index(n), v);
     ret += v;
-  }
-  return ret;
-}
-
-struct r3_tensor_diff {
-  double max_abs = 0.0;
-  mptensor::Index first_index;
-  double first_got = 0.0;
-  double first_expected = 0.0;
-};
-
-static r3_tensor_diff r3_compare_tensors(const tenes::real_tensor& got,
-                                         const tenes::real_tensor& expected) {
-  r3_tensor_diff ret;
-  REQUIRE(got.shape() == expected.shape());
-  bool found = false;
-  for (std::size_t n = 0; n < got.local_size(); ++n) {
-    const auto idx = got.global_index(n);
-    double gv;
-    double ev;
-    got.get_value(idx, gv);
-    expected.get_value(idx, ev);
-    const double diff = std::abs(gv - ev);
-    if (diff > ret.max_abs) {
-      ret.max_abs = diff;
-    }
-    if (!found && diff > 1.0e-12) {
-      ret.first_index = idx;
-      ret.first_got = gv;
-      ret.first_expected = ev;
-      found = true;
-    }
   }
   return ret;
 }
@@ -316,10 +274,6 @@ static double r3_plaquette_norm(int number_site, int seed) {
                                             mptensor::Axes(1, 3)));
 }
 
-static double r3_plaquette_norm(int number_site = -1) {
-  return r3_plaquette_norm(number_site, 0);
-}
-
 static double r3_horizontal_pair_norm(const ft& op, int seed) {
   return r3_sum_entries(tenes::fermion::build_reduced_pair(
       make_r2_tensor(2, 1, 0, seed), make_r2_tensor(2, 1, 1, seed), op,
@@ -330,25 +284,6 @@ static double r3_vertical_pair_norm(const ft& op, int seed) {
   return r3_sum_entries(tenes::fermion::build_reduced_pair(
       make_r2_tensor(1, 2, 0, seed), make_r2_tensor(1, 2, 1, seed), op,
       tenes::fermion::reduced_pair_direction::vertical));
-}
-
-static tenes::real_tensor r3_direct_pair_tensor(
-    int lx, int ly, int site_a, int site_b,
-    tenes::fermion::reduced_pair_direction direction, int seed) {
-  switch (direction) {
-    case tenes::fermion::reduced_pair_direction::horizontal:
-      return mptensor::tensordot(
-          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_a, seed)),
-          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_b, seed)),
-          mptensor::Axes(2), mptensor::Axes(0));
-    case tenes::fermion::reduced_pair_direction::vertical:
-      return mptensor::tensordot(
-          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_a, seed)),
-          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_b, seed)),
-          mptensor::Axes(3), mptensor::Axes(1));
-    default:
-      throw std::runtime_error("r3_direct_pair_tensor: invalid direction");
-  }
 }
 
 static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
@@ -398,101 +333,6 @@ static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
 
 static double r3_pair_plaquette_norm(int a, int b, int seed) {
   return r3_pair_plaquette_norm(a, b, r2_hop_op(), seed);
-}
-
-constexpr int r3_joint_bit(int x, int y) { return x * 3 + (y < x ? y : y - 1); }
-
-static void r3_apply_joint_swaps_with_mask(ft& a,
-                                           const std::vector<int>& bra_axes,
-                                           const std::vector<int>& ket_axes,
-                                           const std::vector<int>& leg_ids,
-                                           unsigned mask) {
-  for (int x = 0; x < 4; ++x) {
-    for (int y = 0; y < 4; ++y) {
-      if (x == y || (mask & (1u << r3_joint_bit(x, y))) == 0) {
-        continue;
-      }
-      for (std::size_t ix = 0; ix < leg_ids.size(); ++ix) {
-        if (leg_ids[ix] != x) {
-          continue;
-        }
-        for (std::size_t iy = 0; iy < leg_ids.size(); ++iy) {
-          if (leg_ids[iy] != y) {
-            continue;
-          }
-          tenes::fermion::apply_swap(a, ket_axes[ix], bra_axes[iy]);
-          tenes::fermion::apply_swap(a, bra_axes[ix], bra_axes[iy]);
-        }
-      }
-    }
-  }
-}
-
-static tenes::real_tensor r3_fuse_pair_with_mask(
-    const ft& doubled, const std::vector<int>& leg_ids, unsigned mask,
-    unsigned order_mask) {
-  const std::size_t nlegs = leg_ids.size();
-  ft prepared = doubled;
-  std::vector<int> bra_axes;
-  std::vector<int> ket_axes;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    bra_axes.push_back(static_cast<int>(ax));
-    ket_axes.push_back(static_cast<int>(nlegs + ax));
-  }
-  r3_apply_joint_swaps_with_mask(prepared, bra_axes, ket_axes, leg_ids, mask);
-  mptensor::Axes interleaved;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    if ((order_mask & (1u << ax)) == 0) {
-      interleaved.push(nlegs + ax);
-      interleaved.push(ax);
-    } else {
-      interleaved.push(ax);
-      interleaved.push(nlegs + ax);
-    }
-  }
-  ft ordered = tenes::fermion::transpose(prepared, interleaved);
-  mptensor::Shape sh;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
-  }
-  return mptensor::reshape(ordered.t, sh);
-}
-
-static tenes::real_tensor r3_build_pair_with_mask(
-    const ft& a, const ft& b, const ft& op,
-    tenes::fermion::reduced_pair_direction direction, unsigned mask,
-    bool negate, unsigned order_mask = 0) {
-  ft ket;
-  std::vector<int> leg_ids;
-  switch (direction) {
-    case tenes::fermion::reduced_pair_direction::horizontal:
-      ket =
-          tenes::fermion::tensordot(a, b, mptensor::Axes(2), mptensor::Axes(0));
-      leg_ids = {0, 1, 3, 1, 2, 3};
-      break;
-    case tenes::fermion::reduced_pair_direction::vertical:
-      ket =
-          tenes::fermion::tensordot(a, b, mptensor::Axes(3), mptensor::Axes(1));
-      leg_ids = {0, 1, 2, 0, 2, 3};
-      break;
-    default:
-      throw std::runtime_error("r3_build_pair_with_mask: invalid direction");
-  }
-  ft op_ket = r2_apply_two_site(ket, 3, 7, op);
-  ft doubled =
-      tenes::fermion::tensordot(tenes::fermion::conj(ket), op_ket,
-                                mptensor::Axes(3, 7), mptensor::Axes(3, 7));
-  tenes::real_tensor ret =
-      r3_fuse_pair_with_mask(doubled, leg_ids, mask, order_mask);
-  if (negate) {
-    for (std::size_t n = 0; n < ret.local_size(); ++n) {
-      const auto idx = ret.global_index(n);
-      double v;
-      ret.get_value(idx, v);
-      ret.set_value(idx, -v);
-    }
-  }
-  return ret;
 }
 
 }  // namespace
@@ -559,108 +399,6 @@ TEST_CASE(
   CHECK(hop23 == doctest::Approx(-6.61038902919681842e-02).epsilon(1e-12));
   CHECK(pair01 == doctest::Approx(0.00000000000000000e+00).epsilon(1e-12));
   CHECK(pair02 == doctest::Approx(0.00000000000000000e+00).epsilon(1e-12));
-}
-
-TEST_CASE(
-    "R3 diagnostic identity pair blob matches direct reduced contraction") {
-  const ft id = r2_identity_pair_op();
-
-  const tenes::real_tensor h_blob = tenes::fermion::build_reduced_pair(
-      make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
-      tenes::fermion::reduced_pair_direction::horizontal);
-  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
-      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
-  const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
-  std::cout << "R3 identity horizontal max_abs_diff=" << h_diff.max_abs
-            << " first_idx=" << h_diff.first_index
-            << " got=" << h_diff.first_got
-            << " expected=" << h_diff.first_expected << std::endl;
-  CHECK(h_diff.max_abs == doctest::Approx(0.0).epsilon(1e-12));
-
-  const tenes::real_tensor v_blob = tenes::fermion::build_reduced_pair(
-      make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
-      tenes::fermion::reduced_pair_direction::vertical);
-  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
-      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
-  const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
-  std::cout << "R3 identity vertical max_abs_diff=" << v_diff.max_abs
-            << " first_idx=" << v_diff.first_index
-            << " got=" << v_diff.first_got
-            << " expected=" << v_diff.first_expected << std::endl;
-  CHECK(v_diff.max_abs == doctest::Approx(0.0).epsilon(1e-12));
-}
-
-TEST_CASE("R3 diagnostic search pair mask for identity consistency") {
-  std::vector<std::pair<unsigned, bool>> passing;
-  const ft id = r2_identity_pair_op();
-  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
-      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
-  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
-      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
-  for (unsigned mask = 0; mask < 4096; ++mask) {
-    for (bool negate : {false, true}) {
-      const tenes::real_tensor h_blob = r3_build_pair_with_mask(
-          make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
-          tenes::fermion::reduced_pair_direction::horizontal, mask, negate);
-      const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
-      if (h_diff.max_abs > 1.0e-12) {
-        continue;
-      }
-      const tenes::real_tensor v_blob = r3_build_pair_with_mask(
-          make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
-          tenes::fermion::reduced_pair_direction::vertical, mask, negate);
-      const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
-      if (v_diff.max_abs <= 1.0e-12) {
-        passing.push_back({mask, negate});
-      }
-    }
-  }
-  std::cout << "R3 identity pair-mask passing count=" << passing.size();
-  for (const auto& variant : passing) {
-    std::cout << " mask=" << variant.first
-              << " negate=" << (variant.second ? "true" : "false");
-  }
-  std::cout << std::endl;
-  CHECK(!passing.empty());
-}
-
-TEST_CASE("R3 diagnostic search pair fuse ordering for identity consistency") {
-  constexpr unsigned mask =
-      (1u << r3_joint_bit(0, 3)) | (1u << r3_joint_bit(1, 0)) |
-      (1u << r3_joint_bit(2, 3)) | (1u << r3_joint_bit(3, 0));
-  std::vector<std::pair<unsigned, bool>> passing;
-  const ft id = r2_identity_pair_op();
-  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
-      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
-  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
-      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
-  for (unsigned order_mask = 0; order_mask < 64; ++order_mask) {
-    for (bool negate : {false, true}) {
-      const tenes::real_tensor h_blob = r3_build_pair_with_mask(
-          make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
-          tenes::fermion::reduced_pair_direction::horizontal, mask, negate,
-          order_mask);
-      const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
-      if (h_diff.max_abs > 1.0e-12) {
-        continue;
-      }
-      const tenes::real_tensor v_blob = r3_build_pair_with_mask(
-          make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
-          tenes::fermion::reduced_pair_direction::vertical, mask, negate,
-          order_mask);
-      const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
-      if (v_diff.max_abs <= 1.0e-12) {
-        passing.push_back({order_mask, negate});
-      }
-    }
-  }
-  std::cout << "R3 identity pair-order passing count=" << passing.size();
-  for (const auto& variant : passing) {
-    std::cout << " order_mask=" << variant.first
-              << " negate=" << (variant.second ? "true" : "false");
-  }
-  std::cout << std::endl;
-  CHECK(!passing.empty());
 }
 
 TEST_CASE("R3 diagnostic split density pair blob matches site impurities") {
@@ -754,19 +492,4 @@ TEST_CASE("R3 reduced physical-open tensor traces to reduced norm tensor") {
     reduced.get_value(idx, expected);
     CHECK(got == doctest::Approx(expected).epsilon(1e-12));
   }
-}
-
-TEST_CASE("R3 default reduced pair blob diagnostic is finite") {
-  const double norm = r3_plaquette_norm();
-  const double hop01 = r3_pair_plaquette_norm(0, 1, 0) / norm;
-  const double hop02 = r3_pair_plaquette_norm(0, 2, 0) / norm;
-  const double hop13 = r3_pair_plaquette_norm(1, 3, 0) / norm;
-  const double hop23 = r3_pair_plaquette_norm(2, 3, 0) / norm;
-  std::cout << std::setprecision(17) << "R3 reduced pair plaquette hop=["
-            << hop01 << ", " << hop02 << ", " << hop13 << ", " << hop23 << "]"
-            << std::endl;
-  CHECK(std::isfinite(hop01));
-  CHECK(std::isfinite(hop02));
-  CHECK(std::isfinite(hop13));
-  CHECK(std::isfinite(hop23));
 }

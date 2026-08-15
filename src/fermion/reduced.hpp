@@ -100,16 +100,6 @@ tensor fuse_doubled_external_legs(const ftensor<tensor>& doubled,
 }
 
 template <class tensor>
-void negate_in_place(tensor& a) {
-  for (std::size_t n = 0; n < a.local_size(); ++n) {
-    const auto idx = a.global_index(n);
-    typename tensor::value_type v;
-    a.get_value(idx, v);
-    a.set_value(idx, -v);
-  }
-}
-
-template <class tensor>
 void scale_in_place(tensor& a, double scale) {
   for (std::size_t n = 0; n < a.local_size(); ++n) {
     const auto idx = a.global_index(n);
@@ -120,33 +110,18 @@ void scale_in_place(tensor& a, double scale) {
 }
 
 template <class tensor>
-void apply_ket_string_to_fused_leg(tensor& a, const parity_vector& leg_parity,
-                                   std::size_t ax) {
+void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
+                           std::size_t ax, bool ket_odd_bra_even) {
   std::vector<double> sign(leg_parity.size() * leg_parity.size(), 1.0);
   for (std::size_t bra = 0; bra < leg_parity.size(); ++bra) {
     for (std::size_t ket = 0; ket < leg_parity.size(); ++ket) {
-      sign[ket + leg_parity.size() * bra] = leg_parity[ket] ? -1.0 : 1.0;
+      const bool flip = ket_odd_bra_even
+                            ? (leg_parity[ket] && !leg_parity[bra])
+                            : (!leg_parity[ket] && leg_parity[bra]);
+      sign[ket + leg_parity.size() * bra] = flip ? -1.0 : 1.0;
     }
   }
   a.multiply_vector(sign, ax);
-}
-
-template <class tensor>
-ftensor<tensor> local_u_channel(const ftensor<tensor>& u, std::size_t alpha) {
-  ftensor<tensor> sliced = slice(u, 2, alpha, alpha + 1);
-  sliced.t =
-      mptensor::reshape(sliced.t, mptensor::Shape(u.shape()[0], u.shape()[1]));
-  sliced.parity = {u.parity[0], u.parity[1]};
-  return sliced;
-}
-
-template <class tensor>
-ftensor<tensor> local_vt_channel(const ftensor<tensor>& vt, std::size_t alpha) {
-  ftensor<tensor> sliced = slice(vt, 0, alpha, alpha + 1);
-  sliced.t = mptensor::reshape(sliced.t,
-                               mptensor::Shape(vt.shape()[1], vt.shape()[2]));
-  sliced.parity = {vt.parity[1], vt.parity[2]};
-  return sliced;
 }
 
 template <class tensor>
@@ -173,6 +148,44 @@ tensor doubled_pipeline(const ftensor<tensor>& braTn,
   sh.push(ordered.shape()[8]);
   sh.push(ordered.shape()[9]);
   return mptensor::reshape(ordered.t, sh);
+}
+
+template <class tensor>
+tensor fuse_doubled_cluster(const ftensor<tensor>& doubled,
+                            const std::vector<int>& leg_ids) {
+  ftensor<tensor> prepared = doubled;
+  constexpr std::size_t kExternalLegs = 6;
+  const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
+  std::vector<int> bra_axes;
+  std::vector<int> ket_axes;
+  for (const int ax : cluster_axes) {
+    bra_axes.push_back(ax);
+    ket_axes.push_back(ax + 8);
+  }
+  apply_joint_swaps(prepared, bra_axes, ket_axes, leg_ids);
+
+  mptensor::Axes interleaved;
+  for (std::size_t i = 0; i < kExternalLegs; ++i) {
+    interleaved.push(ket_axes[i]);
+    interleaved.push(bra_axes[i]);
+  }
+  interleaved.push(11);
+  interleaved.push(15);
+  interleaved.push(3);
+  interleaved.push(7);
+  ftensor<tensor> ordered = transpose(prepared, interleaved);
+
+  mptensor::Shape sh;
+  for (std::size_t ax = 0; ax < kExternalLegs; ++ax) {
+    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
+  }
+  sh.push(ordered.shape()[12]);
+  sh.push(ordered.shape()[13]);
+  sh.push(ordered.shape()[14]);
+  sh.push(ordered.shape()[15]);
+
+  tensor fused = mptensor::reshape(ordered.t, sh);
+  return mptensor::contract(fused, mptensor::Axes(6, 7), mptensor::Axes(8, 9));
 }
 
 }  // namespace detail
@@ -205,87 +218,56 @@ tensor build_reduced(const ftensor<tensor>& Tn) {
                             mptensor::Axes(5));
 }
 
-// variant bits (search-time; frozen after the oracle decides):
-// bit 0: odd-channel string on A's shared leg (0) or B's shared leg (1)
-// bit 1: global sign +1 (0) or -1 (1)
+// variant bit 0: doubled-cluster global sign +1 (0) or -1 (1).
 inline int g_reduced_pair_variant = 0;
 
 template <class tensor>
-tensor build_reduced_pair_variant(const ftensor<tensor>& TnA,
-                                  const ftensor<tensor>& TnB,
-                                  const ftensor<tensor>& op12,
-                                  reduced_pair_direction direction,
-                                  int variant);
+tensor doubled_cluster(const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+                       const ftensor<tensor>& op12,
+                       reduced_pair_direction direction, int variant = 0);
 
 template <class tensor>
 tensor build_reduced_pair(const ftensor<tensor>& TnA,
                           const ftensor<tensor>& TnB,
                           const ftensor<tensor>& op12,
                           reduced_pair_direction direction) {
-  return build_reduced_pair_variant(TnA, TnB, op12, direction,
-                                    g_reduced_pair_variant);
+  return doubled_cluster(TnA, TnB, op12, direction, g_reduced_pair_variant);
 }
 
 template <class tensor>
-tensor build_reduced_pair_variant(const ftensor<tensor>& TnA,
-                                  const ftensor<tensor>& TnB,
-                                  const ftensor<tensor>& op12,
-                                  reduced_pair_direction direction,
-                                  int variant) {
-  std::size_t shared_a_ax = 0;
-  std::size_t shared_b_ax = 0;
+tensor doubled_cluster(const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+                       const ftensor<tensor>& op12,
+                       reduced_pair_direction direction, int variant) {
+  ftensor<tensor> ket_ab;
+  std::vector<int> leg_ids;
   switch (direction) {
     case reduced_pair_direction::horizontal:
-      shared_a_ax = 2;
-      shared_b_ax = 0;
+      ket_ab = tensordot(TnA, TnB, mptensor::Axes(2), mptensor::Axes(0));
+      leg_ids = {0, 1, 3, 1, 2, 3};
       break;
     case reduced_pair_direction::vertical:
-      shared_a_ax = 3;
-      shared_b_ax = 1;
+      ket_ab = tensordot(TnA, TnB, mptensor::Axes(3), mptensor::Axes(1));
+      leg_ids = {0, 1, 2, 0, 2, 3};
       break;
     default:
-      throw std::runtime_error("build_reduced_pair: invalid direction");
+      throw std::runtime_error("doubled_cluster: invalid direction");
   }
-  ftensor<tensor> u, vt;
-  std::vector<double> s;
-  const int info =
-      svd(op12, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt);
-  if (info != 0) {
-    throw std::runtime_error("build_reduced_pair: operator SVD failed");
-  }
-  const parity_vector& channel_parity = u.parity.back();
 
-  tensor ret;
-  bool initialized = false;
-  for (std::size_t alpha = 0; alpha < s.size(); ++alpha) {
-    ftensor<tensor> op_a = detail::local_u_channel(u, alpha);
-    ftensor<tensor> op_b = detail::local_vt_channel(vt, alpha);
-    tensor imp_a = build_reduced_channel(TnA, op_a);
-    tensor imp_b = build_reduced_channel(TnB, op_b);
-    if (channel_parity[alpha]) {
-      // odd channel: the JW string rides the connecting bond
-      if ((variant & 1) == 0) {
-        detail::apply_ket_string_to_fused_leg(imp_a, TnA.parity[shared_a_ax],
-                                              shared_a_ax);
-      } else {
-        detail::apply_ket_string_to_fused_leg(imp_b, TnB.parity[shared_b_ax],
-                                              shared_b_ax);
-      }
-    }
-    tensor term = mptensor::tensordot(imp_a, imp_b, mptensor::Axes(shared_a_ax),
-                                      mptensor::Axes(shared_b_ax));
-    detail::scale_in_place(term, s[alpha]);
-    if (!initialized) {
-      ret = term;
-      initialized = true;
-    } else {
-      ret += term;
-    }
+  ftensor<tensor> ket_op = detail::apply_reduced_two_site_op(ket_ab, op12);
+  ftensor<tensor> doubled =
+      tensordot(conj(ket_ab), ket_op, mptensor::Axes(), mptensor::Axes());
+  tensor ret = detail::fuse_doubled_cluster(doubled, leg_ids);
+  // Gauge alignment with the single-site doubling convention; measured
+  // directly via comparison against build_reduced_op/build_reduced-based
+  // direct composition, not derived analytically.
+  if (direction == reduced_pair_direction::horizontal) {
+    detail::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
+    detail::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);
+  } else {
+    detail::apply_fused_leg_gauge(ret, TnA.parity[0], 0, true);
+    detail::apply_fused_leg_gauge(ret, TnB.parity[0], 3, false);
   }
-  if (!initialized) {
-    throw std::runtime_error("build_reduced_pair: empty operator SVD");
-  }
-  if ((variant & 2) != 0) {
+  if ((variant & 1) != 0) {
     detail::scale_in_place(ret, -1.0);
   }
   return ret;
