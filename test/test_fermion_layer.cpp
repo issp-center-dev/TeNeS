@@ -772,3 +772,5 @@ TEST_CASE("ftensor CTM measurement kernels produce finite positive norm") {
           hop);
   CHECK(std::isfinite(hop_value));
 }
+
+#include "fermion/r2_convention.cpp"
