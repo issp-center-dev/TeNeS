@@ -28,11 +28,16 @@ namespace fermion {
 using parity_vector = std::vector<bool>;
 using leg_parities = std::vector<parity_vector>;
 
+// Fuse two leg parities into the parity of the combined index, using the
+// COLUMN-MAJOR flattening convention of mptensor (ScaLAPACK heritage):
+// mptensor::reshape combines adjacent legs as index = i + a.size() * j, i.e.
+// the FIRST leg is the fastest-varying one. A row-major fuse here silently
+// mislabels every fused index whose leg parity patterns are asymmetric.
 inline parity_vector fuse(const parity_vector& a, const parity_vector& b) {
   parity_vector r(a.size() * b.size());
-  for (std::size_t i = 0; i < a.size(); ++i) {
-    for (std::size_t j = 0; j < b.size(); ++j) {
-      r[i * b.size() + j] = a[i] != b[j];
+  for (std::size_t j = 0; j < b.size(); ++j) {
+    for (std::size_t i = 0; i < a.size(); ++i) {
+      r[i + a.size() * j] = a[i] != b[j];
     }
   }
   return r;

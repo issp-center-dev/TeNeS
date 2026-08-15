@@ -40,12 +40,13 @@ static ft make_random_ft(const mptensor::Shape& sh,
   return ft{t, p};
 }
 
-TEST_CASE("fuse combines parities row-major with XOR") {
+TEST_CASE("fuse combines parities column-major with XOR") {
   parity_vector a{false, true};
   parity_vector b{false, true, true};
   parity_vector f = fuse(a, b);
   REQUIRE(f.size() == 6);
-  CHECK(f == parity_vector{false, true, true, true, false, false});
+  // mptensor flattening: index = i + a.size() * j (first leg fastest)
+  CHECK(f == parity_vector{false, true, true, false, true, false});
 }
 
 TEST_CASE("count_odd counts odd legs at an element") {
@@ -302,8 +303,9 @@ TEST_CASE("reshape fuses adjacent leg parities") {
   REQUIRE(r.parity.size() == 2);
   CHECK(r.parity[0] == tenes::fermion::fuse(p[0], p[1]));
   CHECK(r.parity[1] == p[2]);
+  // column-major fusion: fused index 4 = i + 2*j -> (i, j) = (0, 2)
   CHECK(tenes::fermion::count_odd(r.parity, mptensor::Index(4, 0)) ==
-        (static_cast<int>(p[0][1] != p[1][1]) + static_cast<int>(p[2][0])));
+        (static_cast<int>(p[0][0] != p[1][2]) + static_cast<int>(p[2][0])));
 }
 
 TEST_CASE("reshape fusion preserves contraction values") {
@@ -603,4 +605,45 @@ TEST_CASE("manual four-swap reduced tensor matches f-primitive contraction") {
     manual.get_value(idx, vm);
     CHECK(vf == doctest::Approx(vm).epsilon(1.0e-12));
   }
+}
+
+TEST_CASE("graded svd preserves parity for permuting axes") {
+  // regression: svd with axes (0,2),(1,3) requires a non-identity internal
+  // transpose; lazy-transpose + mptensor::reshape produced the storage-order
+  // (wrong) unfolding. Legs deliberately carry DIFFERENT parity patterns so a
+  // wrong unfolding cannot masquerade as a consistent graded SVD.
+  namespace f = tenes::fermion;
+  using FT = f::ftensor<tenes::real_tensor>;
+  f::parity_vector p2{false, true};               // dim 2: {e,o}
+  f::parity_vector p4{false, false, true, true};  // dim 4: {e,e,o,o}
+  // leg layout matches the simple-update Theta: (aux1, aux2, out1, out2),
+  // so rows (0,2) and cols (1,3) fuse legs with DIFFERENT parity patterns
+  f::leg_parities lp{p4, p4, p2, p2};
+  tenes::real_tensor t(mptensor::Shape(4, 4, 2, 2));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    auto idx = t.global_index(n);
+    if (f::count_odd(lp, idx) % 2 == 0) {
+      const double x = static_cast<double>(3 * (n + 2));
+      t.set_value(idx, 0.31 * std::sin(x) + 0.23 * std::cos(0.6 * x));
+    }
+  }
+  FT a{t, lp};
+  FT u, vt;
+  std::vector<double> s;
+  f::svd(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt);
+  CHECK(f::parity_violation(u) == doctest::Approx(0.0).epsilon(1e-12));
+  CHECK(f::parity_violation(vt) == doctest::Approx(0.0).epsilon(1e-12));
+  FT us = u;
+  us.multiply_vector(s, 2);
+  FT rec = f::tensordot(us, vt, mptensor::Axes(2), mptensor::Axes(0));
+  FT rec2 = f::transpose(rec, mptensor::Axes(0, 2, 1, 3));
+  double maxdiff = 0.0;
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double va, vb;
+    a.t.get_value(idx, va);
+    rec2.t.get_value(idx, vb);
+    maxdiff = std::max(maxdiff, std::abs(va - vb));
+  }
+  CHECK(maxdiff == doctest::Approx(0.0).epsilon(1e-10));
 }
