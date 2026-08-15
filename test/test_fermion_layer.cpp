@@ -202,3 +202,214 @@ TEST_CASE("trace matches manual swap for reversed contracted ordering") {
                                     mptensor::Axes(0, 1));
   CHECK(got == doctest::Approx(expected));
 }
+
+TEST_CASE("norm of even vector tensor is positive via conj") {
+  tenes::fermion::leg_parities p{{false, false, true, true}};
+  ft v = make_random_ft(mptensor::Shape(4), p, 21);
+  ft cv = tenes::fermion::conj(v);
+  double nrm =
+      tenes::fermion::trace(cv, v, mptensor::Axes(0), mptensor::Axes(0));
+  CHECK(nrm > 0.0);
+}
+
+TEST_CASE("conj applies candidate two-odd-leg twist") {
+  tenes::fermion::leg_parities p{{false, true}, {false, true}};
+  ft a{tenes::real_tensor(mptensor::Shape(2, 2)), p};
+  a.t.set_value(mptensor::Index(1, 1), 2.0);
+  ft ca = tenes::fermion::conj(a);
+  double v;
+  ca.t.get_value(mptensor::Index(1, 1), v);
+  CHECK(v == doctest::Approx(-2.0));
+}
+
+TEST_CASE("conj is an involution up to elementwise conj") {
+  tenes::fermion::leg_parities p{{false, true}, {false, true}};
+  ft a = make_random_ft(mptensor::Shape(2, 2), p, 22);
+  ft cca = tenes::fermion::conj(tenes::fermion::conj(a));
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double va, vb;
+    a.t.get_value(idx, va);
+    cca.t.get_value(idx, vb);
+    CHECK(vb == doctest::Approx(va));
+  }
+}
+
+TEST_CASE("slice carries the sliced leg parity interval") {
+  tenes::fermion::leg_parities p{{false, true, false}, {false, true}};
+  ft a = make_random_ft(mptensor::Shape(3, 2), p, 51);
+  ft s = tenes::fermion::slice(a, 0, 1, 3);
+  REQUIRE(s.shape() == mptensor::Shape(2, 2));
+  CHECK(s.parity[0] == tenes::fermion::parity_vector{true, false});
+  for (std::size_t n = 0; n < s.t.local_size(); ++n) {
+    auto idx = s.t.global_index(n);
+    double vs, va;
+    s.t.get_value(idx, vs);
+    a.t.get_value(mptensor::Index(idx[0] + 1, idx[1]), va);
+    CHECK(vs == doctest::Approx(va));
+  }
+}
+
+TEST_CASE("extend pads new parity entries as even") {
+  tenes::fermion::leg_parities p{{false, true}, {true}};
+  ft a = make_random_ft(mptensor::Shape(2, 1), p, 52);
+  ft e = tenes::fermion::extend(a, mptensor::Shape(3, 2));
+  CHECK(e.shape() == mptensor::Shape(3, 2));
+  CHECK(e.parity[0] == tenes::fermion::parity_vector{false, true, false});
+  CHECK(e.parity[1] == tenes::fermion::parity_vector{true, false});
+}
+
+TEST_CASE("reshape fuses adjacent leg parities") {
+  tenes::fermion::leg_parities p{
+      {false, true}, {false, true, true}, {true, false}};
+  ft a = make_random_ft(mptensor::Shape(2, 3, 2), p, 53);
+  ft r = tenes::fermion::reshape(a, mptensor::Shape(6, 2));
+  REQUIRE(r.shape() == mptensor::Shape(6, 2));
+  REQUIRE(r.parity.size() == 2);
+  CHECK(r.parity[0] == tenes::fermion::fuse(p[0], p[1]));
+  CHECK(r.parity[1] == p[2]);
+  CHECK(tenes::fermion::count_odd(r.parity, mptensor::Index(4, 0)) ==
+        (static_cast<int>(p[0][1] != p[1][1]) + static_cast<int>(p[2][0])));
+}
+
+TEST_CASE("reshape fusion preserves contraction values") {
+  tenes::fermion::leg_parities p{{false, true}, {false, true}, {false, true}};
+  ft a = make_even_ft(mptensor::Shape(2, 2, 2), p, 54);
+  ft b = make_even_ft(mptensor::Shape(4, 2),
+                      {tenes::fermion::fuse(p[0], p[1]), {false, true}}, 55);
+  ft ar = tenes::fermion::reshape(a, mptensor::Shape(4, 2));
+  ft got =
+      tenes::fermion::tensordot(ar, b, mptensor::Axes(0), mptensor::Axes(0));
+  for (std::size_t n = 0; n < got.t.local_size(); ++n) {
+    auto idx = got.t.global_index(n);
+    double vg;
+    got.t.get_value(idx, vg);
+    double vr = 0.0;
+    for (std::size_t fused = 0; fused < 4; ++fused) {
+      double va, vb;
+      ar.t.get_value(mptensor::Index(fused, idx[0]), va);
+      b.t.get_value(mptensor::Index(fused, idx[1]), vb);
+      const int sign = (ar.parity[0][fused] && ar.parity[1][idx[0]]) ? -1 : 1;
+      vr += sign * va * vb;
+    }
+    CHECK(vg == doctest::Approx(vr));
+  }
+}
+
+TEST_CASE("max_abs and multiply_vector forward to the dense tensor") {
+  tenes::fermion::leg_parities p{{false, true}, {false, true}, {false, true}};
+  ft a = make_random_ft(mptensor::Shape(2, 2, 2), p, 56);
+  ft b = a;
+  std::vector<double> v0{2.0, 3.0};
+  std::vector<double> v1{5.0, 7.0};
+  std::vector<double> v2{11.0, 13.0};
+  b.multiply_vector(v0, 0, v1, 1, v2, 2);
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double va, vb;
+    a.t.get_value(idx, va);
+    b.t.get_value(idx, vb);
+    CHECK(vb == doctest::Approx(va * v0[idx[0]] * v1[idx[1]] * v2[idx[2]]));
+  }
+  CHECK(tenes::fermion::max_abs(b) == doctest::Approx(mptensor::max_abs(b.t)));
+}
+
+TEST_CASE("make_perm_matrix uses new-position to old-position convention") {
+  std::vector<std::size_t> perm{1, 3, 0, 2};
+  tenes::real_tensor pmat =
+      tenes::fermion::make_perm_matrix<tenes::real_tensor>(perm);
+  for (std::size_t i = 0; i < 4; ++i) {
+    for (std::size_t j = 0; j < 4; ++j) {
+      double v;
+      pmat.get_value(mptensor::Index(i, j), v);
+      CHECK(v == doctest::Approx(perm[i] == j ? 1.0 : 0.0));
+    }
+  }
+}
+
+TEST_CASE("graded QR reconstructs an even tensor with block parity") {
+  tenes::fermion::leg_parities p{{false, true, false}, {false, true, true}};
+  ft a = make_even_ft(mptensor::Shape(3, 3), p, 61);
+  ft q, r;
+  int info = tenes::fermion::qr(a, mptensor::Axes(0), mptensor::Axes(1), q, r);
+  CHECK(info == 0);
+  CHECK(tenes::fermion::parity_violation(q) == doctest::Approx(0.0));
+  CHECK(tenes::fermion::parity_violation(r) == doctest::Approx(0.0));
+  ft recon =
+      tenes::fermion::tensordot(q, r, mptensor::Axes(1), mptensor::Axes(0));
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double va, vr;
+    a.t.get_value(idx, va);
+    recon.t.get_value(idx, vr);
+    CHECK(vr == doctest::Approx(va).epsilon(1.0e-10));
+  }
+  ft qtq = tenes::fermion::tensordot(tenes::fermion::conj(q), q,
+                                     mptensor::Axes(0), mptensor::Axes(0));
+  for (std::size_t n = 0; n < qtq.t.local_size(); ++n) {
+    auto idx = qtq.t.global_index(n);
+    double v;
+    qtq.t.get_value(idx, v);
+    CHECK(v == doctest::Approx(idx[0] == idx[1] ? 1.0 : 0.0).epsilon(1.0e-10));
+  }
+}
+
+TEST_CASE("graded SVD reconstructs an even tensor with block parity") {
+  tenes::fermion::leg_parities p{{false, true, false}, {false, true, true}};
+  ft a = make_even_ft(mptensor::Shape(3, 3), p, 71);
+  ft u, vt;
+  std::vector<double> s;
+  int info =
+      tenes::fermion::svd(a, mptensor::Axes(0), mptensor::Axes(1), u, s, vt);
+  CHECK(info == 0);
+  CHECK(tenes::fermion::parity_violation(u) == doctest::Approx(0.0));
+  CHECK(tenes::fermion::parity_violation(vt) == doctest::Approx(0.0));
+  ft us = u;
+  us.multiply_vector(s, 1);
+  ft recon =
+      tenes::fermion::tensordot(us, vt, mptensor::Axes(1), mptensor::Axes(0));
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double va, vr;
+    a.t.get_value(idx, va);
+    recon.t.get_value(idx, vr);
+    CHECK(vr == doctest::Approx(va).epsilon(1.0e-10));
+  }
+}
+
+TEST_CASE("svd_trunc selects across sectors and returns even-first metadata") {
+  tenes::fermion::leg_parities p{{false, false, true}, {false, false, true}};
+  ft a{tenes::real_tensor(mptensor::Shape(3, 3)), p};
+  a.t.set_value(mptensor::Index(0, 0), 3.0);
+  a.t.set_value(mptensor::Index(1, 1), 1.0);
+  a.t.set_value(mptensor::Index(2, 2), 2.0);
+  ft u, vt;
+  std::vector<double> s;
+  int info = tenes::fermion::svd_trunc(a, mptensor::Axes(0), mptensor::Axes(1),
+                                       u, s, vt, 2);
+  CHECK(info == 0);
+  REQUIRE(s.size() == 2);
+  CHECK(s[0] == doctest::Approx(3.0));
+  CHECK(s[1] == doctest::Approx(2.0));
+  REQUIRE(u.parity.size() == 2);
+  CHECK(u.parity[1] == tenes::fermion::parity_vector{false, true});
+  CHECK(vt.parity[0] == tenes::fermion::parity_vector{false, true});
+  CHECK(tenes::fermion::parity_violation(u) == doctest::Approx(0.0));
+  CHECK(tenes::fermion::parity_violation(vt) == doctest::Approx(0.0));
+}
+
+TEST_CASE("svd_trunc breaks cross-sector ties by preferring even parity") {
+  tenes::fermion::leg_parities p{{false, true}, {false, true}};
+  ft a{tenes::real_tensor(mptensor::Shape(2, 2)), p};
+  a.t.set_value(mptensor::Index(0, 0), 2.0);
+  a.t.set_value(mptensor::Index(1, 1), 2.0);
+  ft u, vt;
+  std::vector<double> s;
+  int info = tenes::fermion::svd_trunc(a, mptensor::Axes(0), mptensor::Axes(1),
+                                       u, s, vt, 1);
+  CHECK(info == 0);
+  REQUIRE(s.size() == 1);
+  CHECK(s[0] == doctest::Approx(2.0));
+  CHECK(u.parity[1] == tenes::fermion::parity_vector{false});
+  CHECK(vt.parity[0] == tenes::fermion::parity_vector{false});
+}

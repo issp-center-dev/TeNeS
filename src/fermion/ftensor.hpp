@@ -47,6 +47,24 @@ struct ftensor {
 
   mptensor::Shape shape() const { return t.shape(); }
   int rank() const { return static_cast<int>(parity.size()); }
+  template <typename D>
+  ftensor& multiply_vector(const std::vector<D>& vec, std::size_t n_axes) {
+    t.multiply_vector(vec, n_axes);
+    return *this;
+  }
+  template <typename D0, typename D1>
+  ftensor& multiply_vector(const std::vector<D0>& vec0, std::size_t n_axes0,
+                           const std::vector<D1>& vec1, std::size_t n_axes1) {
+    t.multiply_vector(vec0, n_axes0, vec1, n_axes1);
+    return *this;
+  }
+  template <typename D0, typename D1, typename D2>
+  ftensor& multiply_vector(const std::vector<D0>& vec0, std::size_t n_axes0,
+                           const std::vector<D1>& vec1, std::size_t n_axes1,
+                           const std::vector<D2>& vec2, std::size_t n_axes2) {
+    t.multiply_vector(vec0, n_axes0, vec1, n_axes1, vec2, n_axes2);
+    return *this;
+  }
   ftensor& transpose(const mptensor::Axes& axes) {
     for (std::size_t n = 0; n < t.local_size(); ++n) {
       auto idx = t.global_index(n);
