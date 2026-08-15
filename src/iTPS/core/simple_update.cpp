@@ -105,6 +105,24 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
 }
 
 template <class tensor>
+tensor regroup_theta_for_svd(const tensor &theta) {
+  tensor ret = theta;
+  ret.transpose(Axes(0, 2, 1, 3));
+  return ret;
+}
+
+template <class tensor>
+tenes::fermion::ftensor<tensor> regroup_theta_for_svd(
+    const tenes::fermion::ftensor<tensor> &theta) {
+  tenes::fermion::ftensor<tensor> ret;
+  ret.t = theta.t;
+  ret.t.transpose(Axes(0, 2, 1, 3));
+  ret.parity = {theta.parity[0], theta.parity[2], theta.parity[1],
+                theta.parity[3]};
+  return ret;
+}
+
+template <class tensor>
 void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
   const double v = tenes::fermion::parity_violation(a);
   const double scale = std::max(1.0, tenes::fermion::max_abs(a));
@@ -207,13 +225,14 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
   */
   ptensor Theta_before = tensordot(R1, R2, Axes(1), Axes(1));
   log_theta_blocks(Theta_before, "before_gate", Axes(0, 1), Axes(2, 3));
-  ptensor Theta = tensordot(Theta_before, op12, Axes(1, 3), Axes(0, 1));
-  log_theta_blocks(Theta, "after_gate", Axes(0, 2), Axes(1, 3));
+  ptensor Theta = regroup_theta_for_svd(
+      tensordot(Theta_before, op12, Axes(1, 3), Axes(0, 1)));
+  log_theta_blocks(Theta, "after_gate", Axes(0, 1), Axes(2, 3));
 
   // svd
   ptensor U, VT;
   std::vector<double> s;
-  info = svd_trunc(Theta, Axes(0, 2), Axes(1, 3), U, s, VT, dc);
+  info = svd_trunc(Theta, Axes(0, 1), Axes(2, 3), U, s, VT, dc);
 
   lambda_c = std::vector<double>(s.begin(), s.end());
   ptensor Uc = U;

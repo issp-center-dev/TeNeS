@@ -659,19 +659,17 @@ TEST_CASE("manual four-swap reduced tensor matches f-primitive contraction") {
   }
 }
 
-TEST_CASE("graded svd preserves parity for permuting axes") {
-  // regression: svd with axes (0,2),(1,3) requires a non-identity internal
-  // transpose; lazy-transpose + mptensor::reshape produced the storage-order
-  // (wrong) unfolding. Legs deliberately carry DIFFERENT parity patterns so a
-  // wrong unfolding cannot masquerade as a consistent graded SVD.
+TEST_CASE("graded svd preserves parity for asymmetric non-crossing axes") {
+  // Legs deliberately carry DIFFERENT parity patterns so a wrong fused-index
+  // convention cannot masquerade as a consistent graded SVD.
   namespace f = tenes::fermion;
   using FT = f::ftensor<tenes::real_tensor>;
   f::parity_vector p2{false, true};               // dim 2: {e,o}
   f::parity_vector p4{false, false, true, true};  // dim 4: {e,e,o,o}
-  // leg layout matches the simple-update Theta: (aux1, aux2, out1, out2),
-  // so rows (0,2) and cols (1,3) fuse legs with DIFFERENT parity patterns
-  f::leg_parities lp{p4, p4, p2, p2};
-  tenes::real_tensor t(mptensor::Shape(4, 4, 2, 2));
+  // leg layout matches the fixed simple-update Theta:
+  // (aux1, out1, out2, aux2), rows (0,1) and cols (2,3).
+  f::leg_parities lp{p4, p2, p2, p4};
+  tenes::real_tensor t(mptensor::Shape(4, 2, 2, 4));
   for (std::size_t n = 0; n < t.local_size(); ++n) {
     auto idx = t.global_index(n);
     if (f::count_odd(lp, idx) % 2 == 0) {
@@ -682,22 +680,49 @@ TEST_CASE("graded svd preserves parity for permuting axes") {
   FT a{t, lp};
   FT u, vt;
   std::vector<double> s;
-  f::svd(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt);
+  f::svd(a, mptensor::Axes(0, 1), mptensor::Axes(2, 3), u, s, vt);
   CHECK(f::parity_violation(u) == doctest::Approx(0.0).epsilon(1e-12));
   CHECK(f::parity_violation(vt) == doctest::Approx(0.0).epsilon(1e-12));
   FT us = u;
   us.multiply_vector(s, 2);
   FT rec = f::tensordot(us, vt, mptensor::Axes(2), mptensor::Axes(0));
-  FT rec2 = f::transpose(rec, mptensor::Axes(0, 2, 1, 3));
   double maxdiff = 0.0;
   for (std::size_t n = 0; n < a.t.local_size(); ++n) {
     auto idx = a.t.global_index(n);
     double va, vb;
     a.t.get_value(idx, va);
-    rec2.t.get_value(idx, vb);
+    rec.t.get_value(idx, vb);
     maxdiff = std::max(maxdiff, std::abs(va - vb));
   }
   CHECK(maxdiff == doctest::Approx(0.0).epsilon(1e-10));
+}
+
+TEST_CASE("graded svd rejects interleaved row-column splits") {
+  namespace f = tenes::fermion;
+  using FT = f::ftensor<tenes::real_tensor>;
+  f::parity_vector p2{false, true};
+  f::parity_vector p4{false, false, true, true};
+  f::leg_parities lp{p4, p2, p4, p2};
+  tenes::real_tensor t(mptensor::Shape(4, 2, 4, 2));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    auto idx = t.global_index(n);
+    if (f::count_odd(lp, idx) % 2 == 0) {
+      t.set_value(idx, 0.2 * static_cast<double>(n + 1));
+    }
+  }
+  FT a{t, lp};
+  FT u, vt;
+  std::vector<double> s;
+  CHECK_THROWS_WITH_AS(
+      f::svd(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt),
+      doctest::Contains("interleaved row/col split distorts graded singular "
+                        "values"),
+      std::runtime_error);
+  CHECK_THROWS_WITH_AS(
+      f::qr(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, vt),
+      doctest::Contains("interleaved row/col split distorts graded singular "
+                        "values"),
+      std::runtime_error);
 }
 
 TEST_CASE("ftensor CTM environment preserves even parity on asymmetric legs") {
@@ -1033,6 +1058,24 @@ static std::string vector_to_string(const std::vector<double>& values) {
 }
 
 template <class Tensor>
+static Tensor diagnostic_regroup_theta_for_svd(const Tensor& theta) {
+  Tensor ret = theta;
+  ret.transpose(mptensor::Axes(0, 2, 1, 3));
+  return ret;
+}
+
+static tenes::fermion::ftensor<tenes::real_tensor>
+diagnostic_regroup_theta_for_svd(
+    const tenes::fermion::ftensor<tenes::real_tensor>& theta) {
+  tenes::fermion::ftensor<tenes::real_tensor> ret;
+  ret.t = theta.t;
+  ret.t.transpose(mptensor::Axes(0, 2, 1, 3));
+  ret.parity = {theta.parity[0], theta.parity[2], theta.parity[1],
+                theta.parity[3]};
+  return ret;
+}
+
+template <class Tensor>
 static std::pair<Tensor, Tensor> diagnostic_update_thetas(
     const Tensor& Tn1, const Tensor& Tn2,
     const std::vector<std::vector<double>>& lambda1,
@@ -1072,9 +1115,197 @@ static std::pair<Tensor, Tensor> diagnostic_update_thetas(
   qr(Tn1_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q1, R1);
   qr(Tn2_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q2, R2);
   Tensor theta_before = tensordot(R1, R2, mptensor::Axes(1), mptensor::Axes(1));
-  Tensor theta =
-      tensordot(theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1));
+  Tensor theta = diagnostic_regroup_theta_for_svd(tensordot(
+      theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
   return {theta_before, theta};
+}
+
+template <class Tensor>
+struct DiagnosticGateData {
+  Tensor R1;
+  Tensor R2;
+  Tensor theta_before;
+  Tensor theta_after;
+};
+
+template <class Tensor>
+static DiagnosticGateData<Tensor> diagnostic_gate_data(
+    const Tensor& Tn1, const Tensor& Tn2,
+    const std::vector<std::vector<double>>& lambda1,
+    const std::vector<std::vector<double>>& lambda2, const Tensor& op12,
+    int connect1) {
+  const int connect2 = (connect1 + 2) % 4;
+  Tensor Tn1_lambda = Tn1;
+  Tensor Tn2_lambda = Tn2;
+
+  if (connect1 == 0) {
+    Tn1_lambda.multiply_vector(lambda1[1], 1, lambda1[2], 2, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(1, 2, 3, 0, 4));
+  } else if (connect1 == 1) {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[2], 2, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(0, 2, 3, 1, 4));
+  } else if (connect1 == 2) {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[1], 1, lambda1[3], 3);
+    Tn1_lambda.transpose(mptensor::Axes(0, 1, 3, 2, 4));
+  } else {
+    Tn1_lambda.multiply_vector(lambda1[0], 0, lambda1[1], 1, lambda1[2], 2);
+  }
+
+  if (connect2 == 0) {
+    Tn2_lambda.multiply_vector(lambda2[1], 1, lambda2[2], 2, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(1, 2, 3, 0, 4));
+  } else if (connect2 == 1) {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[2], 2, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(0, 2, 3, 1, 4));
+  } else if (connect2 == 2) {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[1], 1, lambda2[3], 3);
+    Tn2_lambda.transpose(mptensor::Axes(0, 1, 3, 2, 4));
+  } else {
+    Tn2_lambda.multiply_vector(lambda2[0], 0, lambda2[1], 1, lambda2[2], 2);
+  }
+
+  DiagnosticGateData<Tensor> data;
+  Tensor Q1, Q2;
+  qr(Tn1_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q1, data.R1);
+  qr(Tn2_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q2, data.R2);
+  data.theta_before =
+      tensordot(data.R1, data.R2, mptensor::Axes(1), mptensor::Axes(1));
+  data.theta_after = diagnostic_regroup_theta_for_svd(tensordot(
+      data.theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
+  return data;
+}
+
+static std::string parity_vector_to_string(
+    const tenes::fermion::parity_vector& parity) {
+  std::ostringstream os;
+  os << "[";
+  for (std::size_t i = 0; i < parity.size(); ++i) {
+    if (i != 0) {
+      os << ",";
+    }
+    os << (parity[i] ? 1 : 0);
+  }
+  os << "]";
+  return os.str();
+}
+
+static const char* parity_name(bool odd) { return odd ? "odd" : "even"; }
+
+static bool combined_parity(const tenes::fermion::leg_parities& parity,
+                            const mptensor::Index& idx,
+                            const mptensor::Axes& axes) {
+  bool odd = false;
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    odd = odd != parity[axes[i]][idx[axes[i]]];
+  }
+  return odd;
+}
+
+static void dump_parity_metadata(
+    const std::string& label,
+    const tenes::fermion::ftensor<tenes::real_tensor>& r1,
+    const tenes::fermion::ftensor<tenes::real_tensor>& r2,
+    const tenes::fermion::ftensor<tenes::real_tensor>& theta_before) {
+  for (std::size_t ax = 0; ax < r1.parity.size(); ++ax) {
+    std::cout << label << " R1.parity[" << ax
+              << "]=" << parity_vector_to_string(r1.parity[ax]) << std::endl;
+  }
+  for (std::size_t ax = 0; ax < r2.parity.size(); ++ax) {
+    std::cout << label << " R2.parity[" << ax
+              << "]=" << parity_vector_to_string(r2.parity[ax]) << std::endl;
+  }
+  for (std::size_t ax = 0; ax < theta_before.parity.size(); ++ax) {
+    std::cout << label << " theta_before.parity[" << ax
+              << "]=" << parity_vector_to_string(theta_before.parity[ax])
+              << std::endl;
+  }
+}
+
+static void dump_tensordot_mask_pattern(
+    const std::string& label,
+    const tenes::fermion::ftensor<tenes::real_tensor>& theta_before,
+    const tenes::fermion::ftensor<tenes::real_tensor>& op12) {
+  const mptensor::Axes axes_a(1, 3);
+  const mptensor::Axes axes_b(0, 1);
+  const mptensor::Axes left_perm = tenes::fermion::detail::tensordot_left_perm(
+      theta_before.parity.size(), axes_a);
+  const mptensor::Axes right_perm =
+      tenes::fermion::detail::tensordot_right_perm(op12.parity.size(), axes_b);
+
+  std::cout << label << " left_perm=" << index_to_string(left_perm)
+            << " right_perm=" << index_to_string(right_perm) << std::endl;
+
+  std::size_t left_count = 0;
+  for (std::size_t n = 0; n < theta_before.t.local_size(); ++n) {
+    const auto idx = theta_before.t.global_index(n);
+    if (tenes::fermion::detail::transpose_sign(theta_before.parity, idx,
+                                               left_perm) < 0) {
+      ++left_count;
+      const bool row =
+          combined_parity(theta_before.parity, idx, mptensor::Axes(0, 1));
+      const bool col =
+          combined_parity(theta_before.parity, idx, mptensor::Axes(2, 3));
+      std::cout << label << " left_mask_minus idx=" << index_to_string(idx)
+                << " sector=" << parity_name(row) << "/" << parity_name(col)
+                << std::endl;
+    }
+  }
+  std::size_t right_count = 0;
+  for (std::size_t n = 0; n < op12.t.local_size(); ++n) {
+    const auto idx = op12.t.global_index(n);
+    if (tenes::fermion::detail::transpose_sign(op12.parity, idx, right_perm) <
+        0) {
+      ++right_count;
+      std::cout << label << " right_mask_minus idx=" << index_to_string(idx)
+                << " in_sector="
+                << parity_name(
+                       combined_parity(op12.parity, idx, mptensor::Axes(0, 1)))
+                << " out_sector="
+                << parity_name(
+                       combined_parity(op12.parity, idx, mptensor::Axes(2, 3)))
+                << std::endl;
+    }
+  }
+  std::cout << label << " mask_minus_counts left=" << left_count
+            << " right=" << right_count << std::endl;
+}
+
+static void dump_post_gate_diff(
+    const std::string& label,
+    const tenes::fermion::ftensor<tenes::real_tensor>& ftheta,
+    const tenes::real_tensor& btheta) {
+  std::size_t diff_count = 0;
+  double max_abs_diff = 0.0;
+  std::array<std::size_t, 4> sector_counts{0, 0, 0, 0};
+  for (std::size_t n = 0; n < ftheta.t.local_size(); ++n) {
+    const auto idx = ftheta.t.global_index(n);
+    double fv = 0.0;
+    double bv = 0.0;
+    ftheta.t.get_value(idx, fv);
+    btheta.get_value(idx, bv);
+    const double scale = std::max({1.0, std::abs(fv), std::abs(bv)});
+    const double diff = std::abs(fv - bv);
+    if (diff <= 1.0e-12 * scale) {
+      continue;
+    }
+    const bool row = combined_parity(ftheta.parity, idx, mptensor::Axes(0, 1));
+    const bool col = combined_parity(ftheta.parity, idx, mptensor::Axes(2, 3));
+    const std::size_t sector = (row ? 2 : 0) + (col ? 1 : 0);
+    ++sector_counts[sector];
+    ++diff_count;
+    max_abs_diff = std::max(max_abs_diff, diff);
+    std::cout << std::setprecision(17) << label
+              << " post_gate_diff idx=" << index_to_string(idx)
+              << " sector=" << parity_name(row) << "/" << parity_name(col)
+              << " fermion=" << fv << " boson=" << bv << " diff=" << diff
+              << " ratio=" << (std::abs(bv) > 0.0 ? fv / bv : 0.0) << std::endl;
+  }
+  std::cout << label << " post_gate_diff_summary count=" << diff_count
+            << " max_abs_diff=" << max_abs_diff
+            << " even/even=" << sector_counts[0]
+            << " even/odd=" << sector_counts[1]
+            << " odd/even=" << sector_counts[2]
+            << " odd/odd=" << sector_counts[3] << std::endl;
 }
 
 struct SectorSpectrum {
@@ -1253,6 +1484,132 @@ TEST_CASE("diagnostic horizontal-chain fermion/boson trajectory divergence") {
       }
     }
   }
+}
+
+TEST_CASE("diagnostic update1 gate application component diff") {
+  if (std::getenv("TENES_RUN_UPDATE1_GATE_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  auto make_lattice = []() {
+    tenes::SquareLattice lattice(2, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 2;
+      lattice.virtual_dims[site] = {2, 1, 2, 1};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  auto make_params = [](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(4, f::parity_vector{false, true});
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 10;
+    params.CTM_Convergence_Epsilon = 1.0e-8;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  auto make_updates = []() {
+    std::vector<tenes::EvolutionOperator<tensor>> updates;
+    const tensor gate = make_free_fermion_gate(0.01);
+    for (int site = 0; site < 4; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, 2, 0, gate));
+    }
+    return updates;
+  };
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  const auto updates = make_updates();
+  auto fparams = make_params(true, "output_test_update1_gate_diag_fermion");
+  auto bparams = make_params(false, "output_test_update1_gate_diag_boson");
+  tenes::itps::iTPS<tensor> fstate(
+      MPI_COMM_WORLD, fparams, lattice_f, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(
+      MPI_COMM_WORLD, bparams, lattice_b, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto& flambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate);
+  auto& blambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate);
+  bTn = fTn;
+  blambda = flambda;
+
+  auto make_fermion_gate = [&](const tenes::EvolutionOperator<tensor>& update,
+                               int source, int target) {
+    const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
+    return f::ftensor<tensor>{update.op,
+                              {finfo.phys[source], finfo.phys[target],
+                               finfo.phys[source], finfo.phys[target]}};
+  };
+
+  auto dump_update = [&](int update_index, const std::string& label) {
+    const auto& update = updates[update_index];
+    const int source = update.source_site;
+    const int source_leg = update.source_leg;
+    const int target = lattice_f.neighbor(source, source_leg);
+    const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
+    const auto fTn1 = f::wrap_Tn(fTn[source], finfo, source);
+    const auto fTn2 = f::wrap_Tn(fTn[target], finfo, target);
+    const auto fop = make_fermion_gate(update, source, target);
+    const auto fdata = diagnostic_gate_data(fTn1, fTn2, flambda[source],
+                                            flambda[target], fop, source_leg);
+    std::cout << label << " source=" << source << " target=" << target
+              << " leg=" << source_leg << std::endl;
+    dump_parity_metadata(label, fdata.R1, fdata.R2, fdata.theta_before);
+    dump_tensordot_mask_pattern(label, fdata.theta_before, fop);
+    return fdata;
+  };
+
+  const auto update0 = dump_update(0, "update0");
+
+  fstate.simple_update(updates[0]);
+  bstate.simple_update(updates[0]);
+
+  const auto update1 = dump_update(1, "update1");
+  const int source = updates[1].source_site;
+  const int source_leg = updates[1].source_leg;
+  const int target = lattice_b.neighbor(source, source_leg);
+  const auto bdata =
+      diagnostic_gate_data(bTn[source], bTn[target], blambda[source],
+                           blambda[target], updates[1].op, source_leg);
+  const f::ftensor<tensor> btheta_before_as_f{bdata.theta_before,
+                                              update1.theta_before.parity};
+  std::cout << "update1 pre_gate_maxdiff="
+            << max_tn_diff(std::vector<tensor>{update1.theta_before.t},
+                           std::vector<tensor>{bdata.theta_before})
+                   .max_abs
+            << " pre_gate_parity_violation="
+            << f::parity_violation(btheta_before_as_f) << std::endl;
+  dump_post_gate_diff("update1_raw", update1.theta_after, bdata.theta_after);
+
+  const auto fop = make_fermion_gate(updates[1], source, target);
+  const auto same_input_fermion_after =
+      diagnostic_regroup_theta_for_svd(f::tensordot(
+          btheta_before_as_f, fop, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
+  dump_post_gate_diff("update1_same_input_gate_only", same_input_fermion_after,
+                      bdata.theta_after);
+
+  static_cast<void>(update0);
 }
 
 TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
@@ -1487,9 +1844,9 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
     const auto b_before_spec = sector_spectrum(
         btheta_before_as_f, mptensor::Axes(0, 1), mptensor::Axes(2, 3));
     const auto f_after_spec = sector_spectrum(
-        ftheta.second, mptensor::Axes(0, 2), mptensor::Axes(1, 3));
-    const auto b_after_spec = sector_spectrum(btheta_as_f, mptensor::Axes(0, 2),
-                                              mptensor::Axes(1, 3));
+        ftheta.second, mptensor::Axes(0, 1), mptensor::Axes(2, 3));
+    const auto b_after_spec = sector_spectrum(btheta_as_f, mptensor::Axes(0, 1),
+                                              mptensor::Axes(2, 3));
     std::cout << "lambda trajectory theta first_call before_gate "
               << "fermion_even=" << vector_to_string(f_before_spec.even)
               << " fermion_odd=" << vector_to_string(f_before_spec.odd)
@@ -1505,25 +1862,25 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
 
     tensor fU_plain, fVT_plain;
     std::vector<double> f_plain_s;
-    mptensor::svd(ftheta.second.t, mptensor::Axes(0, 2), mptensor::Axes(1, 3),
+    mptensor::svd(ftheta.second.t, mptensor::Axes(0, 1), mptensor::Axes(2, 3),
                   fU_plain, f_plain_s, fVT_plain);
     std::cout << "lambda trajectory theta_f_invariants first_call "
               << "parity_violation=" << f::parity_violation(ftheta.second)
               << " off_block_max="
-              << off_block_max(ftheta.second, mptensor::Axes(0, 2),
-                               mptensor::Axes(1, 3))
+              << off_block_max(ftheta.second, mptensor::Axes(0, 1),
+                               mptensor::Axes(2, 3))
               << " raw_full_svd=" << vector_to_string(f_plain_s) << std::endl;
 
     f::ftensor<tensor> fU, fVT, bU, bVT;
     tensor bU_plain, bVT_plain;
     std::vector<double> f_s, b_s;
     std::vector<double> b_plain_s;
-    f::svd_trunc(ftheta.second, mptensor::Axes(0, 2), mptensor::Axes(1, 3), fU,
+    f::svd_trunc(ftheta.second, mptensor::Axes(0, 1), mptensor::Axes(2, 3), fU,
                  f_s, fVT, 2);
-    f::svd_trunc(btheta_as_f, mptensor::Axes(0, 2), mptensor::Axes(1, 3), bU,
+    f::svd_trunc(btheta_as_f, mptensor::Axes(0, 1), mptensor::Axes(2, 3), bU,
                  b_s, bVT, 2);
-    mptensor::svd_trunc(btheta.second, mptensor::Axes(0, 2),
-                        mptensor::Axes(1, 3), bU_plain, b_plain_s, bVT_plain,
+    mptensor::svd_trunc(btheta.second, mptensor::Axes(0, 1),
+                        mptensor::Axes(2, 3), bU_plain, b_plain_s, bVT_plain,
                         2);
     std::cout << "lambda trajectory fsvd_trunc_selected first_call "
               << "fermion_s=" << vector_to_string(f_s)
