@@ -18,6 +18,7 @@
 #include "doctest.h"
 
 #include <fstream>
+#include <cstdio>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@
 #include "../src/arpack_solver.hpp"
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
+#include "../src/iTPS/main.hpp"
 #include "../src/iTPS/transfer_matrix.hpp"
 
 toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
@@ -566,5 +568,53 @@ elements = """
             EvolutionOperators<ptensor>{}, onesite, Operators<ptensor>{},
             Operators<ptensor>{}, CorrelationParameter{}),
         tenes::input_error);
+  }
+
+  SUBCASE("fermion odd operator is rejected through itps_main load path") {
+    INFO("fermion odd operator is rejected through itps_main load path");
+    const std::string input_filename =
+        "test_input_fermion_odd_operator_main_path.toml";
+    const std::string outdir =
+        "output_test_input_fermion_odd_operator_main_path";
+    {
+      std::ofstream ofs(input_filename);
+      ofs << R"(
+[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = ")"
+          << outdir << R"("
+
+[tensor]
+L_sub = [1, 1]
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+
+[observable]
+[[observable.onesite]]
+name = "odd"
+group = 0
+sites = [0]
+dim = 2
+elements = """
+0 1 1.0 0.0
+"""
+
+[evolution]
+)";
+    }
+
+    try {
+      tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, PrintLevel::none);
+      FAIL("fermion odd operator was accepted through itps_main");
+    } catch (const tenes::input_error &e) {
+      CHECK(std::string(e.what()).find("parity-odd one-site operators") !=
+            std::string::npos);
+    }
+    std::remove(input_filename.c_str());
   }
 }

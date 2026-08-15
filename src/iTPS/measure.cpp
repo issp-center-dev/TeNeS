@@ -110,6 +110,16 @@ void iTPS<ptensor>::measure(std::optional<double> time,
     save_correlation(correlations, time, filename_prefix);
   }
 
+  if (finfo.enabled && tmatrix_param.to_calculate) {
+    if (mpirank == 0) {
+      std::cerr << "WARNING: fermion mode disables correlation_length.measure "
+                   "because the transfer-matrix correlation length is not "
+                   "fermion-aware in M1"
+                << std::endl;
+    }
+    tmatrix_param.to_calculate = false;
+  }
+
   if (tmatrix_param.to_calculate) {
     if (!time && peps_parameters.print_level >= PrintLevel::info) {
       std::cout << "  Start calculating correlation length" << std::endl;

@@ -254,6 +254,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
   SquareLattice lattice = gen_lattice(*toml_lattice);
   lattice.Bcast(comm);
+  peps_parameters.phys_parity = gen_phys_parity(*toml_lattice, lattice);
 
   // time evolution
   const toml::value *toml_evolution = section("evolution");
@@ -292,6 +293,10 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       (toml_clength != nullptr
            ? gen_transfer_matrix_parameter(*toml_clength, "correlation_length")
            : TransferMatrix_Parameters());
+
+  validate_fermion_constraints(peps_parameters, lattice, simple_updates,
+                               full_updates, onesite_obs, twosite_obs,
+                               multisite_obs, corparam);
 
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);

@@ -61,6 +61,9 @@ foreach(name simple_mode std_mode)
 endforeach()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py @ONLY)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fermion)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion.py @ONLY)
 
 add_test(NAME restart COMMAND ${TENES_PYTHON_EXECUTABLE}
                               ${CMAKE_CURRENT_BINARY_DIR}/restart.py)
@@ -82,6 +85,10 @@ foreach(
   add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
                                 ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
+
+add_test(NAME FreeFermion
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion.py)
 
 if(ENABLE_MPI)
   set(BENCH_SMOKE_LAUNCHER

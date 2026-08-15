@@ -1,0 +1,343 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MUS = [0.0, -1.0]
+DS = [2, 4]
+TAU = 0.01
+NUM_STEPS = 1000
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+EXACT_RTOL = 5.0e-2
+
+
+def exact_free_fermion(t, mu, nk=512):
+    k = np.linspace(-np.pi, np.pi, nk, endpoint=False) + np.pi / nk
+    kx, ky = np.meshgrid(k, k)
+    eps = -2.0 * t * (np.cos(kx) + np.cos(ky)) - mu
+    occ = eps < 0.0
+    n = occ.mean()
+    e = (eps * occ).mean()
+    return e, n
+
+
+def relerr(value, reference):
+    return abs(value - reference) / max(1.0, abs(reference))
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = []
+    for site in range(4):
+        lines.append(f"{site} 1 0")
+    for site in range(4):
+        lines.append(f"{site} 0 1")
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+""")
+    return "\n".join(blocks)
+
+
+def input_toml(mu, D, outdir):
+    chi = 2 * D * D
+    h = two_site_hamiltonian(T, mu)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block()
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_STEPS}
+
+[parameter.ctm]
+dimension = {chi}
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = 11
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = true
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values[name.strip()] = float(words[0])
+    return values
+
+
+def write_summary(path, rows):
+    with open(path, "w") as f:
+        f.write("# mu D energy n exact_energy exact_n relerr_energy relerr_n\n")
+        for row in rows:
+            f.write(
+                "{mu:.1f} {D:d} {energy:.17e} {density:.17e} "
+                "{exact_energy:.17e} {exact_density:.17e} "
+                "{energy_relerr:.17e} {density_relerr:.17e}\n".format(**row)
+            )
+
+
+def read_summary(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            mu, D, energy, density, exact_energy, exact_density, er, nr = line.split()
+            rows.append(
+                {
+                    "mu": float(mu),
+                    "D": int(D),
+                    "energy": float(energy),
+                    "density": float(density),
+                    "exact_energy": float(exact_energy),
+                    "exact_density": float(exact_density),
+                    "energy_relerr": float(er),
+                    "density_relerr": float(nr),
+                }
+            )
+    return rows
+
+
+def compare_summary(rows, ref_rows):
+    if len(rows) != len(ref_rows):
+        print("free_fermion.dat: number of rows do not match")
+        return False
+    ok = True
+    for row, ref in zip(rows, ref_rows):
+        for key in ("mu", "D"):
+            if row[key] != ref[key]:
+                print(f"free_fermion.dat: metadata mismatch for {key}")
+                ok = False
+        for key in ("energy", "density"):
+            if not np.isclose(row[key], ref[key], rtol=RTOL, atol=ATOL):
+                print(
+                    f"free_fermion.dat: {key} mismatch for mu={row['mu']} D={row['D']}"
+                )
+                print("  result:   ", row[key])
+                print("  reference:", ref[key])
+                ok = False
+    return ok
+
+
+def main():
+    output_root = "output_FreeFermion"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    rows = []
+    saw_warning = False
+    for mu in MUS:
+        exact_energy, exact_density = exact_free_fermion(T, mu)
+        for D in DS:
+            label = f"mu{mu:g}".replace("-", "m").replace(".", "p")
+            outdir = join(output_root, f"{label}_D{D}")
+            inputfile = join(output_root, f"input_{label}_D{D}.toml")
+            with open(inputfile, "w") as f:
+                f.write(input_toml(mu, D, outdir))
+
+            proc = run_tenes(inputfile)
+            combined_output = proc.stdout + proc.stderr
+            if proc.returncode != 0:
+                print(combined_output)
+                return 1
+            if "fermion mode disables correlation_length.measure" in combined_output:
+                saw_warning = True
+            if os.path.exists(join(outdir, "correlation_length.dat")):
+                print("correlation_length.dat was created in fermion mode")
+                return 1
+
+            density = read_density(outdir)
+            energy = density["Energy"]
+            n = density["n"]
+            row = {
+                "mu": mu,
+                "D": D,
+                "energy": energy,
+                "density": n,
+                "exact_energy": exact_energy,
+                "exact_density": exact_density,
+                "energy_relerr": relerr(energy, exact_energy),
+                "density_relerr": relerr(n, exact_density),
+            }
+            rows.append(row)
+            print(
+                "FreeFermion mu={:.1f} D={} energy={:.12e} n={:.12e} "
+                "exact_energy={:.12e} exact_n={:.12e} relerr_energy={:.6e} "
+                "relerr_n={:.6e}".format(
+                    mu,
+                    D,
+                    energy,
+                    n,
+                    exact_energy,
+                    exact_density,
+                    row["energy_relerr"],
+                    row["density_relerr"],
+                )
+            )
+
+    if not saw_warning:
+        print("fermion correlation_length disable warning was not emitted")
+        return 1
+
+    for row in rows:
+        if row["D"] == max(DS):
+            if row["energy_relerr"] > EXACT_RTOL or row["density_relerr"] > EXACT_RTOL:
+                print(
+                    "max-D free-fermion result is outside the provisional "
+                    f"{EXACT_RTOL:g} relative-error threshold: {row}"
+                )
+                return 1
+
+    summary = join(output_root, "free_fermion.dat")
+    write_summary(summary, rows)
+
+    ref_summary = join("data", "output_FreeFermion", "free_fermion.dat")
+    if os.environ.get("TENES_UPDATE_FREE_FERMION_GOLDEN") == "1":
+        os.makedirs(os.path.dirname(ref_summary), exist_ok=True)
+        shutil.copyfile(summary, ref_summary)
+        return 0
+
+    if not os.path.exists(ref_summary):
+        print(f"reference file is missing: {ref_summary}")
+        print(f"result file: {summary}")
+        return 1
+    return 0 if compare_summary(rows, read_summary(ref_summary)) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
