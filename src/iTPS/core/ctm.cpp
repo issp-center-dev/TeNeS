@@ -23,11 +23,15 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <sstream>
+#include <type_traits>
 #include <vector>
 #include <mptensor/complex.hpp>
 #include <mptensor/tensor.hpp>
 #include <mptensor/rsvd.hpp>
 
+#include "../../fermion/fops.hpp"
+#include "../../fermion/ftensor.hpp"
 #include "../../SquareLattice.hpp"
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
@@ -38,6 +42,22 @@ using mptensor::Axes;
 using mptensor::Index;
 using mptensor::Shape;
 
+namespace {
+template <class tensor>
+struct is_ftensor : std::false_type {};
+
+template <class tensor>
+struct is_ftensor<tenes::fermion::ftensor<tensor>> : std::true_type {};
+
+template <class tensor>
+void enforce_even_parity(tensor &, const char *) {}
+
+template <class tensor>
+void enforce_even_parity(tenes::fermion::ftensor<tensor> &a,
+                         const char *context) {
+  tenes::fermion::verify_and_clean_even_parity(a, context);
+}
+}  // namespace
 
 /*
  * Layout of Tensors
@@ -50,7 +70,6 @@ using mptensor::Shape;
  *  Tn* has conjugate, cTn*
  */
 
-
 /*!
  *
  */
@@ -62,14 +81,16 @@ class Mult_col {
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
-   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right,
+   * 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
    * @param[in] LB Left-bottom block tensor @n
    *              eT7 Tn4 @n
    *               C4 Tn6 @n
-   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right,
+   * 4:cTn4_top, 5:cTn4_right]
    *
    */
-  Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
    * @brief
@@ -97,14 +118,16 @@ class Mult_row {
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
-   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right,
+   * 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
    * @param[in] LB Left-bottom block tensor @n
    *              eT7 Tn4 @n
    *               C4 Tn6 @n
-   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right,
+   * 4:cTn4_top, 5:cTn4_right]
    *
    */
-  Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
    * @brief
@@ -129,7 +152,7 @@ class Mult_col_ud {
  public:
   Mult_col_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
   tensor operator()(const tensor &T_in) {
     return tensordot(
         RT_,
@@ -153,7 +176,7 @@ class Mult_row_ud {
  public:
   Mult_row_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
   tensor operator()(const tensor &T_in) {
     return tensordot(
         tensordot(tensordot(tensordot(T_in, RT_, Axes(0, 1, 2), Axes(1, 2, 5)),
@@ -227,52 +250,64 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
     // tensor R1 = LT;
     // tensor R2 = LB;
     if ((t12 != 1 && t34 != 1) && peps_parameters.Use_RSVD) {
-      Mult_col<tensor> m_col(LT, LB);
-      Mult_row<tensor> m_row(LT, LB);
+      if constexpr (is_ftensor<tensor>::value) {
+        throw std::logic_error("rsvd is unreachable in fermion CTM mode");
+      } else {
+        Mult_col<tensor> m_col(LT, LB);
+        Mult_row<tensor> m_row(LT, LB);
 
-      tensor U;
-      tensor VT;
-      std::vector<double> s;
+        tensor U;
+        tensor VT;
+        std::vector<double> s;
 
-      Shape shape_row(t12, e12, t12);
-      Shape shape_col(t34, e56, t34);
+        Shape shape_row(t12, e12, t12);
+        Shape shape_col(t34, e56, t34);
 
-      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
-      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
-           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
-      double denom = s[0];
-      std::vector<double> s_c;
-      s_c.reserve(cut);
+        int cut =
+            std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41),
+                              e12 * t12 * t12),
+                     e56 * t34 * t34);
+        rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
+             static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor *
+                                 cut));
+        double denom = s[0];
+        std::vector<double> s_c;
+        s_c.reserve(cut);
 
-      for (int i = 0; i < cut; ++i) {
-        if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c.push_back(1.0 / sqrt(s[i]));
-        } else {
-          cut = i;
-          break;
+        for (int i = 0; i < cut; ++i) {
+          if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
+            s_c.push_back(1.0 / sqrt(s[i]));
+          } else {
+            cut = i;
+            break;
+          }
         }
-      }
-      
-      tensor U_c = mptensor::slice(U, 3, 0, cut);
-      tensor VT_c = mptensor::slice(VT, 0, 0, cut);
-      U_c.multiply_vector(s_c, 3);
-      VT_c.multiply_vector(s_c, 0);
 
-      PU = tensordot(LB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3))
-               .transpose(Axes(1, 0, 2, 3));
-      PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
-               .transpose(Axes(1, 0, 2, 3));
+        tensor U_c = mptensor::slice(U, 3, 0, cut);
+        tensor VT_c = mptensor::slice(VT, 0, 0, cut);
+        U_c.multiply_vector(s_c, 3);
+        VT_c.multiply_vector(s_c, 0);
+
+        PU = tensordot(LB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3))
+                 .transpose(Axes(1, 0, 2, 3));
+        PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
+                 .transpose(Axes(1, 0, 2, 3));
+      }
     } else {
       // full svd //
       tensor U;
       tensor VT;
       std::vector<double> s;
 
-      svd(tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4)), Axes(0, 1, 2),
-          Axes(3, 4, 5), U, s, VT);
+      tensor theta = tensordot(LT, LB, Axes(1, 3, 5), Axes(0, 2, 4));
+      const auto theta_shape = theta.shape();
+      const int dc = std::min<int>(
+          peps_parameters.CHI,
+          std::min(theta_shape[0] * theta_shape[1] * theta_shape[2],
+                   theta_shape[3] * theta_shape[4] * theta_shape[5]));
+      svd_trunc(theta, Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT, dc);
       double denom = s[0];
       int cut = s.size();
-      cut = std::min(cut, peps_parameters.CHI);
       std::vector<double> s_c;
       s_c.reserve(cut);
 
@@ -298,7 +333,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else { // t41 == 1
+  } else {  // t41 == 1
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -397,44 +432,51 @@ void Calc_projector_updown_blocks(
                             conj(Tn4), Axes(2, 5), Axes(0, 3)),
                   Axes(0, 3, 4), Axes(1, 3, 6));
     if (t23 != 1 && peps_parameters.Use_RSVD) {
-      Mult_col_ud<tensor> m_col(LT, RT, RB, LB);
-      Mult_row_ud<tensor> m_row(LT, RT, RB, LB);
+      if constexpr (is_ftensor<tensor>::value) {
+        throw std::logic_error("rsvd is unreachable in fermion CTM mode");
+      } else {
+        Mult_col_ud<tensor> m_col(LT, RT, RB, LB);
+        Mult_row_ud<tensor> m_row(LT, RT, RB, LB);
 
-      tensor U;
-      tensor VT;
-      std::vector<double> s;
+        tensor U;
+        tensor VT;
+        std::vector<double> s;
 
-      Shape shape_row(t23, e34, t23);
-      Shape shape_col(t23, e34, t23);
+        Shape shape_row(t23, e34, t23);
+        Shape shape_col(t23, e34, t23);
 
-      int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
-      rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
-           static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
-      double denom = s[0];
+        int cut = std::min(peps_parameters.CHI, e34 * t23 * t23);
+        rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
+             static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor *
+                                 cut));
+        double denom = s[0];
 
-      std::vector<double> s_c;
-      s_c.reserve(cut);
-      for (int i = 0; i < cut; ++i) {
-        if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
-          s_c.push_back(1.0 / sqrt(s[i]));
-        } else {
-          cut = i;
-          break;
+        std::vector<double> s_c;
+        s_c.reserve(cut);
+        for (int i = 0; i < cut; ++i) {
+          if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
+            s_c.push_back(1.0 / sqrt(s[i]));
+          } else {
+            cut = i;
+            break;
+          }
         }
+
+        tensor U_c = mptensor::slice(U, 3, 0, cut);
+        tensor VT_c = mptensor::slice(VT, 0, 0, cut);
+
+        U_c.multiply_vector(s_c, 3);
+        VT_c.multiply_vector(s_c, 0);
+
+        PU = tensordot(LB,
+                       tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
+                       Axes(1, 3, 5), Axes(0, 1, 2))
+                 .transpose(Axes(1, 0, 2, 3));
+        PL = tensordot(LT,
+                       tensordot(RT, conj(U_c), Axes(1, 2, 5), Axes(0, 1, 2)),
+                       Axes(0, 2, 4), Axes(0, 1, 2))
+                 .transpose(Axes(1, 0, 2, 3));
       }
-
-      tensor U_c = mptensor::slice(U, 3, 0, cut);
-      tensor VT_c = mptensor::slice(VT, 0, 0, cut);
-
-      U_c.multiply_vector(s_c, 3);
-      VT_c.multiply_vector(s_c, 0);
-
-      PU = tensordot(LB, tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
-                     Axes(1, 3, 5), Axes(0, 1, 2))
-               .transpose(Axes(1, 0, 2, 3));
-      PL = tensordot(LT, tensordot(RT, conj(U_c), Axes(1, 2, 5), Axes(0, 1, 2)),
-                     Axes(0, 2, 4), Axes(0, 1, 2))
-               .transpose(Axes(1, 0, 2, 3));
     } else {
       // full svd
       tensor R1 = tensordot(RT, LT, Axes(0, 3, 4), Axes(0, 2, 4));
@@ -444,11 +486,15 @@ void Calc_projector_updown_blocks(
       tensor VT;
       std::vector<double> s;
 
-      svd(tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5)), Axes(0, 1, 2),
-          Axes(3, 4, 5), U, s, VT);
+      tensor theta = tensordot(R1, R2, Axes(3, 4, 5), Axes(3, 4, 5));
+      const auto theta_shape = theta.shape();
+      const int dc = std::min<int>(
+          peps_parameters.CHI,
+          std::min(theta_shape[0] * theta_shape[1] * theta_shape[2],
+                   theta_shape[3] * theta_shape[4] * theta_shape[5]));
+      svd_trunc(theta, Axes(0, 1, 2), Axes(3, 4, 5), U, s, VT, dc);
       double denom = s[0];
       int cut = s.size();
-      cut = std::min(cut, peps_parameters.CHI);
       std::vector<double> s_c;
       s_c.reserve(cut);
 
@@ -471,7 +517,7 @@ void Calc_projector_updown_blocks(
       PL = tensordot(R1, conj(U_c), Axes(0, 1, 2), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else { // t41 == 1
+  } else {  // t41 == 1
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -513,6 +559,8 @@ void Calc_Next_CTM(const tensor &C1, const tensor &C4, const tensor &eT1,
   C1_out /= max_all;
   max_all = max_abs(C4_out);
   C4_out /= max_all;
+  enforce_even_parity(C1_out, "fermion Calc_Next_CTM C1");
+  enforce_even_parity(C4_out, "fermion Calc_Next_CTM C4");
 }
 
 template <class tensor>
@@ -547,6 +595,7 @@ void Calc_Next_eT(const tensor &eT8, const tensor &Tn1, const tensor &PU,
 
   double max_all = max_abs(eT_out);
   eT_out /= max_all;
+  enforce_even_parity(eT_out, "fermion Calc_Next_eT");
 }
 
 /*
@@ -1195,7 +1244,7 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
       }
     }
-  } // end of if(initialize)
+  }  // end of if(initialize)
 
   bool convergence = false;
   int count = 0;
@@ -1206,7 +1255,6 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
 
   double sig_max = 0.0;
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
-
     // left move
     for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
       Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
@@ -1216,13 +1264,15 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
     // right move
     for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
       Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew, peps_parameters, lattice);
+                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
+                 peps_parameters, lattice);
     }
 
     // top move
     for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
       Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew, peps_parameters, lattice);
+               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
+               peps_parameters, lattice);
     }
 
     // bottom move
@@ -1413,6 +1463,32 @@ template int Calc_CTM_Environment(
     std::vector<complex_tensor> &eTt, std::vector<complex_tensor> &eTr,
     std::vector<complex_tensor> &eTb, std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice,
+    bool initialize);
+
+template int Calc_CTM_Environment(
+    std::vector<tenes::fermion::ftensor<real_tensor>> &C1,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &C2,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &C3,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &C4,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &eTt,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &eTr,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &eTb,
+    std::vector<tenes::fermion::ftensor<real_tensor>> &eTl,
+    const std::vector<tenes::fermion::ftensor<real_tensor>> &Tn,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice,
+    bool initialize);
+
+template int Calc_CTM_Environment(
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &C1,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &C2,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &C3,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &C4,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &eTt,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &eTr,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &eTb,
+    std::vector<tenes::fermion::ftensor<complex_tensor>> &eTl,
+    const std::vector<tenes::fermion::ftensor<complex_tensor>> &Tn,
     const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     bool initialize);
 

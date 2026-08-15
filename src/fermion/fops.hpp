@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <complex>
 #include <cmath>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -237,7 +238,7 @@ ftensor<tensor> conj(const ftensor<tensor>& a) {
     const int sign = ((m * (m - 1) / 2) % 2 == 0) ? 1 : -1;
     typename tensor::value_type v;
     ret.t.get_value(idx, v);
-    ret.t.set_value(idx, sign * detail::scalar_conj(v));
+    ret.t.set_value(idx, static_cast<double>(sign) * detail::scalar_conj(v));
   }
   return ret;
 }
@@ -300,6 +301,37 @@ ftensor<tensor> reshape(const ftensor<tensor>& a, const mptensor::Shape& sh) {
 template <class tensor>
 double max_abs(const ftensor<tensor>& a) {
   return mptensor::max_abs(a.t);
+}
+
+template <class tensor>
+int svd(const ftensor<tensor>& a, std::vector<double>& s) {
+  return mptensor::svd(a.t, s);
+}
+
+inline std::vector<double>& parity_cleanup_observations() {
+  static std::vector<double> values;
+  return values;
+}
+
+template <class tensor>
+double verify_and_clean_even_parity(ftensor<tensor>& a, const char* context) {
+  const double v = parity_violation(a);
+  const double scale = std::max(1.0, max_abs(a));
+  const double threshold = 1.0e-10 * scale;
+  parity_cleanup_observations().push_back(v);
+  if (v > threshold) {
+    std::stringstream ss;
+    ss << context << " produced odd-parity elements: max_abs=" << v
+       << " threshold=" << threshold;
+    throw std::runtime_error(ss.str());
+  }
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    const auto index = a.t.global_index(n);
+    if (count_odd(a.parity, index) % 2 == 1) {
+      a.t.set_value(index, typename tensor::value_type{});
+    }
+  }
+  return v;
 }
 
 template <class tensor>

@@ -17,13 +17,18 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+#include <iostream>
 #include <random>
 
 #include "../src/fermion/fermion_info.hpp"
 #include "../src/fermion/fops.hpp"
 #include "../src/fermion/ftensor.hpp"
 #include "../src/fermion/parity.hpp"
+#include "../src/SquareLattice.hpp"
 #include "../src/tensor.hpp"
+#include "../src/iTPS/PEPS_Parameters.hpp"
+#include "../src/iTPS/core/ctm.hpp"
+#include "../src/iTPS/core/contract_itps_ctm.hpp"
 
 using namespace tenes::fermion;
 
@@ -646,4 +651,124 @@ TEST_CASE("graded svd preserves parity for permuting axes") {
     maxdiff = std::max(maxdiff, std::abs(va - vb));
   }
   CHECK(maxdiff == doctest::Approx(0.0).epsilon(1e-10));
+}
+
+TEST_CASE("ftensor CTM environment preserves even parity on asymmetric legs") {
+  namespace f = tenes::fermion;
+  using FT = f::ftensor<tenes::real_tensor>;
+
+  tenes::SquareLattice lattice(2, 2);
+  tenes::itps::PEPS_Parameters params;
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 2;
+  params.CTM_Convergence_Epsilon = 1.0e-12;
+  params.Use_RSVD = false;
+
+  const f::parity_vector phys{false, true};
+  const f::parity_vector p_h{false, true};
+  const f::parity_vector p_v{false, false, true, true};
+  std::vector<FT> Tn;
+  Tn.reserve(lattice.N_UNIT);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    f::leg_parities parity{p_h, p_v, p_h, p_v, phys};
+    FT t{tenes::real_tensor(mptensor::Shape(2, 4, 2, 4, 2)), parity};
+    for (std::size_t n = 0; n < t.t.local_size(); ++n) {
+      auto idx = t.t.global_index(n);
+      if (f::count_odd(parity, idx) % 2 == 0) {
+        const double x = static_cast<double>((site + 1) * (n + 3));
+        t.t.set_value(idx, 0.15 * std::sin(x) + 0.07 * std::cos(0.5 * x));
+      }
+    }
+    Tn.push_back(t);
+  }
+
+  std::vector<FT> C1(lattice.N_UNIT), C2(lattice.N_UNIT), C3(lattice.N_UNIT),
+      C4(lattice.N_UNIT), eTt(lattice.N_UNIT), eTr(lattice.N_UNIT),
+      eTb(lattice.N_UNIT), eTl(lattice.N_UNIT);
+  tenes::fermion::parity_cleanup_observations().clear();
+  int iterations = tenes::itps::core::Calc_CTM_Environment(
+      C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, params, lattice);
+  double max_cleanup = 0.0;
+  for (double v : tenes::fermion::parity_cleanup_observations()) {
+    max_cleanup = std::max(max_cleanup, v);
+  }
+  std::cout << "ctm parity cleanup max=" << max_cleanup << std::endl;
+
+  CHECK(iterations > 0);
+  CHECK(max_cleanup < 1.0e-12);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    CHECK(f::parity_violation(C1[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(C2[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(C3[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(C4[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(eTt[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(eTr[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(eTb[site]) == doctest::Approx(0.0));
+    CHECK(f::parity_violation(eTl[site]) == doctest::Approx(0.0));
+  }
+}
+
+TEST_CASE("ftensor CTM measurement kernels produce finite positive norm") {
+  namespace f = tenes::fermion;
+  using FT = f::ftensor<tenes::real_tensor>;
+
+  tenes::SquareLattice lattice(2, 2);
+  tenes::itps::PEPS_Parameters params;
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 2;
+  params.CTM_Convergence_Epsilon = 1.0e-12;
+  params.Use_RSVD = false;
+
+  const f::parity_vector phys{false, true};
+  const f::parity_vector p_h{false, true};
+  const f::parity_vector p_v{false, false, true, true};
+  std::vector<FT> Tn;
+  Tn.reserve(lattice.N_UNIT);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    f::leg_parities parity{p_h, p_v, p_h, p_v, phys};
+    FT t{tenes::real_tensor(mptensor::Shape(2, 4, 2, 4, 2)), parity};
+    for (std::size_t n = 0; n < t.t.local_size(); ++n) {
+      auto idx = t.t.global_index(n);
+      if (f::count_odd(parity, idx) % 2 == 0) {
+        const double x = static_cast<double>((site + 2) * (n + 5));
+        t.t.set_value(idx, 0.11 * std::sin(x) + 0.09 * std::cos(0.4 * x));
+      }
+    }
+    Tn.push_back(t);
+  }
+
+  std::vector<FT> C1(lattice.N_UNIT), C2(lattice.N_UNIT), C3(lattice.N_UNIT),
+      C4(lattice.N_UNIT), eTt(lattice.N_UNIT), eTr(lattice.N_UNIT),
+      eTb(lattice.N_UNIT), eTl(lattice.N_UNIT);
+  tenes::fermion::parity_cleanup_observations().clear();
+  tenes::itps::core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
+                                          Tn, params, lattice);
+  double max_cleanup = 0.0;
+  for (double v : tenes::fermion::parity_cleanup_observations()) {
+    max_cleanup = std::max(max_cleanup, v);
+  }
+  std::cout << "ctm measurement parity cleanup max=" << max_cleanup
+            << std::endl;
+  CHECK(max_cleanup < 1.0e-12);
+
+  FT id{tenes::real_tensor(mptensor::Shape(2, 2)), {phys, phys}};
+  id.t.set_value(mptensor::Index(0, 0), 1.0);
+  id.t.set_value(mptensor::Index(1, 1), 1.0);
+  const double norm = tenes::itps::core::Contract_one_site_iTPS_CTM(
+      C1[0], C2[0], C3[0], C4[0], eTt[0], eTr[0], eTb[0], eTl[0], Tn[0], id);
+  CHECK(std::isfinite(norm));
+  CHECK(norm > 0.0);
+
+  FT hop{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+         {phys, phys, phys, phys}};
+  hop.t.set_value(mptensor::Index(0, 1, 1, 0), 1.0);
+  hop.t.set_value(mptensor::Index(1, 0, 0, 1), 1.0);
+  const int left = 0;
+  const int right = lattice.right(left);
+  const double hop_value =
+      tenes::itps::core::Contract_two_sites_horizontal_op12_iTPS_CTM(
+          C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+          eTr[right], eTb[right], eTb[left], eTl[left], Tn[left], Tn[right],
+          hop);
+  CHECK(std::isfinite(hop_value));
 }

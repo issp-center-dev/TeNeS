@@ -26,6 +26,8 @@
 
 #include <string>
 
+#include "../../../fermion/fops.hpp"
+#include "../../../fermion/ftensor.hpp"
 #include "../../../tensor.hpp"
 #include "../../../timer.hpp"
 
@@ -591,3 +593,58 @@ typename tensor::value_type Contract_two_sites_vertical_op12_density_iTPS_CTM(
 #define TENSOR_TYPE complex_tensor
 #include "./instantiate_ctm.hpp"
 #undef TENSOR_TYPE
+
+namespace tenes::itps::core {
+
+using real_ftensor = tenes::fermion::ftensor<tenes::real_tensor>;
+using complex_ftensor = tenes::fermion::ftensor<tenes::complex_tensor>;
+
+template real_ftensor::value_type Contract_one_site_iTPS_CTM<real_ftensor>(
+    const real_ftensor &C1, const real_ftensor &C2, const real_ftensor &C3,
+    const real_ftensor &C4, const real_ftensor &eT1, const real_ftensor &eT2,
+    const real_ftensor &eT3, const real_ftensor &eT4, const real_ftensor &Tn1,
+    const real_ftensor &op1);
+
+template complex_ftensor::value_type Contract_one_site_iTPS_CTM<
+    complex_ftensor>(const complex_ftensor &C1, const complex_ftensor &C2,
+                     const complex_ftensor &C3, const complex_ftensor &C4,
+                     const complex_ftensor &eT1, const complex_ftensor &eT2,
+                     const complex_ftensor &eT3, const complex_ftensor &eT4,
+                     const complex_ftensor &Tn1, const complex_ftensor &op1);
+
+template real_ftensor::value_type
+Contract_two_sites_horizontal_op12_iTPS_CTM<real_ftensor>(
+    const real_ftensor &C1, const real_ftensor &C2, const real_ftensor &C3,
+    const real_ftensor &C4, const real_ftensor &eT1, const real_ftensor &eT2,
+    const real_ftensor &eT3, const real_ftensor &eT4, const real_ftensor &eT5,
+    const real_ftensor &eT6, const real_ftensor &Tn1, const real_ftensor &Tn2,
+    const real_ftensor &op12);
+
+template complex_ftensor::value_type
+Contract_two_sites_horizontal_op12_iTPS_CTM<complex_ftensor>(
+    const complex_ftensor &C1, const complex_ftensor &C2,
+    const complex_ftensor &C3, const complex_ftensor &C4,
+    const complex_ftensor &eT1, const complex_ftensor &eT2,
+    const complex_ftensor &eT3, const complex_ftensor &eT4,
+    const complex_ftensor &eT5, const complex_ftensor &eT6,
+    const complex_ftensor &Tn1, const complex_ftensor &Tn2,
+    const complex_ftensor &op12);
+
+template real_ftensor::value_type
+Contract_two_sites_vertical_op12_iTPS_CTM<real_ftensor>(
+    const real_ftensor &C1, const real_ftensor &C2, const real_ftensor &C3,
+    const real_ftensor &C4, const real_ftensor &eT1, const real_ftensor &eT2,
+    const real_ftensor &eT3, const real_ftensor &eT4, const real_ftensor &eT5,
+    const real_ftensor &eT6, const real_ftensor &Tn1, const real_ftensor &Tn2,
+    const real_ftensor &op12);
+
+template complex_ftensor::value_type Contract_two_sites_vertical_op12_iTPS_CTM<
+    complex_ftensor>(const complex_ftensor &C1, const complex_ftensor &C2,
+                     const complex_ftensor &C3, const complex_ftensor &C4,
+                     const complex_ftensor &eT1, const complex_ftensor &eT2,
+                     const complex_ftensor &eT3, const complex_ftensor &eT4,
+                     const complex_ftensor &eT5, const complex_ftensor &eT6,
+                     const complex_ftensor &Tn1, const complex_ftensor &Tn2,
+                     const complex_ftensor &op12);
+
+}  // namespace tenes::itps::core

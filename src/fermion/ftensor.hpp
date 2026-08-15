@@ -42,11 +42,39 @@ inline int transpose_sign(const leg_parities& parity,
 
 template <class tensor>
 struct ftensor {
+  using value_type = typename tensor::value_type;
+
   tensor t;
   leg_parities parity;
 
+  ftensor() = default;
+  ftensor(const tensor& t_, const leg_parities& parity_)
+      : t(t_), parity(parity_) {}
+  ftensor(typename tensor::comm_type comm, const mptensor::Shape& shape)
+      : t(comm, shape), parity(shape.size()) {
+    for (std::size_t ax = 0; ax < shape.size(); ++ax) {
+      parity[ax].assign(shape[ax], false);
+    }
+  }
   mptensor::Shape shape() const { return t.shape(); }
   int rank() const { return static_cast<int>(parity.size()); }
+  typename tensor::comm_type get_comm() const { return t.get_comm(); }
+  std::size_t local_size() const { return t.local_size(); }
+  mptensor::Index global_index(std::size_t n) const {
+    return t.global_index(n);
+  }
+  template <class D>
+  void get_value(const mptensor::Index& idx, D& v) const {
+    t.get_value(idx, v);
+  }
+  template <class D>
+  void set_value(const mptensor::Index& idx, D v) {
+    t.set_value(idx, v);
+  }
+  ftensor& operator/=(double v) {
+    t /= v;
+    return *this;
+  }
   template <typename D>
   ftensor& multiply_vector(const std::vector<D>& vec, std::size_t n_axes) {
     t.multiply_vector(vec, n_axes);

@@ -25,6 +25,7 @@
 
 #include "iTPS.hpp"
 
+#include "../fermion/fops.hpp"
 #include "../tensor.hpp"
 
 #include "core/contract.hpp"
@@ -79,6 +80,39 @@ auto iTPS<tensor>::measure_onesite()
         const auto val = core::Contract_one_site_density_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
             op.op);
+        local_obs[op.group][i] = op.coeff * val / norm[i];
+      }
+    } else if (finfo.enabled) {
+      for (int i = 0; i < N_UNIT; ++i) {
+        auto fC1 = tenes::fermion::wrap_C(C1[i], finfo, 0, i);
+        auto fC2 = tenes::fermion::wrap_C(C2[i], finfo, 1, i);
+        auto fC3 = tenes::fermion::wrap_C(C3[i], finfo, 2, i);
+        auto fC4 = tenes::fermion::wrap_C(C4[i], finfo, 3, i);
+        auto feTt = tenes::fermion::wrap_eT(eTt[i], finfo, 0, i);
+        auto feTr = tenes::fermion::wrap_eT(eTr[i], finfo, 1, i);
+        auto feTb = tenes::fermion::wrap_eT(eTb[i], finfo, 2, i);
+        auto feTl = tenes::fermion::wrap_eT(eTl[i], finfo, 3, i);
+        auto fTn = tenes::fermion::wrap_Tn(Tn[i], finfo, i);
+        tenes::fermion::ftensor<tensor> fid{op_identity[i],
+                                            {finfo.phys[i], finfo.phys[i]}};
+        norm[i] = core::Contract_one_site_iTPS_CTM(fC1, fC2, fC3, fC4, feTt,
+                                                   feTr, feTb, feTl, fTn, fid);
+      }
+      for (auto const &op : onesite_operators) {
+        const int i = op.source_site;
+        auto fC1 = tenes::fermion::wrap_C(C1[i], finfo, 0, i);
+        auto fC2 = tenes::fermion::wrap_C(C2[i], finfo, 1, i);
+        auto fC3 = tenes::fermion::wrap_C(C3[i], finfo, 2, i);
+        auto fC4 = tenes::fermion::wrap_C(C4[i], finfo, 3, i);
+        auto feTt = tenes::fermion::wrap_eT(eTt[i], finfo, 0, i);
+        auto feTr = tenes::fermion::wrap_eT(eTr[i], finfo, 1, i);
+        auto feTb = tenes::fermion::wrap_eT(eTb[i], finfo, 2, i);
+        auto feTl = tenes::fermion::wrap_eT(eTl[i], finfo, 3, i);
+        auto fTn = tenes::fermion::wrap_Tn(Tn[i], finfo, i);
+        tenes::fermion::ftensor<tensor> fop{op.op,
+                                            {finfo.phys[i], finfo.phys[i]}};
+        const auto val = core::Contract_one_site_iTPS_CTM(
+            fC1, fC2, fC3, fC4, feTt, feTr, feTb, feTl, fTn, fop);
         local_obs[op.group][i] = op.coeff * val / norm[i];
       }
     } else {

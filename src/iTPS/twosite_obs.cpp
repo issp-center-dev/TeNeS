@@ -19,6 +19,7 @@
 
 #include "iTPS.hpp"
 
+#include "../fermion/fops.hpp"
 #include "../tensor.hpp"
 
 #include "../printlevel.hpp"
@@ -169,6 +170,64 @@ auto iTPS<ptensor>::measure_twosite()
     if (norms.count(norm_key) == 0) {
       if (peps_parameters.MeanField_Env) {
         norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
+      } else if (finfo.enabled && !is_TPO && nrow * ncol == 2) {
+        if (nrow == 2) {
+          const int top = indices[0][0];
+          const int bottom = indices[1][0];
+          tenes::fermion::ftensor<ptensor> id{
+              ptensor(mptensor::Shape(
+                  finfo.phys[top].size(), finfo.phys[bottom].size(),
+                  finfo.phys[top].size(), finfo.phys[bottom].size())),
+              {finfo.phys[top], finfo.phys[bottom], finfo.phys[top],
+               finfo.phys[bottom]}};
+          for (std::size_t n = 0; n < id.t.local_size(); ++n) {
+            auto idx = id.t.global_index(n);
+            if (idx[0] == idx[2] && idx[1] == idx[3]) {
+              id.t.set_value(idx, 1.0);
+            }
+          }
+          norms[norm_key] = core::Contract_two_sites_vertical_op12_iTPS_CTM(
+              tenes::fermion::wrap_C(C1[top], finfo, 0, top),
+              tenes::fermion::wrap_C(C2[top], finfo, 1, top),
+              tenes::fermion::wrap_C(C3[bottom], finfo, 2, bottom),
+              tenes::fermion::wrap_C(C4[bottom], finfo, 3, bottom),
+              tenes::fermion::wrap_eT(eTt[top], finfo, 0, top),
+              tenes::fermion::wrap_eT(eTr[top], finfo, 1, top),
+              tenes::fermion::wrap_eT(eTr[bottom], finfo, 1, bottom),
+              tenes::fermion::wrap_eT(eTb[bottom], finfo, 2, bottom),
+              tenes::fermion::wrap_eT(eTl[bottom], finfo, 3, bottom),
+              tenes::fermion::wrap_eT(eTl[top], finfo, 3, top),
+              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
+              tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom), id);
+        } else {
+          const int left = indices[0][0];
+          const int right = indices[0][1];
+          tenes::fermion::ftensor<ptensor> id{
+              ptensor(mptensor::Shape(
+                  finfo.phys[left].size(), finfo.phys[right].size(),
+                  finfo.phys[left].size(), finfo.phys[right].size())),
+              {finfo.phys[left], finfo.phys[right], finfo.phys[left],
+               finfo.phys[right]}};
+          for (std::size_t n = 0; n < id.t.local_size(); ++n) {
+            auto idx = id.t.global_index(n);
+            if (idx[0] == idx[2] && idx[1] == idx[3]) {
+              id.t.set_value(idx, 1.0);
+            }
+          }
+          norms[norm_key] = core::Contract_two_sites_horizontal_op12_iTPS_CTM(
+              tenes::fermion::wrap_C(C1[left], finfo, 0, left),
+              tenes::fermion::wrap_C(C2[right], finfo, 1, right),
+              tenes::fermion::wrap_C(C3[right], finfo, 2, right),
+              tenes::fermion::wrap_C(C4[left], finfo, 3, left),
+              tenes::fermion::wrap_eT(eTt[left], finfo, 0, left),
+              tenes::fermion::wrap_eT(eTt[right], finfo, 0, right),
+              tenes::fermion::wrap_eT(eTr[right], finfo, 1, right),
+              tenes::fermion::wrap_eT(eTb[right], finfo, 2, right),
+              tenes::fermion::wrap_eT(eTb[left], finfo, 2, left),
+              tenes::fermion::wrap_eT(eTl[left], finfo, 3, left),
+              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
+              tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right), id);
+        }
       } else {
         if (is_TPO) {
           norms[norm_key] =
@@ -187,13 +246,37 @@ auto iTPS<ptensor>::measure_twosite()
         if (nrow == 2) {
           const int top = indices[0][0];
           const int bottom = indices[1][0];
-          ptensor o =
-              (top == source ? op.op
-                             : mptensor::transpose(op.op, {1, 0, 3, 2}));
-          value = core::Contract_two_sites_vertical_op12(
-              C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
-              eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], *(Tn_[0][0]),
-              *(Tn_[1][0]), o, is_TPO, is_mf);
+          if (finfo.enabled && !is_TPO && !is_mf) {
+            const int target = top == source ? bottom : top;
+            tenes::fermion::ftensor<ptensor> o{
+                op.op,
+                {finfo.phys[source], finfo.phys[target], finfo.phys[source],
+                 finfo.phys[target]}};
+            if (top != source) {
+              o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
+            }
+            value = core::Contract_two_sites_vertical_op12_iTPS_CTM(
+                tenes::fermion::wrap_C(C1[top], finfo, 0, top),
+                tenes::fermion::wrap_C(C2[top], finfo, 1, top),
+                tenes::fermion::wrap_C(C3[bottom], finfo, 2, bottom),
+                tenes::fermion::wrap_C(C4[bottom], finfo, 3, bottom),
+                tenes::fermion::wrap_eT(eTt[top], finfo, 0, top),
+                tenes::fermion::wrap_eT(eTr[top], finfo, 1, top),
+                tenes::fermion::wrap_eT(eTr[bottom], finfo, 1, bottom),
+                tenes::fermion::wrap_eT(eTb[bottom], finfo, 2, bottom),
+                tenes::fermion::wrap_eT(eTl[bottom], finfo, 3, bottom),
+                tenes::fermion::wrap_eT(eTl[top], finfo, 3, top),
+                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
+                tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom), o);
+          } else {
+            ptensor o =
+                (top == source ? op.op
+                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
+            value = core::Contract_two_sites_vertical_op12(
+                C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+                eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], *(Tn_[0][0]),
+                *(Tn_[1][0]), o, is_TPO, is_mf);
+          }
           // value = peps_parameters.MeanField_Env
           //             ? core::Contract_two_sites_vertical_op12_MF(
           //                   *(Tn_[0][0]), *(Tn_[1][0]), o)
@@ -204,14 +287,38 @@ auto iTPS<ptensor>::measure_twosite()
         } else {  // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
-          ptensor o =
-              (left == source ? op.op
-                              : mptensor::transpose(op.op, {1, 0, 3, 2}));
+          if (finfo.enabled && !is_TPO && !is_mf) {
+            const int target = left == source ? right : left;
+            tenes::fermion::ftensor<ptensor> o{
+                op.op,
+                {finfo.phys[source], finfo.phys[target], finfo.phys[source],
+                 finfo.phys[target]}};
+            if (left != source) {
+              o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
+            }
+            value = core::Contract_two_sites_horizontal_op12_iTPS_CTM(
+                tenes::fermion::wrap_C(C1[left], finfo, 0, left),
+                tenes::fermion::wrap_C(C2[right], finfo, 1, right),
+                tenes::fermion::wrap_C(C3[right], finfo, 2, right),
+                tenes::fermion::wrap_C(C4[left], finfo, 3, left),
+                tenes::fermion::wrap_eT(eTt[left], finfo, 0, left),
+                tenes::fermion::wrap_eT(eTt[right], finfo, 0, right),
+                tenes::fermion::wrap_eT(eTr[right], finfo, 1, right),
+                tenes::fermion::wrap_eT(eTb[right], finfo, 2, right),
+                tenes::fermion::wrap_eT(eTb[left], finfo, 2, left),
+                tenes::fermion::wrap_eT(eTl[left], finfo, 3, left),
+                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
+                tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right), o);
+          } else {
+            ptensor o =
+                (left == source ? op.op
+                                : mptensor::transpose(op.op, {1, 0, 3, 2}));
 
-          value = core::Contract_two_sites_horizontal_op12(
-              C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
-              eTr[right], eTb[right], eTb[left], eTl[left], *(Tn_[0][0]), *(Tn_[0][1]),
-              o, is_TPO, is_mf);
+            value = core::Contract_two_sites_horizontal_op12(
+                C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
+                eTr[right], eTb[right], eTb[left], eTl[left], *(Tn_[0][0]),
+                *(Tn_[0][1]), o, is_TPO, is_mf);
+          }
           // value = peps_parameters.MeanField_Env
           //             ? core::Contract_two_sites_horizontal_op12_MF(
           //                   *(Tn_[0][0]), *(Tn_[0][1]), o)
@@ -258,7 +365,8 @@ auto iTPS<ptensor>::measure_twosite()
       //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = op.coeff * value / norm;
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+        op.coeff * value / norm;
   }
   ret.push_back(norms);
 
@@ -579,7 +687,8 @@ auto iTPS<ptensor>::measure_twosite_density()
         }
       }
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] = op.coeff * value / norm;
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+        op.coeff * value / norm;
   }
   ret.push_back(norms);
 
