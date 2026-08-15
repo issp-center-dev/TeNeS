@@ -16,6 +16,7 @@
 
 #include "iTPS.hpp"
 
+#include "../fermion/fops.hpp"
 #include "core/simple_update.hpp"
 #include "core/local_gauge.hpp"
 
@@ -25,6 +26,15 @@ template <class tensor>
 void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
+    if (finfo.enabled) {
+      auto fTn = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
+      tenes::fermion::ftensor<tensor> fop{
+          up.op, {finfo.phys[source], finfo.phys[source]}};
+      auto updated = tenes::fermion::tensordot(fTn, fop, mptensor::Axes(4),
+                                               mptensor::Axes(0));
+      tenes::fermion::unwrap_Tn(updated, Tn[source], finfo, source);
+      return;
+    }
     Tn[source] =
         tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
   } else {
@@ -34,6 +44,25 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
     const int source_leg = up.source_leg;
     const int target = lattice.neighbor(source, source_leg);
     const int target_leg = (source_leg + 2) % 4;
+    if (finfo.enabled) {
+      auto fTn1 = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
+      auto fTn2 = tenes::fermion::wrap_Tn(Tn[target], finfo, target);
+      tenes::fermion::ftensor<tensor> fop{
+          up.op,
+          {finfo.phys[source], finfo.phys[target], finfo.phys[source],
+           finfo.phys[target]}};
+      tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
+      core::Simple_update_bond(
+          fTn1, fTn2, lambda_tensor[source], lambda_tensor[target], fop,
+          source_leg, peps_parameters, fTn1_work, fTn2_work, lambda_work);
+      lambda_tensor[source][source_leg] = lambda_work;
+      lambda_tensor[target][target_leg] = lambda_work;
+      finfo.virt[source][source_leg] = fTn1_work.parity[source_leg];
+      finfo.virt[target][target_leg] = fTn2_work.parity[target_leg];
+      tenes::fermion::unwrap_Tn(fTn1_work, Tn[source], finfo, source);
+      tenes::fermion::unwrap_Tn(fTn2_work, Tn[target], finfo, target);
+      return;
+    }
     core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
                              lambda_tensor[target], up.op, source_leg,
                              peps_parameters, Tn1_work, Tn2_work, lambda_work);
@@ -161,8 +190,8 @@ void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
                                 Tn[target].shape()[2], Tn[target].shape()[3],
                                 Tn[target].shape()[4] * Tn[target].shape()[5])),
         lambda_tensor[source], lambda_tensor[target],
-        mptensor::kron(up.op, conj(up.op)),
-        source_leg, peps_parameters, Tn1_work, Tn2_work, lambda_work);
+        mptensor::kron(up.op, conj(up.op)), source_leg, peps_parameters,
+        Tn1_work, Tn2_work, lambda_work);
     lambda_tensor[source][source_leg] = lambda_work;
     lambda_tensor[target][target_leg] = lambda_work;
     Tn[source] = reshape(

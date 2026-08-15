@@ -17,11 +17,16 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <fstream>
 #include <vector>
 
-#include "../src/tensor.hpp"
+#include "../src/fermion/fops.hpp"
+#include "../src/fermion/ftensor.hpp"
 #include "../src/mpi.hpp"
+#include "../src/tensor.hpp"
 #include "../src/iTPS/PEPS_Parameters.hpp"
 #include "../src/iTPS/core/simple_update.hpp"
 
@@ -46,8 +51,8 @@ TEST_CASE("testing simple update") {
     lambda.push_back(
         std::vector<std::vector<double>>(nleg, std::vector<double>(D, 1.0)));
   }
-  std::vector<std::vector<double>> &lambda_1 = lambda[0];
-  std::vector<std::vector<double>> &lambda_2 = lambda[1];
+  std::vector<std::vector<double>>& lambda_1 = lambda[0];
+  std::vector<std::vector<double>>& lambda_2 = lambda[1];
 
   for (int i = 0; i < D; ++i)
     for (int j = 0; j < D; ++j)
@@ -157,4 +162,253 @@ TEST_CASE("testing simple update") {
     ofs << new_lambda[i] << " ";
   }
   ofs << std::endl;
+}
+
+namespace {
+using real_ftensor = tenes::fermion::ftensor<tenes::real_tensor>;
+
+tenes::real_tensor make_even_Tn(int seed) {
+  tenes::real_tensor t(mptensor::Shape(2, 2, 2, 2, 2));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const auto idx = t.global_index(n);
+    const int odd = (idx[0] + idx[1] + idx[2] + idx[3] + idx[4]) % 2;
+    if (odd == 0) {
+      const double x = static_cast<double>((seed + 3) * (n + 1));
+      t.set_value(idx, 0.37 * std::sin(x) + 0.19 * std::cos(0.7 * x));
+    }
+  }
+  return t;
+}
+
+tenes::real_tensor make_hopping_gate() {
+  tenes::real_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+  op.set_value(mptensor::Index(0, 1, 0, 1), 1.0);
+  op.set_value(mptensor::Index(1, 0, 1, 0), 1.0);
+  op.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  op.set_value(mptensor::Index(0, 1, 1, 0), 0.1);
+  op.set_value(mptensor::Index(1, 0, 0, 1), 0.1);
+  return op;
+}
+
+tenes::fermion::leg_parities Tn_parities(bool all_even = false) {
+  const tenes::fermion::parity_vector p =
+      all_even ? tenes::fermion::parity_vector{false, false}
+               : tenes::fermion::parity_vector{false, true};
+  return {p, p, p, p, p};
+}
+
+tenes::real_tensor make_even_Tn_with_parity(
+    int seed, const tenes::fermion::leg_parities& parity) {
+  tenes::real_tensor t(mptensor::Shape(2, 2, 2, 2, 2));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const auto idx = t.global_index(n);
+    if (tenes::fermion::count_odd(parity, idx) % 2 == 0) {
+      const double x = static_cast<double>((seed + 3) * (n + 1));
+      t.set_value(idx, 0.37 * std::sin(x) + 0.19 * std::cos(0.7 * x));
+    }
+  }
+  return t;
+}
+
+tenes::fermion::leg_parities op_parities(bool all_even = false) {
+  const tenes::fermion::parity_vector p =
+      all_even ? tenes::fermion::parity_vector{false, false}
+               : tenes::fermion::parity_vector{false, true};
+  return {p, p, p, p};
+}
+
+tenes::real_tensor make_hopping_gate(double hopping) {
+  auto op = make_hopping_gate();
+  op.set_value(mptensor::Index(0, 1, 1, 0), hopping);
+  op.set_value(mptensor::Index(1, 0, 0, 1), hopping);
+  return op;
+}
+
+std::vector<double> sorted_spectrum(std::vector<double> values) {
+  std::sort(values.begin(), values.end());
+  return values;
+}
+
+std::vector<double> run_boson_lambda_spectrum(double ty) {
+  const auto virtual_parity = (ty == 0.0)
+                                  ? tenes::fermion::parity_vector{false, false}
+                                  : tenes::fermion::parity_vector{false, true};
+  const auto physical_parity = (ty == 0.0)
+                                   ? tenes::fermion::parity_vector{false, false}
+                                   : tenes::fermion::parity_vector{false, true};
+  const tenes::fermion::leg_parities init_parity{virtual_parity, virtual_parity,
+                                                 virtual_parity, virtual_parity,
+                                                 physical_parity};
+  std::vector<tenes::real_tensor> T{make_even_Tn_with_parity(1, init_parity),
+                                    make_even_Tn_with_parity(3, init_parity),
+                                    make_even_Tn_with_parity(5, init_parity),
+                                    make_even_Tn_with_parity(7, init_parity)};
+  std::vector<std::vector<std::vector<double>>> lambda(
+      4, std::vector<std::vector<double>>(4, std::vector<double>{1.0, 1.0}));
+  tenes::itps::PEPS_Parameters peps_parameters;
+  peps_parameters.Inverse_lambda_cut = 1.0e-12;
+  const auto hop_x = make_hopping_gate(0.12);
+  const auto hop_y = make_hopping_gate(ty);
+
+  auto update = [&](int source, int target, int leg,
+                    const tenes::real_tensor& op) {
+    tenes::real_tensor out0, out1;
+    std::vector<double> bond_lambda;
+    tenes::itps::core::Simple_update_bond(
+        T[source], T[target], lambda[source], lambda[target], op, leg,
+        peps_parameters, out0, out1, bond_lambda);
+    T[source] = out0;
+    T[target] = out1;
+    lambda[source][leg] = bond_lambda;
+    lambda[target][(leg + 2) % 4] = bond_lambda;
+  };
+
+  if (ty != 0.0) {
+    update(0, 2, 1, hop_y);
+    update(1, 3, 1, hop_y);
+  }
+  update(0, 1, 2, hop_x);
+  return sorted_spectrum(lambda[0][2]);
+}
+
+std::vector<double> run_fermion_lambda_spectrum(double ty) {
+  const auto virtual_parity = (ty == 0.0)
+                                  ? tenes::fermion::parity_vector{false, false}
+                                  : tenes::fermion::parity_vector{false, true};
+  const auto physical_parity = (ty == 0.0)
+                                   ? tenes::fermion::parity_vector{false, false}
+                                   : tenes::fermion::parity_vector{false, true};
+  const tenes::fermion::leg_parities init_parity{virtual_parity, virtual_parity,
+                                                 virtual_parity, virtual_parity,
+                                                 physical_parity};
+  std::vector<tenes::real_tensor> T{make_even_Tn_with_parity(1, init_parity),
+                                    make_even_Tn_with_parity(3, init_parity),
+                                    make_even_Tn_with_parity(5, init_parity),
+                                    make_even_Tn_with_parity(7, init_parity)};
+  std::vector<std::array<tenes::fermion::parity_vector, 4>> virt(
+      4, {virtual_parity, virtual_parity, virtual_parity, virtual_parity});
+  const std::vector<tenes::fermion::parity_vector> phys(4, physical_parity);
+  std::vector<std::vector<std::vector<double>>> lambda(
+      4, std::vector<std::vector<double>>(4, std::vector<double>{1.0, 1.0}));
+  tenes::itps::PEPS_Parameters peps_parameters;
+  peps_parameters.Inverse_lambda_cut = 1.0e-12;
+  const auto hop_x = make_hopping_gate(0.12);
+  const auto hop_y = make_hopping_gate(ty);
+
+  auto wrap_T = [&](int site) {
+    return real_ftensor{T[site],
+                        {virt[site][0], virt[site][1], virt[site][2],
+                         virt[site][3], phys[site]}};
+  };
+  auto update = [&](int source, int target, int leg,
+                    const tenes::real_tensor& op) {
+    real_ftensor out0, out1;
+    std::vector<double> bond_lambda;
+    real_ftensor fop{op,
+                     {phys[source], phys[target], phys[source], phys[target]}};
+    tenes::itps::core::Simple_update_bond(
+        wrap_T(source), wrap_T(target), lambda[source], lambda[target], fop,
+        leg, peps_parameters, out0, out1, bond_lambda);
+    T[source] = out0.t;
+    T[target] = out1.t;
+    virt[source][leg] = out0.parity[leg];
+    virt[target][(leg + 2) % 4] = out1.parity[(leg + 2) % 4];
+    lambda[source][leg] = bond_lambda;
+    lambda[target][(leg + 2) % 4] = bond_lambda;
+  };
+
+  if (ty != 0.0) {
+    update(0, 2, 1, hop_y);
+    update(1, 3, 1, hop_y);
+  }
+  update(0, 1, 2, hop_x);
+  return sorted_spectrum(lambda[0][2]);
+}
+}  // namespace
+
+TEST_CASE("fermion Simple_update_bond preserves even parity") {
+  const auto T0 = make_even_Tn(1);
+  const auto T1 = make_even_Tn(7);
+  const auto op = make_hopping_gate();
+  const std::vector<std::vector<double>> lambda(4,
+                                                std::vector<double>{1.0, 1.0});
+  tenes::itps::PEPS_Parameters peps_parameters;
+  peps_parameters.Inverse_lambda_cut = 1.0e-12;
+
+  real_ftensor fT0{T0, Tn_parities()};
+  real_ftensor fT1{T1, Tn_parities()};
+  real_ftensor fop{op, op_parities()};
+  real_ftensor out0, out1;
+  std::vector<double> lambda_c;
+  tenes::itps::core::Simple_update_bond(fT0, fT1, lambda, lambda, fop, 2,
+                                        peps_parameters, out0, out1, lambda_c);
+
+  CHECK(tenes::fermion::parity_violation(out0) == doctest::Approx(0.0));
+  CHECK(tenes::fermion::parity_violation(out1) == doctest::Approx(0.0));
+  REQUIRE(lambda_c.size() == 2);
+  for (double x : lambda_c) {
+    CHECK(std::isfinite(x));
+    CHECK(x >= 0.0);
+  }
+}
+
+TEST_CASE("parity-trivial ftensor Simple_update_bond matches bosonic kernel") {
+  const auto T0 = make_even_Tn(3);
+  const auto T1 = make_even_Tn(11);
+  const auto op = make_hopping_gate();
+  const std::vector<std::vector<double>> lambda(4,
+                                                std::vector<double>{1.0, 1.0});
+  tenes::itps::PEPS_Parameters peps_parameters;
+  peps_parameters.Inverse_lambda_cut = 1.0e-12;
+
+  tenes::real_tensor boson_out0, boson_out1;
+  std::vector<double> boson_lambda;
+  tenes::itps::core::Simple_update_bond(T0, T1, lambda, lambda, op, 2,
+                                        peps_parameters, boson_out0, boson_out1,
+                                        boson_lambda);
+
+  real_ftensor fT0{T0, Tn_parities(true)};
+  real_ftensor fT1{T1, Tn_parities(true)};
+  real_ftensor fop{op, op_parities(true)};
+  real_ftensor fermion_out0, fermion_out1;
+  std::vector<double> fermion_lambda;
+  tenes::itps::core::Simple_update_bond(fT0, fT1, lambda, lambda, fop, 2,
+                                        peps_parameters, fermion_out0,
+                                        fermion_out1, fermion_lambda);
+
+  REQUIRE(fermion_lambda.size() == boson_lambda.size());
+  for (std::size_t i = 0; i < boson_lambda.size(); ++i) {
+    CHECK(fermion_lambda[i] == doctest::Approx(boson_lambda[i]).epsilon(1e-12));
+  }
+  for (std::size_t n = 0; n < boson_out0.local_size(); ++n) {
+    const auto idx = boson_out0.global_index(n);
+    double b0, f0, b1, f1;
+    boson_out0.get_value(idx, b0);
+    fermion_out0.t.get_value(idx, f0);
+    boson_out1.get_value(idx, b1);
+    fermion_out1.t.get_value(idx, f1);
+    CHECK(f0 == doctest::Approx(b0).epsilon(1e-12));
+    CHECK(f1 == doctest::Approx(b1).epsilon(1e-12));
+  }
+}
+
+TEST_CASE(
+    "fermion simple update lambda spectrum matches the 1D hard-core "
+    "boson limit only") {
+  const auto boson_1d = run_boson_lambda_spectrum(0.0);
+  const auto fermion_1d = run_fermion_lambda_spectrum(0.0);
+  REQUIRE(boson_1d.size() == fermion_1d.size());
+  for (std::size_t i = 0; i < boson_1d.size(); ++i) {
+    CHECK(fermion_1d[i] == doctest::Approx(boson_1d[i]).epsilon(1.0e-8));
+  }
+
+  const auto boson_2d = run_boson_lambda_spectrum(0.12);
+  const auto fermion_2d = run_fermion_lambda_spectrum(0.12);
+  REQUIRE(boson_2d.size() == fermion_2d.size());
+  double max_diff = 0.0;
+  for (std::size_t i = 0; i < boson_2d.size(); ++i) {
+    max_diff = std::max(max_diff, std::abs(fermion_2d[i] - boson_2d[i]));
+  }
+  CHECK(max_diff > 1.0e-8);
 }

@@ -35,6 +35,8 @@
 #include <mptensor/rsvd.hpp>
 #include <mptensor/tensor.hpp>
 
+#include "../../fermion/fops.hpp"
+#include "../../fermion/ftensor.hpp"
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
 
@@ -42,6 +44,30 @@ namespace tenes::itps::core {
 
 using mptensor::Axes;
 using mptensor::Shape;
+
+namespace {
+template <class tensor>
+void enforce_even_parity(tensor &) {}
+
+template <class tensor>
+void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
+  const double v = tenes::fermion::parity_violation(a);
+  const double scale = std::max(1.0, tenes::fermion::max_abs(a));
+  const double threshold = 1.0e-10 * scale;
+  if (v > threshold) {
+    std::stringstream ss;
+    ss << "fermion Simple_update_bond produced odd-parity elements: max_abs="
+       << v << " threshold=" << threshold;
+    throw std::runtime_error(ss.str());
+  }
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    const auto index = a.t.global_index(n);
+    if (tenes::fermion::count_odd(a.parity, index) % 2 == 1) {
+      a.t.set_value(index, typename tensor::value_type{});
+    }
+  }
+}
+}  // namespace
 
 // environment
 
@@ -130,11 +156,11 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
   // svd
   ptensor U, VT;
   std::vector<double> s;
-  info = svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
+  info = svd_trunc(Theta, Axes(0, 2), Axes(1, 3), U, s, VT, dc);
 
-  lambda_c = std::vector<double>(s.begin(), s.begin() + dc);
-  ptensor Uc = slice(U, 2, 0, dc);
-  ptensor VTc = slice(VT, 0, 0, dc);
+  lambda_c = std::vector<double>(s.begin(), s.end());
+  ptensor Uc = U;
+  ptensor VTc = VT;
 
   //  norm =
   //  std::inner_product(lambda_c.begin(),lambda_c.end(),lambda_c.begin(),0.0);
@@ -193,6 +219,9 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
     Tn2_new =
         tensordot(Q2, VTc, Axes(3), Axes(1)).transpose(Axes(0, 1, 2, 3, 4));
   }
+
+  enforce_even_parity(Tn1_new);
+  enforce_even_parity(Tn2_new);
 }
 
 // template instantiations
@@ -210,6 +239,28 @@ template void Simple_update_bond(
     const std::vector<std::vector<double>> &lambda2, const complex_tensor &op12,
     const int connect1, const PEPS_Parameters peps_parameters,
     complex_tensor &Tn1_new, complex_tensor &Tn2_new,
+    std::vector<double> &lambda_c);
+
+template void Simple_update_bond(
+    const tenes::fermion::ftensor<real_tensor> &Tn1,
+    const tenes::fermion::ftensor<real_tensor> &Tn2,
+    const std::vector<std::vector<double>> &lambda1,
+    const std::vector<std::vector<double>> &lambda2,
+    const tenes::fermion::ftensor<real_tensor> &op12, const int connect1,
+    const PEPS_Parameters peps_parameters,
+    tenes::fermion::ftensor<real_tensor> &Tn1_new,
+    tenes::fermion::ftensor<real_tensor> &Tn2_new,
+    std::vector<double> &lambda_c);
+
+template void Simple_update_bond(
+    const tenes::fermion::ftensor<complex_tensor> &Tn1,
+    const tenes::fermion::ftensor<complex_tensor> &Tn2,
+    const std::vector<std::vector<double>> &lambda1,
+    const std::vector<std::vector<double>> &lambda2,
+    const tenes::fermion::ftensor<complex_tensor> &op12, const int connect1,
+    const PEPS_Parameters peps_parameters,
+    tenes::fermion::ftensor<complex_tensor> &Tn1_new,
+    tenes::fermion::ftensor<complex_tensor> &Tn2_new,
     std::vector<double> &lambda_c);
 
 }  // namespace tenes::itps::core

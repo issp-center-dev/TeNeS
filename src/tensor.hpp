@@ -18,10 +18,27 @@
 #define TENES_SRC_TENSOR_HPP_
 
 #include <cstddef>
-#include <vector>
 #include <complex>
+#include <vector>
 
 #include "mptensor/tensor.hpp"  // IWYU pragma: export
+
+namespace mptensor {
+
+template <class MatrixType>
+int svd_trunc(const Tensor<MatrixType>& a, const Axes& rows, const Axes& cols,
+              Tensor<MatrixType>& u, std::vector<double>& s,
+              Tensor<MatrixType>& vt, int dc) {
+  Tensor<MatrixType> full_u, full_vt;
+  std::vector<double> full_s;
+  int info = svd(a, rows, cols, full_u, full_s, full_vt);
+  s = std::vector<double>(full_s.begin(), full_s.begin() + dc);
+  u = slice(full_u, full_u.rank() - 1, 0, dc);
+  vt = slice(full_vt, 0, 0, dc);
+  return info;
+}
+
+}  // namespace mptensor
 
 namespace tenes {
 
