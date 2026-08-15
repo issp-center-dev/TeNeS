@@ -413,3 +413,160 @@ TEST_CASE("svd_trunc breaks cross-sector ties by preferring even parity") {
   CHECK(u.parity[1] == tenes::fermion::parity_vector{false});
   CHECK(vt.parity[0] == tenes::fermion::parity_vector{false});
 }
+
+static ft make_reference_mps_tensor(int site) {
+  const double weights[4][2][2] = {{{1.10, 0.70}, {0.0, 0.0}},
+                                   {{0.90, -0.40}, {1.30, 0.80}},
+                                   {{1.20, 0.50}, {-0.60, 1.10}},
+                                   {{0.75, -0.35}, {1.40, 0.65}}};
+  const std::size_t left_dim = (site == 0) ? 1 : 2;
+  const std::size_t right_dim = (site == 3) ? 1 : 2;
+  ft a{tenes::real_tensor(mptensor::Shape(left_dim, 2, right_dim)),
+       {parity_vector(left_dim, false),
+        {false, true},
+        parity_vector(right_dim, false)}};
+  if (site != 0) {
+    a.parity[0] = {false, true};
+  }
+  if (site != 3) {
+    a.parity[2] = {false, true};
+  }
+  for (std::size_t left = 0; left < left_dim; ++left) {
+    for (std::size_t occ = 0; occ < 2; ++occ) {
+      const std::size_t right = left ^ occ;
+      if (right < right_dim) {
+        a.t.set_value(mptensor::Index(left, occ, right),
+                      weights[site][left][occ]);
+      }
+    }
+  }
+  return a;
+}
+
+static ft reference_chain_left_to_right() {
+  ft a0 = make_reference_mps_tensor(0);
+  ft a1 = make_reference_mps_tensor(1);
+  ft a2 = make_reference_mps_tensor(2);
+  ft a3 = make_reference_mps_tensor(3);
+  ft psi =
+      tenes::fermion::tensordot(a0, a1, mptensor::Axes(2), mptensor::Axes(0));
+  psi =
+      tenes::fermion::tensordot(psi, a2, mptensor::Axes(3), mptensor::Axes(0));
+  psi =
+      tenes::fermion::tensordot(psi, a3, mptensor::Axes(4), mptensor::Axes(0));
+  return psi;
+}
+
+static ft reference_chain_pairwise() {
+  ft a0 = make_reference_mps_tensor(0);
+  ft a1 = make_reference_mps_tensor(1);
+  ft a2 = make_reference_mps_tensor(2);
+  ft a3 = make_reference_mps_tensor(3);
+  ft left =
+      tenes::fermion::tensordot(a0, a1, mptensor::Axes(2), mptensor::Axes(0));
+  ft right =
+      tenes::fermion::tensordot(a2, a3, mptensor::Axes(2), mptensor::Axes(0));
+  return tenes::fermion::tensordot(left, right, mptensor::Axes(3),
+                                   mptensor::Axes(0));
+}
+
+static double full_norm(const ft& psi) {
+  return tenes::fermion::trace(tenes::fermion::conj(psi), psi,
+                               mptensor::Axes(0, 1, 2, 3, 4, 5),
+                               mptensor::Axes(0, 1, 2, 3, 4, 5));
+}
+
+static ft apply_one_site_op(const ft& psi, int site, const ft& op) {
+  const int axis = site + 1;
+  ft applied = tenes::fermion::tensordot(psi, op, mptensor::Axes(axis),
+                                         mptensor::Axes(0));
+  mptensor::Axes perm;
+  for (int i = 0; i < axis; ++i) {
+    perm.push(i);
+  }
+  perm.push(5);
+  for (int i = axis; i < 5; ++i) {
+    perm.push(i);
+  }
+  return tenes::fermion::transpose(applied, perm);
+}
+
+static ft apply_two_site_op_01(const ft& psi, const ft& op) {
+  ft applied = tenes::fermion::tensordot(psi, op, mptensor::Axes(1, 2),
+                                         mptensor::Axes(0, 1));
+  return tenes::fermion::transpose(applied, mptensor::Axes(0, 4, 5, 1, 2, 3));
+}
+
+TEST_CASE("JW four-site reference matches f-primitive contractions") {
+  constexpr double ref_norm = 2.0353391950000002;
+  constexpr double ref_n0 = 0.47988049112374104;
+  constexpr double ref_n1 = 0.2202854252015719;
+  constexpr double ref_n2 = 0.40879752477817338;
+  constexpr double ref_n3 = 0.14348843338616096;
+  constexpr double ref_hop01 = -0.32763393032383481;
+
+  ft psi_ltr = reference_chain_left_to_right();
+  ft psi_pair = reference_chain_pairwise();
+  for (std::size_t n = 0; n < psi_ltr.t.local_size(); ++n) {
+    auto idx = psi_ltr.t.global_index(n);
+    double vl, vp;
+    psi_ltr.t.get_value(idx, vl);
+    psi_pair.t.get_value(idx, vp);
+    CHECK(vl == doctest::Approx(vp).epsilon(1.0e-12));
+  }
+
+  const double norm = full_norm(psi_ltr);
+  CHECK(norm == doctest::Approx(ref_norm).epsilon(1.0e-12));
+
+  ft n_op{tenes::real_tensor(mptensor::Shape(2, 2)),
+          {{false, true}, {false, true}}};
+  n_op.t.set_value(mptensor::Index(1, 1), 1.0);
+  const double refs[4] = {ref_n0, ref_n1, ref_n2, ref_n3};
+  for (int site = 0; site < 4; ++site) {
+    ft npsi = apply_one_site_op(psi_ltr, site, n_op);
+    const double value =
+        tenes::fermion::trace(tenes::fermion::conj(psi_ltr), npsi,
+                              mptensor::Axes(0, 1, 2, 3, 4, 5),
+                              mptensor::Axes(0, 1, 2, 3, 4, 5)) /
+        norm;
+    CHECK(value == doctest::Approx(refs[site]).epsilon(1.0e-12));
+  }
+
+  ft hop{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+         {{false, true}, {false, true}, {false, true}, {false, true}}};
+  hop.t.set_value(mptensor::Index(0, 1, 1, 0), 1.0);
+  hop.t.set_value(mptensor::Index(1, 0, 0, 1), 1.0);
+  ft hpsi = apply_two_site_op_01(psi_ltr, hop);
+  const double hop_value =
+      tenes::fermion::trace(tenes::fermion::conj(psi_ltr), hpsi,
+                            mptensor::Axes(0, 1, 2, 3, 4, 5),
+                            mptensor::Axes(0, 1, 2, 3, 4, 5)) /
+      norm;
+  CHECK(hop_value == doctest::Approx(ref_hop01).epsilon(1.0e-12));
+}
+
+TEST_CASE("manual four-swap reduced tensor matches f-primitive contraction") {
+  tenes::fermion::leg_parities p{{false, true},
+                                 {false, true},
+                                 {false, true},
+                                 {false, true},
+                                 {false, true}};
+  ft ket = make_even_ft(mptensor::Shape(2, 2, 2, 2, 2), p, 91);
+  ft f_reduced = tenes::fermion::tensordot(
+      tenes::fermion::conj(ket), ket, mptensor::Axes(4), mptensor::Axes(4));
+  ft manual_ket = ket;
+  tenes::fermion::apply_swap(manual_ket, 4, 0);
+  tenes::fermion::apply_swap(manual_ket, 4, 1);
+  tenes::fermion::apply_swap(manual_ket, 4, 2);
+  tenes::fermion::apply_swap(manual_ket, 4, 3);
+  tenes::real_tensor manual =
+      mptensor::tensordot(tenes::fermion::conj(ket).t, manual_ket.t,
+                          mptensor::Axes(4), mptensor::Axes(4));
+  for (std::size_t n = 0; n < f_reduced.t.local_size(); ++n) {
+    auto idx = f_reduced.t.global_index(n);
+    double vf, vm;
+    f_reduced.t.get_value(idx, vf);
+    manual.get_value(idx, vm);
+    CHECK(vf == doctest::Approx(vm).epsilon(1.0e-12));
+  }
+}
