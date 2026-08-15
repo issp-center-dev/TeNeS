@@ -198,6 +198,20 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
   }
 }
 
+// Graded representation of a two-site operator op[in1, in2, out1, out2]
+// given as plain matrix elements <out1 out2|O|in1 in2>. The two input legs
+// cross once when the operator is inserted into an ordered-site network, so
+// elements whose input legs are both odd carry an extra minus sign; loading
+// the matrix elements verbatim silently negates the doubly-occupied input
+// channel of every parity-conserving gate (e.g. |11><11| in exp(tau h)).
+template <class tensor>
+ftensor<tensor> wrap_twosite_op(const tensor& op, const parity_vector& p1,
+                                const parity_vector& p2) {
+  ftensor<tensor> fop{op, {p1, p2, p1, p2}};
+  apply_swap(fop, 0, 1);
+  return fop;
+}
+
 template <class tensor>
 void apply_parity(ftensor<tensor>& a, int ax) {
   std::vector<double> sign(a.parity[ax].size());

@@ -248,6 +248,11 @@ auto iTPS<ptensor>::measure_twosite()
           const int bottom = indices[1][0];
           if (finfo.enabled && !is_TPO && !is_mf) {
             const int target = top == source ? bottom : top;
+            // NOTE: the reduced-pair blob takes PLAIN matrix elements; its
+            // doubling pipeline convention is oracle-pinned with plain ops
+            // (see R3 tests in test/fermion/r2_convention.cpp). Do NOT use
+            // wrap_twosite_op here -- that convention belongs to the direct
+            // f-primitive contraction path (simple-update kernel).
             tenes::fermion::ftensor<ptensor> o{
                 op.op,
                 {finfo.phys[source], finfo.phys[target], finfo.phys[source],
@@ -297,6 +302,7 @@ auto iTPS<ptensor>::measure_twosite()
           const int right = indices[0][1];
           if (finfo.enabled && !is_TPO && !is_mf) {
             const int target = left == source ? right : left;
+            // NOTE: plain matrix elements by design; see the vertical branch.
             tenes::fermion::ftensor<ptensor> o{
                 op.op,
                 {finfo.phys[source], finfo.phys[target], finfo.phys[source],

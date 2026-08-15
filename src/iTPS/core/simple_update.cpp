@@ -114,12 +114,12 @@ tensor regroup_theta_for_svd(const tensor &theta) {
 template <class tensor>
 tenes::fermion::ftensor<tensor> regroup_theta_for_svd(
     const tenes::fermion::ftensor<tensor> &theta) {
-  tenes::fermion::ftensor<tensor> ret;
-  ret.t = theta.t;
-  ret.t.transpose(Axes(0, 2, 1, 3));
-  ret.parity = {theta.parity[0], theta.parity[2], theta.parity[1],
-                theta.parity[3]};
-  return ret;
+  // Graded transpose: the (out1, aux2) crossing must carry its Koszul sign.
+  // A metadata-only reorder here silently drops that mask and is only
+  // spectrum-neutral when it happens to cancel against another convention
+  // error upstream (e.g. a two-site gate loaded without its input-leg
+  // crossing sign).
+  return tenes::fermion::transpose(theta, Axes(0, 2, 1, 3));
 }
 
 template <class tensor>

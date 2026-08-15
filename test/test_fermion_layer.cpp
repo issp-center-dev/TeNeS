@@ -633,6 +633,42 @@ TEST_CASE("JW four-site reference matches f-primitive contractions") {
   CHECK(hop_value == doctest::Approx(ref_hop01).epsilon(1.0e-12));
 }
 
+TEST_CASE(
+    "two-site operator doubly-odd input channel matches one-site composition") {
+  // The hopping operator pinned in the JW reference test has no matrix
+  // element whose two INPUT legs are both odd, so that test cannot fix the
+  // sign convention of e.g. the |11><11| channel present in every Trotter
+  // gate exp(tau h). Pin it here with n0*n1, whose only nonzero element is
+  // exactly that channel: the two-site graded application must agree with
+  // the (already validated) composition of one-site applications.
+  ft psi = reference_chain_left_to_right();
+  const double norm = full_norm(psi);
+
+  ft n_op{tenes::real_tensor(mptensor::Shape(2, 2)),
+          {{false, true}, {false, true}}};
+  n_op.t.set_value(mptensor::Index(1, 1), 1.0);
+  ft composed = apply_one_site_op(apply_one_site_op(psi, 1, n_op), 0, n_op);
+  const double ref = tenes::fermion::trace(tenes::fermion::conj(psi), composed,
+                                           mptensor::Axes(0, 1, 2, 3, 4, 5),
+                                           mptensor::Axes(0, 1, 2, 3, 4, 5)) /
+                     norm;
+  CHECK(ref > 0.0);
+
+  tenes::real_tensor nn_plain(mptensor::Shape(2, 2, 2, 2));
+  nn_plain.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  ft nn = tenes::fermion::wrap_twosite_op(nn_plain, parity_vector{false, true},
+                                          parity_vector{false, true});
+  double channel = 0.0;
+  nn.t.get_value(mptensor::Index(1, 1, 1, 1), channel);
+  CHECK(channel == doctest::Approx(-1.0));
+  ft nnpsi = apply_two_site_op_01(psi, nn);
+  const double value = tenes::fermion::trace(tenes::fermion::conj(psi), nnpsi,
+                                             mptensor::Axes(0, 1, 2, 3, 4, 5),
+                                             mptensor::Axes(0, 1, 2, 3, 4, 5)) /
+                       norm;
+  CHECK(value == doctest::Approx(ref).epsilon(1.0e-12));
+}
+
 TEST_CASE("manual four-swap reduced tensor matches f-primitive contraction") {
   tenes::fermion::leg_parities p{{false, true},
                                  {false, true},
@@ -1067,12 +1103,9 @@ static Tensor diagnostic_regroup_theta_for_svd(const Tensor& theta) {
 static tenes::fermion::ftensor<tenes::real_tensor>
 diagnostic_regroup_theta_for_svd(
     const tenes::fermion::ftensor<tenes::real_tensor>& theta) {
-  tenes::fermion::ftensor<tenes::real_tensor> ret;
-  ret.t = theta.t;
-  ret.t.transpose(mptensor::Axes(0, 2, 1, 3));
-  ret.parity = {theta.parity[0], theta.parity[2], theta.parity[1],
-                theta.parity[3]};
-  return ret;
+  // Mirrors the kernel: graded transpose so the (out1, aux2) crossing
+  // carries its Koszul sign.
+  return tenes::fermion::transpose(theta, mptensor::Axes(0, 2, 1, 3));
 }
 
 template <class Tensor>
@@ -1557,9 +1590,8 @@ TEST_CASE("diagnostic update1 gate application component diff") {
   auto make_fermion_gate = [&](const tenes::EvolutionOperator<tensor>& update,
                                int source, int target) {
     const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
-    return f::ftensor<tensor>{update.op,
-                              {finfo.phys[source], finfo.phys[target],
-                               finfo.phys[source], finfo.phys[target]}};
+    return f::wrap_twosite_op(update.op, finfo.phys[source],
+                              finfo.phys[target]);
   };
 
   auto dump_update = [&](int update_index, const std::string& label) {
@@ -1826,9 +1858,8 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
     const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fdiag);
     const auto fTn1 = f::wrap_Tn(fdiag_tn[source], finfo, source);
     const auto fTn2 = f::wrap_Tn(fdiag_tn[target], finfo, target);
-    const f::ftensor<tensor> fop{first_update.op,
-                                 {finfo.phys[source], finfo.phys[target],
-                                  finfo.phys[source], finfo.phys[target]}};
+    const auto fop = f::wrap_twosite_op(first_update.op, finfo.phys[source],
+                                        finfo.phys[target]);
     const auto ftheta =
         diagnostic_update_thetas(fTn1, fTn2, fdiag_lambda[source],
                                  fdiag_lambda[target], fop, source_leg);
@@ -1894,6 +1925,234 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
               << " boson_plain_lambda="
               << vector_to_string(normalized_lambda_from_s(b_plain_s))
               << std::endl;
+  }
+}
+
+TEST_CASE("diagnostic vertical-chain sorted lambda trajectory") {
+  if (std::getenv("TENES_RUN_VERTICAL_LAMBDA_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  auto make_lattice = []() {
+    tenes::SquareLattice lattice(2, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 2;
+      lattice.virtual_dims[site] = {1, 2, 1, 2};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  auto make_params = [](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(4, f::parity_vector{false, true});
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 10;
+    params.CTM_Convergence_Epsilon = 1.0e-8;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  const char* leg_env = std::getenv("TENES_VERTICAL_DIAG_LEG");
+  const int source_leg = (leg_env != nullptr) ? std::atoi(leg_env) : 1;
+  const int bond_leg = source_leg;
+  auto make_updates = [source_leg]() {
+    std::vector<tenes::EvolutionOperator<tensor>> updates;
+    const tensor gate = make_free_fermion_gate(0.01);
+    for (int site = 0; site < 4; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, source_leg, 0, gate));
+    }
+    return updates;
+  };
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  const auto updates = make_updates();
+  std::cout << "vertical lambda trajectory source_leg=" << source_leg
+            << std::endl;
+  auto fparams = make_params(true, "output_test_vertical_lambda_fermion");
+  auto bparams = make_params(false, "output_test_vertical_lambda_boson");
+  tenes::itps::iTPS<tensor> fstate(
+      MPI_COMM_WORLD, fparams, lattice_f, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(
+      MPI_COMM_WORLD, bparams, lattice_b, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto& flambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate);
+  auto& blambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate);
+  bTn = fTn;
+  blambda = flambda;
+
+  double max_rel = 0.0;
+  int max_rel_step = -1;
+  int max_rel_bond = -1;
+  int first_step = -1;
+  int first_bond = -1;
+  double first_rel = 0.0;
+  for (int step = 0; step <= 300; ++step) {
+    for (int site = 0; site < lattice_f.N_UNIT; ++site) {
+      const auto fvals = sorted_desc(flambda[site][bond_leg]);
+      const auto bvals = sorted_desc(blambda[site][bond_leg]);
+      const double rel = lambda_relative_diff(fvals, bvals);
+      if (rel > max_rel) {
+        max_rel = rel;
+        max_rel_step = step;
+        max_rel_bond = site;
+      }
+      if (first_step < 0 && rel > 1.0e-8) {
+        first_step = step;
+        first_bond = site;
+        first_rel = rel;
+      }
+    }
+    if (step == 300) {
+      break;
+    }
+    for (const auto& update : updates) {
+      fstate.simple_update(update);
+      bstate.simple_update(update);
+    }
+  }
+
+  std::cout << std::setprecision(17)
+            << "vertical lambda trajectory max_rel=" << max_rel
+            << " max_step=" << max_rel_step << " max_bond=" << max_rel_bond
+            << std::endl;
+  if (first_step < 0) {
+    std::cout << "vertical lambda trajectory case=A all vertical bond spectra "
+                 "match rtol=1e-8 through 300 steps"
+              << std::endl;
+  } else {
+    std::cout << "vertical lambda trajectory case=B first_step=" << first_step
+              << " first_bond=" << first_bond << " rel=" << first_rel
+              << std::endl;
+  }
+}
+
+TEST_CASE("diagnostic horizontal-chain measured energy fermion vs boson") {
+  if (std::getenv("TENES_RUN_CHAIN_MEASURE_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  auto make_lattice = []() {
+    tenes::SquareLattice lattice(2, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 2;
+      lattice.virtual_dims[site] = {2, 1, 2, 1};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  auto make_params = [](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(4, f::parity_vector{false, true});
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 100;
+    params.CTM_Convergence_Epsilon = 1.0e-10;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  auto make_updates = []() {
+    std::vector<tenes::EvolutionOperator<tensor>> updates;
+    const tensor gate = make_free_fermion_gate(0.01);
+    for (int site = 0; site < 4; ++site) {
+      updates.push_back(
+          tenes::make_twosite_EvolutionOperator(site, 2, 0, gate));
+    }
+    return updates;
+  };
+
+  tensor hopping(mptensor::Shape(2, 2, 2, 2));
+  hopping.set_value(mptensor::Index(0, 1, 1, 0), 1.0);
+  hopping.set_value(mptensor::Index(1, 0, 0, 1), 1.0);
+  tenes::Operators<tensor> twosite_ops;
+  for (int site = 0; site < 4; ++site) {
+    twosite_ops.emplace_back("hop", 0, site, std::vector<int>{1},
+                             std::vector<int>{0}, hopping);
+  }
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  const auto updates = make_updates();
+  auto fparams = make_params(true, "output_test_chain_measure_fermion");
+  auto bparams = make_params(false, "output_test_chain_measure_boson");
+  tenes::itps::iTPS<tensor> fstate(MPI_COMM_WORLD, fparams, lattice_f, updates,
+                                   tenes::EvolutionOperators<tensor>{},
+                                   tenes::Operators<tensor>{}, twosite_ops,
+                                   tenes::Operators<tensor>{},
+                                   tenes::itps::CorrelationParameter{},
+                                   tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(MPI_COMM_WORLD, bparams, lattice_b, updates,
+                                   tenes::EvolutionOperators<tensor>{},
+                                   tenes::Operators<tensor>{}, twosite_ops,
+                                   tenes::Operators<tensor>{},
+                                   tenes::itps::CorrelationParameter{},
+                                   tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto& flambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate);
+  auto& blambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate);
+  bTn = fTn;
+  blambda = flambda;
+
+  for (int step = 0; step < 300; ++step) {
+    for (const auto& update : updates) {
+      fstate.simple_update(update);
+      bstate.simple_update(update);
+    }
+  }
+
+  const auto diff = max_tn_diff(fTn, bTn);
+  std::cout << std::setprecision(17)
+            << "chain measure diag post-evolution component maxdiff="
+            << diff.max_abs << std::endl;
+  for (int site = 0; site < 4; ++site) {
+    std::cout << "chain measure diag lambda site=" << site << " fermion=["
+              << flambda[site][2][0] << "," << flambda[site][2][1]
+              << "] boson=[" << blambda[site][2][0] << ","
+              << blambda[site][2][1] << "]" << std::endl;
+  }
+
+  tenes::itps::iTPSTestAccessor::update_reduced_density_environment(fstate);
+  const auto fmeasured = fstate.measure_twosite();
+  bstate.update_CTM();
+  const auto bmeasured = bstate.measure_twosite();
+  REQUIRE(fmeasured.size() >= 1);
+  REQUIRE(bmeasured.size() >= 1);
+  for (int site = 0; site < 4; ++site) {
+    const auto key = tenes::itps::Bond{site, 1, 0};
+    std::cout << "chain measure diag hop site=" << site
+              << " fermion=" << fmeasured[0].at(key)
+              << " boson=" << bmeasured[0].at(key) << std::endl;
   }
 }
 

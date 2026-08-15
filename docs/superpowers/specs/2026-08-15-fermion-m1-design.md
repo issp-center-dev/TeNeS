@@ -348,3 +348,52 @@ pre-arrow の f-プリミティブで正しい。壊れるのはループを閉�
 
 **利点**: ループ系の規約バグのクラスを構造的に根絶。メモリは D⁴ 級に増えるが M1 の
 検証規模(D≤4)では問題ない。U(1) ブロック化(将来)とも両立。
+
+## 改訂3(2026-08-15): 2サイト演算子の graded 表現規約の確定(τ² 残差の根本原因)
+
+**症状**: 1D 極限 λ 軌跡診断(criterion (a))が wrap ボンドで τ² スケール乖離。
+
+**根本原因は 2 つの規約エラーの部分相殺**:
+
+1. **ゲートの素ロード**: 2サイト演算子 op[in1,in2,out1,out2] を素の行列成分
+   `<o1 o2|O|i1 i2>` のまま ftensor 化していた。graded tensordot の機械的マスク
+   (`(-1)^{|in1||in2|}`、B 側縮約脚の逆順化由来)が **in 脚両方奇のチャネル**
+   (例: exp(τh) の `|11><11|` 要素)を反転させる。正しい canonical 表現は
+   `fop = (-1)^{|i1||i2|} · <o1o2|O|i1i2>`、実装は **`wrap_twosite_op`**
+   (素ロード後に `apply_swap(fop, 0, 1)`)。Task 9 のホッピング演算子はこの
+   チャネルに要素を持たないため検出不能だった。**判別テスト**: `n⊗n`(非ゼロ要素が
+   両奇チャネルのみ)の 2 サイト適用 vs 検証済み 1 サイト適用合成
+   (test_fermion_layer.cpp「two-site operator doubly-odd input channel …」)。
+2. **regroup の符号なし転置**: `regroup_theta_for_svd`(ftensor 版)が
+   コミット 0d4c82f5 で「素 transpose + parity メタデータ並べ替え」になっていた。
+   (out1, aux2) 交差の Koszul 符号が欠落。正しくは graded transpose。
+
+**相殺の構造**: 素ロードの余剰マスク `(-1)^{m1·m2}` と regroup 欠落分
+`(-1)^{o1·q2}` は、パリティ偶テンソル上で恒等(対角)チャネルに対しては合成が
+「行パリティにのみ依存する対角ゲージ」に退化しスペクトル不変 → update 0 では
+一致し、ホッピング(O(τ))チャネルにのみ符号残差 → τ² スケールの λ 乖離として
+顕在化していた。両方修正後、criterion (a) は **300 ステップ機械精度(5.8e-14)で
+case=A** を達成。
+
+**経路ごとの演算子規約(重要)**:
+
+| 経路 | 規約 | 根拠 |
+|---|---|---|
+| simple update カーネル(直接 f-プリミティブ縮約) | **wrap_twosite_op(swap ロード)** | nn 判別テスト+λ軌跡 300 步機械精度 |
+| reduced pair blob(`build_reduced_pair`)測定 | **素ロード(plain)** | R3 oracle 対査(density_pair/mixed の両奇チャネル込みで 1e-12 一致) |
+
+blob 経路は doubling+joint-swap+gauge の経験的固定に規約が焼き込まれているため
+素ロードが正。M2 以降で単一規約への統一を検討(twosite_obs.cpp の NOTE 参照)。
+1 サイト演算子(rank-2)は in 脚交差が存在せず素ロードで両経路とも正しい。
+
+**ボンド方位の正規化(2D 崩壊の根本原因)**: Tn 脚順 (l,t,r,b,p) の下で、graded
+カーネルの canonical ボンド方位は**ラスタ順(左→右、上→下)**: ゲートの第1脚
+(source)は JW 順で先のサイト、すなわち横ボンドは左サイト(source_leg==2)、
+縦ボンドは**上**サイト(source_leg==3)でなければならない。source_leg∈{0,1} の
+更新は driver(`iTPS::simple_update`)で source/target の役割交換+素行列の
+(1,0,3,2) 転置により正規化する。判別診断: 縦鎖 λ 軌跡(t_x=0)が source_leg=1
+で case=B(τ スケール、1 ステップ目から)、source_leg=3 で case=A(3e-15)。
+逆向きに当てると誤った Koszul マスクが掛かり、2D では市松 CDW への崩壊
+(hopping ~1e-3、D=4 で負ノルム)として顕在化していた。
+`build_reduced_pair` の (top, bottom)/(left, right) 順序もこのラスタ順と整合
+(oracle 固定済み)。3 診断(横 leg2・縦 leg1・縦 leg3)すべて case=A を確認。

@@ -80,22 +80,38 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
     const int target = lattice.neighbor(source, source_leg);
     const int target_leg = (source_leg + 2) % 4;
     if (finfo.enabled) {
-      auto fTn1 = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
-      auto fTn2 = tenes::fermion::wrap_Tn(Tn[target], finfo, target);
-      tenes::fermion::ftensor<tensor> fop{
-          up.op,
-          {finfo.phys[source], finfo.phys[target], finfo.phys[source],
-           finfo.phys[target]}};
+      // Canonical fermionic bond orientation is raster order (left-to-right,
+      // top-to-bottom): the source of the graded gate must be the JW-earlier
+      // site, i.e. the left site of a horizontal bond (source_leg == 2) or
+      // the upper site of a vertical bond (source_leg == 3). Updates given
+      // in the opposite orientation are normalized by swapping the site
+      // roles and transposing the plain gate matrix accordingly; feeding the
+      // gate from the JW-later side applies wrong Koszul masks (verified by
+      // the vertical-chain lambda trajectory diagnostic).
+      int s1 = source;
+      int s2 = target;
+      int s1_leg = source_leg;
+      int s2_leg = target_leg;
+      tensor op12 = up.op;
+      if (source_leg == 0 || source_leg == 1) {
+        std::swap(s1, s2);
+        std::swap(s1_leg, s2_leg);
+        op12 = mptensor::transpose(up.op, mptensor::Axes(1, 0, 3, 2));
+      }
+      auto fTn1 = tenes::fermion::wrap_Tn(Tn[s1], finfo, s1);
+      auto fTn2 = tenes::fermion::wrap_Tn(Tn[s2], finfo, s2);
+      auto fop =
+          tenes::fermion::wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
       tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
-      core::Simple_update_bond(
-          fTn1, fTn2, lambda_tensor[source], lambda_tensor[target], fop,
-          source_leg, peps_parameters, fTn1_work, fTn2_work, lambda_work);
-      lambda_tensor[source][source_leg] = lambda_work;
-      lambda_tensor[target][target_leg] = lambda_work;
-      finfo.virt[source][source_leg] = fTn1_work.parity[source_leg];
-      finfo.virt[target][target_leg] = fTn2_work.parity[target_leg];
-      tenes::fermion::unwrap_Tn(fTn1_work, Tn[source], finfo, source);
-      tenes::fermion::unwrap_Tn(fTn2_work, Tn[target], finfo, target);
+      core::Simple_update_bond(fTn1, fTn2, lambda_tensor[s1], lambda_tensor[s2],
+                               fop, s1_leg, peps_parameters, fTn1_work,
+                               fTn2_work, lambda_work);
+      lambda_tensor[s1][s1_leg] = lambda_work;
+      lambda_tensor[s2][s2_leg] = lambda_work;
+      finfo.virt[s1][s1_leg] = fTn1_work.parity[s1_leg];
+      finfo.virt[s2][s2_leg] = fTn2_work.parity[s2_leg];
+      tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
+      tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
       return;
     }
     core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
