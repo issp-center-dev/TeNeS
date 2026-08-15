@@ -26,6 +26,16 @@ foreach(basename IN LISTS tenes_unit_tests)
   endif()
 endforeach()
 
+add_executable(test_fermion_layer test_fermion_layer.cpp)
+target_link_libraries(test_fermion_layer PUBLIC tenes_static)
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_layer
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_layer>)
+else()
+  add_test(NAME test_fermion_layer COMMAND $<TARGET_FILE:test_fermion_layer>)
+endif()
+
 # A syntactically broken input file must lead to a clean error exit,
 # not to an abort by an uncaught exception (WILL_FAIL passes on a
 # nonzero exit code but still fails if the process dies on a signal).
