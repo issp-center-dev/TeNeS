@@ -239,12 +239,15 @@ def print_case(name, lx, ly, parity, seed=0):
     patch, tensors, leg_parities = make_case(lx, ly, parity, seed)
     oracle = Oracle(patch, tensors, leg_parities)
     norm, n, bonds = oracle.observables()
+    mu = 0.7
     print(f"{name}.norm = {norm:.17e}")
     for i, value in enumerate(n):
         print(f"{name}.n{i} = {value:.17e}")
     for a, b, hop, pair in bonds:
+        mixed = -hop - 0.25 * mu * (n[a] + n[b])
         print(f"{name}.hop{a}{b} = {hop:.17e}")
         print(f"{name}.pair{a}{b} = {pair:.17e}")
+        print(f"{name}.mixed{a}{b} = {mixed:.17e}")
 
 
 def self_check():

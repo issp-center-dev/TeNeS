@@ -105,6 +105,53 @@ static ft r2_hop_op() {
   return op;
 }
 
+static ft r2_identity_pair_op() {
+  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+        {{false, true}, {false, true}, {false, true}, {false, true}}};
+  op.t.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+  op.t.set_value(mptensor::Index(0, 1, 0, 1), 1.0);
+  op.t.set_value(mptensor::Index(1, 0, 1, 0), 1.0);
+  op.t.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  return op;
+}
+
+static ft r2_density_a_op() {
+  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+        {{false, true}, {false, true}, {false, true}, {false, true}}};
+  op.t.set_value(mptensor::Index(1, 0, 1, 0), 1.0);
+  op.t.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  return op;
+}
+
+static ft r2_density_b_op() {
+  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+        {{false, true}, {false, true}, {false, true}, {false, true}}};
+  op.t.set_value(mptensor::Index(0, 1, 0, 1), 1.0);
+  op.t.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
+  return op;
+}
+
+static ft r2_mixed_op() {
+  constexpr double mu = 0.7;
+  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+        {{false, true}, {false, true}, {false, true}, {false, true}}};
+  op.t.set_value(mptensor::Index(0, 1, 1, 0), -1.0);
+  op.t.set_value(mptensor::Index(1, 0, 0, 1), -1.0);
+  op.t.set_value(mptensor::Index(0, 1, 0, 1), -0.25 * mu);
+  op.t.set_value(mptensor::Index(1, 0, 1, 0), -0.25 * mu);
+  op.t.set_value(mptensor::Index(1, 1, 1, 1), -0.5 * mu);
+  return op;
+}
+
+static ft r2_density_pair_op() {
+  ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
+        {{false, true}, {false, true}, {false, true}, {false, true}}};
+  op.t.set_value(mptensor::Index(0, 1, 0, 1), 1.0);
+  op.t.set_value(mptensor::Index(1, 0, 1, 0), 1.0);
+  op.t.set_value(mptensor::Index(1, 1, 1, 1), 2.0);
+  return op;
+}
+
 static ft r2_pair_op() {
   ft op{tenes::real_tensor(mptensor::Shape(2, 2, 2, 2)),
         {{false, true}, {false, true}, {false, true}, {false, true}}};
@@ -146,6 +193,38 @@ static double r3_sum_entries(const tenes::real_tensor& tensor) {
   return ret;
 }
 
+struct r3_tensor_diff {
+  double max_abs = 0.0;
+  mptensor::Index first_index;
+  double first_got = 0.0;
+  double first_expected = 0.0;
+};
+
+static r3_tensor_diff r3_compare_tensors(const tenes::real_tensor& got,
+                                         const tenes::real_tensor& expected) {
+  r3_tensor_diff ret;
+  REQUIRE(got.shape() == expected.shape());
+  bool found = false;
+  for (std::size_t n = 0; n < got.local_size(); ++n) {
+    const auto idx = got.global_index(n);
+    double gv;
+    double ev;
+    got.get_value(idx, gv);
+    expected.get_value(idx, ev);
+    const double diff = std::abs(gv - ev);
+    if (diff > ret.max_abs) {
+      ret.max_abs = diff;
+    }
+    if (!found && diff > 1.0e-12) {
+      ret.first_index = idx;
+      ret.first_got = gv;
+      ret.first_expected = ev;
+      found = true;
+    }
+  }
+  return ret;
+}
+
 static tenes::real_tensor r3_number_op_tensor() {
   tenes::real_tensor op(mptensor::Shape(2, 2));
   op.set_value(mptensor::Index(1, 1), 1.0);
@@ -163,6 +242,9 @@ struct r3_dataset_ref {
   double p_norm;
   std::array<double, 4> p_n;
   std::array<double, 4> p_hop;
+  double h_mixed;
+  double v_mixed;
+  std::array<double, 4> p_mixed;
 };
 
 static const r3_dataset_ref r3_refs[] = {
@@ -177,7 +259,11 @@ static const r3_dataset_ref r3_refs[] = {
      {2.08718041601653991e-02, 9.04495304092564401e-01, 4.35775657274577038e-02,
       9.25148998317175564e-01},
      {2.73390825968589414e-02, 1.94309350032059692e-03, 9.63079101517500154e-03,
-      -6.61038902919681842e-02}},
+      -6.61038902919681842e-02},
+     -1.87555923990316217e-02,
+     -3.87593236194719651e-03,
+     {-1.89278326541086644e-01, -1.32217332306546406e-02,
+      -3.29818543936879482e-01, -1.03423258415842642e-01}},
     {173,
      6.99752779917210531e-05,
      9.97583488910690597e-01,
@@ -189,206 +275,224 @@ static const r3_dataset_ref r3_refs[] = {
      {1.61225025287331764e-01, 9.94507681265915267e-01, 1.63971607379076845e-01,
       9.87796732360337271e-01},
      {-8.33515521666127329e-02, 6.24562346176388110e-03,
-      1.23072758949854030e-03, 1.50398236202810870e-01}}};
+      1.23072758949854030e-03, 1.50398236202810870e-01},
+     -3.49154221118741670e-01,
+     -3.49466736542323797e-01,
+     {-1.18901671480205487e-01, -6.31550341783853886e-02,
+      -3.48133999974092723e-01, -3.51957695657208358e-01}}};
 
-static tenes::real_tensor r3_reduced_site(
-    int lx, int ly, int site, bool with_number_op,
-    const tenes::fermion::reduced_variant& variant, int seed = 0) {
+static tenes::real_tensor r3_reduced_site(int lx, int ly, int site,
+                                          bool with_number_op, int seed = 0) {
   if (!with_number_op) {
-    return tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site, seed),
-                                         variant);
+    return tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site, seed));
   }
-  return mptensor::tensordot(tenes::fermion::build_reduced_op(
-                                 make_r2_tensor(lx, ly, site, seed), variant),
-                             r3_number_op_tensor(), mptensor::Axes(4, 5),
-                             mptensor::Axes(0, 1));
+  return mptensor::tensordot(
+      tenes::fermion::build_reduced_op(make_r2_tensor(lx, ly, site, seed)),
+      r3_number_op_tensor(), mptensor::Axes(4, 5), mptensor::Axes(0, 1));
 }
 
-static double r3_horizontal_norm(bool op0, bool op1,
-                                 const tenes::fermion::reduced_variant& variant,
-                                 int seed) {
-  return r3_sum_entries(
-      mptensor::tensordot(r3_reduced_site(2, 1, 0, op0, variant, seed),
-                          r3_reduced_site(2, 1, 1, op1, variant, seed),
-                          mptensor::Axes(2), mptensor::Axes(0)));
+static double r3_horizontal_norm(bool op0, bool op1, int seed) {
+  return r3_sum_entries(mptensor::tensordot(
+      r3_reduced_site(2, 1, 0, op0, seed), r3_reduced_site(2, 1, 1, op1, seed),
+      mptensor::Axes(2), mptensor::Axes(0)));
 }
 
-static double r3_vertical_norm(bool op0, bool op1,
-                               const tenes::fermion::reduced_variant& variant,
-                               int seed) {
-  return r3_sum_entries(
-      mptensor::tensordot(r3_reduced_site(1, 2, 0, op0, variant, seed),
-                          r3_reduced_site(1, 2, 1, op1, variant, seed),
-                          mptensor::Axes(3), mptensor::Axes(1)));
+static double r3_vertical_norm(bool op0, bool op1, int seed) {
+  return r3_sum_entries(mptensor::tensordot(
+      r3_reduced_site(1, 2, 0, op0, seed), r3_reduced_site(1, 2, 1, op1, seed),
+      mptensor::Axes(3), mptensor::Axes(1)));
 }
 
-static double r3_plaquette_norm(int number_site,
-                                const tenes::fermion::reduced_variant& variant,
-                                int seed) {
-  tenes::real_tensor top = mptensor::tensordot(
-      r3_reduced_site(2, 2, 0, number_site == 0, variant, seed),
-      r3_reduced_site(2, 2, 1, number_site == 1, variant, seed),
-      mptensor::Axes(2), mptensor::Axes(0));
-  tenes::real_tensor bottom = mptensor::tensordot(
-      r3_reduced_site(2, 2, 2, number_site == 2, variant, seed),
-      r3_reduced_site(2, 2, 3, number_site == 3, variant, seed),
-      mptensor::Axes(2), mptensor::Axes(0));
+static double r3_plaquette_norm(int number_site, int seed) {
+  tenes::real_tensor top =
+      mptensor::tensordot(r3_reduced_site(2, 2, 0, number_site == 0, seed),
+                          r3_reduced_site(2, 2, 1, number_site == 1, seed),
+                          mptensor::Axes(2), mptensor::Axes(0));
+  tenes::real_tensor bottom =
+      mptensor::tensordot(r3_reduced_site(2, 2, 2, number_site == 2, seed),
+                          r3_reduced_site(2, 2, 3, number_site == 3, seed),
+                          mptensor::Axes(2), mptensor::Axes(0));
   return r3_sum_entries(mptensor::tensordot(top, bottom, mptensor::Axes(2, 5),
                                             mptensor::Axes(1, 3)));
 }
 
 static double r3_plaquette_norm(int number_site = -1) {
-  return r3_plaquette_norm(number_site, tenes::fermion::reduced_variant{}, 0);
+  return r3_plaquette_norm(number_site, 0);
 }
 
-static double r3_pair_plaquette_norm(
-    int a, int b, const tenes::fermion::reduced_variant& variant, int seed) {
+static double r3_horizontal_pair_norm(const ft& op, int seed) {
+  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+      make_r2_tensor(2, 1, 0, seed), make_r2_tensor(2, 1, 1, seed), op,
+      tenes::fermion::reduced_pair_direction::horizontal));
+}
+
+static double r3_vertical_pair_norm(const ft& op, int seed) {
+  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+      make_r2_tensor(1, 2, 0, seed), make_r2_tensor(1, 2, 1, seed), op,
+      tenes::fermion::reduced_pair_direction::vertical));
+}
+
+static tenes::real_tensor r3_direct_pair_tensor(
+    int lx, int ly, int site_a, int site_b,
+    tenes::fermion::reduced_pair_direction direction, int seed) {
+  switch (direction) {
+    case tenes::fermion::reduced_pair_direction::horizontal:
+      return mptensor::tensordot(
+          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_a, seed)),
+          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_b, seed)),
+          mptensor::Axes(2), mptensor::Axes(0));
+    case tenes::fermion::reduced_pair_direction::vertical:
+      return mptensor::tensordot(
+          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_a, seed)),
+          tenes::fermion::build_reduced(make_r2_tensor(lx, ly, site_b, seed)),
+          mptensor::Axes(3), mptensor::Axes(1));
+    default:
+      throw std::runtime_error("r3_direct_pair_tensor: invalid direction");
+  }
+}
+
+static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
   if (a == 0 && b == 1) {
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
-        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 1, seed),
-        r2_hop_op(), tenes::fermion::reduced_pair_direction::horizontal,
-        variant);
+        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 1, seed), op,
+        tenes::fermion::reduced_pair_direction::horizontal);
     tenes::real_tensor bottom =
-        mptensor::tensordot(r3_reduced_site(2, 2, 2, false, variant, seed),
-                            r3_reduced_site(2, 2, 3, false, variant, seed),
+        mptensor::tensordot(r3_reduced_site(2, 2, 2, false, seed),
+                            r3_reduced_site(2, 2, 3, false, seed),
                             mptensor::Axes(2), mptensor::Axes(0));
     return r3_sum_entries(mptensor::tensordot(
         blob, bottom, mptensor::Axes(2, 5), mptensor::Axes(1, 3)));
   }
   if (a == 2 && b == 3) {
     tenes::real_tensor top =
-        mptensor::tensordot(r3_reduced_site(2, 2, 0, false, variant, seed),
-                            r3_reduced_site(2, 2, 1, false, variant, seed),
+        mptensor::tensordot(r3_reduced_site(2, 2, 0, false, seed),
+                            r3_reduced_site(2, 2, 1, false, seed),
                             mptensor::Axes(2), mptensor::Axes(0));
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
-        make_r2_tensor(2, 2, 2, seed), make_r2_tensor(2, 2, 3, seed),
-        r2_hop_op(), tenes::fermion::reduced_pair_direction::horizontal,
-        variant);
+        make_r2_tensor(2, 2, 2, seed), make_r2_tensor(2, 2, 3, seed), op,
+        tenes::fermion::reduced_pair_direction::horizontal);
     return r3_sum_entries(mptensor::tensordot(top, blob, mptensor::Axes(2, 5),
                                               mptensor::Axes(1, 3)));
   }
   if (a == 0 && b == 2) {
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
-        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 2, seed),
-        r2_hop_op(), tenes::fermion::reduced_pair_direction::vertical, variant);
+        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 2, seed), op,
+        tenes::fermion::reduced_pair_direction::vertical);
     tenes::real_tensor right =
-        mptensor::tensordot(r3_reduced_site(2, 2, 1, false, variant, seed),
-                            r3_reduced_site(2, 2, 3, false, variant, seed),
+        mptensor::tensordot(r3_reduced_site(2, 2, 1, false, seed),
+                            r3_reduced_site(2, 2, 3, false, seed),
                             mptensor::Axes(3), mptensor::Axes(1));
     return r3_sum_entries(mptensor::tensordot(blob, right, mptensor::Axes(2, 4),
                                               mptensor::Axes(0, 3)));
   }
   tenes::real_tensor left =
-      mptensor::tensordot(r3_reduced_site(2, 2, 0, false, variant, seed),
-                          r3_reduced_site(2, 2, 2, false, variant, seed),
+      mptensor::tensordot(r3_reduced_site(2, 2, 0, false, seed),
+                          r3_reduced_site(2, 2, 2, false, seed),
                           mptensor::Axes(3), mptensor::Axes(1));
   tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
-      make_r2_tensor(2, 2, 1, seed), make_r2_tensor(2, 2, 3, seed), r2_hop_op(),
-      tenes::fermion::reduced_pair_direction::vertical, variant);
+      make_r2_tensor(2, 2, 1, seed), make_r2_tensor(2, 2, 3, seed), op,
+      tenes::fermion::reduced_pair_direction::vertical);
   return r3_sum_entries(mptensor::tensordot(left, blob, mptensor::Axes(2, 4),
                                             mptensor::Axes(0, 3)));
 }
 
-static double r3_pair_plaquette_norm(int a, int b) {
-  return r3_pair_plaquette_norm(a, b, tenes::fermion::reduced_variant{}, 0);
+static double r3_pair_plaquette_norm(int a, int b, int seed) {
+  return r3_pair_plaquette_norm(a, b, r2_hop_op(), seed);
 }
 
-struct r3_eval {
-  std::array<double, 16> values;
-};
+constexpr int r3_joint_bit(int x, int y) { return x * 3 + (y < x ? y : y - 1); }
 
-static r3_eval r3_evaluate(const r3_dataset_ref& ref,
-                           const tenes::fermion::reduced_variant& variant) {
-  r3_eval ret{};
-  const double h_norm = r3_horizontal_norm(false, false, variant, ref.seed);
-  const double v_norm = r3_vertical_norm(false, false, variant, ref.seed);
-  const double p_norm = r3_plaquette_norm(-1, variant, ref.seed);
-  ret.values = {h_norm,
-                r3_horizontal_norm(true, false, variant, ref.seed) / h_norm,
-                r3_horizontal_norm(false, true, variant, ref.seed) / h_norm,
-                v_norm,
-                r3_vertical_norm(true, false, variant, ref.seed) / v_norm,
-                r3_vertical_norm(false, true, variant, ref.seed) / v_norm,
-                p_norm,
-                r3_plaquette_norm(0, variant, ref.seed) / p_norm,
-                r3_plaquette_norm(1, variant, ref.seed) / p_norm,
-                r3_plaquette_norm(2, variant, ref.seed) / p_norm,
-                r3_plaquette_norm(3, variant, ref.seed) / p_norm,
-                r3_pair_plaquette_norm(0, 1, variant, ref.seed) / p_norm,
-                r3_pair_plaquette_norm(0, 2, variant, ref.seed) / p_norm,
-                r3_pair_plaquette_norm(1, 3, variant, ref.seed) / p_norm,
-                r3_pair_plaquette_norm(2, 3, variant, ref.seed) / p_norm,
-                0.0};
+static void r3_apply_joint_swaps_with_mask(ft& a,
+                                           const std::vector<int>& bra_axes,
+                                           const std::vector<int>& ket_axes,
+                                           const std::vector<int>& leg_ids,
+                                           unsigned mask) {
+  for (int x = 0; x < 4; ++x) {
+    for (int y = 0; y < 4; ++y) {
+      if (x == y || (mask & (1u << r3_joint_bit(x, y))) == 0) {
+        continue;
+      }
+      for (std::size_t ix = 0; ix < leg_ids.size(); ++ix) {
+        if (leg_ids[ix] != x) {
+          continue;
+        }
+        for (std::size_t iy = 0; iy < leg_ids.size(); ++iy) {
+          if (leg_ids[iy] != y) {
+            continue;
+          }
+          tenes::fermion::apply_swap(a, ket_axes[ix], bra_axes[iy]);
+          tenes::fermion::apply_swap(a, bra_axes[ix], bra_axes[iy]);
+        }
+      }
+    }
+  }
+}
+
+static tenes::real_tensor r3_fuse_pair_with_mask(
+    const ft& doubled, const std::vector<int>& leg_ids, unsigned mask,
+    unsigned order_mask) {
+  const std::size_t nlegs = leg_ids.size();
+  ft prepared = doubled;
+  std::vector<int> bra_axes;
+  std::vector<int> ket_axes;
+  for (std::size_t ax = 0; ax < nlegs; ++ax) {
+    bra_axes.push_back(static_cast<int>(ax));
+    ket_axes.push_back(static_cast<int>(nlegs + ax));
+  }
+  r3_apply_joint_swaps_with_mask(prepared, bra_axes, ket_axes, leg_ids, mask);
+  mptensor::Axes interleaved;
+  for (std::size_t ax = 0; ax < nlegs; ++ax) {
+    if ((order_mask & (1u << ax)) == 0) {
+      interleaved.push(nlegs + ax);
+      interleaved.push(ax);
+    } else {
+      interleaved.push(ax);
+      interleaved.push(nlegs + ax);
+    }
+  }
+  ft ordered = tenes::fermion::transpose(prepared, interleaved);
+  mptensor::Shape sh;
+  for (std::size_t ax = 0; ax < nlegs; ++ax) {
+    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
+  }
+  return mptensor::reshape(ordered.t, sh);
+}
+
+static tenes::real_tensor r3_build_pair_with_mask(
+    const ft& a, const ft& b, const ft& op,
+    tenes::fermion::reduced_pair_direction direction, unsigned mask,
+    bool negate, unsigned order_mask = 0) {
+  ft ket;
+  std::vector<int> leg_ids;
+  switch (direction) {
+    case tenes::fermion::reduced_pair_direction::horizontal:
+      ket =
+          tenes::fermion::tensordot(a, b, mptensor::Axes(2), mptensor::Axes(0));
+      leg_ids = {0, 1, 3, 1, 2, 3};
+      break;
+    case tenes::fermion::reduced_pair_direction::vertical:
+      ket =
+          tenes::fermion::tensordot(a, b, mptensor::Axes(3), mptensor::Axes(1));
+      leg_ids = {0, 1, 2, 0, 2, 3};
+      break;
+    default:
+      throw std::runtime_error("r3_build_pair_with_mask: invalid direction");
+  }
+  ft op_ket = r2_apply_two_site(ket, 3, 7, op);
+  ft doubled =
+      tenes::fermion::tensordot(tenes::fermion::conj(ket), op_ket,
+                                mptensor::Axes(3, 7), mptensor::Axes(3, 7));
+  tenes::real_tensor ret =
+      r3_fuse_pair_with_mask(doubled, leg_ids, mask, order_mask);
+  if (negate) {
+    for (std::size_t n = 0; n < ret.local_size(); ++n) {
+      const auto idx = ret.global_index(n);
+      double v;
+      ret.get_value(idx, v);
+      ret.set_value(idx, -v);
+    }
+  }
   return ret;
-}
-
-static std::array<double, 16> r3_reference_values(const r3_dataset_ref& ref) {
-  return {ref.h_norm,   ref.h_n0,     ref.h_n1,     ref.v_norm,
-          ref.v_n0,     ref.v_n1,     ref.p_norm,   ref.p_n[0],
-          ref.p_n[1],   ref.p_n[2],   ref.p_n[3],   ref.p_hop[0],
-          ref.p_hop[1], ref.p_hop[2], ref.p_hop[3], 0.0};
-}
-
-static bool r3_close(double got, double ref) {
-  return std::abs(got - ref) <= 1.0e-10 * std::max(1.0, std::abs(ref));
-}
-
-static double r3_variant_score(const tenes::fermion::reduced_variant& variant,
-                               std::array<double, 16>* first_values = nullptr) {
-  double score = 0.0;
-  for (std::size_t d = 0; d < 2; ++d) {
-    const auto eval = r3_evaluate(r3_refs[d], variant);
-    const auto ref = r3_reference_values(r3_refs[d]);
-    if (d == 0 && first_values != nullptr) {
-      *first_values = eval.values;
-    }
-    for (std::size_t i = 0; i < ref.size() - 1; ++i) {
-      score += std::abs(eval.values[i] - ref[i]) /
-               std::max(1.0e-30, std::abs(ref[i]));
-    }
-  }
-  return score;
-}
-
-static bool r3_variant_passes(const tenes::fermion::reduced_variant& variant) {
-  for (const auto& dataset : r3_refs) {
-    const auto eval = r3_evaluate(dataset, variant);
-    const auto ref = r3_reference_values(dataset);
-    for (std::size_t i = 0; i < ref.size() - 1; ++i) {
-      if (!r3_close(eval.values[i], ref[i])) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-static std::string r3_mask_name(unsigned mask) {
-  const char* names[] = {"l", "t", "r", "b"};
-  std::ostringstream ss;
-  ss << "{";
-  bool first = true;
-  for (int i = 0; i < 4; ++i) {
-    if ((mask & (1u << i)) != 0) {
-      if (!first) {
-        ss << ",";
-      }
-      ss << names[i];
-      first = false;
-    }
-  }
-  ss << "}";
-  return ss.str();
-}
-
-static std::string r3_variant_name(
-    const tenes::fermion::reduced_variant& variant) {
-  std::ostringstream ss;
-  ss << "S_bra=" << r3_mask_name(variant.bra_mask)
-     << " S_ket=" << r3_mask_name(variant.ket_mask)
-     << " order=" << (variant.ket_first ? "(x,xbar)" : "(xbar,x)")
-     << " phys_twist=" << (variant.phys_twist ? "true" : "false");
-  return ss.str();
 }
 
 }  // namespace
@@ -439,7 +543,6 @@ TEST_CASE(
   const double hop23 = r2_expect_two(psi, 8, 11, hop_op);
   const double pair01 = r2_expect_two(psi, 2, 5, pair_op);
   const double pair02 = r2_expect_two(psi, 2, 8, pair_op);
-
   std::cout << "R2 plaquette fprimitive norm=" << norm << " n=[" << n0 << ", "
             << n1 << ", " << n2 << ", " << n3 << "] hop=[" << hop01 << ", "
             << hop02 << ", " << hop13 << ", " << hop23 << "] pair=[" << pair01
@@ -458,61 +561,182 @@ TEST_CASE(
   CHECK(pair02 == doctest::Approx(0.00000000000000000e+00).epsilon(1e-12));
 }
 
-TEST_CASE("R3 brute-force reduced convention search") {
-  std::vector<tenes::fermion::reduced_variant> passing;
-  struct candidate {
-    double score;
-    tenes::fermion::reduced_variant variant;
-    std::array<double, 16> first_values;
-  };
-  std::vector<candidate> best;
+TEST_CASE(
+    "R3 diagnostic identity pair blob matches direct reduced contraction") {
+  const ft id = r2_identity_pair_op();
 
-  for (unsigned bra_mask = 0; bra_mask < 16; ++bra_mask) {
-    for (unsigned ket_mask = 0; ket_mask < 16; ++ket_mask) {
-      for (bool ket_first : {false, true}) {
-        for (bool phys_twist : {false, true}) {
-          tenes::fermion::reduced_variant variant{bra_mask, ket_mask, ket_first,
-                                                  phys_twist};
-          std::array<double, 16> first_values{};
-          const double score = r3_variant_score(variant, &first_values);
-          best.push_back(candidate{score, variant, first_values});
-          if (r3_variant_passes(variant)) {
-            passing.push_back(variant);
-          }
-        }
+  const tenes::real_tensor h_blob = tenes::fermion::build_reduced_pair(
+      make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
+      tenes::fermion::reduced_pair_direction::horizontal);
+  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
+      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
+  const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
+  std::cout << "R3 identity horizontal max_abs_diff=" << h_diff.max_abs
+            << " first_idx=" << h_diff.first_index
+            << " got=" << h_diff.first_got
+            << " expected=" << h_diff.first_expected << std::endl;
+  CHECK(h_diff.max_abs == doctest::Approx(0.0).epsilon(1e-12));
+
+  const tenes::real_tensor v_blob = tenes::fermion::build_reduced_pair(
+      make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
+      tenes::fermion::reduced_pair_direction::vertical);
+  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
+      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
+  const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
+  std::cout << "R3 identity vertical max_abs_diff=" << v_diff.max_abs
+            << " first_idx=" << v_diff.first_index
+            << " got=" << v_diff.first_got
+            << " expected=" << v_diff.first_expected << std::endl;
+  CHECK(v_diff.max_abs == doctest::Approx(0.0).epsilon(1e-12));
+}
+
+TEST_CASE("R3 diagnostic search pair mask for identity consistency") {
+  std::vector<std::pair<unsigned, bool>> passing;
+  const ft id = r2_identity_pair_op();
+  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
+      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
+  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
+      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
+  for (unsigned mask = 0; mask < 4096; ++mask) {
+    for (bool negate : {false, true}) {
+      const tenes::real_tensor h_blob = r3_build_pair_with_mask(
+          make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
+          tenes::fermion::reduced_pair_direction::horizontal, mask, negate);
+      const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
+      if (h_diff.max_abs > 1.0e-12) {
+        continue;
+      }
+      const tenes::real_tensor v_blob = r3_build_pair_with_mask(
+          make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
+          tenes::fermion::reduced_pair_direction::vertical, mask, negate);
+      const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
+      if (v_diff.max_abs <= 1.0e-12) {
+        passing.push_back({mask, negate});
       }
     }
   }
-
-  std::sort(
-      best.begin(), best.end(),
-      [](const candidate& a, const candidate& b) { return a.score < b.score; });
-
-  std::cout << std::setprecision(17)
-            << "R3 search passing count=" << passing.size() << std::endl;
+  std::cout << "R3 identity pair-mask passing count=" << passing.size();
   for (const auto& variant : passing) {
-    std::cout << "R3 search passing " << r3_variant_name(variant) << std::endl;
+    std::cout << " mask=" << variant.first
+              << " negate=" << (variant.second ? "true" : "false");
   }
+  std::cout << std::endl;
+  CHECK(!passing.empty());
+}
 
-  if (passing.empty()) {
-    const auto ref = r3_reference_values(r3_refs[0]);
-    for (std::size_t i = 0; i < std::min<std::size_t>(10, best.size()); ++i) {
-      std::cout << "R3 search best[" << i << "] score=" << best[i].score << " "
-                << r3_variant_name(best[i].variant) << std::endl;
-      static const char* labels[] = {"h_norm", "h_n0",  "h_n1",   "v_norm",
-                                     "v_n0",   "v_n1",  "p_norm", "p_n0",
-                                     "p_n1",   "p_n2",  "p_n3",   "hop01",
-                                     "hop02",  "hop13", "hop23"};
-      for (std::size_t j = 0; j < ref.size() - 1; ++j) {
-        std::cout << "  " << labels[j] << " got=" << best[i].first_values[j]
-                  << " ref=" << ref[j]
-                  << " ratio=" << best[i].first_values[j] / ref[j]
-                  << " diff=" << best[i].first_values[j] - ref[j] << std::endl;
+TEST_CASE("R3 diagnostic search pair fuse ordering for identity consistency") {
+  constexpr unsigned mask =
+      (1u << r3_joint_bit(0, 3)) | (1u << r3_joint_bit(1, 0)) |
+      (1u << r3_joint_bit(2, 3)) | (1u << r3_joint_bit(3, 0));
+  std::vector<std::pair<unsigned, bool>> passing;
+  const ft id = r2_identity_pair_op();
+  const tenes::real_tensor h_direct = r3_direct_pair_tensor(
+      2, 1, 0, 1, tenes::fermion::reduced_pair_direction::horizontal, 0);
+  const tenes::real_tensor v_direct = r3_direct_pair_tensor(
+      1, 2, 0, 1, tenes::fermion::reduced_pair_direction::vertical, 0);
+  for (unsigned order_mask = 0; order_mask < 64; ++order_mask) {
+    for (bool negate : {false, true}) {
+      const tenes::real_tensor h_blob = r3_build_pair_with_mask(
+          make_r2_tensor(2, 1, 0), make_r2_tensor(2, 1, 1), id,
+          tenes::fermion::reduced_pair_direction::horizontal, mask, negate,
+          order_mask);
+      const r3_tensor_diff h_diff = r3_compare_tensors(h_blob, h_direct);
+      if (h_diff.max_abs > 1.0e-12) {
+        continue;
+      }
+      const tenes::real_tensor v_blob = r3_build_pair_with_mask(
+          make_r2_tensor(1, 2, 0), make_r2_tensor(1, 2, 1), id,
+          tenes::fermion::reduced_pair_direction::vertical, mask, negate,
+          order_mask);
+      const r3_tensor_diff v_diff = r3_compare_tensors(v_blob, v_direct);
+      if (v_diff.max_abs <= 1.0e-12) {
+        passing.push_back({order_mask, negate});
       }
     }
   }
+  std::cout << "R3 identity pair-order passing count=" << passing.size();
+  for (const auto& variant : passing) {
+    std::cout << " order_mask=" << variant.first
+              << " negate=" << (variant.second ? "true" : "false");
+  }
+  std::cout << std::endl;
+  CHECK(!passing.empty());
+}
 
-  CHECK(best.size() == 1024);
+TEST_CASE("R3 diagnostic split density pair blob matches site impurities") {
+  const ft n_a = r2_density_a_op();
+  const ft n_b = r2_density_b_op();
+
+  for (const auto& ref : r3_refs) {
+    const double h_norm = r3_horizontal_norm(false, false, ref.seed);
+    const double h_a = r3_horizontal_pair_norm(n_a, ref.seed) / h_norm;
+    const double h_b = r3_horizontal_pair_norm(n_b, ref.seed) / h_norm;
+    std::cout << "R3 split density horizontal seed=" << ref.seed << " A=" << h_a
+              << " refA=" << ref.h_n0 << " B=" << h_b << " refB=" << ref.h_n1
+              << std::endl;
+    CHECK(h_a == doctest::Approx(ref.h_n0).epsilon(1e-12));
+    CHECK(h_b == doctest::Approx(ref.h_n1).epsilon(1e-12));
+
+    const double v_norm = r3_vertical_norm(false, false, ref.seed);
+    const double v_a = r3_vertical_pair_norm(n_a, ref.seed) / v_norm;
+    const double v_b = r3_vertical_pair_norm(n_b, ref.seed) / v_norm;
+    std::cout << "R3 split density vertical seed=" << ref.seed << " A=" << v_a
+              << " refA=" << ref.v_n0 << " B=" << v_b << " refB=" << ref.v_n1
+              << std::endl;
+    CHECK(v_a == doctest::Approx(ref.v_n0).epsilon(1e-12));
+    CHECK(v_b == doctest::Approx(ref.v_n1).epsilon(1e-12));
+  }
+}
+
+TEST_CASE("R3 reduced convention agrees with oracle on both datasets") {
+  const int bonds[][2] = {{0, 1}, {0, 2}, {1, 3}, {2, 3}};
+  const ft density_op = r2_density_pair_op();
+  const ft hop_op = r2_hop_op();
+  const ft mixed_op = r2_mixed_op();
+  for (const auto& ref : r3_refs) {
+    const double h_norm = r3_horizontal_norm(false, false, ref.seed);
+    CHECK(h_norm == doctest::Approx(ref.h_norm).epsilon(1e-12));
+    CHECK(r3_horizontal_norm(true, false, ref.seed) / h_norm ==
+          doctest::Approx(ref.h_n0).epsilon(1e-12));
+    CHECK(r3_horizontal_norm(false, true, ref.seed) / h_norm ==
+          doctest::Approx(ref.h_n1).epsilon(1e-12));
+    CHECK(r3_horizontal_pair_norm(hop_op, ref.seed) / h_norm ==
+          doctest::Approx(0.0).epsilon(1e-12));
+    CHECK(r3_horizontal_pair_norm(density_op, ref.seed) / h_norm ==
+          doctest::Approx(ref.h_n0 + ref.h_n1).epsilon(1e-12));
+    CHECK(r3_horizontal_pair_norm(mixed_op, ref.seed) / h_norm ==
+          doctest::Approx(ref.h_mixed).epsilon(1e-12));
+
+    const double v_norm = r3_vertical_norm(false, false, ref.seed);
+    CHECK(v_norm == doctest::Approx(ref.v_norm).epsilon(1e-12));
+    CHECK(r3_vertical_norm(true, false, ref.seed) / v_norm ==
+          doctest::Approx(ref.v_n0).epsilon(1e-12));
+    CHECK(r3_vertical_norm(false, true, ref.seed) / v_norm ==
+          doctest::Approx(ref.v_n1).epsilon(1e-12));
+    CHECK(r3_vertical_pair_norm(hop_op, ref.seed) / v_norm ==
+          doctest::Approx(0.0).epsilon(1e-12));
+    CHECK(r3_vertical_pair_norm(density_op, ref.seed) / v_norm ==
+          doctest::Approx(ref.v_n0 + ref.v_n1).epsilon(1e-12));
+    CHECK(r3_vertical_pair_norm(mixed_op, ref.seed) / v_norm ==
+          doctest::Approx(ref.v_mixed).epsilon(1e-12));
+
+    const double p_norm = r3_plaquette_norm(-1, ref.seed);
+    CHECK(p_norm == doctest::Approx(ref.p_norm).epsilon(1e-12));
+    for (int site = 0; site < 4; ++site) {
+      CHECK(r3_plaquette_norm(site, ref.seed) / p_norm ==
+            doctest::Approx(ref.p_n[site]).epsilon(1e-12));
+    }
+    for (int i = 0; i < 4; ++i) {
+      const int a = bonds[i][0];
+      const int b = bonds[i][1];
+      CHECK(r3_pair_plaquette_norm(a, b, ref.seed) / p_norm ==
+            doctest::Approx(ref.p_hop[i]).epsilon(1e-12));
+      CHECK(r3_pair_plaquette_norm(a, b, density_op, ref.seed) / p_norm ==
+            doctest::Approx(ref.p_n[a] + ref.p_n[b]).epsilon(1e-12));
+      CHECK(r3_pair_plaquette_norm(a, b, mixed_op, ref.seed) / p_norm ==
+            doctest::Approx(ref.p_mixed[i]).epsilon(1e-12));
+    }
+  }
 }
 
 TEST_CASE("R3 reduced physical-open tensor traces to reduced norm tensor") {
@@ -534,10 +758,10 @@ TEST_CASE("R3 reduced physical-open tensor traces to reduced norm tensor") {
 
 TEST_CASE("R3 default reduced pair blob diagnostic is finite") {
   const double norm = r3_plaquette_norm();
-  const double hop01 = r3_pair_plaquette_norm(0, 1) / norm;
-  const double hop02 = r3_pair_plaquette_norm(0, 2) / norm;
-  const double hop13 = r3_pair_plaquette_norm(1, 3) / norm;
-  const double hop23 = r3_pair_plaquette_norm(2, 3) / norm;
+  const double hop01 = r3_pair_plaquette_norm(0, 1, 0) / norm;
+  const double hop02 = r3_pair_plaquette_norm(0, 2, 0) / norm;
+  const double hop13 = r3_pair_plaquette_norm(1, 3, 0) / norm;
+  const double hop23 = r3_pair_plaquette_norm(2, 3, 0) / norm;
   std::cout << std::setprecision(17) << "R3 reduced pair plaquette hop=["
             << hop01 << ", " << hop02 << ", " << hop13 << ", " << hop23 << "]"
             << std::endl;
