@@ -540,21 +540,15 @@ int svd_trunc(const ftensor<tensor>& a, const mptensor::Axes& rows,
       mptensor::reshape(full_u.t, mptensor::Shape(drow, full_s.size()));
   tensor full_vt_mat =
       mptensor::reshape(full_vt.t, mptensor::Shape(full_s.size(), dcol));
-  typename tensor::comm_type comm = a.t.get_comm();
-  tensor u_mat(comm, mptensor::Shape(drow, nkeep));
-  tensor vt_mat(comm, mptensor::Shape(nkeep, dcol));
-  for (std::size_t n = 0; n < u_mat.local_size(); ++n) {
-    auto idx = u_mat.global_index(n);
-    typename tensor::value_type v;
-    full_u_mat.get_value(mptensor::Index(idx[0], order[idx[1]]), v);
-    u_mat.set_value(idx, v);
+  tensor selector(a.t.get_comm(), mptensor::Shape(full_s.size(), nkeep));
+  for (std::size_t n = 0; n < selector.local_size(); ++n) {
+    auto idx = selector.global_index(n);
+    selector.set_value(idx, order[idx[1]] == idx[0] ? 1.0 : 0.0);
   }
-  for (std::size_t n = 0; n < vt_mat.local_size(); ++n) {
-    auto idx = vt_mat.global_index(n);
-    typename tensor::value_type v;
-    full_vt_mat.get_value(mptensor::Index(order[idx[0]], idx[1]), v);
-    vt_mat.set_value(idx, v);
-  }
+  tensor u_mat = mptensor::tensordot(full_u_mat, selector, mptensor::Axes(1),
+                                     mptensor::Axes(0));
+  tensor vt_mat = mptensor::tensordot(selector, full_vt_mat, mptensor::Axes(0),
+                                      mptensor::Axes(0));
 
   mptensor::Shape u_shape = row_shape;
   u_shape.push(nkeep);
