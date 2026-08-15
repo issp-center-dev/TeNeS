@@ -386,6 +386,28 @@ blob 経路は doubling+joint-swap+gauge の経験的固定に規約が焼き込
 素ロードが正。M2 以降で単一規約への統一を検討(twosite_obs.cpp の NOTE 参照)。
 1 サイト演算子(rank-2)は in 脚交差が存在せず素ロードで両経路とも正しい。
 
+**測定経路の 2 バグ(E2E「CDW 崩壊」の真因は測定側)**: 弱2D結合診断
+(t_y=0.1、TENES_RUN_WEAK2D_DIAG)で、λ ゲージ平均場推定(f-プリミティブのみ、
+CTM 非依存)と本番 CTM 測定を bond ごとに比較して確定:
+
+1. **λ の二重計上**: reduced tensor 構築前に Tn へ full-λ dressing をしていた。
+   TeNeS の規約ではカーネルが √Schmidt を bond 両端の Tn に書き込むため
+   **状態 = bare Tn の直接縮約**(ボゾン CTM 経路と同じ)。full-λ dressing は
+   MeanField 経路の規約であり、CTM に渡すと環境重みが二重になる
+   (λ が縮退に近い状態では偶然無害 → 1D 鎖検証をすり抜けた)。
+2. **wrap ボンドの blob ペア順序逆転**: `wraps_right`/`wraps_up` 分岐が wrap
+   ボンドで build_reduced_pair の (A,B) を逆順にしていた。窓の indices は既に
+   幾何役割(col0=左、row0=上)で正しく、無限格子に境界はないため wrap の
+   特別扱いは丸ごと不要。逆転は blob と環境テンソルの割り当て不整合を生み
+   wrap ボンドの測定値が ~0 に死んでいた(過去の検証は全サイト同一テンソル
+   だったため逆転が不可視だった)。
+
+修正後、t_y=0.1・D=2 で全 8 ボンドが MF 推定と一致、E/site = −0.639 vs 厳密
+−0.638(0.2%)。なお軌跡(simple update)は開放 2×2 プラケットのカーネル vs
+厳密 Trotter 比較(TENES_RUN_PLAQUETTE_TROTTER_DIAG、無切断域で 1e-16)で健全と
+証明済み — E2E の見かけの「市松 CDW・負ノルム」はすべて測定アーティファクト
+だった。
+
 **ボンド方位の正規化(2D 崩壊の根本原因)**: Tn 脚順 (l,t,r,b,p) の下で、graded
 カーネルの canonical ボンド方位は**ラスタ順(左→右、上→下)**: ゲートの第1脚
 (source)は JW 順で先のサイト、すなわち横ボンドは左サイト(source_leg==2)、

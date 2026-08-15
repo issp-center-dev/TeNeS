@@ -175,25 +175,9 @@ auto iTPS<ptensor>::measure_twosite()
         if (nrow == 2) {
           const int top = indices[0][0];
           const int bottom = indices[1][0];
-          tenes::fermion::ftensor<ptensor> id{
-              ptensor(mptensor::Shape(
-                  finfo.phys[top].size(), finfo.phys[bottom].size(),
-                  finfo.phys[top].size(), finfo.phys[bottom].size())),
-              {finfo.phys[top], finfo.phys[bottom], finfo.phys[top],
-               finfo.phys[bottom]}};
-          for (std::size_t n = 0; n < id.t.local_size(); ++n) {
-            auto idx = id.t.global_index(n);
-            if (idx[0] == idx[2] && idx[1] == idx[3]) {
-              id.t.set_value(idx, 1.0);
-            }
-          }
-          const ptensor dressed_top = tenes::fermion::lambda_dressed_tensor(
-              *(Tn_[0][0]), lambda_tensor[top]);
-          const ptensor dressed_bottom = tenes::fermion::lambda_dressed_tensor(
-              *(Tn_[1][0]), lambda_tensor[bottom]);
           const ptensor blob = tenes::fermion::build_reduced_identity_pair(
-              tenes::fermion::wrap_Tn(dressed_top, finfo, top),
-              tenes::fermion::wrap_Tn(dressed_bottom, finfo, bottom),
+              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
+              tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom),
               tenes::fermion::reduced_pair_direction::vertical);
           norms[norm_key] =
               tenes::fermion::contract_reduced_pair_vertical_density_CTM(
@@ -202,25 +186,9 @@ auto iTPS<ptensor>::measure_twosite()
         } else {
           const int left = indices[0][0];
           const int right = indices[0][1];
-          tenes::fermion::ftensor<ptensor> id{
-              ptensor(mptensor::Shape(
-                  finfo.phys[left].size(), finfo.phys[right].size(),
-                  finfo.phys[left].size(), finfo.phys[right].size())),
-              {finfo.phys[left], finfo.phys[right], finfo.phys[left],
-               finfo.phys[right]}};
-          for (std::size_t n = 0; n < id.t.local_size(); ++n) {
-            auto idx = id.t.global_index(n);
-            if (idx[0] == idx[2] && idx[1] == idx[3]) {
-              id.t.set_value(idx, 1.0);
-            }
-          }
-          const ptensor dressed_left = tenes::fermion::lambda_dressed_tensor(
-              *(Tn_[0][0]), lambda_tensor[left]);
-          const ptensor dressed_right = tenes::fermion::lambda_dressed_tensor(
-              *(Tn_[0][1]), lambda_tensor[right]);
           const ptensor blob = tenes::fermion::build_reduced_identity_pair(
-              tenes::fermion::wrap_Tn(dressed_left, finfo, left),
-              tenes::fermion::wrap_Tn(dressed_right, finfo, right),
+              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
+              tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right),
               tenes::fermion::reduced_pair_direction::horizontal);
           norms[norm_key] =
               tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
@@ -260,24 +228,13 @@ auto iTPS<ptensor>::measure_twosite()
             if (top != source) {
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
             }
-            const ptensor dressed_top = tenes::fermion::lambda_dressed_tensor(
-                *(Tn_[0][0]), lambda_tensor[top]);
-            const ptensor dressed_bottom =
-                tenes::fermion::lambda_dressed_tensor(*(Tn_[1][0]),
-                                                      lambda_tensor[bottom]);
-            const bool wraps_up = lattice.y(source) + dy >= lattice.LY;
-            const ptensor blob =
-                wraps_up
-                    ? tenes::fermion::build_reduced_pair(
-                          tenes::fermion::wrap_Tn(dressed_bottom, finfo,
-                                                  bottom),
-                          tenes::fermion::wrap_Tn(dressed_top, finfo, top), o,
-                          tenes::fermion::reduced_pair_direction::vertical)
-                    : tenes::fermion::build_reduced_pair(
-                          tenes::fermion::wrap_Tn(dressed_top, finfo, top),
-                          tenes::fermion::wrap_Tn(dressed_bottom, finfo,
-                                                  bottom),
-                          o, tenes::fermion::reduced_pair_direction::vertical);
+            // The window rows already carry geometric roles (row 0 = upper),
+            // and the infinite lattice has no boundary, so bonds whose target
+            // wraps around the unit cell need no special ordering.
+            const ptensor blob = tenes::fermion::build_reduced_pair(
+                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
+                tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom), o,
+                tenes::fermion::reduced_pair_direction::vertical);
             value = tenes::fermion::contract_reduced_pair_vertical_density_CTM(
                 C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
                 eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], blob);
@@ -310,22 +267,12 @@ auto iTPS<ptensor>::measure_twosite()
             if (left != source) {
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
             }
-            const ptensor dressed_left = tenes::fermion::lambda_dressed_tensor(
-                *(Tn_[0][0]), lambda_tensor[left]);
-            const ptensor dressed_right = tenes::fermion::lambda_dressed_tensor(
-                *(Tn_[0][1]), lambda_tensor[right]);
-            const bool wraps_right = lattice.x(source) + dx >= lattice.LX;
-            const ptensor blob =
-                wraps_right
-                    ? tenes::fermion::build_reduced_pair(
-                          tenes::fermion::wrap_Tn(dressed_right, finfo, right),
-                          tenes::fermion::wrap_Tn(dressed_left, finfo, left), o,
-                          tenes::fermion::reduced_pair_direction::horizontal)
-                    : tenes::fermion::build_reduced_pair(
-                          tenes::fermion::wrap_Tn(dressed_left, finfo, left),
-                          tenes::fermion::wrap_Tn(dressed_right, finfo, right),
-                          o,
-                          tenes::fermion::reduced_pair_direction::horizontal);
+            // Window columns already carry geometric roles (col 0 = left);
+            // see the vertical branch.
+            const ptensor blob = tenes::fermion::build_reduced_pair(
+                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
+                tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right), o,
+                tenes::fermion::reduced_pair_direction::horizontal);
             value =
                 tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
                     C1[left], C2[right], C3[right], C4[left], eTt[left],

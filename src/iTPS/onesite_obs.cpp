@@ -86,20 +86,16 @@ auto iTPS<tensor>::measure_onesite()
       }
     } else if (finfo.enabled) {
       for (int i = 0; i < N_UNIT; ++i) {
-        const tensor dressed =
-            tenes::fermion::lambda_dressed_tensor(Tn[i], lambda_tensor[i]);
         const tensor reduced = tenes::fermion::build_reduced_op(
-            tenes::fermion::wrap_Tn(dressed, finfo, i));
+            tenes::fermion::wrap_Tn(Tn[i], finfo, i));
         norm[i] = core::Contract_one_site_density_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], reduced,
             op_identity[i]);
       }
       for (auto const &op : onesite_operators) {
         const int i = op.source_site;
-        const tensor dressed =
-            tenes::fermion::lambda_dressed_tensor(Tn[i], lambda_tensor[i]);
         const tensor reduced = tenes::fermion::build_reduced_op(
-            tenes::fermion::wrap_Tn(dressed, finfo, i));
+            tenes::fermion::wrap_Tn(Tn[i], finfo, i));
         const auto val = core::Contract_one_site_density_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], reduced,
             op.op);

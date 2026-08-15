@@ -40,6 +40,7 @@
 #include "../src/iTPS/core/ctm.hpp"
 #include "../src/iTPS/core/contract.hpp"
 #include "../src/iTPS/core/contract_itps_ctm.hpp"
+#include "../src/iTPS/core/simple_update.hpp"
 
 using namespace tenes::fermion;
 
@@ -70,10 +71,9 @@ struct iTPSTestAccessor {
 
   template <class tensor>
   static void update_reduced_density_environment(iTPS<tensor>& state) {
-    const std::vector<tensor> dressed =
-        tenes::fermion::lambda_dressed_tensors(state.Tn, state.lambda_tensor);
+    // Bare Tn, matching measure.cpp: the CTM provides the environment.
     const std::vector<tensor> reduced =
-        tenes::fermion::build_reduced_density_tensors(dressed, state.finfo);
+        tenes::fermion::build_reduced_density_tensors(state.Tn, state.finfo);
     core::Calc_CTM_Environment_density(
         state.C1, state.C2, state.C3, state.C4, state.eTt, state.eTr, state.eTb,
         state.eTl, reduced, state.peps_parameters, state.lattice);
@@ -1928,6 +1928,349 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
   }
 }
 
+TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
+  if (std::getenv("TENES_RUN_WEAK2D_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  const char* ty_env = std::getenv("TENES_WEAK2D_TY");
+  const double ty = (ty_env != nullptr) ? std::atof(ty_env) : 0.1;
+  const char* steps_env = std::getenv("TENES_WEAK2D_STEPS");
+  const int nsteps = (steps_env != nullptr) ? std::atoi(steps_env) : 1000;
+
+  tenes::SquareLattice lattice(2, 2);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    lattice.physical_dims[site] = 2;
+    lattice.virtual_dims[site] = {2, 2, 2, 2};
+    lattice.initial_dirs[site] = {0.0};
+    lattice.noises[site] = 1.0;
+  }
+
+  tenes::itps::PEPS_Parameters params;
+  params.fermion = true;
+  params.phys_parity.assign(4, f::parity_vector{false, true});
+  params.print_level = tenes::PrintLevel::none;
+  params.outdir = "output_test_weak2d";
+  params.CHI = 8;
+  params.Max_CTM_Iteration = 100;
+  params.CTM_Convergence_Epsilon = 1.0e-10;
+  params.Use_RSVD = false;
+  params.seed = 11;
+
+  std::vector<tenes::EvolutionOperator<tensor>> updates;
+  const tensor hgate = make_free_fermion_gate(0.01);
+  const tensor vgate = make_free_fermion_gate(0.01 * ty);
+  for (int site = 0; site < 4; ++site) {
+    updates.push_back(tenes::make_twosite_EvolutionOperator(site, 2, 0, hgate));
+  }
+  for (int site = 0; site < 4; ++site) {
+    updates.push_back(tenes::make_twosite_EvolutionOperator(site, 1, 0, vgate));
+  }
+
+  tensor hopping(mptensor::Shape(2, 2, 2, 2));
+  hopping.set_value(mptensor::Index(0, 1, 1, 0), 1.0);
+  hopping.set_value(mptensor::Index(1, 0, 0, 1), 1.0);
+  tenes::Operators<tensor> twosite_ops;
+  for (int site = 0; site < 4; ++site) {
+    twosite_ops.emplace_back("hop", 0, site, std::vector<int>{1},
+                             std::vector<int>{0}, hopping);
+    twosite_ops.emplace_back("hop", 0, site, std::vector<int>{0},
+                             std::vector<int>{1}, hopping);
+  }
+
+  tenes::itps::iTPS<tensor> state(MPI_COMM_WORLD, params, lattice, updates,
+                                  tenes::EvolutionOperators<tensor>{},
+                                  tenes::Operators<tensor>{}, twosite_ops,
+                                  tenes::Operators<tensor>{},
+                                  tenes::itps::CorrelationParameter{},
+                                  tenes::itps::TransferMatrix_Parameters{});
+  auto& lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(state);
+  auto& finfo = tenes::itps::iTPSTestAccessor::finfo(state);
+
+  for (int step = 0; step < nsteps; ++step) {
+    for (const auto& update : updates) {
+      state.simple_update(update);
+    }
+    if ((step + 1) % (nsteps / 10) == 0) {
+      std::cout << std::setprecision(10) << "weak2d step=" << step + 1;
+      for (int site = 0; site < 4; ++site) {
+        const auto h = sorted_desc(lambda[site][2]);
+        std::cout << " lamH" << site << "=[" << h[0] << "," << h[1] << "]";
+      }
+      for (int site = 0; site < 2; ++site) {
+        const auto v = sorted_desc(lambda[site][1]);
+        std::cout << " lamV" << site << "=[" << v[0] << "," << v[1] << "]";
+      }
+      std::cout << std::endl;
+    }
+  }
+  for (int site = 0; site < 4; ++site) {
+    for (int leg : {2, 1}) {
+      std::cout << "weak2d final parity site=" << site << " leg=" << leg
+                << " =[";
+      for (std::size_t i = 0; i < finfo.virt[site][leg].size(); ++i) {
+        std::cout << (finfo.virt[site][leg][i] ? 1 : 0);
+      }
+      std::cout << "] lambda=[";
+      for (const double v : lambda[site][leg]) {
+        std::cout << std::setprecision(10) << v << ",";
+      }
+      std::cout << "]" << std::endl;
+    }
+  }
+
+  tenes::itps::iTPSTestAccessor::update_reduced_density_environment(state);
+  const auto measured = state.measure_twosite();
+  REQUIRE(measured.size() >= 1);
+  for (int site = 0; site < 4; ++site) {
+    std::cout << std::setprecision(10) << "weak2d measured hop site=" << site
+              << " dx=" << measured[0].at(tenes::itps::Bond{site, 1, 0})
+              << " dy=" << measured[0].at(tenes::itps::Bond{site, 0, 1})
+              << std::endl;
+  }
+
+  // CTM-independent mean-field (lambda-gauge) estimate per bond via the
+  // f-primitive open network: <theta|h|theta>/<theta|theta>.
+  auto& Tn = tenes::itps::iTPSTestAccessor::Tn(state);
+  const auto fop_h = f::wrap_twosite_op(hopping, f::parity_vector{false, true},
+                                        f::parity_vector{false, true});
+  auto mf_bond = [&](int source, int source_leg) {
+    // Normalize orientation exactly like the driver.
+    int s1 = source;
+    int s2 = lattice.neighbor(source, source_leg);
+    int s1_leg = source_leg;
+    if (source_leg == 0 || source_leg == 1) {
+      std::swap(s1, s2);
+      s1_leg = (source_leg + 2) % 4;
+    }
+    const auto fTn1 = f::wrap_Tn(Tn[s1], finfo, s1);
+    const auto fTn2 = f::wrap_Tn(Tn[s2], finfo, s2);
+    const auto data =
+        diagnostic_gate_data(fTn1, fTn2, lambda[s1], lambda[s2], fop_h, s1_leg);
+    // theta_before: (aux1, p1, aux2, p2); numerator via graded application.
+    auto applied = f::tensordot(data.theta_before, fop_h, mptensor::Axes(1, 3),
+                                mptensor::Axes(0, 1));
+    applied = f::transpose(applied, mptensor::Axes(0, 2, 1, 3));
+    const double num =
+        f::trace(f::conj(data.theta_before), applied,
+                 mptensor::Axes(0, 1, 2, 3), mptensor::Axes(0, 1, 2, 3));
+    const double den =
+        f::trace(f::conj(data.theta_before), data.theta_before,
+                 mptensor::Axes(0, 1, 2, 3), mptensor::Axes(0, 1, 2, 3));
+    return num / den;
+  };
+  for (int site = 0; site < 4; ++site) {
+    std::cout << std::setprecision(10) << "weak2d MF hop site=" << site
+              << " dx=" << mf_bond(site, 2) << " dy=" << mf_bond(site, 1)
+              << std::endl;
+  }
+}
+
+TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
+  if (std::getenv("TENES_RUN_PLAQUETTE_TROTTER_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+  using fts = f::ftensor<tensor>;
+
+  // Bond dimension 8 with initial support on {index 0 (even), index 1 (odd)}
+  // only: theta rank stays <= 8 = dc through the first TWO sweeps, so the
+  // kernel performs NO truncation there and must match the exact reference
+  // to numerical precision. Sweep 3 onward truncates (reported only).
+  constexpr int D = 8;
+  f::parity_vector bond_par(D, false);
+  bond_par[1] = true;
+  const f::parity_vector triv{false};
+  const f::parity_vector phys{false, true};
+
+  // Open 2x2 patch, sites in raster order: 0=TL, 1=TR, 2=BL, 3=BR.
+  // Leg order (l, t, r, b, p); open legs have dimension 1.
+  auto make_site = [&](std::size_t l, std::size_t t, std::size_t r,
+                       std::size_t b, unsigned seed) {
+    f::leg_parities p{l == 1 ? triv : bond_par, t == 1 ? triv : bond_par,
+                      r == 1 ? triv : bond_par, b == 1 ? triv : bond_par, phys};
+    tensor a(mptensor::Shape(l, t, r, b, 2));
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+    for (std::size_t n = 0; n < a.local_size(); ++n) {
+      const auto idx = a.global_index(n);
+      const double v = dist(gen);
+      bool in_support = true;
+      for (int leg = 0; leg < 4; ++leg) {
+        if (a.shape()[leg] > 1 && idx[leg] > 1) {
+          in_support = false;
+        }
+      }
+      if (in_support && f::count_odd(p, idx) % 2 == 0) {
+        a.set_value(idx, v);
+      }
+    }
+    return fts{a, p};
+  };
+
+  std::array<fts, 4> Tn = {
+      make_site(1, 1, D, D, 101), make_site(D, 1, 1, D, 102),
+      make_site(1, D, D, 1, 103), make_site(D, D, 1, 1, 104)};
+  std::array<std::vector<std::vector<double>>, 4> lambda;
+  for (int s = 0; s < 4; ++s) {
+    lambda[s].resize(4);
+    for (int leg = 0; leg < 4; ++leg) {
+      lambda[s][leg].assign(Tn[s].shape()[leg], 1.0);
+    }
+  }
+
+  tenes::itps::PEPS_Parameters params;
+  params.Inverse_lambda_cut = 1.0e-12;
+
+  const double tau = 0.05;
+  const tensor gate = make_free_fermion_gate(tau);
+  const auto fop = [&](int s1, int s2) {
+    static_cast<void>(s2);
+    static_cast<void>(s1);
+    return f::wrap_twosite_op(gate, phys, phys);
+  };
+
+  // Contract the patch to the four-site wavefunction psi[p0,p1,p2,p3]
+  // (raster order), squeezing the trivial open legs.
+  auto contract_patch = [&](const std::array<fts, 4>& T) {
+    // TL(l0,t0,r0,b0,p0) x TR over r0-l1
+    fts ab = f::tensordot(T[0], T[1], mptensor::Axes(2), mptensor::Axes(0));
+    // ab: (l0,t0,b0,p0, t1,r1,b1,p1)
+    fts abc = f::tensordot(ab, T[2], mptensor::Axes(2), mptensor::Axes(1));
+    // contracted b0 with BL top. abc: (l0,t0,p0,t1,r1,b1,p1, l2,r2,b2,p2)
+    fts abcd =
+        f::tensordot(abc, T[3], mptensor::Axes(5, 8), mptensor::Axes(1, 0));
+    // contracted b1(TR bottom)-t3 and r2(BL right)-l3.
+    // abcd: (l0,t0,p0,t1,r1,p1, l2,b2,p2, r3,b3,p3)
+    // Move physical legs to raster order, trivial legs first.
+    fts ordered = f::transpose(
+        abcd, mptensor::Axes(0, 1, 3, 4, 6, 7, 9, 10, 2, 5, 8, 11));
+    return f::reshape(ordered, mptensor::Shape(2, 2, 2, 2));
+  };
+
+  // Alternative contraction order (validated R2 plaquette pattern: rows
+  // first, then join both vertical bonds) to confirm order independence of
+  // the extraction itself.
+  auto contract_patch_alt = [&](const std::array<fts, 4>& T) {
+    fts top = f::tensordot(T[0], T[1], mptensor::Axes(2), mptensor::Axes(0));
+    fts bottom = f::tensordot(T[2], T[3], mptensor::Axes(2), mptensor::Axes(0));
+    fts joined =
+        f::tensordot(top, bottom, mptensor::Axes(2, 6), mptensor::Axes(1, 4));
+    fts ordered = f::transpose(
+        joined, mptensor::Axes(0, 1, 3, 4, 6, 7, 9, 10, 2, 5, 8, 11));
+    return f::reshape(ordered, mptensor::Shape(2, 2, 2, 2));
+  };
+
+  auto normalized_amplitudes = [&](const fts& psi) {
+    std::vector<double> amps(16, 0.0);
+    double norm2 = 0.0;
+    for (std::size_t n = 0; n < psi.t.local_size(); ++n) {
+      const auto idx = psi.t.global_index(n);
+      double v = 0.0;
+      psi.t.get_value(idx, v);
+      amps[idx[0] * 8 + idx[1] * 4 + idx[2] * 2 + idx[3]] = v;
+      norm2 += v * v;
+    }
+    const double norm = std::sqrt(norm2);
+    for (double& a : amps) {
+      a /= norm;
+    }
+    return amps;
+  };
+
+  auto compare = [&](const std::vector<double>& a,
+                     const std::vector<double>& b) {
+    double best = std::numeric_limits<double>::max();
+    for (const double sign : {1.0, -1.0}) {
+      double diff = 0.0;
+      for (int i = 0; i < 16; ++i) {
+        diff = std::max(diff, std::abs(a[i] - sign * b[i]));
+      }
+      best = std::min(best, diff);
+    }
+    return best;
+  };
+
+  // Exact reference: graded two-site gate application on the rank-4 psi.
+  auto apply_exact = [&](fts psi, int axis0, int axis1) {
+    fts applied =
+        f::tensordot(psi, fop(axis0, axis1), mptensor::Axes(axis0, axis1),
+                     mptensor::Axes(0, 1));
+    // applied: (free..., out0, out1); restore raster order.
+    mptensor::Axes perm;
+    int free_axis = 0;
+    for (int ax = 0; ax < 4; ++ax) {
+      if (ax == axis0) {
+        perm.push(2);
+      } else if (ax == axis1) {
+        perm.push(3);
+      } else {
+        perm.push(free_axis++);
+      }
+    }
+    return f::transpose(applied, perm);
+  };
+
+  fts psi_ref = contract_patch(Tn);
+  std::cout << std::setprecision(17)
+            << "plaquette trotter extraction order check maxdiff="
+            << compare(normalized_amplitudes(psi_ref),
+                       normalized_amplitudes(contract_patch_alt(Tn)))
+            << std::endl;
+
+  struct BondSpec {
+    int s1;
+    int s1_leg;
+    int s2;
+    const char* name;
+    int axis0;
+    int axis1;
+  };
+  // Kernel bonds in normalized (raster) orientation; exact axes in raster
+  // order of (s1, s2).
+  const std::array<BondSpec, 4> bonds = {
+      BondSpec{0, 2, 1, "TL-TR", 0, 1}, BondSpec{2, 2, 3, "BL-BR", 2, 3},
+      BondSpec{0, 3, 2, "TL-BL", 0, 2}, BondSpec{1, 3, 3, "TR-BR", 1, 3}};
+
+  for (int step = 0; step < 6; ++step) {
+    for (const auto& bond : bonds) {
+      fts out1, out2;
+      std::vector<double> lambda_work;
+      tenes::itps::core::Simple_update_bond(
+          Tn[bond.s1], Tn[bond.s2], lambda[bond.s1], lambda[bond.s2],
+          fop(bond.s1, bond.s2), bond.s1_leg, params, out1, out2, lambda_work);
+      const int s2_leg = (bond.s1_leg + 2) % 4;
+      Tn[bond.s1] = out1;
+      Tn[bond.s2] = out2;
+      lambda[bond.s1][bond.s1_leg] = lambda_work;
+      lambda[bond.s2][s2_leg] = lambda_work;
+
+      psi_ref = apply_exact(psi_ref, bond.axis0, bond.axis1);
+
+      const auto kernel_amps = normalized_amplitudes(contract_patch(Tn));
+      const auto ref_amps = normalized_amplitudes(psi_ref);
+      const double diff = compare(kernel_amps, ref_amps);
+      std::cout << std::setprecision(17) << "plaquette trotter step=" << step
+                << " bond=" << bond.name << " maxdiff=" << diff << std::endl;
+      if (diff > 1.0e-8 && step == 0) {
+        std::cout << "plaquette trotter first divergence amplitudes:"
+                  << std::endl;
+        for (int i = 0; i < 16; ++i) {
+          std::cout << "  amp[" << ((i >> 3) & 1) << ((i >> 2) & 1)
+                    << ((i >> 1) & 1) << (i & 1)
+                    << "] kernel=" << kernel_amps[i] << " ref=" << ref_amps[i]
+                    << std::endl;
+        }
+      }
+    }
+  }
+}
+
 TEST_CASE("diagnostic vertical-chain sorted lambda trajectory") {
   if (std::getenv("TENES_RUN_VERTICAL_LAMBDA_DIAG") == nullptr) {
     return;
@@ -2206,9 +2549,8 @@ TEST_CASE(
   f::validate_neighbor_consistency(finfo, lattice);
   auto& Tn = tenes::itps::iTPSTestAccessor::Tn(state);
   auto& lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(state);
-  std::vector<tensor> dressed = f::lambda_dressed_tensors(Tn, lambda);
-  std::vector<tensor> reduced =
-      f::build_reduced_density_tensors(dressed, finfo);
+  static_cast<void>(lambda);
+  std::vector<tensor> reduced = f::build_reduced_density_tensors(Tn, finfo);
   std::vector<tensor> C1(lattice.N_UNIT), C2(lattice.N_UNIT),
       C3(lattice.N_UNIT), C4(lattice.N_UNIT), eTt(lattice.N_UNIT),
       eTr(lattice.N_UNIT), eTb(lattice.N_UNIT), eTl(lattice.N_UNIT);
