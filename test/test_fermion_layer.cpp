@@ -1679,7 +1679,16 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
   };
   auto make_updates = []() {
     std::vector<tenes::EvolutionOperator<tensor>> updates;
-    const tensor gate = make_free_fermion_gate(0.01);
+    const char* mu_env = std::getenv("TENES_LAMBDA_DIAG_MU");
+    const double mu = (mu_env != nullptr) ? std::atof(mu_env) : 0.0;
+    tensor gate = make_free_fermion_gate(0.01);
+    for (std::size_t n = 0; n < gate.local_size(); ++n) {
+      const auto idx = gate.global_index(n);
+      double v = 0.0;
+      gate.get_value(idx, v);
+      const int ntot = static_cast<int>(idx[2]) + static_cast<int>(idx[3]);
+      gate.set_value(idx, v * std::exp(0.25 * 0.01 * mu * ntot));
+    }
     for (int site = 0; site < 4; ++site) {
       updates.push_back(
           tenes::make_twosite_EvolutionOperator(site, 2, 0, gate));
@@ -1938,13 +1947,17 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
 
   const char* ty_env = std::getenv("TENES_WEAK2D_TY");
   const double ty = (ty_env != nullptr) ? std::atof(ty_env) : 0.1;
+  const char* mu_env = std::getenv("TENES_WEAK2D_MU");
+  const double mu = (mu_env != nullptr) ? std::atof(mu_env) : 0.0;
+  const char* d_env = std::getenv("TENES_WEAK2D_D");
+  const int D = (d_env != nullptr) ? std::atoi(d_env) : 2;
   const char* steps_env = std::getenv("TENES_WEAK2D_STEPS");
   const int nsteps = (steps_env != nullptr) ? std::atoi(steps_env) : 1000;
 
   tenes::SquareLattice lattice(2, 2);
   for (int site = 0; site < lattice.N_UNIT; ++site) {
     lattice.physical_dims[site] = 2;
-    lattice.virtual_dims[site] = {2, 2, 2, 2};
+    lattice.virtual_dims[site] = {D, D, D, D};
     lattice.initial_dirs[site] = {0.0};
     lattice.noises[site] = 1.0;
   }
@@ -1960,15 +1973,34 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
   params.Use_RSVD = false;
   params.seed = 11;
 
-  std::vector<tenes::EvolutionOperator<tensor>> updates;
-  const tensor hgate = make_free_fermion_gate(0.01);
-  const tensor vgate = make_free_fermion_gate(0.01 * ty);
-  for (int site = 0; site < 4; ++site) {
-    updates.push_back(tenes::make_twosite_EvolutionOperator(site, 2, 0, hgate));
-  }
-  for (int site = 0; site < 4; ++site) {
-    updates.push_back(tenes::make_twosite_EvolutionOperator(site, 1, 0, vgate));
-  }
+  // Gate exp(-tau h) with h = -t (c+c + h.c.) - 0.25 mu (n1+n2); the two
+  // terms commute, so multiply the hopping gate by the diagonal mu factor.
+  auto make_gate = [&](double t, double tau) {
+    tensor gate = make_free_fermion_gate(tau * t);
+    for (std::size_t n = 0; n < gate.local_size(); ++n) {
+      const auto idx = gate.global_index(n);
+      double v = 0.0;
+      gate.get_value(idx, v);
+      const int ntot = static_cast<int>(idx[2]) + static_cast<int>(idx[3]);
+      gate.set_value(idx, v * std::exp(0.25 * tau * mu * ntot));
+    }
+    return gate;
+  };
+  auto make_updates_tau = [&](double tau) {
+    std::vector<tenes::EvolutionOperator<tensor>> ups;
+    const tensor hgate = make_gate(1.0, tau);
+    const tensor vgate = make_gate(ty, tau);
+    for (int site = 0; site < 4; ++site) {
+      ups.push_back(tenes::make_twosite_EvolutionOperator(site, 2, 0, hgate));
+    }
+    for (int site = 0; site < 4; ++site) {
+      ups.push_back(tenes::make_twosite_EvolutionOperator(site, 1, 0, vgate));
+    }
+    return ups;
+  };
+  const bool anneal = std::getenv("TENES_WEAK2D_ANNEAL") != nullptr;
+  std::vector<tenes::EvolutionOperator<tensor>> updates =
+      make_updates_tau(0.01);
 
   tensor hopping(mptensor::Shape(2, 2, 2, 2));
   hopping.set_value(mptensor::Index(0, 1, 1, 0), 1.0);
@@ -1981,16 +2013,32 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
                              std::vector<int>{1}, hopping);
   }
 
-  tenes::itps::iTPS<tensor> state(MPI_COMM_WORLD, params, lattice, updates,
-                                  tenes::EvolutionOperators<tensor>{},
-                                  tenes::Operators<tensor>{}, twosite_ops,
-                                  tenes::Operators<tensor>{},
-                                  tenes::itps::CorrelationParameter{},
-                                  tenes::itps::TransferMatrix_Parameters{});
+  tensor n_op(mptensor::Shape(2, 2));
+  n_op.set_value(mptensor::Index(1, 1), 1.0);
+  tenes::Operators<tensor> onesite_ops;
+  for (int site = 0; site < 4; ++site) {
+    onesite_ops.emplace_back("n", 0, site, n_op);
+  }
+
+  tenes::itps::iTPS<tensor> state(
+      MPI_COMM_WORLD, params, lattice, updates,
+      tenes::EvolutionOperators<tensor>{}, onesite_ops, twosite_ops,
+      tenes::Operators<tensor>{}, tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
   auto& lambda = tenes::itps::iTPSTestAccessor::lambda_tensor(state);
   auto& finfo = tenes::itps::iTPSTestAccessor::finfo(state);
 
   for (int step = 0; step < nsteps; ++step) {
+    if (anneal) {
+      // Four equal phases with decreasing Trotter step.
+      const double taus[4] = {0.1, 0.05, 0.02, 0.01};
+      const int phase = std::min(3, 4 * step / std::max(1, nsteps));
+      if (step == 0 || phase != std::min(3, 4 * (step - 1) / nsteps)) {
+        updates = make_updates_tau(taus[phase]);
+        std::cout << "weak2d anneal step=" << step << " tau=" << taus[phase]
+                  << std::endl;
+      }
+    }
     for (const auto& update : updates) {
       state.simple_update(update);
     }
@@ -2065,6 +2113,32 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
   for (int site = 0; site < 4; ++site) {
     std::cout << std::setprecision(10) << "weak2d MF hop site=" << site
               << " dx=" << mf_bond(site, 2) << " dy=" << mf_bond(site, 1)
+              << std::endl;
+  }
+
+  const auto n_measured = state.measure_onesite();
+  const auto fop_n = f::ftensor<tensor>{
+      n_op, {f::parity_vector{false, true}, f::parity_vector{false, true}}};
+  auto mf_n = [&](int site) {
+    const auto fTn1 = f::wrap_Tn(Tn[site], finfo, site);
+    const int target = lattice.neighbor(site, 2);
+    const auto fTn2 = f::wrap_Tn(Tn[target], finfo, target);
+    const auto data = diagnostic_gate_data(fTn1, fTn2, lambda[site],
+                                           lambda[target], fop_h, 2);
+    auto applied = f::tensordot(data.theta_before, fop_n, mptensor::Axes(1),
+                                mptensor::Axes(0));
+    applied = f::transpose(applied, mptensor::Axes(0, 3, 1, 2));
+    const double num =
+        f::trace(f::conj(data.theta_before), applied,
+                 mptensor::Axes(0, 1, 2, 3), mptensor::Axes(0, 1, 2, 3));
+    const double den =
+        f::trace(f::conj(data.theta_before), data.theta_before,
+                 mptensor::Axes(0, 1, 2, 3), mptensor::Axes(0, 1, 2, 3));
+    return num / den;
+  };
+  for (int site = 0; site < 4; ++site) {
+    std::cout << std::setprecision(10) << "weak2d n site=" << site
+              << " measured=" << n_measured[0][site] << " MF=" << mf_n(site)
               << std::endl;
   }
 }
@@ -2309,7 +2383,16 @@ TEST_CASE("diagnostic vertical-chain sorted lambda trajectory") {
   const int bond_leg = source_leg;
   auto make_updates = [source_leg]() {
     std::vector<tenes::EvolutionOperator<tensor>> updates;
-    const tensor gate = make_free_fermion_gate(0.01);
+    const char* mu_env = std::getenv("TENES_LAMBDA_DIAG_MU");
+    const double mu = (mu_env != nullptr) ? std::atof(mu_env) : 0.0;
+    tensor gate = make_free_fermion_gate(0.01);
+    for (std::size_t n = 0; n < gate.local_size(); ++n) {
+      const auto idx = gate.global_index(n);
+      double v = 0.0;
+      gate.get_value(idx, v);
+      const int ntot = static_cast<int>(idx[2]) + static_cast<int>(idx[3]);
+      gate.set_value(idx, v * std::exp(0.25 * 0.01 * mu * ntot));
+    }
     for (int site = 0; site < 4; ++site) {
       updates.push_back(
           tenes::make_twosite_EvolutionOperator(site, source_leg, 0, gate));
