@@ -48,10 +48,18 @@ and :math:`n` indicates the site number.
    ``virtual_dim``,   "Dimension of virtual bonds :math:`D` for a site tensor", Integer or a list of integer
    ``initial_state``, "Initial tensor",                                         a list of real
    ``noise``,         "Noise for initial tensor",                               Real
+   ``parity``,        "Fermion parity of each physical basis state (fermion mode only)", a list of integer
 
 
 Multiple sites can be specified at once by setting a list to ``index``.
 An empty list ``[]`` means all sites.
+
+``parity`` is required when ``parameter.general.fermion = true`` and must have
+``physical_dim`` entries, each 0 (even) or 1 (odd).
+For example, a spinless fermion site with the basis :math:`\{|0\rangle, |1\rangle\}`
+has ``parity = [0, 1]``.
+The initial product state must be parity even on every site; parity-odd
+``initial_state`` vectors are rejected.
 
 By setting a list to ``virtual_dim``, individual bond dimensions in four directions can be specified.
 The order is left (-x), top (+y), right (+x), and bottom (-y).

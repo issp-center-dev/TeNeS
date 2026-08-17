@@ -16,6 +16,7 @@ General parameters for ``tenes``.
 
    ``mode``,        "Calculation mode",                                        String, ``\"ground state\"``
    ``is_real``,     "Whether to limit all tensors to real valued ones",        Boolean, false
+   ``fermion``,     "Whether the model is fermionic (experimental)",           Boolean, false
    ``iszero_tol``,  "Absolute cutoff value for reading operators",             Real,    0.0
    ``measure``,     "Whether to calculate and save observables",               Boolean, true
    ``measure_interval``, "Interval of measurement in finite temperature calculation and time evolution process",  Integer or list of integers, 10
@@ -45,6 +46,13 @@ General parameters for ``tenes``.
 
   - When set to ``true``, the type of elements of the tensor becomes real. 
   - If one complex operator is defined at least,  calculation will end in errors before starting.
+
+- ``fermion``
+
+  - **Experimental.** When set to ``true``, site tensors are treated as fermionic (Z2-graded) tensors and all bond updates and measurements generate the fermionic exchange signs automatically
+  - Each site must declare the parity of its physical basis states by the ``parity`` key of the ``tensor.unitcell`` section
+  - Operators and evolution gates must conserve fermion parity; parity-odd operators are rejected when the input is read
+  - In the current version only a subset of features is supported in fermion mode: ground-state mode with the simple update and the CTM environment. Full update, mean-field environment, ``Use_RSVD``, ``Simple_Gauge_Fix``, finite temperature, time evolution, multi-site observables, two-site observables at distances larger than 1, correlation functions, correlation length, and ``tensor_save`` / ``tensor_load`` are not available and are rejected (or forcibly disabled, for the correlation length) when the input is read
 
 - ``iszero_tol``
 

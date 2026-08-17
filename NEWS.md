@@ -2,6 +2,12 @@
 
 ## Changes between develop branch (2026-07-11) and v2.1.3
 
+### New features
+
+- `tenes`
+  - Experimental support for fermionic models (`[parameter.general] fermion = true` with per-site `[[tensor.unitcell]] parity`): site tensors become Z2-graded and all bond updates and measurements generate the fermionic exchange signs automatically; verified against exact free-fermion results (energy within 0.7% at D=4, chi=32 for half-filled spinless fermions on the square lattice)
+  - Limitations of the current fermion mode: ground-state mode with simple update and the CTM environment only; full update, mean-field environment, `Use_RSVD`, `Simple_Gauge_Fix`, finite temperature, real-time evolution, multi-site observables, two-site observables beyond nearest neighbors, correlation functions, correlation length, and `tensor_save`/`tensor_load` are rejected at input time (the correlation length is forcibly disabled); away from half filling the simple update needs considerably more imaginary time to converge
+
 ### Changes
 
 - Building TeNeS now requires a C++17 compiler and mptensor v0.5.0 or later ([#104][], [#109][])
