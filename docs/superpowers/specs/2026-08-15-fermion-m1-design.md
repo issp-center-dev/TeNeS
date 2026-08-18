@@ -442,3 +442,32 @@ max-D 厳密閾値チェックは energy を両 μ、density は μ=0 のみに�
 (hopping ~1e-3、D=4 で負ノルム)として顕在化していた。
 `build_reduced_pair` の (top, bottom)/(left, right) 順序もこのラスタ順と整合
 (oracle 固定済み)。3 診断(横 leg2・縦 leg1・縦 leg3)すべて case=A を確認。
+
+## 改訂4(2026-08-18): d=4(電子系)検証と blob 演算子規約の d 一般化
+
+**検証**(コミット d365659a, 9fc1f46c): physical_dim=4(parity [0,1,1,0])を
+Fock 厳密審判(2〜6モード JW 構成器をテスト内に実装)で層別検証。
+
+- f-プリミティブ層・カーネル(横縦・ループ・無切断域): d=4 で機械精度厳密。
+- **JW 双子 λ 判定は d=4 では無効**: 奇セクター多重度 ≥2 では成分の素コピーが
+  JW 対応にならない(脚順 (l,r,p)↔(l,p,r) の並べ替えマスク (-1)^{|r||p|} が
+  ゲージ吸収不能)。d=4 で case=B が出てもバグの証拠にならない。診断は
+  Fock 審判(プラケット3者比較・鎖 θ 成分照合)を使うこと。
+- **blob 測定の演算子規約は「in+out 両swap」が正**(`wrap_reduced_pair_op`)。
+  d=2 の N 保存演算子では素ロードと縮退(R3 が「素」と固定したのは縮退の
+  ため)。分岐チャネル (o,o)→(e,e) は奇多重度 2 で初出現(電子ホッピングの
+  線形項)。R5 テスト(r2_convention.cpp、常時実行)が恒久固定。
+
+**演算子規約の最終表(3経路)**:
+
+| 経路 | 規約 | ヘルパ |
+|---|---|---|
+| simple update カーネル(ゲート) | in-swap | `wrap_twosite_op` |
+| reduced pair blob(2サイト測定) | in-swap + out-swap | `wrap_reduced_pair_op` |
+| 1サイト(ゲート・測定) | 素 | — |
+
+**電子系の使用法**: physical_dim=4、parity=[0,1,1,0]、局所基底
+|0>,|↑>,|↓>,|↑↓>(|↑↓>=c†_↑c†_↓|0>)。演算子・ゲート行列は順序付き Fock 基底で
+JW 符号込みで計算する(2サイト4モード構成器: テスト内 electron_bond_hamiltonian /
+work/electron-validation/ の numpy 版)。統合検証: U=0 電子鎖 1D 極限
+E/site=−1.193(D=4、厳密 −4/π 比 6.3%)、n=0.9998。
