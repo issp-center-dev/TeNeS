@@ -1652,11 +1652,13 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
   namespace f = tenes::fermion;
   using tensor = tenes::real_tensor;
 
-  auto make_lattice = []() {
+  const char* d_env = std::getenv("TENES_LAMBDA_DIAG_D");
+  const int D = (d_env != nullptr) ? std::atoi(d_env) : 2;
+  auto make_lattice = [D]() {
     tenes::SquareLattice lattice(2, 2);
     for (int site = 0; site < lattice.N_UNIT; ++site) {
       lattice.physical_dims[site] = 2;
-      lattice.virtual_dims[site] = {2, 1, 2, 1};
+      lattice.virtual_dims[site] = {D, 1, D, 1};
       lattice.initial_dirs[site] = {0.0};
       lattice.noises[site] = 1.0;
     }
@@ -2143,6 +2145,9 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
   }
 }
 
+static tenes::real_tensor electron_gate(double t, double u, double mu,
+                                        double tau);
+
 TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
   if (std::getenv("TENES_RUN_PLAQUETTE_TROTTER_DIAG") == nullptr) {
     return;
@@ -2160,7 +2165,15 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
   f::parity_vector bond_par(D, false);
   bond_par[1] = true;
   const f::parity_vector triv{false};
-  const f::parity_vector phys{false, true};
+  // Physical dimension 2 (spinless, parity {e,o}) by default; 4 (electron,
+  // parity {e,o,o,e}) with TENES_PLAQUETTE_PHYS_DIM=4. At d = 4 only the
+  // first sweep is truncation-free (theta rank <= 2 * 4 = 8 = dc).
+  const char* pd_env = std::getenv("TENES_PLAQUETTE_PHYS_DIM");
+  const std::size_t PD = (pd_env != nullptr) ? std::atoi(pd_env) : 2;
+  const f::parity_vector phys =
+      PD == 2 ? f::parity_vector{false, true}
+              : f::parity_vector{false, true, true, false};
+  std::cout << "plaquette trotter phys_dim=" << PD << std::endl;
 
   // Open 2x2 patch, sites in raster order: 0=TL, 1=TR, 2=BL, 3=BR.
   // Leg order (l, t, r, b, p); open legs have dimension 1.
@@ -2168,7 +2181,7 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
                        std::size_t b, unsigned seed) {
     f::leg_parities p{l == 1 ? triv : bond_par, t == 1 ? triv : bond_par,
                       r == 1 ? triv : bond_par, b == 1 ? triv : bond_par, phys};
-    tensor a(mptensor::Shape(l, t, r, b, 2));
+    tensor a(mptensor::Shape(l, t, r, b, PD));
     std::mt19937 gen(seed);
     std::uniform_real_distribution<double> dist(-1.0, 1.0);
     for (std::size_t n = 0; n < a.local_size(); ++n) {
@@ -2202,7 +2215,8 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
   params.Inverse_lambda_cut = 1.0e-12;
 
   const double tau = 0.05;
-  const tensor gate = make_free_fermion_gate(tau);
+  const tensor gate =
+      PD == 2 ? make_free_fermion_gate(tau) : electron_gate(1.0, 0.0, 0.0, tau);
   const auto fop = [&](int s1, int s2) {
     static_cast<void>(s2);
     static_cast<void>(s1);
@@ -2224,7 +2238,7 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
     // Move physical legs to raster order, trivial legs first.
     fts ordered = f::transpose(
         abcd, mptensor::Axes(0, 1, 3, 4, 6, 7, 9, 10, 2, 5, 8, 11));
-    return f::reshape(ordered, mptensor::Shape(2, 2, 2, 2));
+    return f::reshape(ordered, mptensor::Shape(PD, PD, PD, PD));
   };
 
   // Alternative contraction order (validated R2 plaquette pattern: rows
@@ -2237,17 +2251,17 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
         f::tensordot(top, bottom, mptensor::Axes(2, 6), mptensor::Axes(1, 4));
     fts ordered = f::transpose(
         joined, mptensor::Axes(0, 1, 3, 4, 6, 7, 9, 10, 2, 5, 8, 11));
-    return f::reshape(ordered, mptensor::Shape(2, 2, 2, 2));
+    return f::reshape(ordered, mptensor::Shape(PD, PD, PD, PD));
   };
 
   auto normalized_amplitudes = [&](const fts& psi) {
-    std::vector<double> amps(16, 0.0);
+    std::vector<double> amps(PD * PD * PD * PD, 0.0);
     double norm2 = 0.0;
     for (std::size_t n = 0; n < psi.t.local_size(); ++n) {
       const auto idx = psi.t.global_index(n);
       double v = 0.0;
       psi.t.get_value(idx, v);
-      amps[idx[0] * 8 + idx[1] * 4 + idx[2] * 2 + idx[3]] = v;
+      amps[((idx[0] * PD + idx[1]) * PD + idx[2]) * PD + idx[3]] = v;
       norm2 += v * v;
     }
     const double norm = std::sqrt(norm2);
@@ -2262,7 +2276,7 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
     double best = std::numeric_limits<double>::max();
     for (const double sign : {1.0, -1.0}) {
       double diff = 0.0;
-      for (int i = 0; i < 16; ++i) {
+      for (std::size_t i = 0; i < a.size(); ++i) {
         diff = std::max(diff, std::abs(a[i] - sign * b[i]));
       }
       best = std::min(best, diff);
@@ -2297,6 +2311,125 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
                        normalized_amplitudes(contract_patch_alt(Tn)))
             << std::endl;
 
+  // --- third referee: exact Fock-space evolution with Jordan-Wigner ------
+  // Modes in raster-site order; d = 4 has (up, dn) per site, so hopping on
+  // a vertical bond automatically carries the string over the intervening
+  // site's modes. The gates here are pure hopping (t = 1, U = mu = 0).
+  const int spins = (PD == 4) ? 2 : 1;
+  const int nmodes = 4 * spins;
+  const int fock_dim = 1 << nmodes;
+  auto fock_mode_op = [&](int g, int mode, bool dagger, double& sign) -> int {
+    const int bit = nmodes - 1 - mode;
+    const int occ = (g >> bit) & 1;
+    if (dagger == (occ == 1)) {
+      sign = 0.0;
+      return 0;
+    }
+    int cnt = 0;
+    for (int m = 0; m < mode; ++m) {
+      cnt += (g >> (nmodes - 1 - m)) & 1;
+    }
+    sign = (cnt % 2 == 0) ? 1.0 : -1.0;
+    return g ^ (1 << bit);
+  };
+  auto fock_apply_h = [&](const std::vector<double>& v, int sa, int sb) {
+    std::vector<double> hv(fock_dim, 0.0);
+    for (int g = 0; g < fock_dim; ++g) {
+      if (v[g] == 0.0) {
+        continue;
+      }
+      for (int sp = 0; sp < spins; ++sp) {
+        const int mode_a = spins * sa + sp;
+        const int mode_b = spins * sb + sp;
+        for (int dir = 0; dir < 2; ++dir) {
+          const int m_annih = dir == 0 ? mode_b : mode_a;
+          const int m_creat = dir == 0 ? mode_a : mode_b;
+          double s1 = 0.0, s2 = 0.0;
+          const int g1 = fock_mode_op(g, m_annih, false, s1);
+          if (s1 == 0.0) {
+            continue;
+          }
+          const int g2 = fock_mode_op(g1, m_creat, true, s2);
+          if (s2 == 0.0) {
+            continue;
+          }
+          hv[g2] += -1.0 * s1 * s2 * v[g];
+        }
+      }
+    }
+    return hv;
+  };
+  auto fock_apply_gate = [&](std::vector<double>& psi, int sa, int sb) {
+    std::vector<double> term = psi;
+    for (int order = 1; order <= 24; ++order) {
+      term = fock_apply_h(term, sa, sb);
+      for (int g = 0; g < fock_dim; ++g) {
+        term[g] *= -tau / order;
+      }
+      for (int g = 0; g < fock_dim; ++g) {
+        psi[g] += term[g];
+      }
+    }
+  };
+  // local index i -> per-spin occupations; amplitude array index -> Fock g
+  auto amps_to_fock = [&](const std::vector<double>& amps) {
+    std::vector<double> psi(fock_dim, 0.0);
+    const int npd = static_cast<int>(PD);
+    for (int i0 = 0; i0 < npd; ++i0) {
+      for (int i1 = 0; i1 < npd; ++i1) {
+        for (int i2 = 0; i2 < npd; ++i2) {
+          for (int i3 = 0; i3 < npd; ++i3) {
+            const int idx = ((i0 * npd + i1) * npd + i2) * npd + i3;
+            const int loc[4] = {i0, i1, i2, i3};
+            int g = 0;
+            for (int site = 0; site < 4; ++site) {
+              for (int sp = 0; sp < spins; ++sp) {
+                // local index i = n_up + 2 n_dn (d=4) or i = n (d=2)
+                const int occ = (loc[site] >> sp) & 1;
+                const int mode = spins * site + sp;
+                g |= occ << (nmodes - 1 - mode);
+              }
+            }
+            psi[g] = amps[idx];
+          }
+        }
+      }
+    }
+    return psi;
+  };
+  auto fock_to_amps = [&](const std::vector<double>& psi) {
+    std::vector<double> amps(PD * PD * PD * PD, 0.0);
+    const int npd = static_cast<int>(PD);
+    for (int i0 = 0; i0 < npd; ++i0) {
+      for (int i1 = 0; i1 < npd; ++i1) {
+        for (int i2 = 0; i2 < npd; ++i2) {
+          for (int i3 = 0; i3 < npd; ++i3) {
+            const int idx = ((i0 * npd + i1) * npd + i2) * npd + i3;
+            const int loc[4] = {i0, i1, i2, i3};
+            int g = 0;
+            for (int site = 0; site < 4; ++site) {
+              for (int sp = 0; sp < spins; ++sp) {
+                const int occ = (loc[site] >> sp) & 1;
+                const int mode = spins * site + sp;
+                g |= occ << (nmodes - 1 - mode);
+              }
+            }
+            amps[idx] = psi[g];
+          }
+        }
+      }
+    }
+    double norm2 = 0.0;
+    for (const double a : amps) {
+      norm2 += a * a;
+    }
+    for (double& a : amps) {
+      a /= std::sqrt(norm2);
+    }
+    return amps;
+  };
+  std::vector<double> psi_fock = amps_to_fock(normalized_amplitudes(psi_ref));
+
   struct BondSpec {
     int s1;
     int s1_leg;
@@ -2307,9 +2440,14 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
   };
   // Kernel bonds in normalized (raster) orientation; exact axes in raster
   // order of (s1, s2).
-  const std::array<BondSpec, 4> bonds = {
+  std::array<BondSpec, 4> bonds = {
       BondSpec{0, 2, 1, "TL-TR", 0, 1}, BondSpec{2, 2, 3, "BL-BR", 2, 3},
       BondSpec{0, 3, 2, "TL-BL", 0, 2}, BondSpec{1, 3, 3, "TR-BR", 1, 3}};
+  if (std::getenv("TENES_PLAQUETTE_VERTICAL_FIRST") != nullptr) {
+    std::swap(bonds[0], bonds[2]);
+    std::swap(bonds[1], bonds[3]);
+    std::cout << "plaquette trotter vertical bonds first" << std::endl;
+  }
 
   for (int step = 0; step < 6; ++step) {
     for (const auto& bond : bonds) {
@@ -2325,12 +2463,17 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
       lambda[bond.s2][s2_leg] = lambda_work;
 
       psi_ref = apply_exact(psi_ref, bond.axis0, bond.axis1);
+      fock_apply_gate(psi_fock, bond.axis0, bond.axis1);
 
       const auto kernel_amps = normalized_amplitudes(contract_patch(Tn));
       const auto ref_amps = normalized_amplitudes(psi_ref);
+      const auto fock_amps = fock_to_amps(psi_fock);
       const double diff = compare(kernel_amps, ref_amps);
       std::cout << std::setprecision(17) << "plaquette trotter step=" << step
-                << " bond=" << bond.name << " maxdiff=" << diff << std::endl;
+                << " bond=" << bond.name << " maxdiff=" << diff
+                << " kernel_vs_fock=" << compare(kernel_amps, fock_amps)
+                << " fprim_vs_fock=" << compare(ref_amps, fock_amps)
+                << std::endl;
       if (diff > 1.0e-8 && step == 0) {
         std::cout << "plaquette trotter first divergence amplitudes:"
                   << std::endl;
@@ -2342,6 +2485,347 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
         }
       }
     }
+  }
+}
+
+// --- two-site, four-mode Fock helpers for the electron (d = 4) diagnostics --
+//
+// Local basis per site: 0:|0>, 1:|up>, 2:|dn>, 3:|up dn> with the internal
+// convention |up dn> = c^dag_up c^dag_dn |0>, i.e. local index i = n_up +
+// 2 n_dn. Global modes are ordered (1up, 1dn, 2up, 2dn) and a global Fock
+// state is encoded in bits g = a<<3 | b<<2 | c<<1 | d for occupations
+// (a, b, c, d) of those modes; the creation-string order matches the mode
+// order, so Jordan-Wigner signs are (-1)^(number of occupied earlier modes).
+
+// Apply c_mode (dagger=false) or c^dag_mode to basis state g.
+// Returns {g', sign}; sign = 0 means the result vanishes.
+static std::pair<int, double> electron_mode_op(int g, int mode, bool dagger) {
+  const int bit = 3 - mode;  // mode 0 (1up) is the highest bit
+  const int occ = (g >> bit) & 1;
+  if (dagger == (occ == 1)) {
+    return {0, 0.0};
+  }
+  int string_count = 0;
+  for (int m = 0; m < mode; ++m) {
+    string_count += (g >> (3 - m)) & 1;
+  }
+  const double sign = (string_count % 2 == 0) ? 1.0 : -1.0;
+  return {g ^ (1 << bit), sign};
+}
+
+// 16x16 matrix of the electron bond Hamiltonian
+//   h = -t sum_sigma (c^dag_{1 sigma} c_{2 sigma} + h.c.)
+//       + (U/4) (n_{1up} n_{1dn} + n_{2up} n_{2dn})   [U split over 4 bonds]
+//       - (mu/4) (n_1 + n_2)
+// in the ordered Fock basis, indexed by (i1, i2) as i1 * 4 + i2.
+static std::array<std::array<double, 16>, 16> electron_bond_hamiltonian(
+    double t, double u, double mu) {
+  auto local_to_bits = [](int i) {  // i = n_up + 2 n_dn -> (n_up, n_dn)
+    return std::pair<int, int>{i & 1, (i >> 1) & 1};
+  };
+  auto pair_to_g = [&](int i1, int i2) {
+    const auto [a, b] = local_to_bits(i1);
+    const auto [c, d] = local_to_bits(i2);
+    return a << 3 | b << 2 | c << 1 | d;
+  };
+  std::array<int, 16> g_of_index{};
+  std::array<int, 16> index_of_g{};
+  for (int i1 = 0; i1 < 4; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      const int idx = i1 * 4 + i2;
+      g_of_index[idx] = pair_to_g(i1, i2);
+      index_of_g[g_of_index[idx]] = idx;
+    }
+  }
+
+  std::array<std::array<double, 16>, 16> h{};
+  for (int idx = 0; idx < 16; ++idx) {
+    const int g = g_of_index[idx];
+    // diagonal: U and mu terms
+    const int a = (g >> 3) & 1, b = (g >> 2) & 1, c = (g >> 1) & 1, d = g & 1;
+    h[idx][idx] += 0.25 * u * (a * b + c * d) - 0.25 * mu * (a + b + c + d);
+    // hopping: -t (c^dag_{1s} c_{2s} + c^dag_{2s} c_{1s});
+    // modes: 1up=0, 1dn=1, 2up=2, 2dn=3
+    const int hop_pairs[4][2] = {{0, 2}, {2, 0}, {1, 3}, {3, 1}};
+    for (const auto& mp : hop_pairs) {
+      const auto [g1, s1] = electron_mode_op(g, mp[1], false);
+      if (s1 == 0.0) {
+        continue;
+      }
+      const auto [g2, s2] = electron_mode_op(g1, mp[0], true);
+      if (s2 == 0.0) {
+        continue;
+      }
+      h[index_of_g[g2]][idx] += -t * s1 * s2;
+    }
+  }
+  return h;
+}
+
+// Gate tensor exp(-tau h) as op[in1][in2][out1][out2] via a Taylor series
+// (norm(tau h) << 1 for the parameters used here).
+static tenes::real_tensor electron_gate(double t, double u, double mu,
+                                        double tau) {
+  const auto h = electron_bond_hamiltonian(t, u, mu);
+  std::array<std::array<double, 16>, 16> gate{};
+  std::array<std::array<double, 16>, 16> term{};
+  for (int i = 0; i < 16; ++i) {
+    gate[i][i] = 1.0;
+    term[i][i] = 1.0;
+  }
+  for (int order = 1; order <= 20; ++order) {
+    std::array<std::array<double, 16>, 16> next{};
+    for (int i = 0; i < 16; ++i) {
+      for (int k = 0; k < 16; ++k) {
+        if (term[i][k] == 0.0) {
+          continue;
+        }
+        const double w = term[i][k] * (-tau) / order;
+        for (int j = 0; j < 16; ++j) {
+          next[i][j] += w * h[k][j];
+        }
+      }
+    }
+    term = next;
+    for (int i = 0; i < 16; ++i) {
+      for (int j = 0; j < 16; ++j) {
+        gate[i][j] += term[i][j];
+      }
+    }
+  }
+  tenes::real_tensor op(mptensor::Shape(4, 4, 4, 4));
+  for (int i1 = 0; i1 < 4; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      for (int o1 = 0; o1 < 4; ++o1) {
+        for (int o2 = 0; o2 < 4; ++o2) {
+          const double v = gate[o1 * 4 + o2][i1 * 4 + i2];
+          if (std::abs(v) > 1.0e-16) {
+            op.set_value(mptensor::Index(i1, i2, o1, o2), v);
+          }
+        }
+      }
+    }
+  }
+  return op;
+}
+
+TEST_CASE("diagnostic electron chain sorted lambda trajectory") {
+  if (std::getenv("TENES_RUN_ELECTRON_CHAIN_DIAG") == nullptr) {
+    return;
+  }
+
+  namespace f = tenes::fermion;
+  using tensor = tenes::real_tensor;
+
+  const char* u_env = std::getenv("TENES_ELECTRON_U");
+  const double u = (u_env != nullptr) ? std::atof(u_env) : 0.0;
+  const char* mu_env = std::getenv("TENES_ELECTRON_MU");
+  const double mu = (mu_env != nullptr) ? std::atof(mu_env) : 0.0;
+  const char* leg_env = std::getenv("TENES_ELECTRON_LEG");
+  const int source_leg = (leg_env != nullptr) ? std::atoi(leg_env) : 2;
+  const bool horizontal = (source_leg == 0 || source_leg == 2);
+  // Optional parity-sorted local basis |0>, |up dn>, |up>, |dn| to test
+  // whether an unsorted physical parity pattern is handled correctly.
+  const bool sorted_basis = std::getenv("TENES_ELECTRON_SORTED") != nullptr;
+
+  std::cout << "electron chain diag U=" << u << " mu=" << mu
+            << " source_leg=" << source_leg
+            << " sorted_basis=" << (sorted_basis ? 1 : 0) << std::endl;
+
+  const char* lx_env = std::getenv("TENES_ELECTRON_LX");
+  const int LX = (lx_env != nullptr) ? std::atoi(lx_env) : 2;
+  auto make_lattice = [&]() {
+    tenes::SquareLattice lattice(LX, 2);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      lattice.physical_dims[site] = 4;
+      lattice.virtual_dims[site] = horizontal ? std::array<int, 4>{2, 1, 2, 1}
+                                              : std::array<int, 4>{1, 2, 1, 2};
+      lattice.initial_dirs[site] = {0.0};
+      lattice.noises[site] = 1.0;
+    }
+    return lattice;
+  };
+  const f::parity_vector electron_parity =
+      sorted_basis ? f::parity_vector{false, false, true, true}
+                   : f::parity_vector{false, true, true, false};
+  auto make_params = [&](bool fermion, const std::string& outdir) {
+    tenes::itps::PEPS_Parameters params;
+    params.fermion = fermion;
+    if (fermion) {
+      params.phys_parity.assign(2 * LX, electron_parity);
+    }
+    params.print_level = tenes::PrintLevel::none;
+    params.outdir = outdir;
+    params.CHI = 8;
+    params.Max_CTM_Iteration = 10;
+    params.CTM_Convergence_Epsilon = 1.0e-8;
+    params.Use_RSVD = false;
+    params.seed = 11;
+    return params;
+  };
+  tensor gate = electron_gate(1.0, u, mu, 0.01);
+  if (sorted_basis) {
+    // basis permutation: new index -> old index {0, 3, 1, 2}
+    const int perm[4] = {0, 3, 1, 2};
+    tensor permuted(mptensor::Shape(4, 4, 4, 4));
+    for (int i1 = 0; i1 < 4; ++i1) {
+      for (int i2 = 0; i2 < 4; ++i2) {
+        for (int o1 = 0; o1 < 4; ++o1) {
+          for (int o2 = 0; o2 < 4; ++o2) {
+            double v = 0.0;
+            gate.get_value(
+                mptensor::Index(perm[i1], perm[i2], perm[o1], perm[o2]), v);
+            if (std::abs(v) > 1.0e-16) {
+              permuted.set_value(mptensor::Index(i1, i2, o1, o2), v);
+            }
+          }
+        }
+      }
+    }
+    gate = permuted;
+  }
+  std::vector<tenes::EvolutionOperator<tensor>> updates;
+  for (int site = 0; site < 2 * LX; ++site) {
+    updates.push_back(
+        tenes::make_twosite_EvolutionOperator(site, source_leg, 0, gate));
+  }
+
+  auto lattice_f = make_lattice();
+  auto lattice_b = make_lattice();
+  auto fparams = make_params(true, "output_test_electron_chain_fermion");
+  auto bparams = make_params(false, "output_test_electron_chain_boson");
+  tenes::itps::iTPS<tensor> fstate(
+      MPI_COMM_WORLD, fparams, lattice_f, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+  tenes::itps::iTPS<tensor> bstate(
+      MPI_COMM_WORLD, bparams, lattice_b, updates,
+      tenes::EvolutionOperators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{},
+      tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& fTn = tenes::itps::iTPSTestAccessor::Tn(fstate);
+  auto& bTn = tenes::itps::iTPSTestAccessor::Tn(bstate);
+  auto& flambda = tenes::itps::iTPSTestAccessor::lambda_tensor(fstate);
+  auto& blambda = tenes::itps::iTPSTestAccessor::lambda_tensor(bstate);
+  bTn = fTn;
+  blambda = flambda;
+
+  const int bond_leg = source_leg;
+  double max_rel = 0.0;
+  int first_step = -1;
+  int first_bond = -1;
+  double first_rel = 0.0;
+  int first_call_update = -1;
+  for (int step = 0; step <= 300; ++step) {
+    for (int site = 0; site < lattice_f.N_UNIT; ++site) {
+      const auto fvals = sorted_desc(flambda[site][bond_leg]);
+      const auto bvals = sorted_desc(blambda[site][bond_leg]);
+      const double rel = lambda_relative_diff(fvals, bvals);
+      max_rel = std::max(max_rel, rel);
+      if (first_step < 0 && rel > 1.0e-8) {
+        first_step = step;
+        first_bond = site;
+        first_rel = rel;
+      }
+    }
+    if (step == 300) {
+      break;
+    }
+    for (std::size_t iu = 0; iu < updates.size(); ++iu) {
+      const auto& update = updates[iu];
+      if (first_call_update < 0) {
+        // Compare theta spectra for this call BEFORE applying it.
+        const int src = update.source_site;
+        const int tgt = lattice_f.neighbor(src, update.source_leg);
+        int s1 = src, s2 = tgt, s1_leg = update.source_leg;
+        tensor op12 = update.op;
+        if (s1_leg == 0 || s1_leg == 1) {
+          std::swap(s1, s2);
+          s1_leg = (s1_leg + 2) % 4;
+          op12 = mptensor::transpose(update.op, mptensor::Axes(1, 0, 3, 2));
+        }
+        const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
+        const auto fTn1 = f::wrap_Tn(fTn[s1], finfo, s1);
+        const auto fTn2 = f::wrap_Tn(fTn[s2], finfo, s2);
+        const auto fop =
+            f::wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
+        const auto fthetas = diagnostic_update_thetas(fTn1, fTn2, flambda[s1],
+                                                      flambda[s2], fop, s1_leg);
+        const auto bthetas = diagnostic_update_thetas(
+            bTn[s1], bTn[s2], blambda[s1], blambda[s2], op12, s1_leg);
+        auto raw_svals = [](const tensor& th) {
+          tensor uu, vv;
+          std::vector<double> ss;
+          mptensor::svd(th, mptensor::Axes(0, 1), mptensor::Axes(2, 3), uu, ss,
+                        vv);
+          return ss;
+        };
+        const auto f_before = raw_svals(fthetas.first.t);
+        const auto b_before = raw_svals(bthetas.first);
+        const auto f_after = raw_svals(fthetas.second.t);
+        const auto b_after = raw_svals(bthetas.second);
+        const double rel_before =
+            lambda_relative_diff(sorted_desc(f_before), sorted_desc(b_before));
+        const double rel_after =
+            lambda_relative_diff(sorted_desc(f_after), sorted_desc(b_after));
+        if (rel_before > 1.0e-9 || rel_after > 1.0e-9) {
+          first_call_update = static_cast<int>(iu);
+          std::cout << std::setprecision(17)
+                    << "electron first divergent call step=" << step
+                    << " update=" << iu << " source=" << src
+                    << " leg=" << static_cast<int>(update.source_leg)
+                    << " theta_rel_before=" << rel_before
+                    << " theta_rel_after=" << rel_after << std::endl;
+          std::cout << "  f_after=" << vector_to_string(f_after) << std::endl;
+          std::cout << "  b_after=" << vector_to_string(b_after) << std::endl;
+          if (std::getenv("TENES_ELECTRON_DUMP_THETA") != nullptr) {
+            auto dump = [&](const char* label, const tensor& th) {
+              for (std::size_t n = 0; n < th.local_size(); ++n) {
+                const auto tidx = th.global_index(n);
+                double v = 0.0;
+                th.get_value(tidx, v);
+                std::cout << "THETA " << label << " " << tidx[0] << " "
+                          << tidx[1] << " " << tidx[2] << " " << tidx[3] << " "
+                          << std::setprecision(17) << v << std::endl;
+              }
+            };
+            dump("f_before", fthetas.first.t);
+            dump("f_after", fthetas.second.t);
+            dump("b_after", bthetas.second);
+          }
+          // Same-input check: graded gate application on the BOSON theta
+          // components (with fermion parity metadata). Separates the QR
+          // sign-gauge question from the gate-application question.
+          const f::ftensor<tensor> btheta_as_f{bthetas.first,
+                                               fthetas.first.parity};
+          const auto same_after = diagnostic_regroup_theta_for_svd(f::tensordot(
+              btheta_as_f, fop, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
+          const auto s_same = raw_svals(same_after.t);
+          std::cout << "  same_input_rel_after="
+                    << lambda_relative_diff(sorted_desc(s_same),
+                                            sorted_desc(b_after))
+                    << " s_same=" << vector_to_string(s_same) << std::endl;
+        }
+      }
+      fstate.simple_update(update);
+      bstate.simple_update(update);
+    }
+  }
+
+  std::cout << std::setprecision(17)
+            << "electron chain lambda max_rel=" << max_rel << std::endl;
+  if (first_step < 0) {
+    std::cout << "electron chain lambda case=A all bond spectra match "
+                 "rtol=1e-8 through 300 steps"
+              << std::endl;
+  } else {
+    std::cout << "electron chain lambda case=B first_step=" << first_step
+              << " first_bond=" << first_bond << " rel=" << first_rel
+              << std::endl;
   }
 }
 
