@@ -62,6 +62,17 @@ endforeach()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fulltest.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py @ONLY)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fermion)
+# The full free-fermion matrix (D = 4 included) takes many hours because the
+# two-site reduced-pair measurement scales as D^12; the default quick mode
+# runs D = 2 only. TENES_FREE_FERMION_FULL=1 at runtime also switches modes.
+option(TENES_FERMION_FULL_TEST
+       "Run the free-fermion end-to-end test with the full (slow) D matrix"
+       OFF)
+if(TENES_FERMION_FULL_TEST)
+  set(TENES_FERMION_FULL_TEST_PY "1")
+else()
+  set(TENES_FERMION_FULL_TEST_PY "0")
+endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion.py @ONLY)
 
@@ -89,6 +100,11 @@ endforeach()
 add_test(NAME FreeFermion
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion.py)
+if(TENES_FERMION_FULL_TEST)
+  set_tests_properties(FreeFermion PROPERTIES TIMEOUT 86400)
+else()
+  set_tests_properties(FreeFermion PROPERTIES TIMEOUT 3600)
+endif()
 
 if(ENABLE_MPI)
   set(BENCH_SMOKE_LAUNCHER

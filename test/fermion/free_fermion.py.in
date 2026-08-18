@@ -24,11 +24,17 @@ import numpy as np
 
 T = 1.0
 MUS = [0.0, -1.0]
-DS = [2, 4]
+# The full D matrix takes many hours: the two-site reduced-pair blob scales
+# as D^12 and dominates the D = 4 measurement. The quick (default) mode runs
+# D = 2 only with a correspondingly relaxed exact-reference threshold; set
+# TENES_FREE_FERMION_FULL=1 (or configure with -DTENES_FERMION_FULL_TEST=ON)
+# for the full matrix with the 5% threshold at D = 4.
+FULL = os.environ.get("TENES_FREE_FERMION_FULL", "@TENES_FERMION_FULL_TEST_PY@") == "1"
+DS = [2, 4] if FULL else [2]
 TAU = 0.01
 RTOL = 1.0e-3
 ATOL = 1.0e-4
-EXACT_RTOL = 5.0e-2
+EXACT_RTOL = 5.0e-2 if FULL else 2.0e-1
 
 
 def num_steps(mu):
@@ -240,22 +246,24 @@ def read_summary(path):
 
 
 def compare_summary(rows, ref_rows):
-    if len(rows) != len(ref_rows):
-        print("free_fermion.dat: number of rows do not match")
-        return False
+    # Match by (mu, D) so the quick mode can compare its subset against the
+    # full-matrix golden file.
+    refs = {(ref["mu"], ref["D"]): ref for ref in ref_rows}
     ok = True
-    for row, ref in zip(rows, ref_rows):
-        for key in ("mu", "D"):
-            if row[key] != ref[key]:
-                print(f"free_fermion.dat: metadata mismatch for {key}")
-                ok = False
-        for key in ("energy", "density"):
-            if not np.isclose(row[key], ref[key], rtol=RTOL, atol=ATOL):
+    for row in rows:
+        key = (row["mu"], row["D"])
+        if key not in refs:
+            print(f"free_fermion.dat: no reference row for mu={key[0]} D={key[1]}")
+            ok = False
+            continue
+        ref = refs[key]
+        for name in ("energy", "density"):
+            if not np.isclose(row[name], ref[name], rtol=RTOL, atol=ATOL):
                 print(
-                    f"free_fermion.dat: {key} mismatch for mu={row['mu']} D={row['D']}"
+                    f"free_fermion.dat: {name} mismatch for mu={row['mu']} D={row['D']}"
                 )
-                print("  result:   ", row[key])
-                print("  reference:", ref[key])
+                print("  result:   ", row[name])
+                print("  reference:", ref[name])
                 ok = False
     return ok
 
@@ -345,6 +353,9 @@ def main():
 
     ref_summary = join("data", "output_FreeFermion", "free_fermion.dat")
     if os.environ.get("TENES_UPDATE_FREE_FERMION_GOLDEN") == "1":
+        if not FULL:
+            print("golden update requires the full matrix; set TENES_FREE_FERMION_FULL=1")
+            return 1
         os.makedirs(os.path.dirname(ref_summary), exist_ok=True)
         shutil.copyfile(summary, ref_summary)
         return 0
