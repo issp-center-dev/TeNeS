@@ -212,6 +212,23 @@ ftensor<tensor> wrap_twosite_op(const tensor& op, const parity_vector& p1,
   return fop;
 }
 
+// Operator loading for the reduced-pair blob path (build_reduced_pair):
+// there both the ket-layer insertion (input legs) and the bra-layer closure
+// (output legs) cross, so the plain matrix elements acquire BOTH swap
+// factors. For physical dimension 2 this is indistinguishable from verbatim
+// loading on particle-number-conserving operators (which is how the d = 2
+// oracle pinned the pipeline); the distinction appears first in channels
+// like (odd,odd) -> (even,even), present e.g. in the spinful hopping at
+// linear order, and is pinned by the R5 d = 4 oracle test.
+template <class tensor>
+ftensor<tensor> wrap_reduced_pair_op(const tensor& op, const parity_vector& p1,
+                                     const parity_vector& p2) {
+  ftensor<tensor> fop{op, {p1, p2, p1, p2}};
+  apply_swap(fop, 0, 1);
+  apply_swap(fop, 2, 3);
+  return fop;
+}
+
 template <class tensor>
 void apply_parity(ftensor<tensor>& a, int ax) {
   std::vector<double> sign(a.parity[ax].size());

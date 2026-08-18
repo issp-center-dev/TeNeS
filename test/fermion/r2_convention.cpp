@@ -493,3 +493,204 @@ TEST_CASE("R3 reduced physical-open tensor traces to reduced norm tensor") {
     CHECK(got == doctest::Approx(expected).epsilon(1e-12));
   }
 }
+
+// ===== R5: d = 4 (electron) oracle pinning of the reduced-pair blob ========
+//
+// The d = 2 oracle cannot distinguish verbatim operator loading from
+// in+out-swapped loading in the blob path (they differ only on channels
+// that require odd-sector multiplicity >= 2, e.g. (odd,odd)->(even,even)
+// present in the electron hopping at linear order). The reference here is
+// the direct f-primitive expectation with the canonical (input-swapped)
+// operator, which is verified against exact Fock evolution at d = 4 in the
+// plaquette and chain diagnostics.
+
+namespace {
+
+tenes::fermion::leg_parities r4_parities(int lx, int ly, int site) {
+  const int x = site % lx;
+  const int y = site / lx;
+  tenes::fermion::parity_vector even{false};
+  tenes::fermion::parity_vector bond{false, true};
+  tenes::fermion::parity_vector phys{false, true, true, false};
+  return {x > 0 ? bond : even, y > 0 ? bond : even, x + 1 < lx ? bond : even,
+          y + 1 < ly ? bond : even, phys};
+}
+
+ft make_r4_tensor(int lx, int ly, int site, int seed = 0) {
+  const auto p = r4_parities(lx, ly, site);
+  tenes::real_tensor t(mptensor::Shape(p[0].size(), p[1].size(), p[2].size(),
+                                       p[3].size(), p[4].size()));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    auto idx = t.global_index(n);
+    if (tenes::fermion::count_odd(p, idx) % 2 == 0) {
+      const double x = static_cast<double>(
+          (site + 2) * (1 + seed + (3 + seed % 5) * idx[0] +
+                        (4 + seed % 5) * idx[1] + (5 + seed % 5) * idx[2] +
+                        (6 + seed % 5) * idx[3] + (11 + seed % 7) * idx[4]));
+      t.set_value(idx, 0.19 * std::sin(x) + 0.13 * std::cos(0.41 * x));
+    }
+  }
+  return ft{t, p};
+}
+
+const tenes::fermion::parity_vector r4_phys{false, true, true, false};
+
+ft r4_number_op() {
+  ft op{tenes::real_tensor(mptensor::Shape(4, 4)), {r4_phys, r4_phys}};
+  op.t.set_value(mptensor::Index(1, 1), 1.0);
+  op.t.set_value(mptensor::Index(2, 2), 1.0);
+  op.t.set_value(mptensor::Index(3, 3), 2.0);
+  return op;
+}
+
+// plain rank-4 tensors (no swaps applied)
+tenes::real_tensor r4_nn_plain() {
+  tenes::real_tensor op(mptensor::Shape(4, 4, 4, 4));
+  const double nv[4] = {0.0, 1.0, 1.0, 2.0};
+  for (int i1 = 0; i1 < 4; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      if (nv[i1] * nv[i2] != 0.0) {
+        op.set_value(mptensor::Index(i1, i2, i1, i2), nv[i1] * nv[i2]);
+      }
+    }
+  }
+  return op;
+}
+
+tenes::real_tensor r4_hop_plain() {
+  const auto h = electron_bond_hamiltonian(1.0, 0.0, 0.0);
+  tenes::real_tensor op(mptensor::Shape(4, 4, 4, 4));
+  for (int i1 = 0; i1 < 4; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      for (int o1 = 0; o1 < 4; ++o1) {
+        for (int o2 = 0; o2 < 4; ++o2) {
+          const double v = h[o1 * 4 + o2][i1 * 4 + i2];
+          if (std::abs(v) > 1.0e-15) {
+            op.set_value(mptensor::Index(i1, i2, o1, o2), v);
+          }
+        }
+      }
+    }
+  }
+  return op;
+}
+
+ft r4_wrap(const tenes::real_tensor& plain, bool swap_in, bool swap_out) {
+  ft op{plain, {r4_phys, r4_phys, r4_phys, r4_phys}};
+  if (swap_in) {
+    tenes::fermion::apply_swap(op, 0, 1);
+  }
+  if (swap_out) {
+    tenes::fermion::apply_swap(op, 2, 3);
+  }
+  return op;
+}
+
+double r4_pair_norm_blob(const ft& op, bool horizontal, int seed) {
+  if (horizontal) {
+    return r3_sum_entries(tenes::fermion::build_reduced_pair(
+        make_r4_tensor(2, 1, 0, seed), make_r4_tensor(2, 1, 1, seed), op,
+        tenes::fermion::reduced_pair_direction::horizontal));
+  }
+  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+      make_r4_tensor(1, 2, 0, seed), make_r4_tensor(1, 2, 1, seed), op,
+      tenes::fermion::reduced_pair_direction::vertical));
+}
+
+double r4_norm_blob(bool horizontal, int seed) {
+  auto site = [&](int s) {
+    return horizontal ? make_r4_tensor(2, 1, s, seed)
+                      : make_r4_tensor(1, 2, s, seed);
+  };
+  if (horizontal) {
+    return r3_sum_entries(
+        mptensor::tensordot(tenes::fermion::build_reduced(site(0)),
+                            tenes::fermion::build_reduced(site(1)),
+                            mptensor::Axes(2), mptensor::Axes(0)));
+  }
+  return r3_sum_entries(
+      mptensor::tensordot(tenes::fermion::build_reduced(site(0)),
+                          tenes::fermion::build_reduced(site(1)),
+                          mptensor::Axes(3), mptensor::Axes(1)));
+}
+
+}  // namespace
+
+TEST_CASE("R5 d=4 reduced pair blob against the Fock-verified direct path") {
+  for (const int seed : {0, 173}) {
+    for (const bool horizontal : {true, false}) {
+      const ft psi =
+          horizontal
+              ? tenes::fermion::tensordot(make_r4_tensor(2, 1, 0, seed),
+                                          make_r4_tensor(2, 1, 1, seed),
+                                          mptensor::Axes(2), mptensor::Axes(0))
+              : tenes::fermion::tensordot(make_r4_tensor(1, 2, 0, seed),
+                                          make_r4_tensor(1, 2, 1, seed),
+                                          mptensor::Axes(3), mptensor::Axes(1));
+      const double norm = r2_norm(psi);
+      const std::string label =
+          std::string(horizontal ? "H" : "V") + " seed=" + std::to_string(seed);
+
+      // layer 1: norm
+      const double norm_blob = r4_norm_blob(horizontal, seed);
+      CHECK(norm_blob / norm == doctest::Approx(1.0).epsilon(1e-10));
+
+      // layer 2: one-site number density via composed one-site ops
+      const ft n_op = r4_number_op();
+      const double n0_ref = r2_expect_one(psi, 3, n_op);
+      const double n1_ref = r2_expect_one(psi, 7, n_op);
+
+      // layer 3: rank-4 diagonal nn (odd-odd diagonal channel)
+      const double nn_ref = [&] {
+        ft tmp = r2_apply_one_site(psi, 7, n_op);
+        tmp = r2_apply_one_site(tmp, 3, n_op);
+        mptensor::Axes all;
+        for (int ax = 0; ax < psi.rank(); ++ax) {
+          all.push(ax);
+        }
+        return tenes::fermion::trace(tenes::fermion::conj(psi), tmp, all, all) /
+               norm;
+      }();
+      // cross-check the reference route: canonical (in-swapped) two-site
+      const double nn_direct =
+          r2_expect_two(psi, 3, 7, r4_wrap(r4_nn_plain(), true, false));
+      CHECK(nn_direct == doctest::Approx(nn_ref).epsilon(1e-10));
+
+      // layer 4: rank-4 electron hopping ((odd,odd)->(even,even) channel)
+      const double hop_ref =
+          r2_expect_two(psi, 3, 7, r4_wrap(r4_hop_plain(), true, false));
+
+      // blob candidates
+      const double nn_plain =
+          r4_pair_norm_blob(r4_wrap(r4_nn_plain(), false, false), horizontal,
+                            seed) /
+          norm_blob;
+      const double nn_both =
+          r4_pair_norm_blob(r4_wrap(r4_nn_plain(), true, true), horizontal,
+                            seed) /
+          norm_blob;
+      const double hop_plain =
+          r4_pair_norm_blob(r4_wrap(r4_hop_plain(), false, false), horizontal,
+                            seed) /
+          norm_blob;
+      const double hop_both =
+          r4_pair_norm_blob(r4_wrap(r4_hop_plain(), true, true), horizontal,
+                            seed) /
+          norm_blob;
+
+      std::cout << "R5 " << label << " n_ref=(" << n0_ref << ", " << n1_ref
+                << ") nn_ref=" << nn_ref << " nn_plain=" << nn_plain
+                << " nn_both=" << nn_both << " hop_ref=" << hop_ref
+                << " hop_plain=" << hop_plain << " hop_both=" << hop_both
+                << std::endl;
+
+      // The production blob convention (wrap_reduced_pair_op = both swaps)
+      // must reproduce the Fock-verified direct path; verbatim loading is
+      // degenerate with it on the nn channel but wrong on the hopping.
+      CHECK(nn_both == doctest::Approx(nn_ref).epsilon(1e-10));
+      CHECK(hop_both == doctest::Approx(hop_ref).epsilon(1e-10));
+      const double hop_scale = std::max(1.0e-6, std::abs(hop_ref));
+      CHECK(std::abs(hop_plain - hop_ref) > 0.1 * hop_scale);
+    }
+  }
+}
