@@ -55,9 +55,31 @@ Multiple sites can be specified at once by setting a list to ``index``.
 An empty list ``[]`` means all sites.
 
 ``parity`` is required when ``parameter.general.fermion = true`` and must have
-``physical_dim`` entries, each 0 (even) or 1 (odd).
+``physical_dim`` entries, each 0 (even) or 1 (odd):
+``parity[i]`` is the parity of the number of fermions in the ``i``-th physical
+basis state.
 For example, a spinless fermion site with the basis :math:`\{|0\rangle, |1\rangle\}`
 has ``parity = [0, 1]``.
+
+When a site hosts more than one fermionic mode (e.g. spinful electrons,
+``physical_dim = 4``), **fix an ordering of the creation operators within the
+site once and use it consistently everywhere**: each basis state is *defined*
+as the product of creation operators applied to the vacuum in that fixed
+internal order. For example, with the internal order :math:`(\uparrow, \downarrow)`,
+
+.. math::
+   |0\rangle,\quad
+   |{\uparrow}\rangle = c^\dagger_\uparrow |0\rangle,\quad
+   |{\downarrow}\rangle = c^\dagger_\downarrow |0\rangle,\quad
+   |{\uparrow\downarrow}\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle
+
+gives ``parity = [0, 1, 1, 0]``.
+The chosen ordering does not appear in the ``parity`` list itself, but it
+determines the signs of the operator matrix elements (see the ``fermion``
+entry of the ``parameter.general`` section), so all operators, gates, and
+initial states must be written in the same convention; mixing conventions
+produces silently wrong signs.
+
 The initial product state must be parity even on every site; parity-odd
 ``initial_state`` vectors are rejected.
 
