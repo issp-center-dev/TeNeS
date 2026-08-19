@@ -69,10 +69,6 @@ void iTPS<ptensor>::initialize_tensors() {
       finfo.phys.push_back(site_parity);
     }
     finfo.virt.reserve(N_UNIT);
-    for (int e = 0; e < 4; ++e) {
-      finfo.C_par[e].resize(N_UNIT);
-      finfo.eT_par[e].resize(N_UNIT);
-    }
   }
 
   for (int i = 0; i < N_UNIT; ++i) {
@@ -86,14 +82,6 @@ void iTPS<ptensor>::initialize_tensors() {
             tenes::fermion::even_first_parity(static_cast<size_t>(vdim[leg]));
       }
       finfo.virt.push_back(virt);
-      const auto chi_parity = tenes::fermion::even_first_parity(CHI);
-      for (int e = 0; e < 4; ++e) {
-        finfo.C_par[e][i] = {chi_parity, chi_parity};
-      }
-      finfo.eT_par[0][i] = {chi_parity, chi_parity, virt[1], virt[1]};
-      finfo.eT_par[1][i] = {chi_parity, chi_parity, virt[2], virt[2]};
-      finfo.eT_par[2][i] = {chi_parity, chi_parity, virt[3], virt[3]};
-      finfo.eT_par[3][i] = {chi_parity, chi_parity, virt[0], virt[0]};
     }
 
     Tn.push_back(

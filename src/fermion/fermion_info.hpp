@@ -33,8 +33,6 @@ struct FermionInfo {
   bool enabled = false;
   std::vector<parity_vector> phys;
   std::vector<std::array<parity_vector, 4>> virt;
-  std::vector<std::array<parity_vector, 2>> C_par[4];
-  std::vector<std::array<parity_vector, 4>> eT_par[4];
 };
 
 inline void validate_neighbor_consistency(const FermionInfo& fi,
@@ -89,56 +87,6 @@ void unwrap_Tn(const ftensor<tensor>& ft, tensor& Tn, FermionInfo&, int) {
     throw std::runtime_error("unwrap_Tn expects a five-leg Tn ftensor");
   }
   Tn = ft.t;
-}
-
-inline leg_parities C_parity(const FermionInfo& fi, int corner, int site) {
-  if (corner < 0 || corner >= 4 || site < 0 ||
-      static_cast<std::size_t>(site) >= fi.C_par[corner].size()) {
-    throw std::runtime_error("FermionInfo: C index is out of range");
-  }
-  return {fi.C_par[corner][site][0], fi.C_par[corner][site][1]};
-}
-
-template <class tensor>
-ftensor<tensor> wrap_C(const tensor& C, const FermionInfo& fi, int corner,
-                       int site) {
-  return ftensor<tensor>{C, C_parity(fi, corner, site)};
-}
-
-template <class tensor>
-void unwrap_C(const ftensor<tensor>& ft, tensor& C, FermionInfo& fi, int corner,
-              int site) {
-  if (ft.parity.size() != 2) {
-    throw std::runtime_error("unwrap_C expects a two-leg C ftensor");
-  }
-  C = ft.t;
-  fi.C_par[corner][site] = {ft.parity[0], ft.parity[1]};
-}
-
-inline leg_parities eT_parity(const FermionInfo& fi, int edge, int site) {
-  if (edge < 0 || edge >= 4 || site < 0 ||
-      static_cast<std::size_t>(site) >= fi.eT_par[edge].size()) {
-    throw std::runtime_error("FermionInfo: eT index is out of range");
-  }
-  return {fi.eT_par[edge][site][0], fi.eT_par[edge][site][1],
-          fi.eT_par[edge][site][2], fi.eT_par[edge][site][3]};
-}
-
-template <class tensor>
-ftensor<tensor> wrap_eT(const tensor& eT, const FermionInfo& fi, int edge,
-                        int site) {
-  return ftensor<tensor>{eT, eT_parity(fi, edge, site)};
-}
-
-template <class tensor>
-void unwrap_eT(const ftensor<tensor>& ft, tensor& eT, FermionInfo& fi, int edge,
-               int site) {
-  if (ft.parity.size() != 4) {
-    throw std::runtime_error("unwrap_eT expects a four-leg eT ftensor");
-  }
-  eT = ft.t;
-  fi.eT_par[edge][site] = {ft.parity[0], ft.parity[1], ft.parity[2],
-                           ft.parity[3]};
 }
 
 }  // namespace fermion

@@ -74,42 +74,6 @@ ftensor<tensor> apply_reduced_two_site_op(const ftensor<tensor>& psi,
 }
 
 template <class tensor>
-tensor fuse_doubled_external_legs(const ftensor<tensor>& doubled,
-                                  const std::vector<int>& leg_ids) {
-  const std::size_t nlegs = leg_ids.size();
-  ftensor<tensor> prepared = doubled;
-  std::vector<int> bra_axes;
-  std::vector<int> ket_axes;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    bra_axes.push_back(static_cast<int>(ax));
-    ket_axes.push_back(static_cast<int>(nlegs + ax));
-  }
-  apply_joint_swaps(prepared, bra_axes, ket_axes, leg_ids);
-
-  mptensor::Axes interleaved;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    interleaved.push(nlegs + ax);
-    interleaved.push(ax);
-  }
-  ftensor<tensor> ordered = transpose(prepared, interleaved);
-  mptensor::Shape sh;
-  for (std::size_t ax = 0; ax < nlegs; ++ax) {
-    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
-  }
-  return mptensor::reshape(ordered.t, sh);
-}
-
-template <class tensor>
-void scale_in_place(tensor& a, double scale) {
-  for (std::size_t n = 0; n < a.local_size(); ++n) {
-    const auto idx = a.global_index(n);
-    typename tensor::value_type v;
-    a.get_value(idx, v);
-    a.set_value(idx, scale * v);
-  }
-}
-
-template <class tensor>
 void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
                            std::size_t ax, bool ket_odd_bra_even) {
   std::vector<double> sign(leg_parity.size() * leg_parity.size(), 1.0);
@@ -198,46 +162,17 @@ tensor build_reduced_op(const ftensor<tensor>& Tn) {
   return detail::doubled_pipeline(Tn, Tn);
 }
 
-// Doubled impurity with a (possibly parity-odd) single-site operator inserted
-// into the KET layer BEFORE doubling. Odd operators anticommute past virtual
-// legs during the interleave, so post-doubling bosonic insertion is wrong for
-// them; the pre-doubling insertion lets the graded pipeline generate those
-// signs. For parity-even operators both insertion points agree.
-template <class tensor>
-tensor build_reduced_channel(const ftensor<tensor>& Tn,
-                             const ftensor<tensor>& op_channel) {
-  ftensor<tensor> ket_op =
-      tensordot(Tn, op_channel, mptensor::Axes(4), mptensor::Axes(0));
-  return mptensor::contract(detail::doubled_pipeline(Tn, ket_op),
-                            mptensor::Axes(4), mptensor::Axes(5));
-}
-
 template <class tensor>
 tensor build_reduced(const ftensor<tensor>& Tn) {
   return mptensor::contract(build_reduced_op(Tn), mptensor::Axes(4),
                             mptensor::Axes(5));
 }
 
-// variant bit 0: doubled-cluster global sign +1 (0) or -1 (1).
-inline int g_reduced_pair_variant = 0;
-
-template <class tensor>
-tensor doubled_cluster(const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
-                       const ftensor<tensor>& op12,
-                       reduced_pair_direction direction, int variant = 0);
-
 template <class tensor>
 tensor build_reduced_pair(const ftensor<tensor>& TnA,
                           const ftensor<tensor>& TnB,
                           const ftensor<tensor>& op12,
                           reduced_pair_direction direction) {
-  return doubled_cluster(TnA, TnB, op12, direction, g_reduced_pair_variant);
-}
-
-template <class tensor>
-tensor doubled_cluster(const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
-                       const ftensor<tensor>& op12,
-                       reduced_pair_direction direction, int variant) {
   ftensor<tensor> ket_ab;
   std::vector<int> leg_ids;
   switch (direction) {
@@ -266,9 +201,6 @@ tensor doubled_cluster(const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
   } else {
     detail::apply_fused_leg_gauge(ret, TnA.parity[0], 0, true);
     detail::apply_fused_leg_gauge(ret, TnB.parity[0], 3, false);
-  }
-  if ((variant & 1) != 0) {
-    detail::scale_in_place(ret, -1.0);
   }
   return ret;
 }
