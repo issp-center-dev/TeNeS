@@ -1211,6 +1211,18 @@ class Model:
                     self.full_updates.append(evo)
 
     def _validate_fermion_mode_input(self) -> None:
+        narrow_dimensions = [
+            "{}={}".format(name, size)
+            for name, size in zip(("L_sub[0]", "L_sub[1]"), self.unitcell.L)
+            if size < 2
+        ]
+        if narrow_dimensions:
+            msg = (
+                "Fermion mode requires both tensor L_sub dimensions to be at "
+                "least 2; got L_sub = {} ({})."
+            ).format(self.unitcell.L, ", ".join(narrow_dimensions))
+            raise RuntimeError(msg)
+
         if self.unitcell.skew != 0:
             msg = (
                 "Fermion mode with a skewed tensor unit cell is a known "
@@ -1254,8 +1266,7 @@ class Model:
                     "Fermion mode does not support Hamiltonian bond source_site "
                     "{} with displacement (dx, dy) = ({}, {}): it requires {} "
                     "nearest-neighbour hops. Use only nearest-neighbour "
-                    "Hamiltonian bonds or include the required fermionic string "
-                    "explicitly in a supported formulation."
+                    "Hamiltonian bonds."
                 ).format(bond.source_site, bond.dx, bond.dy, nhops)
                 raise RuntimeError(msg)
 

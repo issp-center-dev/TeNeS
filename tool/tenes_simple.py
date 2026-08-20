@@ -1414,10 +1414,9 @@ class HubbardModel(Model):
 
         ham = -t * hop
         ham = ham + V * (n1 @ n2)
-        if not use_onesite_hamiltonian:
-            ham = ham + (U / z) * (doublon1 + doublon2)
-            ham = ham - (mu / z) * (n1 + n2)
-            ham = ham - (h / z) * (sz1 + sz2)
+        ham = ham + (U / z) * (doublon1 + doublon2)
+        ham = ham - (mu / z) * (n1 + n2)
+        ham = ham - (h / z) * (sz1 + sz2)
         return bond_matrix(ham, self.nspin)
 
 
@@ -1522,6 +1521,14 @@ def _check_fermion_scope(
     bonds only. Nothing else is silently converted; every unsupported input
     stops here with a reason.
     """
+    general = param.get("parameter", {}).get("general", {})
+    if general.get("fermion", False) and not model.is_fermion:
+        msg = (
+            'parameter.general.fermion = true conflicts with model type "{}"; '
+            "remove the fermion flag or choose a fermionic model type."
+        ).format(param["model"]["type"])
+        raise RuntimeError(msg)
+
     if not model.is_fermion:
         return
 
@@ -1582,6 +1589,13 @@ def tenes_simple(
     lattice = make_lattice(param)
     model = make_model(param)
     _check_fermion_scope(param, lattice, model)
+    if use_onesite_hamiltonian and model.is_fermion:
+        msg = (
+            "Fermionic model one-site terms are folded into bond Hamiltonians "
+            "in this version; use_onesite_hamiltonian is not supported for "
+            "fermionic models."
+        )
+        raise RuntimeError(msg)
     hams = hamiltonians(lattice, model, use_onesite_hamiltonian)
 
     ret = []

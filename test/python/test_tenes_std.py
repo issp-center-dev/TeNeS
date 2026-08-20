@@ -163,13 +163,18 @@ class TestUnitcell:
 def minimal_fermion_std_input():
     """A minimal valid fermion-mode standard-mode input.
 
-    One site, L_sub = [1, 1], a single nearest-neighbour bond term
-    (dx, dy) = (1, 0), which has make_path length 1 on this lattice.
+    A 2x2 unit cell -- the smallest shape fermion mode allows under C2
+    (task-11-contract.md: both L_sub entries must be >= 2) -- with one
+    shared site definition broadcast to all four positions via
+    index = [], and a single nearest-neighbour bond term (dx, dy) = (1, 0),
+    which has make_path length 1 on this lattice (unchanged from the
+    former 1x1 fixture: the taxicab hop count between two lattice sites
+    does not depend on the unit-cell tiling).
     """
     return {
         "parameter": {"general": {"fermion": True}},
         "tensor": {
-            "l_sub": [1, 1],
+            "l_sub": [2, 2],
             "unitcell": [
                 {
                     "index": [],
@@ -190,22 +195,29 @@ def minimal_fermion_std_input():
 
 
 def two_site_fermion_input(parities):
-    """A two-site fermion-mode input, with only a one-site Hamiltonian term
-    (no bonds), so it isolates the "every unitcell needs parity" check (C3a)
-    from the bond-distance check (C3c).
+    """A four-site (2x2, the minimum fermion-valid shape per C2) fermion-mode
+    input, with only a one-site Hamiltonian term (no bonds), so it isolates
+    the "every unitcell needs parity" check (C3a) from the bond-distance
+    check (C3c).
 
-    `parities` maps a subset of {0, 1} to a parity list; a site not present
-    in the mapping is emitted without a `parity` key at all.
+    `parities` maps a subset of {0, 1} to a parity list for sites 0 and 1;
+    a site not present in the mapping is emitted without a `parity` key at
+    all, exactly as before. Sites 2 and 3 exist only to satisfy the
+    L_sub >= [2, 2] requirement and always carry a valid parity, so they
+    never trigger this check themselves.
     """
     unitcell = []
-    for index in (0, 1):
+    for index in range(4):
         site = {"index": [index], "physical_dim": 2, "virtual_dim": 2}
-        if index in parities:
-            site["parity"] = parities[index]
+        if index in (0, 1):
+            if index in parities:
+                site["parity"] = parities[index]
+        else:
+            site["parity"] = [0, 1]
         unitcell.append(site)
     return {
         "parameter": {"general": {"fermion": True}},
-        "tensor": {"l_sub": [2, 1], "unitcell": unitcell},
+        "tensor": {"l_sub": [2, 2], "unitcell": unitcell},
         "hamiltonian": [
             {
                 "dim": [2],
@@ -218,9 +230,11 @@ def two_site_fermion_input(parities):
 
 def fermion_input_with_missing_parity(missing_index, num_sites=4):
     """A fermion-mode input with `num_sites` unitcell sites (L_sub =
-    [num_sites, 1]), all carrying `parity = [0, 1]` except `missing_index`,
-    which has none. Only a one-site Hamiltonian term is used, so this
-    isolates the "every unitcell needs parity" check (C3a).
+    [2, num_sites // 2], the smallest fermion-valid (>= 2 in both entries,
+    per C2) shape that holds `num_sites` sites), all carrying
+    `parity = [0, 1]` except `missing_index`, which has none. Only a
+    one-site Hamiltonian term is used, so this isolates the "every unitcell
+    needs parity" check (C3a).
 
     `num_sites` defaults to 4 so that the offending index can be chosen
     from {2, 3}: values that cannot collide with any digit already present
@@ -228,6 +242,7 @@ def fermion_input_with_missing_parity(missing_index, num_sites=4):
     talk about a "0/1" parity entry), keeping the content-pinning checks
     in TestFermionErrorMessageQuality unambiguous.
     """
+    assert num_sites % 2 == 0 and num_sites // 2 >= 2
     unitcell = []
     for index in range(num_sites):
         site = {"index": [index], "physical_dim": 2, "virtual_dim": 2}
@@ -236,7 +251,7 @@ def fermion_input_with_missing_parity(missing_index, num_sites=4):
         unitcell.append(site)
     return {
         "parameter": {"general": {"fermion": True}},
-        "tensor": {"l_sub": [num_sites, 1], "unitcell": unitcell},
+        "tensor": {"l_sub": [2, num_sites // 2], "unitcell": unitcell},
         "hamiltonian": [
             {
                 "dim": [2],
@@ -535,6 +550,85 @@ class TestFermionErrorMessageQuality:
         assert "beta_observable_marker" not in msg_a
         assert "alpha_observable_marker" not in msg_b
         assert msg_a != msg_b
+
+
+# ---------------------------------------------------------------------------
+# C2 (task-11-contract.md): fermion mode requires BOTH tensor unit-cell
+# dimensions to be >= 2.
+#
+# L_sub = [2, 1] (or [1, 2]) has one entry equal to 1, so with skew = 0 a
+# site becomes its own neighbour along that direction; the C++ constructor
+# computes skew % LX = 0 in that case, so the pre-existing skew guard can
+# never fire. LatticeGraph happily builds a shortest-path graph for this
+# geometry -- no crash, no warning -- so it must be rejected up front here.
+# ---------------------------------------------------------------------------
+
+
+class TestFermionUnitCellDimensionGuard:
+    def test_l_sub_2_1_is_rejected(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["l_sub"] = [2, 1]
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        # Identifying content: name the unit-cell dimensions, not just
+        # "raises something".
+        assert re.search(r"\bL_sub\b", message, re.I) or re.search(
+            r"\bdimension", message, re.I
+        )
+        assert re.search(r"\b2\b", message)
+        assert re.search(r"\b1\b", message)
+
+    def test_l_sub_1_2_is_rejected(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["l_sub"] = [1, 2]
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bL_sub\b", message, re.I) or re.search(
+            r"\bdimension", message, re.I
+        )
+        assert re.search(r"\b1\b", message)
+        assert re.search(r"\b2\b", message)
+
+    def test_l_sub_2_1_message_does_not_mention_the_internal_milestone(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["l_sub"] = [2, 1]
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert "M1" not in message
+        assert "M2" not in message
+
+    def test_l_sub_2_2_is_accepted(self):
+        # Regression net (i): the exact same fermionic configuration
+        # (parity everywhere, a single nearest-neighbour bond) as the
+        # rejected cases above, but with both dimensions >= 2, must not
+        # raise -- this is minimal_fermion_std_input() itself.
+        model = tenes_std.Model(minimal_fermion_std_input())
+        assert model.unitcell.L == [2, 2]
+
+    def test_bosonic_l_sub_2_1_still_constructs(self):
+        # Regression net (ii): the bug -- and this new guard -- is
+        # fermion-specific. A bosonic (no `fermion` key) 2x1 cell, the
+        # shape the benchmark harness uses, must be entirely unaffected.
+        param = {
+            "tensor": {
+                "l_sub": [2, 1],
+                "unitcell": [
+                    {"index": [], "physical_dim": 2, "virtual_dim": 2},
+                ],
+            },
+            "hamiltonian": [
+                {
+                    "dim": [2, 2],
+                    "bonds": "0 1 0\n",
+                    "elements": "0 0 0 0 1.0 0.0\n1 1 1 1 -1.0 0.0",
+                }
+            ],
+        }
+        model = tenes_std.Model(param)  # must not raise
+        assert model.unitcell.L == [2, 1]
 
 
 # ---------------------------------------------------------------------------

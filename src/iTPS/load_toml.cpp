@@ -616,6 +616,9 @@ void validate_fermion_constraints(
       static_cast<std::size_t>(lattice.N_UNIT)) {
     throw_fermion_guard("missing tensor.unitcell.parity metadata");
   }
+  if (lattice.LX < 2 || lattice.LY < 2) {
+    throw_fermion_guard("tensor.L_sub dimensions smaller than 2");
+  }
   if (lattice.skew != 0) {
     throw_fermion_guard(
         "skewed unit cells (measured to give wrong fermionic numbers)");

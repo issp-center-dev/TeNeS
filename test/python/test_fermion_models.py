@@ -749,3 +749,149 @@ def test_hubbard_gate_expands_to_the_hamiltonian():
     assert_gate_expands_to_hamiltonian(
         hubbard_param({"t": 1.0, "u": 4.0, "v": 0.5, "mu": 1.0, "h": 0.3})
     )
+
+
+# ---------------------------------------------------------------------------
+# task-11-contract.md C1: use_onesite_hamiltonian must not delete the
+# Hubbard model's U/mu/h terms.
+#
+# Today HubbardModel.model_bondhamiltonian guards its onsite block on
+# `use_onesite_hamiltonian`, and model_sitehamiltonian always returns zeros
+# -- so tenes_simple(param, use_onesite_hamiltonian=True) with type =
+# "hubbard" silently emits a bond Hamiltonian with U, mu and h dropped and
+# no site Hamiltonian to carry them: wrong physics through the documented
+# --use-site-hamiltonian CLI flag, with no error. The required fix folds
+# the onsite terms into the bond Hamiltonian unconditionally (matching the
+# spinless sibling, which already has no such conditional) and rejects the
+# flag outright for fermionic models instead of silently corrupting the
+# Hamiltonian.
+# ---------------------------------------------------------------------------
+
+
+class TestHubbardOnesiteTermsAlwaysInBondHamiltonian:
+    def test_bond_hamiltonian_is_identical_for_both_flag_values(self):
+        # The sharpest form of C1(a): the two flag values must produce the
+        # SAME bond Hamiltonian element-for-element, not merely "both
+        # nonzero somewhere".
+        model = tenes_simple.make_model(
+            hubbard_param({"t": 1.0, "u": 8.0, "v": 0.5, "mu": 1.0, "h": 0.3})
+        )
+        h_true = model.bondhamiltonian(0, 0, z=4, use_onesite_hamiltonian=True)
+        h_false = model.bondhamiltonian(0, 0, z=4, use_onesite_hamiltonian=False)
+        assert np.allclose(h_true, h_false)
+
+    def test_u_carrying_element_is_present_regardless_of_the_flag(self):
+        # Derivation (same as TestHubbardModel.test_hubbard_u_appears_on_
+        # doubly_occupied_sites): u=8, z=4 -> U/z * doublon1 = 2.0 on the
+        # site1-doubly-occupied (i1=3), site2-empty (i2=0) diagonal element.
+        model = tenes_simple.make_model(hubbard_param({"u": 8.0}))
+        h_true = model.bondhamiltonian(0, 0, z=4, use_onesite_hamiltonian=True)
+        h_false = model.bondhamiltonian(0, 0, z=4, use_onesite_hamiltonian=False)
+        assert h_true[3, 0, 3, 0] == pytest.approx(2.0)
+        assert h_false[3, 0, 3, 0] == pytest.approx(2.0)
+
+
+class TestFermionicModelsRejectUseOnesiteHamiltonian:
+    def test_hubbard_rejects_use_onesite_hamiltonian(self):
+        param = hubbard_param({"u": 8.0})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param, use_onesite_hamiltonian=True)
+        message = str(excinfo.value)
+        assert re.search(r"\bfermion", message, re.I)
+        assert re.search(r"onesite_hamiltonian|one.?site", message, re.I)
+
+    def test_spinless_rejects_use_onesite_hamiltonian(self):
+        param = spinless_param({"mu": 1.0})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param, use_onesite_hamiltonian=True)
+        message = str(excinfo.value)
+        assert re.search(r"\bfermion", message, re.I)
+        assert re.search(r"onesite_hamiltonian|one.?site", message, re.I)
+
+    def test_message_does_not_mention_the_internal_milestone(self):
+        param = hubbard_param({"u": 8.0})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param, use_onesite_hamiltonian=True)
+        message = str(excinfo.value)
+        assert "M1" not in message and "M2" not in message
+
+    def test_spin_model_with_use_onesite_hamiltonian_still_works(self):
+        # Regression net: C1's fix is gated on model.is_fermion, so a
+        # bosonic/spin model must keep the flag exactly as today.
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "spin", "j": 1.0, "hz": 0.5},
+        }
+        text, lattice = tenes_simple.tenes_simple(param, use_onesite_hamiltonian=True)
+        assert isinstance(text, str) and len(text) > 0
+
+
+# ---------------------------------------------------------------------------
+# task-11-contract.md C3: fermion = true with a non-fermionic model type
+# must be rejected up front.
+#
+# Today [parameter.general] fermion = true with type = "spin"/"boson" is
+# passed straight through into std.toml (no parity is emitted, since the
+# model is not fermionic), and tenes_std then tells the user to ADD parity
+# -- a confusing dead end. _check_fermion_scope must instead reject the
+# combination itself, before its `is_fermion` early return.
+# ---------------------------------------------------------------------------
+
+
+class TestFermionFlagWithNonFermionicModelIsRejected:
+    def test_spin_with_fermion_flag_is_rejected(self):
+        param = {
+            "parameter": {"general": {"fermion": True}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "spin", "j": 1.0},
+        }
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        # Identifying content: the flag and/or the (non-fermionic) model
+        # type must be named, not a generic "invalid input" string.
+        assert re.search(r"\bfermion\b", message, re.I)
+        assert "spin" in message.lower()
+
+    def test_boson_with_fermion_flag_is_rejected(self):
+        param = {
+            "parameter": {"general": {"fermion": True}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "boson", "t": 1.0},
+        }
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bfermion\b", message, re.I)
+        assert "boson" in message.lower()
+
+    def test_message_does_not_mention_the_internal_milestone(self):
+        param = {
+            "parameter": {"general": {"fermion": True}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "spin", "j": 1.0},
+        }
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert "M1" not in message and "M2" not in message
+
+    def test_fermionic_model_with_fermion_flag_still_works(self):
+        # A fermionic model type with the flag explicitly set to True (the
+        # matching, non-conflicting case) must keep working.
+        param = spinless_param()
+        param["parameter"]["general"]["fermion"] = True
+        text, lattice = tenes_simple.tenes_simple(param)
+        assert isinstance(text, str) and len(text) > 0
+
+    def test_boson_without_the_flag_is_untouched(self):
+        # Regression net: the ordinary bosonic path (no fermion key at
+        # all) must not be touched by this new up-front check.
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "boson", "t": 1.0},
+        }
+        parsed = std_toml(param)
+        assert "fermion" not in parsed["parameter"].get("general", {})
