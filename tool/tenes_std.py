@@ -267,6 +267,7 @@ class LocalTensor:
 
     phys_dim: int
     virtual_dim: List[int]
+    parity: Optional[List[int]]
 
     def __init__(self, tensor_dict: dict = None):
         if tensor_dict is not None:
@@ -288,6 +289,7 @@ class LocalTensor:
             self.virtual_dim = [virtual_dim] * 4
         else:
             self.virtual_dim = virtual_dim
+        self.parity = tensor_dict.get("parity", None)
         self.check()
 
     def check(self):
@@ -310,6 +312,21 @@ class LocalTensor:
         ):
             msg = "virtual_dim must be a positive integer or a list with 4 positive integers"
             raise RuntimeError(msg)
+
+        if self.parity is not None:
+            if not isinstance(self.parity, list) or len(self.parity) != self.phys_dim:
+                msg = (
+                    "parity must be a list with one 0/1 entry per physical state; "
+                    "physical_dim is {} but parity is {}".format(
+                        self.phys_dim, self.parity
+                    )
+                )
+                raise RuntimeError(msg)
+            if any(p not in (0, 1) for p in self.parity):
+                msg = "parity entries must be 0 or 1, but parity is {}".format(
+                    self.parity
+                )
+                raise RuntimeError(msg)
 
 
 class Unitcell:
@@ -1174,6 +1191,9 @@ class Model:
             obs = MultisiteObservable(group, ms, ops=multisite["ops"], coeff=coeff, coeff_im=coeff_im, name=name)
             self.multibodies.append(obs)
 
+        if self.parameter.get("general", {}).get("fermion", False):
+            self._validate_fermion_mode_input()
+
         self.simple_updates = []
         self.full_updates = []
 
@@ -1189,6 +1209,45 @@ class Model:
             for ham in self.hamiltonians:
                 for evo in make_evolution(ham, self.graph, tau, group=g):
                     self.full_updates.append(evo)
+
+    def _validate_fermion_mode_input(self) -> None:
+        for site_index, site in enumerate(self.unitcell.sites):
+            if site.parity is None:
+                msg = (
+                    "Fermion mode requires tensor.unitcell site {} to define "
+                    "parity metadata. Add parity = [...] with one 0/1 entry per "
+                    "physical state."
+                ).format(site_index)
+                raise RuntimeError(msg)
+
+        for obs in self.twobodies:
+            if obs.ops is not None:
+                bonds = [
+                    "{} {} {}".format(bond.source_site, bond.dx, bond.dy)
+                    for bond in obs.bonds
+                ]
+                msg = (
+                    "Fermion mode does not support ops-form observable.twosite "
+                    "'{}' (group {}, bonds {}). Provide explicit elements for "
+                    "this two-site observable."
+                ).format(obs.name, obs.group, bonds)
+                raise RuntimeError(msg)
+
+        for ham in self.hamiltonians:
+            if not isinstance(ham, NNOperator):
+                continue
+            bonds = self.graph.make_path(ham.bond)
+            nhops = len(bonds)
+            if nhops != 1:
+                bond = ham.bond
+                msg = (
+                    "Fermion mode does not support Hamiltonian bond source_site "
+                    "{} with displacement (dx, dy) = ({}, {}): it requires {} "
+                    "nearest-neighbour hops. Use only nearest-neighbour "
+                    "Hamiltonian bonds or include the required fermionic string "
+                    "explicitly in a supported formulation."
+                ).format(bond.source_site, bond.dx, bond.dy, nhops)
+                raise RuntimeError(msg)
 
     def to_toml(self, f: TextIO):
         # parameter
@@ -1209,6 +1268,8 @@ class Model:
             f.write("index = {}\n".format(ucell["index"]))
             f.write("physical_dim = {}\n".format(ucell["physical_dim"]))
             f.write("virtual_dim = {}\n".format(ucell["virtual_dim"]))
+            if "parity" in ucell:
+                f.write("parity = {}\n".format(ucell["parity"]))
             if "initial_state" in ucell:
                 f.write("initial_state = {}\n".format(ucell["initial_state"]))
             if "noise" in ucell:
