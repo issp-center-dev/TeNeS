@@ -7,6 +7,8 @@
 - `tenes`
   - Experimental support for fermionic models (`[parameter.general] fermion = true` with per-site `[[tensor.unitcell]] parity`): site tensors become Z2-graded and all bond updates and measurements generate the fermionic exchange signs automatically; verified against exact free-fermion results (energy within 0.7% at D=4, chi=32 for half-filled spinless fermions on the square lattice)
   - Limitations of the current fermion mode: ground-state mode with simple update and the CTM environment only; full update, mean-field environment, `Use_RSVD`, `Simple_Gauge_Fix`, finite temperature, real-time evolution, multi-site observables, two-site observables beyond nearest neighbors, correlation functions, correlation length, and `tensor_save`/`tensor_load` are rejected at input time (the correlation length is forcibly disabled); away from half filling the simple update needs considerably more imaginary time to converge
+- `tenes_simple` / `tenes_std`
+  - `tenes_simple` now supports two fermionic models on the square lattice with nearest-neighbor bonds: `type = "spinless fermion"` (spinless fermions; parameters `t`, `v`, `mu`) and `type = "hubbard"` (the fermionic Hubbard model; parameters `t`, `u`, `v`, `mu`, `h`; the Bose-Hubbard model remains `type = "boson"`), with initial states `vacuum` (both), `full` and `cdw` (Hubbard); `tenes_std` carries the `parity` metadata through to `input.toml` and rejects inputs the fermion mode cannot handle (long-range bonds, `ops`-form two-site observables, skewed unit cells)
 
 ### Changes
 

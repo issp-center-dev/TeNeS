@@ -18,13 +18,13 @@
 ==========================
 
 計算する模型を指定します。
-スピン系 (spin) および ボソン系 (boson) が定義済みです。
+スピン系 (spin)、ボソン系 (boson)、スピンレスフェルミオン系 (spinless fermion)、フェルミオン Hubbard 模型 (hubbard) が定義済みです。
 
 .. csv-table::
    :header: "名前", "説明", "型", "デフォルト"
    :widths: 5, 30, 10, 10
 
-   ``type``, 模型の種類 ("spin" もしくは "boson"), 文字列, --
+   ``type``, 模型の種類 (``"spin"`` / ``"boson"`` / ``"spinless fermion"`` / ``"hubbard"``), 文字列, --
 
 模型の種類によって相互作用などのパラメータ名が変わります。
 
@@ -170,6 +170,78 @@
 および最近接ボンド上の相関 :math:`n_i n_j`, :math:`b^\dagger_i b`, :math:`b_i b^\dagger_j` が自動的に定義されます。
 ここで、ボンドハミルトニアンのうち、 :math:`z` はひとつのサイトから伸びる最近接ボンドの本数で、また一体項の寄与は最近接ボンドにのみ定義されます。
 
+スピンレスフェルミオン系 spinless fermion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+スピンレスフェルミオン系
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \left(c^\dagger_i c_j + c^\dagger_j c_i \right) + V_{ij} n_i n_j \right] - \sum_i \mu n_i
+
+ここで :math:`c` と :math:`c^\dagger` はフェルミ粒子の生成消滅演算子で、 :math:`n = c^\dagger c` は数演算子です。
+局所ヒルベルト空間の次元 ``physical_dim`` は 2 で、局所基底は :math:`|0\rangle`, :math:`|1\rangle` です。
+
+一体項のパラメータは次の通り。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``mu``, "化学ポテンシャル", 実数, 0.0
+
+
+ホッピング :math:`t` およびオフサイト斥力 :math:`V` にはボンド依存性をもたせることができます。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``t``, "最近接ボンドのホッピング", 実数, 0.0
+   ``v``, "最近接ボンドのオフサイト斥力", 実数, 0.0
+
+
+物理量測定に使われる1サイト物理量として、 :math:`n` が自動的に定義されます。
+また、2サイト物理量として、最近接ボンド上の ``hopping`` と ``nn`` が自動的に定義されます。
+
+Hubbard 模型 hubbard
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+フェルミオン Hubbard 模型
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \sum_{\sigma=\uparrow,\downarrow} \left(c^\dagger_{i\sigma} c_{j\sigma} + c^\dagger_{j\sigma} c_{i\sigma} \right) + V_{ij} n_i n_j \right] + \sum_i \left[U n_{i\uparrow} n_{i\downarrow} - \mu n_i - h S^z_i\right]
+
+これはフェルミオン Hubbard 模型です。Bose-Hubbard 模型は ``type = "boson"`` で指定します。
+局所ヒルベルト空間の次元 ``physical_dim`` は 4 で、局所基底は :math:`|0\rangle`, :math:`|\uparrow\rangle`, :math:`|\downarrow\rangle`, :math:`|\uparrow\downarrow\rangle` です。
+ここで :math:`|\uparrow\downarrow\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle` の順序を用います。
+
+一体項のパラメータは次の通り。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``u``, "オンサイト斥力", 実数, 0.0
+   ``mu``, "化学ポテンシャル", 実数, 0.0
+   ``h``, ":math:`S^z` 方向の磁場", 実数, 0.0
+
+
+ホッピング :math:`t` およびオフサイト斥力 :math:`V` にはボンド依存性をもたせることができます。
+
+.. csv-table::
+   :header: "名前", "説明", "型", "デフォルト"
+   :widths: 5, 30, 10, 10
+
+   ``t``, "最近接ボンドのホッピング", 実数, 0.0
+   ``v``, "最近接ボンドのオフサイト斥力", 実数, 0.0
+
+
+物理量測定に使われる1サイト物理量として、 :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S^z`, doublon, holon が自動的に定義されます。
+また、2サイト物理量として、最近接ボンド上の ``hopping``、``nn``、``SzSz`` が自動的に定義されます。
+
+フェルミオン模型は現行版では正方格子の最近接ボンドのみをサポートします。
+正方格子で ``W = 1`` の場合などに自動設定される skew したユニットセルは使えません。
+
 ``lattice`` セクション
 ==========================
 
@@ -209,9 +281,15 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 
    - ``"random"`` : 各サイトバラバラなランダム状態。
 
+   - フェルミオン模型では、スピンレスフェルミオン系で ``"random"`` と ``"vacuum"``、Hubbard 模型で ``"random"``、``"vacuum"``、``"full"``、``"cdw"`` が使えます。
+     ``"ferro"`` と ``"antiferro"`` は、パリティ奇の局所状態を含むプロダクト状態を構成できないため使えません。
+
 - ``noise``
 
   - テンソルの要素に付与されるゆらぎの大きさ。
+
+フェルミオン模型は正方格子の最近接ボンドのみをサポートします。
+正方格子で ``W = 1`` の場合などに自動設定される skew したユニットセルは現行版では使えません。
 
 正方格子 square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,4 +404,3 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 ``tenes_simple`` では使われず、 ``tenes_std`` の入力ファイルとしてそのままコピーされます。
 
 .. include:: ./correlation_length_section.rst
-

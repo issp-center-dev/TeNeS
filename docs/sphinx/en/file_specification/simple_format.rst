@@ -16,13 +16,13 @@ Input file for ``tenes_simple``
 ==========================
 
 Specify the model to calculate.
-In this version, spin system (``"spin"``) and bosonic system (``"boson"``) are defined.
+In this version, spin system (``"spin"``), bosonic system (``"boson"``), spinless fermions (``"spinless fermion"``), and the fermionic Hubbard model (``"hubbard"``) are defined.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
    :widths: 5, 40, 10, 10
 
-   ``type``, Model type ("spin" or "boson"), String, --
+   ``type``, Model type (``"spin"`` / ``"boson"`` / ``"spinless fermion"`` / ``"hubbard"``), String, --
 
 
 The parameter names such as interactions depend on the model type.
@@ -167,6 +167,74 @@ In addition, bond Hamiltonian
 and short range correlations on nearest neighbor bonds :math:`n_i n_j`, :math:`b^\dagger_i b_j`, and :math:`b_i b^\dagger_j`  are automatically defined as two-site operators.
 In the bond Hamiltonian, one body terms (:math:`U` and :math:`\mu` term) appear only in the nearest neighbor bonds, and :math:`z` is the number of the coordinate number.
 
+Spinless fermions: ``"spinless fermion"``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hamiltonian is described as
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \left(c^\dagger_i c_j + c^\dagger_j c_i \right) + V_{ij} n_i n_j \right] - \sum_i \mu n_i,
+
+where :math:`c^\dagger` and :math:`c` are the creation and annihilation operators of a fermion, and :math:`n = c^\dagger c` is the number operator.
+The local Hilbert-space dimension ``physical_dim`` is 2, and the local basis is :math:`|0\rangle`, :math:`|1\rangle`.
+
+The parameter of the one-body term is defined as follows.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``mu``, "Chemical potential", Real, 0.0
+
+The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``t``, "Hopping of a nearest-neighbor bond", Real, 0.0
+   ``v``, "Offsite repulsion of a nearest-neighbor bond", Real, 0.0
+
+The one-site operator :math:`n` is automatically defined.
+In addition, ``hopping`` and ``nn`` on nearest-neighbor bonds are automatically defined as two-site operators.
+
+Fermionic Hubbard model: ``"hubbard"``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hamiltonian is described as
+
+.. math ::
+ \mathcal{H} = \sum_{i<j}\left[ -t_{ij} \sum_{\sigma=\uparrow,\downarrow} \left(c^\dagger_{i\sigma} c_{j\sigma} + c^\dagger_{j\sigma} c_{i\sigma} \right) + V_{ij} n_i n_j \right] + \sum_i \left[U n_{i\uparrow} n_{i\downarrow} - \mu n_i - h S^z_i\right].
+
+This is the fermionic Hubbard model. The Bose-Hubbard model remains ``type = "boson"``.
+The local Hilbert-space dimension ``physical_dim`` is 4, and the local basis is :math:`|0\rangle`, :math:`|\uparrow\rangle`, :math:`|\downarrow\rangle`, :math:`|\uparrow\downarrow\rangle`.
+The ordering convention is :math:`|\uparrow\downarrow\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle`.
+
+The parameters of the one-body terms are defined as follows.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``u``, "Onsite repulsion", Real, 0.0
+   ``mu``, "Chemical potential", Real, 0.0
+   ``h``, "Magnetic field along :math:`S^z`", Real, 0.0
+
+The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+
+.. csv-table::
+   :header: "Name", "Description", "Type", "Default"
+   :widths: 5, 40, 10, 10
+
+   ``t``, "Hopping of a nearest-neighbor bond", Real, 0.0
+   ``v``, "Offsite repulsion of a nearest-neighbor bond", Real, 0.0
+
+One-site operators :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S^z`, doublon, and holon are automatically defined.
+In addition, ``hopping``, ``nn``, and ``SzSz`` on nearest-neighbor bonds are automatically defined as two-site operators.
+
+In the current version, fermionic models support only nearest-neighbor bonds on the square lattice.
+Skewed unit cells, including the one automatically selected for a square lattice with ``W = 1``, are not supported.
+
 
 ``lattice`` section
 ==========================
@@ -202,9 +270,15 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
    - ``"random"`` : Random state
 
+   - In fermionic models, ``"random"`` and ``"vacuum"`` are available for spinless fermions, and ``"random"``, ``"vacuum"``, ``"full"``, and ``"cdw"`` are available for the Hubbard model.
+     ``"ferro"`` and ``"antiferro"`` are not available because product states containing odd-parity local states cannot be built.
+
 - ``noise``
 
   - The amount of fluctuation in the elements of the initial tensor
+
+In fermionic models, only nearest-neighbor bonds on the square lattice are supported.
+Skewed unit cells, including the one automatically selected for a square lattice with ``W = 1``, are not supported in the current version.
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
