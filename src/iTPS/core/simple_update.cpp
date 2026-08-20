@@ -73,8 +73,10 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
   double odd_norm2 = 0.0;
   double even_max = 0.0;
   double odd_max = 0.0;
+  mptensor::Index idx;
+  idx.resize(theta.t.shape().size());
   for (std::size_t n = 0; n < theta.t.local_size(); ++n) {
-    const auto idx = theta.t.global_index(n);
+    theta.t.global_index_fast(n, idx);
     bool row_odd = false;
     for (std::size_t i = 0; i < rows.size(); ++i) {
       row_odd = row_odd != theta.parity[rows[i]][idx[rows[i]]];
@@ -86,9 +88,7 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
     if (row_odd != col_odd) {
       continue;
     }
-    typename tensor::value_type value{};
-    theta.t.get_value(idx, value);
-    const double abs_value = std::abs(value);
+    const double abs_value = std::abs(theta.t[n]);
     if (row_odd) {
       odd_norm2 += abs_value * abs_value;
       odd_max = std::max(odd_max, abs_value);
@@ -115,10 +115,12 @@ void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
        << v << " threshold=" << threshold;
     throw std::runtime_error(ss.str());
   }
+  mptensor::Index index;
+  index.resize(a.t.shape().size());
   for (std::size_t n = 0; n < a.t.local_size(); ++n) {
-    const auto index = a.t.global_index(n);
+    a.t.global_index_fast(n, index);
     if (tenes::fermion::count_odd(a.parity, index) % 2 == 1) {
-      a.t.set_value(index, typename tensor::value_type{});
+      a.t[n] = typename tensor::value_type{};
     }
   }
 }

@@ -81,13 +81,11 @@ template <class tensor>
 ftensor<tensor> apply_transpose_sign_mask(const ftensor<tensor>& a,
                                           const mptensor::Axes& axes) {
   ftensor<tensor> ret = a;
+  mptensor::Index idx;
+  idx.resize(ret.t.shape().size());
   for (std::size_t n = 0; n < ret.t.local_size(); ++n) {
-    auto idx = ret.t.global_index(n);
-    if (transpose_sign(ret.parity, idx, axes) < 0) {
-      typename tensor::value_type v;
-      ret.t.get_value(idx, v);
-      ret.t.set_value(idx, -v);
-    }
+    ret.t.global_index_fast(n, idx);
+    ret.t[n] *= transpose_sign(ret.parity, idx, axes);
   }
   return ret;
 }
@@ -171,11 +169,11 @@ void validate_block_diagonal(const tensor& sorted, std::size_t row_even,
 #ifndef NDEBUG
   double off = 0.0;
   double scale = 0.0;
+  mptensor::Index idx;
+  idx.resize(sorted.shape().size());
   for (std::size_t n = 0; n < sorted.local_size(); ++n) {
-    const auto idx = sorted.global_index(n);
-    typename tensor::value_type v;
-    sorted.get_value(idx, v);
-    const double a = std::abs(v);
+    sorted.global_index_fast(n, idx);
+    const double a = std::abs(sorted[n]);
     scale = std::max(scale, a);
     if ((idx[0] < row_even) != (idx[1] < col_even)) {
       off = std::max(off, a);
@@ -209,12 +207,12 @@ inline std::complex<double> scalar_conj(std::complex<double> v) {
 
 template <class tensor>
 void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
+  mptensor::Index idx;
+  idx.resize(a.t.shape().size());
   for (std::size_t n = 0; n < a.t.local_size(); ++n) {
-    auto idx = a.t.global_index(n);
+    a.t.global_index_fast(n, idx);
     if (a.parity[ax1][idx[ax1]] && a.parity[ax2][idx[ax2]]) {
-      typename tensor::value_type v;
-      a.t.get_value(idx, v);
-      a.t.set_value(idx, -v);
+      a.t[n] = -a.t[n];
     }
   }
 }
@@ -268,12 +266,12 @@ void apply_parity(ftensor<tensor>& a, int ax) {
 template <class tensor>
 double parity_violation(const ftensor<tensor>& a) {
   double v = 0.0;
+  mptensor::Index idx;
+  idx.resize(a.t.shape().size());
   for (std::size_t n = 0; n < a.t.local_size(); ++n) {
-    auto idx = a.t.global_index(n);
+    a.t.global_index_fast(n, idx);
     if (count_odd(a.parity, idx) % 2 == 1) {
-      typename tensor::value_type x;
-      a.t.get_value(idx, x);
-      v = std::max(v, std::abs(x));
+      v = std::max(v, std::abs(a.t[n]));
     }
   }
   return v;
@@ -320,13 +318,13 @@ typename tensor::value_type trace(const ftensor<tensor>& a,
 template <class tensor>
 ftensor<tensor> conj(const ftensor<tensor>& a) {
   ftensor<tensor> ret = a;
+  mptensor::Index idx;
+  idx.resize(ret.t.shape().size());
   for (std::size_t n = 0; n < ret.t.local_size(); ++n) {
-    auto idx = ret.t.global_index(n);
+    ret.t.global_index_fast(n, idx);
     const int m = count_odd(ret.parity, idx);
     const double sign = ((m * (m - 1) / 2) % 2 == 0) ? 1.0 : -1.0;
-    typename tensor::value_type v;
-    ret.t.get_value(idx, v);
-    ret.t.set_value(idx, sign * detail::scalar_conj(v));
+    ret.t[n] = sign * detail::scalar_conj(ret.t[n]);
   }
   return ret;
 }
@@ -399,9 +397,11 @@ int svd(const ftensor<tensor>& a, std::vector<double>& s) {
 template <class tensor>
 tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
   tensor ret(mptensor::Shape(perm.size(), perm.size()));
+  mptensor::Index idx;
+  idx.resize(2);
   for (std::size_t n = 0; n < ret.local_size(); ++n) {
-    auto idx = ret.global_index(n);
-    ret.set_value(idx, perm[idx[0]] == idx[1] ? 1.0 : 0.0);
+    ret.global_index_fast(n, idx);
+    ret[n] = (perm[idx[0]] == idx[1]) ? 1.0 : 0.0;
   }
   return ret;
 }
@@ -660,9 +660,11 @@ int svd_trunc(const ftensor<tensor>& a, const mptensor::Axes& rows,
   tensor full_vt_mat =
       mptensor::reshape(full_vt.t, mptensor::Shape(full_s.size(), dcol));
   tensor selector(a.t.get_comm(), mptensor::Shape(full_s.size(), nkeep));
+  mptensor::Index sel_idx;
+  sel_idx.resize(2);
   for (std::size_t n = 0; n < selector.local_size(); ++n) {
-    auto idx = selector.global_index(n);
-    selector.set_value(idx, order[idx[1]] == idx[0] ? 1.0 : 0.0);
+    selector.global_index_fast(n, sel_idx);
+    selector[n] = (order[sel_idx[1]] == sel_idx[0]) ? 1.0 : 0.0;
   }
   tensor u_mat = mptensor::tensordot(full_u_mat, selector, mptensor::Axes(1),
                                      mptensor::Axes(0));

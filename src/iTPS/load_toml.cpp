@@ -570,12 +570,12 @@ bool has_odd_tensor_element(tensor const &t,
     return false;
   }
   double local = 0.0;
+  mptensor::Index idx;
+  idx.resize(t.shape().size());
   for (std::size_t n = 0; n < t.local_size(); ++n) {
-    auto idx = t.global_index(n);
+    t.global_index_fast(n, idx);
     if (count_index_odd(parity, idx) % 2 == 1) {
-      typename tensor::value_type v;
-      t.get_value(idx, v);
-      local = std::max(local, std::abs(v));
+      local = std::max(local, std::abs(t[n]));
     }
   }
   std::vector<double> reduced{local};

@@ -94,13 +94,11 @@ struct ftensor {
     return *this;
   }
   ftensor& transpose(const mptensor::Axes& axes) {
+    mptensor::Index idx;
+    idx.resize(t.shape().size());
     for (std::size_t n = 0; n < t.local_size(); ++n) {
-      auto idx = t.global_index(n);
-      if (detail::transpose_sign(parity, idx, axes) < 0) {
-        typename tensor::value_type v;
-        t.get_value(idx, v);
-        t.set_value(idx, -v);
-      }
+      t.global_index_fast(n, idx);
+      t[n] *= detail::transpose_sign(parity, idx, axes);
     }
     t.transpose(axes);
     leg_parities next;

@@ -78,12 +78,12 @@ typename tensor::value_type trace_boundary_pairs(const tensor& a) {
     throw std::runtime_error("expected four boundary legs");
   }
   typename tensor::value_type value = 0.0;
+  mptensor::Index idx;
+  idx.resize(4);
   for (std::size_t n = 0; n < a.local_size(); ++n) {
-    const auto idx = a.global_index(n);
+    a.global_index_fast(n, idx);
     if (idx[0] == idx[1] && idx[2] == idx[3]) {
-      typename tensor::value_type local = 0.0;
-      a.get_value(idx, local);
-      value += local;
+      value += a[n];
     }
   }
   return value;
