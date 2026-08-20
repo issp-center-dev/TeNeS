@@ -656,8 +656,8 @@ TEST_CASE(
 
   tenes::real_tensor nn_plain(mptensor::Shape(2, 2, 2, 2));
   nn_plain.set_value(mptensor::Index(1, 1, 1, 1), 1.0);
-  ft nn = tenes::fermion::wrap_twosite_op(nn_plain, parity_vector{false, true},
-                                          parity_vector{false, true});
+  ft nn = tenes::fermion::wrap_twosite_gate(
+      nn_plain, parity_vector{false, true}, parity_vector{false, true});
   double channel = 0.0;
   nn.t.get_value(mptensor::Index(1, 1, 1, 1), channel);
   CHECK(channel == doctest::Approx(-1.0));
@@ -731,6 +731,29 @@ TEST_CASE("graded svd preserves parity for asymmetric non-crossing axes") {
     maxdiff = std::max(maxdiff, std::abs(va - vb));
   }
   CHECK(maxdiff == doctest::Approx(0.0).epsilon(1e-10));
+}
+
+TEST_CASE("graded decompositions reject parity-odd input in debug builds") {
+  // The block decomposition only ever looks at the two diagonal parity
+  // blocks, so an odd component would be discarded without a trace. Debug
+  // builds check for it; release builds skip the scan.
+  namespace f = tenes::fermion;
+  f::leg_parities p{{false, true}, {false, true}};
+  ft a{tenes::real_tensor(mptensor::Shape(2, 2)), p};
+  a.t.set_value(mptensor::Index(0, 0), 1.0);
+  a.t.set_value(mptensor::Index(0, 1), 0.5);  // odd total parity
+  ft u, vt;
+  std::vector<double> s;
+#ifndef NDEBUG
+  CHECK_THROWS_WITH_AS(
+      f::svd(a, mptensor::Axes(0), mptensor::Axes(1), u, s, vt),
+      doctest::Contains("not parity even"), std::runtime_error);
+  CHECK_THROWS_WITH_AS(f::qr(a, mptensor::Axes(0), mptensor::Axes(1), u, vt),
+                       doctest::Contains("not parity even"),
+                       std::runtime_error);
+#else
+  CHECK_NOTHROW(f::svd(a, mptensor::Axes(0), mptensor::Axes(1), u, s, vt));
+#endif
 }
 
 TEST_CASE("graded svd is invariant under regrouping to a contiguous split") {
@@ -1482,8 +1505,8 @@ TEST_CASE("diagnostic update1 gate application component diff") {
   auto make_fermion_gate = [&](const tenes::EvolutionOperator<tensor>& update,
                                int source, int target) {
     const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fstate);
-    return f::wrap_twosite_op(update.op, finfo.phys[source],
-                              finfo.phys[target]);
+    return f::wrap_twosite_gate(update.op, finfo.phys[source],
+                                finfo.phys[target]);
   };
 
   auto dump_update = [&](int update_index, const std::string& label) {
@@ -1761,8 +1784,8 @@ TEST_CASE("diagnostic horizontal-chain sorted lambda trajectory") {
     const auto& finfo = tenes::itps::iTPSTestAccessor::finfo(fdiag);
     const auto fTn1 = f::wrap_Tn(fdiag_tn[source], finfo, source);
     const auto fTn2 = f::wrap_Tn(fdiag_tn[target], finfo, target);
-    const auto fop = f::wrap_twosite_op(first_update.op, finfo.phys[source],
-                                        finfo.phys[target]);
+    const auto fop = f::wrap_twosite_gate(first_update.op, finfo.phys[source],
+                                          finfo.phys[target]);
     const auto ftheta =
         diagnostic_update_thetas(fTn1, fTn2, fdiag_lambda[source],
                                  fdiag_lambda[target], fop, source_leg);
@@ -1977,8 +2000,8 @@ TEST_CASE("diagnostic weak-2d coupled chains trajectory") {
   // CTM-independent mean-field (lambda-gauge) estimate per bond via the
   // f-primitive open network: <theta|h|theta>/<theta|theta>.
   auto& Tn = tenes::itps::iTPSTestAccessor::Tn(state);
-  const auto fop_h = f::wrap_twosite_op(hopping, f::parity_vector{false, true},
-                                        f::parity_vector{false, true});
+  const auto fop_h = f::wrap_twosite_gate(
+      hopping, f::parity_vector{false, true}, f::parity_vector{false, true});
   auto mf_bond = [&](int source, int source_leg) {
     // Normalize orientation exactly like the driver.
     int s1 = source;
@@ -2112,7 +2135,7 @@ TEST_CASE("diagnostic plaquette kernel vs exact trotter") {
   const auto fop = [&](int s1, int s2) {
     static_cast<void>(s2);
     static_cast<void>(s1);
-    return f::wrap_twosite_op(gate, phys, phys);
+    return f::wrap_twosite_gate(gate, phys, phys);
   };
 
   // Contract the patch to the four-site wavefunction psi[p0,p1,p2,p3]
@@ -2644,7 +2667,7 @@ TEST_CASE("diagnostic electron chain sorted lambda trajectory") {
         const auto fTn1 = f::wrap_Tn(fTn[s1], finfo, s1);
         const auto fTn2 = f::wrap_Tn(fTn[s2], finfo, s2);
         const auto fop =
-            f::wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
+            f::wrap_twosite_gate(op12, finfo.phys[s1], finfo.phys[s2]);
         const auto fthetas = diagnostic_update_thetas(fTn1, fTn2, flambda[s1],
                                                       flambda[s2], fop, s1_leg);
         const auto bthetas = diagnostic_update_thetas(

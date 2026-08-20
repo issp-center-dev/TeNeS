@@ -221,7 +221,7 @@ auto iTPS<ptensor>::measure_twosite()
             // oracle (where it coincides with verbatim loading for
             // number-conserving operators) and the d = 4 R5 oracle (where
             // verbatim loading is wrong). The simple-update kernel path uses
-            // the different wrap_twosite_op convention instead.
+            // the different wrap_twosite_gate convention instead.
             auto o = tenes::fermion::wrap_reduced_pair_op(
                 op.op, finfo.phys[source], finfo.phys[target]);
             if (top != source) {

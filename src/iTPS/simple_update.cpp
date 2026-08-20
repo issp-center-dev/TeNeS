@@ -100,8 +100,8 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
       }
       auto fTn1 = tenes::fermion::wrap_Tn(Tn[s1], finfo, s1);
       auto fTn2 = tenes::fermion::wrap_Tn(Tn[s2], finfo, s2);
-      auto fop =
-          tenes::fermion::wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
+      auto fop = tenes::fermion::wrap_twosite_gate(op12, finfo.phys[s1],
+                                                   finfo.phys[s2]);
       tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
       core::Simple_update_bond(fTn1, fTn2, lambda_tensor[s1], lambda_tensor[s2],
                                fop, s1_leg, peps_parameters, fTn1_work,

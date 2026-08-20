@@ -89,13 +89,15 @@ void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
 }
 
 template <class tensor>
-tensor doubled_pipeline(const ftensor<tensor>& braTn,
-                        const ftensor<tensor>& ketT) {
+tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
+                        const ftensor<tensor>& ket_Tn) {
   // Shared double-layer pipeline: outer product of bra and ket layers,
   // frozen joint-swap dressing, (ket, bra) interleave, column-major fusion.
   // Output legs: ([l lb], [t tb], [r rb], [b bb], s_ket, s_bra).
+  // The two arguments differ only where an operator has been inserted into
+  // the ket layer beforehand; for the plain reduced tensor they are equal.
   ftensor<tensor> doubled =
-      tensordot(conj(braTn), ketT, mptensor::Axes(), mptensor::Axes());
+      tensordot(conj(bra_Tn), ket_Tn, mptensor::Axes(), mptensor::Axes());
   apply_joint_swaps(doubled, {0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3});
   mptensor::Axes interleaved;
   for (int ax = 0; ax < 4; ++ax) {

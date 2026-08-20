@@ -9,6 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# file(CREATE_LINK) was added in CMake 3.14. Older versions still generate
+# compile_commands.json in the build directory when the cache variable is ON.
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.14)
+    file(CREATE_LINK
+        "${CMAKE_BINARY_DIR}/compile_commands.json"
+        "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        SYMBOLIC)
+endif()
+
 # icpx defaults to -fp-model=fast, whose finite-math-only assumption breaks
 # Inf/NaN handling (e.g. divergent correlation lengths and std::isinf/isnan).
 # Force the precise model; add_compile_options here also covers mptensor.

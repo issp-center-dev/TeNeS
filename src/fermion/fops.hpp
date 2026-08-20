@@ -158,6 +158,47 @@ inline std::size_t count_even(const parity_vector& parity) {
   return ret;
 }
 
+// A parity-even tensor matricizes block-diagonally: an element is allowed
+// only when the fused row and column parities agree, so after the even-first
+// sort the (even row, odd col) and (odd row, even col) blocks must vanish.
+// qr()/svd() below decompose the two diagonal blocks and never look at the
+// others, which would silently discard them if the input were not even.
+// Checked in debug builds only; like parity_violation() this inspects the
+// process-local slice.
+template <class tensor>
+void validate_block_diagonal(const tensor& sorted, std::size_t row_even,
+                             std::size_t col_even, const char* context) {
+#ifndef NDEBUG
+  double off = 0.0;
+  double scale = 0.0;
+  for (std::size_t n = 0; n < sorted.local_size(); ++n) {
+    const auto idx = sorted.global_index(n);
+    typename tensor::value_type v;
+    sorted.get_value(idx, v);
+    const double a = std::abs(v);
+    scale = std::max(scale, a);
+    if ((idx[0] < row_even) != (idx[1] < col_even)) {
+      off = std::max(off, a);
+    }
+  }
+  const double threshold = 1.0e-10 * std::max(1.0, scale);
+  if (off > threshold) {
+    std::stringstream ss;
+    ss << context
+       << ": input is not parity even; its off-diagonal parity blocks carry "
+          "max_abs="
+       << off << " (threshold " << threshold
+       << ") and would be discarded silently";
+    throw std::runtime_error(ss.str());
+  }
+#else
+  static_cast<void>(sorted);
+  static_cast<void>(row_even);
+  static_cast<void>(col_even);
+  static_cast<void>(context);
+#endif
+}
+
 inline double scalar_conj(double v) { return v; }
 
 inline std::complex<double> scalar_conj(std::complex<double> v) {
@@ -178,28 +219,34 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
   }
 }
 
-// Graded representation of a two-site operator op[in1, in2, out1, out2]
-// given as plain matrix elements <out1 out2|O|in1 in2>. The two input legs
-// cross once when the operator is inserted into an ordered-site network, so
-// elements whose input legs are both odd carry an extra minus sign; loading
-// the matrix elements verbatim silently negates the doubly-occupied input
-// channel of every parity-conserving gate (e.g. |11><11| in exp(tau h)).
+// Load an evolution gate given as plain matrix elements
+// <out1 out2|O|in1 in2> in the ordered two-site Fock basis, for the
+// simple-update kernel.
+//
+// The swap is a convention adapter, not extra physics: graded tensordot
+// contracts by moving the second operand's contracted legs to the front in
+// REVERSED order, which multiplies elements whose two input legs are both
+// odd by -1. Pre-applying the same mask cancels that factor, so the gate
+// that reaches theta is exactly the matrix the caller wrote. Without it the
+// doubly-odd input channel of every parity-conserving gate (e.g. |11><11|
+// in exp(-tau h)) is silently negated.
 template <class tensor>
-ftensor<tensor> wrap_twosite_op(const tensor& op, const parity_vector& p1,
-                                const parity_vector& p2) {
+ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
+                                  const parity_vector& p2) {
   ftensor<tensor> fop{op, {p1, p2, p1, p2}};
   apply_swap(fop, 0, 1);
   return fop;
 }
 
-// Operator loading for the reduced-pair blob path (build_reduced_pair):
-// there both the ket-layer insertion (input legs) and the bra-layer closure
-// (output legs) cross, so the plain matrix elements acquire BOTH swap
-// factors. For physical dimension 2 this is indistinguishable from verbatim
-// loading on particle-number-conserving operators (which is how the d = 2
-// oracle pinned the pipeline); the distinction appears first in channels
-// like (odd,odd) -> (even,even), present e.g. in the spinful hopping at
-// linear order, and is pinned by the R5 d = 4 oracle test.
+// Load a measurement operator for the reduced-pair blob path
+// (build_reduced_pair). Same plain matrix elements as wrap_twosite_gate,
+// but here the operator's output legs are also closed - against the bra
+// layer - so both leg pairs need the compensating mask. For physical
+// dimension 2 this is indistinguishable from verbatim loading on
+// particle-number-conserving operators (which is how the d = 2 oracle
+// pinned the pipeline); the distinction appears first in channels like
+// (odd,odd) -> (even,even), present e.g. in the spinful hopping at linear
+// order, and is pinned by the R5 d = 4 oracle test.
 template <class tensor>
 ftensor<tensor> wrap_reduced_pair_op(const tensor& op, const parity_vector& p1,
                                      const parity_vector& p2) {
@@ -383,6 +430,7 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
 
   const std::size_t row_even = detail::count_even(row_parity);
   const std::size_t col_even = detail::count_even(col_parity);
+  detail::validate_block_diagonal(sorted, row_even, col_even, "fermion qr");
   const std::size_t row_odd = drow - row_even;
   const std::size_t col_odd = dcol - col_even;
   const std::size_t size_even = std::min(row_even, col_even);
@@ -476,6 +524,7 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
 
   const std::size_t row_even = detail::count_even(row_parity);
   const std::size_t col_even = detail::count_even(col_parity);
+  detail::validate_block_diagonal(sorted, row_even, col_even, "fermion svd");
   const std::size_t row_odd = drow - row_even;
   const std::size_t col_odd = dcol - col_even;
   const std::size_t size_even = std::min(row_even, col_even);
