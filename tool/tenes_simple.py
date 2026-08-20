@@ -1369,6 +1369,14 @@ def _check_fermion_scope(
         )
         raise RuntimeError(msg)
 
+    if lattice.skew != 0:
+        msg = (
+            "Fermionic models on a skewed unit cell are a known limitation of "
+            "the current fermion implementation: measurements show wrong "
+            "numbers for skew = {}. Use a cell with W >= 2 instead of W = {}."
+        ).format(lattice.skew, lattice.W)
+        raise RuntimeError(msg)
+
     for n, per_level in enumerate(model.params_twosite):
         if n == 0:
             continue

@@ -535,3 +535,101 @@ class TestFermionErrorMessageQuality:
         assert "beta_observable_marker" not in msg_a
         assert "alpha_observable_marker" not in msg_b
         assert msg_a != msg_b
+
+
+# ---------------------------------------------------------------------------
+# C2/C3 (task-4b-contract.md): fermion = true with [tensor] skew != 0 must
+# be rejected.
+#
+# work/skew-validation/FINDINGS.md measured this at the tenes_simple layer
+# (a 20.6% energy shift, density drifted off half filling for the standard
+# skew = 1 two-site cell); tenes_std must refuse the same combination when
+# `skew` arrives as an explicit std.toml field, before evolution operators
+# are built. Where the parsed value lives: `Model.unitcell.skew`
+# (`Unitcell.load_dict` sets it from `tensor.skew`, defaulting to 0) --
+# tests read it from there rather than re-parsing the raw dict.
+# ---------------------------------------------------------------------------
+
+
+class TestFermionSkewGuard:
+    def test_fermion_mode_with_nonzero_skew_is_rejected(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["skew"] = 1
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bskew\b", message, re.I)
+        assert re.search(r"\b1\b", message)
+
+    def test_fermion_mode_with_nonzero_skew_message_is_fermion_specific(self):
+        # C2 requirements mirror C1: the message must read as a measured
+        # correctness bug (wrong numbers), not as a generic missing-scope
+        # complaint -- which in this file's own established phrasing reads
+        # "Fermion mode does not support ...". The skew guard must not
+        # reuse that exact framing.
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["skew"] = 1
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bfermion", message, re.I)
+        assert re.search(r"measured|wrong|incorrect|known limitation", message, re.I)
+        assert "does not support" not in message
+
+    def test_skew_guard_message_does_not_mention_the_internal_milestone(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["skew"] = 1
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert "M1" not in message
+        assert "M2" not in message
+
+    def test_skew_guard_message_names_the_offending_skew_value(self):
+        # Identifying content, not merely "the two messages differ" (a
+        # content-free string differing only by e.g. id(self) would still
+        # pass a bare inequality check): each message must contain its OWN
+        # offending skew value. 7 and 9 are used so neither digit can
+        # coincide with any digit already in the fixed boilerplate.
+        param_a = copy.deepcopy(minimal_fermion_std_input())
+        param_a["tensor"]["skew"] = 7
+        param_b = copy.deepcopy(minimal_fermion_std_input())
+        param_b["tensor"]["skew"] = 9
+
+        with pytest.raises(RuntimeError) as ea:
+            tenes_std.Model(param_a)
+        with pytest.raises(RuntimeError) as eb:
+            tenes_std.Model(param_b)
+
+        msg_a, msg_b = str(ea.value), str(eb.value)
+        assert re.search(r"\b7\b", msg_a), msg_a
+        assert re.search(r"\b9\b", msg_b), msg_b
+        # Discrimination: a message that hard-codes one skew value cannot
+        # simultaneously name the other.
+        assert not re.search(r"\b9\b", msg_a), msg_a
+        assert not re.search(r"\b7\b", msg_b), msg_b
+        assert msg_a != msg_b
+
+    def test_fermion_mode_with_default_skew_is_still_accepted(self):
+        # Regression net (i): fermion = true with no explicit `skew` key
+        # (skew defaults to 0 in Unitcell.load_dict) must keep working
+        # exactly as today -- this is minimal_fermion_std_input() itself.
+        model = tenes_std.Model(minimal_fermion_std_input())
+        assert model.unitcell.skew == 0
+
+    def test_fermion_mode_with_explicit_zero_skew_is_accepted(self):
+        # Regression net (i), the explicit form: skew = 0 written out
+        # must not be mistaken for "skew present" by the guard.
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["tensor"]["skew"] = 0
+        model = tenes_std.Model(param)
+        assert model.unitcell.skew == 0
+
+    def test_bosonic_input_with_nonzero_skew_is_still_accepted(self):
+        # Regression net (ii): the bug is fermion-specific. A bosonic
+        # input (no `fermion` key at all) with skew != 0 must be entirely
+        # untouched by this guard.
+        param = minimal_std_input()
+        param["tensor"]["skew"] = 1
+        model = tenes_std.Model(param)
+        assert model.unitcell.skew == 1

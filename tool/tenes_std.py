@@ -1211,6 +1211,16 @@ class Model:
                     self.full_updates.append(evo)
 
     def _validate_fermion_mode_input(self) -> None:
+        if self.unitcell.skew != 0:
+            msg = (
+                "Fermion mode with a skewed tensor unit cell is a known "
+                "limitation of the current fermion implementation: "
+                "measurements show wrong numbers for skew = {}. Use an "
+                "unskewed tensor cell, such as skew = 0; tenes_simple square "
+                "lattices can use W >= 2."
+            ).format(self.unitcell.skew)
+            raise RuntimeError(msg)
+
         for site_index, site in enumerate(self.unitcell.sites):
             if site.parity is None:
                 msg = (

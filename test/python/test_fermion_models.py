@@ -15,6 +15,7 @@
 # along with this program. If not, see http://www.gnu.org/licenses
 
 import os
+import re
 import sys
 
 import numpy as np
@@ -199,3 +200,81 @@ class TestFermionScopeGuards:
         with pytest.raises(RuntimeError) as excinfo:
             tenes_simple.tenes_simple(param)
         assert "M1" not in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# C1 (task-4b-contract.md): a fermionic model on a skewed cell must be
+# rejected.
+#
+# work/skew-validation/FINDINGS.md measured this, it is not a precaution:
+# free spinless fermions on the standard two-site cell L_sub = [2, 1] (which
+# SquareLattice realises as skew = 1 when W == 1) give a 20.6% energy shift
+# and a density drifted off half filling relative to the flat, skew = 0
+# control -- with no error, no warning, a plausible-looking wrong number.
+# Until the C++ sign bug is fixed, tenes_simple must refuse to emit a
+# std.toml for this combination.
+# ---------------------------------------------------------------------------
+
+
+class TestFermionSkewGuard:
+    def test_fermionic_model_with_skewed_cell_is_rejected(self):
+        # W = 1 is the standard two-site cell; SquareLattice sets skew = 1
+        # for it. This must raise before any std.toml text is produced.
+        param = spinless_param(lattice_extra={"W": 1})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        # Identifying content, not just "raises something": name the
+        # offending cell (W = 1) or the skew value it produces (both are
+        # literally 1 here), and steer the user to a wider cell (W >= 2).
+        assert re.search(r"\bskew\b", message, re.I) or re.search(
+            r"\bW\s*=\s*1\b", message
+        )
+        assert re.search(r"\b2\b", message)
+
+    def test_fermionic_model_with_skewed_cell_message_is_fermion_specific(self):
+        # C1 requires the message to say this is a MEASURED limitation of
+        # the fermion implementation (wrong numbers), not a generic
+        # "unsupported configuration" the way e.g. the non-square-lattice
+        # guard reads. Pin that framing without pinning exact prose.
+        param = spinless_param(lattice_extra={"W": 1})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bfermion", message, re.I)
+        assert re.search(r"measured|wrong|incorrect|known limitation", message, re.I)
+        # The existing missing-feature guards in this same function say
+        # exactly this; the skew bug must not be described the same way,
+        # since it is a correctness bug, not missing scope.
+        assert "is not available for fermionic models" not in message
+
+    def test_skew_guard_message_does_not_mention_the_internal_milestone(self):
+        param = spinless_param(lattice_extra={"W": 1})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert "M1" not in message
+        assert "M2" not in message
+
+    def test_fermionic_model_with_square_cell_no_skew_is_accepted(self):
+        # Regression net (i): fermionic + skew = 0 (the default 2x2 cell)
+        # must keep working exactly as today.
+        text, lattice = tenes_simple.tenes_simple(spinless_param())
+        assert lattice.skew == 0
+
+    def test_fermionic_model_with_wide_cell_no_skew_is_accepted(self):
+        # Regression net (i), a second shape: any W != 1 keeps skew = 0.
+        param = spinless_param(lattice_extra={"L": 3, "W": 3})
+        text, lattice = tenes_simple.tenes_simple(param)
+        assert lattice.skew == 0
+
+    def test_bosonic_model_with_skewed_cell_is_still_accepted(self):
+        # Regression net (ii): the bug is fermion-specific. W = 1 is
+        # standard practice for spins/bosons and must be untouched.
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 1, "virtual_dim": 2},
+            "model": {"type": "spin", "j": 1.0},
+        }
+        text, lattice = tenes_simple.tenes_simple(param)
+        assert lattice.skew == 1
