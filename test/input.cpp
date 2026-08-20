@@ -371,6 +371,10 @@ noise = 0.01
 
   SUBCASE("fermion initialization masks odd-total Tn entries") {
     INFO("fermion initialization masks odd-total Tn entries");
+    // L_sub = [2, 1] is left as-is: this subcase constructs iTPS<ptensor>
+    // directly and never calls validate_fermion_constraints (only
+    // itps_main does, in main.cpp), so the new C2 tensor.L_sub-dimensions
+    // guard is never on this subcase's path and does not need a 2x2 cell.
     auto toml = parse_str(R"(
 [tensor]
 L_sub = [2, 1]
@@ -477,6 +481,11 @@ eigensolver = "lapack"
 
   SUBCASE("fermion parity input loads") {
     INFO("fermion parity input loads");
+    // L_sub = [1, 1] is left as-is: this subcase only exercises
+    // gen_param/gen_lattice/gen_phys_parity (the raw TOML parsing) and
+    // never calls validate_fermion_constraints, so the new C2
+    // tensor.L_sub-dimensions guard never runs here and the 1x1 cell still
+    // loads cleanly.
     auto param_toml = parse_str(R"(
 [parameter]
 [parameter.general]
@@ -509,11 +518,17 @@ fermion = true
 [parameter.ctm]
 meanfield_env = true
 )");
+    // L_sub = [2, 2]: with a 1-wide cell the new tensor.L_sub-dimensions
+    // guard (C2, task-11-contract.md) fires first, so this subcase would
+    // pass for the wrong reason (a generic input_error, not the
+    // MeanField_Env=true rejection it is named for). A 2x2 cell with a
+    // single site definition broadcast via index = [] clears that guard
+    // and reaches the MeanField_Env check.
     auto tensor_toml = parse_str(R"(
 [tensor]
-L_sub = [1, 1]
+L_sub = [2, 2]
 [[tensor.unitcell]]
-index = [0]
+index = []
 physical_dim = 2
 virtual_dim = 2
 parity = [0, 1]
@@ -537,11 +552,15 @@ parity = [0, 1]
 [parameter.general]
 fermion = true
 )");
+    // L_sub = [2, 2]: same reasoning as "fermion rejects mean-field
+    // environment" above -- a 1-wide cell would trip the new
+    // tensor.L_sub-dimensions guard before the parity-odd one-site
+    // operator check this subcase is named for.
     auto tensor_toml = parse_str(R"(
 [tensor]
-L_sub = [1, 1]
+L_sub = [2, 2]
 [[tensor.unitcell]]
-index = [0]
+index = []
 physical_dim = 2
 virtual_dim = 2
 parity = [0, 1]
@@ -560,7 +579,7 @@ elements = """
     SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
     peps_parameters.phys_parity =
         gen_phys_parity(tensor_toml.at("tensor"), lattice);
-    auto onesite = load_operators<ptensor>(observable_toml, MPI_COMM_WORLD, 1,
+    auto onesite = load_operators<ptensor>(observable_toml, MPI_COMM_WORLD, 4,
                                            1, 0.0, "observable.onesite");
     CHECK_THROWS_AS(
         validate_fermion_constraints(
@@ -578,6 +597,11 @@ elements = """
         "output_test_input_fermion_odd_operator_main_path";
     {
       std::ofstream ofs(input_filename);
+      // L_sub = [2, 2]: a 1-wide cell now trips the new
+      // tensor.L_sub-dimensions guard (C2, task-11-contract.md) before
+      // reaching the parity-odd one-site operator check this subcase
+      // exercises; a single site definition broadcast via index = []
+      // keeps this a minimal fixture while clearing that guard.
       ofs << R"(
 [parameter]
 [parameter.general]
@@ -587,9 +611,9 @@ output = ")"
           << outdir << R"("
 
 [tensor]
-L_sub = [1, 1]
+L_sub = [2, 2]
 [[tensor.unitcell]]
-index = [0]
+index = []
 physical_dim = 2
 virtual_dim = 2
 parity = [0, 1]
