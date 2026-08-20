@@ -733,32 +733,42 @@ TEST_CASE("graded svd preserves parity for asymmetric non-crossing axes") {
   CHECK(maxdiff == doctest::Approx(0.0).epsilon(1e-10));
 }
 
-TEST_CASE("graded svd rejects interleaved row-column splits") {
+TEST_CASE("graded svd is invariant under regrouping to a contiguous split") {
+  // svd(a, rows, cols) starts by transposing a into (rows..., cols...) order,
+  // so requesting an interleaved split is exactly the same computation as
+  // first applying that graded transpose and then splitting contiguously.
+  // The kernel therefore hands svd_trunc the interleaved axes directly. The
+  // third variant below - a metadata-only regroup that drops the Koszul mask
+  // - is what a past version of the kernel did, and it does NOT agree: that
+  // dropped sign (cancelling against a missing gate sign) was the actual bug
+  // once misattributed to interleaved splits.
   namespace f = tenes::fermion;
-  using FT = f::ftensor<tenes::real_tensor>;
-  f::parity_vector p2{false, true};
-  f::parity_vector p4{false, false, true, true};
-  f::leg_parities lp{p4, p2, p4, p2};
-  tenes::real_tensor t(mptensor::Shape(4, 2, 4, 2));
-  for (std::size_t n = 0; n < t.local_size(); ++n) {
-    auto idx = t.global_index(n);
-    if (f::count_odd(lp, idx) % 2 == 0) {
-      t.set_value(idx, 0.2 * static_cast<double>(n + 1));
-    }
+  f::leg_parities p{
+      {false, true}, {false, true, true}, {false, true}, {false, true, true}};
+  ft a = make_even_ft(mptensor::Shape(2, 3, 2, 3), p, 4321);
+
+  ft u1, vt1, u2, vt2;
+  std::vector<double> s1, s2;
+  f::svd(f::transpose(a, mptensor::Axes(0, 2, 1, 3)), mptensor::Axes(0, 1),
+         mptensor::Axes(2, 3), u1, s1, vt1);
+  f::svd(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u2, s2, vt2);
+  REQUIRE(s1.size() == s2.size());
+  for (std::size_t i = 0; i < s1.size(); ++i) {
+    CHECK(s1[i] == doctest::Approx(s2[i]).epsilon(1.0e-12));
   }
-  FT a{t, lp};
-  FT u, vt;
-  std::vector<double> s;
-  CHECK_THROWS_WITH_AS(
-      f::svd(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt),
-      doctest::Contains("interleaved row/col split distorts graded singular "
-                        "values"),
-      std::runtime_error);
-  CHECK_THROWS_WITH_AS(
-      f::qr(a, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, vt),
-      doctest::Contains("interleaved row/col split distorts graded singular "
-                        "values"),
-      std::runtime_error);
+
+  ft maskless;
+  maskless.t = a.t;
+  maskless.t.transpose(mptensor::Axes(0, 2, 1, 3));
+  maskless.parity = {a.parity[0], a.parity[2], a.parity[1], a.parity[3]};
+  ft u3, vt3;
+  std::vector<double> s3;
+  f::svd(maskless, mptensor::Axes(0, 1), mptensor::Axes(2, 3), u3, s3, vt3);
+  double maskless_diff = 0.0;
+  for (std::size_t i = 0; i < s1.size(); ++i) {
+    maskless_diff = std::max(maskless_diff, std::abs(s1[i] - s3[i]));
+  }
+  CHECK(maskless_diff > 1.0e-3);
 }
 
 TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
@@ -973,18 +983,20 @@ static std::string vector_to_string(const std::vector<double>& values) {
   return os.str();
 }
 
+// Reorder theta from the kernel's (aux1, aux2, out1, out2) layout to the
+// site-contiguous (aux1, out1, aux2, out2) one, so the diagnostics below can
+// report row/col sector data with a plain (0,1) x (2,3) split. Equivalent to
+// the interleaved split the kernel hands to svd_trunc.
 template <class Tensor>
-static Tensor diagnostic_regroup_theta_for_svd(const Tensor& theta) {
+static Tensor diagnostic_site_ordered_theta(const Tensor& theta) {
   Tensor ret = theta;
   ret.transpose(mptensor::Axes(0, 2, 1, 3));
   return ret;
 }
 
 static tenes::fermion::ftensor<tenes::real_tensor>
-diagnostic_regroup_theta_for_svd(
+diagnostic_site_ordered_theta(
     const tenes::fermion::ftensor<tenes::real_tensor>& theta) {
-  // Mirrors the kernel: graded transpose so the (out1, aux2) crossing
-  // carries its Koszul sign.
   return tenes::fermion::transpose(theta, mptensor::Axes(0, 2, 1, 3));
 }
 
@@ -1028,7 +1040,7 @@ static std::pair<Tensor, Tensor> diagnostic_update_thetas(
   qr(Tn1_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q1, R1);
   qr(Tn2_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q2, R2);
   Tensor theta_before = tensordot(R1, R2, mptensor::Axes(1), mptensor::Axes(1));
-  Tensor theta = diagnostic_regroup_theta_for_svd(tensordot(
+  Tensor theta = diagnostic_site_ordered_theta(tensordot(
       theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
   return {theta_before, theta};
 }
@@ -1083,7 +1095,7 @@ static DiagnosticGateData<Tensor> diagnostic_gate_data(
   qr(Tn2_lambda, mptensor::Axes(0, 1, 2), mptensor::Axes(3, 4), Q2, data.R2);
   data.theta_before =
       tensordot(data.R1, data.R2, mptensor::Axes(1), mptensor::Axes(1));
-  data.theta_after = diagnostic_regroup_theta_for_svd(tensordot(
+  data.theta_after = diagnostic_site_ordered_theta(tensordot(
       data.theta_before, op12, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
   return data;
 }
@@ -1516,7 +1528,7 @@ TEST_CASE("diagnostic update1 gate application component diff") {
 
   const auto fop = make_fermion_gate(updates[1], source, target);
   const auto same_input_fermion_after =
-      diagnostic_regroup_theta_for_svd(f::tensordot(
+      diagnostic_site_ordered_theta(f::tensordot(
           btheta_before_as_f, fop, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
   dump_post_gate_diff("update1_same_input_gate_only", same_input_fermion_after,
                       bdata.theta_after);
@@ -2682,7 +2694,7 @@ TEST_CASE("diagnostic electron chain sorted lambda trajectory") {
           // sign-gauge question from the gate-application question.
           const f::ftensor<tensor> btheta_as_f{bthetas.first,
                                                fthetas.first.parity};
-          const auto same_after = diagnostic_regroup_theta_for_svd(f::tensordot(
+          const auto same_after = diagnostic_site_ordered_theta(f::tensordot(
               btheta_as_f, fop, mptensor::Axes(1, 3), mptensor::Axes(0, 1)));
           const auto s_same = raw_svals(same_after.t);
           std::cout << "  same_input_rel_after="

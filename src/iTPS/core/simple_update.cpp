@@ -105,24 +105,6 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
 }
 
 template <class tensor>
-tensor regroup_theta_for_svd(const tensor &theta) {
-  tensor ret = theta;
-  ret.transpose(Axes(0, 2, 1, 3));
-  return ret;
-}
-
-template <class tensor>
-tenes::fermion::ftensor<tensor> regroup_theta_for_svd(
-    const tenes::fermion::ftensor<tensor> &theta) {
-  // Graded transpose: the (out1, aux2) crossing must carry its Koszul sign.
-  // A metadata-only reorder here silently drops that mask and is only
-  // spectrum-neutral when it happens to cancel against another convention
-  // error upstream (e.g. a two-site gate loaded without its input-leg
-  // crossing sign).
-  return tenes::fermion::transpose(theta, Axes(0, 2, 1, 3));
-}
-
-template <class tensor>
 void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
   const double v = tenes::fermion::parity_violation(a);
   const double scale = std::max(1.0, tenes::fermion::max_abs(a));
@@ -225,14 +207,16 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
   */
   ptensor Theta_before = tensordot(R1, R2, Axes(1), Axes(1));
   log_theta_blocks(Theta_before, "before_gate", Axes(0, 1), Axes(2, 3));
-  ptensor Theta = regroup_theta_for_svd(
-      tensordot(Theta_before, op12, Axes(1, 3), Axes(0, 1)));
-  log_theta_blocks(Theta, "after_gate", Axes(0, 1), Axes(2, 3));
+  // Theta legs: (aux1, aux2, out1, out2); the bipartition is site 1 =
+  // (aux1, out1) against site 2 = (aux2, out2). svd_trunc performs the
+  // graded transpose implied by these axes itself, so no regrouping here.
+  ptensor Theta = tensordot(Theta_before, op12, Axes(1, 3), Axes(0, 1));
+  log_theta_blocks(Theta, "after_gate", Axes(0, 2), Axes(1, 3));
 
   // svd
   ptensor U, VT;
   std::vector<double> s;
-  info = svd_trunc(Theta, Axes(0, 1), Axes(2, 3), U, s, VT, dc);
+  info = svd_trunc(Theta, Axes(0, 2), Axes(1, 3), U, s, VT, dc);
 
   lambda_c = std::vector<double>(s.begin(), s.end());
   ptensor Uc = U;

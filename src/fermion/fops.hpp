@@ -158,26 +158,6 @@ inline std::size_t count_even(const parity_vector& parity) {
   return ret;
 }
 
-inline void validate_noninterleaved_split(const mptensor::Axes& rows,
-                                          const mptensor::Axes& cols) {
-  if (rows.size() == 0 || cols.size() == 0) {
-    return;
-  }
-  std::size_t row_max = rows[0];
-  for (std::size_t i = 1; i < rows.size(); ++i) {
-    row_max = std::max<std::size_t>(row_max, rows[i]);
-  }
-  std::size_t col_min = cols[0];
-  for (std::size_t i = 1; i < cols.size(); ++i) {
-    col_min = std::min<std::size_t>(col_min, cols[i]);
-  }
-  if (row_max > col_min) {
-    throw std::runtime_error(
-        "interleaved row/col split distorts graded singular values; regroup "
-        "legs before svd");
-  }
-}
-
 inline double scalar_conj(double v) { return v; }
 
 inline std::complex<double> scalar_conj(std::complex<double> v) {
@@ -296,10 +276,10 @@ ftensor<tensor> conj(const ftensor<tensor>& a) {
   for (std::size_t n = 0; n < ret.t.local_size(); ++n) {
     auto idx = ret.t.global_index(n);
     const int m = count_odd(ret.parity, idx);
-    const int sign = ((m * (m - 1) / 2) % 2 == 0) ? 1 : -1;
+    const double sign = ((m * (m - 1) / 2) % 2 == 0) ? 1.0 : -1.0;
     typename tensor::value_type v;
     ret.t.get_value(idx, v);
-    ret.t.set_value(idx, static_cast<double>(sign) * detail::scalar_conj(v));
+    ret.t.set_value(idx, sign * detail::scalar_conj(v));
   }
   return ret;
 }
@@ -382,7 +362,6 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
 template <class tensor>
 int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
        const mptensor::Axes& cols, ftensor<tensor>& q, ftensor<tensor>& r) {
-  detail::validate_noninterleaved_split(rows, cols);
   ftensor<tensor> a_ordered = transpose(a, rows + cols);
   mptensor::Shape row_shape = detail::shape_from_axes(a.shape(), rows);
   mptensor::Shape col_shape = detail::shape_from_axes(a.shape(), cols);
@@ -476,7 +455,6 @@ template <class tensor>
 int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
         const mptensor::Axes& cols, ftensor<tensor>& u, std::vector<double>& s,
         ftensor<tensor>& vt) {
-  detail::validate_noninterleaved_split(rows, cols);
   ftensor<tensor> a_ordered = transpose(a, rows + cols);
   mptensor::Shape row_shape = detail::shape_from_axes(a.shape(), rows);
   mptensor::Shape col_shape = detail::shape_from_axes(a.shape(), cols);
