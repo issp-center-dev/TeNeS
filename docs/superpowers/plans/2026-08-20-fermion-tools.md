@@ -1034,7 +1034,7 @@ git commit -m "Reject inputs outside the supported fermionic scope"
 ## Task 5: `tenes_std` の `parity` 通しと長距離ボンド拒否
 
 **Files:**
-- Modify: `tool/tenes_std.py`(`LocalTensor.__init__` 275-290行、`LocalTensor.check` 292-312行、`TeNeS_Input.__init__` の 1177行目直前、`to_toml` の unitcell 出力 1207-1215行)
+- Modify: `tool/tenes_std.py`(`LocalTensor.__init__` 275-290行、`LocalTensor.check` 292-312行、`tenes_std.Model.__init__` の 1177行目直前、`to_toml` の unitcell 出力 1207-1215行)
 - Test: `test/python/test_tenes_std.py`(追記)
 
 **Interfaces:**
@@ -1094,11 +1094,11 @@ def _to_toml_text(inp):
 
 class TestFermionParityPassthrough:
     def test_parity_is_parsed(self):
-        inp = tenes_std.TeNeS_Input(_fermion_std_param())
+        inp = tenes_std.Model(_fermion_std_param())
         assert inp.unitcell.sites[0].parity == [0, 1]
 
     def test_parity_is_written_out(self):
-        inp = tenes_std.TeNeS_Input(_fermion_std_param())
+        inp = tenes_std.Model(_fermion_std_param())
         parsed = toml.loads(_to_toml_text(inp))
         assert parsed["tensor"]["unitcell"][0]["parity"] == [0, 1]
 
@@ -1106,7 +1106,7 @@ class TestFermionParityPassthrough:
         param = _fermion_std_param()
         del param["parameter"]["general"]["fermion"]
         del param["tensor"]["unitcell"][0]["parity"]
-        inp = tenes_std.TeNeS_Input(param)
+        inp = tenes_std.Model(param)
         parsed = toml.loads(_to_toml_text(inp))
         assert "parity" not in parsed["tensor"]["unitcell"][0]
 
@@ -1114,19 +1114,19 @@ class TestFermionParityPassthrough:
         param = _fermion_std_param()
         del param["tensor"]["unitcell"][0]["parity"]
         with pytest.raises(RuntimeError, match="parity"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 
     def test_parity_with_wrong_length_is_rejected(self):
         param = _fermion_std_param()
         param["tensor"]["unitcell"][0]["parity"] = [0, 1, 0]
         with pytest.raises(RuntimeError, match="parity"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 
     def test_parity_with_invalid_values_is_rejected(self):
         param = _fermion_std_param()
         param["tensor"]["unitcell"][0]["parity"] = [0, 2]
         with pytest.raises(RuntimeError, match="parity"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 
 
 class TestFermionLongDistanceBond:
@@ -1135,21 +1135,21 @@ class TestFermionLongDistanceBond:
         # of nearest-neighbour gates without a Jordan-Wigner string.
         param = _fermion_std_param(bond="0 2 0")
         with pytest.raises(RuntimeError, match="nearest"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 
     def test_a_diagonal_bond_is_rejected(self):
         param = _fermion_std_param(bond="0 1 1")
         with pytest.raises(RuntimeError, match="nearest"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 
     def test_a_nearest_neighbour_bond_is_accepted(self):
-        tenes_std.TeNeS_Input(_fermion_std_param(bond="0 1 0"))
+        tenes_std.Model(_fermion_std_param(bond="0 1 0"))
 
     def test_bosonic_input_still_allows_long_bonds(self):
         param = _fermion_std_param(bond="0 2 0")
         del param["parameter"]["general"]["fermion"]
         del param["tensor"]["unitcell"][0]["parity"]
-        tenes_std.TeNeS_Input(param)
+        tenes_std.Model(param)
 
 
 class TestFermionObservableForm:
@@ -1162,7 +1162,7 @@ class TestFermionObservableForm:
             {"group": 1, "name": "nn", "bonds": "0 1 0", "dim": [2, 2], "ops": [0, 0]}
         ]
         with pytest.raises(RuntimeError, match="elements"):
-            tenes_std.TeNeS_Input(param)
+            tenes_std.Model(param)
 ```
 
 - [ ] **Step 2: テストが失敗することを確認する**
@@ -1221,7 +1221,7 @@ Expected: `AttributeError: 'LocalTensor' object has no attribute 'parity'` な�
                 f.write("parity = {}\n".format(ucell["parity"]))
 ```
 
-3-e. `TeNeS_Input.__init__` の `self.simple_updates = []`(1177行目)の**直前**に
+3-e. `tenes_std.Model.__init__` の `self.simple_updates = []`(1177行目)の**直前**に
 fermion 検証を挿入する。時間発展演算子を作る前に止める必要がある。
 
 ```python
@@ -1231,7 +1231,7 @@ fermion 検証を挿入する。時間発展演算子を作る前に止める必
         self.full_updates = []
 ```
 
-3-f. `TeNeS_Input` のメソッドとして追加する(`to_toml` の直前)。
+3-f. `tenes_std.Model` のメソッドとして追加する(`to_toml` の直前)。
 
 ```python
     def _check_fermion_input(self) -> None:
@@ -1337,7 +1337,7 @@ git commit -m "Carry parity through tenes_std and reject long fermionic bonds"
 - Test: `test/python/test_fermion_models.py`(追記)
 
 **Interfaces:**
-- Consumes: Task 3 の `SpinlessFermionModel`、Task 5 の `tenes_std.TeNeS_Input`
+- Consumes: Task 3 の `SpinlessFermionModel`、Task 5 の `tenes_std.tenes_std.Model`
 - Produces: なし(テストのみ)
 
 `tenes_simple` が作った `h` と `tenes_std` が作ったゲートを結ぶ唯一の検査。
@@ -1362,7 +1362,7 @@ def gate_and_hamiltonian(param, tau):
         "ctm": {"dimension": 4},
     }
     text, _ = tenes_simple.tenes_simple(param)
-    inp = tenes_std.TeNeS_Input(toml.loads(text))
+    inp = tenes_std.Model(toml.loads(text))
     gate = inp.simple_updates[0].elements
     ham = None
     for h in inp.hamiltonians:
