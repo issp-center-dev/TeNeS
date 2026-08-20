@@ -90,7 +90,7 @@ void iTPS<ptensor>::measure(std::optional<double> time,
     if (mpirank == 0) {
       std::cerr << "WARNING: fermion mode disables correlation_length.measure "
                    "because the transfer-matrix correlation length is not "
-                   "fermion-aware in M1"
+                   "fermion-aware in this version"
                 << std::endl;
     }
     tmatrix_param.to_calculate = false;

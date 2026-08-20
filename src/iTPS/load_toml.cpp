@@ -546,7 +546,8 @@ std::vector<std::vector<bool>> gen_phys_parity(const toml::value &toml,
 
 namespace {
 void throw_fermion_guard(std::string const &reason) {
-  throw tenes::input_error("fermion mode M1 does not support " + reason +
+  throw tenes::input_error("fermion mode in this version does not support " +
+                           reason +
                            "; disable fermion mode or remove this setting");
 }
 
