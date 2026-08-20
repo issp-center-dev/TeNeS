@@ -133,3 +133,69 @@ class TestSpinlessFermionSchema:
     def test_unsupported_initial_states_are_rejected(self, mode):
         with pytest.raises(RuntimeError):
             tenes_simple.tenes_simple(spinless_param(lattice_extra={"initial": mode}))
+
+
+class TestFermionScopeGuards:
+    @pytest.mark.parametrize(
+        "latname", ["honeycomb lattice", "triangular lattice", "kagome lattice"]
+    )
+    def test_non_square_lattices_are_rejected(self, latname):
+        param = spinless_param(lattice_extra={"type": latname})
+        with pytest.raises(RuntimeError, match="square"):
+            tenes_simple.tenes_simple(param)
+
+    def test_square_lattice_is_accepted(self):
+        tenes_simple.tenes_simple(spinless_param())
+
+    # In read_params the digit is the BOND TYPE and the number of primes is
+    # the NEIGHBOUR LEVEL, so t1 / t2 are still nearest neighbour and only the
+    # primed keys go beyond it.
+    @pytest.mark.parametrize("key", ["t'", "t''", "v'", "v''"])
+    def test_beyond_nearest_neighbour_parameters_are_rejected(self, key):
+        param = spinless_param({key: 0.5})
+        with pytest.raises(RuntimeError, match="nearest"):
+            tenes_simple.tenes_simple(param)
+
+    def test_zero_valued_far_neighbour_parameters_are_accepted(self):
+        tenes_simple.tenes_simple(spinless_param({"t'": 0.0}))
+
+    def test_bond_type_variants_of_the_first_neighbour_are_accepted(self):
+        # t0 is bond type 0 at the FIRST neighbour level, so the scope guard
+        # must not mistake it for a beyond-nearest-neighbour term.
+        param = spinless_param()
+        param["model"] = {"type": "spinless fermion", "t0": 1.0}
+        tenes_simple.tenes_simple(param)
+
+    def test_duplicate_bond_type_specification_is_rejected(self):
+        # same rule as BoseHubbardModel.read_params
+        param = spinless_param()
+        param["model"] = {"type": "spinless fermion", "t": 1.0, "t0": 1.0}
+        with pytest.raises(RuntimeError, match="defined twice"):
+            tenes_simple.tenes_simple(param)
+
+    def test_correlation_is_rejected(self):
+        param = spinless_param()
+        param["correlation"] = {"r_max": 5, "operators": [[0, 0]]}
+        with pytest.raises(RuntimeError, match="correlation"):
+            tenes_simple.tenes_simple(param)
+
+    def test_correlation_length_is_rejected(self):
+        param = spinless_param()
+        param["correlation_length"] = {"measure": True}
+        with pytest.raises(RuntimeError, match="correlation_length"):
+            tenes_simple.tenes_simple(param)
+
+    def test_bosonic_models_are_untouched_by_the_guards(self):
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": "kagome lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "spin", "j": 1.0, "j'": 0.5},
+            "correlation": {"r_max": 3, "operators": [[0, 0]]},
+        }
+        tenes_simple.tenes_simple(param)
+
+    def test_the_message_does_not_mention_the_internal_milestone(self):
+        param = spinless_param(lattice_extra={"type": "honeycomb lattice"})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        assert "M1" not in str(excinfo.value)

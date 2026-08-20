@@ -1346,6 +1346,53 @@ def hamiltonians(
     return ret
 
 
+def _check_fermion_scope(
+    param: MutableMapping[str, Any], lattice: Lattice, model: Model
+) -> None:
+    """Reject inputs outside the supported fermionic scope.
+
+    The current version supports the square lattice with nearest-neighbour
+    bonds only. Nothing else is silently converted; every unsupported input
+    stops here with a reason.
+    """
+    if not model.is_fermion:
+        return
+
+    scope = (
+        "the fermion support in this version covers the square lattice with"
+        " nearest-neighbour bonds only"
+    )
+
+    if not isinstance(lattice, SquareLattice):
+        msg = 'lattice type "{}" is not available for fermionic models; {}.'.format(
+            param["lattice"]["type"], scope
+        )
+        raise RuntimeError(msg)
+
+    for n, per_level in enumerate(model.params_twosite):
+        if n == 0:
+            continue
+        for typ, params in enumerate(per_level):
+            for name, value in params.items():
+                if value != 0.0:
+                    msg = "{} = {} is a {}-neighbour term; {}.".format(
+                        name, value, n + 1, scope
+                    )
+                    raise RuntimeError(msg)
+
+    if "correlation" in param:
+        msg = "[correlation] is not available for fermionic models in this version"
+        msg += "; remove the section."
+        raise RuntimeError(msg)
+
+    if "correlation_length" in param:
+        msg = "[correlation_length] is not available for fermionic models in this"
+        msg += " version; remove the section. The transfer-matrix correlation"
+        msg += " length is not fermion-aware, and the solver would silently"
+        msg += " disable it."
+        raise RuntimeError(msg)
+
+
 def tenes_simple(
     param: MutableMapping[str, Any], use_onesite_hamiltonian: bool = False
 ) -> Tuple[str, Lattice]:
@@ -1359,6 +1406,7 @@ def tenes_simple(
     param = lower_dict(param)
     lattice = make_lattice(param)
     model = make_model(param)
+    _check_fermion_scope(param, lattice, model)
     hams = hamiltonians(lattice, model, use_onesite_hamiltonian)
 
     ret = []
