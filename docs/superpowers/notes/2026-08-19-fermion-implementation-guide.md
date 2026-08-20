@@ -74,10 +74,10 @@ CTM 環境は**閉ループ**を含む。開いたネットワーク(状態の�
 | ファイル | 行数 | 役割 |
 |---|---|---|
 | `src/fermion/parity.hpp` | 73 | `parity_vector` / `leg_parities` 型と純関数3つ |
-| `src/fermion/ftensor.hpp` | 119 | `ftensor<tensor>` 構造体、member `transpose`(符号適用の本体)、`transpose_sign` |
-| `src/fermion/fops.hpp` | 677 | f-プリミティブ全部。mptensor と**同名**の自由関数でオーバーロード解決 |
+| `src/fermion/ftensor.hpp` | 117 | `ftensor<tensor>` 構造体、member `transpose`(符号適用の本体)、`transpose_sign` |
+| `src/fermion/fops.hpp` | 706 | f-プリミティブ全部。mptensor と**同名**の自由関数でオーバーロード解決 |
 | `src/fermion/fermion_info.hpp` | 95 | `FermionInfo`(phys/virt パリティ)、`wrap_Tn`/`unwrap_Tn`、隣接整合検証 |
-| `src/fermion/reduced.hpp` | 210 | reduced tensor(1サイト・2サイトblob)の構築 |
+| `src/fermion/reduced.hpp` | 212 | reduced tensor(1サイト・2サイトblob)の構築 |
 | `src/fermion/reduced_measure.hpp` | 154 | λ dressing、reduced 群の生成、blob と CTM 環境の縮約 |
 
 ---
@@ -101,7 +101,7 @@ member `transpose` は「**符号マスクを掛けてから** `mptensor::transp
 
 > **レビュー観点**: member と自由関数 `transpose` が同じ規約であること(自由関数は member に委譲)。
 
-### 3.2 graded tensordot(`fops.hpp:264`)
+### 3.2 graded tensordot(`fops.hpp:289`)
 
 意味論は「A の縮約脚を末尾へ、B の縮約脚を**逆順で**先頭へ寄せる」置換の符号 + 素の tensordot。
 実装は置換を実行せず**符号マスクだけ**を掛けて `mptensor::tensordot` に渡す(等価かつ高速):
@@ -116,12 +116,19 @@ ret.t = mptensor::tensordot(a_masked.t, b_masked.t, axes_a, axes_b);
 
 > **レビュー観点**: `tensordot_right_perm` の逆順が B 側にのみ適用されていること。ここが規約の核。
 
-### 3.3 `conj`(`fops.hpp:294`)
+### 3.3 `conj`
 
-要素共役 + 要素ごとの符号 (−1)^{m(m−1)/2}(m = その要素で奇な脚の数)。
-これは「全脚の順序反転」に相当する twist で、**Task 9 の JW 厳密参照テストが唯一の確定根拠**。
+**グレード付きのエルミート共役**を、脚順序は元のまま(ラベルを戻した形)で表したもの。
+定義は「要素共役 ∘ 全脚の順序反転 ∘ 元の軸番号への転置」で、この合成の正味が要素ごとの
+(−1)^{m(m−1)/2}(m = その要素で奇な脚の数)になる。符号は**導出されたもの**で、
+m 個の奇脚を反転するのに要する互換の数 C(m,2) がそのまま指数。
 
-### 3.4 graded QR / SVD(`fops.hpp:383` / `:476` / `:573`)
+**JW 厳密参照テストが確定するのは「規約の組み合わせ」**である点に注意。
+twist を bra 側に置くか ket 側に置くか、`tensordot` の逆順を A 側にするか B 側にするかは
+個別には任意で、物理的に意味を持つのは組み合わせだけ。Task 9 のテストは組み立てた全体が
+厳密解を再現することを保証している。
+
+### 3.4 graded QR / SVD(`fops.hpp:410` / `:503` / `:600`)
 
 手順(QR も SVD も共通):
 
@@ -132,16 +139,22 @@ ret.t = mptensor::tensordot(a_masked.t, b_masked.t, axes_a, axes_b);
 5. 直和で組み直し、置換を戻す
 6. 内部脚のパリティ(偶 k_e 個 + 奇 k_o 個)を返す
 
-`svd_trunc`(`:573`)はさらに**セクター横断の切断**を行う: 全特異値を降順(同値なら偶優先)で dc 本選び、
+`svd_trunc`(`:600`)はさらに**セクター横断の切断**を行う: 全特異値を降順(同値なら偶優先)で dc 本選び、
 選択後に偶先頭へ再ソート。選択は**選択行列との tensordot** で実装(同じく分散安全)。
 
-> **レビュー観点1**: `validate_noninterleaved_split` — 行と列が交互(例 rows=(0,2), cols=(1,3))だと
-> Koszul マスクが行成分と列成分を結合する非分離 Hadamard 因子になり、**分解後の特異値が物理的な
-> Schmidt スペクトルでなくなる**。これは実際にバグとして踏んだので、ガードで拒否している
-> (呼ぶ側が非交差になるよう regroup する責任を負う。`core/simple_update.cpp` の `regroup_theta_for_svd`)。
->
-> **レビュー観点2**: 分散(ScaLAPACK)対応のため、要素ループでの直接書き込みを避けて置換行列/選択行列を
-> 使っている。`make_perm_matrix` の規約は `P[new, old] = δ`。
+**行と列が交互になる分割**(例 rows=(0,2), cols=(1,3))は、規約上まったく問題ない。
+`svd(a, rows, cols)` は 1 行目で `transpose(a, rows + cols)` を行うため、interleaved 指定は
+「先に graded transpose してから連続分割する」のと**同一の計算**である
+(テスト `graded svd is invariant under regrouping to a contiguous split` が固定)。
+かつて非交差化が効いたように見えたのは、同時に導入した regroup が**符号を落とす転置**で、
+その欠落が当時のゲート符号の欠落と相殺していたため。両方修正した現在、カーネルは
+interleaved の軸指定を `svd_trunc` にそのまま渡している。
+
+> **レビュー観点**: 分散(ScaLAPACK)対応のため、行・列の並べ替えと切断列の選択は
+> 要素の直接書き込みではなく**置換行列・選択行列との tensordot** で実装している。
+> `make_perm_matrix` の規約は `P[new, old] = δ`。
+> また `qr`/`svd` は偶偶・奇奇の対角ブロックしか見ないため、パリティ偶でない入力を渡すと
+> 非対角成分が黙って捨てられる。Debug ビルドでは `validate_block_diagonal` が検出する。
 
 ---
 
@@ -149,12 +162,12 @@ ret.t = mptensor::tensordot(a_masked.t, b_masked.t, axes_a, axes_b);
 
 ### 4.1 カーネル(`src/iTPS/core/simple_update.cpp`)
 
-**ボゾンと完全に同一のソース**を `ftensor` でインスタンス化する。カーネル側の変更は2点のみ:
+**ボゾンと完全に同一のソース**を `ftensor` でインスタンス化する。カーネル側の変更は1点のみ:
 
-1. 「svd → slice で切断」を `svd_trunc(...)` に置換(ボゾン用オーバーロードを `src/tensor.hpp` に追加して共通化)
-2. `regroup_theta_for_svd` — θ を (aux1, out1, aux2, out2) に**graded transpose** してから SVD に渡す
-   (§3.4 レビュー観点1 の非交差要件を満たすため。ここが素の transpose だと Koszul 符号が落ちる = 実際にあったバグ)
+- 「svd → slice で切断」を `svd_trunc(...)` に置換(ボゾン用オーバーロードを `src/tensor.hpp` に追加して共通化)
 
+θ の脚順序は (aux1, aux2, out1, out2) で、二分割はサイト1 = (aux1, out1) 対 サイト2 = (aux2, out2)。
+この軸指定を `svd_trunc` にそのまま渡す(§3.4 のとおり、必要な graded transpose は分解側が行う)。
 分解後に `enforce_even_parity` で超選択則を検査(閾値超過は例外、微小な数値ゴミは 0 にクリップ)。
 
 ### 4.2 ドライバ境界(`src/iTPS/simple_update.cpp:60-`)
@@ -167,8 +180,8 @@ if (source_leg == 0 || source_leg == 1) {   // 右→左 / 下→上 で来た�
   std::swap(s1, s2); std::swap(s1_leg, s2_leg);
   op12 = mptensor::transpose(up.op, Axes(1, 0, 3, 2));
 }
-// (b) ゲートの graded 表現: 入力脚の交差符号
-auto fop = wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
+// (b) ゲートのロード: graded tensordot の縮約脚逆順規約を打ち消す
+auto fop = wrap_twosite_gate(op12, finfo.phys[s1], finfo.phys[s2]);
 ```
 
 - (a) がないと、JW 順で後のサイトからゲートを当てることになり誤ったマスクが掛かる
@@ -176,8 +189,21 @@ auto fop = wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
 - (b) がないと `|11⟩⟨11|` チャネル(全 Trotter ゲートが持つ)が反転する
   (症状: τ² スケールの λ 乖離。ホッピングのみの参照テストでは検出できなかった)
 
-> **レビュー観点**: `wrap_twosite_op` は `apply_swap(fop, 0, 1)` のみ(**入力脚だけ**)。
-> 測定側の `wrap_reduced_pair_op` は入力・出力**両方**。この非対称性は §5.3 で説明する。
+**(b) は追加の物理ではない。** ユーザーが与える `op12` の行列要素には既に反交換関係が
+入っている(順序付き Fock 基底の定義)。ここで足す swap は、graded tensordot が
+**B 側(演算子)の縮約脚を逆順に寄せる**ために生じるマスクを打ち消すためのもの:
+
+- `tensordot(Theta_before, op12, Axes(1,3), Axes(0,1))` に対し
+  `tensordot_right_perm(4, (0,1)) = (1,0,2,3)` → マスクは「in1, in2 が共に奇の要素で −1」
+- `wrap_twosite_gate` の `apply_swap(fop, 0, 1)` は**同一のマスク**
+
+両者は厳密に相殺し、正味では**書いたとおりの行列**が θ に作用する。つまり
+「行列要素という意味論」と「graded テンソルという意味論」の間のアダプタである。
+一方、同じ tensordot が A 側に掛けるマスク (−1)^{p_{aux2} p_{phys1}}(サイト2の補助脚が
+サイト1の物理脚を横切る)は**本物の幾何的交差**であり、これは残る。
+
+> **レビュー観点**: `wrap_twosite_gate` は入力脚のみ、測定側の `wrap_reduced_pair_op` は
+> 入力・出力の両方。後者では演算子の出力脚も bra 層に対して閉じられるため。§5.3 参照。
 
 ---
 
@@ -191,32 +217,56 @@ auto fop = wrap_twosite_op(op12, finfo.phys[s1], finfo.phys[s2]);
 
 ### 5.2 構築パイプライン(`reduced.hpp`)
 
-`doubled_pipeline`(`:92`)が共通の心臓部:
+#### 1サイト: `doubled_pipeline`(`:92`)
 
-```
-conj(bra) ⊗ ket            outer product(rank 10)
-  → apply_joint_swaps      bra/ket 層をまたぐ交差の符号(下記)
-  → (ket, bra) interleave  graded transpose
-  → column-major fusion    mptensor::reshape で [l l̄] 等に融合
-```
+共通の心臓部。ket 側テンソル `T[l,t,r,b,s]` と bra 側 `T̄` から4段階で作る:
 
-`apply_joint_swaps` の `kDoubledJointMask` は「どの脚ペアに joint swap を入れるか」を固定した定数で、
-**解析的に導出したものではなく、Fock oracle を審判にした探索で同定した**もの(コメントに明記)。
-YASTN の `fuse_layers()` 規約とゲージ同値であることを確認している。
+| 段階 | 操作 | 脚(rank) |
+|---|---|---|
+| 0 | 入力 | bra `(l̄,t̄,r̄,b̄,s̄)`、ket `(l,t,r,b,s)` |
+| 1 | `tensordot(conj(bra), ket, Axes(), Axes())`(外積) | `(l̄,t̄,r̄,b̄,s̄, l,t,r,b,s)` = axes 0–4 が bra、5–9 が ket(rank 10) |
+| 2 | `apply_joint_swaps(doubled, {0,1,2,3}, {5,6,7,8}, {0,1,2,3})` | 形は不変。bra/ket 層をまたぐ交差の符号(= swap gate)を要素マスクで挿入 |
+| 3 | `transpose` で (ket, bra) インターリーブ | `(l,l̄, t,t̄, r,r̄, b,b̄, s, s̄)`。**graded transpose なので追加の Koszul 符号もここで発生** |
+| 4 | `mptensor::reshape` で隣接ペアを融合 | `([l l̄], [t t̄], [r r̄], [b b̄], s_ket, s_bra)`(rank 6) |
+
+段階 2–3 で全てのフェルミオン符号が数値に焼き込まれるため、**出力は普通の(符号を持たない)テンソル**
+になる。だからこれ以降の CTM はボゾン用実装をそのまま使える。
+
+`apply_joint_swaps` は `kDoubledJointMask` が指定する脚ペア (x,y) について
+`apply_swap(a, ket_axes[ix], bra_axes[iy])` と `apply_swap(a, bra_axes[ix], bra_axes[iy])` を掛ける。
+このマスク(現在は (0,3), (1,0), (2,3), (3,0))は**解析的に導出したものではなく、
+Fock oracle を審判にした探索で同定した**もの(コメントに明記)。
+YASTN の `fuse_layers()` 規約とゲージ同値であることを確認している。**レビュー最重要点**。
 
 用途別の入口:
 
-| 関数 | 用途 |
-|---|---|
-| `build_reduced_op` | 物理脚を開いたまま(1サイト演算子の挿入用) |
-| `build_reduced` | 物理脚をトレース(ノルム用) |
-| `build_reduced_pair` | 2サイト clusterを doubling して 6 本脚 blob(2サイト演算子用) |
+| 関数 | 実装 | 用途 |
+|---|---|---|
+| `build_reduced_op`(`:160`) | `doubled_pipeline(Tn, Tn)` | 物理脚 (s_ket, s_bra) を開いたまま。1サイト演算子の挿入用 |
+| `build_reduced`(`:168`) | 上を `contract(Axes(4), Axes(5))` | 物理脚をトレース。ノルム・環境構築用 |
+| `build_reduced_pair`(`:174`) | 下記 `doubled_cluster` | 2サイト演算子用の 6 本脚 blob |
+
+#### 2サイト: `doubled_cluster`
+
+2サイトをまとめて doubling する。ペアにまたがる演算子は**ket 層に挿入してから**二重化する
+(奇演算子は仮想脚を通過する際に反交換するため、二重化後の挿入では表現できない):
+
+| 段階 | 操作 | 脚 |
+|---|---|---|
+| 1 | `tensordot(TnA, TnB, …)` で ket 側クラスタ | 横なら A の右脚と B の左脚を縮約 → 外部 6 脚 + 物理 2 脚(rank 8)|
+| 2 | `apply_reduced_two_site_op`(`:69`) | `tensordot(psi, op12, Axes(3,7), Axes(0,1))` で両物理脚に演算子を作用 → out 脚を元位置へ `transpose` |
+| 3 | `tensordot(conj(ket_ab), ket_op, Axes(), Axes())` | 外積(rank 16)|
+| 4 | `fuse_doubled_cluster`(`:120`) | joint swap → インターリーブ → 6 本の外部脚を融合 → 物理ペアを `contract` で閉じる |
+
+**演算子は段階 2 で in 脚、段階 4 で out 脚がそれぞれ閉じられる**。これが測定側で
+入力・出力の**両方**に補正が要る理由(§5.3)。最後にサイト間ボンドの融合ゲージを
+`apply_fused_leg_gauge` で 1 サイト版の規約に合わせる(これも oracle 固定)。
 
 ### 5.3 演算子ロードの3規約(**最重要の注意点**)
 
 | 経路 | 規約 | ヘルパ | 根拠 |
 |---|---|---|---|
-| simple update ゲート | 入力脚 swap | `wrap_twosite_op` | d=2 判別テスト + λ軌跡 + Fock 審判 |
+| simple update ゲート | 入力脚 swap | `wrap_twosite_gate` | d=2 判別テスト + λ軌跡 + Fock 審判 |
 | 2サイト測定 blob | 入力 + 出力 swap | `wrap_reduced_pair_op` | R3(d=2)+ **R5(d=4)** oracle |
 | 1サイト(ゲート・測定) | 素 | — | 入力脚の交差が存在しない |
 
