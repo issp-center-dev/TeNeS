@@ -37,9 +37,9 @@ M1 でフェルミオンの C++ 経路(simple update + reduced-tensor 密度 CTM
 
 | 層 | 責任 |
 |---|---|
-| `tenes_simple` | **順序付き2サイト Fock 基底での行列要素**(サイト内・ボンド内の反交換符号込み)を作る |
+| `tenes_simple` | **順序付き2サイト Fock 基底での行列要素**を作る。すなわちサイト内(スピン間)と、そのボンドを構成する2サイト間の反交換符号 |
 | `tenes_std` | 行列に対する `expm(-τh)`。**符号の知識は持たない**(通し役) |
-| C++ (`tenes`) | サイト**間**・2次元幾何由来の交換符号を graded 機構で生成 |
+| C++ (`tenes`) | そのボンドが2次元ネットワークに埋め込まれる際に生じる符号(他の脚との交差)を graded 機構で生成 |
 
 すなわちツール側の新規性は「Fock 構成器」1点に集約され、それ以外はスキーマの受け渡しに
 過ぎない。この構成なら `tenes_std` の数値ロジックは無変更で済む。
@@ -152,6 +152,21 @@ for s in range(nspin):
 `"vacuum"` は `noise` が全要素(偶マスク付き)に乗るため発展の不動点にはならず、
 低密度側から出発する実用的な初期値になる。
 
+### 5.1 モードをモデルへ渡す仕組み
+
+現在の `tenes_simple()` は `lattice.initial_states` の文字列を見て
+「`"random"` ならゼロ配列、`"ferro"` なら `st[0,:]`、それ以外は `st[i,:]`」と分岐しており、
+モデル側はモードを知らない(`initial_states(num_sublattice)` がパターンを返すだけ)。
+フェルミオン模型はモードごとに異なるパターンと固有のエラーが必要なので、`Model` に
+
+- `initial_state_vectors(mode: str, num_sublattice: int) -> Optional[np.ndarray]`
+
+を追加する。戻り値 `None` は「乱数初期化(ゼロ配列を出力)」を意味する。既定実装は
+現行の挙動(`"random"` → `None`、`"ferro"` → 全副格子に `st[0]`、それ以外 → `st[i]`)を
+そのまま再現し、`tenes_simple()` の分岐をこの1呼び出しに置き換える。
+`SpinModel` / `BoseHubbardModel` は既定実装のままで**挙動不変**。フェルミオン2模型は
+これを上書きし、§5 の表に無い値には理由付きの `RuntimeError` を投げる。
+
 spinless の `"full"` / `"cdw"` と Hubbard の Néel 型が作れないのは、`|1>` や `|up>` が
 パリティ奇で、TeNeS のプロダクト初期化が仮想脚の添字 0(偶)に状態ベクトルを置くため
 サイトテンソルの全脚パリティ合計が奇になるから。エラーメッセージにこの理由と回避策
@@ -163,7 +178,7 @@ spinless の `"full"` / `"cdw"` と Hubbard の Néel 型が作れないのは�
 
 - `[parameter.general] fermion = true` を模型種別から**自動注入**する(利用者は書かない)。
   利用者が明示的に `fermion = false` と書いていたら、矛盾として明示エラー
-- `[[tensor.unitcell]]` に `parity = [...]` を追加出力
+- `[[tensor.unitcell]]` に `parity = [...]` を追加出力。vacancy 副格子(`physical_dim = 1`)は `parity = [0]`(偶)
 - 2サイト観測量は `ops = [i,j]` を使わず `elements` を出力(`is_complex` 分岐に関わらず)
 
 ### 6.2 `tenes_std` → `input.toml`
