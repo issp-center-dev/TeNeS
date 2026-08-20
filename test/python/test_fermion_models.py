@@ -27,6 +27,7 @@ sys.path.insert(
 )
 
 import tenes_simple
+import tenes_std
 
 
 def spinless_param(model_extra=None, lattice_extra=None):
@@ -278,3 +279,58 @@ class TestFermionSkewGuard:
         }
         text, lattice = tenes_simple.tenes_simple(param)
         assert lattice.skew == 1
+
+
+# ---------------------------------------------------------------------------
+# task-6-contract.md: the gate must expand back to the bond Hamiltonian.
+#
+# tenes_simple builds h (through the Fock builder); tenes_std computes the
+# imaginary-time gate expm(-tau h). Nothing so far checks the two agree end
+# to end through the real pipeline (toml round trip included), only that
+# each half separately matches a handwritten/schema expectation. This pins
+#
+#     (gate - identity) / (-tau) -> h   as tau -> 0
+# ---------------------------------------------------------------------------
+
+
+class TestSpinlessFermionGateReducesToBondHamiltonian:
+    def test_gate_reduces_to_bond_hamiltonian_as_tau_to_zero(self):
+        # C1: t, V, mu all nonzero, so a dropped term cannot hide.
+        param = spinless_param({"t": 1.0, "v": 0.7, "mu": 0.3})
+        text, _ = tenes_simple.tenes_simple(param)
+        std_param = toml.loads(text)
+
+        # tau small enough that O(tau) truncation error is far below the
+        # assert tolerance below.
+        tau = 1e-6
+        std_param.setdefault("parameter", {})
+        std_param["parameter"]["simple_update"] = {"tau": [tau]}
+
+        # C3: real pipeline. model.hamiltonians[0] is parsed back from the
+        # generated std.toml's [[hamiltonian]] block (dump_op / load_tensor
+        # round trip), not recomputed via model.bondhamiltonian. The
+        # uniform square lattice carries the same gate on every bond, so
+        # simple_updates[0] is representative and, since it comes from the
+        # same source term, corresponds to hamiltonians[0].
+        model = tenes_std.Model(std_param)
+        ham = model.hamiltonians[0]
+        evo = model.simple_updates[0]
+        assert isinstance(ham, tenes_std.NNOperator)
+        assert isinstance(evo, tenes_std.NNOperator)
+
+        h = ham.elements
+        gate = evo.elements
+        d = h.shape[0]
+
+        # C2: leg-order-honest comparison. Both h and the gate are
+        # op[in1, in2, out1, out2]; build the identity with that same leg
+        # placement by explicit construction (not by reshaping through a
+        # (d*d, d*d) matrix), so a transposed convention in either tool
+        # would show up as a mismatch here rather than being absorbed.
+        identity = np.zeros((d, d, d, d))
+        for i1 in range(d):
+            for i2 in range(d):
+                identity[i1, i2, i1, i2] = 1.0
+
+        approx_h = (gate - identity) / (-tau)
+        assert np.allclose(approx_h, h, atol=1e-4)
