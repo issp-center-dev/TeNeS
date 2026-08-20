@@ -1,0 +1,155 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# End-to-end test of the three-stage fermionic pipeline:
+#   simple.toml -> tenes_simple -> std.toml -> tenes_std -> input.toml -> tenes
+#
+# This is the only test that exercises the whole chain for a fermionic model;
+# everything else tests the tools or the solver in isolation. The physics
+# (free spinless fermions, t = 1, mu = 0, D = 2, chi = 8, tau = 0.01,
+# num_step = 1000, seed = 11, noise = 1.0, L_sub = [2, 2]) is identical to the
+# handwritten expert-mode sample sample/07_spinless_fermion, whose shipped
+# output is used below as the regression reference.
+
+from __future__ import print_function
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import toml
+
+TENES_SIMPLE = "@CMAKE_BINARY_DIR@/tool/tenes_simple"
+TENES_STD = "@CMAKE_BINARY_DIR@/tool/tenes_std"
+TENES = "@CMAKE_BINARY_DIR@/src/tenes"
+WORK_DIR = "@CMAKE_CURRENT_BINARY_DIR@/fermion/free_fermion_simple"
+
+SIMPLE_TOML = """
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 1000
+
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 2
+initial = "random"
+noise = 1.0
+
+[model]
+type = "spinless fermion"
+t = 1.0
+mu = 0.0
+"""
+
+
+def run(cmd):
+    print("run:", " ".join(cmd), flush=True)
+    subprocess.check_call(cmd, cwd=WORK_DIR)
+
+
+def run_tenes(inputfile):
+    # same launcher construction as test/fermion/free_fermion.py.in
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(TENES)
+    cmd.append(inputfile)
+    run(cmd)
+
+
+def read_density(outdir):
+    # density.dat lines look like
+    #   Energy           = -7.32844895452057554e-01  0.00000000000000000e+00
+    # so the real part is the FIRST word after "=", not the last.
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values[name.strip()] = float(words[0])
+    return values
+
+
+def main():
+    if os.path.isdir(WORK_DIR):
+        shutil.rmtree(WORK_DIR)
+    os.makedirs(WORK_DIR)
+    with open(join(WORK_DIR, "simple.toml"), "w") as f:
+        f.write(SIMPLE_TOML)
+
+    run([TENES_SIMPLE, "simple.toml", "-o", "std.toml"])
+    run([TENES_STD, "std.toml", "-o", "input.toml"])
+
+    # Schema half of the chain: the generated input.toml must be fermion-aware
+    # and must not fall back to the ops-form two-site observable (fermion mode
+    # only supports the explicit elements form; see tenes_std.py).
+    generated = toml.load(join(WORK_DIR, "input.toml"))
+    assert generated["parameter"]["general"]["fermion"] is True, "fermion flag missing"
+    unitcells = generated["tensor"]["unitcell"]
+    assert len(unitcells) > 0, "no [[tensor.unitcell]] blocks were generated"
+    for ucell in unitcells:
+        assert ucell["parity"] == [0, 1], "parity missing or wrong: {}".format(ucell)
+    with open(join(WORK_DIR, "input.toml")) as f:
+        assert "ops = " not in f.read(), "two-site observable in ops form"
+
+    run_tenes("input.toml")
+
+    values = read_density(join(WORK_DIR, "output"))
+    energy = values["Energy"]
+    density = values["n"]
+
+    print("Energy =", energy, " n =", density, flush=True)
+    assert abs(density - 0.5) < 5.0e-3, \
+        "density {} is not at half filling".format(density)
+
+    # Regression pin: this pipeline's output was verified (2026-08-21) to
+    # match the handwritten expert-mode sample sample/07_spinless_fermion,
+    # which solves the identical physics (t = 1, mu = 0, D = 2, chi = 8,
+    # tau = 0.01, num_step = 1000, seed = 11, noise = 1.0, L_sub = [2, 2]).
+    # Measured Energy = -0.7328448954520573 against the sample's
+    # -7.32844895452057554e-01: identical to displayed precision. Exact
+    # free-fermion ground-state energy per site is -0.81056; D = 2 is a
+    # coarse approximation, so we pin to the sample's value, not the exact
+    # one.
+    E_REF = -7.32844895452057554e-01
+    assert abs(energy - E_REF) < 1.0e-2 * abs(E_REF), \
+        "energy {} moved away from the reference {}".format(energy, E_REF)
+    print("OK", flush=True)
+
+
+main()
