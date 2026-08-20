@@ -616,6 +616,10 @@ void validate_fermion_constraints(
       static_cast<std::size_t>(lattice.N_UNIT)) {
     throw_fermion_guard("missing tensor.unitcell.parity metadata");
   }
+  if (lattice.skew != 0) {
+    throw_fermion_guard(
+        "skewed unit cells (measured to give wrong fermionic numbers)");
+  }
   for (int site = 0; site < lattice.N_UNIT; ++site) {
     if (peps_parameters.phys_parity[site].empty()) {
       throw_fermion_guard("missing tensor.unitcell.parity");
@@ -673,13 +677,15 @@ void validate_fermion_constraints(
         !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
       throw_fermion_guard("distance-2-or-longer two-site operators");
     }
-    if (op.ops_indices.empty()) {
-      const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
-      if (has_odd_tensor_element(op.op,
-                                 two_site_parity(peps_parameters.phys_parity,
-                                                 op.source_site, site1))) {
-        throw_fermion_guard("parity-odd two-site operators");
-      }
+    if (!op.ops_indices.empty()) {
+      throw_fermion_guard(
+          "two-site observables in the ops form; write them out as elements");
+    }
+    const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+    if (has_odd_tensor_element(
+            op.op, two_site_parity(peps_parameters.phys_parity, op.source_site,
+                                   site1))) {
+      throw_fermion_guard("parity-odd two-site operators");
     }
   }
   for (const auto &op : simple_updates) {
