@@ -591,16 +591,38 @@ class Model(abc.ABC):
     onesite_ops_name: List[str]
     twosite_ops: List[Tuple[int, int]]
     twosite_ops_name: List[str]
+    twosite_ops_explicit: List[Tuple[str, np.ndarray]]
+    parity: List[int]
     params_onesite: Dict[str, Any]  # [neighbor_level][bond_type]
     params_twosite: List[List[Dict[str, Any]]]  # [neighbor_level][bond_type]
     ham_twosites_list: List[List[Tuple[int, int]]]
 
+    is_fermion: bool = False
+
     def __init__(self):
         self.N = 0
         self.onesite_ops = []
+        self.twosite_ops_explicit = []
+        self.parity = []
         self.params_onesite = {}
         self.params_twosite = [[]]
         self.ham_twosites_list = [[]]
+
+    def initial_state_vectors(
+        self, mode: str, num_sublattice: int
+    ) -> Optional[np.ndarray]:
+        """Initial product state for each non-vacancy sublattice.
+
+        Returns None when the state should be initialized randomly.  The first
+        axis of the returned array is indexed by non-vacancy sublattices in
+        order of appearance.
+        """
+        if mode == "random":
+            return None
+        st = self.initial_states(num_sublattice)
+        if mode == "ferro":
+            return np.array([st[0, :] for _ in range(num_sublattice)])
+        return st
 
     def onesite_observables_as_dict(self) -> List[Dict[str, Any]]:
         ret = []
@@ -1244,8 +1266,9 @@ def tenes_simple(
     for sl in lattice.sublattice:
         if not sl.is_vacancy:
             num_sublattice += 1
-    st = model.initial_states(num_sublattice)
-    for i, sl in enumerate(lattice.sublattice):
+    st = model.initial_state_vectors(lattice.initial_states, num_sublattice)
+    nonvacancy_index = 0
+    for sl in lattice.sublattice:
         ret.append("[[tensor.unitcell]]")
         ret.append("virtual_dim = {}".format(sl.vdim))
         ret.append("index = {}".format(sl.sites))
@@ -1254,12 +1277,11 @@ def tenes_simple(
             ret.append("initial_state = [1.0]")
         else:
             ret.append("physical_dim = {}".format(model.N))
-            if lattice.initial_states == "random":
+            if st is None:
                 state = [0.0]
-            elif lattice.initial_states == "ferro":
-                state = st[0, :]
             else:
-                state = st[i, :]
+                state = st[nonvacancy_index, :]
+            nonvacancy_index += 1
             v = ", ".join(map(str, state))
             ret.append("initial_state = [{}]".format(v))
         ret.append("noise = {}".format(lattice.noise))
@@ -1365,6 +1387,24 @@ def tenes_simple(
             for line in dump_op(v):
                 ret.append(line)
             ret.append('"""')
+        ret.append("")
+
+    for name, op in model.twosite_ops_explicit:
+        if not (is_complex or np.all(np.isreal(op))):
+            continue
+        ret.append("[[observable.twosite]]")
+        ret.append('name = "{}"'.format(name))
+        ret.append("group = {}".format(k))
+        k += 1
+        ret.append("dim = {}".format([model.N] * 2))
+        ret.append('bonds = """')
+        for bond in chain(*lattice.bonds[0]):
+            ret.append(dumpbond(bond))
+        ret.append('"""')
+        ret.append('elements = """')
+        for line in dump_op(op):
+            ret.append(line)
+        ret.append('"""')
         ret.append("")
 
     if "correlation" in param:

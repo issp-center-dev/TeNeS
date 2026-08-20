@@ -17,7 +17,9 @@
 import os
 import sys
 
+import numpy as np
 import pytest
+import toml
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tool")
@@ -69,3 +71,66 @@ class TestBoseHubbardModel:
         ham = model.sitehamiltonian()
         assert ham[1, 1].real == pytest.approx(-2.0)
         assert ham[2, 2].real == pytest.approx(-4.0)
+
+
+class TestModelExtensionPoints:
+    def test_bosonic_models_are_not_fermionic(self):
+        assert tenes_simple.SpinModel({"type": "spin"}).is_fermion is False
+        assert tenes_simple.BoseHubbardModel({"type": "boson"}).is_fermion is False
+
+    def test_bosonic_models_have_no_parity_and_no_explicit_twosite_ops(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        assert model.parity == []
+        assert model.twosite_ops_explicit == []
+
+    def test_random_mode_returns_none(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        assert model.initial_state_vectors("random", 2) is None
+
+    def test_ferro_mode_repeats_the_first_sublattice(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        st = model.initial_states(2)
+        v = model.initial_state_vectors("ferro", 2)
+        assert np.allclose(v[0], st[0])
+        assert np.allclose(v[1], st[0])
+
+    def test_other_modes_pass_the_pattern_through(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        v = model.initial_state_vectors("antiferro", 2)
+        assert np.allclose(v, model.initial_states(2))
+
+
+def _unitcell_initial_states(std_toml_text):
+    parsed = toml.loads(std_toml_text)
+    return [u["initial_state"] for u in parsed["tensor"]["unitcell"]]
+
+
+class TestVacancyInitialStateIndexing:
+    """The kagome lattice has a vacancy sublattice; the non-vacancy sublattices
+    must keep reading the pattern by their own running index."""
+
+    def _param(self):
+        return {
+            "parameter": {"general": {}},
+            "lattice": {
+                "type": "kagome lattice",
+                "L": 2,
+                "W": 2,
+                "virtual_dim": 2,
+                "initial": "antiferro",
+            },
+            "model": {"type": "spin"},
+        }
+
+    def test_vacancy_gets_the_scalar_state(self):
+        text, _ = tenes_simple.tenes_simple(self._param())
+        states = _unitcell_initial_states(text)
+        assert states[3] == [1.0]
+
+    def test_nonvacancy_sublattices_follow_the_pattern(self):
+        text, lattice = tenes_simple.tenes_simple(self._param())
+        states = _unitcell_initial_states(text)
+        model = tenes_simple.make_model(self._param())
+        pattern = model.initial_states(3)
+        for i in range(3):
+            assert np.allclose(states[i], pattern[i])
