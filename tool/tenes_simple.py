@@ -311,16 +311,16 @@ class SquareLattice(Lattice):
 
         self.latticevector = np.diag([L, W])
 
-        if self.initial_states in ("ferro", "vacuum"):
+        if self.initial_states in ("ferro", "vacuum", "full"):
             self.sublattice = [SubLattice([self.vdim] * 4)]
-        elif self.initial_states == "antiferro":
+        elif self.initial_states in ("antiferro", "cdw"):
             self.sublattice = [SubLattice([self.vdim] * 4), SubLattice([self.vdim] * 4)]
         elif self.initial_states == "random":
             self.sublattice = [SubLattice([self.vdim] * 4)]
 
         for source in range(L * W):
             x, y = index2coord(source, L)
-            if self.initial_states == "antiferro":
+            if self.initial_states in ("antiferro", "cdw"):
                 if (x + y) % 2 == 0:
                     self.sublattice[0].add_site(source)
                 else:
@@ -1256,6 +1256,171 @@ class SpinlessFermionModel(Model):
         return bond_matrix(h, self.nspin)
 
 
+class HubbardModel(Model):
+    """Fermionic Hubbard model on the square lattice.
+
+    Local basis |0>, |up>, |dn>, |up dn> with i = n_up + 2 n_dn and
+    fermion parity [0, 1, 1, 0].
+    """
+
+    is_fermion = True
+
+    def __init__(self, param: Dict[str, Any]):
+        super().__init__()
+        self.N = 4
+        self.nspin = 2
+        self.parity = [0, 1, 1, 0]
+
+        nmodes = self.nspin
+
+        def cd1(mode: int) -> np.ndarray:
+            return fock_cop(True, mode, nmodes)
+
+        def cop1(mode: int) -> np.ndarray:
+            return fock_cop(False, mode, nmodes)
+
+        n_up = cd1(0) @ cop1(0)
+        n_dn = cd1(1) @ cop1(1)
+        n_tot = n_up + n_dn
+        sz = 0.5 * (n_up - n_dn)
+        doublon = n_up @ n_dn
+        eye = np.eye(self.N)
+        holon = (eye - n_up) @ (eye - n_dn)
+
+        self.onesite_ops = [
+            onesite_matrix(n_tot),
+            onesite_matrix(n_up),
+            onesite_matrix(n_dn),
+            onesite_matrix(sz),
+            onesite_matrix(doublon),
+            onesite_matrix(holon),
+        ]
+        self.onesite_ops_name = ["n", "n_up", "n_dn", "Sz", "doublon", "holon"]
+
+        self.twosite_ops = [(0, 0), (3, 3)]
+        self.twosite_ops_name = ["nn", "SzSz"]
+
+        M = fermion_modes(self.nspin)
+        hop = np.zeros((1 << M, 1 << M))
+        for spin in range(self.nspin):
+            site1 = spin
+            site2 = self.nspin + spin
+            hop = hop + fock_cop(True, site1, M) @ fock_cop(False, site2, M)
+            hop = hop + fock_cop(True, site2, M) @ fock_cop(False, site1, M)
+        self.twosite_ops_explicit = [("hopping", bond_matrix(hop, self.nspin))]
+
+        self.read_params(param)
+
+    def read_params(self, modelparam: Dict[str, Any]) -> None:
+        ret_onesite: Dict[str, Any] = {}
+        ret_twosite: List[List[Dict[str, Any]]] = [
+            [{}, {}, {}],  # 1st neighbors
+            [{}, {}, {}],  # 2nd neighbors
+            [{}, {}, {}],  # 3rd neighbors
+        ]
+
+        repat = re.compile("^([tv])([012]?)('{0,2})$")
+        for key in modelparam.keys():
+            if key in ("type", "mu", "u", "h"):
+                continue
+            ma = repat.match(key)
+            if not ma:
+                msg = "Unknown keyname {}".format(key)
+                raise RuntimeError(msg)
+            gr = ma.groups()
+            types = [int(gr[1])] if gr[1] else [0, 1, 2]
+            n = len(gr[2])
+            for typ in types:
+                if gr[0] in ret_twosite[n][typ]:
+                    raise RuntimeError("{} is defined twice".format(key))
+                ret_twosite[n][typ][gr[0]] = modelparam[key]
+
+        ret_onesite["mu"] = modelparam.get("mu", 0.0)
+        ret_onesite["u"] = modelparam.get("u", 0.0)
+        ret_onesite["h"] = modelparam.get("h", 0.0)
+        self.params_onesite = ret_onesite
+        self.params_twosite = ret_twosite
+        # ham_twosites_list is rebuilt by Model.sort_ham_groups().
+
+    def initial_states(self, num_sublattice: int) -> np.ndarray:
+        ret = np.zeros((num_sublattice, self.N))
+        ret[:, 0] = 1.0
+        return ret
+
+    def initial_state_vectors(
+        self, mode: str, num_sublattice: int
+    ) -> Optional[np.ndarray]:
+        if mode == "random":
+            return None
+        ret = np.zeros((num_sublattice, self.N))
+        if mode == "vacuum":
+            ret[:, 0] = 1.0
+            return ret
+        if mode == "full":
+            ret[:, 3] = 1.0
+            return ret
+        if mode == "cdw":
+            for i in range(num_sublattice):
+                ret[i, 3 if i % 2 else 0] = 1.0
+            return ret
+        msg = 'initial = "{}" is not available for the hubbard model'.format(mode)
+        msg += '; use "random", "vacuum", "full", or "cdw".'
+        msg += " A product state with an odd-parity site (such as |up>) cannot be"
+        msg += " built, because TeNeS puts the state vector on virtual index 0"
+        msg += " (even) and the total leg parity of the site tensor would be odd."
+        raise RuntimeError(msg)
+
+    def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        return np.zeros((self.N, self.N))
+
+    def model_bondhamiltonian(
+        self,
+        z: int,
+        use_onesite_hamiltonian: bool,
+        params_onesite: Dict,
+        params_twosite: Dict,
+    ) -> np.ndarray:
+        t = params_twosite.get("t", 0.0)
+        V = params_twosite.get("v", 0.0)
+        U = params_onesite.get("u", 0.0)
+        mu = params_onesite.get("mu", 0.0)
+        h = params_onesite.get("h", 0.0)
+
+        M = fermion_modes(self.nspin)
+
+        def cd(mode: int) -> np.ndarray:
+            return fock_cop(True, mode, M)
+
+        def cop(mode: int) -> np.ndarray:
+            return fock_cop(False, mode, M)
+
+        n1_up = cd(0) @ cop(0)
+        n1_dn = cd(1) @ cop(1)
+        n2_up = cd(2) @ cop(2)
+        n2_dn = cd(3) @ cop(3)
+        n1 = n1_up + n1_dn
+        n2 = n2_up + n2_dn
+        sz1 = 0.5 * (n1_up - n1_dn)
+        sz2 = 0.5 * (n2_up - n2_dn)
+        doublon1 = n1_up @ n1_dn
+        doublon2 = n2_up @ n2_dn
+
+        hop = np.zeros((1 << M, 1 << M))
+        for spin in range(self.nspin):
+            site1 = spin
+            site2 = self.nspin + spin
+            hop = hop + cd(site1) @ cop(site2)
+            hop = hop + cd(site2) @ cop(site1)
+
+        ham = -t * hop
+        ham = ham + V * (n1 @ n2)
+        if not use_onesite_hamiltonian:
+            ham = ham + (U / z) * (doublon1 + doublon2)
+            ham = ham - (mu / z) * (n1 + n2)
+            ham = ham - (h / z) * (sz1 + sz2)
+        return bond_matrix(ham, self.nspin)
+
+
 def make_lattice(param: Dict[str, Any]) -> Lattice:
     """
     Parameters
@@ -1312,6 +1477,8 @@ def make_model(param: Dict[str, Any]) -> Model:
         model = SpinModel(modelparam)
     elif modelparam["type"] == "boson":
         model = BoseHubbardModel(modelparam)
+    elif modelparam["type"] == "hubbard":
+        model = HubbardModel(modelparam)
     elif modelparam["type"].startswith("spinless"):
         model = SpinlessFermionModel(modelparam)
     else:

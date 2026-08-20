@@ -43,6 +43,14 @@ def std_toml(param):
     return toml.loads(text)
 
 
+def hubbard_param(model_extra=None, lattice_extra=None):
+    model = {"type": "hubbard", "t": 1.0}
+    model.update(model_extra or {})
+    lattice = {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2}
+    lattice.update(lattice_extra or {})
+    return {"parameter": {"general": {}}, "lattice": lattice, "model": model}
+
+
 class TestSpinlessFermionModel:
     def test_is_selected_by_type(self):
         model = tenes_simple.make_model(spinless_param())
@@ -334,3 +342,410 @@ class TestSpinlessFermionGateReducesToBondHamiltonian:
 
         approx_h = (gate - identity) / (-tau)
         assert np.allclose(approx_h, h, atol=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# task-8-contract.md: the fermionic Hubbard model (d = 4).
+#
+# At d = 2 (the spinless model above) the reduced-pair loading conventions
+# and the intra-site mode order both degenerate: there is only one mode per
+# site, and every operator conserves particle number, so a wrong
+# intra-site-order or a per-site-only sign rule is invisible. d = 4 is where
+# these conventions have visible content, so every matrix element pinned
+# below is re-derived independently from the stated conventions:
+#
+#   * local basis |0>, |up>, |dn>, |up dn>, index i = n_up + 2 n_dn
+#   * intra-site creation order FIXED: |up dn> = c^dag_up c^dag_dn |0>
+#   * bond modes ordered (site1 up, site1 dn, site2 up, site2 dn)
+#   * fock_cop's JW sign is (-1)^{sum of occupied modes strictly below the
+#     acted-on mode}, read off the occupation bit string of the *global*
+#     two-site state (bit m <-> mode m)
+#
+# fock_cop itself is not re-derived here (it is pinned by its own
+# first-principles tests elsewhere); what is new and untested is the
+# HubbardModel class and the lattice/schema wiring around it.
+# ---------------------------------------------------------------------------
+
+
+class TestHubbardModel:
+    def test_is_selected_by_type(self):
+        model = tenes_simple.make_model(hubbard_param())
+        assert isinstance(model, tenes_simple.HubbardModel)
+
+    def test_boson_type_still_selects_the_bose_hubbard_model(self):
+        # C1: "hubbard" must not shadow the pre-existing Bose-Hubbard model,
+        # which stays reachable through type = "boson".
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": {"type": "boson", "t": 1.0},
+        }
+        model = tenes_simple.make_model(param)
+        assert isinstance(model, tenes_simple.BoseHubbardModel)
+        assert not isinstance(model, tenes_simple.HubbardModel)
+
+    def test_physical_dimension_and_parity(self):
+        model = tenes_simple.make_model(hubbard_param())
+        assert model.N == 4
+        assert model.parity == [0, 1, 1, 0]
+        assert model.is_fermion is True
+
+    def test_hopping_carries_the_jordan_wigner_sign(self):
+        # Derivation (mode order site1-up=0, site1-dn=1, site2-up=2,
+        # site2-dn=3; global occupation bit string g = i1 + 4*i2):
+        #
+        #   |in1, in2> = |dn, up> -> g = 2 + 4*1 = 6 = 0b0110
+        #   c_{2,up} (mode 2) on g=6: mode 2 is occupied, one occupied mode
+        #     (mode 1, site1-dn) lies strictly below it -> sign = -1,
+        #     result state g=2 = 0b0010 = |dn, 0>
+        #   c^dag_{1,up} (mode 0) on g=2: mode 0 is empty, nothing below it
+        #     -> sign = +1, result state g=3 = 0b0011 = |up dn, 0>
+        #
+        # so <up dn, 0| c^dag_{1,up} c_{2,up} |dn, up> = -1, and the -t
+        # prefactor in H_bond flips it to +t on h[in1=2, in2=1, out1=3,
+        # out2=0].  t = 1.0 is the fixture default.
+        model = tenes_simple.make_model(hubbard_param())
+        h = model.bondhamiltonian(0, 0, z=4)
+        assert h[2, 1, 3, 0] == pytest.approx(1.0)
+
+    def test_zeeman_field_diagonal_element_with_hopping_also_present(self):
+        # Second hand-derived element, with h (Zeeman) present and t also
+        # nonzero (to prove the diagonal is untouched by hopping): the state
+        # |up, up> (i1=i2=1) has Sz_1 = Sz_2 = +1/2, so H contributes
+        # -(h/z)(Sz_1+Sz_2) = -(h/z)*1 = -0.5 for h=2, z=4.  U, V, mu are
+        # zero, and the -t hopping term cannot map |up, up> back to
+        # |up, up>: moving a fermion between two singly-occupied "up" modes
+        # always changes at least one site's occupation number, so it never
+        # contributes to a diagonal entry (true for any t).
+        model = tenes_simple.make_model(hubbard_param({"h": 2.0}))
+        h = model.bondhamiltonian(0, 0, z=4)
+        assert h[1, 1, 1, 1] == pytest.approx(-0.5)
+
+    def test_combined_u_v_h_diagonal_element(self):
+        # Third hand-derived element, mixing U, V and h (with t present but
+        # inert on the diagonal, as above).  State |up dn, up> (i1=3, i2=1):
+        #   U term: (1/z)[U*(n_up n_dn)_1 + U*(n_up n_dn)_2]
+        #         = (1/4)[8*(1*1) + 8*(0*0)] = 2.0
+        #   V term: V * n1 * n2 = 1.0 * 2 * 1 = 2.0   (n1 = 1+1=2, n2 = 1+0=1)
+        #   h term: -(h/z)(Sz_1+Sz_2) = -(2/4)*(0 + 0.5) = -0.25
+        #     (Sz_1 = 0.5*(1-1) = 0 for the doubly occupied site,
+        #      Sz_2 = 0.5*(1-0) = 0.5 for the singly "up" site)
+        #   mu term: 0 (mu not set)
+        #   total: 2.0 + 2.0 - 0.25 = 3.75
+        model = tenes_simple.make_model(hubbard_param({"u": 8.0, "v": 1.0, "h": 2.0}))
+        h = model.bondhamiltonian(0, 0, z=4)
+        assert h[3, 1, 3, 1] == pytest.approx(3.75)
+
+    def test_hubbard_u_appears_on_doubly_occupied_sites(self):
+        # U/z on each site, z = 4 -> site1 doubly occupied (i1=3), site2
+        # empty (i2=0); then both sites doubly occupied.
+        model = tenes_simple.make_model(hubbard_param({"u": 8.0}))
+        h = model.bondhamiltonian(0, 0, z=4)
+        assert h[3, 0, 3, 0] == pytest.approx(2.0)
+        assert h[3, 3, 3, 3] == pytest.approx(4.0)
+
+    def test_bond_hamiltonian_is_parity_conserving(self):
+        # C6/robustness: all five couplings nonzero simultaneously, so a
+        # parity-breaking cross term in any one of them cannot hide behind
+        # another being zero.
+        model = tenes_simple.make_model(
+            hubbard_param({"t": 1.0, "u": 4.0, "v": 1.0, "mu": 2.0, "h": 0.7})
+        )
+        h = model.bondhamiltonian(0, 0, z=4)
+        parity = model.parity
+        for i1, i2, o1, o2 in np.ndindex(h.shape):
+            if (parity[i1] ^ parity[i2]) != (parity[o1] ^ parity[o2]):
+                assert h[i1, i2, o1, o2] == 0.0
+
+    def test_bond_hamiltonian_is_hermitian(self):
+        model = tenes_simple.make_model(
+            hubbard_param({"t": 1.0, "u": 4.0, "v": 1.0, "mu": 2.0, "h": 0.7})
+        )
+        h = model.bondhamiltonian(0, 0, z=4)
+        # rows are (in1, in2), columns are (out1, out2)
+        m = h.reshape(16, 16)
+        assert np.allclose(m, m.conj().T)
+
+    def test_onesite_observables(self):
+        model = tenes_simple.make_model(hubbard_param())
+        assert model.onesite_ops_name == [
+            "n",
+            "n_up",
+            "n_dn",
+            "Sz",
+            "doublon",
+            "holon",
+        ]
+        ops = dict(zip(model.onesite_ops_name, model.onesite_ops))
+        assert np.allclose(np.diag(ops["n"]), [0.0, 1.0, 1.0, 2.0])
+        assert np.allclose(np.diag(ops["n_up"]), [0.0, 1.0, 0.0, 1.0])
+        assert np.allclose(np.diag(ops["n_dn"]), [0.0, 0.0, 1.0, 1.0])
+        assert np.allclose(np.diag(ops["Sz"]), [0.0, 0.5, -0.5, 0.0])
+        assert np.allclose(np.diag(ops["doublon"]), [0.0, 0.0, 0.0, 1.0])
+        assert np.allclose(np.diag(ops["holon"]), [1.0, 0.0, 0.0, 0.0])
+
+    def test_every_onesite_observable_is_parity_even(self):
+        model = tenes_simple.make_model(hubbard_param())
+        parity = model.parity
+        for op in model.onesite_ops:
+            for i, o in np.ndindex(op.shape):
+                if parity[i] != parity[o]:
+                    assert op[i, o] == 0.0
+
+    def test_nn_and_szsz_are_index_pair_products(self):
+        # C3: "nn" and "SzSz" are two-site observables built as index-pair
+        # products of the one-site ops (n is index 0, Sz is index 3 in the
+        # onesite_ops_name order pinned above), not new operators.
+        model = tenes_simple.make_model(hubbard_param())
+        assert model.twosite_ops_name == ["nn", "SzSz"]
+        assert model.twosite_ops == [(0, 0), (3, 3)]
+
+    def test_hopping_is_an_explicit_rank4_observable(self):
+        model = tenes_simple.make_model(hubbard_param())
+        names = [name for name, _ in model.twosite_ops_explicit]
+        assert "hopping" in names
+        op = dict(model.twosite_ops_explicit)["hopping"]
+        assert op.shape == (4, 4, 4, 4)
+        # Same Jordan-Wigner computation as the C2 derivation above, but
+        # without the -t prefactor (this is the bare operator sum_s
+        # (c^dag_{1s} c_{2s} + h.c.), used to *measure* the hopping, not to
+        # build H): <up dn, 0| c^dag_{1,up} c_{2,up} |dn, up> = -1, and no
+        # other term in the sum connects |dn, up> to |up dn, 0>, so the
+        # sign is NOT flipped the way it is in bondhamiltonian.
+        assert op[2, 1, 3, 0] == pytest.approx(-1.0)
+
+
+class TestHubbardSchema:
+    def test_fermion_flag_is_injected(self):
+        assert std_toml(hubbard_param())["parameter"]["general"]["fermion"] is True
+
+    def test_parity_is_emitted_for_every_unitcell(self):
+        parsed = std_toml(hubbard_param())
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert ucell["parity"] == [0, 1, 1, 0]
+
+    def test_no_twosite_observable_uses_the_ops_form(self):
+        # C3: the hopping observable is inherently a rank-4 tensor (not an
+        # outer product of one-site operators), and is_fermion = True routes
+        # even the index-pair products (nn, SzSz) through the explicit
+        # "elements" form instead of "ops = [...]".
+        text, _ = tenes_simple.tenes_simple(hubbard_param())
+        assert "ops = " not in text
+
+    def test_bond_hamiltonian_observable_is_emitted_automatically(self):
+        # C3: bond_hamiltonian is emitted by tenes_simple's own pipeline
+        # (hamiltonians() + the [[observable.twosite]] block), not
+        # constructed by the model itself.
+        text, _ = tenes_simple.tenes_simple(hubbard_param())
+        assert 'name = "bond_hamiltonian"' in text
+
+    def test_random_initial_state_stays_scalar(self):
+        parsed = std_toml(hubbard_param(lattice_extra={"initial": "random"}))
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert ucell["initial_state"] == [0.0]
+
+    def test_vacuum_initial_state(self):
+        parsed = std_toml(hubbard_param(lattice_extra={"initial": "vacuum"}))
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert np.allclose(ucell["initial_state"], [1.0, 0.0, 0.0, 0.0])
+
+    def test_full_initial_state(self):
+        parsed = std_toml(hubbard_param(lattice_extra={"initial": "full"}))
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert np.allclose(ucell["initial_state"], [0.0, 0.0, 0.0, 1.0])
+
+    def test_cdw_initial_state_alternates(self):
+        # C4: cdw is the checkerboard |0> / |up dn> state, which needs TWO
+        # sublattices (the contract's mandated SquareLattice change; see
+        # TestSquareLatticeCdw below for that change pinned in isolation).
+        parsed = std_toml(hubbard_param(lattice_extra={"initial": "cdw"}))
+        states = [u["initial_state"] for u in parsed["tensor"]["unitcell"]]
+        assert len(states) == 2
+        assert np.allclose(states[0], [1.0, 0.0, 0.0, 0.0])
+        assert np.allclose(states[1], [0.0, 0.0, 0.0, 1.0])
+
+    @pytest.mark.parametrize("mode", ["ferro", "antiferro", "neel", "bogus"])
+    def test_unsupported_initial_states_are_rejected(self, mode):
+        # Match on the mode name itself so this cannot be satisfied by an
+        # unrelated RuntimeError (e.g. "Unknown model type: hubbard" from a
+        # missing dispatch branch) that happens to also be a RuntimeError.
+        with pytest.raises(RuntimeError, match=re.escape(mode)):
+            tenes_simple.tenes_simple(hubbard_param(lattice_extra={"initial": mode}))
+
+    def test_unsupported_initial_state_message_gives_the_parity_reason(self):
+        # C4: Neel-like odd-parity product states are impossible in this
+        # scheme (the state vector sits on the even virtual index), and the
+        # rejection message must say so, mirroring the spinless model's
+        # message pattern (see SpinlessFermionModel.initial_state_vectors).
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(hubbard_param(lattice_extra={"initial": "neel"}))
+        message = str(excinfo.value)
+        assert re.search(r"\bparity\b", message, re.I)
+        assert "M1" not in message and "M2" not in message
+
+    def test_boson_model_with_cdw_initial_state_is_still_rejected(self):
+        # C4: the base-class allowlist (random/ferro/antiferro only) must
+        # keep rejecting "cdw" for a bosonic model; the SquareLattice/
+        # HubbardModel changes for cdw must not leak into BoseHubbardModel.
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {
+                "type": "square lattice",
+                "L": 2,
+                "W": 2,
+                "virtual_dim": 2,
+                "initial": "cdw",
+            },
+            "model": {"type": "boson", "t": 1.0},
+        }
+        with pytest.raises(RuntimeError, match="cdw"):
+            tenes_simple.tenes_simple(param)
+
+
+# ---------------------------------------------------------------------------
+# C4's "KNOWN PLAN DEFECT": SquareLattice.__init__ currently has no branch
+# for initial = "cdw" at all, so lattice.sublattice comes out empty (not an
+# error -- SquareLattice itself never validates `initial`). This is tested
+# directly against SquareLattice, independently of HubbardModel, because it
+# fails differently from the rest of this file's tests: not with
+# "Unknown model type: hubbard" (SquareLattice does not look at the model),
+# but with an empty sublattice list.
+# ---------------------------------------------------------------------------
+
+
+class TestSquareLatticeCdw:
+    def test_cdw_creates_two_sublattices(self):
+        lattice = tenes_simple.SquareLattice(
+            {"l": 2, "w": 2, "virtual_dim": 2, "initial": "cdw"}
+        )
+        assert len(lattice.sublattice) == 2
+
+    def test_cdw_sublattices_are_checkerboarded(self):
+        # Same partition rule as the existing "antiferro" branch: site
+        # (x, y) goes to sublattice 0 when (x + y) is even, sublattice 1
+        # otherwise.
+        lattice = tenes_simple.SquareLattice(
+            {"l": 2, "w": 2, "virtual_dim": 2, "initial": "cdw"}
+        )
+        sites0 = set(lattice.sublattice[0].sites)
+        sites1 = set(lattice.sublattice[1].sites)
+        assert sites0 | sites1 == set(range(4))
+        assert sites0 & sites1 == set()
+        for idx in sites0:
+            x, y = tenes_simple.index2coord(idx, 2)
+            assert (x + y) % 2 == 0
+        for idx in sites1:
+            x, y = tenes_simple.index2coord(idx, 2)
+            assert (x + y) % 2 == 1
+
+
+class TestHubbardScopeGuards:
+    @pytest.mark.parametrize(
+        "latname", ["honeycomb lattice", "triangular lattice", "kagome lattice"]
+    )
+    def test_non_square_lattices_are_rejected(self, latname):
+        # C6, and the is_fermion-wiring proof the contract asks for: a
+        # triangular lattice is rejected specifically *because*
+        # HubbardModel.is_fermion is True and the guard is generic across
+        # fermionic models, not because of anything spinless-specific.
+        param = hubbard_param(lattice_extra={"type": latname})
+        with pytest.raises(RuntimeError, match="square"):
+            tenes_simple.tenes_simple(param)
+
+    def test_square_lattice_is_accepted(self):
+        tenes_simple.tenes_simple(hubbard_param())
+
+    @pytest.mark.parametrize("key", ["t'", "t''", "v'", "v''"])
+    def test_beyond_nearest_neighbour_parameters_are_rejected(self, key):
+        param = hubbard_param({key: 0.5})
+        with pytest.raises(RuntimeError, match="nearest"):
+            tenes_simple.tenes_simple(param)
+
+    def test_zero_valued_far_neighbour_parameters_are_accepted(self):
+        tenes_simple.tenes_simple(hubbard_param({"t'": 0.0}))
+
+    def test_bond_type_variants_of_the_first_neighbour_are_accepted(self):
+        param = hubbard_param()
+        param["model"] = {"type": "hubbard", "t0": 1.0}
+        tenes_simple.tenes_simple(param)
+
+    def test_duplicate_bond_type_specification_is_rejected(self):
+        param = hubbard_param()
+        param["model"] = {"type": "hubbard", "t": 1.0, "t0": 1.0}
+        with pytest.raises(RuntimeError, match="defined twice"):
+            tenes_simple.tenes_simple(param)
+
+    def test_correlation_is_rejected(self):
+        param = hubbard_param()
+        param["correlation"] = {"r_max": 5, "operators": [[0, 0]]}
+        with pytest.raises(RuntimeError, match="correlation"):
+            tenes_simple.tenes_simple(param)
+
+    def test_correlation_length_is_rejected(self):
+        param = hubbard_param()
+        param["correlation_length"] = {"measure": True}
+        with pytest.raises(RuntimeError, match="correlation_length"):
+            tenes_simple.tenes_simple(param)
+
+    def test_the_message_does_not_mention_the_internal_milestone(self):
+        param = hubbard_param(lattice_extra={"type": "honeycomb lattice"})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert "M1" not in message and "M2" not in message
+
+
+class TestHubbardSkewGuard:
+    def test_skewed_cell_is_rejected(self):
+        param = hubbard_param(lattice_extra={"W": 1})
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_simple.tenes_simple(param)
+        message = str(excinfo.value)
+        assert re.search(r"\bskew\b", message, re.I) or re.search(
+            r"\bW\s*=\s*1\b", message
+        )
+        assert "M1" not in message and "M2" not in message
+
+    def test_square_cell_no_skew_is_accepted(self):
+        text, lattice = tenes_simple.tenes_simple(hubbard_param())
+        assert lattice.skew == 0
+
+
+# ---------------------------------------------------------------------------
+# task-8-contract.md C5: the Hubbard gate must expand back to the bond
+# Hamiltonian through the real pipeline, the same identity construction and
+# tolerance reasoning as TestSpinlessFermionGateReducesToBondHamiltonian
+# above (task-6-contract.md), generalised to a shared helper and exercised
+# with all five Hubbard couplings nonzero so a dropped term cannot hide.
+# ---------------------------------------------------------------------------
+
+
+def assert_gate_expands_to_hamiltonian(param, tau=1e-6, atol=1e-4):
+    text, _ = tenes_simple.tenes_simple(param)
+    std_param = toml.loads(text)
+    std_param.setdefault("parameter", {})
+    std_param["parameter"]["simple_update"] = {"tau": [tau]}
+
+    model = tenes_std.Model(std_param)
+    ham = model.hamiltonians[0]
+    evo = model.simple_updates[0]
+    assert isinstance(ham, tenes_std.NNOperator)
+    assert isinstance(evo, tenes_std.NNOperator)
+
+    h = ham.elements
+    gate = evo.elements
+    d = h.shape[0]
+
+    identity = np.zeros((d, d, d, d))
+    for i1 in range(d):
+        for i2 in range(d):
+            identity[i1, i2, i1, i2] = 1.0
+
+    approx_h = (gate - identity) / (-tau)
+    assert np.allclose(approx_h, h, atol=atol)
+
+
+def test_hubbard_gate_expands_to_the_hamiltonian():
+    assert_gate_expands_to_hamiltonian(
+        hubbard_param({"t": 1.0, "u": 4.0, "v": 0.5, "mu": 1.0, "h": 0.3})
+    )
