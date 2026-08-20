@@ -311,7 +311,7 @@ class SquareLattice(Lattice):
 
         self.latticevector = np.diag([L, W])
 
-        if self.initial_states == "ferro":
+        if self.initial_states in ("ferro", "vacuum"):
             self.sublattice = [SubLattice([self.vdim] * 4)]
         elif self.initial_states == "antiferro":
             self.sublattice = [SubLattice([self.vdim] * 4), SubLattice([self.vdim] * 4)]
@@ -1142,6 +1142,116 @@ class BoseHubbardModel(Model):
         self.params_twosite = ret_twosite
 
 
+class SpinlessFermionModel(Model):
+    """Spinless fermions on the square lattice (nearest neighbour only).
+
+    Local basis |0>, |1> with fermion parity [0, 1].
+
+        H_bond = -t (c^dag_1 c_2 + h.c.) + V n_1 n_2 - (mu/z) (n_1 + n_2)
+    """
+
+    is_fermion = True
+
+    def __init__(self, param: Dict[str, Any]):
+        super().__init__()
+        self.N = 2
+        self.nspin = 1
+        self.parity = [0, 1]
+
+        nmodes = 1
+        n_op = fock_cop(True, 0, nmodes) @ fock_cop(False, 0, nmodes)
+        self.onesite_ops = [onesite_matrix(n_op)]
+        self.onesite_ops_name = ["n"]
+
+        self.twosite_ops = [(0, 0)]
+        self.twosite_ops_name = ["nn"]
+
+        M = fermion_modes(self.nspin)
+        hop = fock_cop(True, 0, M) @ fock_cop(False, 1, M)
+        hop = hop + fock_cop(True, 1, M) @ fock_cop(False, 0, M)
+        self.twosite_ops_explicit = [("hopping", bond_matrix(hop, self.nspin))]
+
+        self.read_params(param)
+
+    def read_params(self, modelparam: Dict[str, Any]) -> None:
+        ret_onesite: Dict[str, Any] = {}
+        ret_twosite: List[List[Dict[str, Any]]] = [
+            [{}, {}, {}],  # 1st neighbors
+            [{}, {}, {}],  # 2nd neighbors
+            [{}, {}, {}],  # 3rd neighbors
+        ]
+
+        repat = re.compile("^([tv])([012]?)('{0,2})$")
+        for key in modelparam.keys():
+            if key in ("type", "mu"):
+                continue
+            ma = repat.match(key)
+            if not ma:
+                msg = "Unknown keyname {}".format(key)
+                raise RuntimeError(msg)
+            gr = ma.groups()
+            types = [int(gr[1])] if gr[1] else [0, 1, 2]
+            n = len(gr[2])
+            for typ in types:
+                if gr[0] in ret_twosite[n][typ]:
+                    raise RuntimeError("{} is defined twice".format(key))
+                ret_twosite[n][typ][gr[0]] = modelparam[key]
+
+        ret_onesite["mu"] = modelparam.get("mu", 0.0)
+        self.params_onesite = ret_onesite
+        self.params_twosite = ret_twosite
+        # ham_twosites_list is rebuilt by Model.sort_ham_groups(), which
+        # hamiltonians() calls before using it; do not set it here.
+
+    def initial_states(self, num_sublattice: int) -> np.ndarray:
+        ret = np.zeros((num_sublattice, self.N))
+        ret[:, 0] = 1.0
+        return ret
+
+    def initial_state_vectors(
+        self, mode: str, num_sublattice: int
+    ) -> Optional[np.ndarray]:
+        if mode == "random":
+            return None
+        if mode == "vacuum":
+            return self.initial_states(num_sublattice)
+        msg = 'initial = "{}" is not available for spinless fermions'.format(mode)
+        msg += '; use "random" or "vacuum".'
+        msg += " A product state with an odd-parity site (such as |1>) cannot be"
+        msg += " built, because TeNeS puts the state vector on virtual index 0"
+        msg += " (even) and the total leg parity of the site tensor would be odd."
+        raise RuntimeError(msg)
+
+    def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        return np.zeros((self.N, self.N))
+
+    def model_bondhamiltonian(
+        self,
+        z: int,
+        use_onesite_hamiltonian: bool,
+        params_onesite: Dict,
+        params_twosite: Dict,
+    ) -> np.ndarray:
+        t = params_twosite.get("t", 0.0)
+        V = params_twosite.get("v", 0.0)
+        mu = params_onesite.get("mu", 0.0)
+
+        M = fermion_modes(self.nspin)
+
+        def cd(m):
+            return fock_cop(True, m, M)
+
+        def cop(m):
+            return fock_cop(False, m, M)
+
+        n1 = cd(0) @ cop(0)
+        n2 = cd(1) @ cop(1)
+        h = -t * (cd(0) @ cop(1) + cd(1) @ cop(0))
+        h = h + V * (n1 @ n2)
+        h = h - (mu / z) * (n1 + n2)
+        return bond_matrix(h, self.nspin)
+
+
 def make_lattice(param: Dict[str, Any]) -> Lattice:
     """
     Parameters
@@ -1198,6 +1308,8 @@ def make_model(param: Dict[str, Any]) -> Model:
         model = SpinModel(modelparam)
     elif modelparam["type"] == "boson":
         model = BoseHubbardModel(modelparam)
+    elif modelparam["type"].startswith("spinless"):
+        model = SpinlessFermionModel(modelparam)
     else:
         msg = "Unknown model type: {}".format(modelparam["type"])
         raise RuntimeError(msg)
@@ -1248,6 +1360,13 @@ def tenes_simple(
     ret = []
     ret.append("[parameter]")
     pparam = param["parameter"]
+    if model.is_fermion:
+        general = pparam.setdefault("general", {})
+        if general.get("fermion", True) is False:
+            msg = "parameter.general.fermion = false conflicts with the model type"
+            msg += ' "{}", which is fermionic.'.format(param["model"]["type"])
+            raise RuntimeError(msg)
+        general["fermion"] = True
     for name in ("general", "simple_update", "full_update", "ctm", "random"):
         if name in pparam:
             ret.append("[parameter.{}]".format(name))
@@ -1274,9 +1393,13 @@ def tenes_simple(
         ret.append("index = {}".format(sl.sites))
         if sl.is_vacancy:
             ret.append("physical_dim = {}".format(1))
+            if model.is_fermion:
+                ret.append("parity = [0]")
             ret.append("initial_state = [1.0]")
         else:
             ret.append("physical_dim = {}".format(model.N))
+            if model.is_fermion:
+                ret.append("parity = {}".format(model.parity))
             if st is None:
                 state = [0.0]
             else:
@@ -1379,7 +1502,9 @@ def tenes_simple(
         for bond in chain(*lattice.bonds[0]):
             ret.append(dumpbond(bond))
         ret.append('"""')
-        if is_complex or (np.all(np.isreal(oi)) and np.all(np.isreal(oj))):
+        if not model.is_fermion and (
+            is_complex or (np.all(np.isreal(oi)) and np.all(np.isreal(oj)))
+        ):
             ret.append("ops = {}".format([i + onesite_offset, j + onesite_offset]))
         else:
             v = np.einsum("ij,kl -> ikjl", oi, oj)
