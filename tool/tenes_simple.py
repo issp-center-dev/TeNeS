@@ -95,6 +95,81 @@ def dump_op(op: np.ndarray) -> Iterable[str]:
         it.iternext()
 
 
+def fermion_modes(nspin: int) -> int:
+    """Number of fermion modes in a two-site bond.
+
+    Modes are ordered as (site1 spin...), (site2 spin...).
+    """
+    return 2 * nspin
+
+
+def fock_cop(dagger: bool, mode: int, nmodes: int) -> np.ndarray:
+    """Creation/annihilation operator including the Jordan-Wigner string.
+
+    The basis is the occupation bit string g, where bit m is mode m and
+
+        |n_0 ... n_{M-1}> = (c^dag_0)^{n_0} ... (c^dag_{M-1})^{n_{M-1}} |0>.
+
+    Moving c^dag_m (or c_m) past the preceding creation operators gives the
+    sign (-1)^{sum_{k<m} n_k}.
+
+    The returned matrix follows the NumPy convention ``mat[out, in]``, which is
+    the transpose of the ``op[in, out]`` convention used by the one-site
+    operators of this module.  ``bond_matrix`` and ``onesite_matrix`` absorb
+    the difference.
+    """
+    dim = 1 << nmodes
+    mat = np.zeros((dim, dim))
+    for state in range(dim):
+        occupied = (state >> mode) & 1
+        if dagger == bool(occupied):
+            continue
+        sign = 1.0
+        for k in range(mode):
+            if (state >> k) & 1:
+                sign = -sign
+        mat[state ^ (1 << mode), state] = sign
+    return mat
+
+
+def local_index_to_occupation(i: int, nspin: int) -> List[int]:
+    """Local basis index -> occupation numbers (n_up[, n_dn]).
+
+    spinless: i = n.  spinful: i = n_up + 2 n_dn, that is
+    |0>, |up>, |dn>, |up dn> for i = 0, 1, 2, 3.  The intra-site order is
+    fixed to |up dn> = c^dag_up c^dag_dn |0>.
+    """
+    return [(i >> s) & 1 for s in range(nspin)]
+
+
+def bond_matrix(fock_op: np.ndarray, nspin: int) -> np.ndarray:
+    """Two-site Fock matrix -> rank-4 op[in1, in2, out1, out2].
+
+    op[i1, i2, o1, o2] = <o1 o2| O |i1 i2> = fock_op[out_global, in_global],
+    where the global occupation index is  g = i_site1 + 2**nspin * i_site2
+    because the local index is itself the occupation bit pattern.
+
+    The leg order matches what ``tenes_simple`` already emits for a product of
+    two one-site operators (``np.einsum("ij,kl -> ikjl", oi, oj)`` with
+    ``oi[in, out]``), and matches the plain matrix elements that the C++
+    ``wrap_twosite_gate`` / ``wrap_reduced_pair_op`` expect.
+    """
+    d = 1 << nspin
+    op = np.zeros((d, d, d, d), dtype=fock_op.dtype)
+    for i1 in range(d):
+        for i2 in range(d):
+            gin = i1 + d * i2
+            for o1 in range(d):
+                for o2 in range(d):
+                    op[i1, i2, o1, o2] = fock_op[o1 + d * o2, gin]
+    return op
+
+
+def onesite_matrix(fock_op_1site: np.ndarray) -> np.ndarray:
+    """One-site Fock matrix mat[out, in] -> op[in, out]."""
+    return np.array(fock_op_1site).T
+
+
 Bond = namedtuple("Bond", "source dx dy")
 
 
