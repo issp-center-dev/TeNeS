@@ -17,6 +17,7 @@
 import copy
 import io
 import os
+import re
 import sys
 
 import pytest
@@ -205,6 +206,37 @@ def two_site_fermion_input(parities):
     return {
         "parameter": {"general": {"fermion": True}},
         "tensor": {"l_sub": [2, 1], "unitcell": unitcell},
+        "hamiltonian": [
+            {
+                "dim": [2],
+                "sites": [],
+                "elements": "0 0 1.0 0.0\n1 1 -1.0 0.0",
+            }
+        ],
+    }
+
+
+def fermion_input_with_missing_parity(missing_index, num_sites=4):
+    """A fermion-mode input with `num_sites` unitcell sites (L_sub =
+    [num_sites, 1]), all carrying `parity = [0, 1]` except `missing_index`,
+    which has none. Only a one-site Hamiltonian term is used, so this
+    isolates the "every unitcell needs parity" check (C3a).
+
+    `num_sites` defaults to 4 so that the offending index can be chosen
+    from {2, 3}: values that cannot collide with any digit already present
+    in the boilerplate part of the rejection message (which happens to
+    talk about a "0/1" parity entry), keeping the content-pinning checks
+    in TestFermionErrorMessageQuality unambiguous.
+    """
+    unitcell = []
+    for index in range(num_sites):
+        site = {"index": [index], "physical_dim": 2, "virtual_dim": 2}
+        if index != missing_index:
+            site["parity"] = [0, 1]
+        unitcell.append(site)
+    return {
+        "parameter": {"general": {"fermion": True}},
+        "tensor": {"l_sub": [num_sites, 1], "unitcell": unitcell},
         "hamiltonian": [
             {
                 "dim": [2],
@@ -407,41 +439,87 @@ class TestFermionErrorMessageQuality:
             assert "M2" not in message
 
     def test_missing_parity_message_differs_by_offending_site(self):
-        param_site1 = two_site_fermion_input({0: [0, 1]})  # site 1 has none
-        param_site0 = two_site_fermion_input({1: [0, 1]})  # site 0 has none
-
-        with pytest.raises(RuntimeError) as e1:
-            tenes_std.Model(param_site1)
-        with pytest.raises(RuntimeError) as e0:
-            tenes_std.Model(param_site0)
-
-        assert str(e1.value) != str(e0.value)
-
-    def test_multihop_bond_message_differs_by_offending_bond(self):
-        param_2hop = copy.deepcopy(minimal_fermion_std_input())
-        param_2hop["hamiltonian"][0]["bonds"] = "0 2 0\n"  # make_path length 2
-
-        param_3hop = copy.deepcopy(minimal_fermion_std_input())
-        param_3hop["hamiltonian"][0]["bonds"] = "0 3 0\n"  # make_path length 3
+        # Strengthened per code review: it is not enough for the two
+        # messages to differ by *something* (a mutant that appended
+        # id(self) to an otherwise-generic string would still pass that).
+        # Each message must contain ITS OWN offending site index. Sites 2
+        # and 3 are used (out of a 4-site unitcell) because neither digit
+        # can appear by coincidence in the message's fixed boilerplate
+        # (which mentions a "0/1" parity entry, i.e. only the digits 0
+        # and 1) -- so a hard-coded message naming the wrong site is
+        # guaranteed to fail the corresponding assertion below.
+        param_site2 = fermion_input_with_missing_parity(2, num_sites=4)
+        param_site3 = fermion_input_with_missing_parity(3, num_sites=4)
 
         with pytest.raises(RuntimeError) as e2:
-            tenes_std.Model(param_2hop)
+            tenes_std.Model(param_site2)
         with pytest.raises(RuntimeError) as e3:
-            tenes_std.Model(param_3hop)
+            tenes_std.Model(param_site3)
 
-        assert str(e2.value) != str(e3.value)
+        msg2, msg3 = str(e2.value), str(e3.value)
+        assert re.search(r"\b2\b", msg2), msg2
+        assert re.search(r"\b3\b", msg3), msg3
+        # Discrimination: a message that hard-codes one site index cannot
+        # simultaneously name the other offending site.
+        assert not re.search(r"\b3\b", msg2), msg2
+        assert not re.search(r"\b2\b", msg3), msg3
+        assert msg2 != msg3
+
+    def test_multihop_bond_message_differs_by_offending_bond(self):
+        # Strengthened per code review, same rationale as above: pin the
+        # actual bond identifiers (source_site, dx, and the resulting hop
+        # count) rather than merely observing that two messages differ.
+        # dx = 5 and dx = 6 are used (rather than small values like 1-3)
+        # so neither digit can coincide with source_site (0) or dy (0) in
+        # the message.
+        param_5hop = copy.deepcopy(minimal_fermion_std_input())
+        param_5hop["hamiltonian"][0]["bonds"] = "0 5 0\n"  # make_path length 5
+
+        param_6hop = copy.deepcopy(minimal_fermion_std_input())
+        param_6hop["hamiltonian"][0]["bonds"] = "0 6 0\n"  # make_path length 6
+
+        with pytest.raises(RuntimeError) as e5:
+            tenes_std.Model(param_5hop)
+        with pytest.raises(RuntimeError) as e6:
+            tenes_std.Model(param_6hop)
+
+        msg5, msg6 = str(e5.value), str(e6.value)
+        assert re.search(r"\b5\b", msg5), msg5
+        assert re.search(r"\b6\b", msg6), msg6
+        # Discrimination: a message that hard-codes one bond's
+        # displacement/hop-count cannot simultaneously name the other.
+        assert not re.search(r"\b6\b", msg5), msg5
+        assert not re.search(r"\b5\b", msg6), msg6
+        assert msg5 != msg6
 
     def test_ops_form_observable_message_differs_by_offending_observable(self):
+        # Strengthened per code review: pin the observable's own name in
+        # its own message. The names are long and distinctive on purpose,
+        # so an accidental substring collision with unrelated message text
+        # is not a realistic concern, and a message that hard-codes one
+        # observable's name is guaranteed to fail for the other.
         param_a = copy.deepcopy(minimal_fermion_std_input())
         param_a["observable"] = {
             "twosite": [
-                {"name": "alpha", "group": 1, "bonds": "0 1 0\n", "ops": [0, 1]}
+                {
+                    "name": "alpha_observable_marker",
+                    "group": 1,
+                    "bonds": "0 1 0\n",
+                    "ops": [0, 1],
+                }
             ]
         }
 
         param_b = copy.deepcopy(minimal_fermion_std_input())
         param_b["observable"] = {
-            "twosite": [{"name": "beta", "group": 2, "bonds": "0 0 1\n", "ops": [1, 0]}]
+            "twosite": [
+                {
+                    "name": "beta_observable_marker",
+                    "group": 2,
+                    "bonds": "0 1 0\n",
+                    "ops": [1, 0],
+                }
+            ]
         }
 
         with pytest.raises(RuntimeError) as ea:
@@ -449,4 +527,11 @@ class TestFermionErrorMessageQuality:
         with pytest.raises(RuntimeError) as eb:
             tenes_std.Model(param_b)
 
-        assert str(ea.value) != str(eb.value)
+        msg_a, msg_b = str(ea.value), str(eb.value)
+        assert "alpha_observable_marker" in msg_a
+        assert "beta_observable_marker" in msg_b
+        # Discrimination: a message that hard-codes one observable's name
+        # cannot simultaneously name the other.
+        assert "beta_observable_marker" not in msg_a
+        assert "alpha_observable_marker" not in msg_b
+        assert msg_a != msg_b
