@@ -99,6 +99,38 @@ class TestModelExtensionPoints:
         v = model.initial_state_vectors("antiferro", 2)
         assert np.allclose(v, model.initial_states(2))
 
+    @pytest.mark.parametrize(
+        "model",
+        [
+            tenes_simple.SpinModel({"type": "spin"}),
+            tenes_simple.BoseHubbardModel({"type": "boson"}),
+        ],
+    )
+    def test_vacuum_mode_is_rejected_by_default_models(self, model):
+        with pytest.raises(RuntimeError) as excinfo:
+            model.initial_state_vectors("vacuum", 1)
+        msg = str(excinfo.value)
+        assert "vacuum" in msg
+        assert "not available" in msg
+        assert '"random"' in msg
+        assert '"ferro"' in msg
+        assert '"antiferro"' in msg
+
+    def test_boson_vacuum_initial_state_is_rejected_by_tenes_simple(self):
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {
+                "type": "square lattice",
+                "L": 2,
+                "W": 2,
+                "virtual_dim": 2,
+                "initial": "vacuum",
+            },
+            "model": {"type": "boson"},
+        }
+        with pytest.raises(RuntimeError, match="vacuum"):
+            tenes_simple.tenes_simple(param)
+
 
 def _unitcell_initial_states(std_toml_text):
     parsed = toml.loads(std_toml_text)

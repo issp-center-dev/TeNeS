@@ -619,6 +619,10 @@ class Model(abc.ABC):
         """
         if mode == "random":
             return None
+        if mode not in ("ferro", "antiferro"):
+            msg = 'initial = "{}" is not available for this model.'.format(mode)
+            msg += ' Supported values are "random", "ferro", and "antiferro".'
+            raise RuntimeError(msg)
         st = self.initial_states(num_sublattice)
         if mode == "ferro":
             return np.array([st[0, :] for _ in range(num_sublattice)])
