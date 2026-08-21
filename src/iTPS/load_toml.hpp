@@ -100,12 +100,16 @@ EvolutionOperators<tensor> load_full_updates(const toml::value &param,
  *  canonicalise that bond every step.  One gate is added per ungated bond and
  *  per group present among the two-site operators (group 0 if there is none).
  *
+ *  @param comm the communicator the generated gate tensors are allocated on.
+ *              It must be the one the other operators and the state live on;
+ *              it is not inferred from @p simple_updates, which may contain
+ *              no two-site operator at all.
  *  @return the input operators followed by the added identity gates.
  */
 template <class tensor>
 EvolutionOperators<tensor> complete_ungated_bonds(
     const EvolutionOperators<tensor> &simple_updates,
-    const SquareLattice &lattice);
+    const SquareLattice &lattice, MPI_Comm comm);
 
 }  // namespace tenes::itps
 

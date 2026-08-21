@@ -269,7 +269,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   // the CTM then fails to converge on it; identity gates make the update
   // touch (truncate and normalise) every bond with virtual dimension > 1.
   const auto simple_updates =
-      complete_ungated_bonds(loaded_simple_updates, lattice);
+      complete_ungated_bonds(loaded_simple_updates, lattice, comm);
   if (simple_updates.size() > loaded_simple_updates.size() && mpirank == 0 &&
       print_level >= PrintLevel::info) {
     std::cout << "INFO: added "

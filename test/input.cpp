@@ -685,7 +685,7 @@ virtual_dim = )" + vdim + R"(
     EvolutionOperators<ptensor> ops;
     for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
 
-    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
 
     CHECK(completed.size() == 8);
     CHECK(count_leg(completed, 2) == 4);
@@ -712,7 +712,7 @@ virtual_dim = )" + vdim + R"(
     auto lattice = make_lattice("[2, 1, 2, 1]");
     EvolutionOperators<ptensor> ops;
     for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
-    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
     CHECK(completed.size() == 4);
   }
 
@@ -725,7 +725,7 @@ virtual_dim = )" + vdim + R"(
       op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
       ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 1, 0, op));
     }
-    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
     CHECK(completed.size() == 8);
   }
 
@@ -740,8 +740,34 @@ virtual_dim = )" + vdim + R"(
       op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
       ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 3, 0, op));
     }
-    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
     CHECK(completed.size() == 8);
+  }
+
+  SUBCASE("a cell with only one-site gates is completed on the given comm") {
+    // groups is empty here, so the generated gates fall back to group 0.
+    // The communicator cannot be read off the (absent) two-site operators
+    // either: it has to come from the caller.
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2));
+      op.set_value(mptensor::Index(0, 0), 1.0);
+      op.set_value(mptensor::Index(1, 1), 1.0);
+      ops.push_back(make_onesite_EvolutionOperator<ptensor>(s, 0, op));
+    }
+
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+
+    // every one of the 8 bonds of the 2x2 cell is ungated
+    CHECK(completed.size() == 12);
+    CHECK(count_leg(completed, 1) == 4);
+    CHECK(count_leg(completed, 2) == 4);
+    for (auto const &op : completed) {
+      if (!op.is_twosite()) continue;
+      CHECK(op.group == 0);
+      CHECK(op.op.get_comm() == comm);
+    }
   }
 
   SUBCASE("identity gates follow every group that is present") {
@@ -749,7 +775,7 @@ virtual_dim = )" + vdim + R"(
     EvolutionOperators<ptensor> ops;
     for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
     for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 1));
-    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
     CHECK(completed.size() == 16);
     int g0 = 0, g1 = 0;
     for (auto const &op : completed) {

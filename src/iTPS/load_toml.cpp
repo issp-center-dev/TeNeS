@@ -1042,16 +1042,14 @@ template EvolutionOperators<complex_tensor> load_updates(
 template <class tensor>
 EvolutionOperators<tensor> complete_ungated_bonds(
     const EvolutionOperators<tensor> &simple_updates,
-    const SquareLattice &lattice) {
+    const SquareLattice &lattice, MPI_Comm comm) {
   std::set<int> groups;
   std::set<std::pair<int, int>> gated;  // (source_site, source_leg)
-  MPI_Comm comm = MPI_COMM_WORLD;
   for (const auto &op : simple_updates) {
     if (!op.is_twosite()) {
       continue;
     }
     groups.insert(op.group);
-    comm = op.op.get_comm();
     const int other = lattice.neighbor(op.source_site, op.source_leg);
     gated.emplace(op.source_site, op.source_leg);
     gated.emplace(other, (op.source_leg + 2) % 4);
@@ -1090,10 +1088,10 @@ EvolutionOperators<tensor> complete_ungated_bonds(
 
 template EvolutionOperators<real_tensor> complete_ungated_bonds(
     const EvolutionOperators<real_tensor> &simple_updates,
-    const SquareLattice &lattice);
+    const SquareLattice &lattice, MPI_Comm comm);
 template EvolutionOperators<complex_tensor> complete_ungated_bonds(
     const EvolutionOperators<complex_tensor> &simple_updates,
-    const SquareLattice &lattice);
+    const SquareLattice &lattice, MPI_Comm comm);
 
 template EvolutionOperators<real_tensor> load_simple_updates(
     const toml::value &param, MPI_Comm comm, double atol);
