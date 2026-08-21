@@ -1,0 +1,412 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# End-to-end test of the fermionic mean-field environment
+# ([parameter.ctm] meanfield_env = true). The simple update is identical for
+# the CTM and MF runs (same seed, same steps), so only the measurement
+# differs; the MF run must not build a CTM at all.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MU = 0.0
+NUM_STEP = 1000
+TAU = 0.01
+SEED = 11
+# (D, env) pairs to run. "ctm" uses the CTM environment, "mf" the mean-field
+# one obtained from the simple-update lambdas.
+CASES = [(2, "ctm"), (2, "mf"), (4, "mf")]
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+# Physical-sanity thresholds (a-priori estimates, see the contract).
+MF_VS_CTM_RTOL = 0.2
+DENSITY_TOL = 0.02
+MF_EXACT_RTOL = 0.1
+ENVIRONMENT_TIME_MAX = 1.0e-6
+
+
+def exact_free_fermion(t, mu, nk=512):
+    k = np.linspace(-np.pi, np.pi, nk, endpoint=False) + np.pi / nk
+    kx, ky = np.meshgrid(k, k)
+    eps = -2.0 * t * (np.cos(kx) + np.cos(ky)) - mu
+    occ = eps < 0.0
+    n = occ.mean()
+    e = (eps * occ).mean()
+    return e, n
+
+
+def relerr(value, reference):
+    return abs(value - reference) / max(1.0, abs(reference))
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = []
+    for site in range(4):
+        lines.append(f"{site} 1 0")
+    for site in range(4):
+        lines.append(f"{site} 0 1")
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+""")
+    return "\n".join(blocks)
+
+
+def input_toml(mu, D, outdir, meanfield):
+    chi = 2 * D * D
+    h = two_site_hamiltonian(T, mu)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block()
+    meanfield_env = "true" if meanfield else "false"
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_STEP}
+
+[parameter.ctm]
+dimension = {chi}
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+meanfield_env = {meanfield_env}
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = true
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values[name.strip()] = float(words[0])
+    return values
+
+
+def read_time(outdir):
+    # time.dat lines look like "time environment  = 1.234" (note the
+    # irregular spacing before "="), so split on "=" and normalize the name.
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            name = " ".join(name.split())
+            values[name] = float(raw.split()[0])
+    return values
+
+
+def write_summary(path, rows):
+    with open(path, "w") as f:
+        f.write("# mu D env energy n exact_energy exact_n\n")
+        for row in rows:
+            f.write(
+                "{mu:.1f} {D:d} {env} {energy:.17e} {density:.17e} "
+                "{exact_energy:.17e} {exact_density:.17e}\n".format(**row)
+            )
+
+
+def read_summary(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            mu, D, env, energy, density, exact_energy, exact_density = line.split()
+            rows.append(
+                {
+                    "mu": float(mu),
+                    "D": int(D),
+                    "env": env,
+                    "energy": float(energy),
+                    "density": float(density),
+                    "exact_energy": float(exact_energy),
+                    "exact_density": float(exact_density),
+                }
+            )
+    return rows
+
+
+def compare_summary(rows, ref_rows):
+    refs = {(ref["mu"], ref["D"], ref["env"]): ref for ref in ref_rows}
+    ok = True
+    for row in rows:
+        key = (row["mu"], row["D"], row["env"])
+        if key not in refs:
+            print(
+                "free_fermion_mf.dat: no reference row for "
+                f"mu={key[0]} D={key[1]} env={key[2]}"
+            )
+            ok = False
+            continue
+        ref = refs[key]
+        for name in ("energy", "density"):
+            if not np.isclose(row[name], ref[name], rtol=RTOL, atol=ATOL):
+                print(
+                    f"free_fermion_mf.dat: {name} mismatch for "
+                    f"mu={row['mu']} D={row['D']} env={row['env']}"
+                )
+                print("  result:   ", row[name])
+                print("  reference:", ref[name])
+                ok = False
+    return ok
+
+
+def sanity_checks(rows):
+    # Returns a list of human-readable failure messages (empty when all the
+    # physical-sanity checks pass).
+    failures = []
+    by_key = {(row["D"], row["env"]): row for row in rows}
+
+    ctm2 = by_key[(2, "ctm")]
+    mf2 = by_key[(2, "mf")]
+    mf_vs_ctm = abs(mf2["energy"] - ctm2["energy"]) / abs(ctm2["energy"])
+    print(f"FreeFermionMF D=2 |E_mf - E_ctm| / |E_ctm| = {mf_vs_ctm:.6e}")
+    if not mf_vs_ctm < MF_VS_CTM_RTOL:
+        failures.append(
+            f"D=2 mean-field energy deviates from CTM by {mf_vs_ctm:.6e} "
+            f"(threshold {MF_VS_CTM_RTOL:g})"
+        )
+
+    for row in rows:
+        if row["env"] != "mf":
+            continue
+        if not row["energy"] < 0.0:
+            failures.append(
+                f"D={row['D']} mean-field energy is not negative: {row['energy']}"
+            )
+        if not abs(row["density"] - 0.5) < DENSITY_TOL:
+            failures.append(
+                f"D={row['D']} mean-field density {row['density']} is outside "
+                f"0.5 +- {DENSITY_TOL:g}"
+            )
+
+    mf4 = by_key[(4, "mf")]
+    mf4_relerr = relerr(mf4["energy"], mf4["exact_energy"])
+    if not mf4_relerr < MF_EXACT_RTOL:
+        failures.append(
+            f"D=4 mean-field energy relerr vs exact {mf4_relerr:.6e} "
+            f"(threshold {MF_EXACT_RTOL:g})"
+        )
+    return failures
+
+
+def main():
+    output_root = "output_FreeFermionMF"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    exact_energy, exact_density = exact_free_fermion(T, MU)
+    rows = []
+    for D, env in CASES:
+        outdir = join(output_root, f"D{D}_{env}")
+        inputfile = join(output_root, f"input_D{D}_{env}.toml")
+        with open(inputfile, "w") as f:
+            f.write(input_toml(MU, D, outdir, env == "mf"))
+
+        proc = run_tenes(inputfile)
+        combined_output = proc.stdout + proc.stderr
+        if proc.returncode != 0:
+            print(combined_output)
+            print(f"tenes failed for D={D} env={env}: exit code {proc.returncode}")
+            return 1
+        if os.path.exists(join(outdir, "correlation_length.dat")):
+            print(f"correlation_length.dat was created in fermion mode (D={D} {env})")
+            return 1
+
+        density = read_density(outdir)
+        if "Energy" not in density or "n" not in density:
+            print(f"density.dat lacks Energy or n for D={D} env={env}: {density}")
+            return 1
+        energy = density["Energy"]
+        n = density["n"]
+
+        if env == "mf":
+            times = read_time(outdir)
+            if "time environment" not in times:
+                print(f"time.dat lacks 'time environment' for D={D} env={env}")
+                return 1
+            if not times["time environment"] < ENVIRONMENT_TIME_MAX:
+                print(
+                    f"mean-field run D={D} spent {times['time environment']} s on "
+                    f"the environment (expected < {ENVIRONMENT_TIME_MAX:g}); "
+                    "a CTM seems to have been built"
+                )
+                return 1
+
+        row = {
+            "mu": MU,
+            "D": D,
+            "env": env,
+            "energy": energy,
+            "density": n,
+            "exact_energy": exact_energy,
+            "exact_density": exact_density,
+        }
+        rows.append(row)
+        print(
+            "FreeFermionMF mu={:.1f} D={} env={} energy={:.12e} n={:.12e} "
+            "exact_energy={:.12e} relerr_energy={:.6e}".format(
+                MU, D, env, energy, n, exact_energy, relerr(energy, exact_energy)
+            )
+        )
+
+    # The result file is written before any sanity or golden comparison so
+    # that a golden file can be produced even when a later check fails.
+    summary = join(output_root, "free_fermion_mf.dat")
+    write_summary(summary, rows)
+    print(f"result file: {summary}")
+
+    failures = sanity_checks(rows)
+    if failures:
+        for message in failures:
+            print("FreeFermionMF sanity check failed: " + message)
+        return 1
+
+    ref_summary = join(
+        "@CMAKE_SOURCE_DIR@",
+        "test",
+        "data",
+        "output_FreeFermionMF",
+        "free_fermion_mf.dat",
+    )
+    if not os.path.exists(ref_summary):
+        print(f"golden file {ref_summary} not found")
+        return 1
+    return 0 if compare_summary(rows, read_summary(ref_summary)) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

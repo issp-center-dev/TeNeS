@@ -106,6 +106,16 @@ else()
   set_tests_properties(FreeFermion PROPERTIES TIMEOUT 3600)
 endif()
 
+# End-to-end test of the fermionic mean-field environment
+# ([parameter.ctm] meanfield_env = true) at half filling, compared against the
+# CTM result at D = 2 and the exact free-fermion energy at D = 4.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_mf.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_mf.py @ONLY)
+add_test(NAME FreeFermionMF
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_mf.py)
+set_tests_properties(FreeFermionMF PROPERTIES TIMEOUT 1800)
+
 # End-to-end test of the full three-stage pipeline (tenes_simple -> tenes_std
 # -> tenes) for the fermionic model, checked against the handwritten
 # expert-mode sample sample/07_spinless_fermion.

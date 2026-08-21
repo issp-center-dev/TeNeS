@@ -60,7 +60,7 @@
     (:math:`A^\dagger(i)` は固定した内部順序による局所基底 :math:`i` の生成演算子列、サイト1 = ``source_site``)における行列要素 :math:`\langle o_1 o_2 | O | i_1 i_2 \rangle` です。この行列要素は**フェルミオンの反交換関係込みで**評価してください。スピンレス(``physical_dim = 2``)の最近接ホッピングでは余分な符号は現れませんが、1サイトに複数モードがある場合は現れます。例: スピンあり電子では :math:`c_{2\uparrow}` が :math:`c^\dagger_{1\downarrow}` を跨ぐため :math:`\langle \uparrow\downarrow, 0 |\, c^\dagger_{1\uparrow} c_{2\uparrow} \,| \downarrow, \uparrow \rangle = -1` となります。符号を手で書くのではなく、関与するモードの2サイト Fock 空間を数値的に構成(Jordan-Wigner)して行列要素を読み出すことを推奨します
   - サイト**間**の交換符号(2次元幾何由来のものを含む)はすべて TeNeS が生成します。ユーザーが与えるのは上記の符号込み局所行列のみです
   - 演算子・時間発展ゲートはフェルミオンパリティを保存する必要があり、パリティ奇の演算子は入力読み込み時にエラーになります
-  - 現バージョンでは simple update + CTM 環境による基底状態計算のみに対応しています。full update、平均場環境、``Use_RSVD``、``Simple_Gauge_Fix``、有限温度計算、実時間発展、マルチサイト演算子、``ops`` 形式2サイト観測量、距離2以上の2サイト演算子、skew セル、1幅セル(``LX < 2`` または ``LY < 2``)、相関関数、相関長、``tensor_save`` / ``tensor_load`` は非対応で、入力読み込み時にエラーになります(相関長は強制的に無効化されます)
+  - 現バージョンでは simple update による基底状態計算のみに対応しています(環境は CTM または平均場)。full update、``Use_RSVD``、``Simple_Gauge_Fix``、有限温度計算、実時間発展、マルチサイト演算子、``ops`` 形式2サイト観測量、距離2以上の2サイト演算子、skew セル、1幅セル(``LX < 2`` または ``LY < 2``)、相関関数、相関長、``tensor_save`` / ``tensor_load`` は非対応で、入力読み込み時にエラーになります(相関長は強制的に無効化されます)
 
 - ``iszero_tol``
 
@@ -161,7 +161,7 @@ full update に関するパラメータ
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
-   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる",        真偽値, false
+   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン模式でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
 
 乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ を参照してください。
 
