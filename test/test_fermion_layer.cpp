@@ -3157,5 +3157,699 @@ TEST_CASE("fermion twosite measurement is translation invariant across wraps") {
   CHECK(std::abs(hy[3]) < 10.0 * vertical_scale);
 }
 
+// ===== MF layer 4: iTPS::measure_* through the mean-field environment ======
+//
+// Drives iTPS<tensor>::measure_onesite() / measure_twosite() with
+// MeanField_Env = true and fermion = true on a 2x2 cell whose Tn, lambda and
+// parity ledger are injected through iTPSTestAccessor. References come from
+// the bosonic mean-field path (all-even parities, norms), from symmetries
+// (both ends of a bond, translation) and from the Fock oracle
+// (test/fermion/fock_oracle.py, `mf_*` lines); never from the reduced-pair
+// primitives themselves.
+
+namespace mf_layer4 {
+
+using tenes::itps::Bond;
+using tenes::itps::iTPSTestAccessor;
+using lambda_table = std::vector<std::vector<std::vector<double>>>;
+
+const tenes::fermion::parity_vector parity_even_odd{false, true};
+const tenes::fermion::parity_vector parity_all_even{false, false};
+const tenes::fermion::parity_vector parity_electron{false, true, true, false};
+
+// 2x2 cell, D = 2 on every virtual leg.
+inline tenes::SquareLattice make_lattice(int physical_dim) {
+  tenes::SquareLattice lattice(2, 2);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    lattice.physical_dims[site] = physical_dim;
+    lattice.virtual_dims[site] = {2, 2, 2, 2};
+    lattice.initial_dirs[site] = {0.0};
+    lattice.noises[site] = 1.0;
+  }
+  return lattice;
+}
+
+inline tenes::itps::PEPS_Parameters make_params(
+    bool fermion, const tenes::fermion::parity_vector& phys_parity,
+    int n_unit) {
+  tenes::itps::PEPS_Parameters params;
+  params.fermion = fermion;
+  params.phys_parity.assign(n_unit, phys_parity);
+  params.MeanField_Env = true;
+  params.print_level = tenes::PrintLevel::none;
+  params.outdir = "output_test_fermion_mf_layer4";
+  params.CHI = 4;
+  params.Use_RSVD = false;
+  params.seed = 5;
+  return params;
+}
+
+// Same formula as fock_oracle.deterministic_tensor(site, parities, seed):
+// only parity-even elements are non-zero.
+inline tenes::real_tensor deterministic_tensor(
+    int site, const tenes::fermion::leg_parities& parity, int seed) {
+  tenes::real_tensor t(mptensor::Shape(parity[0].size(), parity[1].size(),
+                                       parity[2].size(), parity[3].size(),
+                                       parity[4].size()));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const auto idx = t.global_index(n);
+    if (tenes::fermion::count_odd(parity, idx) % 2 != 0) {
+      continue;
+    }
+    double x = 1.0 + seed;
+    for (int ax = 0; ax < 5; ++ax) {
+      x += static_cast<double>((ax + 3 + seed % 5) * idx[ax]);
+    }
+    x *= site + 2;
+    t.set_value(idx, 0.19 * std::sin(x) + 0.13 * std::cos(0.37 * x));
+  }
+  return t;
+}
+
+inline tenes::fermion::leg_parities site_parities(
+    const tenes::fermion::parity_vector& phys) {
+  return {parity_even_odd, parity_even_odd, parity_even_odd, parity_even_odd,
+          phys};
+}
+
+// Rank-5 tensor with every element non-zero (no parity structure at all).
+inline tenes::real_tensor dense_random_tensor(unsigned seed) {
+  tenes::real_tensor t(mptensor::Shape(2, 2, 2, 2, 2));
+  std::mt19937 gen(seed);
+  std::uniform_real_distribution<double> magnitude(0.2, 1.0);
+  std::bernoulli_distribution negative(0.5);
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const double v = magnitude(gen);
+    t.set_value(t.global_index(n), negative(gen) ? -v : v);
+  }
+  return t;
+}
+
+// General real rank-4 operator (no symmetry) for the all-even comparison.
+inline tenes::real_tensor dense_random_twosite_op(unsigned seed) {
+  tenes::real_tensor op(mptensor::Shape(2, 2, 2, 2));
+  std::mt19937 gen(seed);
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
+  for (std::size_t n = 0; n < op.local_size(); ++n) {
+    op.set_value(op.global_index(n), dist(gen));
+  }
+  return op;
+}
+
+// Two-site operators as op[in1, in2, out1, out2].
+inline tenes::real_tensor hopping_op(double amplitude) {
+  tenes::real_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(0, 1, 1, 0), amplitude);
+  op.set_value(mptensor::Index(1, 0, 0, 1), amplitude);
+  return op;
+}
+
+inline tenes::real_tensor pairing_op() {
+  tenes::real_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(1, 1, 0, 0), 1.0);
+  op.set_value(mptensor::Index(0, 0, 1, 1), 1.0);
+  return op;
+}
+
+// d = 4 spinful hopping, op[i1, i2, o1, o2] = h[o1 * 4 + o2][i1 * 4 + i2]
+// with h = electron_bond_hamiltonian(1, 0, 0).
+inline tenes::real_tensor electron_hopping_op() {
+  const auto h = electron_bond_hamiltonian(1.0, 0.0, 0.0);
+  tenes::real_tensor op(mptensor::Shape(4, 4, 4, 4));
+  for (int i1 = 0; i1 < 4; ++i1) {
+    for (int i2 = 0; i2 < 4; ++i2) {
+      for (int o1 = 0; o1 < 4; ++o1) {
+        for (int o2 = 0; o2 < 4; ++o2) {
+          const double v = h[o1 * 4 + o2][i1 * 4 + i2];
+          if (std::abs(v) > 1.0e-15) {
+            op.set_value(mptensor::Index(i1, i2, o1, o2), v);
+          }
+        }
+      }
+    }
+  }
+  return op;
+}
+
+inline tenes::real_tensor number_op() {
+  tenes::real_tensor op(mptensor::Shape(2, 2));
+  op.set_value(mptensor::Index(1, 1), 1.0);
+  return op;
+}
+
+inline tenes::real_tensor symmetric_onesite_op() {
+  tenes::real_tensor op(mptensor::Shape(2, 2));
+  op.set_value(mptensor::Index(0, 0), 0.2);
+  op.set_value(mptensor::Index(0, 1), 0.5);
+  op.set_value(mptensor::Index(1, 0), 0.5);
+  op.set_value(mptensor::Index(1, 1), -0.3);
+  return op;
+}
+
+template <class tensor>
+tensor to_tensor(const tenes::real_tensor& a);
+
+template <>
+inline tenes::real_tensor to_tensor<tenes::real_tensor>(
+    const tenes::real_tensor& a) {
+  return a;
+}
+
+template <>
+inline tenes::complex_tensor to_tensor<tenes::complex_tensor>(
+    const tenes::real_tensor& a) {
+  tenes::complex_tensor t(a.shape());
+  for (std::size_t n = 0; n < a.local_size(); ++n) {
+    const auto idx = a.global_index(n);
+    double v;
+    a.get_value(idx, v);
+    t.set_value(idx, std::complex<double>(v, 0.0));
+  }
+  return t;
+}
+
+// The same lambda on every leg of every site.
+inline lambda_table uniform_lambda(int n_unit, const std::vector<double>& lam) {
+  return lambda_table(n_unit, std::vector<std::vector<double>>(4, lam));
+}
+
+// Horizontal bonds (s, right(s)) and vertical bonds (s, up(s)) each carry
+// their own lambda, stored on both end legs as the simple update does
+// (lambda[s][2] == lambda[right(s)][0], lambda[s][1] == lambda[up(s)][3]).
+// On a 2x2 cell the four legs of every site then see four different
+// lambdas.
+inline lambda_table bond_lambdas(const tenes::SquareLattice& lattice) {
+  const std::vector<std::vector<double>> horizontal{
+      {1.0, 0.6}, {0.9, 0.4}, {0.8, 0.55}, {0.95, 0.35}};
+  const std::vector<std::vector<double>> vertical{
+      {0.85, 0.5}, {1.0, 0.45}, {0.7, 0.3}, {0.9, 0.65}};
+  lambda_table lambda(lattice.N_UNIT, std::vector<std::vector<double>>(4));
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    lambda[site][2] = horizontal[site];
+    lambda[lattice.other(site, 1, 0)][0] = horizontal[site];
+    lambda[site][1] = vertical[site];
+    lambda[lattice.other(site, 0, 1)][3] = vertical[site];
+  }
+  return lambda;
+}
+
+// Translation-invariant lambda: one value per direction.
+inline lambda_table direction_lambda(int n_unit,
+                                     const std::vector<double>& horizontal,
+                                     const std::vector<double>& vertical) {
+  lambda_table lambda(n_unit, std::vector<std::vector<double>>(4));
+  for (int site = 0; site < n_unit; ++site) {
+    lambda[site][0] = horizontal;
+    lambda[site][2] = horizontal;
+    lambda[site][1] = vertical;
+    lambda[site][3] = vertical;
+  }
+  return lambda;
+}
+
+struct twosite_spec {
+  int group;
+  int source;
+  int dx;
+  int dy;
+  tenes::real_tensor op;
+};
+
+template <class tensor>
+struct measured {
+  // [group][site], last row = norm
+  std::vector<std::vector<typename tensor::value_type>> onesite;
+  // [group][bond], last map = norm
+  std::vector<std::map<Bond, typename tensor::value_type>> twosite;
+};
+
+// Builds the iTPS, injects Tn / lambda / virtual parities, and measures.
+// Every one-site operator is attached to every site of the cell.
+template <class tensor>
+measured<tensor> measure_state(
+    const tenes::SquareLattice& lattice,
+    const tenes::itps::PEPS_Parameters& params,
+    const tenes::fermion::parity_vector& virt_parity,
+    const std::vector<tenes::real_tensor>& Tn, const lambda_table& lambda,
+    const std::vector<tenes::real_tensor>& onesite_ops,
+    const std::vector<twosite_spec>& twosite_specs) {
+  tenes::Operators<tensor> onesite;
+  for (std::size_t g = 0; g < onesite_ops.size(); ++g) {
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      onesite.emplace_back("onesite", static_cast<int>(g), site,
+                           to_tensor<tensor>(onesite_ops[g]));
+    }
+  }
+  tenes::Operators<tensor> twosite;
+  for (const auto& spec : twosite_specs) {
+    twosite.emplace_back("twosite", spec.group, spec.source, spec.dx, spec.dy,
+                         to_tensor<tensor>(spec.op));
+  }
+
+  tenes::itps::iTPS<tensor> state(
+      MPI_COMM_WORLD, params, lattice, tenes::EvolutionOperators<tensor>{},
+      tenes::EvolutionOperators<tensor>{}, onesite, twosite,
+      tenes::Operators<tensor>{}, tenes::itps::CorrelationParameter{},
+      tenes::itps::TransferMatrix_Parameters{});
+
+  auto& state_Tn = iTPSTestAccessor::Tn(state);
+  REQUIRE(state_Tn.size() == Tn.size());
+  for (std::size_t site = 0; site < Tn.size(); ++site) {
+    state_Tn[site] = to_tensor<tensor>(Tn[site]);
+  }
+  iTPSTestAccessor::lambda_tensor(state) = lambda;
+  auto& finfo = iTPSTestAccessor::finfo(state);
+  if (finfo.enabled) {
+    REQUIRE(finfo.virt.size() == Tn.size());
+    for (auto& site_virt : finfo.virt) {
+      for (auto& leg_parity : site_virt) {
+        leg_parity = virt_parity;
+      }
+    }
+  }
+
+  measured<tensor> out;
+  out.onesite = state.measure_onesite();
+  out.twosite = state.measure_twosite();
+  return out;
+}
+
+template <class value_type>
+void check_value(value_type got, value_type expected) {
+  CHECK(std::real(got) == doctest::Approx(std::real(expected)).epsilon(1e-12));
+  CHECK(std::imag(got) == doctest::Approx(std::imag(expected)).epsilon(1e-12));
+}
+
+template <class value_type>
+void check_map(const std::map<Bond, value_type>& got,
+               const std::map<Bond, value_type>& expected) {
+  REQUIRE(got.size() == expected.size());
+  for (const auto& entry : expected) {
+    const Bond& bond = entry.first;
+    INFO("bond (" << bond.source_site << ", " << bond.dx << ", " << bond.dy
+                  << ")");
+    REQUIRE(got.count(bond) == 1);
+    check_value(got.at(bond), entry.second);
+  }
+}
+
+// Complex result against the real one: equal real parts, vanishing imaginary
+// parts.
+inline void check_complex_against_real(
+    const std::map<Bond, std::complex<double>>& got,
+    const std::map<Bond, double>& expected) {
+  REQUIRE(got.size() == expected.size());
+  for (const auto& entry : expected) {
+    const Bond& bond = entry.first;
+    INFO("bond (" << bond.source_site << ", " << bond.dx << ", " << bond.dy
+                  << ")");
+    REQUIRE(got.count(bond) == 1);
+    CHECK(got.at(bond).real() == doctest::Approx(entry.second).epsilon(1e-12));
+    CHECK(std::abs(got.at(bond).imag()) <= 1e-12);
+  }
+}
+
+inline std::string bond_name(const Bond& bond) {
+  std::stringstream ss;
+  ss << "(" << bond.source_site << "," << bond.dx << "," << bond.dy << ")";
+  return ss.str();
+}
+
+template <class value_type>
+std::string map_to_string(const std::map<Bond, value_type>& values) {
+  std::stringstream ss;
+  ss << std::setprecision(17);
+  for (const auto& entry : values) {
+    ss << " " << bond_name(entry.first) << "=" << entry.second;
+  }
+  return ss.str();
+}
+
+// All 16 nearest-neighbour bonds of the 2x2 cell, each seen from both ends.
+inline std::vector<twosite_spec> all_bonds_both_ends(
+    const tenes::SquareLattice& lattice, int group,
+    const tenes::real_tensor& op) {
+  std::vector<twosite_spec> specs;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    specs.push_back({group, site, 1, 0, op});
+    specs.push_back({group, site, 0, 1, op});
+    specs.push_back({group, site, -1, 0, op});
+    specs.push_back({group, site, 0, -1, op});
+  }
+  return specs;
+}
+
+// The 8 bonds of the 2x2 cell seen from the left / bottom end only.
+inline std::vector<twosite_spec> all_bonds_forward(
+    const tenes::SquareLattice& lattice, int group,
+    const tenes::real_tensor& op) {
+  std::vector<twosite_spec> specs;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    specs.push_back({group, site, 1, 0, op});
+    specs.push_back({group, site, 0, 1, op});
+  }
+  return specs;
+}
+
+}  // namespace mf_layer4
+
+// Contract item 1: with every parity even no graded sign can appear, so the
+// fermionic mean-field measurement must reproduce the bosonic one exactly,
+// for real and complex tensors alike.
+TEST_CASE(
+    "MF layer4 all-even fermion mean-field measurement matches the boson "
+    "path") {
+  using namespace mf_layer4;
+  const tenes::SquareLattice lattice = make_lattice(2);
+
+  std::vector<tenes::real_tensor> Tn;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    Tn.push_back(dense_random_tensor(100 + site));
+  }
+  const lambda_table lambda = bond_lambdas(lattice);
+  const std::vector<tenes::real_tensor> onesite_ops{symmetric_onesite_op()};
+  const std::vector<twosite_spec> specs =
+      all_bonds_both_ends(lattice, 0, dense_random_twosite_op(7));
+
+  const auto boson_params = make_params(false, parity_all_even, lattice.N_UNIT);
+  const auto fermion_params =
+      make_params(true, parity_all_even, lattice.N_UNIT);
+
+  const auto boson_r = measure_state<tenes::real_tensor>(
+      lattice, boson_params, parity_all_even, Tn, lambda, onesite_ops, specs);
+  const auto fermion_r = measure_state<tenes::real_tensor>(
+      lattice, fermion_params, parity_all_even, Tn, lambda, onesite_ops, specs);
+  const auto boson_c = measure_state<tenes::complex_tensor>(
+      lattice, boson_params, parity_all_even, Tn, lambda, onesite_ops, specs);
+  const auto fermion_c = measure_state<tenes::complex_tensor>(
+      lattice, fermion_params, parity_all_even, Tn, lambda, onesite_ops, specs);
+
+  // (a) one-site: values and norms on every site
+  REQUIRE(boson_r.onesite.size() == 2);
+  REQUIRE(fermion_r.onesite.size() == 2);
+  REQUIRE(fermion_c.onesite.size() == 2);
+  REQUIRE(boson_r.onesite[1].size() == lattice.N_UNIT);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    INFO("onesite norm site " << site);
+    CHECK(boson_r.onesite[1][site] > 0.0);
+  }
+  for (int row = 0; row < 2; ++row) {
+    REQUIRE(boson_r.onesite[row].size() == lattice.N_UNIT);
+    REQUIRE(fermion_r.onesite[row].size() == lattice.N_UNIT);
+    REQUIRE(fermion_c.onesite[row].size() == lattice.N_UNIT);
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      INFO("onesite row " << row << " site " << site);
+      check_value(fermion_r.onesite[row][site], boson_r.onesite[row][site]);
+      check_value(fermion_c.onesite[row][site], boson_c.onesite[row][site]);
+      CHECK(fermion_c.onesite[row][site].real() ==
+            doctest::Approx(fermion_r.onesite[row][site]).epsilon(1e-12));
+      CHECK(std::abs(fermion_c.onesite[row][site].imag()) <= 1e-12);
+    }
+  }
+
+  // (b) two-site: 16 bond values and 8 norms
+  REQUIRE(boson_r.twosite.size() == 2);
+  REQUIRE(fermion_r.twosite.size() == 2);
+  REQUIRE(fermion_c.twosite.size() == 2);
+  REQUIRE(boson_r.twosite[0].size() == 16);
+  REQUIRE(boson_r.twosite[1].size() == 8);
+  for (const auto& entry : boson_r.twosite[1]) {
+    INFO("norm bond " << bond_name(entry.first));
+    CHECK(entry.second > 0.0);
+  }
+  check_map(fermion_r.twosite[0], boson_r.twosite[0]);
+  check_map(fermion_r.twosite[1], boson_r.twosite[1]);
+  check_map(fermion_c.twosite[0], boson_c.twosite[0]);
+  check_map(fermion_c.twosite[1], boson_c.twosite[1]);
+  check_complex_against_real(fermion_c.twosite[0], fermion_r.twosite[0]);
+  check_complex_against_real(fermion_c.twosite[1], fermion_r.twosite[1]);
+
+  std::cout << "MF layer4 all-even boson values:"
+            << map_to_string(boson_r.twosite[0])
+            << "\nMF layer4 all-even fermion values:"
+            << map_to_string(fermion_r.twosite[0]) << std::endl;
+}
+
+// Contract item 2: for parity-even tensors the two-site norm carries no
+// graded sign, so the fermionic mean-field norm equals the bosonic one.
+TEST_CASE("MF layer4 fermion mean-field norm matches the boson norm") {
+  using namespace mf_layer4;
+  const tenes::SquareLattice lattice = make_lattice(2);
+  const auto parity = site_parities(parity_even_odd);
+
+  std::vector<tenes::real_tensor> Tn;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    Tn.push_back(deterministic_tensor(site, parity, 0));
+  }
+  const lambda_table lambda = bond_lambdas(lattice);
+  const std::vector<twosite_spec> specs =
+      all_bonds_forward(lattice, 0, hopping_op(-1.0));
+
+  const auto boson = measure_state<tenes::real_tensor>(
+      lattice, make_params(false, parity_even_odd, lattice.N_UNIT),
+      parity_even_odd, Tn, lambda, {}, specs);
+  const auto fermion = measure_state<tenes::real_tensor>(
+      lattice, make_params(true, parity_even_odd, lattice.N_UNIT),
+      parity_even_odd, Tn, lambda, {}, specs);
+
+  REQUIRE(boson.twosite.size() == 2);
+  REQUIRE(fermion.twosite.size() == 2);
+  const auto& boson_norms = boson.twosite.back();
+  const auto& fermion_norms = fermion.twosite.back();
+  REQUIRE(boson_norms.size() == 8);
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    // horizontal window keyed by its left site, vertical by its bottom site
+    REQUIRE(boson_norms.count(Bond{site, 0, 1}) == 1);
+    REQUIRE(boson_norms.count(Bond{site, 1, 0}) == 1);
+    CHECK(boson_norms.at(Bond{site, 0, 1}) > 0.0);
+    CHECK(boson_norms.at(Bond{site, 1, 0}) > 0.0);
+  }
+  check_map(fermion_norms, boson_norms);
+  std::cout << "MF layer4 norms boson:" << map_to_string(boson_norms)
+            << "\nMF layer4 norms fermion:" << map_to_string(fermion_norms)
+            << std::endl;
+}
+
+// Contract item 3: the hopping on a bond is one physical quantity, so
+// measuring it with the source on either end must agree. d = 2 cannot tell
+// the graded transpose from the plain one; the spinful d = 4 hopping can.
+TEST_CASE("MF layer4 fermion mean-field hopping agrees from both bond ends") {
+  using namespace mf_layer4;
+
+  struct case_spec {
+    const char* label;
+    int physical_dim;
+    tenes::fermion::parity_vector phys_parity;
+    tenes::real_tensor op;
+  };
+  const case_spec cases[] = {
+      {"d=2", 2, parity_even_odd, hopping_op(-1.0)},
+      {"d=4", 4, parity_electron, electron_hopping_op()}};
+
+  for (const auto& c : cases) {
+    const tenes::SquareLattice lattice = make_lattice(c.physical_dim);
+    const auto parity = site_parities(c.phys_parity);
+    std::vector<tenes::real_tensor> Tn;
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      Tn.push_back(deterministic_tensor(site, parity, 0));
+    }
+    const lambda_table lambda = bond_lambdas(lattice);
+    const std::vector<twosite_spec> specs =
+        all_bonds_both_ends(lattice, 0, c.op);
+
+    const auto result = measure_state<tenes::real_tensor>(
+        lattice, make_params(true, c.phys_parity, lattice.N_UNIT),
+        parity_even_odd, Tn, lambda, {}, specs);
+    REQUIRE(result.twosite.size() == 2);
+    const auto& hop = result.twosite[0];
+    REQUIRE(hop.size() == 16);
+    std::cout << "MF layer4 both-ends " << c.label << ":" << map_to_string(hop)
+              << std::endl;
+
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      const int right = lattice.other(site, 1, 0);
+      const int up = lattice.other(site, 0, 1);
+      {
+        INFO(std::string(c.label) << " horizontal bond from site " << site);
+        check_value(hop.at(Bond{right, -1, 0}), hop.at(Bond{site, 1, 0}));
+      }
+      {
+        INFO(std::string(c.label) << " vertical bond from site " << site);
+        check_value(hop.at(Bond{up, 0, -1}), hop.at(Bond{site, 0, 1}));
+      }
+    }
+  }
+}
+
+// Contract item 4: identical tensors and lambdas on every site make the
+// cell translation invariant; all horizontal bonds agree, all vertical bonds
+// agree.
+TEST_CASE("MF layer4 fermion mean-field measurement is translation invariant") {
+  using namespace mf_layer4;
+  const tenes::SquareLattice lattice = make_lattice(2);
+  const auto parity = site_parities(parity_even_odd);
+  const std::vector<tenes::real_tensor> Tn(lattice.N_UNIT,
+                                           deterministic_tensor(0, parity, 0));
+  const lambda_table lambda =
+      direction_lambda(lattice.N_UNIT, {1.0, 0.7}, {1.0, 0.55});
+
+  std::vector<twosite_spec> specs =
+      all_bonds_forward(lattice, 0, hopping_op(1.0));
+  for (const auto& spec : all_bonds_forward(lattice, 1, pairing_op())) {
+    specs.push_back(spec);
+  }
+
+  const auto result = measure_state<tenes::real_tensor>(
+      lattice, make_params(true, parity_even_odd, lattice.N_UNIT),
+      parity_even_odd, Tn, lambda, {}, specs);
+  REQUIRE(result.twosite.size() == 3);
+  for (int group = 0; group < 3; ++group) {
+    const auto& values = result.twosite[group];
+    REQUIRE(values.size() == 8);
+    std::cout << "MF layer4 translation group " << group << ":"
+              << map_to_string(values) << std::endl;
+    for (int site = 1; site < lattice.N_UNIT; ++site) {
+      INFO("group " << group << " site " << site);
+      check_value(values.at(Bond{site, 1, 0}), values.at(Bond{0, 1, 0}));
+      check_value(values.at(Bond{site, 0, 1}), values.at(Bond{0, 0, 1}));
+    }
+  }
+}
+
+// Contract item 5: one-site density against the single-site Fock oracle
+// (mf_single_site.n0 / mf_seed173_single_site.n0).
+TEST_CASE("MF layer4 fermion mean-field one-site density matches the oracle") {
+  using namespace mf_layer4;
+  struct oracle_ref {
+    int seed;
+    double n0;
+  };
+  // venv/bin/python3 test/fermion/fock_oracle.py | grep '^mf_.*single_site'
+  const oracle_ref refs[] = {{0, 3.17497722830307694e-01},
+                             {173, 6.29424213426165835e-01}};
+
+  const tenes::SquareLattice lattice = make_lattice(2);
+  const auto parity = site_parities(parity_even_odd);
+  const lambda_table lambda = uniform_lambda(lattice.N_UNIT, {1.0, 0.7});
+  for (const auto& ref : refs) {
+    const std::vector<tenes::real_tensor> Tn(
+        lattice.N_UNIT, deterministic_tensor(0, parity, ref.seed));
+    const auto result = measure_state<tenes::real_tensor>(
+        lattice, make_params(true, parity_even_odd, lattice.N_UNIT),
+        parity_even_odd, Tn, lambda, {number_op()}, {});
+    REQUIRE(result.onesite.size() == 2);
+    REQUIRE(result.onesite[0].size() == lattice.N_UNIT);
+    std::cout << std::setprecision(17) << "MF layer4 density seed=" << ref.seed;
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      std::cout << " n[" << site << "]=" << result.onesite[0][site] << " norm["
+                << site << "]=" << result.onesite[1][site];
+    }
+    std::cout << std::endl;
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      INFO("seed " << ref.seed << " site " << site);
+      CHECK(result.onesite[0][site] == doctest::Approx(ref.n0).epsilon(1e-12));
+    }
+  }
+}
+
+// Contract item 7: two-site values against the mf_* Fock oracle, through the
+// full measure_twosite wiring (window placement, lambda on the outer legs
+// only, both bond orientations). The oracle's site 0 (tensor A) is the left
+// site of the horizontal pair and the top site of the vertical pair, site 1
+// (tensor B) the right / bottom one.
+//
+// The pairing operator |00><11| + |11><00| is antisymmetric under site
+// exchange (c_b c_a + c_a^dag c_b^dag = -(c_a c_b + c_b^dag c_a^dag)): the
+// same raw tensor read in the B-first ordered basis is the negated physical
+// operator, so from the B end it must give -pair01 (the reordering sign
+// |n_B n_A> = (-1)^{n_A n_B} |n_A n_B> on the input and output legs is the
+// graded transpose). hop01 is exchange symmetric and agrees from both ends.
+TEST_CASE("MF layer4 fermion mean-field two-site values match the oracle") {
+  using namespace mf_layer4;
+  struct oracle_ref {
+    const char* name;
+    bool horizontal;
+    int seed;
+    double hop01;
+    double pair01;
+  };
+  // venv/bin/python3 test/fermion/fock_oracle.py | grep '^mf_'
+  const oracle_ref refs[] = {
+      {"mf_horizontal_2site", true, 0, -3.73251249983831065e-02,
+       7.91808258802335907e-02},
+      {"mf_vertical_2site", false, 0, 4.51903604013348132e-03,
+       -2.89028494305034822e-03},
+      {"mf_seed173_horizontal_2site", true, 173, 1.02835266183819024e-01,
+       1.01072667937597435e-01},
+      {"mf_seed173_vertical_2site", false, 173, 9.45737037673597195e-03,
+       -9.68639099935675665e-03}};
+
+  const tenes::SquareLattice lattice = make_lattice(2);
+  const auto parity = site_parities(parity_even_odd);
+  const lambda_table lambda = uniform_lambda(lattice.N_UNIT, {1.0, 0.7});
+
+  for (const auto& ref : refs) {
+    const tenes::real_tensor A = deterministic_tensor(0, parity, ref.seed);
+    const tenes::real_tensor B = deterministic_tensor(1, parity, ref.seed);
+    std::vector<tenes::real_tensor> Tn(lattice.N_UNIT, A);
+    // bonds keyed from the A end and from the B end
+    std::vector<Bond> from_a;
+    std::vector<Bond> from_b;
+    if (ref.horizontal) {
+      // A on x = 0, B on x = 1
+      for (int site = 0; site < lattice.N_UNIT; ++site) {
+        Tn[site] = (site % lattice.LX == 0) ? A : B;
+      }
+      for (int y = 0; y < lattice.LY; ++y) {
+        const int a = y * lattice.LX;
+        from_a.push_back(Bond{a, 1, 0});
+        from_b.push_back(Bond{lattice.other(a, 1, 0), -1, 0});
+      }
+    } else {
+      // A on the upper row (y = 1), B on the lower row (y = 0)
+      for (int site = 0; site < lattice.N_UNIT; ++site) {
+        Tn[site] = (site / lattice.LX == 1) ? A : B;
+      }
+      for (int x = 0; x < lattice.LX; ++x) {
+        const int b = x;
+        from_b.push_back(Bond{b, 0, 1});
+        from_a.push_back(Bond{lattice.other(b, 0, 1), 0, -1});
+      }
+    }
+    std::vector<twosite_spec> specs;
+    for (const auto& bond : from_a) {
+      specs.push_back({0, bond.source_site, bond.dx, bond.dy, hopping_op(1.0)});
+      specs.push_back({1, bond.source_site, bond.dx, bond.dy, pairing_op()});
+    }
+    for (const auto& bond : from_b) {
+      specs.push_back({0, bond.source_site, bond.dx, bond.dy, hopping_op(1.0)});
+      specs.push_back({1, bond.source_site, bond.dx, bond.dy, pairing_op()});
+    }
+
+    const auto result = measure_state<tenes::real_tensor>(
+        lattice, make_params(true, parity_even_odd, lattice.N_UNIT),
+        parity_even_odd, Tn, lambda, {}, specs);
+    REQUIRE(result.twosite.size() == 3);
+    const auto& hop = result.twosite[0];
+    const auto& pair = result.twosite[1];
+    REQUIRE(hop.size() == 4);
+    REQUIRE(pair.size() == 4);
+    std::cout << "MF layer4 oracle " << ref.name
+              << " hop:" << map_to_string(hop) << "\nMF layer4 oracle "
+              << ref.name << " pair:" << map_to_string(pair) << std::endl;
+
+    for (const auto& bond : from_a) {
+      INFO(std::string(ref.name) << " from A " << bond_name(bond));
+      CHECK(hop.at(bond) == doctest::Approx(ref.hop01).epsilon(1e-12));
+      CHECK(pair.at(bond) == doctest::Approx(ref.pair01).epsilon(1e-12));
+    }
+    for (const auto& bond : from_b) {
+      INFO(std::string(ref.name) << " from B " << bond_name(bond));
+      CHECK(hop.at(bond) == doctest::Approx(ref.hop01).epsilon(1e-12));
+      CHECK(pair.at(bond) == doctest::Approx(-ref.pair01).epsilon(1e-12));
+    }
+  }
+}
+
 #include "fermion/r2_convention.cpp"
 #include "fermion/mf_measure.cpp"

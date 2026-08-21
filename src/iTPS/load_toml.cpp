@@ -639,9 +639,6 @@ void validate_fermion_constraints(
   if (has_positive_steps(peps_parameters.num_full_step)) {
     throw_fermion_guard("full update");
   }
-  if (peps_parameters.MeanField_Env) {
-    throw_fermion_guard("MeanField_Env=true");
-  }
   if (peps_parameters.Simple_Gauge_Fix) {
     throw_fermion_guard("Simple_Gauge_Fix=true");
   }

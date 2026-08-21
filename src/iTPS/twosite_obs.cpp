@@ -169,41 +169,60 @@ auto iTPS<ptensor>::measure_twosite()
 
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
-      if (peps_parameters.MeanField_Env) {
-        norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
-      } else if (finfo.enabled && !is_TPO && nrow * ncol == 2) {
+      if (finfo.enabled && !is_TPO && nrow * ncol == 2) {
         if (nrow == 2) {
           const int top = indices[0][0];
           const int bottom = indices[1][0];
-          const ptensor blob = tenes::fermion::build_reduced_identity_pair(
-              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
-              tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom),
-              tenes::fermion::reduced_pair_direction::vertical);
-          norms[norm_key] =
-              tenes::fermion::contract_reduced_pair_vertical_density_CTM(
-                  C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
-                  eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], blob);
+          const auto fTop = tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top);
+          const auto fBottom =
+              tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom);
+          if (is_mf) {
+            // Mean field: Tn_ are the lambda-dressed boundary copies, so the
+            // single-layer graded contraction already closes the window.
+            norms[norm_key] = tenes::fermion::contract_pair_MF(
+                tenes::fermion::build_pair_state(
+                    fTop, fBottom,
+                    tenes::fermion::reduced_pair_direction::vertical));
+          } else {
+            const ptensor blob = tenes::fermion::build_reduced_identity_pair(
+                fTop, fBottom,
+                tenes::fermion::reduced_pair_direction::vertical);
+            norms[norm_key] =
+                tenes::fermion::contract_reduced_pair_vertical_density_CTM(
+                    C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+                    eTr[top], eTr[bottom], eTb[bottom], eTl[bottom], eTl[top],
+                    blob);
+          }
         } else {
           const int left = indices[0][0];
           const int right = indices[0][1];
-          const ptensor blob = tenes::fermion::build_reduced_identity_pair(
-              tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
-              tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right),
-              tenes::fermion::reduced_pair_direction::horizontal);
-          norms[norm_key] =
-              tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
-                  C1[left], C2[right], C3[right], C4[left], eTt[left],
-                  eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
-                  blob);
+          const auto fLeft = tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left);
+          const auto fRight =
+              tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right);
+          if (is_mf) {
+            norms[norm_key] = tenes::fermion::contract_pair_MF(
+                tenes::fermion::build_pair_state(
+                    fLeft, fRight,
+                    tenes::fermion::reduced_pair_direction::horizontal));
+          } else {
+            const ptensor blob = tenes::fermion::build_reduced_identity_pair(
+                fLeft, fRight,
+                tenes::fermion::reduced_pair_direction::horizontal);
+            norms[norm_key] =
+                tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
+                    C1[left], C2[right], C3[right], C4[left], eTt[left],
+                    eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
+                    blob);
+          }
         }
+      } else if (is_mf) {
+        norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
+      } else if (is_TPO) {
+        norms[norm_key] =
+            core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       } else {
-        if (is_TPO) {
-          norms[norm_key] =
-              core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-        } else {
-          norms[norm_key] =
-              core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-        }
+        norms[norm_key] =
+            core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       }
     }
     auto norm = norms[norm_key];
@@ -214,29 +233,44 @@ auto iTPS<ptensor>::measure_twosite()
         if (nrow == 2) {
           const int top = indices[0][0];
           const int bottom = indices[1][0];
-          if (finfo.enabled && !is_TPO && !is_mf) {
+          if (finfo.enabled && !is_TPO) {
             const int target = top == source ? bottom : top;
-            // Blob path convention: both input and output legs carry the
-            // crossing swap (wrap_reduced_pair_op). Pinned by the d = 2 R3
-            // oracle (where it coincides with verbatim loading for
-            // number-conserving operators) and the d = 4 R5 oracle (where
-            // verbatim loading is wrong). The simple-update kernel path uses
-            // the different wrap_twosite_gate convention instead.
-            auto o = tenes::fermion::wrap_reduced_pair_op(
-                op.op, finfo.phys[source], finfo.phys[target]);
+            // Two loading conventions, both pinned by the d = 4 R5 oracle:
+            //  - blob path: wrap_reduced_pair_op (input and output swaps),
+            //  - single-layer mean-field path: wrap_twosite_gate (input swap
+            //    only), the convention of the Fock-verified direct path.
+            auto o = is_mf ? tenes::fermion::wrap_twosite_gate(
+                                 op.op, finfo.phys[source], finfo.phys[target])
+                           : tenes::fermion::wrap_reduced_pair_op(
+                                 op.op, finfo.phys[source], finfo.phys[target]);
             if (top != source) {
+              // Graded transpose: carries the Fock reordering sign
+              // |n_B n_A> = (-1)^{n_A n_B} |n_A n_B> on both leg pairs.
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
             }
-            // The window rows already carry geometric roles (row 0 = upper),
-            // and the infinite lattice has no boundary, so bonds whose target
-            // wraps around the unit cell need no special ordering.
-            const ptensor blob = tenes::fermion::build_reduced_pair(
-                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top),
-                tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom), o,
-                tenes::fermion::reduced_pair_direction::vertical);
-            value = tenes::fermion::contract_reduced_pair_vertical_density_CTM(
-                C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
-                eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], blob);
+            const auto fTop = tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, top);
+            const auto fBottom =
+                tenes::fermion::wrap_Tn(*(Tn_[1][0]), finfo, bottom);
+            if (is_mf) {
+              value = tenes::fermion::contract_pair_MF(
+                  tenes::fermion::build_pair_state(
+                      fTop, fBottom,
+                      tenes::fermion::reduced_pair_direction::vertical),
+                  o);
+            } else {
+              // The window rows already carry geometric roles (row 0 =
+              // upper), and the infinite lattice has no boundary, so bonds
+              // whose target wraps around the unit cell need no special
+              // ordering.
+              const ptensor blob = tenes::fermion::build_reduced_pair(
+                  fTop, fBottom, o,
+                  tenes::fermion::reduced_pair_direction::vertical);
+              value =
+                  tenes::fermion::contract_reduced_pair_vertical_density_CTM(
+                      C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
+                      eTr[top], eTr[bottom], eTb[bottom], eTl[bottom], eTl[top],
+                      blob);
+            }
           } else {
             ptensor o =
                 (top == source ? op.op
@@ -256,25 +290,39 @@ auto iTPS<ptensor>::measure_twosite()
         } else {  // ncol == 2
           const int left = indices[0][0];
           const int right = indices[0][1];
-          if (finfo.enabled && !is_TPO && !is_mf) {
+          if (finfo.enabled && !is_TPO) {
             const int target = left == source ? right : left;
-            // wrap_reduced_pair_op by design; see the vertical branch.
-            auto o = tenes::fermion::wrap_reduced_pair_op(
-                op.op, finfo.phys[source], finfo.phys[target]);
+            // Two loading conventions; see the vertical branch.
+            auto o = is_mf ? tenes::fermion::wrap_twosite_gate(
+                                 op.op, finfo.phys[source], finfo.phys[target])
+                           : tenes::fermion::wrap_reduced_pair_op(
+                                 op.op, finfo.phys[source], finfo.phys[target]);
             if (left != source) {
+              // Graded transpose; see the vertical branch.
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
             }
-            // Window columns already carry geometric roles (col 0 = left);
-            // see the vertical branch.
-            const ptensor blob = tenes::fermion::build_reduced_pair(
-                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left),
-                tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right), o,
-                tenes::fermion::reduced_pair_direction::horizontal);
-            value =
-                tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
-                    C1[left], C2[right], C3[right], C4[left], eTt[left],
-                    eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
-                    blob);
+            const auto fLeft =
+                tenes::fermion::wrap_Tn(*(Tn_[0][0]), finfo, left);
+            const auto fRight =
+                tenes::fermion::wrap_Tn(*(Tn_[0][1]), finfo, right);
+            if (is_mf) {
+              value = tenes::fermion::contract_pair_MF(
+                  tenes::fermion::build_pair_state(
+                      fLeft, fRight,
+                      tenes::fermion::reduced_pair_direction::horizontal),
+                  o);
+            } else {
+              // Window columns already carry geometric roles (col 0 = left);
+              // see the vertical branch.
+              const ptensor blob = tenes::fermion::build_reduced_pair(
+                  fLeft, fRight, o,
+                  tenes::fermion::reduced_pair_direction::horizontal);
+              value =
+                  tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
+                      C1[left], C2[right], C3[right], C4[left], eTt[left],
+                      eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
+                      blob);
+            }
           } else {
             ptensor o =
                 (left == source ? op.op

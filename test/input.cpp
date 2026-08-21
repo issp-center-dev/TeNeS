@@ -509,8 +509,8 @@ parity = [0, 1]
     CHECK(peps_parameters.phys_parity[0] == std::vector<bool>{false, true});
   }
 
-  SUBCASE("fermion rejects mean-field environment") {
-    INFO("fermion rejects mean-field environment");
+  SUBCASE("fermion accepts mean-field environment") {
+    INFO("fermion accepts mean-field environment");
     auto param_toml = parse_str(R"(
 [parameter]
 [parameter.general]
@@ -518,12 +518,13 @@ fermion = true
 [parameter.ctm]
 meanfield_env = true
 )");
-    // L_sub = [2, 2]: with a 1-wide cell the new tensor.L_sub-dimensions
-    // guard (C2, task-11-contract.md) fires first, so this subcase would
-    // pass for the wrong reason (a generic input_error, not the
-    // MeanField_Env=true rejection it is named for). A 2x2 cell with a
-    // single site definition broadcast via index = [] clears that guard
-    // and reaches the MeanField_Env check.
+    // L_sub = [2, 2]: with a 1-wide cell the tensor.L_sub-dimensions guard
+    // (C2, task-11-contract.md) would throw before MeanField_Env is even
+    // looked at, so the subcase could not tell that the mean-field
+    // environment itself is accepted. A 2x2 cell with a single site
+    // definition broadcast via index = [] clears that guard; with the
+    // fermionic mean-field measurement in place, MeanField_Env=true is a
+    // supported combination and nothing else in this input is guarded.
     auto tensor_toml = parse_str(R"(
 [tensor]
 L_sub = [2, 2]
@@ -537,12 +538,11 @@ parity = [0, 1]
     SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
     peps_parameters.phys_parity =
         gen_phys_parity(tensor_toml.at("tensor"), lattice);
-    CHECK_THROWS_AS(
-        validate_fermion_constraints(
-            peps_parameters, lattice, EvolutionOperators<ptensor>{},
-            EvolutionOperators<ptensor>{}, Operators<ptensor>{},
-            Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}),
-        tenes::input_error);
+    CHECK(peps_parameters.MeanField_Env == true);
+    CHECK_NOTHROW(validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}));
   }
 
   SUBCASE("fermion rejects odd one-site operator") {
