@@ -217,24 +217,41 @@ void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
     }
     return util::drop_comment(line);
   };
-  auto next_ints = [&next_line, &filename]() -> std::vector<int> {
-    const auto words = util::split(next_line());
+  std::string last_int_line;
+  auto next_ints = [&next_line, &filename,
+                    &last_int_line]() -> std::vector<int> {
+    last_int_line = next_line();
+    const auto words = util::split(last_int_line);
     std::vector<int> ret;
     ret.reserve(words.size());
     for (const auto &w : words) {
-      ret.push_back(std::stoi(w));
+      try {
+        ret.push_back(std::stoi(w));
+      } catch (const std::exception &) {
+        throw tenes::load_error("ERROR: cannot parse " + filename +
+                                " line as integers: \"" + last_int_line + "\"");
+      }
     }
     return ret;
   };
+  auto next_scalar = [&next_ints, &filename, &last_int_line]() -> int {
+    const auto values = next_ints();
+    try {
+      return values.at(0);
+    } catch (const std::exception &) {
+      throw tenes::load_error("ERROR: expected an integer in " + filename +
+                              " line: \"" + last_int_line + "\"");
+    }
+  };
 
-  const int version = next_ints().at(0);
+  const int version = next_scalar();
   if (version != 1) {
     std::stringstream ss;
     ss << "ERROR: " << filename << " has fermion format version " << version
        << " but this version of TeNeS supports only version 1";
     throw tenes::load_error(ss.str());
   }
-  const int loaded_N_UNIT = next_ints().at(0);
+  const int loaded_N_UNIT = next_scalar();
   if (loaded_N_UNIT != N_UNIT) {
     std::stringstream ss;
     ss << "ERROR: N_UNIT is " << N_UNIT << " but " << filename << " has "
@@ -242,7 +259,7 @@ void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
     throw tenes::load_error(ss.str());
   }
   const auto lsub = next_ints();
-  const int loaded_skew = next_ints().at(0);
+  const int loaded_skew = next_scalar();
   if (lsub.size() != 2 || lsub[0] != lattice.LX || lsub[1] != lattice.LY ||
       loaded_skew != lattice.skew) {
     std::stringstream ss;
@@ -293,7 +310,14 @@ void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
   for (int i = 0; i < N_UNIT; ++i) {
     finfo.virt[i] = virt[i];
   }
-  tenes::fermion::validate_neighbor_consistency(finfo, lattice);
+  try {
+    tenes::fermion::validate_neighbor_consistency(finfo, lattice);
+  } catch (const std::exception &e) {
+    throw tenes::load_error(
+        std::string(e.what()) + "\nHINT: the parity ledger in " + filename +
+        " disagrees between the two ends of a bond, so it does not describe "
+        "the lattice being loaded into.");
+  }
 }
 
 template <class ptensor>
@@ -303,7 +327,8 @@ void iTPS<ptensor>::validate_loaded_fermion_tensors() const {
   }
   for (int i = 0; i < N_UNIT; ++i) {
     const auto ft = tenes::fermion::wrap_Tn(Tn[i], finfo, i);
-    // parity_violation and max_abs scan the process-local slice only.
+    // parity_violation scans the process-local slice; max_abs may already
+    // reduce internally, but the extra allreduce is harmless.
     std::vector<double> reduced{tenes::fermion::parity_violation(ft),
                                 tenes::fermion::max_abs(ft)};
     tenes::allreduce_max(reduced, comm);

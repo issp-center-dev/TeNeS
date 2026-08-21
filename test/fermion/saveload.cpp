@@ -224,6 +224,22 @@ inline state_type make_state(const tenes::SquareLattice &lattice,
                     tenes::itps::TransferMatrix_Parameters{});
 }
 
+// The message of the tenes::load_error a fermionic load throws, or a marker
+// string when it throws something else (or nothing). Used to check that a
+// guard did not merely stand in for the one under test.
+inline std::string load_error_message(const tenes::SquareLattice &lattice,
+                                      const std::string &tag,
+                                      const std::string &dir) {
+  try {
+    make_state(lattice, make_params(true, tag, "", dir), false);
+  } catch (const tenes::load_error &e) {
+    return e.what();
+  } catch (const std::exception &e) {
+    return std::string("<not a load_error: ") + e.what() + ">";
+  }
+  return "<no exception>";
+}
+
 inline void inject(state_type &state, const std::vector<tenes::real_tensor> &Tn,
                    const lambda_table &lambda,
                    const tenes::fermion::parity_vector &virt) {
@@ -609,8 +625,15 @@ TEST_CASE("SL V6a a ledger inconsistent between neighbors is an error") {
              "1 0 0 0 # parity of the virtual leg 2 of Tn[0]");
 
   const auto lattice = make_lattice();
-  CHECK_THROWS(
-      make_state(lattice, make_params(true, "v6a_load", "", dir), false));
+  // Not a bare CHECK_THROWS: this fixture also violates V7 (the tensors do
+  // not respect the patched ledger), so "something threw" would stay green
+  // even with the neighbor-consistency check deleted. The message pins which
+  // guard fired -- the V7 message ("breaks fermion parity under the loaded
+  // parity ledger") does not contain this text.
+  CHECK_THROWS_WITH_AS(
+      make_state(lattice, make_params(true, "v6a_load", "", dir), false),
+      doctest::Contains("inconsistent virtual parity ledger"),
+      tenes::load_error);
 }
 
 TEST_CASE("SL V6b a ledger with a different L_sub is an error") {
@@ -657,6 +680,46 @@ TEST_CASE("SL V8 a bosonic load of a fermionic save is an error") {
   CHECK_THROWS_AS(
       make_state(lattice, make_params(false, "v8_load", "", dir), false),
       tenes::load_error);
+}
+
+TEST_CASE("SL a malformed fermion.dat is a load error") {
+  using namespace fermion_saveload;
+  const auto lattice = make_lattice();
+
+  SUBCASE("a parity entry that is not a number") {
+    const std::string dir = save_reference("parse_value");
+    const std::string path = dir + "/fermion.dat";
+    REQUIRE(tenes::util::path_exists(path));
+    // Four entries, so a length check (V5) cannot fire first; only the
+    // conversion of "x" can fail.
+    patch_line(path, virt_line(0, 0),
+               "0 1 x 0 # parity of the virtual leg 0 of Tn[0]");
+    CHECK_THROWS_WITH_AS(
+        make_state(lattice, make_params(true, "parse_value_load", "", dir),
+                   false),
+        doctest::Contains("fermion.dat"), tenes::load_error);
+    // "fermion.dat" on its own is a weak marker (the V7 hint names the file
+    // too), so make sure the parity guard is not the one answering here.
+    const std::string what =
+        load_error_message(lattice, "parse_value_msg", dir);
+    INFO("message: " << what);
+    CHECK(what.find("breaks fermion parity") == std::string::npos);
+  }
+
+  SUBCASE("a header line with no value at all") {
+    const std::string dir = save_reference("parse_empty");
+    const std::string path = dir + "/fermion.dat";
+    REQUIRE(tenes::util::path_exists(path));
+    patch_line(path, 1, "# N_UNIT");
+    CHECK_THROWS_WITH_AS(
+        make_state(lattice, make_params(true, "parse_empty_load", "", dir),
+                   false),
+        doctest::Contains("fermion.dat"), tenes::load_error);
+    const std::string what =
+        load_error_message(lattice, "parse_empty_msg", dir);
+    INFO("message: " << what);
+    CHECK(what.find("breaks fermion parity") == std::string::npos);
+  }
 }
 
 TEST_CASE("SL fermion accepts tensor save and load directories") {
