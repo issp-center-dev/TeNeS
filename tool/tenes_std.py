@@ -895,6 +895,19 @@ class MultisiteObservable:
         return ret
 
 
+def _drop_tiny(evo: np.ndarray, cutoff: float) -> np.ndarray:
+    """Zero entries below ``cutoff`` in magnitude.
+
+    eigh-based reconstruction of expm(-tau h) leaves O(eps) residue where the
+    exact result is zero; for a parity-even h those residues sit in the
+    parity-odd blocks, and the solver's fermion guard treats any nonzero
+    entry there as a genuine odd operator.
+    """
+    evo = np.array(evo)
+    evo[np.abs(evo) < cutoff] = 0.0
+    return evo
+
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
@@ -904,6 +917,7 @@ def make_evolution_onesite(
 ) -> List[SiteOperator]:
     D, V = np.linalg.eigh(hamiltonian.elements)
     evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate())
+    evo = _drop_tiny(evo, result_cutoff)
 
     return [SiteOperator(hamiltonian.site, evo, group=group)]
 
@@ -926,6 +940,7 @@ def make_evolution_twosite(
         np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate()),
         hamiltonian.elements.shape,
     )
+    evo = _drop_tiny(evo, result_cutoff)
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
 

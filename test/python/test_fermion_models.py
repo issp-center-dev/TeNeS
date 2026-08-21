@@ -895,3 +895,29 @@ class TestFermionFlagWithNonFermionicModelIsRejected:
         }
         parsed = std_toml(param)
         assert "fermion" not in parsed["parameter"].get("general", {})
+
+
+class TestHubbardGateIsExactlyParityEven:
+    """expm(-tau h) of a parity-even h is parity-even, but eigh-based
+    reconstruction leaves O(1e-16) noise in the odd blocks for the 16x16
+    Hubbard gate.  The solver's fermion guard is a strict zero test, so
+    that noise is a hard INPUT ERROR.  tenes_std must emit exact zeros."""
+
+    def test_emitted_hubbard_gate_has_no_parity_odd_element(self):
+        param = hubbard_param({"t": 1.0, "u": 4.0, "mu": 0.0})
+        param["parameter"] = {
+            "general": {"is_real": True},
+            "simple_update": {"tau": 0.01, "num_step": 1},
+            "ctm": {"dimension": 4},
+        }
+        text, _ = tenes_simple.tenes_simple(param)
+        model = tenes_std.Model(toml.loads(text))
+        parity = [0, 1, 1, 0]
+        for evo in model.simple_updates:
+            gate = evo.elements
+            odd = []
+            for i1, i2, o1, o2 in np.ndindex(gate.shape):
+                if (parity[i1] ^ parity[i2]) != (parity[o1] ^ parity[o2]):
+                    if gate[i1, i2, o1, o2] != 0.0:
+                        odd.append(((i1, i2, o1, o2), gate[i1, i2, o1, o2]))
+            assert odd == [], "parity-odd gate elements survive: %s" % odd[:4]
