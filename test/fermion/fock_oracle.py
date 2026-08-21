@@ -63,9 +63,30 @@ class Patch:
                     bonds.append((s, "b", self.site(x, y + 1), "t"))
         return bonds
 
+    def open_legs(self):
+        closed = set()
+        for a, aleg, b, bleg in self.internal_bonds():
+            closed.add((a, aleg))
+            closed.add((b, bleg))
+        return sorted(
+            (site, leg)
+            for site in range(self.nsite)
+            for leg in LEGS
+            if (site, leg) not in closed
+        )
+
 
 class Oracle:
-    def __init__(self, patch, tensors, leg_parities):
+    """Exact Fock-space construction of a small iTPS patch.
+
+    Labels are encoded as the occupation of an auxiliary mode, so a leg on an
+    internal bond must carry exactly one label per parity (e.g. ``[False, True]``)
+    to be contracted correctly; two labels of equal parity on a bond are not
+    distinguishable.  Open legs are filtered by label directly through
+    ``dangling_labels`` and may therefore carry several labels of equal parity.
+    """
+
+    def __init__(self, patch, tensors, leg_parities, dangling_labels=None):
         self.patch = patch
         self.tensors = tensors
         self.leg_parities = leg_parities
@@ -79,7 +100,28 @@ class Oracle:
             next_mode += 1
             self.mode[("a", b, bleg)] = next_mode
             next_mode += 1
+        self.dangling_labels = None
+        self.dangling_legs = []
+        if dangling_labels is not None:
+            open_legs = patch.open_legs()
+            missing = [key for key in open_legs if key not in dangling_labels]
+            if missing:
+                raise ValueError(f"dangling_labels misses open legs: {missing}")
+            for key in open_legs:
+                self.mode[("a",) + key] = next_mode
+                next_mode += 1
+            self.dangling_labels = {key: int(dangling_labels[key]) for key in open_legs}
+            self.dangling_legs = open_legs
         self.nmode = next_mode
+        self._physical_state = None
+
+    def dangling_creation_order(self):
+        order = []
+        for site, leg in self.dangling_legs:
+            parity = self.leg_parities[site][LEGS.index(leg)]
+            if label_occ(parity, self.dangling_labels[(site, leg)]) == 1:
+                order.append((site, leg))
+        return order
 
     def apply_annihilate(self, vec, mode):
         out = np.zeros_like(vec)
@@ -104,10 +146,17 @@ class Oracle:
     def apply_physical_projector(self, vec, site):
         parity = self.leg_parities[site]
         tensor = self.tensors[site]
+        fixed = []
+        if self.dangling_labels is not None:
+            for leg in LEGS:
+                if (site, leg) in self.dangling_labels:
+                    fixed.append((LEGS.index(leg), self.dangling_labels[(site, leg)]))
         out = np.zeros_like(vec)
         for idx in product(*[range(len(p)) for p in parity]):
             coeff = tensor[idx]
             if coeff == 0.0:
+                continue
+            if any(idx[axis] != label for axis, label in fixed):
                 continue
             term = vec
             for leg in OP_ORDER:
@@ -145,6 +194,8 @@ class Oracle:
     def state(self):
         vec = np.zeros(1 << self.nmode, dtype=np.float64)
         vec[0] = 1.0
+        for site, leg in self.dangling_creation_order():
+            vec = self.apply_create(vec, self.mode[("a", site, leg)])
         for bond in self.patch.internal_bonds():
             vec = self.apply_bond_creator(vec, bond)
         for site in range(self.patch.nsite):
@@ -152,17 +203,21 @@ class Oracle:
         return vec
 
     def physical_state(self):
+        if self._physical_state is not None:
+            return self._physical_state
         vec = self.state()
         aux_mask = 0
         for key, mode in self.mode.items():
             if key[0] == "a":
                 aux_mask |= 1 << mode
         if aux_mask == 0:
+            self._physical_state = vec
             return vec
         out = np.zeros_like(vec)
         for state, amp in enumerate(vec):
             if (state & aux_mask) == 0:
                 out[state] = amp
+        self._physical_state = out
         return out
 
     def norm(self):
@@ -179,6 +234,14 @@ class Oracle:
         psi = self.physical_state()
         ket = self.apply_annihilate(psi, self.mode[("f", j)])
         ket = self.apply_annihilate(ket, self.mode[("f", i)])
+        return float(np.vdot(psi, ket).real)
+
+    def density_density(self, i, j):
+        psi = self.physical_state()
+        ket = self.apply_annihilate(psi, self.mode[("f", j)])
+        ket = self.apply_create(ket, self.mode[("f", j)])
+        ket = self.apply_annihilate(ket, self.mode[("f", i)])
+        ket = self.apply_create(ket, self.mode[("f", i)])
         return float(np.vdot(psi, ket).real)
 
     def observables(self):
@@ -233,6 +296,69 @@ def make_case(lx, ly, parity, seed=0):
         for site in range(patch.nsite)
     ]
     return patch, tensors, leg_parities
+
+
+def make_case_open(lx, ly, parity, seed=0):
+    patch = Patch(lx, ly)
+    leg_parities = [
+        [parity, parity, parity, parity, [False, True]] for _ in range(patch.nsite)
+    ]
+    tensors = [
+        deterministic_tensor(site, leg_parities[site], seed)
+        for site in range(patch.nsite)
+    ]
+    return patch, tensors, leg_parities
+
+
+def mf_sum(patch, tensors, leg_parities, fn):
+    open_legs = patch.open_legs()
+    ranges = [
+        range(len(leg_parities[site][LEGS.index(leg)])) for site, leg in open_legs
+    ]
+    total = None
+    for labels in product(*ranges):
+        x = dict(zip(open_legs, labels))
+        value = fn(Oracle(patch, tensors, leg_parities, dangling_labels=x))
+        total = value if total is None else total + value
+    return total
+
+
+def mf_case_values(name, lx, ly, parity, seed, lam):
+    patch, tensors, leg_parities = make_case_open(lx, ly, parity, seed)
+    lam = np.asarray(lam, dtype=np.float64)
+    weighted = [tensor.copy() for tensor in tensors]
+    for site, leg in patch.open_legs():
+        shape = [1] * 5
+        shape[LEGS.index(leg)] = len(lam)
+        weighted[site] = weighted[site] * lam.reshape(shape)
+    bonds = patch.internal_bonds()
+
+    def fn(oracle):
+        values = [oracle.norm()]
+        values += [oracle.one_body(i, i) for i in range(patch.nsite)]
+        for a, _, b, _ in bonds:
+            values.append(oracle.one_body(a, b) + oracle.one_body(b, a))
+            values.append(oracle.pairing(a, b) + oracle.pairing(b, a))
+            values.append(oracle.density_density(a, b))
+        return np.array(values, dtype=np.float64)
+
+    total = mf_sum(patch, weighted, leg_parities, fn)
+    norm = float(total[0])
+    out = [(f"{name}.norm", norm)]
+    for i in range(patch.nsite):
+        out.append((f"{name}.n{i}", float(total[1 + i]) / norm))
+    pos = 1 + patch.nsite
+    for a, _, b, _ in bonds:
+        out.append((f"{name}.hop{a}{b}", float(total[pos]) / norm))
+        out.append((f"{name}.pair{a}{b}", float(total[pos + 1]) / norm))
+        out.append((f"{name}.nn{a}{b}", float(total[pos + 2]) / norm))
+        pos += 3
+    return out
+
+
+def print_mf_case(name, lx, ly, parity, seed, lam):
+    for key, value in mf_case_values(name, lx, ly, parity, seed, lam):
+        print(f"{key} = {value:.17e}")
 
 
 def print_case(name, lx, ly, parity, seed=0):
@@ -367,6 +493,13 @@ def main():
     print_case("seed173_horizontal_2site", 2, 1, [False, True], 173)
     print_case("seed173_vertical_2site", 1, 2, [False, True], 173)
     print_case("seed173_plaquette_2x2", 2, 2, [False, True], 173)
+    lam = [1.0, 0.7]
+    print_mf_case("mf_horizontal_2site", 2, 1, [False, True], 0, lam)
+    print_mf_case("mf_vertical_2site", 1, 2, [False, True], 0, lam)
+    print_mf_case("mf_seed173_horizontal_2site", 2, 1, [False, True], 173, lam)
+    print_mf_case("mf_seed173_vertical_2site", 1, 2, [False, True], 173, lam)
+    print_mf_case("mf_single_site", 1, 1, [False, True], 0, lam)
+    print_mf_case("mf_seed173_single_site", 1, 1, [False, True], 173, lam)
 
 
 if __name__ == "__main__":
