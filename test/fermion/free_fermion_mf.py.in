@@ -18,6 +18,11 @@
 # ([parameter.ctm] meanfield_env = true). The simple update is identical for
 # the CTM and MF runs (same seed, same steps), so only the measurement
 # differs; the MF run must not build a CTM at all.
+#
+# Golden regeneration (only when the numerical behaviour changes on purpose):
+# run `ctest -R FreeFermionMF` in the build tree and copy
+# <build>/test/output_FreeFermionMF/free_fermion_mf.dat to
+# test/data/output_FreeFermionMF/free_fermion_mf.dat in the source tree.
 
 import os
 import shutil

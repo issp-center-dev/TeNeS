@@ -156,6 +156,86 @@ static tenes::fermion::ftensor<tenes::complex_tensor> mf_to_complex(
                                                         a.parity};
 }
 
+// The open variant of make_r4_tensor: the physical leg is r4_phys (d = 4),
+// every virtual leg is {even, odd}. Same formula as make_r4_tensor, so the
+// only difference from the layer-2 sites is that the open legs of B carry
+// odd labels that s_A has to cross inside apply_pair_op.
+static ft make_mf4_tensor(int site, int seed) {
+  const tenes::fermion::parity_vector bond{false, true};
+  const tenes::fermion::leg_parities par{bond, bond, bond, bond, r4_phys};
+  tenes::real_tensor t(mptensor::Shape(2, 2, 2, 2, 4));
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    auto idx = t.global_index(n);
+    if (tenes::fermion::count_odd(par, idx) % 2 == 0) {
+      const double x = static_cast<double>(
+          (site + 2) * (1 + seed + (3 + seed % 5) * idx[0] +
+                        (4 + seed % 5) * idx[1] + (5 + seed % 5) * idx[2] +
+                        (6 + seed % 5) * idx[3] + (11 + seed % 7) * idx[4]));
+      t.set_value(idx, 0.19 * std::sin(x) + 0.13 * std::cos(0.41 * x));
+    }
+  }
+  return ft{t, par};
+}
+
+using mf_cft = tenes::fermion::ftensor<tenes::complex_tensor>;
+
+// a * exp(i theta(idx)) with a deterministic, non-separable phase
+//   theta = scale * ((site + 1) * 0.37 * sum_ax (ax + 1) idx[ax]
+//                    + 0.23 * idx[4] * sum_{ax < 4} idx[ax]),
+// so that the virtual legs and the physical leg pick up phases that do not
+// cancel between the two sites; scale = 0 gives back the real tensor.
+static mf_cft mf_phased(const ft& a, int site, double scale) {
+  tenes::complex_tensor t(a.t.shape());
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    auto idx = a.t.global_index(n);
+    double v;
+    a.t.get_value(idx, v);
+    double linear = 0.0;
+    double virt = 0.0;
+    for (std::size_t ax = 0; ax < idx.size(); ++ax) {
+      linear += static_cast<double>((ax + 1) * idx[ax]);
+      if (ax < 4) {
+        virt += static_cast<double>(idx[ax]);
+      }
+    }
+    const double theta =
+        scale * ((site + 1) * 0.37 * linear + 0.23 * idx[4] * virt);
+    t.set_value(idx, v * std::polar(1.0, theta));
+  }
+  return mf_cft{t, a.parity};
+}
+
+static mf_cft mf2_wrap_complex(const ft& op) {
+  const tenes::fermion::parity_vector p{false, true};
+  return tenes::fermion::wrap_twosite_gate(mf_complexify(op.t), p, p);
+}
+
+// e^{i phi} |01><10|-type single term (in_A, in_B, out_A, out_B) =
+// (0, 1, 1, 0): moves the particle from B to A. Not Hermitian on its own.
+static mf_cft mf2_complex_hop_term(double phi) {
+  const tenes::fermion::parity_vector p{false, true};
+  tenes::complex_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(0, 1, 1, 0), std::polar(1.0, phi));
+  return tenes::fermion::wrap_twosite_gate(op, p, p);
+}
+
+// Its Hermitian conjugate: (1, 0, 0, 1) = e^{-i phi}.
+static mf_cft mf2_complex_hop_term_hc(double phi) {
+  const tenes::fermion::parity_vector p{false, true};
+  tenes::complex_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(1, 0, 0, 1), std::polar(1.0, -phi));
+  return tenes::fermion::wrap_twosite_gate(op, p, p);
+}
+
+// t e^{i phi} c_A^dag c_B + h.c. with t = 1 (Hermitian).
+static mf_cft mf2_complex_hop(double phi) {
+  const tenes::fermion::parity_vector p{false, true};
+  tenes::complex_tensor op(mptensor::Shape(2, 2, 2, 2));
+  op.set_value(mptensor::Index(0, 1, 1, 0), std::polar(1.0, phi));
+  op.set_value(mptensor::Index(1, 0, 0, 1), std::polar(1.0, -phi));
+  return tenes::fermion::wrap_twosite_gate(op, p, p);
+}
+
 }  // namespace
 
 TEST_CASE("MF layer1 d=2 pair measurement matches the Fock oracle") {
@@ -425,4 +505,241 @@ TEST_CASE("MF build_pair_state and apply_pair_op reject wrong ranks") {
       apply_pair_op(mf_direct_pair(a, b, reduced_pair_direction::horizontal),
                     r2_number_op()),
       std::runtime_error);
+}
+
+// important-1: layer 2 uses make_r4_tensor(2,1,.) / (1,2,.), whose open legs
+// on the B side are all one-dimensional even, so the crossing sign that the
+// restore transpose of apply_pair_op pays when s_A is moved back past the
+// open legs of B is identically +1 there. Here every virtual leg is
+// {even, odd} and the physical leg is d = 4, so both sign sources (odd open
+// labels and the (odd,odd)->(even,even) channel of the hopping) act at once.
+TEST_CASE("MF layer2 d=4 with odd open legs matches the direct path") {
+  using tenes::fermion::build_pair_state;
+  using tenes::fermion::contract_pair_MF;
+  using tenes::fermion::reduced_pair_direction;
+  for (const int seed : {0, 173}) {
+    for (const auto direction : {reduced_pair_direction::horizontal,
+                                 reduced_pair_direction::vertical}) {
+      const bool horizontal = direction == reduced_pair_direction::horizontal;
+      const std::string label =
+          std::string(horizontal ? "H" : "V") + " seed=" + std::to_string(seed);
+      const ft a = make_mf4_tensor(0, seed);
+      const ft b = make_mf4_tensor(1, seed);
+      const ft psi = mf_direct_pair(a, b, direction);
+      const ft pair = build_pair_state(a, b, direction);
+      REQUIRE(pair.rank() == 8);
+      for (int ax = 0; ax < 8; ++ax) {
+        const std::size_t want = (ax == 3 || ax == 7) ? 4 : 2;
+        CHECK(pair.shape()[ax] == want);
+      }
+
+      const double norm = contract_pair_MF(pair);
+      CHECK(norm > 0.0);
+      CHECK(norm == doctest::Approx(r2_norm(psi)).epsilon(1e-12));
+
+      const ft hop = r4_wrap(r4_hop_plain(), true, false);
+      const ft nn = r4_wrap(r4_nn_plain(), true, false);
+      const double hop_ref = r2_expect_two(psi, 3, 7, hop);
+      const double nn_ref = r2_expect_two(psi, 3, 7, nn);
+      const double hop_mf = contract_pair_MF(pair, hop) / norm;
+      const double nn_mf = contract_pair_MF(pair, nn) / norm;
+      // the hopping must actually probe the state: a vanishing value would
+      // hide a sign error behind 0 == -0
+      CHECK(std::abs(hop_ref) > 1.0e-6);
+      CHECK(std::abs(nn_ref) > 1.0e-6);
+      CHECK(hop_mf == doctest::Approx(hop_ref).epsilon(1e-12));
+      CHECK(nn_mf == doctest::Approx(nn_ref).epsilon(1e-12));
+
+      // negative control: verbatim loading (no input swap) is a different
+      // operator on the doubly-odd input channel of the hopping
+      const double hop_plain =
+          contract_pair_MF(pair, r4_wrap(r4_hop_plain(), false, false)) / norm;
+      const double hop_scale = std::max(1.0e-6, std::abs(hop_ref));
+      CHECK(std::abs(hop_plain - hop_ref) > 0.1 * hop_scale);
+
+      // seen from the B end: graded transpose keeps the bond operator, the
+      // plain transpose does not
+      const ft o_b = tenes::fermion::transpose(hop, mptensor::Axes(1, 0, 3, 2));
+      const ft o_b_plain{mptensor::transpose(hop.t, mptensor::Axes(1, 0, 3, 2)),
+                         hop.parity};
+      const double hop_b = contract_pair_MF(pair, o_b) / norm;
+      const double hop_b_plain = contract_pair_MF(pair, o_b_plain) / norm;
+      CHECK(hop_b == doctest::Approx(hop_ref).epsilon(1e-12));
+      CHECK(std::abs(hop_b_plain - hop_ref) > 0.1 * hop_scale);
+
+      std::cout << std::setprecision(17) << "MF layer2-odd " << label
+                << " norm=" << norm << " hop_ref=" << hop_ref
+                << " hop_mf=" << hop_mf << " hop_plain=" << hop_plain
+                << " hop_b=" << hop_b << " hop_b_plain=" << hop_b_plain
+                << " nn_ref=" << nn_ref << " nn_mf=" << nn_mf << std::endl;
+    }
+  }
+}
+
+// The same linearity check as layer 3, on the d = 4 sites with odd open
+// labels: fixing the six open legs of the pair to every one of the 64 label
+// patterns and summing the unnormalized traces reproduces the single call.
+TEST_CASE("MF layer3 d=4 contract_pair_MF sums over fixed open-leg labels") {
+  using tenes::fermion::build_pair_state;
+  using tenes::fermion::contract_pair_MF;
+  using tenes::fermion::reduced_pair_direction;
+  const ft hop = r4_wrap(r4_hop_plain(), true, false);
+  for (const auto direction :
+       {reduced_pair_direction::horizontal, reduced_pair_direction::vertical}) {
+    const ft a = make_mf4_tensor(0, 0);
+    const ft b = make_mf4_tensor(1, 0);
+    const std::vector<int> legs_a = mf_open_legs_a(direction);
+    const std::vector<int> legs_b = mf_open_legs_b(direction);
+
+    const ft pair = build_pair_state(a, b, direction);
+    const double norm = contract_pair_MF(pair);
+    const double hop_value = contract_pair_MF(pair, hop);
+    REQUIRE(std::abs(hop_value) > 1.0e-6 * norm);
+
+    double norm_sum = 0.0;
+    double hop_sum = 0.0;
+    int odd_patterns = 0;
+    for (int labels = 0; labels < 64; ++labels) {
+      ft a_x = a;
+      ft b_x = b;
+      for (int i = 0; i < 3; ++i) {
+        const std::size_t la = (labels >> i) & 1;
+        const std::size_t lb = (labels >> (3 + i)) & 1;
+        a_x = tenes::fermion::slice(a_x, legs_a[i], la, la + 1);
+        b_x = tenes::fermion::slice(b_x, legs_b[i], lb, lb + 1);
+      }
+      const ft pair_x = build_pair_state(a_x, b_x, direction);
+      const double norm_x = contract_pair_MF(pair_x);
+      const double hop_x = contract_pair_MF(pair_x, hop);
+      // patterns with an odd label on B contribute with both signs of the
+      // crossing; they must not be dropped
+      if (((labels >> 3) & 7) != 0 && std::abs(hop_x) > 1.0e-12) {
+        ++odd_patterns;
+      }
+      norm_sum += norm_x;
+      hop_sum += hop_x;
+    }
+    std::cout << std::setprecision(17) << "MF layer3 d=4 "
+              << (direction == reduced_pair_direction::horizontal ? "H" : "V")
+              << " norm=" << norm << " sum=" << norm_sum << " hop=" << hop_value
+              << " sum=" << hop_sum << " odd_patterns=" << odd_patterns
+              << std::endl;
+    CHECK(odd_patterns > 0);
+    CHECK(norm_sum == doctest::Approx(norm).epsilon(1e-12));
+    CHECK(hop_sum == doctest::Approx(hop_value).epsilon(1e-12));
+  }
+}
+
+// important-2: a genuinely complex pair state (odd open labels, element-wise
+// phases). The graded contraction must still give a real positive norm and
+// real expectation values for Hermitian operators, and the expectation of a
+// single complex hopping term must be the complex conjugate of that of its
+// Hermitian conjugate.
+TEST_CASE("MF complex phased pair state keeps Hermitian expectations real") {
+  using tenes::fermion::build_pair_state;
+  using tenes::fermion::contract_pair_MF;
+  constexpr auto direction = tenes::fermion::reduced_pair_direction::horizontal;
+  constexpr double phi = 0.6;
+  const ft a = mf2_site_a(direction, 0);
+  const ft b = mf2_site_b(direction, 0);
+  const mf_cft n_a = mf2_wrap_complex(r2_density_a_op());
+  const mf_cft n_b = mf2_wrap_complex(r2_density_b_op());
+  const mf_cft hop = mf2_wrap_complex(r2_hop_op());
+  const mf_cft nn = mf2_wrap_complex(mf2_nn_op());
+  const mf_cft pairing = mf2_wrap_complex(r2_pair_op());
+
+  const mf_cft a_c = mf_phased(a, 0, 1.0);
+  const mf_cft b_c = mf_phased(b, 1, 1.0);
+  const mf_cft pair_c = build_pair_state(a_c, b_c, direction);
+  REQUIRE(pair_c.rank() == 8);
+
+  const std::complex<double> norm_c = contract_pair_MF(pair_c);
+  CHECK(std::abs(norm_c.imag()) <= 1e-12);
+  CHECK(norm_c.real() > 0.0);
+  const double norm = norm_c.real();
+
+  // the phases are not a gauge: the state differs from the real one
+  const ft pair_r = build_pair_state(a, b, direction);
+  const double hop_r = contract_pair_MF(pair_r, mf2_wrap(r2_hop_op())) /
+                       contract_pair_MF(pair_r);
+
+  const std::complex<double> n0 = contract_pair_MF(pair_c, n_a) / norm;
+  const std::complex<double> n1 = contract_pair_MF(pair_c, n_b) / norm;
+  const std::complex<double> hop01 = contract_pair_MF(pair_c, hop) / norm;
+  const std::complex<double> nn01 = contract_pair_MF(pair_c, nn) / norm;
+  const std::complex<double> pair01 = contract_pair_MF(pair_c, pairing) / norm;
+  std::cout << std::setprecision(17) << "MF complex phased norm=" << norm_c
+            << " n0=" << n0 << " n1=" << n1 << " hop01=" << hop01
+            << " nn01=" << nn01 << " pair01=" << pair01
+            << " real hop01=" << hop_r << std::endl;
+  CHECK(std::abs(n0.imag()) <= 1e-12);
+  CHECK(std::abs(n1.imag()) <= 1e-12);
+  CHECK(std::abs(hop01.imag()) <= 1e-12);
+  CHECK(std::abs(nn01.imag()) <= 1e-12);
+  CHECK(std::abs(pair01.imag()) <= 1e-12);
+  CHECK(n0.real() > 0.0);
+  CHECK(n0.real() < 1.0);
+  CHECK(n1.real() > 0.0);
+  CHECK(n1.real() < 1.0);
+  CHECK(std::abs(hop01.real() - hop_r) > 1.0e-6);
+
+  // single term e^{i phi} c_A^dag c_B: complex expectation, and the
+  // expectation of its Hermitian conjugate is the complex conjugate
+  const std::complex<double> term =
+      contract_pair_MF(pair_c, mf2_complex_hop_term(phi)) / norm;
+  const std::complex<double> term_hc =
+      contract_pair_MF(pair_c, mf2_complex_hop_term_hc(phi)) / norm;
+  std::cout << std::setprecision(17) << "MF complex phased term=" << term
+            << " term_hc=" << term_hc << std::endl;
+  CHECK(std::abs(term.imag()) > 1.0e-6);
+  CHECK(term_hc.real() == doctest::Approx(term.real()).epsilon(1e-12));
+  CHECK(term_hc.imag() == doctest::Approx(-term.imag()).epsilon(1e-12));
+
+  // Hermitian complex hopping t e^{i phi} c_A^dag c_B + h.c.: real for
+  // +phi and -phi, equal to 2 Re(term), and the two signs of phi differ
+  // (they differ by -4 sin(phi) Im<c_A^dag c_B>)
+  const std::complex<double> hop_plus =
+      contract_pair_MF(pair_c, mf2_complex_hop(phi)) / norm;
+  const std::complex<double> hop_minus =
+      contract_pair_MF(pair_c, mf2_complex_hop(-phi)) / norm;
+  const std::complex<double> term_minus =
+      contract_pair_MF(pair_c, mf2_complex_hop_term(-phi)) / norm;
+  std::cout << std::setprecision(17)
+            << "MF complex phased hop(+phi)=" << hop_plus
+            << " hop(-phi)=" << hop_minus << std::endl;
+  CHECK(std::abs(hop_plus.imag()) <= 1e-12);
+  CHECK(std::abs(hop_minus.imag()) <= 1e-12);
+  CHECK(hop_plus.real() == doctest::Approx(2.0 * term.real()).epsilon(1e-12));
+  CHECK(hop_minus.real() ==
+        doctest::Approx(2.0 * term_minus.real()).epsilon(1e-12));
+  CHECK(std::abs(hop_plus.real() - hop_minus.real()) > 1.0e-6);
+  // the coefficient enters linearly: e^{-i phi} <c_A^dag c_B> =
+  // e^{-2 i phi} (e^{i phi} <c_A^dag c_B>)
+  const std::complex<double> rotated = term * std::polar(1.0, -2.0 * phi);
+  CHECK(term_minus.real() == doctest::Approx(rotated.real()).epsilon(1e-12));
+  CHECK(term_minus.imag() == doctest::Approx(rotated.imag()).epsilon(1e-12));
+}
+
+TEST_CASE("MF complex phased pair state at zero phase matches layer 1") {
+  using tenes::fermion::build_pair_state;
+  using tenes::fermion::contract_pair_MF;
+  const mf_cft hop = mf2_wrap_complex(r2_hop_op());
+  const mf_cft nn = mf2_wrap_complex(mf2_nn_op());
+  for (const auto& ref : mf_refs) {
+    const mf_cft a_c = mf_phased(mf2_site_a(ref.direction, ref.seed), 0, 0.0);
+    const mf_cft b_c = mf_phased(mf2_site_b(ref.direction, ref.seed), 1, 0.0);
+    const mf_cft pair_c = build_pair_state(a_c, b_c, ref.direction);
+    const std::complex<double> norm_c = contract_pair_MF(pair_c);
+    const std::complex<double> hop01 = contract_pair_MF(pair_c, hop) / norm_c;
+    const std::complex<double> nn01 = contract_pair_MF(pair_c, nn) / norm_c;
+    std::cout << std::setprecision(17) << "MF complex zero-phase " << ref.name
+              << " norm=" << norm_c << " hop01=" << hop01 << " nn01=" << nn01
+              << std::endl;
+    CHECK(norm_c.real() == doctest::Approx(ref.norm).epsilon(1e-12));
+    CHECK(std::abs(norm_c.imag()) <= 1e-12);
+    CHECK(hop01.real() == doctest::Approx(ref.hop01).epsilon(1e-12));
+    CHECK(std::abs(hop01.imag()) <= 1e-12);
+    CHECK(nn01.real() == doctest::Approx(ref.nn01).epsilon(1e-12));
+    CHECK(std::abs(nn01.imag()) <= 1e-12);
+  }
 }

@@ -552,7 +552,7 @@ parity = [0, 1]
 [parameter.general]
 fermion = true
 )");
-    // L_sub = [2, 2]: same reasoning as "fermion rejects mean-field
+    // L_sub = [2, 2]: same reasoning as "fermion accepts mean-field
     // environment" above -- a 1-wide cell would trip the new
     // tensor.L_sub-dimensions guard before the parity-odd one-site
     // operator check this subcase is named for.
