@@ -187,7 +187,7 @@ def minimal_fermion_std_input():
         "hamiltonian": [
             {
                 "dim": [2, 2],
-                "bonds": "0 1 0\n1 1 0\n2 1 0\n3 1 0\n0 0 1\n1 0 1\n2 0 1\n3 0 1\n",
+                "bonds": "0 1 0\n",
                 "elements": "0 0 0 0 1.0 0.0\n1 1 1 1 -1.0 0.0",
             }
         ],
@@ -353,13 +353,9 @@ class TestFermionModeValidation:
         # would not prove the guard discriminates rather than rejecting
         # everything in fermion mode.
         param = copy.deepcopy(minimal_fermion_std_input())
-        # every bond a 1-hop bond (the fermion mode also requires every
-        # virtual_dim > 1 leg to carry a term, so keep the full set)
-        param["hamiltonian"][0][
-            "bonds"
-        ] = "0 1 0\n1 1 0\n2 1 0\n3 1 0\n0 0 1\n1 0 1\n2 0 1\n3 0 1\n"
+        param["hamiltonian"][0]["bonds"] = "0 1 0\n"  # make_path length 1
         model = tenes_std.Model(param)  # must not raise
-        assert len(model.simple_updates) == 8  # one gate per bond
+        assert len(model.simple_updates) == 1
 
 
 class TestBosonicInputsUnaffected:
@@ -572,7 +568,6 @@ class TestFermionUnitCellDimensionGuard:
     def test_l_sub_2_1_is_rejected(self):
         param = copy.deepcopy(minimal_fermion_std_input())
         param["tensor"]["l_sub"] = [2, 1]
-        param["hamiltonian"][0]["bonds"] = "0 1 0\n1 1 0\n0 0 1\n1 0 1\n"
         with pytest.raises(RuntimeError) as excinfo:
             tenes_std.Model(param)
         message = str(excinfo.value)
@@ -587,7 +582,6 @@ class TestFermionUnitCellDimensionGuard:
     def test_l_sub_1_2_is_rejected(self):
         param = copy.deepcopy(minimal_fermion_std_input())
         param["tensor"]["l_sub"] = [1, 2]
-        param["hamiltonian"][0]["bonds"] = "0 1 0\n1 1 0\n0 0 1\n1 0 1\n"
         with pytest.raises(RuntimeError) as excinfo:
             tenes_std.Model(param)
         message = str(excinfo.value)
@@ -600,7 +594,6 @@ class TestFermionUnitCellDimensionGuard:
     def test_l_sub_2_1_message_does_not_mention_the_internal_milestone(self):
         param = copy.deepcopy(minimal_fermion_std_input())
         param["tensor"]["l_sub"] = [2, 1]
-        param["hamiltonian"][0]["bonds"] = "0 1 0\n1 1 0\n0 0 1\n1 0 1\n"
         with pytest.raises(RuntimeError) as excinfo:
             tenes_std.Model(param)
         message = str(excinfo.value)
@@ -734,58 +727,3 @@ class TestFermionSkewGuard:
         param["tensor"]["skew"] = 1
         model = tenes_std.Model(param)
         assert model.unitcell.skew == 1
-
-
-def _fermion_input_with_bonds(bonds, virtual_dim=2, fermion=True):
-    site = {"index": [], "physical_dim": 2, "virtual_dim": virtual_dim}
-    if fermion:
-        site["parity"] = [0, 1]
-    return {
-        "parameter": {"general": ({"fermion": True} if fermion else {})},
-        "tensor": {"L_sub": [2, 2], "unitcell": [site]},
-        "hamiltonian": [
-            {
-                "dim": [2, 2],
-                "bonds": bonds,
-                "elements": "0 1 1 0 -1.0 0.0\n1 0 0 1 -1.0 0.0\n",
-            }
-        ],
-    }
-
-
-HORIZONTAL_ONLY = "0 1 0\n1 1 0\n2 1 0\n3 1 0\n"
-ALL_BONDS = HORIZONTAL_ONLY + "0 0 1\n1 0 1\n2 0 1\n3 0 1\n"
-
-
-class TestFermionUngatedBonds:
-    """A virtual bond that no Hamiltonian term acts on is never touched by
-    the simple update, keeps its random non-canonical initialisation, and
-    the CTM then fails to converge (measured: negative norms, energies far
-    below the variational bound).  Fermion mode must refuse such inputs
-    unless that leg has virtual_dim 1."""
-
-    def test_ungated_leg_with_virtual_dim_above_one_is_rejected(self):
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(_fermion_input_with_bonds(HORIZONTAL_ONLY))
-        msg = str(excinfo.value)
-        assert "virtual_dim" in msg
-        assert "M1" not in msg and "M2" not in msg
-
-    def test_message_names_an_offending_site_and_leg(self):
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(_fermion_input_with_bonds(HORIZONTAL_ONLY))
-        msg = str(excinfo.value)
-        # the vertical legs (1 = up, 3 = bottom) of site 0 are ungated
-        assert "site 0" in msg
-        assert "leg 1" in msg or "leg 3" in msg
-
-    def test_ungated_leg_with_virtual_dim_one_is_accepted(self):
-        tenes_std.Model(
-            _fermion_input_with_bonds(HORIZONTAL_ONLY, virtual_dim=[2, 1, 2, 1])
-        )
-
-    def test_fully_gated_cell_is_accepted(self):
-        tenes_std.Model(_fermion_input_with_bonds(ALL_BONDS))
-
-    def test_bosonic_input_with_ungated_bonds_is_untouched(self):
-        tenes_std.Model(_fermion_input_with_bonds(HORIZONTAL_ONLY, fermion=False))

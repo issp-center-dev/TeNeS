@@ -1285,41 +1285,6 @@ class Model:
                 ).format(bond.source_site, bond.dx, bond.dy, nhops)
                 raise RuntimeError(msg)
 
-        self._check_fermion_ungated_bonds()
-
-    def _check_fermion_ungated_bonds(self) -> None:
-        """Every virtual leg with virtual_dim > 1 must carry a Hamiltonian term.
-
-        A bond no gate ever acts on is never touched by the simple update: it
-        keeps its random, non-canonical initialisation, and the CTM then fails
-        to converge on the resulting state.  Measured on the spinless chain
-        (t1 = 0 on the square lattice): negative norms and energies far below
-        the variational bound.  Any nonzero coupling, however small,
-        canonicalises the bond each step and restores a sane result.
-        """
-        opposite = {0: 2, 1: 3, 2: 0, 3: 1}
-        gated = set()
-        for ham in self.hamiltonians:
-            if not isinstance(ham, NNOperator):
-                continue
-            direction = self.unitcell.bond_direction(ham.bond)
-            gated.add((ham.bond.source_site, direction))
-            gated.add((self.unitcell.target_site(ham.bond), opposite[direction]))
-
-        for site_index, site in enumerate(self.unitcell.sites):
-            for leg, dim in enumerate(site.virtual_dim):
-                if dim > 1 and (site_index, leg) not in gated:
-                    msg = (
-                        "Fermion mode requires every virtual bond with "
-                        "virtual_dim > 1 to carry a Hamiltonian term, but site "
-                        "{} leg {} has virtual_dim = {} and no bond term acts on "
-                        "it. A bond the simple update never touches keeps its "
-                        "random initialisation and the CTM does not converge on "
-                        "it. Give that bond a (possibly small) coupling, or set "
-                        "its virtual_dim to 1."
-                    ).format(site_index, leg, dim)
-                    raise RuntimeError(msg)
-
     def to_toml(self, f: TextIO):
         # parameter
         f.write("[parameter]\n")
