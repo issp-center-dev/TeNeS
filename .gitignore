@@ -11,6 +11,7 @@ out-*
 # from the repository root. Anchored at the root so that the golden data under
 # test/data/output_*/ stays tracked.
 /output_*
+/output/
 
 doxygen_out
 
