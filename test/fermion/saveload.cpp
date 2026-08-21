@@ -62,6 +62,12 @@ inline tenes::SquareLattice make_lattice(int vdim = sl_D) {
   return lattice;
 }
 
+// One parent directory for every case: running this binary outside the build
+// tree then leaves a single directory behind instead of one per case.
+inline std::string case_dir_name(const std::string &tag) {
+  return "output_test_fermion_saveload/" + tag;
+}
+
 inline tenes::itps::PEPS_Parameters make_params(bool fermion,
                                                 const std::string &tag,
                                                 const std::string &save_dir,
@@ -73,7 +79,7 @@ inline tenes::itps::PEPS_Parameters make_params(bool fermion,
   }
   params.MeanField_Env = true;
   params.print_level = tenes::PrintLevel::none;
-  params.outdir = "output_test_fermion_saveload_" + tag;
+  params.outdir = case_dir_name(tag);
   params.CHI = 4;
   params.Use_RSVD = false;
   params.seed = 11;
@@ -83,7 +89,7 @@ inline tenes::itps::PEPS_Parameters make_params(bool fermion,
 }
 
 inline std::string save_dir_name(const std::string &tag) {
-  return "output_test_fermion_saveload_" + tag + "/tensors";
+  return case_dir_name(tag) + "/tensors";
 }
 
 // The tests create their own directories; a stale one from an earlier run
@@ -358,7 +364,7 @@ inline std::string save_reference(
     const std::string &tag, const tenes::fermion::parity_vector &virt_state,
     const tenes::fermion::parity_vector &virt_ledger) {
   const std::string dir = save_dir_name(tag);
-  reset_dir("output_test_fermion_saveload_" + tag);
+  reset_dir(case_dir_name(tag));
   const auto lattice = make_lattice();
   auto state = make_state(lattice, make_params(true, tag, dir, ""), false);
   inject(state, deterministic_state(virt_state), bond_lambdas(lattice),
@@ -399,7 +405,7 @@ TEST_CASE("SL boson save writes no parity ledger") {
   using namespace fermion_saveload;
   const std::string tag = "boson_format";
   const std::string dir = save_dir_name(tag);
-  reset_dir("output_test_fermion_saveload_" + tag);
+  reset_dir(case_dir_name(tag));
   const auto lattice = make_lattice();
   make_state(lattice, make_params(false, tag, dir, ""), false).save_tensors();
   REQUIRE(tenes::util::path_exists(dir + "/params.dat"));
@@ -436,7 +442,7 @@ TEST_CASE("SL layer2 measured values survive the round trip") {
   using namespace fermion_saveload;
   const std::string tag = "measure";
   const std::string dir = save_dir_name(tag);
-  reset_dir("output_test_fermion_saveload_" + tag);
+  reset_dir(case_dir_name(tag));
 
   const auto lattice = make_lattice();
   const auto Tn = deterministic_state(sl_virt);
@@ -499,7 +505,7 @@ TEST_CASE("SL V1 a fermionic load without fermion.dat is an error") {
   using namespace fermion_saveload;
   const std::string tag = "v1";
   const std::string dir = save_dir_name(tag);
-  reset_dir("output_test_fermion_saveload_" + tag);
+  reset_dir(case_dir_name(tag));
   const auto lattice = make_lattice();
   make_state(lattice, make_params(false, tag, dir, ""), false).save_tensors();
   REQUIRE_FALSE(tenes::util::path_exists(dir + "/fermion.dat"));

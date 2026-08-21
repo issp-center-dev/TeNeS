@@ -4,6 +4,14 @@ usr
 usr-*
 .clangd
 
+# CMakePresets build trees
+out-*
+
+# Output directories written by the tests and by tenes itself when it is run
+# from the repository root. Anchored at the root so that the golden data under
+# test/data/output_*/ stays tracked.
+/output_*
+
 doxygen_out
 
 icecream.cpp
@@ -92,7 +100,8 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
