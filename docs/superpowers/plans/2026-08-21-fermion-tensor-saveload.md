@@ -156,7 +156,10 @@
    2 サイトのホッピング(`(0,1,1,0) = (1,0,0,1) = -1`)を各サイトの `dx=+1` / `dy=+1` に置く。
    **`MeanField_Env = true` を使うこと**(CTM 環境テンソルは保存されても意味を持たないので、
    CTM で測ると保存・読み込みと無関係な要因が混ざる)。
-7. `lambda_tensor` が保存前後で一致すること。
+7. `lambda_tensor` が保存前後で**厳密に**(`operator==` で)一致すること。
+   フィクスチャの λ には有効 6 桁では往復しない値(例 `1.0/3.0`、`std::sqrt(2.0)/2.0`)を使う。
+   現状の `save_tensors()` は既定精度(有効 6 桁)で λ を書くので、これは Step 5b の
+   精度修正を要求するテストになる。
 
 層3(ガード): V1〜V8 のそれぞれについて、その条件だけを満たす保存ディレクトリを作り、
 読み込みが例外を投げること。作り方の指針:
@@ -427,6 +430,23 @@ void iTPS<ptensor>::validate_loaded_fermion_tensors() const {
 
   必要な `#include`(`<sstream>`、`<array>`、`"../fermion/fops.hpp"`、
   `"../fermion/fermion_info.hpp"`)を確認して足す。
+
+- [ ] **Step 5b(Codex):** 同ファイル — `save_tensors()` の λ 書き出しを厳密往復にする。
+  現状は `std::ofstream` の既定精度(有効 6 桁)なので、保存・読み込みで λ が丸められる。
+  `density.cpp:122` と同じ書式指定を足す:
+
+```cpp
+      std::ofstream ofs(save_dir + "/lambda_" + std::to_string(i) + ".dat");
+      // max_digits10 round-trips a double exactly; the default 6 significant
+      // digits silently truncated the Schmidt weights on every checkpoint.
+      ofs << std::scientific
+          << std::setprecision(std::numeric_limits<double>::max_digits10);
+```
+
+  `<iomanip>` と `<limits>` の include を確認して足す。これはボソン経路にも効くが、
+  保存ファイルの**精度が上がるだけ**で読み出し側(`ifs >> temp`)は変更不要、
+  古い保存ファイルもそのまま読める。`restart` ctest は 2 回の実行を rtol 1e-3 で
+  比べているので、精度向上で悪化することはない。
 
 - [ ] **Step 6(Codex):** `src/iTPS/load_toml.cpp` — 次のブロックを削除する:
 

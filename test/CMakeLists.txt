@@ -116,6 +116,16 @@ add_test(NAME FreeFermionMF
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_mf.py)
 set_tests_properties(FreeFermionMF PROPERTIES TIMEOUT 1800)
 
+# End-to-end test of tensor_save / tensor_load in fermion mode: the parity
+# ledger written next to the tensors, the reload round trip, a parameter scan
+# seeded from a checkpoint, and the two checkpoints that must be refused.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_saveload.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload.py @ONLY)
+add_test(NAME FreeFermionSaveLoad
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload.py)
+set_tests_properties(FreeFermionSaveLoad PROPERTIES TIMEOUT 1800)
+
 # End-to-end test of the full three-stage pipeline (tenes_simple -> tenes_std
 # -> tenes) for the fermionic model, checked against the handwritten
 # expert-mode sample sample/07_spinless_fermion.

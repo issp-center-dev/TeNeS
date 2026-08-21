@@ -1,0 +1,435 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# End-to-end test of tensor_save / tensor_load in fermion mode.
+#
+# The checkpoint has to carry the virtual-bond parity ledger
+# (<save_dir>/fermion.dat), so this test pins down
+#   * the format of fermion.dat (version, N_UNIT, L_sub, skew, parity rows),
+#   * that reloading reproduces the saved state bit-for-bit (run1 vs run2),
+#   * that a checkpoint can seed a run with different model parameters
+#     (run3, the parameter-scan use case),
+#   * that the two checkpoints that would silently give wrong numbers are
+#     rejected instead: a different virtual_dim (run4) and a bosonic run
+#     reading fermionic tensors (run5).
+#
+# No golden file is used: run1 versus run2 is self-contained.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MU = 0.0
+MU_SCAN = -1.0
+D = 2
+NUM_STEP = 200
+TAU = 0.01
+SEED = 11
+# run1 and run2 describe the very same state, so they must agree far beyond
+# the usual regression tolerance.
+RELOAD_RTOL = 1.0e-10
+RELOAD_ATOL = 1.0e-12
+# run1 sits at half filling; run3 must have moved away from it.
+SCAN_DENSITY_DIFF_MIN = 1.0e-3
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = []
+    for site in range(4):
+        lines.append(f"{site} 1 0")
+    for site in range(4):
+        lines.append(f"{site} 0 1")
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+""")
+    return "\n".join(blocks)
+
+
+def input_toml(
+    mu,
+    dim,
+    outdir,
+    num_step,
+    fermion=True,
+    save_dir=None,
+    load_dir=None,
+):
+    chi = 2 * dim * dim
+    h = two_site_hamiltonian(T, mu)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block()
+    fermion_flag = "true" if fermion else "false"
+    general_extra = ""
+    if save_dir is not None:
+        general_extra += f'tensor_save = "{save_dir}"\n'
+    if load_dir is not None:
+        general_extra += f'tensor_load = "{load_dir}"\n'
+    # The parity of the physical basis only exists in fermion mode.
+    parity_line = "parity = [0, 1]\n" if fermion else ""
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = {fermion_flag}
+output = "{outdir}"
+{general_extra}
+[parameter.simple_update]
+tau = {TAU}
+num_step = {num_step}
+
+[parameter.ctm]
+dimension = {chi}
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+meanfield_env = true
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{dim}, {dim}, {dim}, {dim}]
+{parity_line}initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = false
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values[name.strip()] = float(words[0])
+    return values
+
+
+def read_parity_rows(path):
+    # fermion.dat uses the "value # comment" style of params.dat.
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            rows.append(line.split())
+    return rows
+
+
+def check_fermion_dat(path, n_unit, dim):
+    # Returns a list of human-readable failure messages (empty when the file
+    # has the documented format).
+    failures = []
+    if not os.path.exists(path):
+        return [f"{path} was not written"]
+    rows = read_parity_rows(path)
+    header = [
+        ("format version", ["1"]),
+        ("N_UNIT", [str(n_unit)]),
+        ("L_sub", ["2", "2"]),
+        ("skew", ["0"]),
+    ]
+    if len(rows) < len(header):
+        return [f"{path} has only {len(rows)} data lines"]
+    for index, (name, expected) in enumerate(header):
+        if rows[index] != expected:
+            failures.append(
+                f"{path} line {index + 1} ({name}) is "
+                f"{' '.join(rows[index])}, expected {' '.join(expected)}"
+            )
+    # One physical-leg row plus four virtual-leg rows per site.
+    parity_rows = rows[len(header) :]
+    expected_rows = 5 * n_unit
+    if len(parity_rows) != expected_rows:
+        failures.append(
+            f"{path} has {len(parity_rows)} parity rows, expected {expected_rows}"
+        )
+        return failures
+    for site in range(n_unit):
+        block = parity_rows[5 * site : 5 * (site + 1)]
+        # The physical leg comes first, then the four virtual legs.
+        lengths = [2] + [dim] * 4
+        for leg, (row, length) in enumerate(zip(block, lengths)):
+            what = "physical leg" if leg == 0 else f"virtual leg {leg - 1}"
+            if len(row) != length:
+                failures.append(
+                    f"{path}: the {what} of Tn[{site}] has {len(row)} parities, "
+                    f"expected {length}"
+                )
+            bad = [word for word in row if word not in ("0", "1")]
+            if bad:
+                failures.append(
+                    f"{path}: the {what} of Tn[{site}] has non-binary "
+                    f"parities {' '.join(bad)}"
+                )
+    return failures
+
+
+def compare_density(name, values, ref_values):
+    ok = True
+    if set(values) != set(ref_values):
+        print(f"{name}: density.dat has different observables than run1")
+        print("  result:   ", sorted(values))
+        print("  reference:", sorted(ref_values))
+        return False
+    for key in sorted(ref_values):
+        if not np.isclose(
+            values[key], ref_values[key], rtol=RELOAD_RTOL, atol=RELOAD_ATOL
+        ):
+            print(f"{name}: {key} differs from run1")
+            print("  result:   ", values[key])
+            print("  reference:", ref_values[key])
+            ok = False
+    return ok
+
+
+def report(proc, name):
+    print(f"--- {name} output ---")
+    print(proc.stdout + proc.stderr)
+
+
+def main():
+    output_root = "output_FreeFermionSaveLoad"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    save_dir = join(output_root, "save1")
+
+    # --- run1: fresh simple update at mu = 0, saving the tensors ---
+    out1 = join(output_root, "run1")
+    input1 = join(output_root, "input_run1.toml")
+    with open(input1, "w") as f:
+        f.write(input_toml(MU, D, out1, NUM_STEP, save_dir=save_dir))
+    proc = run_tenes(input1)
+    if proc.returncode != 0:
+        report(proc, "run1")
+        print(f"run1 (tensor_save) failed: exit code {proc.returncode}")
+        return 1
+    density1 = read_density(out1)
+    if "Energy" not in density1 or "n" not in density1:
+        print(f"run1 density.dat lacks Energy or n: {density1}")
+        return 1
+    print(
+        "FreeFermionSaveLoad run1 (save, mu={:.1f}) Energy={:.12e} n={:.12e}".format(
+            MU, density1["Energy"], density1["n"]
+        )
+    )
+
+    # --- the parity ledger written next to the tensors ---
+    failures = check_fermion_dat(join(save_dir, "fermion.dat"), 4, D)
+    if failures:
+        for message in failures:
+            print("FreeFermionSaveLoad fermion.dat check failed: " + message)
+        return 1
+
+    # --- run2: reload the checkpoint and measure without evolving ---
+    out2 = join(output_root, "run2")
+    input2 = join(output_root, "input_run2.toml")
+    with open(input2, "w") as f:
+        f.write(input_toml(MU, D, out2, 0, load_dir=save_dir))
+    proc = run_tenes(input2)
+    if proc.returncode != 0:
+        report(proc, "run2")
+        print(f"run2 (tensor_load) failed: exit code {proc.returncode}")
+        return 1
+    density2 = read_density(out2)
+    print(
+        "FreeFermionSaveLoad run2 (load, mu={:.1f}) Energy={:.12e} n={:.12e}".format(
+            MU, density2["Energy"], density2["n"]
+        )
+    )
+    if not compare_density("run2", density2, density1):
+        return 1
+
+    # --- run3: restart the same checkpoint with a different mu (scan) ---
+    out3 = join(output_root, "run3")
+    input3 = join(output_root, "input_run3.toml")
+    with open(input3, "w") as f:
+        f.write(input_toml(MU_SCAN, D, out3, NUM_STEP, load_dir=save_dir))
+    proc = run_tenes(input3)
+    if proc.returncode != 0:
+        report(proc, "run3")
+        print(f"run3 (scan) failed: exit code {proc.returncode}")
+        return 1
+    density3 = read_density(out3)
+    if "Energy" not in density3 or "n" not in density3:
+        print(f"run3 density.dat lacks Energy or n: {density3}")
+        return 1
+    energy3 = density3["Energy"]
+    n3 = density3["n"]
+    print(
+        "FreeFermionSaveLoad run3 (load, mu={:.1f}) Energy={:.12e} n={:.12e}".format(
+            MU_SCAN, energy3, n3
+        )
+    )
+    if not np.isfinite(energy3) or not energy3 < 0.0:
+        print(f"run3 energy is not finite and negative: {energy3}")
+        return 1
+    if not 0.0 < n3 < 1.0:
+        print(f"run3 density is outside (0, 1): {n3}")
+        return 1
+    density_diff = abs(n3 - density1["n"])
+    print(f"FreeFermionSaveLoad |n(run3) - n(run1)| = {density_diff:.6e}")
+    if not density_diff >= SCAN_DENSITY_DIFF_MIN:
+        print(
+            f"run3 density {n3} is too close to run1 {density1['n']} "
+            f"(difference {density_diff:.6e}, expected at least "
+            f"{SCAN_DENSITY_DIFF_MIN:g}); changing mu had no effect"
+        )
+        return 1
+
+    # --- run4: a different virtual_dim must be refused ---
+    out4 = join(output_root, "run4")
+    input4 = join(output_root, "input_run4.toml")
+    with open(input4, "w") as f:
+        f.write(input_toml(MU, 3, out4, 0, load_dir=save_dir))
+    proc = run_tenes(input4)
+    message4 = proc.stdout + proc.stderr
+    if proc.returncode == 0:
+        report(proc, "run4")
+        print("run4 loaded a checkpoint saved with a different virtual_dim")
+        return 1
+    if "virtual_dim" not in message4:
+        report(proc, "run4")
+        print("run4 failed without mentioning virtual_dim")
+        return 1
+    print("FreeFermionSaveLoad run4 (virtual_dim mismatch) rejected as expected")
+
+    # --- run5: a bosonic run must refuse fermionic tensors ---
+    out5 = join(output_root, "run5")
+    input5 = join(output_root, "input_run5.toml")
+    with open(input5, "w") as f:
+        f.write(input_toml(MU, D, out5, 0, fermion=False, load_dir=save_dir))
+    proc = run_tenes(input5)
+    message5 = proc.stdout + proc.stderr
+    if proc.returncode == 0:
+        report(proc, "run5")
+        print("run5 loaded fermionic tensors in a bosonic run")
+        return 1
+    if "fermion" not in message5:
+        report(proc, "run5")
+        print("run5 failed without mentioning fermion")
+        return 1
+    print("FreeFermionSaveLoad run5 (bosonic reload) rejected as expected")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

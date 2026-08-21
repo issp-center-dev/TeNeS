@@ -252,10 +252,22 @@ void iTPS<ptensor>::load_tensors() {
   復元後の台帳のもとで行われる。`load_tensors_v1` 自体は変更しない。
 - `validate_loaded_fermion_tensors` は `finfo.enabled` のときだけ中身を実行する。
 
+### 5.3b λ の保存精度(付随する修正)
+
+`save_tensors()` は λ を `ofs << lambda_tensor[i][j][k]`(既定精度 = 有効 6 桁)で書いており、
+チェックポイントのたびに Schmidt 重みが丸められる。テンソル本体は mptensor のバイナリ保存で
+厳密なので、**λ だけが往復で精度を失う**。`density.cpp:122` と同じ
+`std::scientific` + `setprecision(max_digits10)` に変える。ボソン経路にも効くが、
+読み出しは `ifs >> temp` なので古い保存ファイルもそのまま読め、精度が上がるだけである。
+
+平均場環境での測定は λ を直接使うので、この修正がないと「読み込み直して測る」だけで
+相対 1e-6 程度の差が出る(CTM 経路は λ を使わないので出ない)。
+
 ### 5.4 ボソン経路への影響
 
-`fermion.dat` を書かない・読まない(V8 の存在確認のみ)。既存の ctest(`restart` を含む)の
-数値は不変。
+`fermion.dat` を書かない・読まない(V8 の存在確認のみ)。§5.3b の λ 精度向上は
+ボソンの保存ファイルにも及ぶが、読み出し形式は変わらず、`restart` ctest は 2 回の実行を
+rtol 1e-3 で比べているので影響しない。
 
 ## 6. ドキュメント
 
