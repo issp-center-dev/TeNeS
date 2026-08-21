@@ -338,7 +338,9 @@ def mf_case_values(name, lx, ly, parity, seed, lam):
         values += [oracle.one_body(i, i) for i in range(patch.nsite)]
         for a, _, b, _ in bonds:
             values.append(oracle.one_body(a, b) + oracle.one_body(b, a))
-            values.append(oracle.pairing(a, b) + oracle.pairing(b, a))
+            # pair = <c_b c_a + c_a^dag c_b^dag> = 2 <c_b c_a> for a real state,
+            # i.e. the operator |00><11| + |11><00| in the ordered Fock basis.
+            values.append(oracle.pairing(b, a))
             values.append(oracle.density_density(a, b))
         return np.array(values, dtype=np.float64)
 
@@ -350,7 +352,7 @@ def mf_case_values(name, lx, ly, parity, seed, lam):
     pos = 1 + patch.nsite
     for a, _, b, _ in bonds:
         out.append((f"{name}.hop{a}{b}", float(total[pos]) / norm))
-        out.append((f"{name}.pair{a}{b}", float(total[pos + 1]) / norm))
+        out.append((f"{name}.pair{a}{b}", 2.0 * float(total[pos + 1]) / norm))
         out.append((f"{name}.nn{a}{b}", float(total[pos + 2]) / norm))
         pos += 3
     return out

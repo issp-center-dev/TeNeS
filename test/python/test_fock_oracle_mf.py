@@ -158,8 +158,10 @@ def test_mf_datasets_have_nonzero_hopping(capsys, name, lx, ly):
     }
     norm = printed[f"{name}.norm"]
     assert norm > 0.0
-    # hop01 is printed already divided by norm.
+    # hop01 and pair01 are printed already divided by norm.
     assert abs(printed[f"{name}.hop01"]) > 1.0e-3
+    if name == "mf_horizontal_2site":
+        assert abs(printed[f"{name}.pair01"]) > 1.0e-3
     assert 0.0 <= printed[f"{name}.n0"] <= 1.0
     assert 0.0 <= printed[f"{name}.n1"] <= 1.0
 
@@ -176,14 +178,14 @@ def test_mf_datasets_have_nonzero_hopping(capsys, name, lx, ly):
     hop = fock_oracle.mf_sum(
         patch, weighted, leg_parities, lambda o: o.one_body(0, 1) + o.one_body(1, 0)
     )
-    pair = fock_oracle.mf_sum(
-        patch, weighted, leg_parities, lambda o: o.pairing(0, 1) + o.pairing(1, 0)
-    )
+    # pair01 = <c_1 c_0 + c_0^dag c_1^dag> / norm = 2 <c_1 c_0> / norm, and
+    # pairing(i, j) annihilates j first, so <c_1 c_0> = pairing(1, 0).
+    pair = fock_oracle.mf_sum(patch, weighted, leg_parities, lambda o: o.pairing(1, 0))
     assert abs(printed[f"{name}.norm"] - total[0]) < TOL
     assert abs(printed[f"{name}.n0"] - total[1] / total[0]) < TOL
     assert abs(printed[f"{name}.n1"] - total[2] / total[0]) < TOL
     assert abs(printed[f"{name}.hop01"] - hop / total[0]) < TOL
-    assert abs(printed[f"{name}.pair01"] - pair / total[0]) < TOL
+    assert abs(printed[f"{name}.pair01"] - 2.0 * pair / total[0]) < TOL
     assert abs(printed[f"{name}.nn01"] - total[5] / total[0]) < TOL
 
 
