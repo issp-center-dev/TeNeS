@@ -66,14 +66,6 @@ void apply_joint_swaps(ftensor<tensor>& a, const std::vector<int>& bra_axes,
 }
 
 template <class tensor>
-ftensor<tensor> apply_reduced_two_site_op(const ftensor<tensor>& psi,
-                                          const ftensor<tensor>& op) {
-  ftensor<tensor> applied =
-      tensordot(psi, op, mptensor::Axes(3, 7), mptensor::Axes(0, 1));
-  return transpose(applied, mptensor::Axes(0, 1, 2, 6, 3, 4, 5, 7));
-}
-
-template <class tensor>
 void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
                            std::size_t ax, bool ket_odd_bra_even) {
   std::vector<double> sign(leg_parity.size() * leg_parity.size(), 1.0);
@@ -171,26 +163,58 @@ tensor build_reduced(const ftensor<tensor>& Tn) {
 }
 
 template <class tensor>
+ftensor<tensor> build_pair_state(const ftensor<tensor>& TnA,
+                                 const ftensor<tensor>& TnB,
+                                 reduced_pair_direction direction) {
+  if (TnA.rank() != 5 || TnB.rank() != 5) {
+    throw std::runtime_error("build_pair_state expects five-leg Tn ftensors");
+  }
+  switch (direction) {
+    case reduced_pair_direction::horizontal:
+      // (l_A, t_A, b_A, s_A, t_B, r_B, b_B, s_B)
+      return tensordot(TnA, TnB, mptensor::Axes(2), mptensor::Axes(0));
+    case reduced_pair_direction::vertical:
+      // (l_A, t_A, r_A, s_A, l_B, r_B, b_B, s_B)
+      return tensordot(TnA, TnB, mptensor::Axes(3), mptensor::Axes(1));
+  }
+  throw std::runtime_error("build_pair_state: invalid direction");
+}
+
+// Apply a two-site operator op12 (in_A, in_B, out_A, out_B) to the physical
+// legs (3, 7) of a pair state and restore the original leg order.
+template <class tensor>
+ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
+                              const ftensor<tensor>& op12) {
+  if (pair.rank() != 8) {
+    throw std::runtime_error("apply_pair_op expects an eight-leg pair state");
+  }
+  if (op12.rank() != 4) {
+    throw std::runtime_error("apply_pair_op expects a four-leg operator");
+  }
+  ftensor<tensor> applied =
+      tensordot(pair, op12, mptensor::Axes(3, 7), mptensor::Axes(0, 1));
+  return transpose(applied, mptensor::Axes(0, 1, 2, 6, 3, 4, 5, 7));
+}
+
+template <class tensor>
 tensor build_reduced_pair(const ftensor<tensor>& TnA,
                           const ftensor<tensor>& TnB,
                           const ftensor<tensor>& op12,
                           reduced_pair_direction direction) {
-  ftensor<tensor> ket_ab;
+  const ftensor<tensor> ket_ab = build_pair_state(TnA, TnB, direction);
   std::vector<int> leg_ids;
   switch (direction) {
     case reduced_pair_direction::horizontal:
-      ket_ab = tensordot(TnA, TnB, mptensor::Axes(2), mptensor::Axes(0));
       leg_ids = {0, 1, 3, 1, 2, 3};
       break;
     case reduced_pair_direction::vertical:
-      ket_ab = tensordot(TnA, TnB, mptensor::Axes(3), mptensor::Axes(1));
       leg_ids = {0, 1, 2, 0, 2, 3};
       break;
     default:
       throw std::runtime_error("doubled_cluster: invalid direction");
   }
 
-  ftensor<tensor> ket_op = detail::apply_reduced_two_site_op(ket_ab, op12);
+  ftensor<tensor> ket_op = apply_pair_op(ket_ab, op12);
   ftensor<tensor> doubled =
       tensordot(conj(ket_ab), ket_op, mptensor::Axes(), mptensor::Axes());
   tensor ret = detail::fuse_doubled_cluster(doubled, leg_ids);

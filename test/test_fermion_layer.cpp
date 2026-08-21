@@ -3158,3 +3158,4 @@ TEST_CASE("fermion twosite measurement is translation invariant across wraps") {
 }
 
 #include "fermion/r2_convention.cpp"
+#include "fermion/mf_measure.cpp"

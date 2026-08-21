@@ -72,6 +72,40 @@ tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
 
 namespace detail {
 
+inline mptensor::Axes all_axes(int rank) {
+  mptensor::Axes axes;
+  for (int ax = 0; ax < rank; ++ax) {
+    axes.push(ax);
+  }
+  return axes;
+}
+
+}  // namespace detail
+
+// Mean-field norm of a two-site pair state: <pair|pair> as a graded full
+// contraction. No environment tensors: the lambda weights on the open legs
+// are expected to be multiplied into TnA / TnB beforehand (the same dressing
+// the bosonic mean-field path applies in measure_twosite).
+template <class tensor>
+typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair) {
+  const mptensor::Axes axes = detail::all_axes(pair.rank());
+  return trace(conj(pair), pair, axes, axes);
+}
+
+// Mean-field expectation value (unnormalized) of op12 on a pair state.
+// op12 must be loaded with wrap_twosite_gate (input-leg swap only): this is
+// the single-layer convention pinned by the Fock-verified direct path
+// (r2_expect_two in the R5 test and the mf_* oracle cases), not the blob
+// convention (wrap_reduced_pair_op).
+template <class tensor>
+typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair,
+                                             const ftensor<tensor>& op12) {
+  const mptensor::Axes axes = detail::all_axes(pair.rank());
+  return trace(conj(pair), apply_pair_op(pair, op12), axes, axes);
+}
+
+namespace detail {
+
 template <class tensor>
 typename tensor::value_type trace_boundary_pairs(const tensor& a) {
   if (a.rank() != 4) {
