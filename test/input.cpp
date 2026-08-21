@@ -642,3 +642,119 @@ elements = """
     std::remove(input_filename.c_str());
   }
 }
+
+TEST_CASE("identity gates complete the bonds no Hamiltonian term gates") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  auto make_lattice = [&](std::string const &vdim) {
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = )" + vdim + R"(
+)");
+    return gen_lattice(tensor_toml.at("tensor"));
+  };
+
+  auto horizontal_gate = [&](int site, int group) {
+    ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        op.set_value(mptensor::Index(i, j, i, j), 0.5);
+      }
+    }
+    return make_twosite_EvolutionOperator<ptensor>(site, 2, group, op);
+  };
+
+  auto count_leg = [](EvolutionOperators<ptensor> const &ops, int leg) {
+    int n = 0;
+    for (auto const &op : ops) {
+      if (op.is_twosite() && op.source_leg == leg) ++n;
+    }
+    return n;
+  };
+
+  SUBCASE("ungated vertical bonds with D > 1 receive identity gates") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+
+    CHECK(completed.size() == 8);
+    CHECK(count_leg(completed, 2) == 4);
+    CHECK(count_leg(completed, 1) == 4);
+    for (auto const &op : completed) {
+      if (op.source_leg != 1) continue;
+      CHECK(op.group == 0);
+      for (int i1 = 0; i1 < 2; ++i1) {
+        for (int i2 = 0; i2 < 2; ++i2) {
+          for (int o1 = 0; o1 < 2; ++o1) {
+            for (int o2 = 0; o2 < 2; ++o2) {
+              typename ptensor::value_type v;
+              op.op.get_value(mptensor::Index(i1, i2, o1, o2), v);
+              const double expected = (i1 == o1 && i2 == o2) ? 1.0 : 0.0;
+              CHECK(std::abs(v - expected) < 1e-15);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  SUBCASE("a D = 1 ungated leg needs nothing") {
+    auto lattice = make_lattice("[2, 1, 2, 1]");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    CHECK(completed.size() == 4);
+  }
+
+  SUBCASE("a fully gated cell is returned unchanged") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+      op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+      ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 1, 0, op));
+    }
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    CHECK(completed.size() == 8);
+  }
+
+  SUBCASE("a bond gated from the other end counts as gated") {
+    // the vertical bond of site 0 (leg 1, up) is the same bond as the
+    // bottom leg (3) of its upper neighbour
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+      op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+      ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 3, 0, op));
+    }
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    CHECK(completed.size() == 8);
+  }
+
+  SUBCASE("identity gates follow every group that is present") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 1));
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice);
+    CHECK(completed.size() == 16);
+    int g0 = 0, g1 = 0;
+    for (auto const &op : completed) {
+      if (op.source_leg == 1) (op.group == 0 ? g0 : g1)++;
+    }
+    CHECK(g0 == 4);
+    CHECK(g1 == 4);
+  }
+}

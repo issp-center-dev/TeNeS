@@ -18,6 +18,7 @@
 
 #define _USE_MATH_DEFINES
 #include <algorithm>
+#include <set>
 #include <array>
 #include <cmath>
 #include <iterator>
@@ -1044,6 +1045,62 @@ template EvolutionOperators<real_tensor> load_updates(const toml::value &param,
 template EvolutionOperators<complex_tensor> load_updates(
     const toml::value &param, MPI_Comm comm, double atol,
     std::string const &key);
+
+template <class tensor>
+EvolutionOperators<tensor> complete_ungated_bonds(
+    const EvolutionOperators<tensor> &simple_updates,
+    const SquareLattice &lattice) {
+  std::set<int> groups;
+  std::set<std::pair<int, int>> gated;  // (source_site, source_leg)
+  MPI_Comm comm = MPI_COMM_WORLD;
+  for (const auto &op : simple_updates) {
+    if (!op.is_twosite()) {
+      continue;
+    }
+    groups.insert(op.group);
+    comm = op.op.get_comm();
+    const int other = lattice.neighbor(op.source_site, op.source_leg);
+    gated.emplace(op.source_site, op.source_leg);
+    gated.emplace(other, (op.source_leg + 2) % 4);
+  }
+  if (groups.empty()) {
+    groups.insert(0);
+  }
+
+  EvolutionOperators<tensor> completed = simple_updates;
+  // legs 1 (up) and 2 (right) enumerate every bond of the cell exactly once
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    for (int leg : {1, 2}) {
+      if (lattice.virtual_dims[site][leg] <= 1) {
+        continue;
+      }
+      if (gated.count({site, leg}) > 0) {
+        continue;
+      }
+      const int other = lattice.neighbor(site, leg);
+      const int d1 = lattice.physical_dims[site];
+      const int d2 = lattice.physical_dims[other];
+      tensor id(comm, mptensor::Shape(d1, d2, d1, d2));
+      for (int i1 = 0; i1 < d1; ++i1) {
+        for (int i2 = 0; i2 < d2; ++i2) {
+          id.set_value(mptensor::Index(i1, i2, i1, i2), 1.0);
+        }
+      }
+      for (int group : groups) {
+        completed.push_back(
+            make_twosite_EvolutionOperator<tensor>(site, leg, group, id));
+      }
+    }
+  }
+  return completed;
+}
+
+template EvolutionOperators<real_tensor> complete_ungated_bonds(
+    const EvolutionOperators<real_tensor> &simple_updates,
+    const SquareLattice &lattice);
+template EvolutionOperators<complex_tensor> complete_ungated_bonds(
+    const EvolutionOperators<complex_tensor> &simple_updates,
+    const SquareLattice &lattice);
 
 template EvolutionOperators<real_tensor> load_simple_updates(
     const toml::value &param, MPI_Comm comm, double atol);

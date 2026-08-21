@@ -263,8 +263,21 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
 
   const double tol = peps_parameters.iszero_tol;
-  const auto simple_updates =
+  const auto loaded_simple_updates =
       load_simple_updates<tensor_complex>(input_toml, comm);
+  // A bond no gate acts on is never canonicalised by the simple update and
+  // the CTM then fails to converge on it; identity gates make the update
+  // touch (truncate and normalise) every bond with virtual dimension > 1.
+  const auto simple_updates =
+      complete_ungated_bonds(loaded_simple_updates, lattice);
+  if (simple_updates.size() > loaded_simple_updates.size() && mpirank == 0 &&
+      print_level >= PrintLevel::info) {
+    std::cout << "INFO: added "
+              << simple_updates.size() - loaded_simple_updates.size()
+              << " identity simple-update gate(s) on bonds that no "
+                 "evolution operator acts on, so that they are canonicalised"
+              << std::endl;
+  }
   const auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
 
   // observable

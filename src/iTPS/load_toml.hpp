@@ -91,6 +91,22 @@ template <class tensor>
 EvolutionOperators<tensor> load_full_updates(const toml::value &param,
                                              MPI_Comm comm, double atol = 0.0);
 
+/*! @brief Add identity two-site gates on every bond no gate acts on.
+ *
+ *  A bond with virtual dimension > 1 that carries no evolution operator is
+ *  never touched by the simple update: it keeps its random, non-canonical
+ *  initialisation, and the CTM does not converge on the resulting state.
+ *  An identity gate is physically a no-op but makes the update truncate and
+ *  canonicalise that bond every step.  One gate is added per ungated bond and
+ *  per group present among the two-site operators (group 0 if there is none).
+ *
+ *  @return the input operators followed by the added identity gates.
+ */
+template <class tensor>
+EvolutionOperators<tensor> complete_ungated_bonds(
+    const EvolutionOperators<tensor> &simple_updates,
+    const SquareLattice &lattice);
+
 }  // namespace tenes::itps
 
 #endif  // TENES_SRC_ITPS_LOAD_TOML_HPP_
