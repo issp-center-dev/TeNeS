@@ -648,10 +648,6 @@ void validate_fermion_constraints(
   if (corparam.r_max > 0) {
     throw_fermion_guard("correlation.r_max > 0");
   }
-  if (!peps_parameters.tensor_load_dir.empty() ||
-      !peps_parameters.tensor_save_dir.empty()) {
-    throw_fermion_guard("tensor load/save directories");
-  }
   if (!multisite_operators.empty()) {
     throw_fermion_guard("multisite operators");
   }

@@ -16,10 +16,13 @@
 
 #define _USE_MATH_DEFINES
 #include <algorithm>
-#include <complex>
-#include <random>
-#include <string>
 #include <array>
+#include <complex>
+#include <iomanip>
+#include <limits>
+#include <random>
+#include <sstream>
+#include <string>
 #include <cstdlib>
 
 #include "iTPS.hpp"
@@ -28,6 +31,8 @@
 
 #include "../tensor.hpp"
 
+#include "../fermion/fermion_info.hpp"
+#include "../fermion/fops.hpp"
 #include "../printlevel.hpp"
 #include "../util/file.hpp"
 #include "../util/string.hpp"
@@ -74,6 +79,10 @@ void iTPS<ptensor>::save_tensors() const {
   if (mpirank == 0) {
     for (int i = 0; i < N_UNIT; ++i) {
       std::ofstream ofs(save_dir + "/lambda_" + std::to_string(i) + ".dat");
+      // max_digits10 round-trips a double exactly; the default 6 significant
+      // digits silently truncated the Schmidt weights on every checkpoint.
+      ofs << std::scientific
+          << std::setprecision(std::numeric_limits<double>::max_digits10);
       for (int j = 0; j < nleg; ++j) {
         for (int k = 0; k < lattice.virtual_dims[i][j]; ++k) {
           ofs << lambda_tensor[i][j][k] << std::endl;
@@ -81,8 +90,46 @@ void iTPS<ptensor>::save_tensors() const {
       }
     }
   }
+  if (finfo.enabled) {
+    // The virtual-bond parity ledger is mutable state (the simple update
+    // rewrites it through svd_trunc), so it has to travel with the tensors:
+    // reloading with a stale ledger changes the measured energy without any
+    // error message.
+    //
+    // The CTM environment tensors saved above carry no information in fermion
+    // mode: save_tensors() runs before measure() (main.cpp, run_groundstate)
+    // and the fermionic CTM is rebuilt from scratch inside measure().
+    save_fermion_parity(save_dir);
+  }
   if (peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Tensors saved in " << save_dir << std::endl;
+  }
+}
+
+template <class ptensor>
+void iTPS<ptensor>::save_fermion_parity(std::string const &save_dir) const {
+  if (mpirank != 0) {
+    return;
+  }
+  std::string filename = save_dir + "/fermion.dat";
+  std::ofstream ofs(filename.c_str());
+  constexpr int fermion_format_version = 1;
+  ofs << fermion_format_version << " # Fermion_Format_Version\n";
+  ofs << N_UNIT << " # N_UNIT\n";
+  ofs << lattice.LX << " " << lattice.LY << " # L_sub\n";
+  ofs << lattice.skew << " # skew\n";
+  auto write_parity = [&ofs](tenes::fermion::parity_vector const &p) {
+    for (std::size_t i = 0; i < p.size(); ++i) {
+      ofs << (p[i] ? 1 : 0) << " ";
+    }
+  };
+  for (int i = 0; i < N_UNIT; ++i) {
+    write_parity(finfo.phys[i]);
+    ofs << "# parity of the physical leg of Tn[" << i << "]\n";
+    for (int leg = 0; leg < nleg; ++leg) {
+      write_parity(finfo.virt[i][leg]);
+      ofs << "# parity of the virtual leg " << leg << " of Tn[" << i << "]\n";
+    }
   }
 }
 
@@ -106,6 +153,9 @@ void iTPS<ptensor>::load_tensors() {
     }
   }
   bcast(tensor_format_version, 0, comm);
+
+  load_fermion_ledger(load_dir);
+
   if (tensor_format_version == 0) {
     load_tensors_v0();
   } else if (tensor_format_version == 1) {
@@ -116,22 +166,180 @@ void iTPS<ptensor>::load_tensors() {
        << tensor_format_version;
     throw tenes::load_error(ss.str());
   }
+
+  validate_loaded_fermion_tensors();
 }
 
 template <class ptensor>
-void load_tensor(ptensor &A, std::string const& name, std::string const& directory, int iunit){
-  std::string filename = directory + "/" + name + "_" + std::to_string(iunit) + ".dat";
+void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
+  const std::string filename = load_dir + "/fermion.dat";
+  int exists = 0;
+  if (mpirank == 0) {
+    exists = util::path_exists(filename) ? 1 : 0;
+  }
+  bcast(exists, 0, comm);
+
+  if (!finfo.enabled) {
+    if (exists != 0) {
+      throw tenes::load_error(
+          "ERROR: " + filename +
+          " exists, i.e. the saved tensors come from a fermionic run, but "
+          "parameter.general.fermion is false.\n"
+          "HINT: set fermion = true, or load tensors saved by a "
+          "non-fermionic run.");
+    }
+    return;
+  }
+  if (exists == 0) {
+    throw tenes::load_error(
+        "ERROR: cannot find " + filename +
+        ".\n"
+        "The saved tensors do not carry the fermionic parity ledger of the "
+        "virtual bonds, which fermion mode needs in order to interpret them.\n"
+        "HINT: they were saved by a non-fermionic run, or by a version of "
+        "TeNeS that could not save fermionic tensors.");
+  }
+
+  std::string content;
+  if (mpirank == 0) {
+    std::ifstream ifs(filename.c_str());
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    content = ss.str();
+  }
+  bcast(content, 0, comm);
+
+  std::istringstream iss(content);
+  std::string line;
+  auto next_line = [&iss, &line, &filename]() -> std::string {
+    if (!std::getline(iss, line)) {
+      throw tenes::load_error("ERROR: " + filename + " ends unexpectedly");
+    }
+    return util::drop_comment(line);
+  };
+  auto next_ints = [&next_line, &filename]() -> std::vector<int> {
+    const auto words = util::split(next_line());
+    std::vector<int> ret;
+    ret.reserve(words.size());
+    for (const auto &w : words) {
+      ret.push_back(std::stoi(w));
+    }
+    return ret;
+  };
+
+  const int version = next_ints().at(0);
+  if (version != 1) {
+    std::stringstream ss;
+    ss << "ERROR: " << filename << " has fermion format version " << version
+       << " but this version of TeNeS supports only version 1";
+    throw tenes::load_error(ss.str());
+  }
+  const int loaded_N_UNIT = next_ints().at(0);
+  if (loaded_N_UNIT != N_UNIT) {
+    std::stringstream ss;
+    ss << "ERROR: N_UNIT is " << N_UNIT << " but " << filename << " has "
+       << loaded_N_UNIT;
+    throw tenes::load_error(ss.str());
+  }
+  const auto lsub = next_ints();
+  const int loaded_skew = next_ints().at(0);
+  if (lsub.size() != 2 || lsub[0] != lattice.LX || lsub[1] != lattice.LY ||
+      loaded_skew != lattice.skew) {
+    std::stringstream ss;
+    ss << "ERROR: the unit cell of the saved tensors (L_sub = [";
+    for (std::size_t i = 0; i < lsub.size(); ++i) {
+      ss << (i == 0 ? "" : ", ") << lsub[i];
+    }
+    ss << "], skew = " << loaded_skew << ") differs from the input (L_sub = ["
+       << lattice.LX << ", " << lattice.LY << "], skew = " << lattice.skew
+       << ").\n"
+       << "HINT: the parity ledger is indexed by (site, leg), so it only means "
+          "the same thing on the same lattice.";
+    throw tenes::load_error(ss.str());
+  }
+
+  auto to_parity = [](std::vector<int> const &v) {
+    tenes::fermion::parity_vector p(v.size());
+    for (std::size_t i = 0; i < v.size(); ++i) {
+      p[i] = (v[i] != 0);
+    }
+    return p;
+  };
+
+  std::vector<std::array<tenes::fermion::parity_vector, 4>> virt(N_UNIT);
+  for (int i = 0; i < N_UNIT; ++i) {
+    const auto phys = to_parity(next_ints());
+    if (phys != finfo.phys[i]) {
+      std::stringstream ss;
+      ss << "ERROR: the physical parity of the tensor " << i << " in "
+         << filename << " differs from tensor.unitcell.parity in the input";
+      throw tenes::load_error(ss.str());
+    }
+    for (int leg = 0; leg < nleg; ++leg) {
+      auto p = to_parity(next_ints());
+      if (static_cast<int>(p.size()) != lattice.virtual_dims[i][leg]) {
+        std::stringstream ss;
+        ss << "ERROR: the virtual dimension of the leg " << leg
+           << " of the tensor " << i << " is " << lattice.virtual_dims[i][leg]
+           << " but the saved tensors have " << p.size() << ".\n"
+           << "HINT: fermion mode cannot change virtual_dim on restart, "
+              "because resizing a leg does not preserve its even/odd blocks. "
+              "Keep virtual_dim as it was, or start without tensor_load.";
+        throw tenes::load_error(ss.str());
+      }
+      virt[i][leg] = p;
+    }
+  }
+  for (int i = 0; i < N_UNIT; ++i) {
+    finfo.virt[i] = virt[i];
+  }
+  tenes::fermion::validate_neighbor_consistency(finfo, lattice);
+}
+
+template <class ptensor>
+void iTPS<ptensor>::validate_loaded_fermion_tensors() const {
+  if (!finfo.enabled) {
+    return;
+  }
+  for (int i = 0; i < N_UNIT; ++i) {
+    const auto ft = tenes::fermion::wrap_Tn(Tn[i], finfo, i);
+    // parity_violation and max_abs scan the process-local slice only.
+    std::vector<double> reduced{tenes::fermion::parity_violation(ft),
+                                tenes::fermion::max_abs(ft)};
+    tenes::allreduce_max(reduced, comm);
+    const double violation = reduced[0];
+    const double scale = std::max(reduced[1], 1.0e-300);
+    if (violation > 1.0e-12 * scale) {
+      std::stringstream ss;
+      ss << "ERROR: the loaded tensor " << i
+         << " breaks fermion parity under the loaded parity ledger "
+         << "(max violating amplitude " << violation << ", max amplitude "
+         << reduced[1] << ").\n"
+         << "HINT: the tensors and " << peps_parameters.tensor_load_dir
+         << "/fermion.dat do not belong together.";
+      throw tenes::load_error(ss.str());
+    }
+  }
+}
+
+template <class ptensor>
+void load_tensor(ptensor &A, std::string const &name,
+                 std::string const &directory, int iunit) {
+  std::string filename =
+      directory + "/" + name + "_" + std::to_string(iunit) + ".dat";
   if (!util::path_exists(filename)) {
     throw tenes::load_error("ERROR: cannot find a tensor file: " + filename);
   }
   ptensor temp;
   temp.load(filename.c_str());
-  if (A.rank() != temp.rank()){
+  if (A.rank() != temp.rank()) {
     std::stringstream ss;
     ss << "ERROR: rank mismatch in load_tensor: ";
     ss << name << "[" << iunit << "] has " << A.rank() << " legs, but";
     ss << "loaded one has " << temp.rank() << " legs." << std::endl;
-    ss << "HINT: check the calculation mode. The number of legs differs between ground state calculation and finite temperature calculation.";
+    ss << "HINT: check the calculation mode. The number of legs differs "
+          "between ground state calculation and finite temperature "
+          "calculation.";
     throw tenes::load_error(ss.str());
   }
   A = resize_tensor(temp, A.shape());
@@ -207,12 +415,12 @@ void iTPS<ptensor>::load_tensors_v1() {
     bcast(loaded_shape[i], 0, comm);
   }
 
-// #define LOAD_TENSOR_(A, name)                      \
-//   do {                                             \
-//     ptensor temp;                                  \
-//     temp.load((filename + name + suffix).c_str()); \
-//     A = resize_tensor(temp, A.shape());            \
-//   } while (false)
+  // #define LOAD_TENSOR_(A, name)                      \
+  //   do {                                             \
+  //     ptensor temp;                                  \
+  //     temp.load((filename + name + suffix).c_str()); \
+  //     A = resize_tensor(temp, A.shape());            \
+  //   } while (false)
 
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = load_dir + "/";
@@ -237,7 +445,7 @@ void iTPS<ptensor>::load_tensors_v1() {
     // LOAD_TENSOR_(C3[i], "C3");
     // LOAD_TENSOR_(C4[i], "C4");
   }
-// #undef LOAD_TENSOR_
+  // #undef LOAD_TENSOR_
 
   std::vector<double> ls;
   if (mpirank == 0) {

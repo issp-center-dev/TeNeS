@@ -248,6 +248,12 @@ class iTPS {
 
   void load_tensors_v1();
   void load_tensors_v0();
+  //! save the fermionic parity ledger of the virtual bonds
+  void save_fermion_parity(std::string const &save_dir) const;
+  //! load and validate the fermionic parity ledger (before reading tensors)
+  void load_fermion_ledger(std::string const &load_dir);
+  //! check the loaded tensors against the restored ledger (after reading them)
+  void validate_loaded_fermion_tensors() const;
 
   std::vector<Correlation> measure_correlation_ctm();
   std::vector<Correlation> measure_correlation_mf();
