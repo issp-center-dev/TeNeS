@@ -25,6 +25,7 @@
 #include "../src/iTPS/core/full_update.hpp"
 
 #include "doctest.h"
+#include "test_workdir.hpp"
 
 TEST_CASE("testing full update") {
   using tensor = tenes::real_tensor;

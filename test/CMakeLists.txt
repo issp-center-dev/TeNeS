@@ -16,6 +16,8 @@ foreach(basename IN LISTS tenes_unit_tests)
   add_executable(${testname} "${basename}.cpp")
 
   target_link_libraries(${testname} PUBLIC tenes_static)
+  target_compile_definitions(
+    ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
 
   if(ENABLE_MPI)
     add_test(NAME ${testname}
@@ -28,6 +30,8 @@ endforeach()
 
 add_executable(test_fermion_layer test_fermion_layer.cpp)
 target_link_libraries(test_fermion_layer PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_layer PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_MPI)
   add_test(NAME test_fermion_layer
            COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
