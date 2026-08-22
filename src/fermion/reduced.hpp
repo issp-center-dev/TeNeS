@@ -37,10 +37,24 @@ constexpr unsigned kDoubledJointMask =
     (1u << joint_bit(0, 3)) | (1u << joint_bit(1, 0)) |
     (1u << joint_bit(2, 3)) | (1u << joint_bit(3, 0));
 
-template <class tensor>
-void apply_joint_swaps(ftensor<tensor>& a, const std::vector<int>& bra_axes,
-                       const std::vector<int>& ket_axes,
-                       const std::vector<int>& leg_ids) {
+struct JointSwapForms {
+  SwapForm cross;
+  SwapForm bra;
+};
+
+inline JointSwapForms joint_swap_forms(const std::vector<int>& bra_axes,
+                                       const std::vector<int>& ket_axes,
+                                       const std::vector<int>& leg_ids) {
+  if (bra_axes.size() != leg_ids.size() || ket_axes.size() != leg_ids.size()) {
+    throw std::runtime_error("joint_swap_forms: axis and leg id size mismatch");
+  }
+  for (std::size_t i = 0; i < leg_ids.size(); ++i) {
+    if (bra_axes[i] < 0 || ket_axes[i] < 0) {
+      throw std::runtime_error("joint_swap_forms: negative axis");
+    }
+  }
+
+  JointSwapForms forms;
   for (int x = 0; x < 4; ++x) {
     for (int y = 0; y < 4; ++y) {
       if (x == y) {
@@ -57,12 +71,13 @@ void apply_joint_swaps(ftensor<tensor>& a, const std::vector<int>& bra_axes,
           if (leg_ids[iy] != y) {
             continue;
           }
-          apply_swap(a, ket_axes[ix], bra_axes[iy]);
-          apply_swap(a, bra_axes[ix], bra_axes[iy]);
+          forms.cross.toggle(ket_axes[ix], bra_axes[iy]);
+          forms.bra.toggle(bra_axes[ix], bra_axes[iy]);
         }
       }
     }
   }
+  return forms;
 }
 
 template <class tensor>
@@ -88,9 +103,11 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   // Output legs: ([l lb], [t tb], [r rb], [b bb], s_ket, s_bra).
   // The two arguments differ only where an operator has been inserted into
   // the ket layer beforehand; for the plain reduced tensor they are equal.
+  const auto forms = joint_swap_forms({0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3});
+  ftensor<tensor> bra = conj(bra_Tn);
+  apply_swap_form(bra, forms.bra);
   ftensor<tensor> doubled =
-      tensordot(conj(bra_Tn), ket_Tn, mptensor::Axes(), mptensor::Axes());
-  apply_joint_swaps(doubled, {0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3});
+      tensordot(bra, ket_Tn, mptensor::Axes(), mptensor::Axes());
   mptensor::Axes interleaved;
   for (int ax = 0; ax < 4; ++ax) {
     interleaved.push(5 + ax);
@@ -98,20 +115,20 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   }
   interleaved.push(9);
   interleaved.push(4);
-  ftensor<tensor> ordered = transpose(doubled, interleaved);
+  transpose_with_swap_form(doubled, forms.cross, interleaved);
   mptensor::Shape sh;
   for (std::size_t ax = 0; ax < 4; ++ax) {
-    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
+    sh.push(doubled.shape()[2 * ax] * doubled.shape()[2 * ax + 1]);
   }
-  sh.push(ordered.shape()[8]);
-  sh.push(ordered.shape()[9]);
-  return mptensor::reshape(ordered.t, sh);
+  sh.push(doubled.shape()[8]);
+  sh.push(doubled.shape()[9]);
+  return mptensor::reshape(doubled.t, sh);
 }
 
 template <class tensor>
-tensor fuse_doubled_cluster(const ftensor<tensor>& doubled,
+tensor fuse_doubled_cluster(const ftensor<tensor>& bra_pair,
+                            const ftensor<tensor>& ket_pair,
                             const std::vector<int>& leg_ids) {
-  ftensor<tensor> prepared = doubled;
   constexpr std::size_t kExternalLegs = 6;
   const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
   std::vector<int> bra_axes;
@@ -120,7 +137,11 @@ tensor fuse_doubled_cluster(const ftensor<tensor>& doubled,
     bra_axes.push_back(ax);
     ket_axes.push_back(ax + 8);
   }
-  apply_joint_swaps(prepared, bra_axes, ket_axes, leg_ids);
+  const auto forms = joint_swap_forms(bra_axes, ket_axes, leg_ids);
+  ftensor<tensor> bra = bra_pair;
+  apply_swap_form(bra, forms.bra);
+  ftensor<tensor> doubled =
+      tensordot(bra, ket_pair, mptensor::Axes(), mptensor::Axes());
 
   mptensor::Axes interleaved;
   for (std::size_t i = 0; i < kExternalLegs; ++i) {
@@ -131,18 +152,18 @@ tensor fuse_doubled_cluster(const ftensor<tensor>& doubled,
   interleaved.push(15);
   interleaved.push(3);
   interleaved.push(7);
-  ftensor<tensor> ordered = transpose(prepared, interleaved);
+  transpose_with_swap_form(doubled, forms.cross, interleaved);
 
   mptensor::Shape sh;
   for (std::size_t ax = 0; ax < kExternalLegs; ++ax) {
-    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
+    sh.push(doubled.shape()[2 * ax] * doubled.shape()[2 * ax + 1]);
   }
-  sh.push(ordered.shape()[12]);
-  sh.push(ordered.shape()[13]);
-  sh.push(ordered.shape()[14]);
-  sh.push(ordered.shape()[15]);
+  sh.push(doubled.shape()[12]);
+  sh.push(doubled.shape()[13]);
+  sh.push(doubled.shape()[14]);
+  sh.push(doubled.shape()[15]);
 
-  tensor fused = mptensor::reshape(ordered.t, sh);
+  tensor fused = mptensor::reshape(doubled.t, sh);
   return mptensor::contract(fused, mptensor::Axes(6, 7), mptensor::Axes(8, 9));
 }
 
@@ -215,9 +236,7 @@ tensor build_reduced_pair(const ftensor<tensor>& TnA,
   }
 
   ftensor<tensor> ket_op = apply_pair_op(ket_ab, op12);
-  ftensor<tensor> doubled =
-      tensordot(conj(ket_ab), ket_op, mptensor::Axes(), mptensor::Axes());
-  tensor ret = detail::fuse_doubled_cluster(doubled, leg_ids);
+  tensor ret = detail::fuse_doubled_cluster(conj(ket_ab), ket_op, leg_ids);
   // Gauge alignment with the single-site doubling convention; measured
   // directly via comparison against build_reduced_op/build_reduced-based
   // direct composition, not derived analytically.
