@@ -32,6 +32,7 @@
 #include <limits>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2319,5 +2320,547 @@ TEST_CASE_TEMPLATE("SS C3-6 fuse_doubled_cluster does the outer product itself",
       REQUIRE(ss_count_nonzero_tensor(expected) > 0);
       CHECK(ss_count_diff(got, expected) == 0);
     }
+  }
+}
+
+// ===== SS C4: the input-validation guards ================================
+//
+// Every `throw std::runtime_error` in src/fermion/sign_sweep.hpp and
+// src/fermion/reduced.hpp is pinned here.  Several of them (validate_axes,
+// the form/gauge range checks) exist because the index they guard is used
+// immediately as a buffer offset -- without the throw the code writes out of
+// bounds instead of failing, so removing one silently is a memory safety
+// regression that no numerical test can see.
+//
+// The assertions check the exception MESSAGE, not just the type.  Guards
+// shadow each other: without the rank check in build_reduced_op, for example,
+// the pipeline still throws -- but from validate_axes, several calls later.
+// A plain CHECK_THROWS_AS is green for that mutation; only the message pins
+// which guard fired.  (Verified by mutation; see task-6-guard-tests-report.md)
+//
+// These cases are green as written, because the guards already exist.  Their
+// value is that removing a guard turns them red.
+
+namespace fermion_sign_sweep {
+
+// A well-formed rank-5 ftensor: the starting point every C4 case then breaks
+// in exactly one way.
+template <class tensor>
+tenes::fermion::ftensor<tensor> ss_c4_good(unsigned seed) {
+  return ss_random_ftensor<tensor>(mptensor::Shape(2, 3, 2, 2, 2), seed);
+}
+
+// The exact messages the guards throw.
+constexpr const char* kMsgParityRank =
+    "fermion sign sweep: parity rank mismatch";
+constexpr const char* kMsgParityDim =
+    "fermion sign sweep: parity dimension mismatch";
+constexpr const char* kMsgGaugeAxis =
+    "fermion sign sweep: gauge axis out of range";
+constexpr const char* kMsgFormAxis =
+    "fermion sign sweep: form axis out of range";
+constexpr const char* kMsgTransposeAxes =
+    "fermion sign sweep: transpose axes out of range";
+constexpr const char* kMsgJointSize =
+    "joint_swap_forms: axis and leg id size mismatch";
+constexpr const char* kMsgJointNegative = "joint_swap_forms: negative axis";
+constexpr const char* kMsgJointDupBra =
+    "fermion joint swap: duplicate bra axis";
+constexpr const char* kMsgJointDupKet =
+    "fermion joint swap: duplicate ket axis";
+constexpr const char* kMsgReducedOpRank =
+    "build_reduced_op expects a five-leg Tn ftensor";
+constexpr const char* kMsgPairStateRank =
+    "build_pair_state expects five-leg Tn ftensors";
+constexpr const char* kMsgPairStateDirection =
+    "build_pair_state: invalid direction";
+constexpr const char* kMsgPairOpRank =
+    "apply_pair_op expects an eight-leg pair state";
+constexpr const char* kMsgPairOpOperator =
+    "apply_pair_op expects a four-leg operator";
+
+}  // namespace fermion_sign_sweep
+
+// ------------------------------------------------------------------ C4-1
+
+TEST_CASE_TEMPLATE("SS C4-1 apply_sign_sweep rejects a malformed parity ledger",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+  using tenes::fermion::SwapForm;
+
+  const tenes::fermion::ftensor<tensor> good = ss_c4_good<tensor>(41000u);
+  const SwapForm form = ss_form({{0, 2}, {1, 4}});
+  const std::vector<tenes::fermion::LegGauge> no_gauges;
+
+  SUBCASE("the well-formed call does not throw") {
+    tenes::fermion::ftensor<tensor> a = good;
+    CHECK_NOTHROW(tenes::fermion::apply_sign_sweep(a, form, no_gauges));
+  }
+
+  SUBCASE("parity ledger with too few legs") {
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity.pop_back();
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_sign_sweep(a, form, no_gauges),
+                         kMsgParityRank, std::runtime_error);
+  }
+
+  SUBCASE("parity ledger with too many legs") {
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity.push_back(tenes::fermion::parity_vector{false, true});
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_sign_sweep(a, form, no_gauges),
+                         kMsgParityRank, std::runtime_error);
+  }
+
+  SUBCASE("a leg whose ledger is longer than its dimension") {
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity[1].push_back(true);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_sign_sweep(a, form, no_gauges),
+                         kMsgParityDim, std::runtime_error);
+  }
+
+  SUBCASE("a leg whose ledger is shorter than its dimension") {
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity[1].pop_back();
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_sign_sweep(a, form, no_gauges),
+                         kMsgParityDim, std::runtime_error);
+  }
+
+  SUBCASE("the ledger is checked before the empty-work shortcut") {
+    // an empty form with no gauges still has to be rejected, otherwise the
+    // guard could be moved behind the early return and stay green
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity.pop_back();
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_sign_sweep(a, SwapForm{}, no_gauges),
+        kMsgParityRank, std::runtime_error);
+  }
+
+  SUBCASE("apply_swap_form forwards to the same guard") {
+    tenes::fermion::ftensor<tensor> a = good;
+    a.parity[2].pop_back();
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_swap_form(a, form),
+                         kMsgParityDim, std::runtime_error);
+  }
+}
+
+// ------------------------------------------------------------------ C4-2
+
+TEST_CASE_TEMPLATE(
+    "SS C4-2 apply_sign_sweep rejects out-of-range gauge and form axes", tensor,
+    tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+  using tenes::fermion::LegGauge;
+  using tenes::fermion::SwapForm;
+
+  const tenes::fermion::ftensor<tensor> good = ss_c4_good<tensor>(42000u);
+  const int rank = good.rank();  // 5
+
+  SUBCASE("a gauge axis equal to the rank") {
+    tenes::fermion::ftensor<tensor> a = good;
+    const std::vector<LegGauge> gauges{LegGauge{rank, {1.0, -1.0}}};
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_sign_sweep(a, SwapForm{}, gauges), kMsgGaugeAxis,
+        std::runtime_error);
+  }
+
+  SUBCASE("a gauge axis far beyond the rank") {
+    tenes::fermion::ftensor<tensor> a = good;
+    const std::vector<LegGauge> gauges{LegGauge{0, {1.0, -1.0}},
+                                       LegGauge{97, {1.0, -1.0}}};
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_sign_sweep(a, SwapForm{}, gauges), kMsgGaugeAxis,
+        std::runtime_error);
+  }
+
+  SUBCASE("a negative gauge axis") {
+    tenes::fermion::ftensor<tensor> a = good;
+    const std::vector<LegGauge> gauges{LegGauge{-1, {1.0, -1.0}}};
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_sign_sweep(a, SwapForm{}, gauges), kMsgGaugeAxis,
+        std::runtime_error);
+  }
+
+  SUBCASE("a form axis equal to the rank") {
+    tenes::fermion::ftensor<tensor> a = good;
+    SwapForm form;
+    form.toggle(0, rank);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_swap_form(a, form), kMsgFormAxis,
+                         std::runtime_error);
+  }
+
+  SUBCASE("a form axis far beyond the rank") {
+    tenes::fermion::ftensor<tensor> a = good;
+    SwapForm form;
+    form.toggle(1, 3);
+    form.toggle(2, 64);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_swap_form(a, form), kMsgFormAxis,
+                         std::runtime_error);
+  }
+
+  SUBCASE("a negative form axis") {
+    tenes::fermion::ftensor<tensor> a = good;
+    SwapForm form;
+    form.toggle(-1, 2);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_swap_form(a, form), kMsgFormAxis,
+                         std::runtime_error);
+  }
+
+  SUBCASE("every evaluation path rejects it") {
+    // the table path indexes a per-axis array with the form axis, the direct
+    // path indexes the parity offsets; both must be guarded
+    for (const tenes::fermion::SignEval eval :
+         {tenes::fermion::SignEval::table, tenes::fermion::SignEval::direct,
+          tenes::fermion::SignEval::automatic}) {
+      tenes::fermion::ftensor<tensor> a = good;
+      SwapForm form;
+      form.toggle(0, rank + 2);
+      CHECK_THROWS_WITH_AS(tenes::fermion::apply_swap_form(a, form, eval),
+                           kMsgFormAxis, std::runtime_error);
+    }
+  }
+
+  SUBCASE("transpose_with_swap_form forwards the form to the same guard") {
+    tenes::fermion::ftensor<tensor> a = good;
+    SwapForm form;
+    form.toggle(0, rank + 1);
+    CHECK_THROWS_WITH_AS(tenes::fermion::transpose_with_swap_form(
+                             a, form, mptensor::Axes(4, 3, 2, 1, 0)),
+                         kMsgFormAxis, std::runtime_error);
+  }
+
+  SUBCASE("the well-formed call does not throw") {
+    tenes::fermion::ftensor<tensor> a = good;
+    const std::vector<LegGauge> gauges{LegGauge{rank - 1, {1.0, -1.0}}};
+    SwapForm form;
+    form.toggle(0, rank - 1);
+    CHECK_NOTHROW(tenes::fermion::apply_sign_sweep(a, form, gauges));
+  }
+}
+
+// ------------------------------------------------------------------ C4-3
+
+TEST_CASE_TEMPLATE("SS C4-3 apply_leg_gauges rejects out-of-range gauge axes",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+  using tenes::fermion::LegGauge;
+
+  const mptensor::Shape sh(2, 3, 2, 2, 2);
+  const tensor good = ss_random_tensor<tensor>(sh, 43000u);
+  const int rank = static_cast<int>(sh.size());  // 5
+
+  SUBCASE("a gauge axis equal to the rank") {
+    tensor a = good;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_leg_gauges(a, {LegGauge{rank, {1.0, -1.0}}}),
+        kMsgGaugeAxis, std::runtime_error);
+  }
+
+  SUBCASE("a gauge axis far beyond the rank") {
+    tensor a = good;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_leg_gauges(a, {LegGauge{123, {1.0, -1.0}}}),
+        kMsgGaugeAxis, std::runtime_error);
+  }
+
+  SUBCASE("a negative gauge axis") {
+    tensor a = good;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_leg_gauges(a, {LegGauge{-3, {1.0, -1.0}}}),
+        kMsgGaugeAxis, std::runtime_error);
+  }
+
+  SUBCASE("the bad axis is caught even next to a valid one") {
+    tensor a = good;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::apply_leg_gauges(
+            a, {LegGauge{0, {1.0, -1.0}}, LegGauge{rank, {1.0, -1.0}}}),
+        kMsgGaugeAxis, std::runtime_error);
+  }
+
+  SUBCASE("well-formed gauges do not throw") {
+    tensor a = good;
+    CHECK_NOTHROW(tenes::fermion::apply_leg_gauges(a, std::vector<LegGauge>()));
+    CHECK_NOTHROW(
+        tenes::fermion::apply_leg_gauges(a, {LegGauge{rank - 1, {1.0, -1.0}}}));
+  }
+}
+
+// ------------------------------------------------------------------ C4-4
+
+TEST_CASE_TEMPLATE("SS C4-4 the transpose entry points reject malformed axes",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+  using tenes::fermion::SwapForm;
+
+  const tenes::fermion::ftensor<tensor> good = ss_c4_good<tensor>(44000u);
+
+  struct bad_axes {
+    std::string name;
+    mptensor::Axes axes;
+  };
+  // the rank of `good` is 5
+  const std::vector<bad_axes> cases = {
+      {"too few axes", mptensor::Axes(0, 1, 2)},
+      {"too many axes", mptensor::Axes(0, 1, 2, 3, 4, 4)},
+      {"an axis equal to the rank", mptensor::Axes(0, 1, 2, 3, 5)},
+      {"an axis far beyond the rank", mptensor::Axes(0, 1, 2, 3, 99)},
+      {"a repeated axis", mptensor::Axes(0, 1, 2, 3, 3)},
+      {"a repeated axis in front", mptensor::Axes(2, 1, 2, 3, 4)},
+  };
+
+  for (const bad_axes& b : cases) {
+    INFO(b.name);
+    {
+      tenes::fermion::ftensor<tensor> a = good;
+      CHECK_THROWS_WITH_AS(
+          tenes::fermion::transpose_with_swap_form(a, SwapForm{}, b.axes),
+          kMsgTransposeAxes, std::runtime_error);
+    }
+    {
+      // the guard has to fire with a non-empty form too
+      tenes::fermion::ftensor<tensor> a = good;
+      CHECK_THROWS_WITH_AS(tenes::fermion::transpose_with_swap_form(
+                               a, ss_form({{0, 2}}), b.axes),
+                           kMsgTransposeAxes, std::runtime_error);
+    }
+    {
+      tenes::fermion::ftensor<tensor> a = good;
+      CHECK_THROWS_WITH_AS(a.transpose(b.axes), kMsgTransposeAxes,
+                           std::runtime_error);
+    }
+    {
+      tenes::fermion::ftensor<tensor> a = good;
+      CHECK_THROWS_WITH_AS(tenes::fermion::transpose(a, b.axes),
+                           kMsgTransposeAxes, std::runtime_error);
+    }
+    {
+      tenes::fermion::ftensor<tensor> a = good;
+      CHECK_THROWS_WITH_AS(
+          tenes::fermion::detail::apply_transpose_sign_mask(a, b.axes),
+          kMsgTransposeAxes, std::runtime_error);
+    }
+  }
+
+  SUBCASE("well-formed axes do not throw") {
+    tenes::fermion::ftensor<tensor> a = good;
+    CHECK_NOTHROW(tenes::fermion::transpose_with_swap_form(
+        a, SwapForm{}, mptensor::Axes(0, 1, 2, 3, 4)));
+    tenes::fermion::ftensor<tensor> b = good;
+    CHECK_NOTHROW(b.transpose(mptensor::Axes(4, 3, 2, 1, 0)));
+    tenes::fermion::ftensor<tensor> c = good;
+    CHECK_NOTHROW(tenes::fermion::detail::apply_transpose_sign_mask(
+        c, mptensor::Axes(1, 0, 3, 2, 4)));
+  }
+}
+
+// ------------------------------------------------------------------ C4-5
+
+TEST_CASE("SS C4-5 joint_swap_forms rejects malformed axis lists") {
+  using namespace fermion_sign_sweep;
+
+  const std::vector<int> bra = ss_c3_cluster_bra_axes();  // {0,1,2,4,5,6}
+  const std::vector<int> ket = ss_c3_cluster_ket_axes();  // {8,9,10,12,13,14}
+  const std::vector<int> legs = {0, 1, 3, 1, 2, 3};
+
+  SUBCASE("the well-formed calls do not throw") {
+    CHECK_NOTHROW(tenes::fermion::detail::joint_swap_forms(bra, ket, legs));
+    CHECK_NOTHROW(
+        tenes::fermion::detail::joint_swap_forms(bra, ket, {0, 1, 2, 0, 2, 3}));
+    CHECK_NOTHROW(tenes::fermion::detail::joint_swap_forms(
+        {0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3}));
+  }
+
+  SUBCASE("bra axis list shorter than the leg ids") {
+    std::vector<int> short_bra = bra;
+    short_bra.pop_back();
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(short_bra, ket, legs),
+        kMsgJointSize, std::runtime_error);
+  }
+
+  SUBCASE("bra axis list longer than the leg ids") {
+    std::vector<int> long_bra = bra;
+    long_bra.push_back(7);
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(long_bra, ket, legs),
+        kMsgJointSize, std::runtime_error);
+  }
+
+  SUBCASE("ket axis list shorter than the leg ids") {
+    std::vector<int> short_ket = ket;
+    short_ket.pop_back();
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(bra, short_ket, legs),
+        kMsgJointSize, std::runtime_error);
+  }
+
+  SUBCASE("ket axis list longer than the leg ids") {
+    std::vector<int> long_ket = ket;
+    long_ket.push_back(15);
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(bra, long_ket, legs),
+        kMsgJointSize, std::runtime_error);
+  }
+
+  SUBCASE("a negative bra axis") {
+    std::vector<int> neg_bra = bra;
+    neg_bra[2] = -1;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(neg_bra, ket, legs),
+        kMsgJointNegative, std::runtime_error);
+  }
+
+  SUBCASE("a negative ket axis") {
+    std::vector<int> neg_ket = ket;
+    neg_ket[4] = -8;
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(bra, neg_ket, legs),
+        kMsgJointNegative, std::runtime_error);
+  }
+
+  SUBCASE("a duplicated bra axis") {
+    // a duplicate would toggle the same swap twice and cancel it, so the form
+    // would silently lose a sign
+    std::vector<int> dup_bra = bra;
+    dup_bra[3] = dup_bra[0];
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(dup_bra, ket, legs),
+        kMsgJointDupBra, std::runtime_error);
+  }
+
+  SUBCASE("a duplicated ket axis") {
+    std::vector<int> dup_ket = ket;
+    dup_ket[5] = dup_ket[1];
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::detail::joint_swap_forms(bra, dup_ket, legs),
+        kMsgJointDupKet, std::runtime_error);
+  }
+
+  SUBCASE("the duplicate check covers every position pair") {
+    for (std::size_t i = 0; i < bra.size(); ++i) {
+      for (std::size_t j = 0; j < bra.size(); ++j) {
+        if (i == j) {
+          continue;
+        }
+        INFO("position " << j << " := position " << i);
+        std::vector<int> dup_bra = bra;
+        dup_bra[j] = dup_bra[i];
+        CHECK_THROWS_WITH_AS(
+            tenes::fermion::detail::joint_swap_forms(dup_bra, ket, legs),
+            kMsgJointDupBra, std::runtime_error);
+        std::vector<int> dup_ket = ket;
+        dup_ket[j] = dup_ket[i];
+        CHECK_THROWS_WITH_AS(
+            tenes::fermion::detail::joint_swap_forms(bra, dup_ket, legs),
+            kMsgJointDupKet, std::runtime_error);
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------------ C4-6
+
+TEST_CASE_TEMPLATE("SS C4-6 the reduced pipeline rejects malformed tensors",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+  using tenes::fermion::reduced_pair_direction;
+
+  const tenes::fermion::ftensor<tensor> good5 = ss_c4_good<tensor>(46000u);
+  const tenes::fermion::ftensor<tensor> bad4 =
+      ss_random_ftensor<tensor>(mptensor::Shape(2, 2, 2, 2), 46100u);
+  // a value no enumerator has, for the fall-through / default branches
+  const reduced_pair_direction bogus = static_cast<reduced_pair_direction>(7);
+
+  SUBCASE("build_reduced_op wants exactly five legs") {
+    // The message matters here: without this guard the pipeline still throws,
+    // but from validate_axes ("transpose axes out of range") much later.
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_op(bad4),
+                         kMsgReducedOpRank, std::runtime_error);
+    CHECK_NOTHROW(tenes::fermion::build_reduced_op(good5));
+  }
+
+  SUBCASE("build_reduced forwards to the same guard") {
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced(bad4), kMsgReducedOpRank,
+                         std::runtime_error);
+    CHECK_NOTHROW(tenes::fermion::build_reduced(good5));
+  }
+
+  SUBCASE("build_pair_state wants five legs on both sites") {
+    tenes::fermion::ftensor<tensor> TnA, TnB;
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46200u, TnA,
+                               TnB);
+    CHECK_NOTHROW(tenes::fermion::build_pair_state(
+        TnA, TnB, reduced_pair_direction::horizontal));
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_pair_state(
+                             bad4, TnB, reduced_pair_direction::horizontal),
+                         kMsgPairStateRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_pair_state(
+                             TnA, bad4, reduced_pair_direction::horizontal),
+                         kMsgPairStateRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_pair_state(
+                             bad4, bad4, reduced_pair_direction::vertical),
+                         kMsgPairStateRank, std::runtime_error);
+  }
+
+  SUBCASE("build_pair_state rejects a direction no enumerator has") {
+    tenes::fermion::ftensor<tensor> TnA, TnB;
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46300u, TnA,
+                               TnB);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_pair_state(TnA, TnB, bogus),
+                         kMsgPairStateDirection, std::runtime_error);
+  }
+
+  SUBCASE("apply_pair_op wants an eight-leg pair and a four-leg operator") {
+    tenes::fermion::ftensor<tensor> TnA, TnB;
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46400u, TnA,
+                               TnB);
+    const tenes::fermion::ftensor<tensor> pair =
+        tenes::fermion::build_pair_state(TnA, TnB,
+                                         reduced_pair_direction::horizontal);
+    const tenes::fermion::ftensor<tensor> op =
+        ss_c3_op_hopping<tensor>(TnA, TnB);
+    CHECK_NOTHROW(tenes::fermion::apply_pair_op(pair, op));
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_pair_op(good5, op),
+                         kMsgPairOpRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_pair_op(bad4, op),
+                         kMsgPairOpRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_pair_op(pair, good5),
+                         kMsgPairOpOperator, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::apply_pair_op(pair, pair),
+                         kMsgPairOpOperator, std::runtime_error);
+  }
+
+  SUBCASE("build_reduced_pair rejects a direction no enumerator has") {
+    tenes::fermion::ftensor<tensor> TnA, TnB;
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46500u, TnA,
+                               TnB);
+    const tenes::fermion::ftensor<tensor> op =
+        ss_c3_op_hopping<tensor>(TnA, TnB);
+    // build_reduced_pair calls build_pair_state first, so the message that
+    // comes out is build_pair_state's.  Its own `default:` branch (the
+    // "doubled_cluster: invalid direction" throw) is unreachable -- recorded
+    // in the task-6 report, not something this test can pin.
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_pair(TnA, TnB, op, bogus),
+        kMsgPairStateDirection, std::runtime_error);
+  }
+
+  SUBCASE("fuse_doubled_cluster forwards a bad leg_ids list to the guard") {
+    tenes::fermion::ftensor<tensor> TnA, TnB;
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46600u, TnA,
+                               TnB);
+    const tenes::fermion::ftensor<tensor> op =
+        ss_c3_op_hopping<tensor>(TnA, TnB);
+    tenes::fermion::ftensor<tensor> bra_pair, ket_pair;
+    ss_c3_doubled_pair<tensor>(TnA, TnB, op, reduced_pair_direction::horizontal,
+                               bra_pair, ket_pair);
+    CHECK_NOTHROW(tenes::fermion::detail::fuse_doubled_cluster(
+        bra_pair, ket_pair, {0, 1, 3, 1, 2, 3}));
+    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster(
+                             bra_pair, ket_pair, {0, 1, 3}),
+                         kMsgJointSize, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster(
+                             bra_pair, ket_pair, {0, 1, 3, 1, 2, 3, 0}),
+                         kMsgJointSize, std::runtime_error);
   }
 }
