@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "ftensor.hpp"
+#include "sign_sweep.hpp"
 
 namespace tenes {
 namespace fermion {
@@ -207,6 +208,12 @@ inline std::complex<double> scalar_conj(std::complex<double> v) {
 
 template <class tensor>
 void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
+  if (ax1 != ax2) {
+    SwapForm form;
+    form.toggle(ax1, ax2);
+    apply_swap_form(a, form);
+    return;
+  }
   mptensor::Index idx;
   idx.resize(a.t.shape().size());
   for (std::size_t n = 0; n < a.t.local_size(); ++n) {
