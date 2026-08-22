@@ -138,6 +138,16 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
   const std::size_t n_local = a.t.local_size();
   const std::vector<std::pair<int, int>>& terms = form.terms();
   const bool has_form = !terms.empty();
+  for (std::size_t i = 0; i < terms.size(); ++i) {
+    if (terms[i].first < 0 || terms[i].second < 0 ||
+        static_cast<std::size_t>(terms[i].first) >= rank ||
+        static_cast<std::size_t>(terms[i].second) >= rank) {
+      throw std::runtime_error("fermion sign sweep: form axis out of range");
+    }
+  }
+  if (!has_form && gauges.empty()) {
+    return;
+  }
   const bool use_table =
       (eval == SignEval::table && rank <= detail::kMaxTableRank) ||
       (eval == SignEval::automatic && detail::use_sign_table(rank, n_local));
@@ -145,6 +155,7 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
 
   std::vector<std::size_t> parity_offsets;
   std::vector<std::uint8_t> parity_bits;
+  std::vector<std::uint32_t> shifted_parity_bits;
   std::vector<int> form_axes;
   if (has_form) {
     parity_offsets.assign(rank + 1, 0);
@@ -152,9 +163,13 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
       parity_offsets[ax + 1] = parity_offsets[ax] + a.parity[ax].size();
     }
     parity_bits.assign(parity_offsets[rank], 0);
+    shifted_parity_bits.assign(parity_offsets[rank], 0);
     for (std::size_t ax = 0; ax < rank; ++ax) {
       for (std::size_t i = 0; i < a.parity[ax].size(); ++i) {
-        parity_bits[parity_offsets[ax] + i] = a.parity[ax][i] ? 1 : 0;
+        if (a.parity[ax][i]) {
+          parity_bits[parity_offsets[ax] + i] = 1;
+          shifted_parity_bits[parity_offsets[ax] + i] = std::uint32_t(1) << ax;
+        }
       }
     }
 
@@ -224,9 +239,7 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
         std::uint32_t mask = 0;
         for (std::size_t i = 0; i < form_axes.size(); ++i) {
           const int ax = form_axes[i];
-          if (parity_bits[parity_offsets[ax] + idx[ax]] != 0) {
-            mask |= std::uint32_t(1) << ax;
-          }
+          mask |= shifted_parity_bits[parity_offsets[ax] + idx[ax]];
         }
         if (signs[mask] < 0) {
           a.t[n] = -a.t[n];
