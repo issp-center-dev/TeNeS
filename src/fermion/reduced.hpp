@@ -42,6 +42,17 @@ struct JointSwapForms {
   SwapForm bra;
 };
 
+inline void validate_unique_joint_axes(const std::vector<int>& axes,
+                                       const char* context) {
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    for (std::size_t j = i + 1; j < axes.size(); ++j) {
+      if (axes[i] == axes[j]) {
+        throw std::runtime_error(context);
+      }
+    }
+  }
+}
+
 inline JointSwapForms joint_swap_forms(const std::vector<int>& bra_axes,
                                        const std::vector<int>& ket_axes,
                                        const std::vector<int>& leg_ids) {
@@ -53,6 +64,10 @@ inline JointSwapForms joint_swap_forms(const std::vector<int>& bra_axes,
       throw std::runtime_error("joint_swap_forms: negative axis");
     }
   }
+  validate_unique_joint_axes(bra_axes,
+                             "fermion joint swap: duplicate bra axis");
+  validate_unique_joint_axes(ket_axes,
+                             "fermion joint swap: duplicate ket axis");
 
   JointSwapForms forms;
   for (int x = 0; x < 4; ++x) {
@@ -105,6 +120,11 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   // the ket layer beforehand; for the plain reduced tensor they are equal.
   const auto forms = joint_swap_forms({0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3});
   ftensor<tensor> bra = conj(bra_Tn);
+  // This pre-outer-product swap is the point of this task: it cuts rank-16
+  // sweeps. Moving it after the outer product is numerically identical and
+  // tests cannot detect that regression, but at D=4 it changes 16384 elements
+  // into 2.68e8 elements, a 16384x larger pass. This relies on the empty
+  // contraction axes here; do not generalize it to non-empty tensordot.
   apply_swap_form(bra, forms.bra);
   ftensor<tensor> doubled =
       tensordot(bra, ket_Tn, mptensor::Axes(), mptensor::Axes());
@@ -139,6 +159,11 @@ tensor fuse_doubled_cluster(const ftensor<tensor>& bra_pair,
   }
   const auto forms = joint_swap_forms(bra_axes, ket_axes, leg_ids);
   ftensor<tensor> bra = bra_pair;
+  // This pre-outer-product swap is the point of this task: it cuts rank-16
+  // sweeps. Moving it after the outer product is numerically identical and
+  // tests cannot detect that regression, but at D=4 it changes 16384 elements
+  // into 2.68e8 elements, a 16384x larger pass. This relies on the empty
+  // contraction axes here; do not generalize it to non-empty tensordot.
   apply_swap_form(bra, forms.bra);
   ftensor<tensor> doubled =
       tensordot(bra, ket_pair, mptensor::Axes(), mptensor::Axes());
