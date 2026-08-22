@@ -99,18 +99,4 @@ struct ftensor {
 }  // namespace fermion
 }  // namespace tenes
 
-#include "sign_sweep.hpp"
-
-namespace tenes {
-namespace fermion {
-
-template <class tensor>
-ftensor<tensor>& ftensor<tensor>::transpose(const mptensor::Axes& axes) {
-  transpose_with_swap_form(*this, SwapForm{}, axes);
-  return *this;
-}
-
-}  // namespace fermion
-}  // namespace tenes
-
 #endif  // TENES_SRC_FERMION_FTENSOR_HPP_

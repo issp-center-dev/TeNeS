@@ -65,6 +65,10 @@ struct LegGauge {
 
 namespace detail {
 constexpr std::size_t kMaxTableRank = 24;
+// Measured by work/twosite-perf/task2_threshold_bench.cpp on this task:
+// with 8 OpenMP threads, global_index_fast serial evaluation is faster up to
+// local_size 4096, while the l2g/OpenMP sweep wins at 8192 and above.
+constexpr std::size_t kSerialSweepThreshold = 8192;
 
 inline bool use_sign_table(std::size_t rank, std::size_t local_size) {
   if (rank > kMaxTableRank) {
@@ -198,12 +202,17 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
       parity_offsets[ax + 1] = parity_offsets[ax] + a.parity[ax].size();
     }
     parity_bits.assign(parity_offsets[rank], 0);
-    shifted_parity_bits.assign(parity_offsets[rank], 0);
+    if (build_table) {
+      shifted_parity_bits.assign(parity_offsets[rank], 0);
+    }
     for (std::size_t ax = 0; ax < rank; ++ax) {
       for (std::size_t i = 0; i < a.parity[ax].size(); ++i) {
         if (a.parity[ax][i]) {
           parity_bits[parity_offsets[ax] + i] = 1;
-          shifted_parity_bits[parity_offsets[ax] + i] = std::uint32_t(1) << ax;
+          if (build_table) {
+            shifted_parity_bits[parity_offsets[ax] + i] = std::uint32_t(1)
+                                                          << ax;
+          }
         }
       }
     }
@@ -239,6 +248,49 @@ void apply_sign_sweep(ftensor<tensor>& a, const SwapForm& form,
       }
       signs[mask] = static_cast<std::int8_t>(sign);
     }
+  }
+
+  if (n_local < detail::kSerialSweepThreshold) {
+    mptensor::Index idx;
+    idx.resize(rank);
+    if (!has_form) {
+      for (std::size_t n = 0; n < n_local; ++n) {
+        a.t.global_index_fast(n, idx);
+        for (std::size_t i = 0; i < gauges.size(); ++i) {
+          const LegGauge& g = gauges[i];
+          a.t[n] *= g.factor[idx[g.axis]];
+        }
+      }
+    } else if (build_table) {
+      for (std::size_t n = 0; n < n_local; ++n) {
+        a.t.global_index_fast(n, idx);
+        std::uint32_t mask = 0;
+        for (std::size_t i = 0; i < form_axes.size(); ++i) {
+          const int ax = form_axes[i];
+          mask |= shifted_parity_bits[parity_offsets[ax] + idx[ax]];
+        }
+        if (signs[mask] < 0) {
+          a.t[n] = -a.t[n];
+        }
+        for (std::size_t i = 0; i < gauges.size(); ++i) {
+          const LegGauge& g = gauges[i];
+          a.t[n] *= g.factor[idx[g.axis]];
+        }
+      }
+    } else {
+      for (std::size_t n = 0; n < n_local; ++n) {
+        a.t.global_index_fast(n, idx);
+        if (detail::direct_sign(terms, &idx[0], parity_bits, parity_offsets) <
+            0) {
+          a.t[n] = -a.t[n];
+        }
+        for (std::size_t i = 0; i < gauges.size(); ++i) {
+          const LegGauge& g = gauges[i];
+          a.t[n] *= g.factor[idx[g.axis]];
+        }
+      }
+    }
+    return;
   }
 
   a.t.prep_local_to_global();
@@ -328,6 +380,21 @@ void apply_leg_gauges(tensor& a, const std::vector<LegGauge>& gauges) {
       throw std::runtime_error("fermion sign sweep: gauge axis out of range");
     }
   }
+  if (gauges.empty()) {
+    return;
+  }
+  if (n_local < detail::kSerialSweepThreshold) {
+    mptensor::Index idx;
+    idx.resize(rank);
+    for (std::size_t n = 0; n < n_local; ++n) {
+      a.global_index_fast(n, idx);
+      for (std::size_t i = 0; i < gauges.size(); ++i) {
+        const LegGauge& g = gauges[i];
+        a[n] *= g.factor[idx[g.axis]];
+      }
+    }
+    return;
+  }
   a.prep_local_to_global();
   a.make_l2g_map();
 #ifndef _NO_OMP
@@ -361,12 +428,11 @@ void transpose_with_swap_form(ftensor<tensor>& a, const SwapForm& form,
   }
 
   SwapForm combined = form;
-  for (std::size_t x = 0; x < axes.size(); ++x) {
-    for (std::size_t y = x + 1; y < axes.size(); ++y) {
-      if (axes[x] > axes[y]) {
-        combined.toggle(static_cast<int>(axes[y]), static_cast<int>(axes[x]));
-      }
-    }
+  const SwapForm transpose_form = detail::transpose_sign_form(axes);
+  const std::vector<std::pair<int, int>>& transpose_terms =
+      transpose_form.terms();
+  for (std::size_t i = 0; i < transpose_terms.size(); ++i) {
+    combined.toggle(transpose_terms[i].first, transpose_terms[i].second);
   }
   apply_swap_form(a, combined, eval);
   a.t.transpose(axes);
@@ -376,6 +442,12 @@ void transpose_with_swap_form(ftensor<tensor>& a, const SwapForm& form,
     next.push_back(a.parity[axes[i]]);
   }
   a.parity = next;
+}
+
+template <class tensor>
+ftensor<tensor>& ftensor<tensor>::transpose(const mptensor::Axes& axes) {
+  transpose_with_swap_form(*this, SwapForm{}, axes);
+  return *this;
 }
 
 }  // namespace fermion
