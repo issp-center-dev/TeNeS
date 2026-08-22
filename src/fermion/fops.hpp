@@ -82,12 +82,12 @@ template <class tensor>
 ftensor<tensor> apply_transpose_sign_mask(const ftensor<tensor>& a,
                                           const mptensor::Axes& axes) {
   ftensor<tensor> ret = a;
-  mptensor::Index idx;
-  idx.resize(ret.t.shape().size());
-  for (std::size_t n = 0; n < ret.t.local_size(); ++n) {
-    ret.t.global_index_fast(n, idx);
-    ret.t[n] *= transpose_sign(ret.parity, idx, axes);
+  detail::validate_axes(axes, ret.t.shape().size(),
+                        "fermion sign sweep: transpose axes out of range");
+  if (detail::is_identity_axes(axes)) {
+    return ret;
   }
+  apply_swap_form(ret, detail::transpose_sign_form(axes));
   return ret;
 }
 

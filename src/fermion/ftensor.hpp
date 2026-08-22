@@ -93,23 +93,22 @@ struct ftensor {
     t.multiply_vector(vec0, n_axes0, vec1, n_axes1, vec2, n_axes2);
     return *this;
   }
-  ftensor& transpose(const mptensor::Axes& axes) {
-    mptensor::Index idx;
-    idx.resize(t.shape().size());
-    for (std::size_t n = 0; n < t.local_size(); ++n) {
-      t.global_index_fast(n, idx);
-      t[n] *= detail::transpose_sign(parity, idx, axes);
-    }
-    t.transpose(axes);
-    leg_parities next;
-    next.reserve(axes.size());
-    for (std::size_t i = 0; i < axes.size(); ++i) {
-      next.push_back(parity[axes[i]]);
-    }
-    parity = next;
-    return *this;
-  }
+  ftensor& transpose(const mptensor::Axes& axes);
 };
+
+}  // namespace fermion
+}  // namespace tenes
+
+#include "sign_sweep.hpp"
+
+namespace tenes {
+namespace fermion {
+
+template <class tensor>
+ftensor<tensor>& ftensor<tensor>::transpose(const mptensor::Axes& axes) {
+  transpose_with_swap_form(*this, SwapForm{}, axes);
+  return *this;
+}
 
 }  // namespace fermion
 }  // namespace tenes

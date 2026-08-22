@@ -25,10 +25,14 @@
 // factors in C1-8 are deliberately NOT powers of two, so that a kernel which
 // folds them together before the sweep is detected.
 
+#include <algorithm>
+#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <limits>
 #include <random>
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -753,5 +757,755 @@ TEST_CASE_TEMPLATE("SS C1-9 apply_swap still negates odd-odd elements only",
     ftensor<tensor> twice = b;
     tenes::fermion::apply_swap(twice, ax, ax);
     CHECK(ss_count_diff(twice.t, a.t) == 0);
+  }
+}
+
+// ===== SS C2: graded transpose folded into the fused sign sweep ===========
+//
+// `ss_reference` below holds VERBATIM COPIES of the pre-rewrite code, taken
+// from the tag wip/fermion_20260822:
+//
+//   transpose_sign            <- src/fermion/ftensor.hpp,
+//   detail::transpose_sign transpose_inplace         <-
+//   src/fermion/ftensor.hpp, ftensor::transpose
+//                                (member turned into a free function; the body
+//                                 is character for character the original)
+//   transposed                <- src/fermion/fops.hpp, fermion::transpose
+//   apply_transpose_sign_mask <- src/fermion/fops.hpp,
+//                                detail::apply_transpose_sign_mask
+//   tensordot                 <- src/fermion/fops.hpp, fermion::tensordot,
+//                                with the mask above substituted
+//   svd_values                <- src/fermion/fops.hpp, fermion::svd, truncated
+//                                after the two block SVDs (the contract only
+//                                asks for the singular values), with the
+//                                reference transpose above substituted
+//
+// Only namespace qualification was added. The task-2 contract requires this:
+// the rewrite changes src/, so src/ cannot serve as its own reference.
+
+namespace ss_reference {
+
+using tenes::fermion::ftensor;
+using tenes::fermion::leg_parities;
+using tenes::fermion::parity_vector;
+
+// verbatim: tenes::fermion::detail::transpose_sign (ftensor.hpp)
+inline int transpose_sign(const leg_parities& parity,
+                          const mptensor::Index& idx,
+                          const mptensor::Axes& axes) {
+  int k = 0;
+  for (std::size_t x = 0; x < axes.size(); ++x) {
+    for (std::size_t y = x + 1; y < axes.size(); ++y) {
+      if (axes[x] > axes[y] && parity[axes[y]][idx[axes[y]]] &&
+          parity[axes[x]][idx[axes[x]]]) {
+        ++k;
+      }
+    }
+  }
+  return (k % 2 == 0) ? 1 : -1;
+}
+
+// verbatim: tenes::fermion::ftensor<tensor>::transpose (ftensor.hpp)
+template <class tensor>
+ftensor<tensor>& transpose_inplace(ftensor<tensor>& self,
+                                   const mptensor::Axes& axes) {
+  mptensor::Index idx;
+  idx.resize(self.t.shape().size());
+  for (std::size_t n = 0; n < self.t.local_size(); ++n) {
+    self.t.global_index_fast(n, idx);
+    self.t[n] *= transpose_sign(self.parity, idx, axes);
+  }
+  self.t.transpose(axes);
+  leg_parities next;
+  next.reserve(axes.size());
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    next.push_back(self.parity[axes[i]]);
+  }
+  self.parity = next;
+  return self;
+}
+
+// verbatim: tenes::fermion::transpose (fops.hpp)
+template <class tensor>
+ftensor<tensor> transposed(const ftensor<tensor>& a,
+                           const mptensor::Axes& axes) {
+  ftensor<tensor> ret = a;
+  transpose_inplace(ret, axes);
+  return ret;
+}
+
+// verbatim: tenes::fermion::detail::apply_transpose_sign_mask (fops.hpp)
+template <class tensor>
+ftensor<tensor> apply_transpose_sign_mask(const ftensor<tensor>& a,
+                                          const mptensor::Axes& axes) {
+  ftensor<tensor> ret = a;
+  mptensor::Index idx;
+  idx.resize(ret.t.shape().size());
+  for (std::size_t n = 0; n < ret.t.local_size(); ++n) {
+    ret.t.global_index_fast(n, idx);
+    ret.t[n] *= transpose_sign(ret.parity, idx, axes);
+  }
+  return ret;
+}
+
+// verbatim: tenes::fermion::tensordot (fops.hpp), reference mask substituted
+template <class tensor>
+ftensor<tensor> tensordot(const ftensor<tensor>& a, const ftensor<tensor>& b,
+                          const mptensor::Axes& axes_a,
+                          const mptensor::Axes& axes_b) {
+  namespace fdetail = tenes::fermion::detail;
+  fdetail::validate_contracted_parity(a.parity, b.parity, axes_a, axes_b);
+  ftensor<tensor> a_masked = apply_transpose_sign_mask(
+      a, fdetail::tensordot_left_perm(a.parity.size(), axes_a));
+  ftensor<tensor> b_masked = apply_transpose_sign_mask(
+      b, fdetail::tensordot_right_perm(b.parity.size(), axes_b));
+  ftensor<tensor> ret;
+  ret.t = mptensor::tensordot(a_masked.t, b_masked.t, axes_a, axes_b);
+  ret.parity = fdetail::free_leg_parities(a.parity, axes_a);
+  leg_parities b_free = fdetail::free_leg_parities(b.parity, axes_b);
+  ret.parity.insert(ret.parity.end(), b_free.begin(), b_free.end());
+  return ret;
+}
+
+// verbatim: the singular-value half of tenes::fermion::svd (fops.hpp), with
+// the reference transpose substituted for the production one.
+template <class tensor>
+int svd_values(const ftensor<tensor>& a, const mptensor::Axes& rows,
+               const mptensor::Axes& cols, std::vector<double>& s) {
+  namespace fdetail = tenes::fermion::detail;
+  ftensor<tensor> a_ordered = transposed(a, rows + cols);
+  mptensor::Shape row_shape = fdetail::shape_from_axes(a.shape(), rows);
+  mptensor::Shape col_shape = fdetail::shape_from_axes(a.shape(), cols);
+  const std::size_t drow = fdetail::product_shape(row_shape);
+  const std::size_t dcol = fdetail::product_shape(col_shape);
+  tensor mat = mptensor::reshape(a_ordered.t, mptensor::Shape(drow, dcol));
+
+  parity_vector row_parity = fdetail::fuse_axes(a.parity, rows);
+  parity_vector col_parity = fdetail::fuse_axes(a.parity, cols);
+  std::vector<std::size_t> row_perm =
+      tenes::fermion::parity_sort_perm(row_parity);
+  std::vector<std::size_t> col_perm =
+      tenes::fermion::parity_sort_perm(col_parity);
+  tensor prow = tenes::fermion::make_perm_matrix<tensor>(row_perm);
+  tensor pcol = tenes::fermion::make_perm_matrix<tensor>(col_perm);
+  tensor sorted =
+      mptensor::tensordot(prow, mat, mptensor::Axes(1), mptensor::Axes(0));
+  sorted =
+      mptensor::tensordot(sorted, pcol, mptensor::Axes(1), mptensor::Axes(1));
+
+  const std::size_t row_even = fdetail::count_even(row_parity);
+  const std::size_t col_even = fdetail::count_even(col_parity);
+  fdetail::validate_block_diagonal(sorted, row_even, col_even,
+                                   "ss_reference svd");
+  const std::size_t row_odd = drow - row_even;
+  const std::size_t col_odd = dcol - col_even;
+  const std::size_t size_even = std::min(row_even, col_even);
+  const std::size_t size_odd = std::min(row_odd, col_odd);
+
+  std::vector<double> s_even, s_odd;
+  int info = 0;
+  if (size_even > 0) {
+    tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
+                                        mptensor::Index(row_even, col_even));
+    tensor ue, vte;
+    info = mptensor::svd(even_block, mptensor::Axes(0), mptensor::Axes(1), ue,
+                         s_even, vte);
+  }
+  if (size_odd > 0) {
+    tensor odd_block =
+        mptensor::slice(sorted, mptensor::Index(row_even, col_even),
+                        mptensor::Index(drow, dcol));
+    tensor uo, vto;
+    int info_odd = mptensor::svd(odd_block, mptensor::Axes(0),
+                                 mptensor::Axes(1), uo, s_odd, vto);
+    if (info == 0) {
+      info = info_odd;
+    }
+  }
+  s = s_even;
+  s.insert(s.end(), s_odd.begin(), s_odd.end());
+  return info;
+}
+
+}  // namespace ss_reference
+
+// ------------------------------------------------------- C2 test helpers
+
+namespace fermion_sign_sweep {
+
+struct ss_named_axes {
+  std::string name;
+  mptensor::Axes axes;
+};
+
+inline std::string ss_axes_string(const mptensor::Axes& axes) {
+  std::ostringstream os;
+  os << "[";
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    if (i > 0) {
+      os << ",";
+    }
+    os << axes[i];
+  }
+  os << "]";
+  return os.str();
+}
+
+inline mptensor::Axes ss_identity_axes(std::size_t rank) {
+  std::vector<std::size_t> p(rank);
+  for (std::size_t i = 0; i < rank; ++i) {
+    p[i] = i;
+  }
+  return mptensor::Axes(p);
+}
+
+// identity, full reverse, two cyclic shifts, two adjacent swaps, the end
+// swap (0, rank-1) -- which always exchanges two odd-carrying legs, so the
+// inversion count of the odd legs is never trivially zero -- and three
+// deterministic random permutations.
+inline std::vector<ss_named_axes> ss_axes_catalogue(std::size_t rank) {
+  std::vector<ss_named_axes> out;
+  std::vector<std::size_t> p(rank);
+  for (std::size_t i = 0; i < rank; ++i) {
+    p[i] = i;
+  }
+  out.push_back({"identity", mptensor::Axes(p)});
+  {
+    std::vector<std::size_t> q = p;
+    std::reverse(q.begin(), q.end());
+    out.push_back({"reverse", mptensor::Axes(q)});
+  }
+  for (std::size_t k = 1; k <= 2 && k < rank; ++k) {
+    std::vector<std::size_t> q(rank);
+    for (std::size_t i = 0; i < rank; ++i) {
+      q[i] = (i + k) % rank;
+    }
+    out.push_back({"cyclic+" + std::to_string(k), mptensor::Axes(q)});
+  }
+  {
+    std::vector<std::size_t> q = p;
+    std::swap(q[0], q[1]);
+    out.push_back({"swap(0,1)", mptensor::Axes(q)});
+  }
+  if (rank >= 3) {
+    std::vector<std::size_t> q = p;
+    std::swap(q[rank - 2], q[rank - 1]);
+    out.push_back({"swap(rank-2,rank-1)", mptensor::Axes(q)});
+  }
+  {
+    std::vector<std::size_t> q = p;
+    std::swap(q[0], q[rank - 1]);
+    out.push_back({"swap(0,rank-1)", mptensor::Axes(q)});
+  }
+  for (unsigned seed = 0; seed < 3; ++seed) {
+    std::vector<std::size_t> q = p;
+    std::mt19937 gen(1000u * static_cast<unsigned>(rank) + seed);
+    std::shuffle(q.begin(), q.end(), gen);
+    out.push_back({"random#" + std::to_string(seed), mptensor::Axes(q)});
+  }
+  return out;
+}
+
+// rank 2 .. 10, no two axes of a shape share the same dimension pattern and
+// the dimensions are never all equal.
+inline std::vector<std::vector<std::size_t>> ss_c2_shapes() {
+  return {{3, 4},
+          {2, 3, 4},
+          {2, 3, 4, 2},
+          {2, 3, 2, 4, 3},
+          {2, 3, 4, 2, 3, 2},
+          {3, 2, 2, 4, 2, 3, 2},
+          {2, 3, 2, 2, 3, 2, 2, 2},
+          {2, 2, 3, 2, 2, 2, 3, 2, 2},
+          {2, 2, 3, 2, 2, 2, 2, 3, 2, 2}};
+}
+
+// How many elements the reference transpose sign turns negative.  Used as a
+// hollowness guard: a permutation that never flips a sign proves nothing.
+template <class tensor>
+std::size_t ss_flipped_count(const tenes::fermion::ftensor<tensor>& a,
+                             const mptensor::Axes& axes) {
+  std::size_t n_neg = 0;
+  mptensor::Index idx;
+  idx.resize(a.t.shape().size());
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    a.t.global_index_fast(n, idx);
+    if (ss_reference::transpose_sign(a.parity, idx, axes) < 0) {
+      ++n_neg;
+    }
+  }
+  return n_neg;
+}
+
+// Same, but only counting elements that are actually non-zero: a parity-even
+// tensor is mostly zeros, and a sign flipped on a zero is invisible.
+template <class tensor>
+std::size_t ss_flipped_nonzero(const tenes::fermion::ftensor<tensor>& a,
+                               const mptensor::Axes& axes) {
+  std::size_t n_neg = 0;
+  mptensor::Index idx;
+  idx.resize(a.t.shape().size());
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    a.t.global_index_fast(n, idx);
+    if (std::abs(a.t[n]) != 0.0 &&
+        ss_reference::transpose_sign(a.parity, idx, axes) < 0) {
+      ++n_neg;
+    }
+  }
+  return n_neg;
+}
+
+// Parity-even random tensor, built the same way as make_r2_tensor() in
+// test/fermion/r2_convention.cpp: only elements whose total parity is even
+// are filled, the rest stay exactly zero.  fermion::svd / fermion::qr run
+// detail::validate_block_diagonal, which throws in debug builds on an input
+// that is not parity even, so a plain random tensor cannot be used there.
+template <class tensor>
+tenes::fermion::ftensor<tensor> ss_random_even_ftensor(
+    const mptensor::Shape& sh, unsigned seed) {
+  using value_type = typename tensor::value_type;
+  const tenes::fermion::leg_parities p = ss_parities(sh);
+  tensor t(sh);
+  std::mt19937 gen(seed);
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const mptensor::Index idx = t.global_index(n);
+    if (tenes::fermion::count_odd(p, idx) % 2 == 0) {
+      t.set_value(idx, ss_sampler<value_type>::get(gen));
+    }
+  }
+  return tenes::fermion::ftensor<tensor>{t, p};
+}
+
+template <class tensor>
+std::size_t ss_count_nonzero(const tenes::fermion::ftensor<tensor>& a) {
+  std::size_t n_nz = 0;
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    if (std::abs(a.t[n]) != 0.0) {
+      ++n_nz;
+    }
+  }
+  return n_nz;
+}
+
+}  // namespace fermion_sign_sweep
+
+// ------------------------------------------------------------------ C2-1
+
+TEST_CASE_TEMPLATE(
+    "SS C2-1 transpose_with_swap_form reproduces the reference transpose",
+    tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  const std::vector<std::vector<std::size_t>> shapes = ss_c2_shapes();
+  for (std::size_t s = 0; s < shapes.size(); ++s) {
+    const mptensor::Shape sh(shapes[s]);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 5000u + 17u * static_cast<unsigned>(s));
+
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      INFO("rank " << sh.size() << " " << na.name << " "
+                   << ss_axes_string(na.axes));
+
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::transposed(a, na.axes);
+
+      tenes::fermion::ftensor<tensor> got = a;
+      tenes::fermion::transpose_with_swap_form(got, tenes::fermion::SwapForm{},
+                                               na.axes);
+
+      REQUIRE(got.t.shape() == expected.t.shape());
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+      CHECK(got.parity == expected.parity);
+    }
+
+    // The end swap always exchanges two legs that both carry odd entries, so
+    // the odd-leg inversion count is genuinely non-zero: without this the
+    // whole comparison above could hold with every sign equal to +1.
+    std::vector<std::size_t> ends(sh.size());
+    for (std::size_t i = 0; i < sh.size(); ++i) {
+      ends[i] = i;
+    }
+    std::swap(ends[0], ends[sh.size() - 1]);
+    INFO("rank " << sh.size() << " swap(0,rank-1)");
+    REQUIRE(ss_flipped_count(a, mptensor::Axes(ends)) > 0);
+  }
+}
+
+// ------------------------------------------------------------------ C2-2
+
+TEST_CASE_TEMPLATE(
+    "SS C2-2 transpose_with_swap_form composes the swaps with the transpose",
+    tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  struct named_form {
+    const char* name;
+    pair_list pairs;
+  };
+  const std::vector<named_form> forms = {
+      {"single pair", {{0, 1}}},
+      {"two disjoint pairs", {{0, 2}, {1, 3}}},
+      {"three pairs", {{0, 3}, {1, 2}, {0, 1}}},
+      // (0,2)/(2,0) and (1,3)/(3,1) cancel, only (0,3) survives
+      {"with duplicate pairs", {{0, 2}, {1, 3}, {2, 0}, {3, 1}, {0, 3}}},
+      // everything cancels: the form is empty again
+      {"fully cancelling", {{0, 2}, {1, 3}, {2, 0}, {3, 1}}},
+  };
+
+  const std::vector<std::vector<std::size_t>> all = ss_c2_shapes();
+  // ranks 4, 5, 6 and 8 (every form above only touches axes 0..3)
+  const std::size_t picked[4] = {2, 3, 4, 6};
+
+  for (std::size_t k = 0; k < 4; ++k) {
+    const mptensor::Shape sh(all[picked[k]]);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 7100u + 29u * static_cast<unsigned>(k));
+
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      for (const named_form& nf : forms) {
+        INFO("rank " << sh.size() << " " << na.name << " "
+                     << ss_axes_string(na.axes) << " form " << nf.name);
+
+        const tenes::fermion::SwapForm form = ss_form(nf.pairs);
+
+        // reference: swap signs first, then the pre-rewrite transpose
+        tenes::fermion::ftensor<tensor> swapped = a;
+        tenes::fermion::apply_swap_form(swapped, form);
+        const tenes::fermion::ftensor<tensor> expected =
+            ss_reference::transposed(swapped, na.axes);
+
+        tenes::fermion::ftensor<tensor> got = a;
+        tenes::fermion::transpose_with_swap_form(got, form, na.axes);
+
+        REQUIRE(got.t.shape() == expected.t.shape());
+        CHECK(ss_count_diff(got.t, expected.t) == 0);
+        CHECK(got.parity == expected.parity);
+      }
+    }
+
+    // the swap part alone must not be a no-op
+    tenes::fermion::ftensor<tensor> swapped_only = a;
+    tenes::fermion::apply_swap_form(swapped_only, ss_form(forms[1].pairs));
+    INFO("rank " << sh.size());
+    REQUIRE(ss_count_diff(swapped_only.t, a.t) > 0);
+  }
+}
+
+// ------------------------------------------------------------------ C2-3
+
+TEST_CASE_TEMPLATE("SS C2-3 transpose_with_swap_form table and direct agree",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  // shape 0: local_size 144 >= 2^5, so `automatic` may build a table
+  // shape 1: local_size 32 < 2^6 (one axis of dimension 1), so `automatic`
+  //          has to evaluate directly.  Both sides of the boundary are hit.
+  const mptensor::Shape shapes[2] = {mptensor::Shape(2, 3, 2, 4, 3),
+                                     mptensor::Shape(2, 2, 2, 2, 2, 1)};
+  const pair_list pairs[2] = {{{0, 2}, {1, 4}, {3, 0}},
+                              {{0, 5}, {1, 3}, {2, 4}}};
+
+  for (int s = 0; s < 2; ++s) {
+    const mptensor::Shape& sh = shapes[s];
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 8200u + 13u * static_cast<unsigned>(s));
+    const tenes::fermion::SwapForm form = ss_form(pairs[s]);
+
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      INFO("shape " << s << " " << na.name << " " << ss_axes_string(na.axes));
+
+      tenes::fermion::ftensor<tensor> table = a;
+      tenes::fermion::ftensor<tensor> direct = a;
+      tenes::fermion::ftensor<tensor> automatic = a;
+      tenes::fermion::transpose_with_swap_form(table, form, na.axes,
+                                               tenes::fermion::SignEval::table);
+      tenes::fermion::transpose_with_swap_form(
+          direct, form, na.axes, tenes::fermion::SignEval::direct);
+      tenes::fermion::transpose_with_swap_form(
+          automatic, form, na.axes, tenes::fermion::SignEval::automatic);
+
+      CHECK(ss_count_diff(table.t, direct.t) == 0);
+      CHECK(ss_count_diff(automatic.t, table.t) == 0);
+      CHECK(ss_count_diff(automatic.t, direct.t) == 0);
+      CHECK(table.parity == direct.parity);
+      CHECK(automatic.parity == direct.parity);
+
+      // and the default argument is the automatic path
+      tenes::fermion::ftensor<tensor> defaulted = a;
+      tenes::fermion::transpose_with_swap_form(defaulted, form, na.axes);
+      CHECK(ss_count_diff(defaulted.t, automatic.t) == 0);
+
+      // both paths must agree with the pre-rewrite reference as well
+      tenes::fermion::ftensor<tensor> swapped = a;
+      tenes::fermion::apply_swap_form(swapped, form);
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::transposed(swapped, na.axes);
+      CHECK(ss_count_diff(table.t, expected.t) == 0);
+      CHECK(ss_count_diff(direct.t, expected.t) == 0);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ C2-4
+
+TEST_CASE_TEMPLATE(
+    "SS C2-4 transpose_with_swap_form short-circuits the identity permutation",
+    tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  const std::vector<std::vector<std::size_t>> shapes = ss_c2_shapes();
+  for (std::size_t s = 0; s < shapes.size(); ++s) {
+    const mptensor::Shape sh(shapes[s]);
+    const mptensor::Axes id = ss_identity_axes(sh.size());
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 9300u + 31u * static_cast<unsigned>(s));
+    INFO("rank " << sh.size());
+
+    SUBCASE("empty form and identity leave the tensor alone") {
+      tenes::fermion::ftensor<tensor> got = a;
+      tenes::fermion::transpose_with_swap_form(got, tenes::fermion::SwapForm{},
+                                               id);
+      CHECK(ss_count_diff(got.t, a.t) == 0);
+      CHECK(got.parity == a.parity);
+      CHECK(got.t.shape() == a.t.shape());
+    }
+
+    SUBCASE("identity applies the swap signs only") {
+      pair_list pairs;
+      pairs.push_back({0, static_cast<int>(sh.size()) - 1});
+      if (sh.size() >= 4) {
+        pairs.push_back({1, 2});
+      }
+      const tenes::fermion::SwapForm form = ss_form(pairs);
+
+      tenes::fermion::ftensor<tensor> expected = a;
+      tenes::fermion::apply_swap_form(expected, form);
+      REQUIRE(ss_count_diff(expected.t, a.t) > 0);
+
+      tenes::fermion::ftensor<tensor> got = a;
+      tenes::fermion::transpose_with_swap_form(got, form, id);
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+      CHECK(got.parity == a.parity);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ C2-5
+
+TEST_CASE_TEMPLATE("SS C2-5 ftensor::transpose still matches the reference",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  const std::vector<std::vector<std::size_t>> shapes = ss_c2_shapes();
+  for (std::size_t s = 0; s < shapes.size(); ++s) {
+    const mptensor::Shape sh(shapes[s]);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 5000u + 17u * static_cast<unsigned>(s));
+
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      INFO("rank " << sh.size() << " " << na.name << " "
+                   << ss_axes_string(na.axes));
+
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::transposed(a, na.axes);
+
+      tenes::fermion::ftensor<tensor> got = a;
+      got.transpose(na.axes);
+
+      REQUIRE(got.t.shape() == expected.t.shape());
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+      CHECK(got.parity == expected.parity);
+
+      // the free function in fops.hpp goes through the same member
+      const tenes::fermion::ftensor<tensor> viafree =
+          tenes::fermion::transpose(a, na.axes);
+      CHECK(ss_count_diff(viafree.t, expected.t) == 0);
+      CHECK(viafree.parity == expected.parity);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ C2-6
+
+TEST_CASE_TEMPLATE(
+    "SS C2-6 apply_transpose_sign_mask short-circuits the identity permutation",
+    tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  const std::vector<std::vector<std::size_t>> shapes = ss_c2_shapes();
+  for (std::size_t s = 0; s < shapes.size(); ++s) {
+    const mptensor::Shape sh(shapes[s]);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 6400u + 23u * static_cast<unsigned>(s));
+
+    const mptensor::Axes id = ss_identity_axes(sh.size());
+    INFO("rank " << sh.size() << " identity");
+    const tenes::fermion::ftensor<tensor> unchanged =
+        tenes::fermion::detail::apply_transpose_sign_mask(a, id);
+    CHECK(ss_count_diff(unchanged.t, a.t) == 0);
+    CHECK(unchanged.parity == a.parity);
+    CHECK(unchanged.t.shape() == a.t.shape());
+
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      INFO("rank " << sh.size() << " " << na.name << " "
+                   << ss_axes_string(na.axes));
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::apply_transpose_sign_mask(a, na.axes);
+      const tenes::fermion::ftensor<tensor> got =
+          tenes::fermion::detail::apply_transpose_sign_mask(a, na.axes);
+      // the mask only multiplies signs: neither the shape nor the ledger move
+      REQUIRE(got.t.shape() == a.t.shape());
+      CHECK(got.parity == a.parity);
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+    }
+
+    // the permutations tensordot actually feeds to the mask
+    for (std::size_t nc = 0; nc + 1 < sh.size(); ++nc) {
+      mptensor::Axes contracted;
+      for (std::size_t i = 0; i <= nc; ++i) {
+        contracted.push(sh.size() - 1 - i);
+      }
+      const mptensor::Axes left =
+          tenes::fermion::detail::tensordot_left_perm(sh.size(), contracted);
+      const mptensor::Axes right =
+          tenes::fermion::detail::tensordot_right_perm(sh.size(), contracted);
+      INFO("rank " << sh.size() << " tensordot perms for "
+                   << ss_axes_string(contracted));
+      CHECK(ss_count_diff(
+                tenes::fermion::detail::apply_transpose_sign_mask(a, left).t,
+                ss_reference::apply_transpose_sign_mask(a, left).t) == 0);
+      CHECK(ss_count_diff(
+                tenes::fermion::detail::apply_transpose_sign_mask(a, right).t,
+                ss_reference::apply_transpose_sign_mask(a, right).t) == 0);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ C2-7
+
+TEST_CASE_TEMPLATE("SS C2-7 fermion transpose, tensordot and svd are unchanged",
+                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+  using namespace fermion_sign_sweep;
+
+  SUBCASE("fermion::transpose") {
+    const mptensor::Shape sh(2, 3, 4, 2, 3);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 11100u);
+    for (const ss_named_axes& na : ss_axes_catalogue(sh.size())) {
+      INFO(na.name << " " << ss_axes_string(na.axes));
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::transposed(a, na.axes);
+      const tenes::fermion::ftensor<tensor> got =
+          tenes::fermion::transpose(a, na.axes);
+      REQUIRE(got.t.shape() == expected.t.shape());
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+      CHECK(got.parity == expected.parity);
+    }
+  }
+
+  SUBCASE("fermion::tensordot with no contracted axis (outer product)") {
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(mptensor::Shape(2, 3, 4), 12100u);
+    const tenes::fermion::ftensor<tensor> b =
+        ss_random_ftensor<tensor>(mptensor::Shape(3, 2), 12200u);
+
+    const tenes::fermion::ftensor<tensor> expected =
+        ss_reference::tensordot(a, b, mptensor::Axes(), mptensor::Axes());
+    const tenes::fermion::ftensor<tensor> got =
+        tenes::fermion::tensordot(a, b, mptensor::Axes(), mptensor::Axes());
+
+    REQUIRE(got.t.shape() == expected.t.shape());
+    REQUIRE(got.t.shape().size() == 5);
+    CHECK(ss_count_diff(got.t, expected.t) == 0);
+    CHECK(got.parity == expected.parity);
+  }
+
+  SUBCASE("fermion::tensordot with contracted axes") {
+    const mptensor::Shape sh(2, 3, 4, 2);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_ftensor<tensor>(sh, 13100u);
+
+    // b shares a's ledger on the legs that get contracted, otherwise
+    // validate_contracted_parity rejects the call.
+    tenes::fermion::ftensor<tensor> b = ss_random_ftensor<tensor>(sh, 13200u);
+    b.parity[0] = a.parity[0];
+    b.parity[2] = a.parity[2];
+    b.parity[3] = a.parity[3];
+    b.parity[1] = ss_parity(13, sh[1]);
+
+    struct named_pair {
+      const char* name;
+      mptensor::Axes axes_a;
+      mptensor::Axes axes_b;
+    };
+    const std::vector<named_pair> cases = {
+        {"one axis", mptensor::Axes(2), mptensor::Axes(2)},
+        {"two axes", mptensor::Axes(0, 3), mptensor::Axes(0, 3)},
+        {"two axes reversed", mptensor::Axes(3, 0), mptensor::Axes(3, 0)},
+        {"three axes", mptensor::Axes(0, 2, 3), mptensor::Axes(0, 2, 3)},
+    };
+
+    for (const named_pair& nc : cases) {
+      INFO(std::string(nc.name));
+      const tenes::fermion::ftensor<tensor> expected =
+          ss_reference::tensordot(a, b, nc.axes_a, nc.axes_b);
+      const tenes::fermion::ftensor<tensor> got =
+          tenes::fermion::tensordot(a, b, nc.axes_a, nc.axes_b);
+      REQUIRE(got.t.shape() == expected.t.shape());
+      CHECK(ss_count_diff(got.t, expected.t) == 0);
+      CHECK(got.parity == expected.parity);
+
+      // the masks tensordot applies must not be trivial for these cases
+      REQUIRE(
+          ss_flipped_count(a, tenes::fermion::detail::tensordot_left_perm(
+                                  a.parity.size(), nc.axes_a)) +
+              ss_flipped_count(b, tenes::fermion::detail::tensordot_right_perm(
+                                      b.parity.size(), nc.axes_b)) >
+          0);
+    }
+  }
+
+  SUBCASE("fermion::svd singular values") {
+    // parity even, otherwise validate_block_diagonal throws in debug builds
+    const mptensor::Shape sh(2, 3, 2, 3);
+    const tenes::fermion::ftensor<tensor> a =
+        ss_random_even_ftensor<tensor>(sh, 14100u);
+    REQUIRE(ss_count_nonzero(a) > 0);
+
+    struct named_split {
+      const char* name;
+      mptensor::Axes rows;
+      mptensor::Axes cols;
+    };
+    const std::vector<named_split> splits = {
+        {"rows(0,2) cols(1,3)", mptensor::Axes(0, 2), mptensor::Axes(1, 3)},
+        {"rows(2,0) cols(3,1)", mptensor::Axes(2, 0), mptensor::Axes(3, 1)},
+        {"rows(1,3) cols(0,2)", mptensor::Axes(1, 3), mptensor::Axes(0, 2)},
+        {"rows(3,1) cols(2,0)", mptensor::Axes(3, 1), mptensor::Axes(2, 0)},
+        // rows+cols is the identity here: svd then exercises the
+        // short-circuit of C2-4/C2-6 rather than a sign-carrying transpose.
+        {"rows(0,1) cols(2,3)", mptensor::Axes(0, 1), mptensor::Axes(2, 3)},
+    };
+
+    // At least one of the splits must actually flip the sign of a non-zero
+    // element, otherwise the whole subcase would hold with every sign +1.
+    std::size_t sign_carrying = 0;
+    for (const named_split& ns : splits) {
+      INFO(std::string(ns.name));
+      sign_carrying += ss_flipped_nonzero(a, ns.rows + ns.cols);
+
+      std::vector<double> s_ref;
+      const int info_ref = ss_reference::svd_values(a, ns.rows, ns.cols, s_ref);
+
+      tenes::fermion::ftensor<tensor> u, vt;
+      std::vector<double> s;
+      const int info = tenes::fermion::svd(a, ns.rows, ns.cols, u, s, vt);
+
+      CHECK(info == info_ref);
+      REQUIRE(s_ref.size() > 0);
+      REQUIRE(s.size() == s_ref.size());
+      CHECK(s == s_ref);
+    }
+    REQUIRE(sign_carrying > 0);
   }
 }

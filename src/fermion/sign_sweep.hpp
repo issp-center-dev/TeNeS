@@ -114,6 +114,41 @@ inline bool popcount_odd(std::uint32_t bits) {
   return odd;
 #endif
 }
+
+inline bool is_identity_axes(const mptensor::Axes& axes) {
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    if (axes[i] != i) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline void validate_axes(const mptensor::Axes& axes, std::size_t rank,
+                          const char* context) {
+  if (axes.size() != rank) {
+    throw std::runtime_error(context);
+  }
+  std::vector<std::uint8_t> seen(rank, 0);
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    if (axes[i] >= rank || seen[axes[i]] != 0) {
+      throw std::runtime_error(context);
+    }
+    seen[axes[i]] = 1;
+  }
+}
+
+inline SwapForm transpose_sign_form(const mptensor::Axes& axes) {
+  SwapForm form;
+  for (std::size_t x = 0; x < axes.size(); ++x) {
+    for (std::size_t y = x + 1; y < axes.size(); ++y) {
+      if (axes[x] > axes[y]) {
+        form.toggle(static_cast<int>(axes[y]), static_cast<int>(axes[x]));
+      }
+    }
+  }
+  return form;
+}
 }  // namespace detail
 
 template <class tensor>
@@ -311,6 +346,36 @@ void apply_leg_gauges(tensor& a, const std::vector<LegGauge>& gauges) {
       }
     }
   }
+}
+
+template <class tensor>
+void transpose_with_swap_form(ftensor<tensor>& a, const SwapForm& form,
+                              const mptensor::Axes& axes,
+                              SignEval eval = SignEval::automatic) {
+  const std::size_t rank = a.t.shape().size();
+  detail::validate_axes(axes, rank,
+                        "fermion sign sweep: transpose axes out of range");
+  if (detail::is_identity_axes(axes)) {
+    apply_swap_form(a, form, eval);
+    return;
+  }
+
+  SwapForm combined = form;
+  for (std::size_t x = 0; x < axes.size(); ++x) {
+    for (std::size_t y = x + 1; y < axes.size(); ++y) {
+      if (axes[x] > axes[y]) {
+        combined.toggle(static_cast<int>(axes[y]), static_cast<int>(axes[x]));
+      }
+    }
+  }
+  apply_swap_form(a, combined, eval);
+  a.t.transpose(axes);
+  leg_parities next;
+  next.reserve(axes.size());
+  for (std::size_t i = 0; i < axes.size(); ++i) {
+    next.push_back(a.parity[axes[i]]);
+  }
+  a.parity = next;
 }
 
 }  // namespace fermion
