@@ -18,6 +18,11 @@ LEGS = ("l", "t", "r", "b")
 OP_ORDER = ("b", "r", "t", "l")
 
 
+def popcount(x):
+    # int.bit_count() would do, but it needs Python 3.10 and CI runs 3.9.
+    return bin(x).count("1")
+
+
 def label_occ(parity, label):
     if len(parity) == 1:
         return int(parity[label])
@@ -129,7 +134,7 @@ class Oracle:
         for state, amp in enumerate(vec):
             if amp == 0.0 or (state & bit) == 0:
                 continue
-            sign = -1.0 if ((state & (bit - 1)).bit_count() % 2) else 1.0
+            sign = -1.0 if (popcount(state & (bit - 1)) % 2) else 1.0
             out[state ^ bit] += sign * amp
         return out
 
@@ -139,7 +144,7 @@ class Oracle:
         for state, amp in enumerate(vec):
             if amp == 0.0 or (state & bit) != 0:
                 continue
-            sign = -1.0 if ((state & (bit - 1)).bit_count() % 2) else 1.0
+            sign = -1.0 if (popcount(state & (bit - 1)) % 2) else 1.0
             out[state | bit] += sign * amp
         return out
 
