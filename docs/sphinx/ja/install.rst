@@ -103,10 +103,43 @@ macOS (Homebrew) では
 
 
 .. admonition:: MPI/ScaLAPACK 並列化の無効化
-  
+
   MPI および ScaLAPACK を利用しない場合には、 ``-DENABLE_MPI=OFF`` オプションを ``cmake`` コマンドに追加してください。
-  macOS では ScaLAPACK の一部関数とシステムのBLAS, LAPACK とで相性が悪く、エラー終了するのを確認しています。
-  MPI 並列の無効化を推奨しています。
+  macOS では ScaLAPACK の一部関数とシステムのBLAS, LAPACK とで相性が悪く、エラー終了する場合があります。
+  そのため macOS では ``ENABLE_MPI`` の既定値が ``OFF`` になっています。
+  Homebrew で ``open-mpi`` と ``scalapack`` を導入した環境では
+  ``-DENABLE_MPI=ON`` で動作することを確認しています
+  (Homebrew の ScaLAPACK は Accelerate ではなく OpenBLAS にリンクされているため)。
+
+.. admonition:: macOS で OpenMP を使う
+
+  Apple clang には OpenMP ランタイムが同梱されていないため、別途 libomp が必要です。
+
+  ::
+
+    $ brew install libomp
+
+  CMake は ``brew --prefix libomp`` の結果と Homebrew の既定の場所を順に探します。
+  自動検出に失敗する場合は、libomp の場所を明示してください。
+
+  ::
+
+    $ cmake -DOpenMP_ROOT=$(brew --prefix libomp) ../
+
+  なお Homebrew の ``mpicxx`` は Apple clang のラッパーなので、
+  ``-DCMAKE_CXX_COMPILER=mpicxx`` を指定した場合もこの経路になります。
+  Apple clang を使う場合は CMake 3.12 以降が必要です
+  (``OpenMP_ROOT`` によるライブラリ検索が CMake 3.12 で追加されたため)。
+
+.. admonition:: OpenMP スレッド数の指定
+
+  macOS では OpenMP のバリア同期がシステムコールになるため、
+  1 ノード内の細粒度な並列がかえって大きなオーバーヘッドになります。
+  実行時には ``OMP_NUM_THREADS=1`` を設定し、並列化は MPI 側で行うことを推奨します。
+
+  ::
+
+    $ OMP_NUM_THREADS=1 mpiexec -np 4 tenes input.toml
 
 .. admonition:: コンパイラの指定
 
