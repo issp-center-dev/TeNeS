@@ -192,6 +192,159 @@ tensor fuse_doubled_cluster(const ftensor<tensor>& bra_pair,
   return mptensor::contract(fused, mptensor::Axes(6, 7), mptensor::Axes(8, 9));
 }
 
+// Outer-product-free evaluation of fuse_doubled_cluster: mathematically the
+// rank-16 outer product + sign-dressed interleave transpose + fuse +
+// physical trace equals a direct plain contraction of the physical legs
+// (a rank-12, blob-sized intermediate) once every pairwise sign term of the
+// cluster path -- forms.cross plus the Koszul terms of the interleave
+// transpose -- is redistributed by where its two legs live:
+//   * both on the bra layer            -> mask on the bra pair tensor,
+//   * both on the ket layer            -> mask on the ket pair tensor,
+//   * one leg is traced                -> the delta trace equates a traced
+//     leg with its twin on the other layer, so the term is rewritten onto
+//     the twin (twin x twin collapses to a linear parity mask, p(s)^2=p(s)),
+//   * open bra leg x open ket leg      -> mask on the rank-12 result.
+// Pinned elementwise against build_reduced_pair by the impurity_blob tests;
+// derivation record in work/fermion/impurity-blob/ (design.md rev. 2).
+template <class tensor>
+tensor fuse_doubled_cluster_factorized(const ftensor<tensor>& bra_pair,
+                                       const ftensor<tensor>& ket_pair,
+                                       const std::vector<int>& leg_ids) {
+  constexpr std::size_t kExternalLegs = 6;
+  const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
+  std::vector<int> bra_axes;
+  std::vector<int> ket_axes;
+  for (const int ax : cluster_axes) {
+    bra_axes.push_back(ax);
+    ket_axes.push_back(ax + 8);
+  }
+  const auto forms = joint_swap_forms(bra_axes, ket_axes, leg_ids);
+
+  mptensor::Axes interleaved;
+  for (std::size_t i = 0; i < kExternalLegs; ++i) {
+    interleaved.push(ket_axes[i]);
+    interleaved.push(bra_axes[i]);
+  }
+  interleaved.push(11);
+  interleaved.push(15);
+  interleaved.push(3);
+  interleaved.push(7);
+
+  SwapForm total = forms.cross;
+  const SwapForm koszul = transpose_sign_form(interleaved);
+  for (const auto& pr : koszul.terms()) {
+    total.toggle(pr.first, pr.second);
+  }
+
+  auto is_bra = [](int ax) { return ax < 8; };
+  auto trace_twin = [](int ax) {
+    if (ax == 3) {
+      return 11;
+    }
+    if (ax == 7) {
+      return 15;
+    }
+    if (ax == 11) {
+      return 3;
+    }
+    if (ax == 15) {
+      return 7;
+    }
+    return -1;
+  };
+  auto to_ket_local = [](int ax) { return ax - 8; };
+  auto post_pos = [&](int ax) {
+    static const int bra_pos[8] = {0, 1, 2, -1, 3, 4, 5, -1};
+    if (is_bra(ax)) {
+      return bra_pos[ax];
+    }
+    return 6 + bra_pos[ax - 8];
+  };
+
+  // The twin rewrites below rely on the traced legs carrying the same
+  // parity vector on both layers (bra s and its ket twin s'), which holds
+  // by construction: conj() keeps parities and the wrapped operator maps
+  // each physical leg to one of the same dimension and parity.
+  if (bra_pair.parity[3] != ket_pair.parity[11 - 8] ||
+      bra_pair.parity[7] != ket_pair.parity[15 - 8]) {
+    throw std::runtime_error(
+        "fuse_doubled_cluster_factorized: traced-leg parity mismatch");
+  }
+
+  SwapForm bra_terms = forms.bra;
+  SwapForm ket_terms;
+  SwapForm post_terms;
+  std::vector<LegGauge> ket_gauges;
+  for (const auto& pr : total.terms()) {
+    int a = pr.first;
+    int b = pr.second;
+    const bool a_traced = (a == 3 || a == 7 || a == 11 || a == 15);
+    const bool b_traced = (b == 3 || b == 7 || b == 11 || b == 15);
+    if (a_traced && b_traced && trace_twin(a) == b) {
+      const int ax = to_ket_local(a > b ? a : b);
+      std::vector<double> factor(ket_pair.parity[ax].size(), 1.0);
+      for (std::size_t i = 0; i < factor.size(); ++i) {
+        if (ket_pair.parity[ax][i]) {
+          factor[i] = -1.0;
+        }
+      }
+      ket_gauges.push_back({ax, factor});
+      continue;
+    }
+    if (a_traced && is_bra(a)) {
+      a = trace_twin(a);
+    }
+    if (b_traced && is_bra(b)) {
+      b = trace_twin(b);
+    }
+    if (is_bra(a) && is_bra(b)) {
+      bra_terms.toggle(a, b);
+    } else if (!is_bra(a) && !is_bra(b)) {
+      ket_terms.toggle(to_ket_local(a), to_ket_local(b));
+    } else {
+      const int ket_ax = is_bra(a) ? b : a;
+      const int bra_ax = is_bra(a) ? a : b;
+      if (ket_ax == 11 || ket_ax == 15) {
+        bra_terms.toggle(trace_twin(ket_ax), bra_ax);
+      } else {
+        post_terms.toggle(post_pos(bra_ax), post_pos(ket_ax));
+      }
+    }
+  }
+
+  ftensor<tensor> bra = bra_pair;
+  apply_swap_form(bra, bra_terms);
+  ftensor<tensor> ket = ket_pair;
+  apply_sign_sweep(ket, ket_terms, ket_gauges);
+
+  tensor lean = mptensor::tensordot(bra.t, ket.t, mptensor::Axes(3, 7),
+                                    mptensor::Axes(3, 7));
+  leg_parities post_parity;
+  for (const int ax : cluster_axes) {
+    post_parity.push_back(bra.parity[ax]);
+  }
+  for (const int ax : cluster_axes) {
+    post_parity.push_back(ket.parity[ax]);
+  }
+  ftensor<tensor> post;
+  post.t = std::move(lean);
+  post.parity = post_parity;
+  apply_swap_form(post, post_terms);
+
+  mptensor::Axes perm;
+  for (int i = 0; i < static_cast<int>(kExternalLegs); ++i) {
+    perm.push(6 + i);
+    perm.push(i);
+  }
+  lean = mptensor::transpose(post.t, perm);
+  mptensor::Shape sh;
+  const mptensor::Shape ls = lean.shape();
+  for (std::size_t ax = 0; ax < kExternalLegs; ++ax) {
+    sh.push(ls[2 * ax] * ls[2 * ax + 1]);
+  }
+  return mptensor::reshape(lean, sh);
+}
+
 }  // namespace detail
 
 template <class tensor>
@@ -265,6 +418,43 @@ tensor build_reduced_pair(const ftensor<tensor>& TnA,
   // Gauge alignment with the single-site doubling convention; measured
   // directly via comparison against build_reduced_op/build_reduced-based
   // direct composition, not derived analytically.
+  if (direction == reduced_pair_direction::horizontal) {
+    detail::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
+    detail::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);
+  } else {
+    detail::apply_fused_leg_gauge(ret, TnA.parity[0], 0, true);
+    detail::apply_fused_leg_gauge(ret, TnB.parity[0], 3, false);
+  }
+  return ret;
+}
+
+// Memory-lean replacement for build_reduced_pair: contracts the physical
+// legs of the bra and ket pair layers directly (a rank-12, blob-sized
+// intermediate) after redistributing the frozen joint-swap and transpose
+// Koszul sign terms onto the two layers and the contraction result. Must
+// return the same rank-6 blob as build_reduced_pair elementwise; the
+// rank-16 outer product is never materialized.
+// Design: work/fermion/impurity-blob/design.md (rev. 2, "lean fuse").
+template <class tensor>
+tensor build_reduced_pair_factorized(const ftensor<tensor>& TnA,
+                                     const ftensor<tensor>& TnB,
+                                     const ftensor<tensor>& op12,
+                                     reduced_pair_direction direction) {
+  const ftensor<tensor> ket_ab = build_pair_state(TnA, TnB, direction);
+  const std::vector<int> leg_ids = [direction] {
+    switch (direction) {
+      case reduced_pair_direction::horizontal:
+        return std::vector<int>{0, 1, 3, 1, 2, 3};
+      case reduced_pair_direction::vertical:
+        return std::vector<int>{0, 1, 2, 0, 2, 3};
+    }
+    throw std::runtime_error(
+        "build_reduced_pair_factorized: invalid direction");
+  }();
+
+  ftensor<tensor> ket_op = apply_pair_op(ket_ab, op12);
+  tensor ret =
+      detail::fuse_doubled_cluster_factorized(conj(ket_ab), ket_op, leg_ids);
   if (direction == reduced_pair_direction::horizontal) {
     detail::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
     detail::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);

@@ -3856,3 +3856,4 @@ TEST_CASE("MF layer4 fermion mean-field two-site values match the oracle") {
 #include "fermion/mf_measure.cpp"
 #include "fermion/saveload.cpp"
 #include "fermion/sign_sweep.cpp"
+#include "fermion/impurity_blob.cpp"
