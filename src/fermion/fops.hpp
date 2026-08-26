@@ -14,6 +14,29 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief Graded counterparts of the mptensor operations.
+ *
+ *  Each function mirrors its mptensor namesake — tensordot(), transpose(),
+ *  trace(), conj(), qr(), svd(), svd_trunc(), slice(), extend(),
+ *  reshape() — but acts on ::tenes::fermion::ftensor and generates the
+ *  fermionic signs from the parity ledgers. The decompositions additionally
+ *  preserve the grading: qr() and svd() sort the fused matrix legs
+ *  even-first, factorize the even and odd diagonal blocks separately, and
+ *  hand each factor a parity ledger for the new internal leg.
+ *
+ *  The header also hosts the operator loading adapters
+ *  (wrap_twosite_gate(), wrap_reduced_pair_op()). There are three loading
+ *  conventions for measurement/evolution operators, and confusing them is a
+ *  real (d = 4) sign bug:
+ *
+ *  | path                       | loader                  | swap applied   |
+ *  |----------------------------|-------------------------|----------------|
+ *  | simple-update kernel       | wrap_twosite_gate()     | input legs     |
+ *  | blob measurement (CTM)     | wrap_reduced_pair_op()  | input + output |
+ *  | one-site operators         | plain ftensor wrap      | none           |
+ */
+
 #ifndef TENES_SRC_FERMION_FOPS_HPP_
 #define TENES_SRC_FERMION_FOPS_HPP_
 
@@ -33,6 +56,7 @@ namespace tenes {
 namespace fermion {
 namespace detail {
 
+//! True iff ax appears in axes.
 inline bool contains_axis(const mptensor::Axes& axes, std::size_t ax) {
   for (std::size_t i = 0; i < axes.size(); ++i) {
     if (axes[i] == ax) {
@@ -42,6 +66,8 @@ inline bool contains_axis(const mptensor::Axes& axes, std::size_t ax) {
   return false;
 }
 
+//! Diagnostic knob: TENES_FERMION_SVD_LOG_LIMIT caps how many svd_trunc()
+//! calls dump their per-sector singular values to stderr (default 0: none).
 inline int fermion_svd_log_limit() {
   const char* raw = std::getenv("TENES_FERMION_SVD_LOG_LIMIT");
   if (raw == nullptr) {
@@ -50,6 +76,8 @@ inline int fermion_svd_log_limit() {
   return std::max(0, std::atoi(raw));
 }
 
+//! Leg order mptensor::tensordot effectively gives its LEFT operand:
+//! free legs first (in order), then the contracted legs in axes order.
 inline mptensor::Axes tensordot_left_perm(std::size_t rank,
                                           const mptensor::Axes& axes) {
   mptensor::Axes perm;
@@ -64,6 +92,11 @@ inline mptensor::Axes tensordot_left_perm(std::size_t rank,
   return perm;
 }
 
+//! Leg order mptensor::tensordot effectively gives its RIGHT operand:
+//! contracted legs first in REVERSED axes order, then the free legs.
+//! The reversal is what makes the two operands' contracted legs meet
+//! pairwise, and is the origin of the doubly-odd sign the gate wrappers
+//! compensate.
 inline mptensor::Axes tensordot_right_perm(std::size_t rank,
                                            const mptensor::Axes& axes) {
   mptensor::Axes perm;
@@ -78,6 +111,9 @@ inline mptensor::Axes tensordot_right_perm(std::size_t rank,
   return perm;
 }
 
+//! Copy of a with the Koszul sign of the permutation applied to the
+//! elements, but WITHOUT permuting the legs — the sign half of a graded
+//! transpose, used before handing the tensors to mptensor::tensordot.
 template <class tensor>
 ftensor<tensor> apply_transpose_sign_mask(const ftensor<tensor>& a,
                                           const mptensor::Axes& axes) {
@@ -91,6 +127,7 @@ ftensor<tensor> apply_transpose_sign_mask(const ftensor<tensor>& a,
   return ret;
 }
 
+//! Throw unless each contracted leg pair carries identical parity ledgers.
 inline void validate_contracted_parity(const leg_parities& parity_a,
                                        const leg_parities& parity_b,
                                        const mptensor::Axes& axes_a,
@@ -107,6 +144,7 @@ inline void validate_contracted_parity(const leg_parities& parity_a,
   }
 }
 
+//! Ledgers of the legs NOT in contracted, in their original order.
 inline leg_parities free_leg_parities(const leg_parities& parity,
                                       const mptensor::Axes& contracted) {
   leg_parities ret;
@@ -118,6 +156,8 @@ inline leg_parities free_leg_parities(const leg_parities& parity,
   return ret;
 }
 
+//! Fused ledger of the listed legs, in axes order (trivial even ledger of
+//! dimension 1 for an empty list).
 inline parity_vector fuse_axes(const leg_parities& parity,
                                const mptensor::Axes& axes) {
   if (axes.size() == 0) {
@@ -130,6 +170,7 @@ inline parity_vector fuse_axes(const leg_parities& parity,
   return ret;
 }
 
+//! Dimensions of the listed legs, in axes order.
 inline mptensor::Shape shape_from_axes(const mptensor::Shape& shape,
                                        const mptensor::Axes& axes) {
   mptensor::Shape ret;
@@ -139,6 +180,7 @@ inline mptensor::Shape shape_from_axes(const mptensor::Shape& shape,
   return ret;
 }
 
+//! Product of all dimensions.
 inline std::size_t product_shape(const mptensor::Shape& shape) {
   std::size_t ret = 1;
   for (std::size_t i = 0; i < shape.size(); ++i) {
@@ -147,6 +189,7 @@ inline std::size_t product_shape(const mptensor::Shape& shape) {
   return ret;
 }
 
+//! Number of even index values in a ledger.
 inline std::size_t count_even(const parity_vector& parity) {
   std::size_t ret = 0;
   for (bool p : parity) {
@@ -157,13 +200,24 @@ inline std::size_t count_even(const parity_vector& parity) {
   return ret;
 }
 
-// A parity-even tensor matricizes block-diagonally: an element is allowed
-// only when the fused row and column parities agree, so after the even-first
-// sort the (even row, odd col) and (odd row, even col) blocks must vanish.
-// qr()/svd() below decompose the two diagonal blocks and never look at the
-// others, which would silently discard them if the input were not even.
-// Checked in debug builds only; like parity_violation() this inspects the
-// process-local slice.
+/*!
+ * @brief Debug check that a parity-sorted matrix is block diagonal.
+ *
+ * A parity-even tensor matricizes block-diagonally: an element is allowed
+ * only when the fused row and column parities agree, so after the
+ * even-first sort the (even row, odd col) and (odd row, even col) blocks
+ * must vanish. qr()/svd() decompose the two diagonal blocks and never look
+ * at the others, which would silently discard them if the input were not
+ * even. Checked in debug builds only; like parity_violation() this
+ * inspects the process-local slice.
+ *
+ * @param[in] sorted Even-first sorted matricization.
+ * @param[in] row_even Number of even rows.
+ * @param[in] col_even Number of even columns.
+ * @param[in] context Prefix of the error message.
+ * @throw std::runtime_error If an off-diagonal block carries weight above
+ *        1e-10 relative to the largest element (NDEBUG: never).
+ */
 template <class tensor>
 void validate_block_diagonal(const tensor& sorted, std::size_t row_even,
                              std::size_t col_even, const char* context) {
@@ -198,14 +252,27 @@ void validate_block_diagonal(const tensor& sorted, std::size_t row_even,
 #endif
 }
 
+//! Complex conjugation that is a no-op for real scalars.
 inline double scalar_conj(double v) { return v; }
 
+//! @copybrief scalar_conj(double)
 inline std::complex<double> scalar_conj(std::complex<double> v) {
   return std::conj(v);
 }
 
 }  // namespace detail
 
+/*!
+ * @brief Apply one swap-gate sign in place: @f$(-1)^{p_{ax1} p_{ax2}}@f$.
+ *
+ * For ax1 == ax2 the doubly-odd condition degenerates to "the leg is odd",
+ * i.e. the parity operator @f$(-1)^p@f$ on that single leg (a case
+ * SwapForm cannot express — its diagonal toggles are no-ops).
+ *
+ * @param[in,out] a Tensor to modify; parities are unchanged.
+ * @param[in] ax1 First leg.
+ * @param[in] ax2 Second leg (may equal @p ax1, see above).
+ */
 template <class tensor>
 void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
   if (ax1 != ax2) {
@@ -224,17 +291,30 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
   }
 }
 
-// Load an evolution gate given as plain matrix elements
-// <out1 out2|O|in1 in2> in the ordered two-site Fock basis, for the
-// simple-update kernel.
-//
-// The swap is a convention adapter, not extra physics: graded tensordot
-// contracts by moving the second operand's contracted legs to the front in
-// REVERSED order, which multiplies elements whose two input legs are both
-// odd by -1. Pre-applying the same mask cancels that factor, so the gate
-// that reaches theta is exactly the matrix the caller wrote. Without it the
-// doubly-odd input channel of every parity-conserving gate (e.g. |11><11|
-// in exp(-tau h)) is silently negated.
+/*!
+ * @brief Load an evolution gate for the simple-update kernel.
+ *
+ * The gate is given as plain matrix elements
+ * @f$\langle out_1\, out_2 | O | in_1\, in_2 \rangle@f$ in the ordered
+ * two-site Fock basis; the result has legs
+ * @f$(in_1, in_2, out_1, out_2)@f$ with parities (p1, p2, p1, p2) and the
+ * input-leg swap mask pre-applied.
+ *
+ * The swap is a convention adapter, not extra physics: graded tensordot
+ * contracts by moving the second operand's contracted legs to the front in
+ * REVERSED order, which multiplies elements whose two input legs are both
+ * odd by -1. Pre-applying the same mask cancels that factor, so the gate
+ * that reaches theta is exactly the matrix the caller wrote. Without it
+ * the doubly-odd input channel of every parity-conserving gate (e.g.
+ * |11><11| in exp(-tau h)) is silently negated.
+ *
+ * @warning One of three loading conventions — see the file description.
+ *          Blob measurement must use wrap_reduced_pair_op() instead.
+ *
+ * @param[in] op Gate matrix elements, legs (in1, in2, out1, out2).
+ * @param[in] p1 Physical-leg ledger of the first site.
+ * @param[in] p2 Physical-leg ledger of the second site.
+ */
 template <class tensor>
 ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
                                   const parity_vector& p2) {
@@ -243,15 +323,29 @@ ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
   return fop;
 }
 
-// Load a measurement operator for the reduced-pair blob path
-// (build_reduced_pair_naive). Same plain matrix elements as wrap_twosite_gate,
-// but here the operator's output legs are also closed - against the bra
-// layer - so both leg pairs need the compensating mask. For physical
-// dimension 2 this is indistinguishable from verbatim loading on
-// particle-number-conserving operators (which is how the d = 2 oracle
-// pinned the pipeline); the distinction appears first in channels like
-// (odd,odd) -> (even,even), present e.g. in the spinful hopping at linear
-// order, and is pinned by the R5 d = 4 oracle test.
+/*!
+ * @brief Load a measurement operator for the reduced-pair blob path.
+ *
+ * Same plain matrix elements as wrap_twosite_gate(), but here the
+ * operator's output legs are also closed — against the bra layer — so both
+ * leg pairs need the compensating mask. For physical dimension 2 this is
+ * indistinguishable from verbatim loading on particle-number-conserving
+ * operators (which is how the d = 2 oracle pinned the pipeline); the
+ * distinction appears first in channels like (odd,odd) -> (even,even),
+ * present e.g. in the spinful hopping at linear order, and is pinned by
+ * the R5 d = 4 oracle test.
+ *
+ * @note When the measured source site is the SECOND site of the window,
+ *       the caller additionally graded-transposes the result by
+ *       (1, 0, 3, 2) (see the fermion CTM branch of twosite_obs.cpp).
+ *       Hopping terms are symmetric under this, but antisymmetric
+ *       operators such as the pairing @f$c_b c_a + h.c.@f$ acquire a
+ *       minus sign relative to the first-site view.
+ *
+ * @param[in] op Operator matrix elements, legs (in1, in2, out1, out2).
+ * @param[in] p1 Physical-leg ledger of the first site.
+ * @param[in] p2 Physical-leg ledger of the second site.
+ */
 template <class tensor>
 ftensor<tensor> wrap_reduced_pair_op(const tensor& op, const parity_vector& p1,
                                      const parity_vector& p2) {
@@ -261,6 +355,9 @@ ftensor<tensor> wrap_reduced_pair_op(const tensor& op, const parity_vector& p1,
   return fop;
 }
 
+/*!
+ * @brief Multiply the parity operator @f$(-1)^p@f$ onto one leg in place.
+ */
 template <class tensor>
 void apply_parity(ftensor<tensor>& a, int ax) {
   std::vector<double> sign(a.parity[ax].size());
@@ -270,6 +367,14 @@ void apply_parity(ftensor<tensor>& a, int ax) {
   a.t.multiply_vector(sign, ax);
 }
 
+/*!
+ * @brief Largest magnitude found in the parity-odd sector.
+ *
+ * A physical graded tensor must be parity even: every element whose index
+ * selects an odd number of odd legs must vanish. Returns the worst
+ * violation on the process-local slice (0 for a clean tensor); a
+ * diagnostic, not a collective reduction.
+ */
 template <class tensor>
 double parity_violation(const ftensor<tensor>& a) {
   double v = 0.0;
@@ -284,6 +389,10 @@ double parity_violation(const ftensor<tensor>& a) {
   return v;
 }
 
+/*!
+ * @brief Graded transpose, returning a new tensor (see
+ *        ftensor::transpose()).
+ */
 template <class tensor>
 ftensor<tensor> transpose(const ftensor<tensor>& a,
                           const mptensor::Axes& axes) {
@@ -292,6 +401,23 @@ ftensor<tensor> transpose(const ftensor<tensor>& a,
   return ret;
 }
 
+/*!
+ * @brief Graded tensor contraction.
+ *
+ * Mirrors mptensor::tensordot: contracts axes_a of @p a against axes_b of
+ * @p b pairwise; the result's legs are the free legs of @p a followed by
+ * the free legs of @p b. The Koszul signs are those of the implied
+ * reordering — free-then-contracted for @p a, reversed-contracted-then-free
+ * for @p b (detail::tensordot_left_perm() / tensordot_right_perm()) — and
+ * are applied as element masks before the plain contraction.
+ *
+ * @param[in] a Left operand.
+ * @param[in] b Right operand.
+ * @param[in] axes_a Legs of @p a to contract.
+ * @param[in] axes_b Legs of @p b to contract, paired with @p axes_a in
+ *            order.
+ * @throw std::runtime_error If a contracted leg pair's ledgers differ.
+ */
 template <class tensor>
 ftensor<tensor> tensordot(const ftensor<tensor>& a, const ftensor<tensor>& b,
                           const mptensor::Axes& axes_a,
@@ -309,6 +435,12 @@ ftensor<tensor> tensordot(const ftensor<tensor>& a, const ftensor<tensor>& b,
   return ret;
 }
 
+/*!
+ * @brief Graded full contraction of two tensors to a scalar.
+ *
+ * The all-legs-contracted case of tensordot(), evaluated without forming
+ * the rank-0 intermediate (mirrors mptensor::trace).
+ */
 template <class tensor>
 typename tensor::value_type trace(const ftensor<tensor>& a,
                                   const ftensor<tensor>& b,
@@ -322,6 +454,14 @@ typename tensor::value_type trace(const ftensor<tensor>& a,
   return mptensor::trace(a_masked.t, b_masked.t, axes_a, axes_b);
 }
 
+/*!
+ * @brief Graded conjugate (the bra layer of a ket tensor).
+ *
+ * Elementwise complex conjugation times the sign
+ * @f$(-1)^{m(m-1)/2}@f$, where @f$m@f$ is the number of odd legs the
+ * element's index selects: reversing the @f$m@f$ fermionic factors of a
+ * basis state costs @f$\binom{m}{2}@f$ exchanges. Parities are unchanged.
+ */
 template <class tensor>
 ftensor<tensor> conj(const ftensor<tensor>& a) {
   ftensor<tensor> ret = a;
@@ -336,6 +476,11 @@ ftensor<tensor> conj(const ftensor<tensor>& a) {
   return ret;
 }
 
+/*!
+ * @brief Slice one leg to the index range [b, e), keeping its ledger slice.
+ *
+ * No signs arise: slicing does not reorder legs. Mirrors mptensor::slice.
+ */
 template <class tensor>
 ftensor<tensor> slice(const ftensor<tensor>& a, std::size_t ax, std::size_t b,
                       std::size_t e) {
@@ -347,6 +492,14 @@ ftensor<tensor> slice(const ftensor<tensor>& a, std::size_t ax, std::size_t b,
   return ret;
 }
 
+/*!
+ * @brief Zero-pad legs up to a larger shape; padded index values are even.
+ *
+ * Mirrors mptensor::extend.
+ *
+ * @throw std::runtime_error If any dimension of @p sh is smaller than the
+ *        current one.
+ */
 template <class tensor>
 ftensor<tensor> extend(const ftensor<tensor>& a, const mptensor::Shape& sh) {
   ftensor<tensor> ret;
@@ -361,6 +514,18 @@ ftensor<tensor> extend(const ftensor<tensor>& a, const mptensor::Shape& sh) {
   return ret;
 }
 
+/*!
+ * @brief Graded reshape restricted to fusing groups of ADJACENT legs.
+ *
+ * Each output leg must be the product of one or more consecutive input
+ * legs; their ledgers are combined with fuse() (column-major, matching
+ * mptensor::reshape's flattening). Adjacent fusion generates no signs;
+ * splitting a leg or fusing non-adjacent legs is not supported — reorder
+ * with transpose() first, which is where the signs are accounted.
+ *
+ * @throw std::runtime_error If @p sh is not such an adjacent fusion of the
+ *        input shape.
+ */
 template <class tensor>
 ftensor<tensor> reshape(const ftensor<tensor>& a, const mptensor::Shape& sh) {
   ftensor<tensor> ret;
@@ -391,16 +556,21 @@ ftensor<tensor> reshape(const ftensor<tensor>& a, const mptensor::Shape& sh) {
   return ret;
 }
 
+//! Largest element magnitude (collective; mirrors mptensor::max_abs).
 template <class tensor>
 double max_abs(const ftensor<tensor>& a) {
   return mptensor::max_abs(a.t);
 }
 
+//! Singular values only, of the plain matricization (no parity blocking;
+//! mirrors the matrix overload of mptensor::svd).
 template <class tensor>
 int svd(const ftensor<tensor>& a, std::vector<double>& s) {
   return mptensor::svd(a.t, s);
 }
 
+//! Permutation matrix P with P[i][j] = 1 iff perm[i] == j, used to apply
+//! the even-first sort to a matricization.
 template <class tensor>
 tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
   tensor ret(mptensor::Shape(perm.size(), perm.size()));
@@ -413,6 +583,25 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
   return ret;
 }
 
+/*!
+ * @brief Grading-preserving QR decomposition.
+ *
+ * Matricizes @p a with @p rows fused as rows and @p cols as columns, sorts
+ * both fused legs even-first, and QR-factorizes the even and odd diagonal
+ * blocks separately (the input must be parity even, so the off-diagonal
+ * blocks vanish — checked in debug builds by
+ * detail::validate_block_diagonal()). The new internal leg concatenates
+ * the two blocks' factors and gets an even-first ledger whose even count
+ * is min(number of even rows, number of even columns).
+ *
+ * @param[in] a Parity-even tensor to decompose.
+ * @param[in] rows Legs forming the rows.
+ * @param[in] cols Legs forming the columns.
+ * @param[out] q Orthogonal factor, legs (rows..., internal).
+ * @param[out] r Triangular-block factor, legs (internal, cols...).
+ * @return The LAPACK-style info of the block factorizations (0 on
+ *         success).
+ */
 template <class tensor>
 int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
        const mptensor::Axes& cols, ftensor<tensor>& q, ftensor<tensor>& r) {
@@ -506,6 +695,24 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
   return info;
 }
 
+/*!
+ * @brief Grading-preserving singular value decomposition.
+ *
+ * Same block structure as qr(): the even-first sorted matricization is
+ * SVD-ed per parity block, and the internal leg carries an even-first
+ * ledger. The singular values are returned sector-concatenated — all even
+ * ones first, then all odd ones — NOT globally sorted; use svd_trunc() to
+ * truncate by magnitude.
+ *
+ * @param[in] a Parity-even tensor to decompose.
+ * @param[in] rows Legs forming the rows.
+ * @param[in] cols Legs forming the columns.
+ * @param[out] u Left singular vectors, legs (rows..., internal).
+ * @param[out] s Singular values, even sector then odd sector.
+ * @param[out] vt Right singular vectors, legs (internal, cols...).
+ * @return The LAPACK-style info of the block factorizations (0 on
+ *         success).
+ */
 template <class tensor>
 int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
         const mptensor::Axes& cols, ftensor<tensor>& u, std::vector<double>& s,
@@ -603,6 +810,25 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
   return info;
 }
 
+/*!
+ * @brief Truncated grading-preserving SVD.
+ *
+ * Runs the full svd(), keeps the @p dc largest singular values across BOTH
+ * parity sectors (ties resolved even-first, then by original position, so
+ * the truncation is deterministic), and re-sorts the kept values
+ * even-first for the internal leg's ledger. The per-sector spectra can be
+ * dumped for diagnosis via TENES_FERMION_SVD_LOG_LIMIT (see
+ * detail::fermion_svd_log_limit()).
+ *
+ * @param[in] a Parity-even tensor to decompose.
+ * @param[in] rows Legs forming the rows.
+ * @param[in] cols Legs forming the columns.
+ * @param[out] u Left singular vectors, legs (rows..., internal).
+ * @param[out] s Kept singular values, even sector then odd sector.
+ * @param[out] vt Right singular vectors, legs (internal, cols...).
+ * @param[in] dc Maximum number of singular values to keep.
+ * @return The LAPACK-style info of the underlying svd() (0 on success).
+ */
 template <class tensor>
 int svd_trunc(const ftensor<tensor>& a, const mptensor::Axes& rows,
               const mptensor::Axes& cols, ftensor<tensor>& u,

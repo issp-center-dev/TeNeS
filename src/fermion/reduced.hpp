@@ -14,6 +14,40 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief Double-layer (bra x ket) reduced tensors for fermionic
+ *         measurement.
+ *
+ *  The fermionic CTM measurement strategy is to fold all fermionic signs
+ *  into reduced tensors built here from open two-layer networks; after the
+ *  fusion the network has no crossings left, so the existing single-layer
+ *  bosonic CTM machinery contracts it unmodified. In particular the naive
+ *  mechanical bookkeeping on CLOSED loops would pick up spurious supertrace
+ *  @f$(-1)@f$ factors (the arrow/dual-flag design was tried and discarded
+ *  for exactly that), which this open-network construction sidesteps.
+ *
+ *  build_reduced() / build_reduced_op() produce the one-site reduced
+ *  tensor; build_reduced_pair_naive() / build_reduced_pair_direct()
+ *  produce the two-site "blob" with the operator already inserted. Leg
+ *  orders (each blob leg is a fused (ket, bra) pair of dimension
+ *  @f$D^2@f$):
+ *
+ *  @verbatim
+    horizontal pair (A left, B right):     vertical pair (A top, B bottom):
+
+        T_A   T_B                                T_A
+         |     |                                  |
+    L_A- A --- B -R_B                        L_A- A -R_A
+         |     |                                  |
+        B_A   B_B                            L_B- B -R_B
+                                                  |
+    blob legs: (L_A, T_A, B_A,                   B_B
+                T_B, R_B, B_B)
+                                       blob legs: (L_A, T_A, R_A,
+                                                   L_B, R_B, B_B)
+    @endverbatim
+ */
+
 #ifndef TENES_SRC_FERMION_REDUCED_HPP_
 #define TENES_SRC_FERMION_REDUCED_HPP_
 
@@ -25,23 +59,47 @@
 
 namespace tenes::fermion {
 
+//! Orientation of a two-site window: horizontal (A left of B) or vertical
+//! (A above B).
 enum class reduced_pair_direction { horizontal, vertical };
 
 namespace detail {
 
+//! Bit position encoding the ORDERED direction-label pair (x, y),
+//! x != y, in kDoubledJointMask (directions 0=left, 1=top, 2=right,
+//! 3=bottom).
 constexpr int joint_bit(int x, int y) { return x * 3 + (y < x ? y : y - 1); }
 
-// This joint-swap pattern is gauge-equivalent to YASTN's fuse_layers()
-// convention, empirically pinned down using the oracle as arbiter.
+/*! @brief Which direction-label pairs generate joint-swap terms.
+ *
+ * Only the pairs (0,3), (1,0), (2,3), (3,0) are set (0=left, 1=top,
+ * 2=right, 3=bottom). This joint-swap pattern is gauge-equivalent to
+ * YASTN's fuse_layers() convention, empirically pinned down using the
+ * oracle as arbiter — a measured convention, not an analytic derivation
+ * (which is why the pair list looks arbitrary).
+ */
 constexpr unsigned kDoubledJointMask =
     (1u << joint_bit(0, 3)) | (1u << joint_bit(1, 0)) |
     (1u << joint_bit(2, 3)) | (1u << joint_bit(3, 0));
 
+/*! @brief The two swap forms dressing a double-layer fuse.
+ *
+ * Each generated term is one half of the two-term expansion of "one bra
+ * leg overtakes a fused (ket, bra) leg pair": @c cross collects the
+ * ket x bra terms and @c bra the bra x bra terms. There is no @c ket
+ * member — the ket layer is the resting reference frame, and a ket leg
+ * never overtakes another ket leg in this convention. (Ket–ket sign terms
+ * do exist, but they come from the Koszul side of the interleave
+ * transpose, a separate bookkeeping.)
+ */
 struct JointSwapForms {
+  //! ket x bra terms.
   SwapForm cross;
+  //! bra x bra terms.
   SwapForm bra;
 };
 
+//! Throw std::runtime_error(context) if any axis appears twice.
 inline void validate_unique_joint_axes(const std::vector<int>& axes,
                                        const char* context) {
   for (std::size_t i = 0; i < axes.size(); ++i) {
@@ -53,6 +111,24 @@ inline void validate_unique_joint_axes(const std::vector<int>& axes,
   }
 }
 
+/*!
+ * @brief Build the joint-swap forms for fusing a bra and a ket layer.
+ *
+ * For every ordered pair (x, y) of direction labels enabled in
+ * kDoubledJointMask, and every pair of open legs carrying those labels,
+ * emits the two-term expansion described at JointSwapForms: a cross term
+ * on (ket leg of x, bra leg of y) and a bra term on (bra leg of x, bra leg
+ * of y). Axes are positions in whatever outer-product tensor the caller is
+ * about to sweep; the leg ids attach the direction labels.
+ *
+ * @param[in] bra_axes Axis of each open leg in the bra layer.
+ * @param[in] ket_axes Axis of the same open legs in the ket layer, in the
+ *            same order.
+ * @param[in] leg_ids Direction label (0=left, 1=top, 2=right, 3=bottom) of
+ *            each open leg; the same label may appear more than once (a
+ *            two-site window has e.g. two "top" legs).
+ * @throw std::runtime_error On size mismatch, negative or duplicate axes.
+ */
 inline JointSwapForms joint_swap_forms(const std::vector<int>& bra_axes,
                                        const std::vector<int>& ket_axes,
                                        const std::vector<int>& leg_ids) {
@@ -95,6 +171,20 @@ inline JointSwapForms joint_swap_forms(const std::vector<int>& bra_axes,
   return forms;
 }
 
+/*!
+ * @brief Sign gauge on one fused (ket, bra) leg of a blob.
+ *
+ * Multiplies -1 onto the fused index values whose ket factor is odd and
+ * bra factor even (@p ket_odd_bra_even true) or vice versa (false). This
+ * aligns the pair blob's gauge with the single-site doubling convention of
+ * doubled_pipeline() (see build_reduced_pair_impl()), so both can meet the
+ * same CTM environment.
+ *
+ * @param[in,out] a Blob tensor (plain: the fused legs carry no ledger).
+ * @param[in] leg_parity Single-layer ledger of the leg before doubling.
+ * @param[in] ax Fused leg to act on.
+ * @param[in] ket_odd_bra_even Which mixed-parity sector gets the -1.
+ */
 template <class tensor>
 void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
                            std::size_t ax, bool ket_odd_bra_even) {
@@ -110,14 +200,23 @@ void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
   a.multiply_vector(sign, ax);
 }
 
+/*!
+ * @brief Shared single-site double-layer pipeline.
+ *
+ * Outer product of bra and ket layers, frozen joint-swap dressing,
+ * (ket, bra) interleave, column-major fusion. Output legs:
+ * ([l lb], [t tb], [r rb], [b bb], s_ket, s_bra) — the four virtual legs
+ * fused (ket first and fastest-varying), the two physical legs left open.
+ * The two arguments differ only where an operator has been inserted into
+ * the ket layer beforehand; for the plain reduced tensor they are equal.
+ *
+ * @param[in] bra_Tn Rank-5 wrapped Tn to conjugate into the bra layer.
+ * @param[in] ket_Tn Rank-5 wrapped Tn forming the ket layer.
+ * @return Rank-6 plain tensor as above.
+ */
 template <class tensor>
 tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
                         const ftensor<tensor>& ket_Tn) {
-  // Shared double-layer pipeline: outer product of bra and ket layers,
-  // frozen joint-swap dressing, (ket, bra) interleave, column-major fusion.
-  // Output legs: ([l lb], [t tb], [r rb], [b bb], s_ket, s_bra).
-  // The two arguments differ only where an operator has been inserted into
-  // the ket layer beforehand; for the plain reduced tensor they are equal.
   const auto forms = joint_swap_forms({0, 1, 2, 3}, {5, 6, 7, 8}, {0, 1, 2, 3});
   ftensor<tensor> bra = conj(bra_Tn);
   // This pre-outer-product swap is the point of this task: it cuts rank-16
@@ -145,6 +244,24 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   return mptensor::reshape(doubled.t, sh);
 }
 
+/*!
+ * @brief Reference fuse of a two-site cluster: materializes the rank-16
+ *        outer product.
+ *
+ * The two-site analogue of doubled_pipeline(): outer product of the bra
+ * and ket pair states, joint-swap dressing, (ket, bra) interleave, fusion
+ * of the six open legs, then the plain trace over the two physical leg
+ * pairs. The rank-16 intermediate makes it the slow path — it exists as
+ * the oracle fuse_doubled_cluster_direct() is pinned against.
+ *
+ * @param[in] bra_pair Rank-8 bra pair state, ALREADY conjugated by the
+ *            caller (unlike doubled_pipeline(), which conjugates
+ *            internally).
+ * @param[in] ket_pair Rank-8 ket pair state with the operator applied.
+ * @param[in] leg_ids Direction labels of the six open legs, in the order
+ *            of build_reduced_pair_impl().
+ * @return Rank-6 blob; leg order as in the file description.
+ */
 template <class tensor>
 tensor fuse_doubled_cluster_naive(const ftensor<tensor>& bra_pair,
                                   const ftensor<tensor>& ket_pair,
@@ -192,21 +309,29 @@ tensor fuse_doubled_cluster_naive(const ftensor<tensor>& bra_pair,
   return mptensor::contract(fused, mptensor::Axes(6, 7), mptensor::Axes(8, 9));
 }
 
-// Outer-product-free evaluation of fuse_doubled_cluster_naive: mathematically
-// the rank-16 outer product + sign-dressed interleave transpose + fuse +
-// physical trace equals a direct plain contraction of the physical legs
-// (a rank-12, blob-sized intermediate) once every pairwise sign term of the
-// cluster path -- forms.cross plus the Koszul terms of the interleave
-// transpose -- is redistributed by where its two legs live:
-//   * both on the bra layer            -> mask on the bra pair tensor,
-//   * both on the ket layer            -> mask on the ket pair tensor,
-//   * one leg is traced                -> the delta trace equates a traced
-//     leg with its twin on the other layer, so the term is rewritten onto
-//     the twin (twin x twin collapses to a linear parity mask, p(s)^2=p(s)),
-//   * open bra leg x open ket leg      -> mask on the rank-12 result.
-// Pinned elementwise against build_reduced_pair_naive by the impurity_blob
-// tests; derivation record in misc/fermion_twosite_blob/ (design.md rev. 2, and
-// probe_direct.cpp, which spells the identity out more compactly).
+/*!
+ * @brief Outer-product-free evaluation of fuse_doubled_cluster_naive().
+ *
+ * Mathematically the rank-16 outer product + sign-dressed interleave
+ * transpose + fuse + physical trace equals a direct plain contraction of
+ * the physical legs (a rank-12, blob-sized intermediate) once every
+ * pairwise sign term of the cluster path — forms.cross plus the Koszul
+ * terms of the interleave transpose — is redistributed by where its two
+ * legs live:
+ *   - both on the bra layer: mask on the bra pair tensor,
+ *   - both on the ket layer: mask on the ket pair tensor,
+ *   - one leg is traced: the delta trace equates a traced leg with its
+ *     twin on the other layer, so the term is rewritten onto the twin
+ *     (twin x twin collapses to a linear parity mask,
+ *     @f$p(s)^2 = p(s)@f$),
+ *   - open bra leg x open ket leg: mask on the rank-12 result.
+ *
+ * Pinned elementwise against build_reduced_pair_naive() by the
+ * impurity_blob tests; derivation record in misc/fermion_twosite_blob/
+ * (design.md rev. 2, and probe_direct.cpp, which spells the identity out
+ * more compactly). Parameters and return as in
+ * fuse_doubled_cluster_naive().
+ */
 template <class tensor>
 tensor fuse_doubled_cluster_direct(const ftensor<tensor>& bra_pair,
                                    const ftensor<tensor>& ket_pair,
@@ -348,6 +473,17 @@ tensor fuse_doubled_cluster_direct(const ftensor<tensor>& bra_pair,
 
 }  // namespace detail
 
+/*!
+ * @brief One-site reduced tensor with the physical legs left open.
+ *
+ * doubled_pipeline() of a wrapped Tn against itself: rank 6, legs
+ * ([l lb], [t tb], [r rb], [b bb], s_ket, s_bra). Contracting a one-site
+ * operator into (s_ket, s_bra) and handing the result to the bosonic CTM
+ * is the fermionic one-site measurement.
+ *
+ * @param[in] Tn Rank-5 wrapped center tensor.
+ * @throw std::runtime_error If @p Tn is not rank 5.
+ */
 template <class tensor>
 tensor build_reduced_op(const ftensor<tensor>& Tn) {
   if (Tn.rank() != 5) {
@@ -356,12 +492,30 @@ tensor build_reduced_op(const ftensor<tensor>& Tn) {
   return detail::doubled_pipeline(Tn, Tn);
 }
 
+/*!
+ * @brief One-site reduced tensor with the physical legs traced: the rank-4
+ *        double-layer tensor the CTM environment is built from.
+ */
 template <class tensor>
 tensor build_reduced(const ftensor<tensor>& Tn) {
   return mptensor::contract(build_reduced_op(Tn), mptensor::Axes(4),
                             mptensor::Axes(5));
 }
 
+/*!
+ * @brief Contract two neighboring wrapped Tn into a rank-8 pair state.
+ *
+ * Graded contraction of the shared bond. Output leg order:
+ *   - horizontal: (l_A, t_A, b_A, s_A, t_B, r_B, b_B, s_B)
+ *   - vertical:   (l_A, t_A, r_A, s_A, l_B, r_B, b_B, s_B)
+ *
+ * i.e. A's remaining legs in (l, t, r, b, s) order, then B's.
+ *
+ * @param[in] TnA First site (left, resp. top).
+ * @param[in] TnB Second site (right, resp. bottom).
+ * @param[in] direction Window orientation.
+ * @throw std::runtime_error If either tensor is not rank 5.
+ */
 template <class tensor>
 ftensor<tensor> build_pair_state(const ftensor<tensor>& TnA,
                                  const ftensor<tensor>& TnB,
@@ -380,8 +534,17 @@ ftensor<tensor> build_pair_state(const ftensor<tensor>& TnA,
   throw std::runtime_error("build_pair_state: invalid direction");
 }
 
-// Apply a two-site operator op12 (in_A, in_B, out_A, out_B) to the physical
-// legs (3, 7) of a pair state and restore the original leg order.
+/*!
+ * @brief Apply a two-site operator to the physical legs of a pair state.
+ *
+ * @param[in] pair Rank-8 pair state from build_pair_state(); physical legs
+ *            at positions 3 and 7.
+ * @param[in] op12 Rank-4 operator with legs (in_A, in_B, out_A, out_B),
+ *            loaded via one of the wrappers in fops.hpp.
+ * @return Pair state with the operator applied and the original leg order
+ *         restored.
+ * @throw std::runtime_error On rank mismatch.
+ */
 template <class tensor>
 ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
                               const ftensor<tensor>& op12) {
@@ -398,9 +561,25 @@ ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
 
 namespace detail {
 
-// Shared body of the two blob builders. They differ in exactly one thing --
-// which fuse implementation produces `ret` -- so the surrounding sequence
-// lives here once and the equivalence test compares the fuse step alone.
+/*!
+ * @brief Shared body of the two blob builders.
+ *
+ * They differ in exactly one thing — which fuse implementation produces
+ * the blob — so the surrounding sequence (pair state, operator insertion,
+ * fuse, gauge alignment) lives here once and the equivalence test compares
+ * the fuse step alone. The final apply_fused_leg_gauge() calls align the
+ * blob with the single-site doubling convention; measured directly via
+ * comparison against build_reduced_op() / build_reduced() based direct
+ * composition, not derived analytically.
+ *
+ * @param[in] TnA First site (left, resp. top).
+ * @param[in] TnB Second site (right, resp. bottom).
+ * @param[in] op12 Two-site operator loaded with wrap_reduced_pair_op().
+ * @param[in] direction Window orientation.
+ * @param[in] fuse fuse_doubled_cluster_naive() or
+ *            fuse_doubled_cluster_direct().
+ * @return Rank-6 blob; leg order as in the file description.
+ */
 template <class tensor, class Fuse>
 tensor build_reduced_pair_impl(const ftensor<tensor>& TnA,
                                const ftensor<tensor>& TnB,
@@ -434,9 +613,15 @@ tensor build_reduced_pair_impl(const ftensor<tensor>& TnA,
 
 }  // namespace detail
 
-// Reference path: materializes the rank-16 outer product of the two layers.
-// Kept as the oracle the direct path is pinned against (and as the frozen
-// convention the Fock-verified tests check); the solver uses the direct one.
+/*!
+ * @brief Reference blob builder: materializes the rank-16 outer product of
+ *        the two layers.
+ *
+ * Kept as the oracle the direct path is pinned against (and as the frozen
+ * convention the Fock-verified tests check); the solver uses
+ * build_reduced_pair_direct(). Parameters as in
+ * detail::build_reduced_pair_impl().
+ */
 template <class tensor>
 tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
                                 const ftensor<tensor>& TnB,
@@ -446,13 +631,18 @@ tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
       TnA, TnB, op12, direction, &detail::fuse_doubled_cluster_naive<tensor>);
 }
 
-// Direct-contraction path, used by the solver: contracts the physical legs of
-// the bra and ket pair layers directly (a rank-12, blob-sized intermediate)
-// after redistributing the frozen joint-swap and transpose Koszul sign
-// terms onto the two layers and the contraction result. Returns the same
-// rank-6 blob as build_reduced_pair_naive elementwise; the rank-16 outer
-// product is never materialized.
-// Design: misc/fermion_twosite_blob/design.md (rev. 2, "direct fuse").
+/*!
+ * @brief Direct-contraction blob builder, used by the solver.
+ *
+ * Contracts the physical legs of the bra and ket pair layers directly (a
+ * rank-12, blob-sized intermediate) after redistributing the frozen
+ * joint-swap and transpose Koszul sign terms onto the two layers and the
+ * contraction result (see detail::fuse_doubled_cluster_direct()). Returns
+ * the same rank-6 blob as build_reduced_pair_naive() elementwise; the
+ * rank-16 outer product is never materialized.
+ * Design: misc/fermion_twosite_blob/design.md (rev. 2, "direct fuse").
+ * Parameters as in detail::build_reduced_pair_impl().
+ */
 template <class tensor>
 tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
                                  const ftensor<tensor>& TnB,
