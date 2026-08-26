@@ -1,6 +1,6 @@
 // Tests for the impurity factorization of the fermion two-site blob:
 // build_reduced_pair_factorized against the build_reduced_pair oracle.
-// Contract: work/fermion/impurity-blob/contract.md. The existing
+// Contract: misc/fermion_twosite_blob/contract.md. The existing
 // build_reduced_pair is the oracle; all helpers live in this file's own
 // anonymous namespace (this file is included into the test_fermion_layer TU).
 
@@ -549,8 +549,7 @@ TEST_CASE(
   const tenes::fermion::parity_vector even1{false};
   const tenes::fermion::parity_vector phys{false, true};
   const tenes::fermion::parity_vector phys_flipped{true, false};
-  const tenes::real_tensor zero(
-      mptensor::Shape(1, 1, 1, 2, 1, 1, 1, 2));
+  const tenes::real_tensor zero(mptensor::Shape(1, 1, 1, 2, 1, 1, 1, 2));
   const std::vector<int> leg_ids{0, 1, 3, 1, 2, 3};
 
   const ft bra{zero, {even1, even1, even1, phys, even1, even1, even1, phys}};

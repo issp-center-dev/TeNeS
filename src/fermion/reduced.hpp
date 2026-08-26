@@ -205,7 +205,8 @@ tensor fuse_doubled_cluster(const ftensor<tensor>& bra_pair,
 //     the twin (twin x twin collapses to a linear parity mask, p(s)^2=p(s)),
 //   * open bra leg x open ket leg      -> mask on the rank-12 result.
 // Pinned elementwise against build_reduced_pair by the impurity_blob tests;
-// derivation record in work/fermion/impurity-blob/ (design.md rev. 2).
+// derivation record in misc/fermion_twosite_blob/ (design.md rev. 2,
+// and probe_lean.cpp, which spells the identity out more compactly).
 template <class tensor>
 tensor fuse_doubled_cluster_factorized(const ftensor<tensor>& bra_pair,
                                        const ftensor<tensor>& ket_pair,
@@ -434,7 +435,7 @@ tensor build_reduced_pair(const ftensor<tensor>& TnA,
 // Koszul sign terms onto the two layers and the contraction result. Must
 // return the same rank-6 blob as build_reduced_pair elementwise; the
 // rank-16 outer product is never materialized.
-// Design: work/fermion/impurity-blob/design.md (rev. 2, "lean fuse").
+// Design: misc/fermion_twosite_blob/design.md (rev. 2, "lean fuse").
 template <class tensor>
 tensor build_reduced_pair_factorized(const ftensor<tensor>& TnA,
                                      const ftensor<tensor>& TnB,
