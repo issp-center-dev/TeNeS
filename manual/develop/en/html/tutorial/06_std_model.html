@@ -86,7 +86,7 @@ To define matrix elements is to define a model, and to define bonds is to define
 <p>In the input file of the standard mode, say <code class="docutils literal notranslate"><span class="pre">std.toml</span></code>, each local Hamiltonian is specified as <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code>.
 The bonds where the bond Hamiltonian acts are specified by <code class="docutils literal notranslate"><span class="pre">bonds</span></code> string:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
-bonds = &quot;&quot;&quot; # Set of acting bonds (1 bond per line)
+bonds = """ # Set of acting bonds (1 bond per line)
 0 1 0       # Row 1: Number of the source in the unit cell
 1 1 0       # Row 2: x coordinate(displacement) of target from the source
 2 1 0       # Row 3: y coordinate(displacement) of target from the source
@@ -95,7 +95,7 @@ bonds = &quot;&quot;&quot; # Set of acting bonds (1 bond per line)
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>One line of three integers corresponds one bond.
@@ -106,14 +106,14 @@ and <code class="docutils literal notranslate"><span class="pre">1</span> <span 
 <p>The dimension of the bond Hamiltonian, i.e., the number of states of the source and target sites, is specified by <code class="docutils literal notranslate"><span class="pre">dim</span></code>, and
 the non-zero elements of the bond Hamiltonian is defined by <code class="docutils literal notranslate"><span class="pre">elements</span></code>:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dim = [2, 2]       # Number of possible states of the acting bond [source, target]
-elements = &quot;&quot;&quot;     # (nonzero) matrix elements of the Hamiltonian (one element per row)
+elements = """     # (nonzero) matrix elements of the Hamiltonian (one element per row)
 0 0 0 0 0.25 0.0   # Field 1: State of source before action
 1 0 1 0 -0.25 0.0  # Field 2: State of target before action
 0 1 1 0 0.5 0.0    # Field 3: State of source after action
 1 0 0 1 0.5 0.0    # Field 4: State of target after action
 0 1 0 1 -0.25 0.0  # Field 5: Real part of element
 1 1 1 1 0.25 0.0   # Field 6: Imaginary part of element
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>One line of <code class="docutils literal notranslate"><span class="pre">elements</span></code> corresponds one element.
@@ -128,10 +128,10 @@ The remaining two numbers are the real and imaginary part of the element of the 
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
 dim = [2]
 sites = []
-elements = &quot;&quot;&quot;
+elements = """
 1 0 -0.5 0.0
 0 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>Site is specified by <code class="docutils literal notranslate"><span class="pre">sites</span></code> as a list of indices.
@@ -163,24 +163,24 @@ For convenience, <code class="docutils literal notranslate"><span class="pre">te
 </div>
 <p>is defined as follows:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]] # onesite operator
-name = &quot;Sz&quot;            # Name
+name = "Sz"            # Name
 group = 0              # 1-site operator identification number
 sites = []             # Indices of tensors on which the operator acts ([] means all)
 dim = 2                # Dimensions of operators
-elements = &quot;&quot;&quot;         # Non-zero elements of operator matrix (one element per line)
+elements = """         # Non-zero elements of operator matrix (one element per line)
 0 0 0.5 0.0            # Fields 1 and 2: before and after action
 1 1 -0.5 0.0           # Fields 3 and 4: Real and imaginary parts of the element
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>Non-zero elements of the matrix can be specified in the similar way of bond Hamiltonians.</p>
 <p>Twosites operators can be defined in the similar way how to define the bond Hamiltonian.
 As an example of twosites operator, spin-spin correlation on nearest neighbor bonds <span class="math notranslate nohighlight">\(S^z_i S^z_j\)</span> is defined as follows:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable].twosite]] # twosite operator
-name = &quot;SzSz&quot;           # Name
+name = "SzSz"           # Name
 group = 1               # Index of twosite operator (independent of indices of onesite)
 dim = [2, 2]            # Dimension
-bonds = &quot;&quot;&quot;             # Bond that acts on
+bonds = """             # Bond that acts on
 0 1 0
 1 1 0
 2 1 0
@@ -189,10 +189,10 @@ bonds = &quot;&quot;&quot;             # Bond that acts on
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 ops = [0, 0] # When it can be written as a direct product of onesite operators,
              # their indices.
-             # In this case, &quot;Sz&quot; is the onesite operator with index 0.
+             # In this case, "Sz" is the onesite operator with index 0.
              # Matrix elements can also be written explicitly as elements
 </pre></div>
 </div>
@@ -233,7 +233,7 @@ J/4 &amp; 0 &amp; 0 &amp; 0 \\
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
-tensor_save = &quot;tensor&quot;
+tensor_save = "tensor"
 [parameter.simple_update]
 num_step = 1000
 tau = 0.01
@@ -245,7 +245,7 @@ iteration_max = 10
 dimension = 10
 
 [tensor]
-type = &quot;square lattice&quot;
+type = "square lattice"
 L_sub = [2, 2]
 skew = 0
 
@@ -266,35 +266,35 @@ noise = 0.01
 [[hamiltonian]]
 dim = [2]
 sites = [0, 3]
-elements = &quot;&quot;&quot;
+elements = """
 0 0 -0.5 0.0
 1 1 0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [[hamiltonian]]
 dim = [2]
 sites = [1, 2]
-elements = &quot;&quot;&quot;
+elements = """
 0 0 0.5 0.0
 1 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [observable]
 [[observable.onesite]]
-name = &quot;Sz&quot;
+name = "Sz"
 group = 1
 sites = []
 dim = 2
-elements = &quot;&quot;&quot;
+elements = """
 0 0 0.5 0.0
 1 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [[observable.twosite]]
-name = &quot;SzSz&quot;
+name = "SzSz"
 group = 1
 dim = [2, 2]
-bonds = &quot;&quot;&quot;
+bonds = """
 0 1 0
 1 1 0
 2 1 0
@@ -303,7 +303,7 @@ bonds = &quot;&quot;&quot;
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 ops = [1, 1]
 </pre></div>
 </div>

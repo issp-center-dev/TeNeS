@@ -121,8 +121,34 @@ By typing the following command, tests for <code class="docutils literal notrans
 <div class="admonition-disable-mpi-scalapack-parallelization admonition">
 <p class="admonition-title">Disable MPI/ScaLAPACK parallelization</p>
 <p>If you want to disable MPI/ScaLAPACK parallelization, pass <code class="docutils literal notranslate"><span class="pre">-DENABLE_MPI=OFF</span></code> option to <code class="docutils literal notranslate"><span class="pre">cmake</span></code> command.
-On macOS, some functions of ScaLAPACK are incompatible with the system’s BLAS and LAPACK,
-and TeNeS ends in error. It is recommended to disable MPI parallel.</p>
+On macOS, some functions of ScaLAPACK can be incompatible with the system’s BLAS and LAPACK
+and make TeNeS end in error, so <code class="docutils literal notranslate"><span class="pre">ENABLE_MPI</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">OFF</span></code> there.
+With <code class="docutils literal notranslate"><span class="pre">open-mpi</span></code> and <code class="docutils literal notranslate"><span class="pre">scalapack</span></code> installed from Homebrew, <code class="docutils literal notranslate"><span class="pre">-DENABLE_MPI=ON</span></code>
+is known to work, because that ScaLAPACK links against OpenBLAS rather than Accelerate.</p>
+</div>
+<div class="admonition-openmp-on-macos admonition">
+<p class="admonition-title">OpenMP on macOS</p>
+<p>Apple clang ships without an OpenMP runtime, so libomp has to be installed separately.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ brew install libomp
+</pre></div>
+</div>
+<p>CMake queries <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">--prefix</span> <span class="pre">libomp</span></code> and then falls back to Homebrew’s usual
+locations. If the search fails, point it at libomp explicitly.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DOpenMP_ROOT=$(brew --prefix libomp) ../
+</pre></div>
+</div>
+<p>Note that Homebrew’s <code class="docutils literal notranslate"><span class="pre">mpicxx</span></code> wraps Apple clang, so <code class="docutils literal notranslate"><span class="pre">-DCMAKE_CXX_COMPILER=mpicxx</span></code>
+takes this path as well. Apple clang builds require CMake 3.12 or later,
+which is when <code class="docutils literal notranslate"><span class="pre">OpenMP_ROOT</span></code> started to steer the library search.</p>
+</div>
+<div class="admonition-number-of-openmp-threads admonition">
+<p class="admonition-title">Number of OpenMP threads</p>
+<p>On macOS an OpenMP barrier costs a system call, so fine-grained threading within
+a node adds far more overhead than it saves. Set <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS=1</span></code> at run time
+and parallelize with MPI instead.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ OMP_NUM_THREADS=1 mpiexec -np 4 tenes input.toml
+</pre></div>
+</div>
 </div>
 <div class="admonition-specify-compiler admonition">
 <p class="admonition-title">Specify compiler</p>

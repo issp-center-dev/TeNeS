@@ -87,7 +87,7 @@ noise = 0.01               # 初期テンソルのゆらぎ
 <p>それぞれの局所ハミルトニアンは <code class="docutils literal notranslate"><span class="pre">[[hamiltonian]]</span></code> で記述されます。
 ボンドハミルトニアンの作用するボンドは <code class="docutils literal notranslate"><span class="pre">bonds</span></code> 文字列で指定します。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
-bonds = &quot;&quot;&quot;  # 作用するボンドの集合(1行1ボンド)
+bonds = """  # 作用するボンドの集合(1行1ボンド)
 0 1 0        # 1列目: ユニットセル内のsourceの番号
 1 1 0        # 2列目: sourceからみたtargetのx座標(変位)
 2 1 0        # 3列目: sourceからみたtargetのy座標(変位)
@@ -96,7 +96,7 @@ bonds = &quot;&quot;&quot;  # 作用するボンドの集合(1行1ボンド)
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>3つの整数からなる 1行が1つのボンドを表現します。
@@ -107,14 +107,14 @@ bonds = &quot;&quot;&quot;  # 作用するボンドの集合(1行1ボンド)
 <p>ボンドハミルトニアンの次元、すなわち作用するサイト対の取りうる状態数の数は <code class="docutils literal notranslate"><span class="pre">dim</span></code> で指定し、
 ボンドハミルトニアン演算子の非ゼロ行列要素は <code class="docutils literal notranslate"><span class="pre">elements</span></code> 文字列で指定します。</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dim = [2, 2]       # [source, target] の取りうる状態数の対
-elements = &quot;&quot;&quot;     # ハミルトニアンの(非ゼロな)行列要素(1行1要素)
+elements = """     # ハミルトニアンの(非ゼロな)行列要素(1行1要素)
 0 0 0 0 0.25 0.0   # 1列目: 作用前のsourceの状態
 1 0 1 0 -0.25 0.0  # 2列目: 作用前のtargetの状態
 0 1 1 0 0.5 0.0    # 3列目: 作用後のsourceの状態
 1 0 0 1 0.5 0.0    # 4列目: 作用後のtargetの状態
 0 1 0 1 -0.25 0.0  # 5列目: 要素の実部
 1 1 1 1 0.25 0.0   # 6列目: 要素の虚部
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">elements</span></code> の1行が行列要素1つに対応します。
@@ -128,10 +128,10 @@ elements = &quot;&quot;&quot;     # ハミルトニアンの(非ゼロな)行列
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[hamiltonian]]
 dim = [2]
 sites = []
-elements = &quot;&quot;&quot;
+elements = """
 1 0 -0.5 0.0
 0 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>サイトは <code class="docutils literal notranslate"><span class="pre">sites</span></code> で指定します。空リストはすべてのサイトを意味します。</p>
@@ -162,22 +162,22 @@ elements = &quot;&quot;&quot;
 \end{pmatrix}\end{split}\]</div>
 <p>を考えると、これは次のように表現できます</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]] # 1サイト演算子
-name = &quot;Sz&quot;     # 名前
+name = "Sz"     # 名前
 group = 0       # 1サイト演算子の識別番号
 sites = []      # 1サイト演算子が作用するサイトの番号 ([]はすべてを意味する)
 dim = 2         # 1サイト演算子の次元
-elements = &quot;&quot;&quot;  # 1サイト演算子行列の非ゼロ要素 (1行1要素)
+elements = """  # 1サイト演算子行列の非ゼロ要素 (1行1要素)
 0 0 0.5 0.0     # 1,2列目: 作用前後の状態
 1 1 -0.5 0.0    # 3,4列目: 要素の実部・虚部
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>2サイト演算子の例として、最近接ボンドにおける Sz 相関 <span class="math notranslate nohighlight">\(S^z_i S^z_j\)</span> を例に取ると</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable].twosite]] # 2サイト演算子
-name = &quot;SzSz&quot; # 名前
+name = "SzSz" # 名前
 group = 1 # 2サイト演算子の識別番号 (1サイトとは独立)
 dim = [2, 2] # 次元
-bonds = &quot;&quot;&quot; # 作用するボンド (サイト対)
+bonds = """ # 作用するボンド (サイト対)
 0 1 0
 1 1 0
 2 1 0
@@ -186,9 +186,9 @@ bonds = &quot;&quot;&quot; # 作用するボンド (サイト対)
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 ops = [0, 0] # 1サイト演算子の直積で書ける場合、その識別番号
-             # 今回は&quot;Sz&quot;が0番の1サイト演算子
+             # 今回は"Sz"が0番の1サイト演算子
              # elementsとして行列要素を陽に書くことも可能
              # (ボンドハミルトニアンと同じ書式)
 </pre></div>
@@ -234,7 +234,7 @@ J/4 &amp; 0 &amp; 0 &amp; 0 \\
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
 is_real = true
-tensor_save = &quot;tensor&quot;
+tensor_save = "tensor"
 [parameter.simple_update]
 num_step = 1000
 tau = 0.01
@@ -246,7 +246,7 @@ iteration_max = 10
 dimension = 10
 
 [tensor]
-type = &quot;square lattice&quot;
+type = "square lattice"
 L_sub = [2, 2]
 skew = 0
 
@@ -267,35 +267,35 @@ noise = 0.01
 [[hamiltonian]]
 dim = [2]
 sites = [0, 3]
-elements = &quot;&quot;&quot;
+elements = """
 0 0 -0.5 0.0
 1 1 0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [[hamiltonian]]
 dim = [2]
 sites = [1, 2]
-elements = &quot;&quot;&quot;
+elements = """
 0 0 0.5 0.0
 1 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [observable]
 [[observable.onesite]]
-name = &quot;Sz&quot;
+name = "Sz"
 group = 1
 sites = []
 dim = 2
-elements = &quot;&quot;&quot;
+elements = """
 0 0 0.5 0.0
 1 1 -0.5 0.0
-&quot;&quot;&quot;
+"""
 
 [[observable.twosite]]
-name = &quot;SzSz&quot;
+name = "SzSz"
 group = 1
 dim = [2, 2]
-bonds = &quot;&quot;&quot;
+bonds = """
 0 1 0
 1 1 0
 2 1 0
@@ -304,7 +304,7 @@ bonds = &quot;&quot;&quot;
 1 0 1
 2 0 1
 3 0 1
-&quot;&quot;&quot;
+"""
 ops = [1, 1]
 </pre></div>
 </div>

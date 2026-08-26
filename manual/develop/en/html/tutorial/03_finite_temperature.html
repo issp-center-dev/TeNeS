@@ -46,9 +46,9 @@ H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x.
 The input and script files used in this tutorial are located in the <code class="docutils literal notranslate"><span class="pre">sample/03_finite_temperature</span></code> directory. Below is a sample input file (<code class="docutils literal notranslate"><span class="pre">simple_ft_strong.toml</span></code>):</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
-mode = &quot;finite&quot;
+mode = "finite"
 is_real = false
-output = &quot;output_ft_strong&quot;
+output = "output_ft_strong"
 measure_interval = [10, 10, 5]
 
 [parameter.simple_update]
@@ -64,13 +64,13 @@ iteration_max = 10
 dimension = 10
 
 [lattice]
-type = &quot;square lattice&quot;
+type = "square lattice"
 L = 2
 W = 2
 virtual_dim = 3
 
 [model]
-type = &quot;spin&quot;
+type = "spin"
 Jz = -1.0
 Jx = 0.0
 Jy = 0.0
@@ -112,7 +112,7 @@ For example, <code class="docutils literal notranslate"><span class="pre">FT_den
 </div>
 <p>The second column indicates the type of physical quantity, and for example, 0 represents energy.
 Thus, you can extract the temperature dependence by extracting only the energy with <code class="docutils literal notranslate"><span class="pre">awk</span></code>:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 0 {print $1, $3, $4}&#39; output_ft_strong/FT_density.dat &gt; energy_strong.dat
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk '$2 == 0 {print $1, $3, $4}' output_ft_strong/FT_density.dat &gt; energy_strong.dat
 </pre></div>
 </div>
 <p>To observe the behavior at different transverse magnetic fields, we’ve provided additional sample input files: <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>), <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>), and <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.0</span></code>).

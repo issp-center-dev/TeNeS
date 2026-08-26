@@ -49,9 +49,9 @@ H = J^z \sum_{\langle i,j \rangle} {S}_i^{z} {S}_j^{z} - h^x \sum_i S_i^x
 以下が入力ファイルの例です (<code class="docutils literal notranslate"><span class="pre">simple_ft_strong.toml</span></code> ファイル)。ここでは、</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[parameter]
 [parameter.general]
-mode = &quot;finite&quot;
+mode = "finite"
 is_real = false
-output = &quot;output_ft_strong&quot;
+output = "output_ft_strong"
 measure_interval = [10, 10, 5]
 
 [parameter.simple_update]
@@ -67,13 +67,13 @@ iteration_max = 10
 dimension = 10
 
 [lattice]
-type = &quot;square lattice&quot;
+type = "square lattice"
 L = 2
 W = 2
 virtual_dim = 3
 
 [model]
-type = &quot;spin&quot;
+type = "spin"
 Jz = -1.0
 Jx = 0.0
 Jy = 0.0
@@ -115,7 +115,7 @@ hx = 2.0
 </div>
 <p>となっています。
 2列目が物理量の種類を示しており、例えば0はエネルギーなので、 <code class="docutils literal notranslate"><span class="pre">awk</span></code> などでエネルギーだけを取り出すことで温度依存性を調べられます:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk &#39;$2 == 0 {print $1, $3, $4}&#39; output_ft_strong/FT_density.dat &gt; energy_strong.dat
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>awk '$2 == 0 {print $1, $3, $4}' output_ft_strong/FT_density.dat &gt; energy_strong.dat
 </pre></div>
 </div>
 <p>有限温度の振る舞いをいくつかの横磁場で見るために、 <code class="docutils literal notranslate"><span class="pre">simple_ft_middle.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.8</span></code>)、 <code class="docutils literal notranslate"><span class="pre">simple_te_weak.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.5</span></code>)、 <code class="docutils literal notranslate"><span class="pre">simple_ft_zero.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">hx</span> <span class="pre">=</span> <span class="pre">0.0</span></code>) という入力ファイルもサンプルとして用意しています。

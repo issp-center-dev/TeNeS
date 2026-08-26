@@ -119,8 +119,36 @@ $ make
 <div class="admonition-mpi-scalapack admonition">
 <p class="admonition-title">MPI/ScaLAPACK 並列化の無効化</p>
 <p>MPI および ScaLAPACK を利用しない場合には、 <code class="docutils literal notranslate"><span class="pre">-DENABLE_MPI=OFF</span></code> オプションを <code class="docutils literal notranslate"><span class="pre">cmake</span></code> コマンドに追加してください。
-macOS では ScaLAPACK の一部関数とシステムのBLAS, LAPACK とで相性が悪く、エラー終了するのを確認しています。
-MPI 並列の無効化を推奨しています。</p>
+macOS では ScaLAPACK の一部関数とシステムのBLAS, LAPACK とで相性が悪く、エラー終了する場合があります。
+そのため macOS では <code class="docutils literal notranslate"><span class="pre">ENABLE_MPI</span></code> の既定値が <code class="docutils literal notranslate"><span class="pre">OFF</span></code> になっています。
+Homebrew で <code class="docutils literal notranslate"><span class="pre">open-mpi</span></code> と <code class="docutils literal notranslate"><span class="pre">scalapack</span></code> を導入した環境では
+<code class="docutils literal notranslate"><span class="pre">-DENABLE_MPI=ON</span></code> で動作することを確認しています
+(Homebrew の ScaLAPACK は Accelerate ではなく OpenBLAS にリンクされているため)。</p>
+</div>
+<div class="admonition-macos-openmp admonition">
+<p class="admonition-title">macOS で OpenMP を使う</p>
+<p>Apple clang には OpenMP ランタイムが同梱されていないため、別途 libomp が必要です。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ brew install libomp
+</pre></div>
+</div>
+<p>CMake は <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">--prefix</span> <span class="pre">libomp</span></code> の結果と Homebrew の既定の場所を順に探します。
+自動検出に失敗する場合は、libomp の場所を明示してください。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cmake -DOpenMP_ROOT=$(brew --prefix libomp) ../
+</pre></div>
+</div>
+<p>なお Homebrew の <code class="docutils literal notranslate"><span class="pre">mpicxx</span></code> は Apple clang のラッパーなので、
+<code class="docutils literal notranslate"><span class="pre">-DCMAKE_CXX_COMPILER=mpicxx</span></code> を指定した場合もこの経路になります。
+Apple clang を使う場合は CMake 3.12 以降が必要です
+(<code class="docutils literal notranslate"><span class="pre">OpenMP_ROOT</span></code> によるライブラリ検索が CMake 3.12 で追加されたため)。</p>
+</div>
+<div class="admonition-openmp admonition">
+<p class="admonition-title">OpenMP スレッド数の指定</p>
+<p>macOS では OpenMP のバリア同期がシステムコールになるため、
+1 ノード内の細粒度な並列がかえって大きなオーバーヘッドになります。
+実行時には <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS=1</span></code> を設定し、並列化は MPI 側で行うことを推奨します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ OMP_NUM_THREADS=1 mpiexec -np 4 tenes input.toml
+</pre></div>
+</div>
 </div>
 <div class="admonition- admonition">
 <p class="admonition-title">コンパイラの指定</p>

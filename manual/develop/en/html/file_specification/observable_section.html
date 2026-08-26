@@ -107,22 +107,22 @@ Otherwise, for example, if there are sites with different spin length <span clas
 <p>Finally, the operator element is defined.
 When we label two basis on site as <span class="math notranslate nohighlight">\(|\uparrow\rangle = |0\rangle\)</span> and <span class="math notranslate nohighlight">\(|\downarrow\rangle = |1\rangle\)</span>,
 non-zero elements of <span class="math notranslate nohighlight">\(S^z\)</span> are represented as</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>elements = &quot;&quot;&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>elements = """
 0 0   0.5 0.0
 1 1  -0.5 0.0
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 <p>As a result, <span class="math notranslate nohighlight">\(S^z\)</span> operator for S=1/2 is defined as follows:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.onesite]]
-name = &quot;Sz&quot;
+name = "Sz"
 group = 0
 sites = []
 dim = 2
-elements = &quot;&quot;&quot;
+elements = """
 0 0  0.5 0.0
 1 1  -0.5 0.0
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 </section>
@@ -231,10 +231,10 @@ Using this basis and label number, for example, one of diagonal elements <span c
 Likewise, one of off-diagonal elements <span class="math notranslate nohighlight">\(\left\langle \uparrow_i \downarrow_j | \mathcal{H}_{ij} | \downarrow_i \uparrow_j \right\rangle = 1/2\)</span> is specified by <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0.5</span> <span class="pre">0.0</span></code>.</p>
 <p>As a result, the Heisenberg Hamiltonian for S=1/2 is defined as follows:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[[observable.twosite]]
-name = &quot;hamiltonian&quot;
+name = "hamiltonian"
 group = 0
 dim = [2, 2]
-bonds = &quot;&quot;&quot;
+bonds = """
 0 0 1
 0 1 0
 1 0 1
@@ -243,15 +243,15 @@ bonds = &quot;&quot;&quot;
 2 1 0
 3 0 1
 3 1 0
-&quot;&quot;&quot;
-elements = &quot;&quot;&quot;
+"""
+elements = """
 0 0 0 0  0.25 0.0
 1 0 1 0  -0.25 0.0
 0 1 1 0  0.5 0.0
 1 0 0 1  0.5 0.0
 0 1 0 1  -0.25 0.0
 1 1 1 1  0.25 0.0
-&quot;&quot;&quot;
+"""
 </pre></div>
 </div>
 </section>

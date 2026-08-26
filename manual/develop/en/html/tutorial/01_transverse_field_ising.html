@@ -64,14 +64,14 @@ iteration_max = 10    # Maximum number of iterations in CTMRG
 dimension = 10        # Bond dimension of corner transfer matrix
 
 [lattice]
-type = &quot;square lattice&quot; # Type of lattice
+type = "square lattice" # Type of lattice
 L = 2                   # X length of unit cell
 W = 2                   # Y length of unit cell
 virtual_dim = 2         # Bond dimension of bulk tensors
-initial = &quot;ferro&quot;       # Initial condition
+initial = "ferro"       # Initial condition
 
 [model]
-type = &quot;spin&quot; # Type of model
+type = "spin" # Type of model
 Jz = -1.0     # Jz SzSz
 Jx = 0.0      # Jx SxSx
 Jy = 0.0      # Jy SySy
@@ -144,7 +144,7 @@ As an example of the sample script, <code class="docutils literal notranslate"><
 import numpy as np
 import toml
 
-MPI_cmd = &quot;&quot;  # e.g., &quot;mpiexec -np 1&quot;
+MPI_cmd = ""  # e.g., "mpiexec -np 1"
 
 num_hx = 16
 min_hx = 0.0
@@ -152,25 +152,25 @@ max_hx = 3.0
 
 total = 0
 for idx, hx in enumerate(np.linspace(min_hx, max_hx, num=num_hx)):
-    print(f&quot;Calculation Process: {idx+1}/{num_hx}&quot;)
-    with open(&quot;simple.toml&quot;) as f:
+    print(f"Calculation Process: {idx+1}/{num_hx}")
+    with open("simple.toml") as f:
         dict_toml = toml.load(f)
-    dict_toml[&quot;parameter&quot;][&quot;general&quot;][&quot;output&quot;] = f&quot;output_{idx}&quot;
-    dict_toml[&quot;model&quot;][&quot;hx&quot;] = float(hx)
+    dict_toml["parameter"]["general"]["output"] = f"output_{idx}"
+    dict_toml["model"]["hx"] = float(hx)
 
-    simple_toml = f&quot;simple_{idx}.toml&quot;
-    std_toml = f&quot;std_{idx}.toml&quot;
-    input_toml = f&quot;input_{idx}.toml&quot;
+    simple_toml = f"simple_{idx}.toml"
+    std_toml = f"std_{idx}.toml"
+    input_toml = f"input_{idx}.toml"
 
-    with open(simple_toml, &quot;w&quot;) as f:
+    with open(simple_toml, "w") as f:
         toml.dump(dict_toml, f)
-    cmd = f&quot;tenes_simple {simple_toml} -o {std_toml}&quot;
+    cmd = f"tenes_simple {simple_toml} -o {std_toml}"
     subprocess.call(cmd.split())
 
-    cmd = f&quot;tenes_std {std_toml} -o {input_toml}&quot;
+    cmd = f"tenes_std {std_toml} -o {input_toml}"
     subprocess.call(cmd.split())
 
-    cmd = f&quot;{MPI_cmd} tenes {input_toml}&quot;
+    cmd = f"{MPI_cmd} tenes {input_toml}"
     subprocess.call(cmd.split())
 </pre></div>
 </div>
@@ -183,30 +183,30 @@ import toml
 
 num_hx = 16
 
-print(&quot;# $1: h&quot;)
-print(&quot;# $2: ene&quot;)
-print(&quot;# $3: sz&quot;)
-print(&quot;# $4: sx&quot;)
+print("# $1: h")
+print("# $2: ene")
+print("# $3: sz")
+print("# $4: sx")
 print()
 
 for idx in range(num_hx):
     try:
-        with open(f&quot;simple_{idx}.toml&quot;) as f:
+        with open(f"simple_{idx}.toml") as f:
             dict_toml = toml.load(f)
-        hx = dict_toml[&quot;model&quot;][&quot;hx&quot;]
+        hx = dict_toml["model"]["hx"]
         ene = 0.0
         mag_sz = 0.0
         mag_sx = 0.0
-        with open(join(f&quot;output_{idx}&quot;, &quot;density.dat&quot;)) as f:
+        with open(join(f"output_{idx}", "density.dat")) as f:
             for line in f:
                 words = line.split()
-                if words[0] == &quot;Energy&quot;:
+                if words[0] == "Energy":
                     ene = words[2]
-                elif words[0] == &quot;Sz&quot;:
+                elif words[0] == "Sz":
                     mag_sz = words[2]
-                elif words[0] == &quot;Sx&quot;:
+                elif words[0] == "Sx":
                     mag_sx = words[2]
-        print(f&quot;{hx} {ene} {mag_sz} {mag_sx}&quot;)
+        print(f"{hx} {ene} {mag_sz} {mag_sx}")
     except:
         continue
 </pre></div>
