@@ -14,6 +14,10 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief The solver class ::tenes::itps::iTPS.
+ */
+
 #ifndef TENES_SRC_ITPS_ITPS_HPP_
 #define TENES_SRC_ITPS_ITPS_HPP_
 
@@ -46,45 +50,67 @@
 
 namespace tenes::itps {
 
+//! A pair of sites identified by the source site and the displacement to
+//! the other one; the key type of the two-site measurement results.
 struct Bond {
-  int source_site;
-  int dx;
-  int dy;
+  int source_site;  //!< site index within the unit cell
+  int dx;           //!< x displacement to the other site
+  int dy;           //!< y displacement to the other site
 };
-// std::map<Bond, T> requires operator<
+//! Lexicographic order so Bond can key a std::map.
 inline bool operator<(const Bond &a, const Bond &b) {
   return std::tie(a.source_site, a.dx, a.dy) <
          std::tie(b.source_site, b.dx, b.dy);
 }
 
+//! A cluster of sites identified by the source site and one displacement
+//! per further site; the key type of the multi-site measurement results.
 struct Multisites {
-  int source_site;
-  std::vector<int> dx;
-  std::vector<int> dy;
+  int source_site;      //!< site index within the unit cell
+  std::vector<int> dx;  //!< x displacements to the other sites
+  std::vector<int> dy;  //!< y displacements to the other sites
 };
-// std::map<Multisites, T> requires operator<
+//! Lexicographic order so Multisites can key a std::map.
 inline bool operator<(const Multisites &a, const Multisites &b) {
   return std::tie(a.source_site, a.dx, a.dy) <
          std::tie(b.source_site, b.dx, b.dy);
 }
 
-//! Solver main class
+/*! @brief The solver: an iTPS wave function (or density matrix), its
+ *         environment, and the algorithms acting on them.
+ *
+ *  One instance holds the whole state of a run: the center tensors, the
+ *  CTM and mean-field environments, the evolution operators, and the
+ *  observables. main.cpp builds it from input.toml via load_toml.cpp and
+ *  then calls optimize() / time_evolution() / finite_temperature()
+ *  according to the calculation mode.
+ *
+ *  The *_density members are the finite-temperature (density matrix /
+ *  purification) variants: there the center tensors carry two physical
+ *  legs (ket and bra) and the CTM is built from single-layer tensors.
+ *
+ *  @tparam tensor ::tenes::real_tensor or ::tenes::complex_tensor.
+ */
 template <class tensor>
 class iTPS {
  public:
+  //! Scalar type of the tensor elements (double or complex).
   using tensor_type = typename tensor::value_type;
+  //! True for the real_tensor instantiation.
   static constexpr bool is_tensor_real = std::is_floating_point_v<tensor_type>;
 
+  //! One transfer-matrix result: direction, fixed coordinate, and the
+  //! leading eigenvalues.
   using transfer_matrix_eigenvalues_type =
       std::tuple<int, int, std::vector<std::complex<double>>>;
 
   /*! @brief constructor
    *
-   *  @param[in] comm_
-   *  @param[in] peps_parameters
-   *  @param[in] lattice_
-   *  @param[in] simple_updates Time Evolution operators for simple updates
-   *  @param[in] full_updates Time Evolution operators for full updates
+   *  @param[in] comm_ communicator all tensors live on
+   *  @param[in] peps_parameters_ runtime parameters
+   *  @param[in] lattice_ unit-cell geometry
+   *  @param[in] simple_updates_ time evolution operators for simple updates
+   *  @param[in] full_updates_ time evolution operators for full updates
    *  @param[in] onesite_operators_ onesite operators to be measured
    *  @param[in] twosite_operators_ twosite operators to be measured
    *  @param[in] multisite_operators_ multisite operators to be measured
@@ -100,61 +126,99 @@ class iTPS {
        Operators<tensor> multisite_operators_, CorrelationParameter corparam_,
        TransferMatrix_Parameters tmatrix_param_);
 
-  //! initialize tensors
+  //! Allocate and initialize all tensors (random or loaded initial state).
   void initialize_tensors();
+  //! Finite-temperature variant of initialize_tensors(): the initial
+  //! density matrix is the (infinite-temperature) identity.
   void initialize_tensors_density();
+  //! Trace out the bra-side physical legs, yielding one single-layer
+  //! tensor per site for the finite-temperature CTM.
   std::vector<tensor> make_single_tensor_density();
-  
-  //! update corner transfer matrices
+
+  //! Converge the corner transfer matrices for the current state.
   void update_CTM();
+  //! Finite-temperature variant of update_CTM().
   void update_CTM_density();
 
-  //! perform simple update
+  //! Run all simple-update steps of every operator group.
   void simple_update();
+  //! Apply one simple-update gate (one bond or one site).
   void simple_update(EvolutionOperator<tensor> const &up);
+  //! Iteratively fix the local gauge of the bonds (simple_update.gauge_fix).
   void fix_local_gauge();
+  //! Finite-temperature variant of simple_update().
   void simple_update_density();
+  //! Finite-temperature variant of simple_update(up): the gate acts on the
+  //! ket side and its conjugate on the bra side.
   void simple_update_density(EvolutionOperator<tensor> const &up);
+  //! Purification variant of simple_update_density() (gate split as
+  //! sqrt(U) on both sides).
   void simple_update_density_purification();
+  //! Purification variant of simple_update_density(up).
   void simple_update_density_purification(EvolutionOperator<tensor> const &up);
+  //! Finite-temperature variant of fix_local_gauge().
   void fix_local_gauge_density();
 
-  //! perform full update
+  //! Run all full-update steps of every operator group (converges the CTM
+  //! between gates).
   void full_update();
+  //! Apply one full-update gate.
   void full_update(EvolutionOperator<tensor> const &up);
 
-  //! optimize tensors
+  //! Optimize the state in ground-state mode: simple updates, then full
+  //! updates.
   void optimize();
-  //void optimize_density();
+  // void optimize_density();
 
-  //! measure expectation value of observables
+  /*! @brief Measure and save all observables for the current state.
+   *
+   *  Converges the environment (CTM or mean field), evaluates the one-,
+   *  two-, and multi-site observables, the short-range correlation
+   *  functions, and the transfer-matrix correlation length, and writes
+   *  the *.dat files into the output directory.
+   *
+   *  @param[in] time evolution time (or inverse temperature) stamped onto
+   *             each output row; no stamp when std::nullopt
+   *  @param[in] filename_prefix prefix of the output file names
+   */
   void measure(std::optional<double> time = std::nullopt,
                std::string filename_prefix = "");
+  //! Finite-temperature variant of measure() at inverse temperature beta.
   void measure_density(double beta, std::string filename_prefix = "FT_");
 
-  //! print elapsed time
+  //! Print the elapsed-time summary and write time.dat.
   void summary() const;
 
+  //! Run time-evolution mode: apply the real-time gates, measuring every
+  //! measure_interval steps.
   void time_evolution();
 
+  //! Run finite-temperature mode: evolve the density matrix in inverse
+  //! temperature, measuring every measure_interval steps.
   void finite_temperature();
 
-  //! measure expectation value of onesite observables
+  //! Measure the one-site observables; result indexed by [operator][site].
   std::vector<std::vector<tensor_type>> measure_onesite();
+  //! Finite-temperature variant of measure_onesite().
   std::vector<std::vector<tensor_type>> measure_onesite_density();
 
-  //! measure expectation value of twosite observables
+  //! Measure the two-site observables; result indexed by [operator][bond].
   std::vector<std::map<Bond, tensor_type>> measure_twosite();
+  //! Finite-temperature variant of measure_twosite().
   std::vector<std::map<Bond, tensor_type>> measure_twosite_density();
 
-  //! measure expectation value of multisite observables
+  //! Measure the multi-site observables; result indexed by
+  //! [operator][cluster].
   std::vector<std::map<Multisites, tensor_type>> measure_multisite();
+  //! Finite-temperature variant of measure_multisite().
   std::vector<std::map<Multisites, tensor_type>> measure_multisite_density();
 
-  //! measure correlation functions
+  //! Measure the correlation functions up to distance
+  //! correlation.r_max along the x and y axes.
   std::vector<Correlation> measure_correlation();
 
-  //! measure eigenvalues of transfer matrix
+  //! Compute the leading transfer-matrix eigenvalues for every row and
+  //! column (the correlation lengths follow from their ratios).
   std::vector<transfer_matrix_eigenvalues_type>
   measure_transfer_matrix_eigenvalues();
 
@@ -210,13 +274,14 @@ class iTPS {
       std::optional<double> time = std::nullopt,
       std::string filename_prefix = "");
 
-  /*! @brief calculate and write correlation length
+  /*! @brief write the measured energy and other densities (per-site
+   *         averages of the observables)
    *
-   *  @param[in] onesite_obs
-   *  @param[in] twosite_obs,
-   *  @param[in] multisite_obs,
-   *  @param[in] time
-   *  @param[in] filename_prefix
+   *  @param[in] onesite_obs measured one-site observables
+   *  @param[in] twosite_obs measured two-site observables
+   *  @param[in] multisite_obs measured multi-site observables
+   *  @param[in] time time (or inverse temperature) stamped onto each row
+   *  @param[in] filename_prefix prefix of the output file name
    */
   void save_density(
       std::vector<std::vector<tensor_type>> const &onesite_obs,
@@ -232,53 +297,75 @@ class iTPS {
   void load_tensors();
 
  private:
+  //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {
     return site_ops_indices[site][group];
   }
 
+  //! Convert a scalar to tensor_type, dropping the imaginary part for
+  //! real runs.
   template <class T>
   tensor_type to_tensor_type(T const &v) const {
     return convert_complex<tensor_type>(v);
   }
 
+  //! Read tensors in the current save format (with shape header).
   void load_tensors_v1();
+  //! Read tensors in the legacy headerless save format.
   void load_tensors_v0();
 
+  //! measure_correlation() with the CTM environment.
   std::vector<Correlation> measure_correlation_ctm();
+  //! measure_correlation() with the mean-field environment.
   std::vector<Correlation> measure_correlation_mf();
 
-  static constexpr int nleg = 4;
+  static constexpr int nleg = 4;  //!< virtual legs per center tensor
 
-  MPI_Comm comm;
-  int mpisize, mpirank;
+  MPI_Comm comm;  //!< communicator all tensors live on
+  int mpisize;    //!< size of comm
+  int mpirank;    //!< rank within comm
 
-  PEPS_Parameters peps_parameters;
-  SquareLattice lattice;
+  PEPS_Parameters peps_parameters;  //!< runtime parameters
+  SquareLattice lattice;            //!< unit-cell geometry
 
+  //! Simple-update gates, all groups interleaved.
   EvolutionOperators<tensor> simple_updates;
+  //! Number of simple-update operator groups.
   int num_simple_update_groups;
+  //! Full-update gates, all groups interleaved.
   EvolutionOperators<tensor> full_updates;
+  //! Number of full-update operator groups.
   int num_full_update_groups;
-  Operators<tensor> onesite_operators;
-  Operators<tensor> twosite_operators;
-  Operators<tensor> multisite_operators;
+  Operators<tensor> onesite_operators;    //!< observables on one site
+  Operators<tensor> twosite_operators;    //!< observables on two sites
+  Operators<tensor> multisite_operators;  //!< observables on 3+ sites
+  //! site_ops_indices[site][group]: index into onesite_operators.
   std::vector<std::vector<int>> site_ops_indices;
-  int num_onesite_operators;
-  int num_twosite_operators;
-  int num_multisite_operators;
+  int num_onesite_operators;    //!< number of one-site operator groups
+  int num_twosite_operators;    //!< number of two-site operator groups
+  int num_multisite_operators;  //!< number of multi-site operator groups
+  //! Name of each one-site operator group (for the output files).
   std::vector<std::string> onesite_operator_names;
+  //! Name of each two-site operator group.
   std::vector<std::string> twosite_operator_names;
+  //! Name of each multi-site operator group.
   std::vector<std::string> multisite_operator_names;
+  //! Number of terms in each one-site operator group.
   std::vector<int> onesite_operator_counts;
+  //! Number of terms in each two-site operator group.
   std::vector<int> twosite_operator_counts;
+  //! Number of terms in each multi-site operator group.
   std::vector<int> multisite_operator_counts;
+  //! Number of sites each multi-site operator group acts on.
   std::vector<int> multisite_operator_nsites;
+  //! Distinct multi-site cluster sizes present.
   std::set<int> multisite_operator_nsites_set;
 
+  //! Identity operator on the physical leg, per site.
   std::vector<tensor> op_identity;
 
-  CorrelationParameter corparam;
-  TransferMatrix_Parameters tmatrix_param;
+  CorrelationParameter corparam;            //!< correlation-function settings
+  TransferMatrix_Parameters tmatrix_param;  //!< correlation-length settings
 
   /*! @name Tensors
    *  @brief Tensors of an iTPS
@@ -322,11 +409,11 @@ class iTPS {
 
   std::string outdir;  //!< path to the directory where results will be written
 
-  Timer<> timer_all;
-  double time_simple_update;
-  double time_full_update;
-  double time_environment;
-  double time_observable;
+  Timer<> timer_all;          //!< wall clock of the whole run
+  double time_simple_update;  //!< seconds spent in simple updates
+  double time_full_update;    //!< seconds spent in full updates
+  double time_environment;    //!< seconds spent converging environments
+  double time_observable;     //!< seconds spent measuring observables
 };
 
 }  // namespace tenes::itps

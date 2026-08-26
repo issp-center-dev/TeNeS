@@ -14,6 +14,14 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief Parsing input.toml into the objects the solver is built from.
+ *
+ *  The gen_* functions read one section each (lattice, parameters,
+ *  correlation settings); the load_* functions read the operator tables
+ *  (observables and evolution gates).
+ */
+
 #ifndef TENES_SRC_ITPS_LOAD_TOML_HPP_
 #define TENES_SRC_ITPS_LOAD_TOML_HPP_
 
@@ -37,42 +45,55 @@
 
 namespace tenes::itps {
 
+//! Read the unit-cell geometry from the given table (default: [tensor]).
 SquareLattice gen_lattice(const toml::value &toml,
                           const char *tablename = "tensor");
 
+//! Read the correlation-function settings (default: [correlation]).
 CorrelationParameter gen_corparam(const toml::value &toml,
                                   const char *tablename = "correlation");
 
+//! Read the correlation-length / transfer-matrix settings
+//! (default: [correlation_length]).
 TransferMatrix_Parameters gen_transfer_matrix_parameter(
     const toml::value &toml, const char *tablename = "correlation_length");
 
+//! Read the [parameter] table into a PEPS_Parameters.
 PEPS_Parameters gen_param(const toml::value &param);
 
+//! Parse "source_site dx dy" (one bond) from one line.
 std::tuple<int, int, int> read_bond(std::string line);
+//! Parse a multi-line string of bonds with read_bond().
 std::vector<std::tuple<int, int, int>> read_bonds(std::string str);
 
+//! Read one observable table (an array of nbody-site operators).
 template <class tensor>
 Operators<tensor> load_operator(const toml::value &param, MPI_Comm comm,
                                 int nsites, int nbody, double atol = 0.0,
                                 const char *tablename = "observable.onesite");
 
+//! Read the observable table named by key via load_operator().
 template <class tensor>
 Operators<tensor> load_operators(const toml::value &param, MPI_Comm comm,
                                  int nsites, int nbody, double atol,
                                  std::string const &key);
 
+//! Read one evolution (Trotter gate) table entry.
 template <class tensor>
 EvolutionOperator<tensor> load_Evolution_operator(
     const toml::value &param, MPI_Comm comm, double atol = 0.0,
     const char *tablename = "evolution.simple");
 
+//! Read the evolution-operator table named by key.
 template <class tensor>
 EvolutionOperators<tensor> load_updates(const toml::value &param, MPI_Comm comm,
                                         double atol, std::string const &key);
+//! Read the simple-update gates (evolution.simple).
 template <class tensor>
 EvolutionOperators<tensor> load_simple_updates(const toml::value &param,
                                                MPI_Comm comm,
                                                double atol = 0.0);
+//! Read the full-update gates (evolution.full).
 template <class tensor>
 EvolutionOperators<tensor> load_full_updates(const toml::value &param,
                                              MPI_Comm comm, double atol = 0.0);

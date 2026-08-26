@@ -53,9 +53,12 @@ namespace tenes {
  */
 class SquareLattice {
  public:
-  int LX, LX_noskew;
-  int LY, LY_noskew;
-  int N_UNIT, N_UNIT_noskew;
+  int LX;             //!< unit-cell width
+  int LX_noskew;      //!< unit-cell width before skew expansion
+  int LY;             //!< unit-cell height
+  int LY_noskew;      //!< unit-cell height before skew expansion
+  int N_UNIT;         //!< number of sites in the unit cell
+  int N_UNIT_noskew;  //!< number of sites before skew expansion
 
   /*!
    * @brief Skew boundary condition
@@ -64,12 +67,19 @@ class SquareLattice {
    */
   int skew;
 
+  //! Physical (local Hilbert space) dimension of each site.
   std::vector<int> physical_dims;
+  //! Virtual bond dimensions of each site, indexed by [site][direction].
   std::vector<std::array<int, 4>> virtual_dims;
 
+  //! Initial state amplitude of each site in the physical basis
+  //! (tensor.unitcell.initial_state); all zero means random.
   std::vector<std::vector<double>> initial_dirs;
+  //! Amplitude of the random noise added to each site's initial tensor
+  //! (tensor.unitcell.noise).
   std::vector<double> noises;
 
+  //! Build an X x Y unit cell with the given skew boundary condition.
   SquareLattice(int X, int Y, int skew = 0);
 
   //! x coordinate
@@ -136,7 +146,9 @@ class SquareLattice {
    */
   int parity(int index) const { return parities[index]; }
 
+  //! Append the lattice description to a file (rank 0 only).
   void save(const char *filename, bool append = false);
+  //! save() with append = true.
   void save_append(const char *filename) { save(filename, true); }
 
   /*! @brief broadcast lattice
@@ -156,9 +168,11 @@ class SquareLattice {
  private:
   std::vector<std::vector<int>> Tensor_list;  //!< index of site [x][y]
   std::vector<std::array<int, 4>>
-      NN_Tensor;  //!< index of nearest neighbor site [site][bond]
-  std::vector<int> parities;
+      NN_Tensor;              //!< index of nearest neighbor site [site][bond]
+  std::vector<int> parities;  //!< sublattice parity (+1/-1) of each site
+  //! Validate the lattice sizes; throws tenes::input_error on nonsense.
   void logical_check() const;
+  //! Fill Tensor_list, NN_Tensor, and parities from the sizes.
   void calc_neighbors();
 };
 
