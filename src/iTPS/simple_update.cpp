@@ -26,6 +26,10 @@
 namespace tenes::itps {
 
 namespace {
+// Diagnostic knob: setting TENES_FERMION_SECTOR_LOG (any value) dumps the
+// even/odd dimension split of every virtual-bond ledger to stderr after
+// each simple-update step, to watch how the truncation distributes the
+// bond dimension over the two parity sectors.
 bool fermion_sector_log_enabled() {
   return std::getenv("TENES_FERMION_SECTOR_LOG") != nullptr;
 }

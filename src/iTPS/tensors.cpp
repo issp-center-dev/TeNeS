@@ -35,11 +35,14 @@ using std::size_t;
 namespace tenes::itps {
 
 namespace {
+// Ledgers of one site's Tn in wrapped leg order (l, t, r, b, s).
 tenes::fermion::leg_parities make_Tn_parity(
     tenes::fermion::FermionInfo const &finfo, int site) {
   return tenes::fermion::Tn_parity(finfo, site);
 }
 
+// True iff the element belongs to the parity-even sector, the only sector a
+// physical fermionic state may populate.
 bool is_even_parity_element(tenes::fermion::leg_parities const &parity,
                             mptensor::Index const &index) {
   return tenes::fermion::count_odd(parity, index) % 2 == 0;
@@ -76,6 +79,9 @@ void iTPS<ptensor>::initialize_tensors() {
     const auto vdim = lattice.virtual_dims[i];
 
     if (peps_parameters.fermion) {
+      // Fresh virtual-bond ledgers start even-first (ceil(D/2) even values);
+      // the simple update rewrites them through the graded svd_trunc, and
+      // load_fermion_ledger() overwrites them when tensors are reloaded.
       std::array<tenes::fermion::parity_vector, 4> virt;
       for (int leg = 0; leg < nleg; ++leg) {
         virt[leg] =
@@ -147,6 +153,9 @@ void iTPS<ptensor>::initialize_tensors() {
 
       for (size_t n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
+        // The random initial state is projected onto the parity-even sector:
+        // odd elements would make the state's fermion parity indefinite, which
+        // the graded decompositions reject (see validate_block_diagonal).
         if (peps_parameters.fermion && !is_even_parity_element(parity, index)) {
           Tn[i].set_value(index, to_tensor_type(0.0));
           continue;

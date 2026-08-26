@@ -46,9 +46,15 @@ using mptensor::Axes;
 using mptensor::Shape;
 
 namespace {
+// The plain-tensor overloads of enforce_even_parity / log_theta_blocks are
+// no-ops so the shared kernel below compiles for both the bosonic path
+// (plain tensors) and the fermionic one (ftensor).
 template <class tensor>
 void enforce_even_parity(tensor &) {}
 
+// Diagnostic knob: TENES_FERMION_THETA_LOG_LIMIT caps how many theta
+// tensors have their per-parity-sector norms dumped to stderr by
+// log_theta_blocks (default 0: none).
 int fermion_theta_log_limit() {
   const char *raw = std::getenv("TENES_FERMION_THETA_LOG_LIMIT");
   if (raw == nullptr) {
@@ -104,6 +110,8 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
   ++theta_log_count;
 }
 
+// Guard: the graded update must keep the state parity even; elements in the
+// odd sector above the tolerance indicate a sign-bookkeeping bug upstream.
 template <class tensor>
 void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
   const double v = tenes::fermion::parity_violation(a);

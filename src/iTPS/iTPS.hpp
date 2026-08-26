@@ -248,9 +248,24 @@ class iTPS {
 
   void load_tensors_v1();
   void load_tensors_v0();
-  //! save the fermionic parity ledger of the virtual bonds
+  /*!
+   * @brief Save the fermionic parity ledger to fermion.dat (rank 0 only).
+   *
+   * The virtual-bond ledger is mutable state (the simple update rewrites
+   * it through the graded svd_trunc), so it must travel with the saved
+   * tensors: reloading them under a stale ledger silently changes the
+   * measured energy. The file records a format version, the unit-cell
+   * geometry, and the physical and virtual parity vectors of every site.
+   */
   void save_fermion_parity(std::string const &save_dir) const;
-  //! load and validate the fermionic parity ledger (before reading tensors)
+  /*!
+   * @brief Load and validate fermion.dat before reading the tensors.
+   *
+   * Restores finfo from the saved ledger. Throws tenes::load_error when
+   * the saved run and the current one disagree about fermion mode
+   * (fermion.dat present but fermion = false, or vice versa), or when the
+   * file does not match the current geometry.
+   */
   void load_fermion_ledger(std::string const &load_dir);
   //! check the loaded tensors against the restored ledger (after reading them)
   void validate_loaded_fermion_tensors() const;
@@ -265,6 +280,8 @@ class iTPS {
 
   PEPS_Parameters peps_parameters;
   SquareLattice lattice;
+  //! Physical-leg parities copied from PEPS_Parameters::phys_parity at
+  //! initialize_tensors(); the immutable half of what seeds finfo.
   std::vector<std::vector<bool>> phys_parity;
 
   EvolutionOperators<tensor> simple_updates;
@@ -324,6 +341,10 @@ class iTPS {
   std::vector<tensor> C3;   //!< Right-bottom CTM for each center
   std::vector<tensor> C4;   //!< Left-bottom CTM for each center
   //!@}
+  //! Parity ledgers of every site tensor (fermion mode). Mutable state:
+  //! the simple update rewrites the virtual-bond ledgers through the
+  //! graded svd_trunc, so it is saved to and loaded from fermion.dat
+  //! alongside the tensors. Disabled (enabled = false) in bosonic runs.
   tenes::fermion::FermionInfo finfo;
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments

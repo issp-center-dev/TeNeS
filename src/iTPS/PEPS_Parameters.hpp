@@ -25,6 +25,9 @@
 
 namespace tenes::itps {
 
+/*! @brief Runtime parameters of the solver, read from the [parameter]
+ *         table of input.toml (see gen_param()).
+ */
 struct PEPS_Parameters {
   // Tensor
   int D;    // Bond dimension for central tensor
@@ -68,12 +71,18 @@ struct PEPS_Parameters {
 
   // general
   bool is_real;
+  //! Treat the model fermionically (parameter.general.fermion). Inputs are
+  //! then gated by validate_fermion_constraints() and the solver routes
+  //! updates and measurements through the graded layer in src/fermion/.
   bool fermion;
   double iszero_tol;
   bool to_measure;
   std::string tensor_load_dir;
   std::string tensor_save_dir;
   std::string outdir;
+  //! Physical-leg parity of each site (tensor.unitcell.parity), one 0/1
+  //! flag per physical index; empty per-site vectors when not given.
+  //! Only meaningful when fermion is true.
   std::vector<std::vector<bool>> phys_parity;
 
   enum CalculationMode {
