@@ -3,7 +3,7 @@
 // Builds the factorized pair blob with a faithful copy of the intended
 // pipeline (graded QR split -> impurity doubling with the k leg threaded
 // outside the frozen joint mask -> plain join over bond and k), compares it
-// elementwise against the pinned cluster path build_reduced_pair, and
+// elementwise against the pinned cluster path build_reduced_pair_naive, and
 // identifies the missing diagonal sign dressing automatically:
 //   - 8 internal-sign candidates: (-1)^{a pk_bond + b pb_bond + c p(k)}
 //     applied to impB before contraction,
@@ -114,7 +114,7 @@ tensor impurity(const ft& Tn, const ft& op_half) {
   inter.push(10);  // k
   f::transpose_with_swap_form(doubled, forms.cross, inter);
   // (kl,bl, kt,bt, kr,br, kb,bb, out, s_bra, k) -> trace out x s_bra (plain,
-  // same as fuse_doubled_cluster / build_reduced)
+  // same as fuse_doubled_cluster_naive / build_reduced)
   tensor tr = mptensor::contract(doubled.t, Axes(8), Axes(9));
   // (kl,bl,kt,bt,kr,br,kb,bb,k) -> fuse boundary pairs column-major
   Shape sh;
@@ -260,7 +260,7 @@ void run_case(const char* name, int d, int D, const tensor& op_plain,
   if (source_second) op = f::transpose(op, Axes(1, 0, 3, 2));
   const auto dir = dir_horizontal ? f::reduced_pair_direction::horizontal
                                   : f::reduced_pair_direction::vertical;
-  const tensor oldb = f::build_reduced_pair(TnA, TnB, op, dir);
+  const tensor oldb = f::build_reduced_pair_naive(TnA, TnB, op, dir);
   double scale = 0.0;
   for (std::size_t n = 0; n < oldb.local_size(); ++n)
     scale = std::max(scale, std::fabs(oldb[n]));

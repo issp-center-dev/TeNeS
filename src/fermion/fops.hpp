@@ -244,7 +244,7 @@ ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
 }
 
 // Load a measurement operator for the reduced-pair blob path
-// (build_reduced_pair). Same plain matrix elements as wrap_twosite_gate,
+// (build_reduced_pair_naive). Same plain matrix elements as wrap_twosite_gate,
 // but here the operator's output legs are also closed - against the bra
 // layer - so both leg pairs need the compensating mask. For physical
 // dimension 2 this is indistinguishable from verbatim loading on

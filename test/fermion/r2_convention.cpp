@@ -275,20 +275,20 @@ static double r3_plaquette_norm(int number_site, int seed) {
 }
 
 static double r3_horizontal_pair_norm(const ft& op, int seed) {
-  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+  return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
       make_r2_tensor(2, 1, 0, seed), make_r2_tensor(2, 1, 1, seed), op,
       tenes::fermion::reduced_pair_direction::horizontal));
 }
 
 static double r3_vertical_pair_norm(const ft& op, int seed) {
-  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+  return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
       make_r2_tensor(1, 2, 0, seed), make_r2_tensor(1, 2, 1, seed), op,
       tenes::fermion::reduced_pair_direction::vertical));
 }
 
 static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
   if (a == 0 && b == 1) {
-    tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
+    tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
         make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 1, seed), op,
         tenes::fermion::reduced_pair_direction::horizontal);
     tenes::real_tensor bottom =
@@ -303,14 +303,14 @@ static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
         mptensor::tensordot(r3_reduced_site(2, 2, 0, false, seed),
                             r3_reduced_site(2, 2, 1, false, seed),
                             mptensor::Axes(2), mptensor::Axes(0));
-    tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
+    tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
         make_r2_tensor(2, 2, 2, seed), make_r2_tensor(2, 2, 3, seed), op,
         tenes::fermion::reduced_pair_direction::horizontal);
     return r3_sum_entries(mptensor::tensordot(top, blob, mptensor::Axes(2, 5),
                                               mptensor::Axes(1, 3)));
   }
   if (a == 0 && b == 2) {
-    tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
+    tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
         make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 2, seed), op,
         tenes::fermion::reduced_pair_direction::vertical);
     tenes::real_tensor right =
@@ -324,7 +324,7 @@ static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
       mptensor::tensordot(r3_reduced_site(2, 2, 0, false, seed),
                           r3_reduced_site(2, 2, 2, false, seed),
                           mptensor::Axes(3), mptensor::Axes(1));
-  tenes::real_tensor blob = tenes::fermion::build_reduced_pair(
+  tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
       make_r2_tensor(2, 2, 1, seed), make_r2_tensor(2, 2, 3, seed), op,
       tenes::fermion::reduced_pair_direction::vertical);
   return r3_sum_entries(mptensor::tensordot(left, blob, mptensor::Axes(2, 4),
@@ -588,11 +588,11 @@ ft r4_wrap(const tenes::real_tensor& plain, bool swap_in, bool swap_out) {
 
 double r4_pair_norm_blob(const ft& op, bool horizontal, int seed) {
   if (horizontal) {
-    return r3_sum_entries(tenes::fermion::build_reduced_pair(
+    return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
         make_r4_tensor(2, 1, 0, seed), make_r4_tensor(2, 1, 1, seed), op,
         tenes::fermion::reduced_pair_direction::horizontal));
   }
-  return r3_sum_entries(tenes::fermion::build_reduced_pair(
+  return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
       make_r4_tensor(1, 2, 0, seed), make_r4_tensor(1, 2, 1, seed), op,
       tenes::fermion::reduced_pair_direction::vertical));
 }

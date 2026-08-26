@@ -1,7 +1,7 @@
 # フェルミオン2サイト blob の省メモリ化 — 補助資料
 
-`src/fermion/reduced.hpp` の `fuse_doubled_cluster_factorized` /
-`build_reduced_pair_factorized`（コミット `37a66c82`）の設計記録と、
+`src/fermion/reduced.hpp` の `fuse_doubled_cluster_lean` /
+`build_reduced_pair_lean`（コミット `37a66c82`）の設計記録と、
 設計段階で使った検証プローブ。実装のコメントからここを参照している。
 
 ## 背景（何を直したか）
@@ -64,7 +64,7 @@ elementwise 一致を確認し、`LEAN FUSE IDENTITY HOLDS` を出して 0 を�
 
 プローブは設計段階の使い捨てで、回帰テストではない。恒久的な保証は
 `test/fermion/impurity_blob.cpp`（ctest の `test_fermion_layer`）にあり、
-既存 `build_reduced_pair` をオラクルとする elementwise 等価性を
+既存 `build_reduced_pair_naive` をオラクルとする elementwise 等価性を
 実数・複素の両方、両方向、source 両位置、d=2/4、D=1〜3（d=4 D=3 は
 `TENES_RUN_IMPURITY_BLOB_SLOW=1` で有効化）で固定している。
 

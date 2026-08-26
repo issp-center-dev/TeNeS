@@ -1,6 +1,6 @@
 // Decisive probe for the "lean fuse" identity:
 //
-//   fuse_doubled_cluster's rank-16 outer product + interleave transpose +
+//   fuse_doubled_cluster_naive's rank-16 outer product + interleave transpose +
 //   fuse + physical trace  ==  direct plain contraction of the physical legs
 //   (rank-12 intermediate, blob-sized) with the swap-form terms redistributed:
 //     - bra-internal terms       -> mask on the bra pair tensor,
@@ -9,7 +9,7 @@
 //       twin (bra s -> ket s', and (bra s, ket s') -> linear parity mask),
 //     - cross open-open terms    -> mask on the rank-12 result.
 //
-// If this reproduces build_reduced_pair elementwise, the memory fix needs no
+// If this reproduces build_reduced_pair_naive elementwise, the memory fix needs no
 // new sign conventions at all.
 #include <cmath>
 #include <cstdio>
@@ -122,7 +122,7 @@ void apply_parity_axes(tensor& t, const f::leg_parities& parity,
   }
 }
 
-// Lean replacement for fuse_doubled_cluster(conj(ket_ab), ket_op, leg_ids).
+// Lean replacement for fuse_doubled_cluster_naive(conj(ket_ab), ket_op, leg_ids).
 tensor lean_fuse(const ft& bra_pair, const ft& ket_pair,
                  const std::vector<int>& leg_ids) {
   const std::vector<int> bra_axes = {0, 1, 2, 4, 5, 6};
@@ -229,8 +229,8 @@ tensor lean_fuse(const ft& bra_pair, const ft& ket_pair,
   return mptensor::reshape(lean, sh);
 }
 
-// full lean build_reduced_pair (mirrors reduced.hpp build_reduced_pair with
-// lean_fuse in place of fuse_doubled_cluster)
+// full lean build_reduced_pair_naive (mirrors reduced.hpp build_reduced_pair_naive with
+// lean_fuse in place of fuse_doubled_cluster_naive)
 tensor lean_pair(const ft& TnA, const ft& TnB, const ft& op12,
                  f::reduced_pair_direction dir) {
   const ft ket_ab = f::build_pair_state(TnA, TnB, dir);
@@ -262,7 +262,7 @@ void run_case(const char* name, int d, int D, const tensor& op_plain,
   if (source_second) op = f::transpose(op, Axes(1, 0, 3, 2));
   const auto dir = dir_horizontal ? f::reduced_pair_direction::horizontal
                                   : f::reduced_pair_direction::vertical;
-  const tensor oldb = f::build_reduced_pair(TnA, TnB, op, dir);
+  const tensor oldb = f::build_reduced_pair_naive(TnA, TnB, op, dir);
   const tensor newb = lean_pair(TnA, TnB, op, dir);
   double scale = 0.0, maxdiff = 0.0;
   for (std::size_t n = 0; n < oldb.local_size(); ++n) {

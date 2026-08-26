@@ -15,6 +15,11 @@
   `probe_split.cpp` で検証済み（QR 分解自体は正しいが、本改訂で不要になった。
   blob を作らないストリーミング化という将来課題の部品として記録に残す）。
 
+
+> **改名の注記**: この文書中の `build_reduced_pair` / `fuse_doubled_cluster` は、
+> その後 `..._naive`（rank-16 を作るリファレンス）に、`..._factorized` は
+> `..._lean` に改名された。本文は当時の記録としてそのまま残してある。
+
 ## 1. 目的と背景
 
 フェルミオン模式の 2 サイト観測量（CTM 経路、`meanfield_env = false`）は

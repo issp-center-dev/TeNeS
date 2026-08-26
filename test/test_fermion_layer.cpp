@@ -879,7 +879,7 @@ TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
     const tenes::real_tensor norm_blob = f::build_reduced_identity_pair(
         f::wrap_Tn(Tn[first], finfo, first),
         f::wrap_Tn(Tn[second], finfo, second), direction);
-    const tenes::real_tensor density_blob = f::build_reduced_pair(
+    const tenes::real_tensor density_blob = f::build_reduced_pair_naive(
         f::wrap_Tn(Tn[first], finfo, first),
         f::wrap_Tn(Tn[second], finfo, second), fdensity, direction);
     double norm = 0.0;

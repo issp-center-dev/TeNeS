@@ -1517,9 +1517,9 @@ TEST_CASE_TEMPLATE("SS C2-7 fermion transpose, tensordot and svd are unchanged",
 // taken from the tag wip/fermion_20260822:
 //
 //   joint_bit / kDoubledJointMask / apply_joint_swaps / apply_fused_leg_gauge
-//   doubled_pipeline / fuse_doubled_cluster (old two-argument signature)
+//   doubled_pipeline / fuse_doubled_cluster_naive (old two-argument signature)
 //   build_reduced_op / build_reduced / build_pair_state / apply_pair_op
-//   build_reduced_pair
+//   build_reduced_pair_naive
 //                                       <- src/fermion/reduced.hpp
 //   build_reduced_identity_pair         <- src/fermion/reduced_measure.hpp
 //
@@ -1648,10 +1648,10 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   return mptensor::reshape(ordered.t, sh);
 }
 
-// verbatim: tenes::fermion::detail::fuse_doubled_cluster (old signature)
+// verbatim: tenes::fermion::detail::fuse_doubled_cluster_naive (old signature)
 template <class tensor>
-tensor fuse_doubled_cluster(const ftensor<tensor>& doubled,
-                            const std::vector<int>& leg_ids) {
+tensor fuse_doubled_cluster_naive(const ftensor<tensor>& doubled,
+                                  const std::vector<int>& leg_ids) {
   ftensor<tensor> prepared = doubled;
   constexpr std::size_t kExternalLegs = 6;
   const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
@@ -1738,12 +1738,12 @@ ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
                                    mptensor::Axes(0, 1, 2, 6, 3, 4, 5, 7));
 }
 
-// verbatim: tenes::fermion::build_reduced_pair
+// verbatim: tenes::fermion::build_reduced_pair_naive
 template <class tensor>
-tensor build_reduced_pair(const ftensor<tensor>& TnA,
-                          const ftensor<tensor>& TnB,
-                          const ftensor<tensor>& op12,
-                          reduced_pair_direction direction) {
+tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
+                                const ftensor<tensor>& TnB,
+                                const ftensor<tensor>& op12,
+                                reduced_pair_direction direction) {
   const ftensor<tensor> ket_ab =
       ss_reference3::build_pair_state(TnA, TnB, direction);
   std::vector<int> leg_ids;
@@ -1761,7 +1761,7 @@ tensor build_reduced_pair(const ftensor<tensor>& TnA,
   ftensor<tensor> ket_op = ss_reference3::apply_pair_op(ket_ab, op12);
   ftensor<tensor> doubled = tenes::fermion::tensordot(
       tenes::fermion::conj(ket_ab), ket_op, mptensor::Axes(), mptensor::Axes());
-  tensor ret = ss_reference3::fuse_doubled_cluster(doubled, leg_ids);
+  tensor ret = ss_reference3::fuse_doubled_cluster_naive(doubled, leg_ids);
   if (direction == reduced_pair_direction::horizontal) {
     ss_reference3::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
     ss_reference3::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);
@@ -1787,7 +1787,7 @@ tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
                              mptensor::Axes(3), mptensor::Axes(1));
 }
 
-// The leg_ids build_reduced_pair uses for each direction.
+// The leg_ids build_reduced_pair_naive uses for each direction.
 inline std::vector<int> leg_ids_for(reduced_pair_direction direction) {
   if (direction == reduced_pair_direction::horizontal) {
     return {0, 1, 3, 1, 2, 3};
@@ -1895,8 +1895,8 @@ tenes::fermion::ftensor<tensor> ss_c3_op_wrapped_hopping(
       TnA.parity[4], TnB.parity[4]);
 }
 
-// The rank-16 doubled tensor build_reduced_pair works on, and the two layers
-// it is the outer product of.
+// The rank-16 doubled tensor build_reduced_pair_naive works on, and the two
+// layers it is the outer product of.
 template <class tensor>
 void ss_c3_doubled_pair(const tenes::fermion::ftensor<tensor>& TnA,
                         const tenes::fermion::ftensor<tensor>& TnB,
@@ -1961,8 +1961,9 @@ void ss_c3_check_reduced_pair(tenes::fermion::reduced_pair_direction dir,
   for (const named_op& no : ops) {
     INFO(dir_name << " op: " << no.name);
     const tensor expected =
-        ss_reference3::build_reduced_pair(TnA, TnB, no.op, dir);
-    const tensor got = tenes::fermion::build_reduced_pair(TnA, TnB, no.op, dir);
+        ss_reference3::build_reduced_pair_naive(TnA, TnB, no.op, dir);
+    const tensor got =
+        tenes::fermion::build_reduced_pair_naive(TnA, TnB, no.op, dir);
     REQUIRE(got.shape() == expected.shape());
     // an all-zero blob would make the comparison vacuous
     REQUIRE(ss_count_nonzero_tensor(expected) > 0);
@@ -2107,7 +2108,8 @@ TEST_CASE_TEMPLATE(
 // ------------------------------------------------------------------ C3-2
 
 TEST_CASE_TEMPLATE(
-    "SS C3-2 build_reduced_pair matches the reference for horizontal pairs",
+    "SS C3-2 build_reduced_pair_naive matches the reference for horizontal "
+    "pairs",
     tensor, tenes::real_tensor, tenes::complex_tensor) {
   fermion_sign_sweep::ss_c3_check_reduced_pair<tensor>(
       tenes::fermion::reduced_pair_direction::horizontal, "horizontal");
@@ -2116,7 +2118,7 @@ TEST_CASE_TEMPLATE(
 // ------------------------------------------------------------------ C3-3
 
 TEST_CASE_TEMPLATE(
-    "SS C3-3 build_reduced_pair matches the reference for vertical pairs",
+    "SS C3-3 build_reduced_pair_naive matches the reference for vertical pairs",
     tensor, tenes::real_tensor, tenes::complex_tensor) {
   fermion_sign_sweep::ss_c3_check_reduced_pair<tensor>(
       tenes::fermion::reduced_pair_direction::vertical, "vertical");
@@ -2184,7 +2186,7 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
   const std::vector<int> cket = ss_c3_cluster_ket_axes();  // {8,9,10,12,13,14}
 
   const std::vector<cfg> cases = {
-      {"fuse_doubled_cluster horizontal",
+      {"fuse_doubled_cluster_naive horizontal",
        cbra,
        cket,
        {0, 1, 3, 1, 2, 3},
@@ -2193,7 +2195,7 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
        4,
        {{0, 9}, {0, 10}, {0, 12}, {0, 14}, {2, 8}, {2, 13}, {6, 8}, {6, 13}},
        {{0, 1}, {0, 4}, {2, 5}, {5, 6}}},
-      {"fuse_doubled_cluster vertical",
+      {"fuse_doubled_cluster_naive vertical",
        cbra,
        cket,
        {0, 1, 2, 0, 2, 3},
@@ -2276,8 +2278,9 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
 
 // ------------------------------------------------------------------ C3-6
 
-TEST_CASE_TEMPLATE("SS C3-6 fuse_doubled_cluster does the outer product itself",
-                   tensor, tenes::real_tensor, tenes::complex_tensor) {
+TEST_CASE_TEMPLATE(
+    "SS C3-6 fuse_doubled_cluster_naive does the outer product itself", tensor,
+    tenes::real_tensor, tenes::complex_tensor) {
   using namespace fermion_sign_sweep;
 
   for (const tenes::fermion::reduced_pair_direction dir :
@@ -2312,8 +2315,8 @@ TEST_CASE_TEMPLATE("SS C3-6 fuse_doubled_cluster does the outer product itself",
       REQUIRE(doubled.rank() == 16);
 
       const tensor expected =
-          ss_reference3::fuse_doubled_cluster(doubled, leg_ids);
-      const tensor got = tenes::fermion::detail::fuse_doubled_cluster(
+          ss_reference3::fuse_doubled_cluster_naive(doubled, leg_ids);
+      const tensor got = tenes::fermion::detail::fuse_doubled_cluster_naive(
           bra_pair, ket_pair, leg_ids);
 
       REQUIRE(got.shape() == expected.shape());
@@ -2830,22 +2833,23 @@ TEST_CASE_TEMPLATE("SS C4-6 the reduced pipeline rejects malformed tensors",
                          kMsgPairOpOperator, std::runtime_error);
   }
 
-  SUBCASE("build_reduced_pair rejects a direction no enumerator has") {
+  SUBCASE("build_reduced_pair_naive rejects a direction no enumerator has") {
     tenes::fermion::ftensor<tensor> TnA, TnB;
     ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46500u, TnA,
                                TnB);
     const tenes::fermion::ftensor<tensor> op =
         ss_c3_op_hopping<tensor>(TnA, TnB);
-    // build_reduced_pair calls build_pair_state first, so the message that
-    // comes out is build_pair_state's.  Its own `default:` branch (the
+    // build_reduced_pair_naive calls build_pair_state first, so the message
+    // that comes out is build_pair_state's.  Its own `default:` branch (the
     // "doubled_cluster: invalid direction" throw) is unreachable -- recorded
     // in the task-6 report, not something this test can pin.
     CHECK_THROWS_WITH_AS(
-        tenes::fermion::build_reduced_pair(TnA, TnB, op, bogus),
+        tenes::fermion::build_reduced_pair_naive(TnA, TnB, op, bogus),
         kMsgPairStateDirection, std::runtime_error);
   }
 
-  SUBCASE("fuse_doubled_cluster forwards a bad leg_ids list to the guard") {
+  SUBCASE(
+      "fuse_doubled_cluster_naive forwards a bad leg_ids list to the guard") {
     tenes::fermion::ftensor<tensor> TnA, TnB;
     ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46600u, TnA,
                                TnB);
@@ -2854,12 +2858,12 @@ TEST_CASE_TEMPLATE("SS C4-6 the reduced pipeline rejects malformed tensors",
     tenes::fermion::ftensor<tensor> bra_pair, ket_pair;
     ss_c3_doubled_pair<tensor>(TnA, TnB, op, reduced_pair_direction::horizontal,
                                bra_pair, ket_pair);
-    CHECK_NOTHROW(tenes::fermion::detail::fuse_doubled_cluster(
+    CHECK_NOTHROW(tenes::fermion::detail::fuse_doubled_cluster_naive(
         bra_pair, ket_pair, {0, 1, 3, 1, 2, 3}));
-    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster(
+    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster_naive(
                              bra_pair, ket_pair, {0, 1, 3}),
                          kMsgJointSize, std::runtime_error);
-    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster(
+    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster_naive(
                              bra_pair, ket_pair, {0, 1, 3, 1, 2, 3, 0}),
                          kMsgJointSize, std::runtime_error);
   }
