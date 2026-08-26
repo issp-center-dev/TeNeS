@@ -6,6 +6,7 @@
 
 - Building TeNeS now requires a C++17 compiler and mptensor v0.5.0 or later ([#104][], [#109][])
 - The minimum required CMake version is raised from 3.6 to 3.8, so that the language standard is honored in configure-time checks (CMP0067); note that the bundled toml11 requires CMake 3.16 or later anyway ([#112][])
+- On macOS, CMake now locates a Homebrew libomp instead of assuming `/usr/local`: it queries `brew --prefix libomp` and falls back to Homebrew's usual prefixes, then lets `find_package(OpenMP)` drive Apple clang. Building with Apple clang -- including `-DCMAKE_CXX_COMPILER=mpicxx`, since Homebrew's `mpicxx` wraps it -- therefore requires CMake 3.12 or later, which is when `OpenMP_ROOT` started to steer the library search ([#113][])
 - `tenes`
   - Replaced the TOML parser cpptoml (archived, TOML v0.5.0) with toml11 v4.4.0 (TOML v1.0.0); input errors now report the file name, the line number, and the offending value ([#108][])
   - Writing `[observable.onesite]` and similar sections as a single table instead of an array of tables (`[[...]]`) is now an input error instead of being silently ignored ([#108][])
@@ -22,6 +23,7 @@
   - Fixed Inf/NaN handling with the Intel icpx compiler: the default `-fp-model=fast` broke the detection of divergent correlation lengths and could leak `nan` rows of unmeasured sites into `onesite_obs.dat` / `density.dat`; `-fp-model=precise` is now enforced for icpx builds ([#107][])
   - Fixed an undefined behavior (null-pointer dereference) when the input file has no `[[evolution.simple]]` / `[[evolution.full]]` sections; they are now treated as an empty list of evolution operators ([#108][])
   - Fixed an out-of-bounds access in mptensor (`make_l2g_map`) that aborted finite-temperature calculations in Debug builds, by updating mptensor to v0.5.0 ([#104][])
+  - Fixed an out-of-bounds access in mptensor (`&v[0]` on an empty `std::vector`) that aborted every MPI run with two or more processes in Debug builds. Empty local blocks are routine with the ScaLAPACK backend, and GCC 15 and later enable `_GLIBCXX_ASSERTIONS` by default when compiling without optimization, turning the previously harmless undefined behavior into an abort ([#113][])
   - `tenes --version` / `--help` no longer initialize MPI, fixing a hang of MPI-linked binaries where the launcher infrastructure is unavailable, e.g. on cluster login nodes ([#111][])
 
 ### Development
@@ -38,6 +40,7 @@
 ### Documentation and samples
 
 - Updated the requirements in README and the install guides: C++17, mptensor >= v0.5.0, dependency list, and notes for Intel compilers ([#104][], [#107][], [#108][])
+- Install guides: how to set up libomp for Apple clang on macOS, a note that Homebrew's `open-mpi` + `scalapack` works with `-DENABLE_MPI=ON` (that ScaLAPACK links OpenBLAS, not Accelerate), and a recommendation to run with `OMP_NUM_THREADS=1` on macOS, where every OpenMP barrier costs a system call ([#113][])
 
 ## Changes between v2.1.3 and v2.1.2
 
@@ -133,3 +136,4 @@
 [#110]: https://github.com/issp-center-dev/TeNeS/pull/110
 [#111]: https://github.com/issp-center-dev/TeNeS/pull/111
 [#112]: https://github.com/issp-center-dev/TeNeS/pull/112
+[#113]: https://github.com/issp-center-dev/TeNeS/pull/113

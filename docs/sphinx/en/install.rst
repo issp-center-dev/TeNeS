@@ -101,8 +101,39 @@ In this case, ``tenes``, ``tenes_std`` and ``tenes_simple`` are installed into t
 .. admonition:: Disable MPI/ScaLAPACK parallelization
 
   If you want to disable MPI/ScaLAPACK parallelization, pass ``-DENABLE_MPI=OFF`` option to ``cmake`` command.
-  On macOS, some functions of ScaLAPACK are incompatible with the system's BLAS and LAPACK,
-  and TeNeS ends in error. It is recommended to disable MPI parallel.
+  On macOS, some functions of ScaLAPACK can be incompatible with the system's BLAS and LAPACK
+  and make TeNeS end in error, so ``ENABLE_MPI`` defaults to ``OFF`` there.
+  With ``open-mpi`` and ``scalapack`` installed from Homebrew, ``-DENABLE_MPI=ON``
+  is known to work, because that ScaLAPACK links against OpenBLAS rather than Accelerate.
+
+.. admonition:: OpenMP on macOS
+
+  Apple clang ships without an OpenMP runtime, so libomp has to be installed separately.
+
+  ::
+
+    $ brew install libomp
+
+  CMake queries ``brew --prefix libomp`` and then falls back to Homebrew's usual
+  locations. If the search fails, point it at libomp explicitly.
+
+  ::
+
+    $ cmake -DOpenMP_ROOT=$(brew --prefix libomp) ../
+
+  Note that Homebrew's ``mpicxx`` wraps Apple clang, so ``-DCMAKE_CXX_COMPILER=mpicxx``
+  takes this path as well. Apple clang builds require CMake 3.12 or later,
+  which is when ``OpenMP_ROOT`` started to steer the library search.
+
+.. admonition:: Number of OpenMP threads
+
+  On macOS an OpenMP barrier costs a system call, so fine-grained threading within
+  a node adds far more overhead than it saves. Set ``OMP_NUM_THREADS=1`` at run time
+  and parallelize with MPI instead.
+
+  ::
+
+    $ OMP_NUM_THREADS=1 mpiexec -np 4 tenes input.toml
 
 .. admonition:: Specify compiler
 
