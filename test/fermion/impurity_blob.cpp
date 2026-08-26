@@ -1,5 +1,5 @@
 // Tests for the impurity factorization of the fermion two-site blob:
-// build_reduced_pair_lean against the build_reduced_pair_naive oracle.
+// build_reduced_pair_direct against the build_reduced_pair_naive oracle.
 // Contract: misc/fermion_twosite_blob/contract.md. The existing
 // build_reduced_pair_naive is the oracle; all helpers live in this file's own
 // anonymous namespace (this file is included into the test_fermion_layer TU).
@@ -254,7 +254,7 @@ void ib_check_pair_equivalence(const std::string& label, int d,
   const tenes::real_tensor blob_old =
       tenes::fermion::build_reduced_pair_naive(TnA, TnB, op12, dir);
   const tenes::real_tensor blob_new =
-      tenes::fermion::build_reduced_pair_lean(TnA, TnB, op12, dir);
+      tenes::fermion::build_reduced_pair_direct(TnA, TnB, op12, dir);
   ib_check_allclose(blob_new, blob_old,
                     "factorized blob vs build_reduced_pair_naive");
 }
@@ -496,7 +496,7 @@ void ibc_check_pair_equivalence(const std::string& label, int d,
   const tenes::complex_tensor blob_old =
       tenes::fermion::build_reduced_pair_naive(TnA, TnB, op12, dir);
   const tenes::complex_tensor blob_new =
-      tenes::fermion::build_reduced_pair_lean(TnA, TnB, op12, dir);
+      tenes::fermion::build_reduced_pair_direct(TnA, TnB, op12, dir);
   ibc_check_allclose(blob_new, blob_old,
                      "factorized blob vs build_reduced_pair_naive (complex)");
 }
@@ -541,7 +541,7 @@ TEST_CASE(
 // ===== addendum 3: traced-leg parity mismatch guard ========================
 
 TEST_CASE(
-    "impurity blob guard: fuse_doubled_cluster_lean rejects traced-leg "
+    "impurity blob guard: fuse_doubled_cluster_direct rejects traced-leg "
     "parity mismatch") {
   // Contract addendum 3: the guard is structurally unreachable from
   // production inputs, so it is exercised directly. D=1, d=2, all-zero
@@ -556,22 +556,24 @@ TEST_CASE(
 
   // matched parities: the guard must stay silent (return value not checked)
   const ft ket_ok = bra;
-  CHECK_NOTHROW(
-      tenes::fermion::detail::fuse_doubled_cluster_lean(bra, ket_ok, leg_ids));
+  CHECK_NOTHROW(tenes::fermion::detail::fuse_doubled_cluster_direct(bra, ket_ok,
+                                                                    leg_ids));
 
   // ket trace leg 3 disagrees with the bra twin
   const ft ket_bad3{
       zero, {even1, even1, even1, phys_flipped, even1, even1, even1, phys}};
   CHECK_THROWS_WITH_AS(
-      tenes::fermion::detail::fuse_doubled_cluster_lean(bra, ket_bad3, leg_ids),
-      "fuse_doubled_cluster_lean: traced-leg parity mismatch",
+      tenes::fermion::detail::fuse_doubled_cluster_direct(bra, ket_bad3,
+                                                          leg_ids),
+      "fuse_doubled_cluster_direct: traced-leg parity mismatch",
       std::runtime_error);
 
   // ket trace leg 7 disagrees with the bra twin
   const ft ket_bad7{
       zero, {even1, even1, even1, phys, even1, even1, even1, phys_flipped}};
   CHECK_THROWS_WITH_AS(
-      tenes::fermion::detail::fuse_doubled_cluster_lean(bra, ket_bad7, leg_ids),
-      "fuse_doubled_cluster_lean: traced-leg parity mismatch",
+      tenes::fermion::detail::fuse_doubled_cluster_direct(bra, ket_bad7,
+                                                          leg_ids),
+      "fuse_doubled_cluster_direct: traced-leg parity mismatch",
       std::runtime_error);
 }

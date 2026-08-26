@@ -9,8 +9,8 @@
   不純物二重化 + join」は、プローブ実験により join の符号 dressing が
   開脚パリティの 2 次形式（サイト間 joint マスク項）+ wrap 規約補正を含む
   ことが判明し（`probe_join.cpp`）、同じ実験系からより単純で等価な解 —
-  **lean fuse（外積の直接縮約化）** — が見つかったため置き換える。
-  lean fuse の恒等式は `probe_lean.cpp` で 22 ケース機械精度検証済み。
+  **direct fuse（外積の直接縮約化）** — が見つかったため置き換える。
+  direct fuse の恒等式は `probe_direct.cpp` で 22 ケース機械精度検証済み。
 - 経緯: 改訂1 = Codex レビュー指摘 5 件反映。T1 前提（graded QR 分割）は
   `probe_split.cpp` で検証済み（QR 分解自体は正しいが、本改訂で不要になった。
   blob を作らないストリーミング化という将来課題の部品として記録に残す）。
@@ -18,7 +18,7 @@
 
 > **改名の注記**: この文書中の `build_reduced_pair` / `fuse_doubled_cluster` は、
 > その後 `..._naive`（rank-16 を作るリファレンス）に、`..._factorized` は
-> `..._lean` に改名された。本文は当時の記録としてそのまま残してある。
+> `..._direct`（外積を経由せず物理脚を直接縮約する）に改名された。本文は当時の記録としてそのまま残してある。
 
 ## 1. 目的と背景
 
@@ -95,7 +95,7 @@ MF 経路（`contract_pair_MF`）、ボソン経路、density(TPO) 経路は対�
   よって本番の op12 は常に総パリティ偶で、graded QR のブロック対角前提は
   solver 経路では入力検証が保証する。
 
-## 3. 新設計（改訂2）: lean fuse — 外積 + trace を直接縮約に置き換える
+## 3. 新設計（改訂2）: direct fuse — 外積 + trace を直接縮約に置き換える
 
 ### 3.1 恒等式
 
@@ -119,14 +119,14 @@ MF 経路（`contract_pair_MF`）、ボソン経路、density(TPO) 経路は対�
     twin 書き換えしてよい（(bra s × ket開脚) ≡ (ket s' × ket開脚) は ket
     内部へ、(ket s' × bra開脚) ≡ (bra s × bra開脚) は bra 内部へ）。
     twin 同士のペア (bra s × ket s') は p(s)² = p(s) の**線形パリティ
-    マスク**に落ちる（probe_lean.cpp の分類ロジックがこの正）
+    マスク**に落ちる（probe_direct.cpp の分類ロジックがこの正）
   - **open×open のサイト間ペア** → 縮約後の rank-12 結果へのマスク
 - マスク振り分け後、物理脚 2 対を **plain tensordot で直接縮約**
   （`tensordot(bra', ket', Axes(3,7), Axes(3,7))`）すれば rank-12
   （= D¹² = blob と同要素数）しか実体化しない。
 - 残りは plain の interleave 転置 + fuse reshape（従来と同じ）。
 
-**この恒等式は `probe_lean.cpp` で検証済み**（2026-08-25）: 方向 {h,v} ×
+**この恒等式は `probe_direct.cpp` で検証済み**（2026-08-25）: 方向 {h,v} ×
 op {nn, hopping, pairing, random 偶, source 第2サイト} × d {2,4} × D {1,2,3}
 の 22 ケース全てで既存 `build_reduced_pair` と elementwise 一致
 （maxdiff ≤ 4.4e-16）。**新しい符号規約は一切導入していない** — 既存の
@@ -153,22 +153,23 @@ rank-12 は blob と同要素数なので、**blob を出力とする限りこ�
 - 現行 `build_reduced_pair` は**名前も実装も無変更**（オラクル。
   ss_reference3 のビット厳密 pin も無傷）。
 - 新関数 `build_reduced_pair_factorized`（同一シグネチャ、スタブ導入済み）を
-  lean fuse で実装する。名前の由来: 融合パイプラインの外積を縮約に
-  因数分解した評価、の意。**QR 分解・build_reduced_impurity・
+  direct fuse で実装する。名前の由来: 外積を経由せず物理脚を直接縮約する、の意
+  （当初は `_lean`（メモリが lean）としたが、Lean 定理証明器と紛らわしく
+  分野の用語でもないため `_direct` に改めた）。**QR 分解・build_reduced_impurity・
   split_pair_op は改訂2 で不要になった**（スタブと T1 実装は撤去する）。
 - 実装完了時に `twosite_obs.cpp` の呼び出し 2 箇所だけを factorized に
   切り替える。
-- 実装の参照コード: `probe_lean.cpp` の
-  `lean_fuse` / `lean_pair`（設計検証済みの試作。製品化では elementwise
+- 実装の参照コード: `probe_direct.cpp` の
+  `direct_fuse` / `direct_pair`（設計検証済みの試作。製品化では elementwise
   ループを ftensor の `apply_swap_form` / `multiply_vector` 系に置き換え、
   項の振り分けは同一のロジックを用いる）。
 
 ## 4. 符号リスク（改訂2 で消滅）
 
-改訂1 の主リスク「join の符号 dressing」は、lean fuse では**存在しない**。
+改訂1 の主リスク「join の符号 dressing」は、direct fuse では**存在しない**。
 新規約はゼロで、既存 `joint_swap_forms` の出力と転置 Koszul 項の
 機械的な振り分けのみ。振り分けの正しさは
-(1) probe_lean の 22 ケース機械精度一致（設計段階、済）、
+(1) probe_direct の 22 ケース機械精度一致（設計段階、済）、
 (2) T3 等価性テストの全掃引（実装後、作成者のテスト）、
 (3) 既存 C3（ビット厳密）/ R3 / R5 / E2E の全回帰
 の三重で検証される。複素テンソル経路（conj の取り扱い・型依存分岐）は
@@ -178,7 +179,7 @@ probe が実数のみのため、契約追補2 の小型 complex ケースで pi
 参考（記録）: 改訂1 ルートを probe_join.cpp で調べた結果 —
 naive join は nn D=1 で全体 −1（wrap の in/out-swap マスクが単脚縮約では
 相殺しない）、hopping では対角 gauge で埋まらない構造的不一致
-（サイト間 joint 項は開脚パリティの 2 次形式）。この知見が lean fuse への
+（サイト間 joint 項は開脚パリティの 2 次形式）。この知見が direct fuse への
 ピボットの直接の動機である。
 ## 5. 検証契約の要点（契約書は別ファイルで作成）
 
@@ -186,7 +187,7 @@ naive join は nn D=1 で全体 −1（wrap の in/out-swap マスクが単脚�
 修正は**契約追補**として作成者へ渡す: **T1（split_pair_op）と
 T2（build_reduced_impurity）のテストケースを削除**（API 撤去のため）。
 **T3-1 / T3-2 は一字も変えない**（`build_reduced_pair_factorized` 対
-既存オラクルの等価性テストは実装方式に依存しないため、lean fuse でも
+既存オラクルの等価性テストは実装方式に依存しないため、direct fuse でも
 そのまま受け入れ基準になる）。T3-3（dressing pin）は dressing 自体が
 消滅したため**不要になった**（追補で正式に取り下げる）。v1 の柱（記録）:
 
@@ -229,13 +230,13 @@ T2（build_reduced_impurity）のテストケースを削除**（API 撤去の�
 | # | 内容 | 主ファイル | 受け入れ |
 |---|---|---|---|
 | U1 | 撤去: split_pair_op（T1 実装済み分）・build_reduced_impurity スタブ。作成者による T1/T2 テスト削除後に統括が実施 | fops.hpp, reduced.hpp | ビルド緑、残テスト構成が想定どおり |
-| T3' | `build_reduced_pair_factorized` を lean fuse で実装、呼び出し切替（twosite_obs.cpp 2箇所） | reduced.hpp, twosite_obs.cpp | 契約 T3-1/T3-2 緑 + 全 ctest 緑 |
+| T3' | `build_reduced_pair_factorized` を direct fuse で実装、呼び出し切替（twosite_obs.cpp 2箇所） | reduced.hpp, twosite_obs.cpp | 契約 T3-1/T3-2 緑 + 全 ctest 緑 |
 | T4 | 性能実測（D=3/D=4、ピーク RSS・時間）、記録 | work/ | D=4 χ=40 が mac 1 プロセスで完走、実測記録 |
 
 手順: 契約追補 → 作成者が T1/T2 削除（それ以外バイト不変）→ 統括が
 RED 再確認（T3 の 2 ケースが logic_error で赤のまま）+ スナップショット v2
 → U1 → Codex 実装（テスト変更禁止）→ バイト検査 → 統括の独立検証
-（全 ctest + 変異検査: lean fuse のマスク項を 1 つ落として T3 が赤くなる
+（全 ctest + 変異検査: direct fuse のマスク項を 1 つ落として T3 が赤くなる
 ことを確認）→ タスクレビュー → 最終全体レビュー。
 
 ## 7. スコープ外

@@ -206,11 +206,11 @@ tensor fuse_doubled_cluster_naive(const ftensor<tensor>& bra_pair,
 //   * open bra leg x open ket leg      -> mask on the rank-12 result.
 // Pinned elementwise against build_reduced_pair_naive by the impurity_blob
 // tests; derivation record in misc/fermion_twosite_blob/ (design.md rev. 2, and
-// probe_lean.cpp, which spells the identity out more compactly).
+// probe_direct.cpp, which spells the identity out more compactly).
 template <class tensor>
-tensor fuse_doubled_cluster_lean(const ftensor<tensor>& bra_pair,
-                                 const ftensor<tensor>& ket_pair,
-                                 const std::vector<int>& leg_ids) {
+tensor fuse_doubled_cluster_direct(const ftensor<tensor>& bra_pair,
+                                   const ftensor<tensor>& ket_pair,
+                                   const std::vector<int>& leg_ids) {
   constexpr std::size_t kExternalLegs = 6;
   const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
   std::vector<int> bra_axes;
@@ -269,7 +269,7 @@ tensor fuse_doubled_cluster_lean(const ftensor<tensor>& bra_pair,
   if (bra_pair.parity[3] != ket_pair.parity[11 - 8] ||
       bra_pair.parity[7] != ket_pair.parity[15 - 8]) {
     throw std::runtime_error(
-        "fuse_doubled_cluster_lean: traced-leg parity mismatch");
+        "fuse_doubled_cluster_direct: traced-leg parity mismatch");
   }
 
   SwapForm bra_terms = forms.bra;
@@ -318,8 +318,8 @@ tensor fuse_doubled_cluster_lean(const ftensor<tensor>& bra_pair,
   ftensor<tensor> ket = ket_pair;
   apply_sign_sweep(ket, ket_terms, ket_gauges);
 
-  tensor lean = mptensor::tensordot(bra.t, ket.t, mptensor::Axes(3, 7),
-                                    mptensor::Axes(3, 7));
+  tensor direct = mptensor::tensordot(bra.t, ket.t, mptensor::Axes(3, 7),
+                                      mptensor::Axes(3, 7));
   leg_parities post_parity;
   for (const int ax : cluster_axes) {
     post_parity.push_back(bra.parity[ax]);
@@ -328,7 +328,7 @@ tensor fuse_doubled_cluster_lean(const ftensor<tensor>& bra_pair,
     post_parity.push_back(ket.parity[ax]);
   }
   ftensor<tensor> post;
-  post.t = std::move(lean);
+  post.t = std::move(direct);
   post.parity = post_parity;
   apply_swap_form(post, post_terms);
 
@@ -337,13 +337,13 @@ tensor fuse_doubled_cluster_lean(const ftensor<tensor>& bra_pair,
     perm.push(6 + i);
     perm.push(i);
   }
-  lean = mptensor::transpose(post.t, perm);
+  direct = mptensor::transpose(post.t, perm);
   mptensor::Shape sh;
-  const mptensor::Shape ls = lean.shape();
+  const mptensor::Shape ls = direct.shape();
   for (std::size_t ax = 0; ax < kExternalLegs; ++ax) {
     sh.push(ls[2 * ax] * ls[2 * ax + 1]);
   }
-  return mptensor::reshape(lean, sh);
+  return mptensor::reshape(direct, sh);
 }
 
 }  // namespace detail
@@ -435,8 +435,8 @@ tensor build_reduced_pair_impl(const ftensor<tensor>& TnA,
 }  // namespace detail
 
 // Reference path: materializes the rank-16 outer product of the two layers.
-// Kept as the oracle the lean path is pinned against (and as the frozen
-// convention the Fock-verified tests check); the solver uses the lean one.
+// Kept as the oracle the direct path is pinned against (and as the frozen
+// convention the Fock-verified tests check); the solver uses the direct one.
 template <class tensor>
 tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
                                 const ftensor<tensor>& TnB,
@@ -446,20 +446,20 @@ tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
       TnA, TnB, op12, direction, &detail::fuse_doubled_cluster_naive<tensor>);
 }
 
-// Memory-lean path, used by the solver: contracts the physical legs of the
-// bra and ket pair layers directly (a rank-12, blob-sized intermediate)
+// Direct-contraction path, used by the solver: contracts the physical legs of
+// the bra and ket pair layers directly (a rank-12, blob-sized intermediate)
 // after redistributing the frozen joint-swap and transpose Koszul sign
 // terms onto the two layers and the contraction result. Returns the same
 // rank-6 blob as build_reduced_pair_naive elementwise; the rank-16 outer
 // product is never materialized.
-// Design: misc/fermion_twosite_blob/design.md (rev. 2, "lean fuse").
+// Design: misc/fermion_twosite_blob/design.md (rev. 2, "direct fuse").
 template <class tensor>
-tensor build_reduced_pair_lean(const ftensor<tensor>& TnA,
-                               const ftensor<tensor>& TnB,
-                               const ftensor<tensor>& op12,
-                               reduced_pair_direction direction) {
+tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
+                                 const ftensor<tensor>& TnB,
+                                 const ftensor<tensor>& op12,
+                                 reduced_pair_direction direction) {
   return detail::build_reduced_pair_impl(
-      TnA, TnB, op12, direction, &detail::fuse_doubled_cluster_lean<tensor>);
+      TnA, TnB, op12, direction, &detail::fuse_doubled_cluster_direct<tensor>);
 }
 
 }  // namespace tenes::fermion

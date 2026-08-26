@@ -1,7 +1,7 @@
 # フェルミオン2サイト blob の省メモリ化 — 補助資料
 
-`src/fermion/reduced.hpp` の `fuse_doubled_cluster_lean` /
-`build_reduced_pair_lean`（コミット `37a66c82`）の設計記録と、
+`src/fermion/reduced.hpp` の `fuse_doubled_cluster_direct` /
+`build_reduced_pair_direct`（コミット `37a66c82`）の設計記録と、
 設計段階で使った検証プローブ。実装のコメントからここを参照している。
 
 ## 背景（何を直したか）
@@ -11,7 +11,7 @@ bra 層と ket 層の **rank-16 全外積**（D¹²d⁴ 要素）を実体化し
 Hubbard d=4, D=4 で 1 コピー 34 GB、転置と再分配で 4〜5 コピー同時に生きて
 140〜180 GB に達し、実機（PBS、np=4、mem=240gb）で cgroup OOM kill となった。
 
-採用した解が **lean fuse**: 外積 + 符号付き転置 + 物理脚の δ trace は、
+採用した解が **direct fuse**: 外積 + 符号付き転置 + 物理脚の δ trace は、
 符号項を掛ける先ごとに仕分ければ「物理脚の直接縮約（rank-12 = blob と同サイズ）」
 と同値になる、という恒等式に基づく。新しい符号規約は導入していない。
 詳細は `design.md` §3（改訂2）。
@@ -29,7 +29,7 @@ Hubbard d=4, D=4 で 1 コピー 34 GB、転置と再分配で 4〜5 コピー�
 |---|---|
 | `design.md` | 設計書。改訂2 が実装された方式（改訂1 の当初案は §3 冒頭の経緯参照） |
 | `contract.md` | `test/fermion/impurity_blob.cpp` の振る舞い契約書（追補3 まで） |
-| `probe_lean.cpp` | **lean fuse の恒等式の検証**。実装より短く読める参照実装 |
+| `probe_direct.cpp` | **direct fuse の恒等式の検証**。実装より短く読める参照実装 |
 | `probe_join.cpp` | 当初案（演算子の graded QR 分解 + サイト局所二重化）が対角 gauge で閉じないことを示した実験。ピボットの根拠 |
 | `probe_split.cpp` | graded QR 分割の厳密再結合と k パリティ序列の検証。当初案は破棄したが、分割自体は正しく、blob を作らないストリーミング化（将来課題）の部品になる |
 
@@ -44,9 +44,9 @@ mptensor の静的ライブラリが要る（TeNeS を一度ビルドしてお�
 ```sh
 BUILD=../../out-gcc-release/build      # 自分のビルドディレクトリに読み替える
 g++ -std=c++17 -O2 -D_NO_MPI -I../.. -I../../deps/mptensor/include \
-    probe_lean.cpp -o probe_lean \
+    probe_direct.cpp -o probe_direct \
     $BUILD/deps/mptensor/src/libmptensor.a -framework Accelerate   # macOS
-./probe_lean
+./probe_direct
 ```
 
 Linux では `-framework Accelerate` を `-llapack -lblas`（または使用中の BLAS）
@@ -56,9 +56,9 @@ Linux では `-framework Accelerate` を `-llapack -lblas`（または使用中�
 SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk g++-16 ...
 ```
 
-`probe_lean` は 22 ケース（方向 {h,v} × 演算子 {nn, hopping, pairing,
+`probe_direct` は 22 ケース（方向 {h,v} × 演算子 {nn, hopping, pairing,
 ランダム偶, source 第2サイト} × d {2,4} × D {1,2,3}）で新旧経路の
-elementwise 一致を確認し、`LEAN FUSE IDENTITY HOLDS` を出して 0 を返す。
+elementwise 一致を確認し、`DIRECT FUSE IDENTITY HOLDS` を出して 0 を返す。
 
 ## 恒久的な検証はどこにあるか
 

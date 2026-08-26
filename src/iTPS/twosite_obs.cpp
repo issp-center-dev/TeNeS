@@ -262,7 +262,7 @@ auto iTPS<ptensor>::measure_twosite()
               // upper), and the infinite lattice has no boundary, so bonds
               // whose target wraps around the unit cell need no special
               // ordering.
-              const ptensor blob = tenes::fermion::build_reduced_pair_lean(
+              const ptensor blob = tenes::fermion::build_reduced_pair_direct(
                   fTop, fBottom, o,
                   tenes::fermion::reduced_pair_direction::vertical);
               value =
@@ -314,7 +314,7 @@ auto iTPS<ptensor>::measure_twosite()
             } else {
               // Window columns already carry geometric roles (col 0 = left);
               // see the vertical branch.
-              const ptensor blob = tenes::fermion::build_reduced_pair_lean(
+              const ptensor blob = tenes::fermion::build_reduced_pair_direct(
                   fLeft, fRight, o,
                   tenes::fermion::reduced_pair_direction::horizontal);
               value =

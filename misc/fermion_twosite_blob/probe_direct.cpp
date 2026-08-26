@@ -1,4 +1,4 @@
-// Decisive probe for the "lean fuse" identity:
+// Decisive probe for the "direct fuse" identity:
 //
 //   fuse_doubled_cluster_naive's rank-16 outer product + interleave transpose +
 //   fuse + physical trace  ==  direct plain contraction of the physical legs
@@ -122,8 +122,8 @@ void apply_parity_axes(tensor& t, const f::leg_parities& parity,
   }
 }
 
-// Lean replacement for fuse_doubled_cluster_naive(conj(ket_ab), ket_op, leg_ids).
-tensor lean_fuse(const ft& bra_pair, const ft& ket_pair,
+// Direct-contraction replacement for fuse_doubled_cluster_naive(conj(ket_ab), ket_op, leg_ids).
+tensor direct_fuse(const ft& bra_pair, const ft& ket_pair,
                  const std::vector<int>& leg_ids) {
   const std::vector<int> bra_axes = {0, 1, 2, 4, 5, 6};
   std::vector<int> ket_axes;
@@ -209,12 +209,12 @@ tensor lean_fuse(const ft& bra_pair, const ft& ket_pair,
   apply_pair_terms(kt, ket_pair.parity, ket_terms);
   apply_parity_axes(kt, ket_pair.parity, ket_parity_axes);
 
-  tensor lean = mptensor::tensordot(bt, kt, Axes(3, 7), Axes(3, 7));
+  tensor direct = mptensor::tensordot(bt, kt, Axes(3, 7), Axes(3, 7));
   // parities of the rank-12 result for the post masks
   f::leg_parities post_parity;
   for (const int ax : bra_axes) post_parity.push_back(bra.parity[ax]);
   for (const int ax : bra_axes) post_parity.push_back(ket_pair.parity[ax]);
-  apply_pair_terms(lean, post_parity, post_terms);
+  apply_pair_terms(direct, post_parity, post_terms);
 
   // interleave (ket_i, bra_i) and fuse, matching the cluster output
   Axes perm;
@@ -222,16 +222,16 @@ tensor lean_fuse(const ft& bra_pair, const ft& ket_pair,
     perm.push(6 + i);
     perm.push(i);
   }
-  lean = mptensor::transpose(lean, perm);
+  direct = mptensor::transpose(direct, perm);
   Shape sh;
-  const Shape ls = lean.shape();
+  const Shape ls = direct.shape();
   for (int i = 0; i < 6; ++i) sh.push(ls[2 * i] * ls[2 * i + 1]);
-  return mptensor::reshape(lean, sh);
+  return mptensor::reshape(direct, sh);
 }
 
-// full lean build_reduced_pair_naive (mirrors reduced.hpp build_reduced_pair_naive with
-// lean_fuse in place of fuse_doubled_cluster_naive)
-tensor lean_pair(const ft& TnA, const ft& TnB, const ft& op12,
+// full direct build_reduced_pair_naive (mirrors reduced.hpp build_reduced_pair_naive with
+// direct_fuse in place of fuse_doubled_cluster_naive)
+tensor direct_pair(const ft& TnA, const ft& TnB, const ft& op12,
                  f::reduced_pair_direction dir) {
   const ft ket_ab = f::build_pair_state(TnA, TnB, dir);
   std::vector<int> leg_ids;
@@ -240,7 +240,7 @@ tensor lean_pair(const ft& TnA, const ft& TnB, const ft& op12,
   else
     leg_ids = {0, 1, 2, 0, 2, 3};
   ft ket_op = f::apply_pair_op(ket_ab, op12);
-  tensor ret = lean_fuse(f::conj(ket_ab), ket_op, leg_ids);
+  tensor ret = direct_fuse(f::conj(ket_ab), ket_op, leg_ids);
   if (dir == f::reduced_pair_direction::horizontal) {
     f::detail::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
     f::detail::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);
@@ -263,7 +263,7 @@ void run_case(const char* name, int d, int D, const tensor& op_plain,
   const auto dir = dir_horizontal ? f::reduced_pair_direction::horizontal
                                   : f::reduced_pair_direction::vertical;
   const tensor oldb = f::build_reduced_pair_naive(TnA, TnB, op, dir);
-  const tensor newb = lean_pair(TnA, TnB, op, dir);
+  const tensor newb = direct_pair(TnA, TnB, op, dir);
   double scale = 0.0, maxdiff = 0.0;
   for (std::size_t n = 0; n < oldb.local_size(); ++n) {
     const Index idx = oldb.global_index(n);
@@ -299,7 +299,7 @@ int main() {
     run_case("d4 random src2", 4, 2, random_even_plain(4, 25), true, h, 21,
              22);
   }
-  std::printf("%s\n", g_fail == 0 ? "LEAN FUSE IDENTITY HOLDS"
-                                  : "LEAN FUSE IDENTITY FAILS");
+  std::printf("%s\n", g_fail == 0 ? "DIRECT FUSE IDENTITY HOLDS"
+                                  : "DIRECT FUSE IDENTITY FAILS");
   return g_fail == 0 ? 0 : 1;
 }
