@@ -89,23 +89,29 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
       // site, i.e. the left site of a horizontal bond (source_leg == 2) or
       // the upper site of a vertical bond (source_leg == 3). Updates given
       // in the opposite orientation are normalized by swapping the site
-      // roles and transposing the plain gate matrix accordingly; feeding the
-      // gate from the JW-later side applies wrong Koszul masks (verified by
-      // the vertical-chain lambda trajectory diagnostic).
+      // roles; feeding the gate from the JW-later side applies wrong Koszul
+      // masks (verified by the vertical-chain lambda trajectory diagnostic).
       int s1 = source;
       int s2 = target;
       int s1_leg = source_leg;
       int s2_leg = target_leg;
-      tensor op12 = up.op;
+      auto fop = tenes::fermion::wrap_twosite_gate(up.op, finfo.phys[source],
+                                                   finfo.phys[target]);
       if (source_leg == 0 || source_leg == 1) {
         std::swap(s1, s2);
         std::swap(s1_leg, s2_leg);
-        op12 = mptensor::transpose(up.op, mptensor::Axes(1, 0, 3, 2));
+        // Graded transpose: exchanging the two sites of a two-site operator
+        // conjugates it by S(|a> x |b>) = (-1)^{|a||b|} |b> x |a>, so it
+        // carries the Fock reordering sign on both leg pairs, exactly as the
+        // measurement path does (twosite_obs.cpp). A plain transpose drops
+        // (-1)^{p(j1)p(j2) + p(k1)p(k2)}, which is -1 on the
+        // (odd,odd) <-> (even,even) channels: empty for a
+        // particle-number-conserving spinless model, but the doublon-holon
+        // channel of an electron model at first order in the hopping.
+        fop = tenes::fermion::transpose(fop, mptensor::Axes(1, 0, 3, 2));
       }
       auto fTn1 = tenes::fermion::wrap_Tn(Tn[s1], finfo, s1);
       auto fTn2 = tenes::fermion::wrap_Tn(Tn[s2], finfo, s2);
-      auto fop = tenes::fermion::wrap_twosite_gate(op12, finfo.phys[s1],
-                                                   finfo.phys[s2]);
       tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
       core::Simple_update_bond(fTn1, fTn2, lambda_tensor[s1], lambda_tensor[s2],
                                fop, s1_leg, peps_parameters, fTn1_work,
