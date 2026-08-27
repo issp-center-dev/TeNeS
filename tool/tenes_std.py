@@ -578,9 +578,13 @@ class LatticeGraph:
     decomposed into a chain of nearest-neighbor gates; this graph provides
     the paths. Nodes are sites of the unit cell replicated over the
     offset range spanned by the Hamiltonian bonds; edges are
-    nearest-neighbor bonds, weighted to prefer wide (large-D) bonds, to
-    break ties deterministically, and to avoid leaving the offset window
-    (D = 1 bonds are omitted: they are disconnections).
+    nearest-neighbor bonds (D = 1 bonds are omitted: they are
+    disconnections). The edge weights make the shortest path prefer wide
+    (large-D) bonds; bonds crossing into a neighboring copy of the unit
+    cell weigh double, so intra-cell routes win; and an infinitesimal
+    position-dependent term lifts the degeneracy between equal-weight
+    paths, so the resulting gate decomposition is always the same
+    (degenerate paths made the choice unstable).
 
     Attributes
     ----------
