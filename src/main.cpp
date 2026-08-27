@@ -162,7 +162,8 @@ int main(int argc, char **argv) {
  *
  * \ref tenes is the main program written in C++.
  *
- * \ref tenes_simple and \ref tenes_std are the utility tools for generating
- * input files written in Python.
+ * tenes_simple and tenes_std, the utility tools generating the input
+ * files, are Python scripts under tool/ and are not covered by this
+ * document; see their docstrings and the user's manual.
  *
  */
