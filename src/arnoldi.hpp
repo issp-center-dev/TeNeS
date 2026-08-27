@@ -14,6 +14,12 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief The builtin implicit-restart Arnoldi eigensolver
+ *         (::tenes::Arnoldi), used for transfer-matrix spectra when
+ *         ARPACK-NG is not available or not selected.
+ */
+
 #ifndef TENES_SRC_ARNOLDI_HPP_
 #define TENES_SRC_ARNOLDI_HPP_
 
@@ -32,15 +38,19 @@ namespace tenes {
 template <class ptensor>
 class Arnoldi {
  public:
-  using value_type = typename ptensor::value_type;
+  using value_type = typename ptensor::value_type;  //!< scalar type
 
+  //! Prepare for a problem of dimension N with a Krylov subspace of at
+  //! most maxvec vectors.
   Arnoldi(std::size_t N, std::size_t maxvec);
+  //! Set (and normalize) the start vector of the iteration.
   void initialize(ptensor const &initial);
 
   /*! @brief perform Arnoldi method
    *
-   * @param[in] A "Matrix" as a function taking a "vector" `x` and returning another, `Ax`.
-   * The first [out] argument of `A` is for `Ax` and the second [in] argument is for `x`.
+   * @param[in] A "Matrix" as a function taking a "vector" `x` and returning
+   * another, `Ax`. The first [out] argument of `A` is for `Ax` and the second
+   * [in] argument is for `x`.
    * @param[in] nev Number of eigenvalues to be calculated
    * @param[in] mindim Number of vectors re-generated in restart
    * @param[in] maxiter Maximum number of iterations
@@ -55,19 +65,22 @@ class Arnoldi {
   std::vector<std::complex<double>> eigenvalues() const;
 
  private:
+  //! Orthonormalize the k-th Krylov vector against the previous ones.
   void orthonormalize(std::size_t k);
+  //! Implicit restart: compress the subspace back to minvec vectors.
   void restart(std::size_t minvec, double cutoff = 1.0e-12);
+  //! Residual estimate of each of the k current Ritz pairs.
   std::vector<double> residue(std::size_t k) const;
 
-  std::size_t N;
-  std::size_t maxvec;
-  std::size_t nev;
+  std::size_t N;       //!< dimension of the problem
+  std::size_t maxvec;  //!< maximum Krylov subspace size
+  std::size_t nev;     //!< number of requested eigenvalues
 
-  std::vector<ptensor> Q;
-  small_tensor<value_type> H;
+  std::vector<ptensor> Q;      //!< Krylov basis vectors
+  small_tensor<value_type> H;  //!< projected (Hessenberg) matrix
 
-  int mpisize;
-  int mpirank;
+  int mpisize;  //!< size of the communicator the vectors live on
+  int mpirank;  //!< rank within that communicator
 };
 
 }  // end of namespace tenes

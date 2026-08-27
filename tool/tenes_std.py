@@ -14,6 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
+"""Stage 2 of the TeNeS pipeline: read the bond Hamiltonians of one or
+more std.toml files, exponentiate them into (imaginary or real) time
+evolution operators, and write the input.toml the tenes executable
+runs on."""
+
 from itertools import product
 from typing import (
     TextIO,
@@ -34,6 +39,7 @@ import scipy.sparse as sparse
 
 
 def drop_comment(line: str) -> str:
+    """Strip a trailing "#" comment from a line."""
     last = line.find("#")
     if last < 0:
         return line[:]
@@ -42,6 +48,7 @@ def drop_comment(line: str) -> str:
 
 
 def lower_dict(d: MutableMapping) -> Dict[str, Any]:
+    """Make all keys lowercase, recursively."""
     ks = list(d.keys())
     for k in ks:
         if isinstance(d[k], dict):
@@ -54,10 +61,12 @@ def lower_dict(d: MutableMapping) -> Dict[str, Any]:
 
 
 def all_positive(xs, v=0) -> bool:
+    """True iff every element of xs is greater than v."""
     return all(map(lambda x: x > v, xs))
 
 
 def float_to_str(v: float) -> str:
+    """Format a float as a TOML-compatible literal (nan, inf, exponents)."""
     if np.isnan(v):
         return "nan"
     ret = ""
@@ -78,6 +87,7 @@ def float_to_str(v: float) -> str:
 
 
 def value_to_str(v) -> str:
+    """Format a Python value as a TOML literal."""
     if isinstance(v, str):
         return "'{}'".format(v)
     elif isinstance(v, bool):
@@ -89,6 +99,12 @@ def value_to_str(v) -> str:
 
 
 def merge_input_dict(d1: dict, d2: dict) -> None:
+    """Merge a second parsed std.toml into the first, in place.
+
+    List-like sections (unitcell entries, Hamiltonian terms, observables)
+    are concatenated; scalar keys must not appear in both files
+    (RuntimeError otherwise).
+    """
     section1 = d1.get("parameter", {})
     section2 = d2.get("parameter", {})
     subsection_names = sorted(set(section1.keys()) | set(section2.keys()))
@@ -159,23 +175,39 @@ def merge_input_dict(d1: dict, d2: dict) -> None:
 
 
 class Bond:
+    """A pair of sites: a source site and the displacement to the target.
+
+    Attributes
+    ----------
+    source_site : int
+        Site index within the unit cell.
+    dx : int
+        x displacement to the target site.
+    dy : int
+        y displacement to the target site.
+    """
+
     source_site: int
     dx: int
     dy: int
 
     def __init__(self, source_site: int, dx: int, dy: int):
+        """Store the source site and the displacement."""
         self.source_site = source_site
         self.dx = dx
         self.dy = dy
 
     def is_site(self) -> bool:
+        """True iff the displacement is zero (a single site, not a bond)."""
         return self.dx == self.dy == 0
 
     def is_bond(self) -> bool:
+        """True iff the displacement is nonzero."""
         return not self.is_site()
 
 
 def parse_bond(line: str) -> Optional[Bond]:
+    """Parse a "source dx dy" line; None for empty/comment-only lines."""
     line = drop_comment(line)
     if not line:
         return None
@@ -187,11 +219,25 @@ def parse_bond(line: str) -> Optional[Bond]:
 
 
 class Multisite:
+    """A cluster of sites: a source site and one displacement per further
+    site.
+
+    Attributes
+    ----------
+    source_site : int
+        Site index within the unit cell.
+    dx : List[int]
+        x displacement to each further site.
+    dy : List[int]
+        y displacement to each further site.
+    """
+
     source_site: int
     dx: List[int]
     dy: List[int]
 
     def __init__(self, source_site: int, dx: Iterable[int], dy: Iterable[int]):
+        """Store the source site and the displacements (equal lengths)."""
         self.source_site = source_site
         self.dx = list(dx)
         self.dy = list(dy)
@@ -199,10 +245,12 @@ class Multisite:
             raise RuntimeError("dx and dy should have the same length")
 
     def nsites(self) -> int:
+        """Number of sites in the cluster."""
         return len(self.dx) + 1
 
 
 def parse_multisite(line: str) -> Optional[Multisite]:
+    """Parse a "source dx1 dy1 dx2 dy2 ..." line; None for empty lines."""
     line = drop_comment(line)
     if not line:
         return None
@@ -214,6 +262,11 @@ def parse_multisite(line: str) -> Optional[Multisite]:
 
 
 def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.ndarray:
+    """Parse an "indices... re im" elements block into a dense array.
+
+    Returns a real array when every imaginary part is below atol, a
+    complex one otherwise.
+    """
     A_re = np.zeros(dims)
     A_im = np.zeros(dims)
     ndim = A_re.ndim
@@ -241,6 +294,8 @@ def load_tensor(elements_str: str, dims: List[int], atol: float = 1e-15) -> np.n
 
 
 def is_hermite(A: np.ndarray) -> bool:
+    """True iff the operator (input legs first, then output legs) is
+    Hermitian as a matrix."""
     nsite = len(A.shape) // 2
     input_dirs = A.shape[:nsite]
     output_dirs = A.shape[nsite:]
@@ -269,6 +324,7 @@ class LocalTensor:
     virtual_dim: List[int]
 
     def __init__(self, tensor_dict: dict = None):
+        """Load from a tensor.unitcell entry when one is given."""
         if tensor_dict is not None:
             self.load_dict(tensor_dict)
 
@@ -328,12 +384,15 @@ class Unitcell:
     sites: List[LocalTensor]
 
     def __init__(self, lat_dict: dict = None):
+        """Load from a [tensor] table when one is given."""
         self.L = [1] * 2
         self.sites = cast(List[LocalTensor], [None])
         if lat_dict is not None:
             self.load_dict(lat_dict)
 
     def load_dict(self, lat_dict: dict):
+        """Load the cell size, skew, and site tensors from a [tensor]
+        table, then validate with check()."""
         L = lat_dict["l_sub"]
         if isinstance(L, int):
             self.L = [L, L]
@@ -355,17 +414,24 @@ class Unitcell:
         self.check()
 
     def numsites(self) -> int:
+        """Number of sites in the unit cell."""
         return len(self.sites)
 
     def index2coord(self, index: int) -> Tuple[int, int]:
+        """Convert a site index to (x, y) coordinates within the cell."""
         d, m = divmod(index, self.L[0])
         return m, d
 
     def coord2index(self, x: int, y: int) -> int:
+        """Convert (possibly out-of-cell) coordinates to a site index,
+        applying the periodic and skew boundary conditions."""
         x, y, _, _ = self.coord2supercoord(x, y)
         return x + self.L[0] * y
 
     def coord2supercoord(self, x: int, y: int) -> Tuple[int, int, int, int]:
+        """Split coordinates into in-cell coordinates plus the unit-cell
+        offset: returns (x_in, y_in, offset_x, offset_y), accounting for
+        the skew boundary."""
         offset_y = y // self.L[1]
         x -= offset_y * self.skew
         offset_x = x // self.L[0]
@@ -374,6 +440,8 @@ class Unitcell:
         return x, y, offset_x, offset_y
 
     def wan2coord(self, site: int, ox: int, oy: int) -> Tuple[int, int]:
+        """Global coordinates of a site in the unit cell at offset
+        (ox, oy)."""
         x, y = self.index2coord(site)
         x += oy * self.skew
         x += ox * self.L[0]
@@ -381,12 +449,15 @@ class Unitcell:
         return x, y
 
     def source_site(self, bond: Bond) -> int:
+        """Site index of the bond's source."""
         return bond.source_site
 
     def source_coord(self, bond: Bond) -> Tuple[int, int]:
+        """Coordinates of the bond's source."""
         return self.index2coord(self.source_site(bond))
 
     def target_site(self, bond: Bond) -> int:
+        """Site index (within the cell) of the bond's target."""
         x, y = self.index2coord(bond.source_site)
         x += bond.dx
         y += bond.dy
@@ -394,20 +465,25 @@ class Unitcell:
         return self.coord2index(x, y)
 
     def target_coord(self, bond: Bond) -> Tuple[int, int]:
+        """Coordinates of the bond's target (possibly outside the cell)."""
         x, y = self.index2coord(bond.source_site)
         x += bond.dx
         y += bond.dy
         return x, y
 
     def target_offset(self, bond: Bond) -> Tuple[int, int]:
+        """Unit-cell offset the bond's target falls into."""
         x, y = self.target_coord(bond)
         _, _, ox, oy = self.coord2supercoord(x, y)
         return ox, oy
 
     def bond_displacement(self, bond: Bond) -> Tuple[int, int]:
+        """The (dx, dy) displacement of the bond."""
         return bond.dx, bond.dy
 
     def bond_direction(self, bond: Bond) -> int:
+        """Direction (0=-x, 1=+y, 2=+x, 3=-y) of a nearest-neighbor
+        bond."""
         dx, dy = self.bond_displacement(bond)
         nhop = abs(dx) + abs(dy)
         assert nhop == 1, "{} {}".format(dx, dy)
@@ -422,10 +498,13 @@ class Unitcell:
         return direction
 
     def bond_dim(self, bond: Bond) -> int:
+        """Virtual dimension of the bond (as seen from the source site)."""
         direction = self.bond_direction(bond)
         return self.sites[bond.source_site].virtual_dim[direction]
 
     def make_bond(self, source: int, direction: int) -> Bond:
+        """Nearest-neighbor bond leaving source in the given direction
+        (0=-x, 1=+y, 2=+x, 3=-y)."""
         dx = 0
         dy = 0
         if direction == 0:
@@ -479,6 +558,7 @@ class Unitcell:
             raise RuntimeError(msg)
 
     def neighbor(self, index: int, direction: int) -> int:
+        """Site index of the nearest neighbor in the given direction."""
         x, y = self.index2coord(index)
         if direction == 0:
             X, Y, _, _ = self.coord2supercoord(x - 1, y)
@@ -492,6 +572,36 @@ class Unitcell:
 
 
 class LatticeGraph:
+    """Shortest-path graph over the unit cell and its neighboring copies.
+
+    A two-site Hamiltonian term acting beyond nearest neighbors has to be
+    decomposed into a chain of nearest-neighbor gates; this graph provides
+    the paths. Nodes are sites of the unit cell replicated over the
+    offset range spanned by the Hamiltonian bonds; edges are
+    nearest-neighbor bonds (D = 1 bonds are omitted: they are
+    disconnections). The edge weights make the shortest path prefer wide
+    (large-D) bonds; bonds crossing into a neighboring copy of the unit
+    cell weigh double, so intra-cell routes win; and an infinitesimal
+    position-dependent term lifts the degeneracy between equal-weight
+    paths, so the resulting gate decomposition is always the same
+    (degenerate paths made the choice unstable).
+
+    Attributes
+    ----------
+    unitcell : Unitcell
+        The unit cell being replicated.
+    offset_x_min, offset_y_min, offset_x_max, offset_y_max : int
+        Range of unit-cell offsets covered by the graph.
+    offset_Lx, offset_Ly : int
+        Extent of the offset range.
+    N : int
+        Number of graph nodes.
+    path_pred : np.ndarray
+        Predecessor matrix of the all-pairs shortest paths.
+    path_weight : np.ndarray
+        Distance matrix of the all-pairs shortest paths.
+    """
+
     unitcell: Unitcell
     offset_x_min: int
     offset_y_min: int
@@ -511,6 +621,7 @@ class LatticeGraph:
         offset_x_max: int,
         offset_y_max: int,
     ):
+        """Build the graph and precompute all shortest paths."""
         self.unitcell = unitcell
         self.offset_x_min = offset_x_min
         self.offset_y_min = offset_y_min
@@ -563,6 +674,8 @@ class LatticeGraph:
         )
 
     def graph_site(self, localsite: int, offset_x: int = 0, offset_y: int = 0) -> int:
+        """Graph node of a unit-cell site in the copy at the given
+        offset."""
         assert self.offset_x_min <= offset_x <= self.offset_x_max
         assert self.offset_y_min <= offset_y <= self.offset_y_max
         offset_x -= self.offset_x_min
@@ -571,6 +684,8 @@ class LatticeGraph:
         return localsite + self.unitcell.numsites() * unitcell_index
 
     def graph_coords(self, index: int) -> Tuple[int, int, int]:
+        """Inverse of graph_site(): returns (localsite, offset_x,
+        offset_y)."""
         assert 0 <= index < self.N
 
         index, localsite = divmod(index, self.unitcell.numsites())
@@ -578,6 +693,9 @@ class LatticeGraph:
         return localsite, offset_x, offset_y
 
     def make_path(self, bond: Bond) -> List[Bond]:
+        """Decompose a bond into a chain of nearest-neighbor bonds along
+        the shortest path from its source to its target (empty when they
+        are disconnected)."""
         ox, oy = self.unitcell.target_offset(bond)
         target_index = self.graph_site(self.unitcell.target_site(bond), ox, oy)
         path_pred = self.path_pred[self.graph_site(bond.source_site)]
@@ -606,16 +724,30 @@ class LatticeGraph:
 
 
 class SiteOperator:
+    """A one-site operator (Hamiltonian term or evolution gate).
+
+    Attributes
+    ----------
+    site : int
+        Site the operator acts on.
+    elements : np.ndarray
+        Matrix elements.
+    group : Optional[int]
+        Evolution-operator group (None for a plain Hamiltonian term).
+    """
+
     site: int
     elements: np.ndarray
     group: Optional[int]
 
     def __init__(self, site: int, elements: np.ndarray, group: Optional[int] = None):
+        """Store the site, the elements, and optionally the group."""
         self.site = site
         self.elements = elements
         self.group = group
 
     def to_toml_strs(self, unitcell) -> List[str]:
+        """Render as the lines of an evolution table entry."""
         ret = []
         if self.group is not None:
             ret.append("group = {}".format(self.group))
@@ -642,6 +774,22 @@ class SiteOperator:
 
 
 class NNOperator:
+    """A two-site operator on a nearest-neighbor bond.
+
+    Attributes
+    ----------
+    bond : Bond
+        The bond the operator acts on.
+    elements : Optional[np.ndarray]
+        Matrix elements (None when given as a product of one-site
+        operators).
+    ops : Optional[List[int]]
+        One-site operator indices whose product forms the operator (None
+        when elements is given).
+    group : Optional[int]
+        Evolution-operator group (None for a plain Hamiltonian term).
+    """
+
     bond: Bond
     elements: Optional[np.ndarray]
     ops: Optional[List[int]]
@@ -655,6 +803,7 @@ class NNOperator:
         ops: Optional[List[int]] = None,
         group: Optional[int] = None,
     ):
+        """Store the bond and either the elements or the ops indices."""
         self.bond = bond
         self.group = group
         if elements is not None:
@@ -665,6 +814,7 @@ class NNOperator:
             self.elements = None
 
     def to_toml_strs(self, unitcell: Unitcell) -> List[str]:
+        """Render as the lines of an evolution table entry."""
         ret = []
         if self.group is not None:
             ret.append("group = {}".format(self.group))
@@ -698,6 +848,24 @@ Operator = Union[SiteOperator, NNOperator]
 
 
 class OnesiteObservable:
+    """A measured one-site observable (an observable.onesite entry).
+
+    Attributes
+    ----------
+    group : int
+        Observable group the term belongs to.
+    elements : np.ndarray
+        Matrix elements.
+    sites : List[int]
+        Sites the observable is measured on (empty: all sites).
+    name : str
+        Display name.
+    coeff : float
+        Real part of the overall coefficient.
+    coeff_im : float
+        Imaginary part of the overall coefficient.
+    """
+
     group: int
     elements: np.ndarray
     sites: List[int]
@@ -714,6 +882,7 @@ class OnesiteObservable:
         coeff: float = 1.0,
         coeff_im: float = 0.0,
     ):
+        """Store the fields, checking that elements is a square matrix."""
         self.group = group
         assert elements.ndim == 2
         assert elements.shape[0] == elements.shape[1]
@@ -724,6 +893,7 @@ class OnesiteObservable:
         self.coeff_im = coeff_im
 
     def to_toml_strs(self) -> List[str]:
+        """Render as the lines of an observable.onesite entry."""
         ret = []
         ret.append('name = "{}"'.format(self.name))
         ret.append("group = {}".format(self.group))
@@ -753,6 +923,28 @@ class OnesiteObservable:
 
 
 class TwositeObservable:
+    """A measured two-site observable (an observable.twosite entry).
+
+    Attributes
+    ----------
+    group : int
+        Observable group the term belongs to.
+    bonds : List[Bond]
+        Bonds the observable is measured on.
+    elements : Optional[np.ndarray]
+        Matrix elements (None when given as a product of one-site
+        operators).
+    ops : Optional[List[int]]
+        One-site operator indices whose product forms the observable
+        (None when elements is given).
+    name : str
+        Display name.
+    coeff : float
+        Real part of the overall coefficient.
+    coeff_im : float
+        Imaginary part of the overall coefficient.
+    """
+
     group: int
     bonds: List[Bond]
     elements: Optional[np.ndarray]
@@ -772,6 +964,7 @@ class TwositeObservable:
         coeff: float = 1.0,
         coeff_im: float = 0.0,
     ):
+        """Store the fields, validating the shape of elements if given."""
         self.group = group
         if elements is not None:
             dim = elements.ndim
@@ -791,6 +984,7 @@ class TwositeObservable:
         self.coeff_im = coeff_im
 
     def to_toml_strs(self) -> List[str]:
+        """Render as the lines of an observable.twosite entry."""
         ret = []
         ret.append('name = "{}"'.format(self.name))
         ret.append("group = {}".format(self.group))
@@ -825,6 +1019,7 @@ class TwositeObservable:
         return ret
 
     def to_twosite_operators(self) -> List[NNOperator]:
+        """Expand into one NNOperator per bond."""
         if self.elements is not None:
             return [NNOperator(bond, elements=self.elements) for bond in self.bonds]
         else:
@@ -832,6 +1027,26 @@ class TwositeObservable:
 
 
 class MultisiteObservable:
+    """A measured multi-site observable (an observable.multisite entry),
+    always given as a product of one-site operators.
+
+    Attributes
+    ----------
+    group : int
+        Observable group the term belongs to.
+    multisites : List[Multisite]
+        Site clusters the observable is measured on (all with the same
+        number of sites).
+    ops : List[int]
+        One-site operator indices, one per site of the cluster.
+    name : str
+        Display name.
+    coeff : float
+        Real part of the overall coefficient.
+    coeff_im : float
+        Imaginary part of the overall coefficient.
+    """
+
     group: int
     multisites: List[Multisite]
     ops: List[int]
@@ -848,6 +1063,8 @@ class MultisiteObservable:
         coeff: float = 1.0,
         coeff_im: float = 0.0,
     ):
+        """Store the fields, checking that all clusters have the same
+        number of sites."""
         self.group = group
         self.multisites = multisites
         for ms in multisites:
@@ -859,9 +1076,11 @@ class MultisiteObservable:
         self.coeff_im = coeff_im
 
     def nsites(self) -> int:
+        """Number of sites per cluster."""
         return self.multisites[0].nsites()
 
     def to_toml_strs(self) -> List[str]:
+        """Render as the lines of an observable.multisite entry."""
         ret = []
         ret.append('name = "{}"'.format(self.name))
         ret.append("group = {}".format(self.group))
@@ -885,6 +1104,7 @@ def make_evolution_onesite(
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[SiteOperator]:
+    """Exponentiate a one-site Hamiltonian term into exp(-tau H)."""
     D, V = np.linalg.eigh(hamiltonian.elements)
     evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate())
 
@@ -898,6 +1118,19 @@ def make_evolution_twosite(
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> List[NNOperator]:
+    """Exponentiate a two-site Hamiltonian term into Trotter gates.
+
+    exp(-tau H) is built by diagonalization. A nearest-neighbor term
+    yields one gate; a longer-range term is carried along the shortest
+    nearest-neighbor path (LatticeGraph.make_path()) and split by
+    successive SVDs into one gate per hop, with identities on the
+    intermediate sites.
+
+    Raises
+    ------
+    RuntimeError
+        If the two sites are disconnected (D = 1 bonds do not connect).
+    """
     if hamiltonian.elements is None:
         raise NotImplementedError(
             "make_evolution for NNOperator with two onesite operators is not yet implemented."
@@ -965,6 +1198,8 @@ def make_evolution(
     group: int = 0,
     result_cutoff: float = 1e-15,
 ) -> Union[List[SiteOperator], List[NNOperator]]:
+    """Exponentiate one Hamiltonian term into evolution gates (dispatch
+    over one-site / two-site)."""
     if isinstance(hamiltonian, SiteOperator):
         return make_evolution_onesite(
             hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
@@ -976,6 +1211,48 @@ def make_evolution(
 
 
 class Model:
+    """The whole std.toml content, ready to be written as input.toml.
+
+    The constructor parses the input, validates the Hamiltonian
+    (hermiticity, connectivity), collects the observables (adding the
+    Hamiltonian itself as the group-0 energy observable when the input
+    defines none), and precomputes the evolution gates of every tau group;
+    to_toml() writes the result.
+
+    Attributes
+    ----------
+    param : Dict[str, Dict[str, Any]]
+        The parsed input.
+    parameter : Dict[str, Any]
+        The [parameter] table, passed through verbatim.
+    simple_tau : List[float]
+        Time step of each simple-update group.
+    full_tau : List[float]
+        Time step of each full-update group.
+    correlation : Dict[str, Any]
+        The [correlation] table (None if absent).
+    clength : Dict[str, Any]
+        The [correlation_length] table (None if absent).
+    unitcell : Unitcell
+        The unit cell.
+    hamiltonians : List[Operator]
+        The Hamiltonian terms, one per site/bond.
+    graph : LatticeGraph
+        Shortest-path graph for decomposing long-range terms.
+    onesites : List[OnesiteObservable]
+        One-site observables.
+    twobodies : List[TwositeObservable]
+        Two-site observables.
+    multibodies : List[MultisiteObservable]
+        Multi-site observables.
+    simple_updates : List[Operator]
+        Trotter gates of the simple update, all groups.
+    full_updates : List[Operator]
+        Trotter gates of the full update, all groups.
+    time_evolution : bool
+        True in real-time evolution mode (tau is multiplied by i).
+    """
+
     param: Dict[str, Dict[str, Any]]
     parameter: Dict[str, Any]
     simple_tau: List[float]
@@ -993,6 +1270,15 @@ class Model:
     time_evolution: bool
 
     def __init__(self, param: MutableMapping, atol: float = 1e-15):
+        """Parse and validate a merged std.toml dictionary.
+
+        Parameters
+        ----------
+        param : MutableMapping
+            The parsed (and possibly merged) std.toml content.
+        atol : float
+            Imaginary parts below this read as zero when loading tensors.
+        """
         param = lower_dict(param)
         for name in ("tensor", "hamiltonian"):
             if name not in param:
@@ -1171,7 +1457,14 @@ class Model:
             coeff_im = multisite.get("coeff_im", 0.0)
             if "ops" not in multisite:
                 raise RuntimeError("multisite observable should have ops")
-            obs = MultisiteObservable(group, ms, ops=multisite["ops"], coeff=coeff, coeff_im=coeff_im, name=name)
+            obs = MultisiteObservable(
+                group,
+                ms,
+                ops=multisite["ops"],
+                coeff=coeff,
+                coeff_im=coeff_im,
+                name=name,
+            )
             self.multibodies.append(obs)
 
         self.simple_updates = []
@@ -1191,6 +1484,7 @@ class Model:
                     self.full_updates.append(evo)
 
     def to_toml(self, f: TextIO):
+        """Write the input.toml content for the tenes executable."""
         # parameter
         f.write("[parameter]\n")
         for tablename, table in self.parameter.items():

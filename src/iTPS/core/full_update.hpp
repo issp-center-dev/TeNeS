@@ -40,16 +40,18 @@ void Full_update_bond_horizontal(
 /*! @brief full update on a bond
  *
  *  @tparam    tensor tensor class in mptensor
- *  @param[in] C1
- *  @param[in] C2
- *  @param[in] C3
- *  @param[in] C4
- *  @param[in] eT1
- *  @param[in] eT2
- *  @param[in] eT3
- *  @param[in] eT4
- *  @param[in] Tn1
- *  @param[in] Tn2
+ *  @param[in] C1 corner transfer matrix (see the layout below)
+ *  @param[in] C2 corner transfer matrix
+ *  @param[in] C3 corner transfer matrix
+ *  @param[in] C4 corner transfer matrix
+ *  @param[in] eT1 edge tensor
+ *  @param[in] eT2 edge tensor
+ *  @param[in] eT3 edge tensor
+ *  @param[in] eT4 edge tensor
+ *  @param[in] eT5 edge tensor
+ *  @param[in] eT6 edge tensor
+ *  @param[in] Tn1 center tensor on one end of the bond
+ *  @param[in] Tn2 center tensor on the other end
  *  @param[in] op12 Imaginary time evolution operator
  *  @param[in] connect1  leg index from Tn1
  *  @param[in] peps_parameters  hyperparameters
@@ -65,7 +67,8 @@ void Full_update_bond_horizontal(
  *
  *
  *  @par Reference
- *  H. N. Phien, J. A. Bengua, H. D. Tuan, P. Corboz, and R. Orus, Phys. Rev. B @b 92, 035142 (2015)
+ *  H. N. Phien, J. A. Bengua, H. D. Tuan, P. Corboz, and R. Orus, Phys. Rev. B
+ @b 92, 035142 (2015)
  *
  */
 template <class tensor>

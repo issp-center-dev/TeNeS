@@ -38,7 +38,6 @@ using mptensor::Axes;
 using mptensor::Index;
 using mptensor::Shape;
 
-
 /*
  * Layout of Tensors
  *
@@ -50,33 +49,34 @@ using mptensor::Shape;
  *  Tn* has conjugate, cTn*
  */
 
-
-/*!
- *
+/*! @brief One of the two matvec functors handed to mptensor::rsvd for
+ *         the left half-column: contracts LB, then LT, into the boundary
+ *         vector (see the tensor layout above).
  */
 template <class tensor>
 class Mult_col {
  public:
   /*!
-   * @brief
+   * @brief Hold the two blocks of the half-column.
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
-   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right,
+   * 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
    * @param[in] LB Left-bottom block tensor @n
    *              eT7 Tn4 @n
    *               C4 Tn6 @n
-   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right,
+   * 4:cTn4_top, 5:cTn4_right]
    *
    */
-  Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
-   * @brief
+   * @brief Apply the half-column to a boundary vector.
    * @param[in] T_in Input tensor
    *            legs = [0:Tn3_left, 1:eT5_left, 2:cTn3_left]
-   * @return
-   * @param[out] T_out Output tensor
+   * @return Output tensor with
    *            legs = [0:Tn1_right, 2:eT1_right, 3:cTn1_right]
    */
   tensor operator()(const tensor &T_in) {
@@ -85,33 +85,37 @@ class Mult_col {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief The complementary rsvd functor of Mult_col: contracts the
+ *         boundary vector into LT, then LB.
+ */
 template <class tensor>
 class Mult_row {
  public:
   /*!
-   * @brief
+   * @brief Hold the two blocks of the half-column.
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
-   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right, 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
+   *             with legs = [0:Tn1_right, 1:Tn1_bottom, 2:eT1_right,
+   * 3:eT8_bottom, 4:cTn1_right, 5:cTn1_bottom]
    * @param[in] LB Left-bottom block tensor @n
    *              eT7 Tn4 @n
    *               C4 Tn6 @n
-   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right, 4:cTn4_top, 5:cTn4_right]
+   *             legs = [0:Tn4_top, 1:Tn4_right, 2:eT7_top, 3:eT6_right,
+   * 4:cTn4_top, 5:cTn4_right]
    *
    */
-  Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
-   * @brief
+   * @brief Contract a boundary vector through LT, then LB.
    * @param[in] T_in Input tensor
    *            legs = [0:Tn2_left, 1:eT2_left, 2:cTn2_left]
-   * @return
-   * @param[out] T_out Output tensor
+   * @return Output tensor with
    *            legs = [0:Tn4_right, 2:eT6_right, 3:cTn4_right]
    */
   tensor operator()(const tensor &T_in) {
@@ -120,16 +124,21 @@ class Mult_row {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief rsvd functor for the full plaquette (all four blocks),
+ *         contracting RB, LB, LT, RT into the boundary vector in turn.
+ */
 template <class tensor>
 class Mult_col_ud {
  public:
+  //! Hold the four corner blocks.
   Mult_col_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Apply the four blocks to a boundary vector.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         RT_,
@@ -142,18 +151,23 @@ class Mult_col_ud {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief The complementary rsvd functor of Mult_col_ud: contracts the
+ *         boundary vector through RT, LT, LB, RB in turn.
+ */
 template <class tensor>
 class Mult_row_ud {
  public:
+  //! Hold the four corner blocks.
   Mult_row_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Contract a boundary vector through the four blocks.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         tensordot(tensordot(tensordot(T_in, RT_, Axes(0, 1, 2), Axes(1, 2, 5)),
@@ -163,10 +177,10 @@ class Mult_row_ud {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
 template <class tensor>
@@ -237,7 +251,10 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       Shape shape_row(t12, e12, t12);
       Shape shape_col(t34, e56, t34);
 
-      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41), e12 * t12 * t12), e56 * t34 * t34);
+      int cut =
+          std::min(std::min(std::min(peps_parameters.CHI, e78 * t41 * t41),
+                            e12 * t12 * t12),
+                   e56 * t34 * t34);
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
            static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
@@ -252,7 +269,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
           break;
         }
       }
-      
+
       tensor U_c = mptensor::slice(U, 3, 0, cut);
       tensor VT_c = mptensor::slice(VT, 0, 0, cut);
       U_c.multiply_vector(s_c, 3);
@@ -298,7 +315,7 @@ void Calc_projector_left_block(const tensor &C1, const tensor &C4,
       PL = tensordot(LT, conj(U_c), Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else { // t41 == 1
+  } else {  // t41 == 1
     const auto comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -429,9 +446,10 @@ void Calc_projector_updown_blocks(
       U_c.multiply_vector(s_c, 3);
       VT_c.multiply_vector(s_c, 0);
 
-      PU = tensordot(LB, tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
-                     Axes(1, 3, 5), Axes(0, 1, 2))
-               .transpose(Axes(1, 0, 2, 3));
+      PU =
+          tensordot(LB, tensordot(RB, conj(VT_c), Axes(1, 3, 5), Axes(1, 2, 3)),
+                    Axes(1, 3, 5), Axes(0, 1, 2))
+              .transpose(Axes(1, 0, 2, 3));
       PL = tensordot(LT, tensordot(RT, conj(U_c), Axes(1, 2, 5), Axes(0, 1, 2)),
                      Axes(0, 2, 4), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
@@ -471,7 +489,7 @@ void Calc_projector_updown_blocks(
       PL = tensordot(R1, conj(U_c), Axes(0, 1, 2), Axes(0, 1, 2))
                .transpose(Axes(1, 0, 2, 3));
     }
-  } else { // t41 == 1
+  } else {  // t41 == 1
     const MPI_Comm comm = C1.get_comm();
     tensor identity_matrix(comm, Shape(e78, e78));
     Index index;
@@ -1195,7 +1213,7 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34, d34));
       }
     }
-  } // end of if(initialize)
+  }  // end of if(initialize)
 
   bool convergence = false;
   int count = 0;
@@ -1206,7 +1224,6 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
 
   double sig_max = 0.0;
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
-
     // left move
     for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
       Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
@@ -1216,13 +1233,15 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
     // right move
     for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
       Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew, peps_parameters, lattice);
+                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
+                 peps_parameters, lattice);
     }
 
     // top move
     for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
       Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew, peps_parameters, lattice);
+               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
+               peps_parameters, lattice);
     }
 
     // bottom move

@@ -14,6 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
+"""Stage 1 of the TeNeS pipeline: expand a predefined model on a
+predefined lattice (simple.toml) into the bond Hamiltonians and
+observables of std.toml, plus the site-coordinate and bond files."""
+
 import re
 import warnings
 
@@ -32,6 +36,7 @@ TeNeSInput = namedtuple("TeNeSInput", "param tensor ham obs")
 
 
 def float_to_str(v: float) -> str:
+    """Format a float as a TOML-compatible literal (nan, inf, exponents)."""
     if np.isnan(v):
         return "nan"
     ret = ""
@@ -52,6 +57,7 @@ def float_to_str(v: float) -> str:
 
 
 def value_to_str(v) -> str:
+    """Format a Python value as a TOML literal."""
     if isinstance(v, str):
         return "'{}'".format(v)
     elif isinstance(v, bool):
@@ -76,14 +82,17 @@ def lower_dict(d: dict) -> dict:
 
 
 def index2coord(index: int, X: int) -> Tuple[int, int]:
+    """Convert a site index to (x, y) coordinates in a cell of width X."""
     return index % X, index // X
 
 
 def coord2index(x: int, y: int, X: int) -> int:
+    """Convert (x, y) coordinates to a site index in a cell of width X."""
     return x + y * X
 
 
 def dump_op(op: np.ndarray) -> Iterable[str]:
+    """Yield the nonzero elements of an operator as "indices... re im" lines."""
     it = np.nditer(op, flags=["multi_index"], op_flags=["readonly"], order="F")
     while not it.finished:
         index = it.multi_index
@@ -99,6 +108,18 @@ Bond = namedtuple("Bond", "source dx dy")
 
 
 class Hamiltonian:
+    """One Hamiltonian term and where it acts.
+
+    Attributes
+    ----------
+    elements : np.ndarray
+        Matrix elements of the term.
+    sites : Optional[Iterable[int]]
+        Sites a one-site term acts on (None for a bond term).
+    bonds : Optional[Iterable[Bond]]
+        Bonds a two-site term acts on (None for a site term).
+    """
+
     elements: np.ndarray
     sites: Optional[Iterable[int]]
     bonds: Optional[Iterable[Bond]]
@@ -109,6 +130,7 @@ class Hamiltonian:
         sites: Optional[Iterable[int]] = None,
         bonds: Optional[Iterable[Bond]] = None,
     ):
+        """Store the elements and exactly one of sites or bonds."""
         if sites is None and bonds is None:
             raise RuntimeError("Both sites and bonds are None")
         self.elements = elements
@@ -117,23 +139,40 @@ class Hamiltonian:
 
 
 def dumpbond(bond: Bond) -> str:
+    """Format a bond as the "source dx dy" line used in std.toml."""
     return "{} {} {}".format(bond.source, bond.dx, bond.dy)
 
 
 class SubLattice:
+    """A group of sites sharing the same tensor shape.
+
+    Attributes
+    ----------
+    sites : List[int]
+        Site indices belonging to this sublattice.
+    vdim : List[int]
+        Virtual bond dimension of each leg (left, top, right, bottom).
+    is_vacancy : bool
+        True for placeholder sites with physical dimension 1 (e.g. the
+        empty corner of the kagome unit cell).
+    """
+
     sites: List[int]
     vdim: List[int]
     is_vacancy: bool
 
     def __init__(self, vdim: List[int], is_vacancy: bool = False):
+        """Create an empty sublattice with the given virtual dimensions."""
         self.sites = []
         self.vdim = vdim
         self.is_vacancy = is_vacancy
 
     def add_site(self, site: int):
+        """Register one site index into this sublattice."""
         self.sites.append(site)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
+        """Render as one tensor.unitcell entry of std.toml."""
         ret: Dict[str, Any] = {}
         ret["index"] = self.sites
         if self.is_vacancy:
@@ -145,6 +184,40 @@ class SubLattice:
 
 
 class Lattice(object):
+    """Base class of the predefined lattices.
+
+    A subclass fills the unit cell (sublattices and bonds up to third
+    neighbors) in its constructor; the base class renders the common
+    std.toml sections and the coordinate/bond files.
+
+    Attributes
+    ----------
+    type : str
+        Human-readable lattice name written into std.toml.
+    zs : List[List[int]]
+        Coordination numbers, indexed by [neighbor_level][bond_type].
+    skew : int
+        Skew boundary offset of the unit cell.
+    L : int
+        Width of the unit cell.
+    W : int
+        Height of the unit cell.
+    vdim : int
+        Virtual bond dimension.
+    sublattice : List[SubLattice]
+        Site groups of the unit cell.
+    bonds : List[List[List[Bond]]]
+        Bonds, indexed by [neighbor_level][bond_type][index].
+    initial_states : str
+        Initial-state keyword ("ferro", "antiferro", or "random").
+    noise : float
+        Amplitude of the random noise on the initial tensors.
+    coords : list
+        Cartesian coordinate of each site (None for vacancies).
+    latticevector : np.ndarray
+        Lattice vectors of the whole unit cell, one per row.
+    """
+
     type: str
     zs: List[List[int]]
     skew: int
@@ -158,6 +231,7 @@ class Lattice(object):
     latticevector: np.ndarray
 
     def __init__(self, param: Dict[str, Any]):
+        """Read the common keys of the [lattice] table."""
         self.type = ""
         self.zs = [[]]
         self.skew = 0
@@ -172,6 +246,7 @@ class Lattice(object):
         self.latticevector = np.eye(2)
 
     def to_dict(self, physdim: int) -> Dict[str, Any]:
+        """Render as the [tensor] section of std.toml."""
         ret: Dict[str, Any] = {}
         ret["L_sub"] = [self.L, self.W]
         ret["skew"] = self.skew
@@ -179,9 +254,11 @@ class Lattice(object):
         return ret
 
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        """Cartesian coordinate of the site at logical position (x, y)."""
         return np.array([x, y])
 
     def write_coordinates(self, f: TextIO) -> None:
+        """Write the site-coordinate file (coordinates.dat)."""
         f.write("# coord_version = 1\n")
         f.write("# name = {}\n".format(self.type))
         f.write(
@@ -201,6 +278,7 @@ class Lattice(object):
                 f.write("{} {} {}\n".format(i, C[0], C[1]))
 
     def write_bonds(self, f: TextIO, nnlevel: int) -> None:
+        """Write the bonds of one neighbor level as gnuplot line segments."""
         for i, bonds in enumerate(self.bonds[nnlevel]):
             for b in bonds:
                 source = b.source
@@ -212,9 +290,11 @@ class Lattice(object):
                 f.write("\n\n")
 
     def numsites(self) -> int:
+        """Total number of sites in the unit cell, vacancies included."""
         return self.L * self.W
 
     def valid_sites(self) -> List[int]:
+        """Sorted indices of the non-vacancy sites."""
         ret = []
         for sl in self.sublattice:
             if not sl.is_vacancy:
@@ -224,7 +304,10 @@ class Lattice(object):
 
 
 class SquareLattice(Lattice):
+    """Square lattice: two bond types (x and y) per neighbor level."""
+
     def __init__(self, param: Dict[str, Any]):
+        """Build the unit cell and its bonds up to third neighbors."""
         super().__init__(param)
         self.type = "square lattice"
         self.zs = [[2, 2, 0], [2, 2, 0], [2, 2, 0]]
@@ -267,7 +350,15 @@ class SquareLattice(Lattice):
 
 
 class HoneycombLattice(Lattice):
+    """Honeycomb lattice, embedded by doubling the width of the cell.
+
+    The two sites of the honeycomb basis become two square-lattice sites,
+    one of which has a trivial (dimension 1) bond; the three inequivalent
+    bond directions are the three bond types.
+    """
+
     def __init__(self, param: Dict[str, Any]):
+        """Build the unit cell and its bonds up to third neighbors."""
         super().__init__(param)
         self.type = "honeycomb lattice"
         self.zs = [[1, 1, 1], [2, 2, 2], [1, 1, 1]]
@@ -338,6 +429,7 @@ class HoneycombLattice(Lattice):
                 self.bonds[2][0].append(Bond(index, 2, 1))
 
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        """Cartesian coordinate of the site at logical position (x, y)."""
         a0 = np.array([np.sqrt(3.0), 0.0])
         a1 = np.array([np.sqrt(3.0) / 2, 1.5])
         other = (a0 + a1) / 3.0
@@ -349,7 +441,11 @@ class HoneycombLattice(Lattice):
 
 
 class TriangularLattice(Lattice):
+    """Triangular lattice: three bond directions per neighbor level; the
+    antiferro initial state uses the three-sublattice 120-degree order."""
+
     def __init__(self, param: Dict[str, Any]):
+        """Build the unit cell and its bonds up to third neighbors."""
         super().__init__(param)
         self.type = "triangular lattice"
         self.zs = [[2, 2, 2], [2, 2, 2], [2, 2, 2]]
@@ -409,13 +505,19 @@ class TriangularLattice(Lattice):
             self.bonds[2][2].append(Bond(source, -2, 2))
 
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        """Cartesian coordinate of the site at logical position (x, y)."""
         a0 = np.array([1.0, 0.0])
         a1 = np.array([0.5, np.sqrt(3.0) / 2])
         return a0 * x + a1 * y
 
 
 class KagomeLattice(Lattice):
+    """Kagome lattice, embedded by doubling the cell in both directions:
+    three of the four resulting sites form the kagome basis and the fourth
+    is a vacancy."""
+
     def __init__(self, param: Dict[str, Any]):
+        """Build the unit cell and its bonds up to third neighbors."""
         super().__init__(param)
         self.type = "kagome lattice"
         self.zs = [[2, 2, 0], [4, 0, 0], [4, 2, 0]]
@@ -505,12 +607,41 @@ class KagomeLattice(Lattice):
                 self.coords.append(None)
 
     def cartesian_coordinate(self, x: int, y: int) -> np.ndarray:
+        """Cartesian coordinate of the site at logical position (x, y)."""
         a0 = np.array([1.0, 0.0])
         a1 = np.array([0.5, np.sqrt(3.0) / 2])
         return a0 * x + a1 * y
 
 
 class Model(abc.ABC):
+    """Base class of the predefined models.
+
+    A subclass defines the local operators, the site and bond Hamiltonians,
+    and the product initial states; the base class assembles the observable
+    tables and groups equivalent bond Hamiltonians.
+
+    Attributes
+    ----------
+    N : int
+        Local Hilbert space dimension.
+    onesite_ops : List[np.ndarray]
+        The one-site operators offered as observables.
+    onesite_ops_name : List[str]
+        Display name of each one-site operator.
+    twosite_ops : List[Tuple[int, int]]
+        Two-site observables, as pairs of one-site operator indices.
+    twosite_ops_name : List[str]
+        Display name of each two-site observable.
+    params_onesite : Dict[str, Any]
+        One-site coupling constants read from the input.
+    params_twosite : List[List[Dict[str, Any]]]
+        Two-site coupling constants, indexed by
+        [neighbor_level][bond_type].
+    ham_twosites_list : List[List[Tuple[int, int]]]
+        Groups of (neighbor_level, bond_type) pairs sharing one bond
+        Hamiltonian (built by sort_ham_groups()).
+    """
+
     N: int
     onesite_ops: List[np.ndarray]
     onesite_ops_name: List[str]
@@ -521,6 +652,7 @@ class Model(abc.ABC):
     ham_twosites_list: List[List[Tuple[int, int]]]
 
     def __init__(self):
+        """Initialize the empty operator and parameter tables."""
         self.N = 0
         self.onesite_ops = []
         self.params_onesite = {}
@@ -528,6 +660,7 @@ class Model(abc.ABC):
         self.ham_twosites_list = [[]]
 
     def onesite_observables_as_dict(self) -> List[Dict[str, Any]]:
+        """Render the one-site observables as observable.onesite entries."""
         ret = []
         for i, (name, op) in enumerate(zip(self.onesite_ops_name, self.onesite_ops)):
             dic: Dict[str, Any] = {}
@@ -541,6 +674,7 @@ class Model(abc.ABC):
         return ret
 
     def twosite_observables_as_dict(self) -> List[Dict[str, Any]]:
+        """Render the two-site observables as observable.twosite entries."""
         ret = []
 
         for i, (name, op) in enumerate(
@@ -557,6 +691,7 @@ class Model(abc.ABC):
 
     @abc.abstractmethod
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        """Build the one-site Hamiltonian from the given couplings."""
         ...
 
     @abc.abstractmethod
@@ -567,13 +702,20 @@ class Model(abc.ABC):
         params_onesite: Dict,
         params_twosite: Dict,
     ) -> np.ndarray:
+        """Build one bond Hamiltonian from the given couplings.
+
+        Unless use_onesite_hamiltonian is true, the one-site terms are
+        absorbed into the bond terms, divided by the coordination number z.
+        """
         ...
 
     @abc.abstractmethod
     def initial_states(self, nlat: int) -> np.ndarray:
+        """Product initial state of each of the nlat sublattices."""
         ...
 
     def sitehamiltonian(self) -> np.ndarray:
+        """One-site Hamiltonian with the couplings read from the input."""
         return self.model_sitehamiltonian(self.params_onesite)
 
     def bondhamiltonian(
@@ -583,6 +725,7 @@ class Model(abc.ABC):
         z: int = 1,
         use_onesite_hamiltonian: bool = False,
     ) -> np.ndarray:
+        """Bond Hamiltonian of neighbor level n and bond type t."""
         return self.model_bondhamiltonian(
             z,
             use_onesite_hamiltonian,
@@ -591,6 +734,10 @@ class Model(abc.ABC):
         )
 
     def sort_ham_groups(self, zs, consider_site_term: bool):
+        """Group the (neighbor_level, bond_type) pairs whose couplings (and,
+        when the one-site terms are absorbed, coordination numbers) agree,
+        so each group is emitted as a single bond Hamiltonian; pairs with
+        all-zero couplings are dropped. Fills ham_twosites_list."""
         num_nn = len(self.params_twosite)
         num_typ = len(self.params_twosite[0])
         ham_groups = list(range(num_nn * num_typ))
@@ -623,6 +770,7 @@ class Model(abc.ABC):
 
 
 def Sz(S: float) -> np.ndarray:
+    """Sz matrix for spin S, in the basis m = S, S-1, ..., -S."""
     N = int(2 * S) + 1
     ret = np.zeros((N, N))
     for i in range(N):
@@ -632,6 +780,7 @@ def Sz(S: float) -> np.ndarray:
 
 
 def Splus(S: float) -> np.ndarray:
+    """Raising operator S+ for spin S."""
     N = int(2 * S) + 1
     ret = np.zeros((N, N))
     for i in range(1, N):
@@ -641,6 +790,7 @@ def Splus(S: float) -> np.ndarray:
 
 
 def Sminus(S: float) -> np.ndarray:
+    """Lowering operator S- for spin S."""
     N = int(2 * S) + 1
     ret = np.zeros((N, N))
     for i in range(N - 1):
@@ -650,15 +800,21 @@ def Sminus(S: float) -> np.ndarray:
 
 
 def Sx(S: float) -> np.ndarray:
+    """Sx matrix for spin S."""
     return 0.5 * (Splus(S) + Sminus(S))
 
 
 def Sy(S: float) -> np.ndarray:
+    """Sy matrix for spin S (purely imaginary)."""
     return -0.5j * (Splus(S) - Sminus(S))
 
 
 class SpinModel(Model):
+    """Spin-S model with XYZ exchange, biquadratic coupling, magnetic
+    fields, and single-ion anisotropy (the [model] type = "spin")."""
+
     def __init__(self, param: Dict[str, Any]):
+        """Set up the spin operators and read the coupling constants."""
         super().__init__()
 
         self.S = param.get("s", 0.5)
@@ -678,6 +834,9 @@ class SpinModel(Model):
         self.read_params(param)
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
+        """Product initial states: ferro, Neel, or 120-degree order by the
+        number of sublattices."""
+
         def coherent_state(theta, phi):
             zeta = np.tan(0.5 * theta) * complex(np.cos(phi), np.sin(phi))
             sm = Sminus(self.S)
@@ -702,6 +861,7 @@ class SpinModel(Model):
         return ret
 
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        """One-site Hamiltonian: -hx Sx - hy Sy - hz Sz - D Sz^2."""
         hx = params_onesite.get("hx", 0.0)
         hy = params_onesite.get("hy", 0.0)
         hz = params_onesite.get("hz", 0.0)
@@ -795,10 +955,18 @@ class SpinModel(Model):
 
             ham[in1, in2, out1, out2] = val
             it.iternext()
-        ham += B * np.tensordot(SS,SS,([2,3],[0,1]))
+        ham += B * np.tensordot(SS, SS, ([2, 3], [0, 1]))
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
+        """Read the spin couplings from the [model] table.
+
+        Exchange keys follow "j[type]['][xyz]": an optional bond type
+        digit, primes selecting the neighbor level, and an optional axis
+        (all axes when omitted); "b..." are the biquadratic couplings.
+        Fields (hx, hy, hz), the anisotropy d, and the deprecated aliases
+        h / g are one-site couplings.
+        """
         ret_onesite = {}
         ret_twosite: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
@@ -876,6 +1044,7 @@ class SpinModel(Model):
 
 
 def bose_creator(nmax: int) -> np.ndarray:
+    """Boson creation operator truncated at occupation nmax."""
     N = nmax + 1
     ret = np.zeros((N, N))
     for i in range(N - 1):
@@ -884,6 +1053,7 @@ def bose_creator(nmax: int) -> np.ndarray:
 
 
 def bose_annihilator(nmax: int) -> np.ndarray:
+    """Boson annihilation operator truncated at occupation nmax."""
     N = nmax + 1
     ret = np.zeros((N, N))
     for i in range(N - 1):
@@ -892,6 +1062,7 @@ def bose_annihilator(nmax: int) -> np.ndarray:
 
 
 def bose_number(nmax: int) -> np.ndarray:
+    """Boson number operator truncated at occupation nmax."""
     N = nmax + 1
     ret = np.zeros((N, N))
     for i in range(N):
@@ -900,7 +1071,11 @@ def bose_number(nmax: int) -> np.ndarray:
 
 
 class BoseHubbardModel(Model):
+    """Bose-Hubbard model with hopping, on- and off-site repulsion, and a
+    chemical potential (the [model] type = "boson")."""
+
     def __init__(self, param: Dict[str, Any]):
+        """Set up the boson operators and read the coupling constants."""
         super().__init__()
 
         self.nmax = param.get("nmax", 1)
@@ -925,6 +1100,8 @@ class BoseHubbardModel(Model):
         self.read_params(param)
 
     def initial_states(self, num_sublattice: int) -> np.ndarray:
+        """Product initial states: fully occupied on the first sublattice,
+        empty on the others (a checkerboard density pattern)."""
         ret = np.zeros((num_sublattice, self.N))
         ret[0, self.N - 1] = 1.0
         for i in range(1, num_sublattice):
@@ -932,6 +1109,7 @@ class BoseHubbardModel(Model):
         return ret
 
     def model_sitehamiltonian(self, params_onesite: Dict) -> np.ndarray:
+        """One-site Hamiltonian: -mu n + (U/2) n(n-1)."""
         N, Bdagger, B = self.onesite_ops
         mu = params_onesite.get("mu", 0.0)
         U = params_onesite.get("u", 0.0)
@@ -1000,6 +1178,12 @@ class BoseHubbardModel(Model):
         return ham
 
     def read_params(self, modelparam: Dict[str, Any]) -> None:
+        """Read the boson couplings from the [model] table.
+
+        Hopping and off-site repulsion follow "t[type][']" / "v[type][']"
+        (optional bond type digit, primes selecting the neighbor level);
+        mu and u are one-site couplings.
+        """
         ret_onesite = {}
         ret_twosite: List[List[Dict[str, Any]]] = [
             [{}, {}, {}],  # 1st neighbors
@@ -1110,6 +1294,12 @@ def make_model(param: Dict[str, Any]) -> Model:
 def hamiltonians(
     lattice: Lattice, model: Model, use_onesite_hamiltonian: bool = False
 ) -> List[Hamiltonian]:
+    """Assemble the Hamiltonian terms of the model on the lattice.
+
+    Groups equivalent bonds into a single term each; when
+    use_onesite_hamiltonian is true the one-site part is emitted as its
+    own term instead of being absorbed into the bond terms.
+    """
     ret = []
     if use_onesite_hamiltonian:
         elem = model.sitehamiltonian()
@@ -1136,11 +1326,21 @@ def hamiltonians(
 def tenes_simple(
     param: MutableMapping[str, Any], use_onesite_hamiltonian: bool = False
 ) -> Tuple[str, Lattice]:
-    """
+    """Expand a simple.toml parameter set into the std.toml text.
+
     Parameters
     ----------
     param : Dict[str, Any]
-        parameter
+        The parsed simple.toml (model, lattice, parameter, ... tables).
+    use_onesite_hamiltonian : bool
+        Emit the one-site terms as site Hamiltonians instead of absorbing
+        them into the bond Hamiltonians.
+
+    Returns
+    -------
+    (text, lattice) : Tuple[str, Lattice]
+        The std.toml content and the lattice (for the coordinate and bond
+        files).
     """
 
     param = lower_dict(param)
