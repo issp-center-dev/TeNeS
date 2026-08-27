@@ -174,9 +174,10 @@ class TransferMatrix {
   const std::vector<ptensor> &Tn;  //!< center tensors, per site
 };
 
-/*! @brief Transfer matrix contracted with the CTM environment: the edge
- *         tensors cap the row/column and the vector lives on the
- *         (chi, D, D, chi) boundary.
+/*! @brief Transfer matrix built from the CTM edge tensors: one
+ *         application contracts the pair of opposing edge tensors
+ *         (already carrying the renormalized double layer) across the
+ *         whole row/column, acting on a (chi x chi) boundary vector.
  */
 template <class ptensor>
 class TransferMatrix_ctm : public TransferMatrix<ptensor> {
@@ -222,7 +223,7 @@ class TransferMatrix_ctm : public TransferMatrix<ptensor> {
 
 /*! @brief Transfer matrix with the mean-field environment: the
  *         lambda-dressed center tensors alone form the row/column and the
- *         vector lives on the (D, D) bond.
+ *         vector lives on the (D x D) double-layer bond.
  */
 template <class ptensor>
 class TransferMatrix_mf : public TransferMatrix<ptensor> {

@@ -151,10 +151,11 @@ class iTPS {
   //! Finite-temperature variant of simple_update(up): the gate acts on the
   //! ket side and its conjugate on the bra side.
   void simple_update_density(EvolutionOperator<tensor> const &up);
-  //! Purification variant of simple_update_density() (gate split as
-  //! sqrt(U) on both sides).
+  //! Purification variant of simple_update_density().
   void simple_update_density_purification();
-  //! Purification variant of simple_update_density(up).
+  //! Purification variant of simple_update_density(up): the state is a
+  //! purified wave function, so the gate acts on one layer of the doubled
+  //! physical legs only and the other (ancilla) layer is left untouched.
   void simple_update_density_purification(EvolutionOperator<tensor> const &up);
   //! Finite-temperature variant of fix_local_gauge().
   void fix_local_gauge_density();
@@ -309,9 +310,11 @@ class iTPS {
     return convert_complex<tensor_type>(v);
   }
 
-  //! Read tensors in the current save format (with shape header).
+  //! Read tensors in the current save format, whose params.dat records
+  //! the format version, unit cell, and per-site shapes.
   void load_tensors_v1();
-  //! Read tensors in the legacy headerless save format.
+  //! Read tensors in the legacy save format (bare tensor files, no
+  //! params.dat metadata).
   void load_tensors_v0();
 
   //! measure_correlation() with the CTM environment.

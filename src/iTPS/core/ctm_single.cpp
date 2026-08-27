@@ -48,7 +48,8 @@ std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn) {
 }
 
 /*! @brief Single-layer (finite-temperature) counterpart of Mult_col in
- *         ctm.cpp: matvec of the left half-column for the randomized SVD.
+ *         ctm.cpp: rsvd functor contracting LB, then LT, into the
+ *         boundary vector.
  */
 template <class tensor>
 class Mult_col_single {
@@ -66,15 +67,16 @@ class Mult_col_single {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Single-layer counterpart of Mult_row in ctm.cpp: transposed
- *         matvec of the left half-column.
+/*! @brief Single-layer counterpart of Mult_row in ctm.cpp: the
+ *         complementary rsvd functor, contracting the boundary vector
+ *         into LT, then LB.
  */
 template <class tensor>
 class Mult_row_single {
  public:
   //! Hold the two blocks of the half-column.
   Mult_row_single(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
-  //! Apply the transposed half-column to a boundary vector.
+  //! Contract a boundary vector through LT, then LB.
   tensor operator()(const tensor &T_in) {
     return tensordot(tensordot(T_in, LT_, Axes(0), Axes(1)), LB_, Axes(1),
                      Axes(0));
@@ -85,8 +87,8 @@ class Mult_row_single {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Single-layer counterpart of Mult_col_ud in ctm.cpp: matvec of
- *         the full plaquette.
+/*! @brief Single-layer counterpart of Mult_col_ud in ctm.cpp: rsvd
+ *         functor of the full plaquette.
  */
 template <class tensor>
 class Mult_col_ud_single {
@@ -113,8 +115,8 @@ class Mult_col_ud_single {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Single-layer counterpart of Mult_row_ud in ctm.cpp: transposed
- *         matvec of the full plaquette.
+/*! @brief Single-layer counterpart of Mult_row_ud in ctm.cpp: the
+ *         complementary rsvd functor of the full plaquette.
  */
 template <class tensor>
 class Mult_row_ud_single {
@@ -123,7 +125,7 @@ class Mult_row_ud_single {
   Mult_row_ud_single(const tensor &LT, const tensor &RT, const tensor &RB,
                      const tensor &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
-  //! Apply the transposed four-block product to a boundary vector.
+  //! Contract a boundary vector through the four blocks.
   tensor operator()(const tensor &T_in) {
     return tensordot(tensordot(tensordot(tensordot(T_in, RT_, Axes(0), Axes(1)),
                                          LT_, Axes(1), Axes(1)),

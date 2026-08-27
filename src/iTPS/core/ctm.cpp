@@ -49,9 +49,9 @@ using mptensor::Shape;
  *  Tn* has conjugate, cTn*
  */
 
-/*! @brief Matvec functor for the randomized SVD of the left half-column
- *         (LB then LT applied to a boundary vector); see the tensor
- *         layout above.
+/*! @brief One of the two matvec functors handed to mptensor::rsvd for
+ *         the left half-column: contracts LB, then LT, into the boundary
+ *         vector (see the tensor layout above).
  */
 template <class tensor>
 class Mult_col {
@@ -89,8 +89,8 @@ class Mult_col {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Matvec functor for the randomized SVD of the left half-column,
- *         acting from the row side (the transposed product).
+/*! @brief The complementary rsvd functor of Mult_col: contracts the
+ *         boundary vector into LT, then LB.
  */
 template <class tensor>
 class Mult_row {
@@ -112,7 +112,7 @@ class Mult_row {
   Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
-   * @brief Apply the transposed half-column to a boundary vector.
+   * @brief Contract a boundary vector through LT, then LB.
    * @param[in] T_in Input tensor
    *            legs = [0:Tn2_left, 1:eT2_left, 2:cTn2_left]
    * @return Output tensor with
@@ -128,8 +128,8 @@ class Mult_row {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Matvec functor for the randomized SVD of the full plaquette
- *         (all four blocks), column side.
+/*! @brief rsvd functor for the full plaquette (all four blocks),
+ *         contracting RB, LB, LT, RT into the boundary vector in turn.
  */
 template <class tensor>
 class Mult_col_ud {
@@ -157,8 +157,8 @@ class Mult_col_ud {
   const tensor &LB_;  //!< left-bottom block
 };
 
-/*! @brief Matvec functor for the randomized SVD of the full plaquette,
- *         row side (the transposed product).
+/*! @brief The complementary rsvd functor of Mult_col_ud: contracts the
+ *         boundary vector through RT, LT, LB, RB in turn.
  */
 template <class tensor>
 class Mult_row_ud {
@@ -167,7 +167,7 @@ class Mult_row_ud {
   Mult_row_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
-  //! Apply the transposed four-block product to a boundary vector.
+  //! Contract a boundary vector through the four blocks.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         tensordot(tensordot(tensordot(T_in, RT_, Axes(0, 1, 2), Axes(1, 2, 5)),

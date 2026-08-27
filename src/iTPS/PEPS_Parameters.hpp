@@ -114,13 +114,14 @@ struct PEPS_Parameters {
   //!@}
 
   // observable
-  //! Maximum distance of the correlation functions
-  //! (correlation.r_max).
+  //! Legacy field kept in the params.dat save format; the correlation
+  //! distance actually used comes from CorrelationParameter::r_max.
   int Lcor;
 
   // random
-  //! Seed of the random number generator initializing the tensors
-  //! (random.seed); each MPI rank adds its rank to it.
+  //! Seed of the pseudo-random number generator used to initialize the
+  //! tensors (random.seed); every rank seeds identically and picks its
+  //! locally stored elements from the same sequence.
   int seed;
 
   /*! @name General (parameter.general) */
