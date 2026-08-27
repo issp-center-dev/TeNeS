@@ -14,6 +14,12 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief MPI wrapper: typed bcast / allreduce helpers, and stub
+ *         definitions of the used MPI symbols so _NO_MPI builds compile
+ *         without an MPI library.
+ */
+
 #ifndef TENES_SRC_MPI_HPP_
 #define TENES_SRC_MPI_HPP_
 
@@ -58,6 +64,8 @@ int MPI_Comm_get_parent(MPI_Comm *);  // return MPI_COMM_NULL
 
 namespace tenes {
 
+//! The MPI datatype tag of T (bool travels as MPI_INT); throws
+//! tenes::unimplemented_error for unsupported types.
 template <class T>
 MPI_Datatype get_MPI_Datatype() {
   if constexpr (std::is_same_v<T, int>) {
@@ -71,6 +79,12 @@ MPI_Datatype get_MPI_Datatype() {
   }
 }
 
+/*! @brief Broadcast a value from root to every rank (no-op without MPI).
+ *
+ *  The overloads cover scalars, strings, complex values, and vectors of
+ *  those; vectors are resized on the receiving ranks. All return the MPI
+ *  error code (0 on success).
+ */
 template <class T>
 int bcast(T &val, int root, MPI_Comm comm) {
   int ret = 0;
@@ -81,10 +95,14 @@ int bcast(T &val, int root, MPI_Comm comm) {
   return ret;
 }
 
+//! bcast() overload for bool.
 int bcast(bool &val, int root, MPI_Comm comm);
+//! bcast() overload for strings.
 int bcast(std::string &val, int root, MPI_Comm comm);
+//! bcast() overload for vectors of strings.
 int bcast(std::vector<std::string> &val, int root, MPI_Comm comm);
 
+//! bcast() overload for complex scalars.
 template <class T>
 int bcast(std::complex<T> &val, int root, MPI_Comm comm) {
   int ret = 0;
@@ -97,6 +115,7 @@ int bcast(std::complex<T> &val, int root, MPI_Comm comm) {
   return ret;
 }
 
+//! bcast() overload for vectors; receiving ranks are resized.
 template <class T>
 int bcast(std::vector<T> &val, int root, MPI_Comm comm) {
   int ret = 0;
@@ -117,6 +136,7 @@ int bcast(std::vector<T> &val, int root, MPI_Comm comm) {
   return ret;
 }
 
+//! bcast() overload for vectors of complex values.
 template <class T>
 int bcast(std::vector<std::complex<T>> &val, int root, MPI_Comm comm) {
   int ret = 0;
@@ -145,6 +165,12 @@ int bcast(std::vector<std::complex<T>> &val, int root, MPI_Comm comm) {
   return ret;
 }
 
+/*! @brief In-place sum of val over all ranks (no-op without MPI).
+ *
+ *  The overloads cover scalars and vectors, real and complex (the plain
+ *  complex scalar overload is unimplemented and throws). All return the
+ *  MPI error code (0 on success).
+ */
 template <class T>
 int allreduce_sum(T &val, MPI_Comm comm) {
 #ifndef _NO_MPI
@@ -159,6 +185,7 @@ int allreduce_sum(T &val, MPI_Comm comm) {
   return 0;
 }
 
+//! allreduce_sum() overload for vectors (elementwise sum).
 template <class T>
 int allreduce_sum(std::vector<T> &val, MPI_Comm comm) {
 #ifndef _NO_MPI
@@ -174,11 +201,13 @@ int allreduce_sum(std::vector<T> &val, MPI_Comm comm) {
   return 0;
 }
 
+//! Unimplemented complex-scalar overload: always throws.
 template <class T>
 int allreduce_sum(std::complex<T> /* &val */, MPI_Comm /* comm */) {
   throw tenes::unimplemented_error("allreduce for complex is not implemented");
 }
 
+//! allreduce_sum() overload for vectors of complex values.
 template <class T>
 int allreduce_sum(std::vector<std::complex<T>> &val, MPI_Comm comm) {
   int ret = 0;
@@ -203,6 +232,8 @@ int allreduce_sum(std::vector<std::complex<T>> &val, MPI_Comm comm) {
   return ret;
 }
 
+//! In-place elementwise maximum of val over all ranks (no-op without
+//! MPI); returns the MPI error code.
 template <class T>
 int allreduce_max(std::vector<T> &val, MPI_Comm comm) {
 #ifndef _NO_MPI
@@ -218,6 +249,8 @@ int allreduce_max(std::vector<T> &val, MPI_Comm comm) {
   return 0;
 }
 
+//! In-place elementwise minimum of val over all ranks (no-op without
+//! MPI); returns the MPI error code.
 template <class T>
 int allreduce_min(std::vector<T> &val, MPI_Comm comm) {
 #ifndef _NO_MPI

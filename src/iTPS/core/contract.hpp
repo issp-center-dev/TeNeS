@@ -43,6 +43,10 @@ namespace tenes::itps::core {
  *  @param[in] eTl left edge tensors
  *  @param[in] Tn center tensors
  *  @param[in] op onesite operators
+ *  @param[in] is_density true for the finite-temperature (density-matrix)
+ *             network
+ *  @param[in] is_meanfield true for the mean-field environment instead of
+ *             the CTM
  */
 template <class tensor>
 typename tensor::value_type Contract(
@@ -88,7 +92,7 @@ typename tensor::value_type Contract_one_site(
       return Contract_one_site_iTPS_MF(Tn1, op1);
     } else {
       return Contract_one_site_iTPS_CTM(C1, C2, C3, C4, eT1, eT2, eT3, eT4, Tn1,
-                                   op1);
+                                        op1);
     }
   }
 }
@@ -133,8 +137,8 @@ typename tensor::value_type Contract_two_sites_vertical(
     if (is_meanfield) {
       return Contract_two_sites_vertical_iTPS_MF(Tn1, op1);
     } else {
-      return Contract_two_sites_vertical_iTPS_CTM(C1, C2, C3, C4, eT1, eT2, eT3, eT4,
-                                             eT5, eT6, Tn1, Tn2, op1, op2);
+      return Contract_two_sites_vertical_iTPS_CTM(
+          C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, Tn1, Tn2, op1, op2);
     }
   }
 }
@@ -203,11 +207,12 @@ typename tensor::value_type Contract_four_sites(
     }
   } else {
     if (is_meanfield) {
-      return Contract_four_sites_iTPS_MF(Tn1, Tn2, Tn3, Tn4, op1, op2, op3, op4);
+      return Contract_four_sites_iTPS_MF(Tn1, Tn2, Tn3, Tn4, op1, op2, op3,
+                                         op4);
     } else {
-      return Contract_four_sites_iTPS_CTM(C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5,
-                                     eT6, eT7, eT8, Tn1, Tn2, Tn3, Tn4, op1,
-                                     op2, op3, op4);
+      return Contract_four_sites_iTPS_CTM(C1, C2, C3, C4, eT1, eT2, eT3, eT4,
+                                          eT5, eT6, eT7, eT8, Tn1, Tn2, Tn3,
+                                          Tn4, op1, op2, op3, op4);
     }
   }
 }

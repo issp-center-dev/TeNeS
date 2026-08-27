@@ -14,6 +14,17 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief The tensor types of TeNeS.
+ *
+ *  Everything in the solver is templated on the tensor type; the two
+ *  concrete choices are ::tenes::real_tensor and ::tenes::complex_tensor,
+ *  mptensor tensors whose backing matrix is selected here: distributed
+ *  ScaLAPACK matrices in the MPI build, plain LAPACK matrices when
+ *  _NO_MPI is defined. ::tenes::small_tensor stays non-distributed in
+ *  both builds for data every rank needs whole.
+ */
+
 #ifndef TENES_SRC_TENSOR_HPP_
 #define TENES_SRC_TENSOR_HPP_
 
@@ -53,6 +64,8 @@ template <class T>
 using mptensor_matrix_type = mptensor::scalapack::Matrix<T>;
 #endif  // USE_MPI
 
+//! mptensor tensor over the build's matrix backend (see
+//! mptensor_matrix_type).
 template <class T>
 using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type<T>>;
 
@@ -61,16 +74,30 @@ using mptensor_tensor_type = mptensor::Tensor<mptensor_matrix_type<T>>;
 template <class T>
 using small_tensor = mptensor::Tensor<mptensor::lapack::Matrix<T>>;
 
+//! The real-valued tensor type the solver is instantiated for.
 using real_tensor = mptensor_tensor_type<double>;
+//! The complex-valued tensor type the solver is instantiated for.
 using complex_tensor = mptensor_tensor_type<std::complex<double>>;
 
+//! Return a copy of src zero-padded or truncated to target_shape.
 template <class tensor>
 tensor resize_tensor(tensor const& src, mptensor::Shape target_shape);
 
+/*!
+ * @brief Dense eigensolver for a non-distributed matrix.
+ *
+ * @param[in] A Square matrix as a rank-2 small_tensor.
+ * @param[out] eigvals The nev leading eigenvalues, by descending
+ *             magnitude.
+ * @param[out] eigvecs_last Last component of the eigenvector of each
+ *             returned eigenvalue, in the same order.
+ * @param[in] nev Number of eigenvalues to return.
+ */
 template <class T>
 void eigen(small_tensor<T> const& A, std::vector<std::complex<double>>& eigvals,
            std::vector<std::complex<double>>& eigvecs_last, int nev);
 
+//! k x k diagonal matrix with v on the diagonal.
 template <class T>
 small_tensor<T> identity(std::size_t k, T v) {
   small_tensor<T> ret{mptensor::Shape(k, k)};

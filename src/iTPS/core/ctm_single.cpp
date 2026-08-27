@@ -39,95 +39,114 @@ using mptensor::Index;
 using mptensor::Shape;
 
 template <class tensor>
-std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn){
+std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn) {
   std::vector<tensor> Tn_single;
   for (size_t num = 0; num < Tn.size(); ++num) {
     Tn_single.push_back(mptensor::contract(Tn[num], Axes(4), Axes(5)));
   }
   return Tn_single;
 }
-  
+
+/*! @brief Single-layer (finite-temperature) counterpart of Mult_col in
+ *         ctm.cpp: rsvd functor contracting LB, then LT, into the
+ *         boundary vector.
+ */
 template <class tensor>
 class Mult_col_single {
  public:
-  Mult_col_single(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  //! Hold the two blocks of the half-column.
+  Mult_col_single(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
+  //! Apply the half-column to a boundary vector.
   tensor operator()(const tensor &T_in) {
-    return tensordot(LT_, tensordot(LB_, T_in, Axes(1), Axes(0)),
-                     Axes(0), Axes(0));
+    return tensordot(LT_, tensordot(LB_, T_in, Axes(1), Axes(0)), Axes(0),
+                     Axes(0));
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief Single-layer counterpart of Mult_row in ctm.cpp: the
+ *         complementary rsvd functor, contracting the boundary vector
+ *         into LT, then LB.
+ */
 template <class tensor>
 class Mult_row_single {
  public:
-  Mult_row_single(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB){};
+  //! Hold the two blocks of the half-column.
+  Mult_row_single(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
+  //! Contract a boundary vector through LT, then LB.
   tensor operator()(const tensor &T_in) {
-    return tensordot(tensordot(T_in, LT_, Axes(0), Axes(1)), LB_,
-                     Axes(1), Axes(0));
+    return tensordot(tensordot(T_in, LT_, Axes(0), Axes(1)), LB_, Axes(1),
+                     Axes(0));
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief Single-layer counterpart of Mult_col_ud in ctm.cpp: rsvd
+ *         functor of the full plaquette.
+ */
 template <class tensor>
 class Mult_col_ud_single {
  public:
+  //! Hold the four corner blocks.
   Mult_col_ud_single(const tensor &LT, const tensor &RT, const tensor &RB,
-              const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+                     const tensor &LB)
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Apply the four blocks to a boundary vector.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         RT_,
-        tensordot(
-            LT_,
-            tensordot(LB_, tensordot(RB_, T_in, Axes(1), Axes(0)),
-                      Axes(1), Axes(0)),
-            Axes(0), Axes(0)),
+        tensordot(LT_,
+                  tensordot(LB_, tensordot(RB_, T_in, Axes(1), Axes(0)),
+                            Axes(1), Axes(0)),
+                  Axes(0), Axes(0)),
         Axes(0), Axes(0));
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief Single-layer counterpart of Mult_row_ud in ctm.cpp: the
+ *         complementary rsvd functor of the full plaquette.
+ */
 template <class tensor>
 class Mult_row_ud_single {
  public:
+  //! Hold the four corner blocks.
   Mult_row_ud_single(const tensor &LT, const tensor &RT, const tensor &RB,
-              const tensor &LB)
-      : LT_(LT), RT_(RT), RB_(RB), LB_(LB){};
+                     const tensor &LB)
+      : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Contract a boundary vector through the four blocks.
   tensor operator()(const tensor &T_in) {
-    return tensordot(
-        tensordot(tensordot(tensordot(T_in, RT_, Axes(0), Axes(1)),
-                            LT_, Axes(1), Axes(1)),
-                  LB_, Axes(1), Axes(0)),
-        RB_, Axes(1), Axes(0));
+    return tensordot(tensordot(tensordot(tensordot(T_in, RT_, Axes(0), Axes(1)),
+                                         LT_, Axes(1), Axes(1)),
+                               LB_, Axes(1), Axes(0)),
+                     RB_, Axes(1), Axes(0));
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
 template <class tensor>
 void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
-                               const tensor &eT1, const tensor &eT6,
-                               const tensor &eT7, const tensor &eT8,
-                               const tensor &Tn1_s, const tensor &Tn4_s,
-                               const PEPS_Parameters peps_parameters,
-                               tensor &PU, tensor &PL) {
-
+                                      const tensor &eT1, const tensor &eT6,
+                                      const tensor &eT7, const tensor &eT8,
+                                      const tensor &Tn1_s, const tensor &Tn4_s,
+                                      const PEPS_Parameters peps_parameters,
+                                      tensor &PU, tensor &PL) {
   int e12 = eT1.shape()[1];
   int e56 = eT6.shape()[0];
   int e78 = eT8.shape()[0];
@@ -144,10 +163,11 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
         ##############################
     */
     tensor LT =
-      reshape(tensordot(tensordot(tensordot(C1, eT1, Axes(1), Axes(0)), eT8,
-                                      Axes(0), Axes(1)),
-		  Tn1_s, Axes(1, 3), Axes(1, 0)).transpose(Axes(1, 3, 0, 2)),
-	      Shape(e78 * t41, e12 * t12));
+        reshape(tensordot(tensordot(tensordot(C1, eT1, Axes(1), Axes(0)), eT8,
+                                    Axes(0), Axes(1)),
+                          Tn1_s, Axes(1, 3), Axes(1, 0))
+                    .transpose(Axes(1, 3, 0, 2)),
+                Shape(e78 * t41, e12 * t12));
 
     /*
         ##############################
@@ -157,10 +177,11 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
         ##############################
     */
     tensor LB =
-      reshape(tensordot(tensordot(tensordot(C4, eT7, Axes(1), Axes(0)), eT6,
-                                      Axes(0), Axes(1)),
-			Tn4_s, Axes(1, 3), Axes(0, 3)).transpose(Axes(0, 2, 1, 3)),
-	      Shape(e78 * t41, e56 * t34));
+        reshape(tensordot(tensordot(tensordot(C4, eT7, Axes(1), Axes(0)), eT6,
+                                    Axes(0), Axes(1)),
+                          Tn4_s, Axes(1, 3), Axes(0, 3))
+                    .transpose(Axes(0, 2, 1, 3)),
+                Shape(e78 * t41, e56 * t34));
 
     // tensor R1 = LT;
     // tensor R2 = LB;
@@ -176,7 +197,9 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
       Shape shape_col(e56 * t34);
 
       /*int info ()= */
-      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41), e12 * t12), e56 * t34);
+      int cut = std::min(
+          std::min(std::min(peps_parameters.CHI, e78 * t41), e12 * t12),
+          e56 * t34);
       rsvd(m_row, m_col, shape_row, shape_col, U, s, VT, cut,
            static_cast<size_t>(peps_parameters.RSVD_Oversampling_factor * cut));
       double denom = s[0];
@@ -188,8 +211,8 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
-	  cut = i;
-	  break;
+          cut = i;
+          break;
         }
       }
 
@@ -200,9 +223,11 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
       U_c.multiply_vector(s_c, 1);
       VT_c.multiply_vector(s_c, 0);
 
-      PU = reshape(tensordot(LB, conj(VT_c), Axes(1), Axes(1)), Shape(e78, t41, cut));
-      PL = reshape(tensordot(LT, conj(U_c), Axes(1), Axes(0)), Shape(e78, t41, cut));
-      
+      PU = reshape(tensordot(LB, conj(VT_c), Axes(1), Axes(1)),
+                   Shape(e78, t41, cut));
+      PL = reshape(tensordot(LT, conj(U_c), Axes(1), Axes(0)),
+                   Shape(e78, t41, cut));
+
     } else {
       // full svd //
       tensor U;
@@ -210,40 +235,40 @@ void Calc_projector_left_block_single(const tensor &C1, const tensor &C4,
       std::vector<double> s;
 
       /* int info = */
-      svd(tensordot(LT, LB, Axes(0), Axes(0)), Axes(0),
-          Axes(1), U, s, VT);
+      svd(tensordot(LT, LB, Axes(0), Axes(0)), Axes(0), Axes(1), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
-      //s_c.resize(e78);
-      int cut = std::min(std::min(std::min(peps_parameters.CHI, e78 * t41), e12 * t12), e56 * t34);
+      // s_c.resize(e78);
+      int cut = std::min(
+          std::min(std::min(peps_parameters.CHI, e78 * t41), e12 * t12),
+          e56 * t34);
       s_c.resize(cut);
       for (int i = 0; i < cut; ++i) {
         if (s[i] / denom > peps_parameters.Inverse_projector_cut) {
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
-	  cut = i;
-	  break;	    
+          cut = i;
+          break;
         }
       }
       // O(D^{10})
-      //tensor U_c = mptensor::slice(U, 1, 0, e78);
-      //tensor VT_c = mptensor::slice(VT, 0, 0, e78);
+      // tensor U_c = mptensor::slice(U, 1, 0, e78);
+      // tensor VT_c = mptensor::slice(VT, 0, 0, e78);
       tensor U_c = mptensor::slice(U, 1, 0, cut);
       tensor VT_c = mptensor::slice(VT, 0, 0, cut);
       s_c.resize(cut);
 
-      
       U_c.multiply_vector(s_c, 1);
       VT_c.multiply_vector(s_c, 0);
 
-      
-      //PU = reshape(tensordot(LB, conj(VT), Axes(1), Axes(1)), Shape(e78, t41, e78));
-      //PL = reshape(tensordot(LT, conj(U), Axes(1), Axes(0)), Shape(e78, t41, e78));
-      PU = reshape(tensordot(LB, conj(VT_c), Axes(1), Axes(1)), Shape(e78, t41, cut));
-      PL = reshape(tensordot(LT, conj(U_c), Axes(1), Axes(0)), Shape(e78, t41, cut));
-
-      
+      // PU = reshape(tensordot(LB, conj(VT), Axes(1), Axes(1)), Shape(e78, t41,
+      // e78)); PL = reshape(tensordot(LT, conj(U), Axes(1), Axes(0)),
+      // Shape(e78, t41, e78));
+      PU = reshape(tensordot(LB, conj(VT_c), Axes(1), Axes(1)),
+                   Shape(e78, t41, cut));
+      PL = reshape(tensordot(LT, conj(U_c), Axes(1), Axes(0)),
+                   Shape(e78, t41, cut));
     }
   } else {
     const auto comm = C1.get_comm();
@@ -267,8 +292,9 @@ void Calc_projector_updown_blocks_single(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
     const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
     const tensor &eT5, const tensor &eT6, const tensor &eT7, const tensor &eT8,
-    const tensor &Tn1_s, const tensor &Tn2_s, const tensor &Tn3_s, const tensor &Tn4_s,
-    const PEPS_Parameters peps_parameters, tensor &PU, tensor &PL) {
+    const tensor &Tn1_s, const tensor &Tn2_s, const tensor &Tn3_s,
+    const tensor &Tn4_s, const PEPS_Parameters peps_parameters, tensor &PU,
+    tensor &PL) {
   // based on P. Corboz, T.M.Rice and M. Troyer, PRL 113, 046402(2014)
 
   // comment out for unused variables
@@ -282,7 +308,7 @@ void Calc_projector_updown_blocks_single(
   int t41 = Tn4_s.shape()[1];
 
   if (t41 != 1) {
-    /* 
+    /*
         ##############################
         # (((C1*eT1)*eT8)*Tn1_s)
         # cpu_cost= 2.1e+08  memory= 2.01e+06
@@ -290,10 +316,11 @@ void Calc_projector_updown_blocks_single(
         ##############################
     */
     tensor LT =
-      reshape(tensordot(tensordot(tensordot(C1, eT1, Axes(1), Axes(0)), eT8,
-                                      Axes(0), Axes(1)),
-			Tn1_s, Axes(1, 3), Axes(1, 0)).transpose(Axes(1, 3, 0, 2)),
-	      Shape(e78 * t41, e12 * t12));
+        reshape(tensordot(tensordot(tensordot(C1, eT1, Axes(1), Axes(0)), eT8,
+                                    Axes(0), Axes(1)),
+                          Tn1_s, Axes(1, 3), Axes(1, 0))
+                    .transpose(Axes(1, 3, 0, 2)),
+                Shape(e78 * t41, e12 * t12));
 
     /*
         ##############################
@@ -304,12 +331,13 @@ void Calc_projector_updown_blocks_single(
     */
 
     tensor RT =
-      reshape(tensordot(tensordot(tensordot(C2, eT3, Axes(1), Axes(0)), eT2,
-                                      Axes(0), Axes(1)),
-		  Tn2_s, Axes(1, 3), Axes(2, 1)).transpose(Axes(1, 2, 0, 3)),
-	      Shape(e12 * t12, e34 * t23));
+        reshape(tensordot(tensordot(tensordot(C2, eT3, Axes(1), Axes(0)), eT2,
+                                    Axes(0), Axes(1)),
+                          Tn2_s, Axes(1, 3), Axes(2, 1))
+                    .transpose(Axes(1, 2, 0, 3)),
+                Shape(e12 * t12, e34 * t23));
 
-    /* 
+    /*
         ##############################
         # (((C3*eT5)*eT4)*Tn3_s)
         # cpu_cost= 2.1e+08  memory= 2.01e+06
@@ -317,10 +345,11 @@ void Calc_projector_updown_blocks_single(
         ##############################
     */
     tensor RB =
-      reshape(tensordot(tensordot(tensordot(C3, eT5, Axes(1), Axes(0)), eT4,
-                                      Axes(0), Axes(1)),
-		  Tn3_s, Axes(1, 3), Axes(3, 2)).transpose(Axes(0, 2, 1, 3)),
-	      Shape(e56 * t34, e34 * t23));
+        reshape(tensordot(tensordot(tensordot(C3, eT5, Axes(1), Axes(0)), eT4,
+                                    Axes(0), Axes(1)),
+                          Tn3_s, Axes(1, 3), Axes(3, 2))
+                    .transpose(Axes(0, 2, 1, 3)),
+                Shape(e56 * t34, e34 * t23));
 
     /*
         ##############################
@@ -330,11 +359,12 @@ void Calc_projector_updown_blocks_single(
         ##############################
     */
     tensor LB =
-      reshape(tensordot(tensordot(tensordot(C4, eT7, Axes(1), Axes(0)), eT6,
-                                      Axes(0), Axes(1)),
-		  Tn4_s, Axes(1, 3), Axes(0, 3)).transpose(Axes(0, 2, 1, 3)),
-	      Shape(e78 * t41, e56 * t34));
-    
+        reshape(tensordot(tensordot(tensordot(C4, eT7, Axes(1), Axes(0)), eT6,
+                                    Axes(0), Axes(1)),
+                          Tn4_s, Axes(1, 3), Axes(0, 3))
+                    .transpose(Axes(0, 2, 1, 3)),
+                Shape(e78 * t41, e56 * t34));
+
     if (t23 != 1 && peps_parameters.Use_RSVD) {
       Mult_col_ud_single<tensor> m_col(LT, RT, RB, LB);
       Mult_row_ud_single<tensor> m_row(LT, RT, RB, LB);
@@ -359,8 +389,8 @@ void Calc_projector_updown_blocks_single(
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
-	  cut = i;
-	  break;
+          cut = i;
+          break;
         }
       }
 
@@ -372,12 +402,12 @@ void Calc_projector_updown_blocks_single(
       VT_c.multiply_vector(s_c, 0);
 
       PU = reshape(tensordot(LB, tensordot(RB, conj(VT_c), Axes(1), Axes(1)),
-			     Axes(1), Axes(0)),
-		   Shape(e78, t41, cut));
+                             Axes(1), Axes(0)),
+                   Shape(e78, t41, cut));
       PL = reshape(tensordot(LT, tensordot(RT, conj(U_c), Axes(1), Axes(0)),
-			     Axes(1), Axes(0)),
-		   Shape(e78, t41, cut));
-               
+                             Axes(1), Axes(0)),
+                   Shape(e78, t41, cut));
+
     } else {
       // full svd
       tensor R1 = tensordot(RT, LT, Axes(0), Axes(1));
@@ -388,8 +418,7 @@ void Calc_projector_updown_blocks_single(
       std::vector<double> s;
 
       /* int info = */
-      svd(tensordot(R1, R2, Axes(1), Axes(1)), Axes(0),
-          Axes(0), U, s, VT);
+      svd(tensordot(R1, R2, Axes(1), Axes(1)), Axes(0), Axes(0), U, s, VT);
       double denom = s[0];
       std::vector<double> s_c;
       int cut = std::min(peps_parameters.CHI, e34 * t23);
@@ -400,12 +429,12 @@ void Calc_projector_updown_blocks_single(
           s_c[i] = 1.0 / sqrt(s[i]);
         } else {
           s_c[i] = 0.0;
-	  cut = i;
-	  break;
+          cut = i;
+          break;
         }
       }
-      //tensor U_c = mptensor::slice(U, 1, 0, e78);
-      //tensor VT_c = mptensor::slice(VT, 0, 0, e78);
+      // tensor U_c = mptensor::slice(U, 1, 0, e78);
+      // tensor VT_c = mptensor::slice(VT, 0, 0, e78);
       tensor U_c = mptensor::slice(U, 1, 0, cut);
       tensor VT_c = mptensor::slice(VT, 0, 0, cut);
       s_c.resize(cut);
@@ -413,8 +442,10 @@ void Calc_projector_updown_blocks_single(
       U_c.multiply_vector(s_c, 1);
       VT_c.multiply_vector(s_c, 0);
 
-      PU = reshape(tensordot(R2, conj(VT_c), Axes(0), Axes(1)), Shape(e78, t41, cut));
-      PL = reshape(tensordot(R1, conj(U_c), Axes(0), Axes(0)), Shape(e78, t41, cut));
+      PU = reshape(tensordot(R2, conj(VT_c), Axes(0), Axes(1)),
+                   Shape(e78, t41, cut));
+      PL = reshape(tensordot(R1, conj(U_c), Axes(0), Axes(0)),
+                   Shape(e78, t41, cut));
     }
   } else {
     const MPI_Comm comm = C1.get_comm();
@@ -435,8 +466,8 @@ void Calc_projector_updown_blocks_single(
 
 template <class tensor>
 void Calc_Next_CTM_single(const tensor &C1, const tensor &C4, const tensor &eT1,
-                   const tensor &eT6, const tensor &PU, const tensor &PL,
-                   tensor &C1_out, tensor &C4_out) {
+                          const tensor &eT6, const tensor &PU, const tensor &PL,
+                          tensor &C1_out, tensor &C4_out) {
   C1_out = tensordot(PU, tensordot(C1, eT1, Axes(1), Axes(0)), Axes(0, 1),
                      Axes(0, 2));
   C4_out = tensordot(tensordot(eT6, C4, Axes(1), Axes(0)), PL, Axes(2, 1),
@@ -449,8 +480,8 @@ void Calc_Next_CTM_single(const tensor &C1, const tensor &C4, const tensor &eT1,
 }
 
 template <class tensor>
-void Calc_Next_eT_single(const tensor &eT8, const tensor &Tn1_s, const tensor &PU,
-                  const tensor &PL, tensor &eT_out) {
+void Calc_Next_eT_single(const tensor &eT8, const tensor &Tn1_s,
+                         const tensor &PU, const tensor &PL, tensor &eT_out) {
   /*
     ##############################
     # ((Tn1_s*(eT8*PL))*PU)
@@ -459,12 +490,10 @@ void Calc_Next_eT_single(const tensor &eT8, const tensor &Tn1_s, const tensor &P
     ##############################
   */
 
-  eT_out = tensordot(tensordot(Tn1_s,
-                               tensordot(eT8, PL, Axes(1), Axes(0)),
-                                         Axes(0, 1), Axes(1, 2)),
+  eT_out = tensordot(tensordot(Tn1_s, tensordot(eT8, PL, Axes(1), Axes(0)),
+                               Axes(0, 1), Axes(1, 2)),
                      PU, Axes(1, 2), Axes(1, 0))
                .transpose(Axes(2, 1, 0));
-
 
   double max_all = max_abs(eT_out);
   eT_out /= max_all;
@@ -480,12 +509,13 @@ void Calc_Next_eT_single(const tensor &eT8, const tensor &Tn1_s, const tensor &P
 
 template <class tensor>
 void Left_move_single(std::vector<tensor> &C1, const std::vector<tensor> &C2,
-               const std::vector<tensor> &C3, std::vector<tensor> &C4,
-               const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
-               const std::vector<tensor> &eTb, std::vector<tensor> &eTl,
-               const std::vector<tensor> &Tn_single, const int ix,
-               const PEPS_Parameters peps_parameters,
-               const SquareLattice lattice) {
+                      const std::vector<tensor> &C3, std::vector<tensor> &C4,
+                      const std::vector<tensor> &eTt,
+                      const std::vector<tensor> &eTr,
+                      const std::vector<tensor> &eTb, std::vector<tensor> &eTl,
+                      const std::vector<tensor> &Tn_single, const int ix,
+                      const PEPS_Parameters peps_parameters,
+                      const SquareLattice lattice) {
   /* Do one step left move absoving X=ix column
      part of C1, C4, eTl will be modified */
 
@@ -499,16 +529,15 @@ void Left_move_single(std::vector<tensor> &C1, const std::vector<tensor> &C2,
     k = lattice.bottom(j);
     l = lattice.left(k);
 
-    
     if (peps_parameters.CTM_Projector_corner) {
-      Calc_projector_left_block_single(C1[i], C4[l], eTt[i], eTb[l], eTl[l], eTl[i],
-                                Tn_single[i], Tn_single[l], peps_parameters, PUs[iy],
-                                PLs[iy]);
+      Calc_projector_left_block_single(C1[i], C4[l], eTt[i], eTb[l], eTl[l],
+                                       eTl[i], Tn_single[i], Tn_single[l],
+                                       peps_parameters, PUs[iy], PLs[iy]);
     } else {
-      Calc_projector_updown_blocks_single(C1[i], C2[j], C3[k], C4[l], eTt[i], eTt[j],
-                                   eTr[j], eTr[k], eTb[k], eTb[l], eTl[l],
-                                   eTl[i], Tn_single[i], Tn_single[j], Tn_single[k], Tn_single[l],
-                                   peps_parameters, PUs[iy], PLs[iy]);
+      Calc_projector_updown_blocks_single(
+          C1[i], C2[j], C3[k], C4[l], eTt[i], eTt[j], eTr[j], eTr[k], eTb[k],
+          eTb[l], eTl[l], eTl[i], Tn_single[i], Tn_single[j], Tn_single[k],
+          Tn_single[l], peps_parameters, PUs[iy], PLs[iy]);
     }
   }
   // update
@@ -529,20 +558,22 @@ void Left_move_single(std::vector<tensor> &C1, const std::vector<tensor> &C2,
     iy_down = (iy - 1 + lattice.LY_noskew) % lattice.LY_noskew;
 
     Calc_Next_CTM_single(C1_bak[i], C4_bak[l], eTt[i], eTb[l], PUs[iy_up],
-                  PLs[iy_down], C1[j], C4[k]);
+                         PLs[iy_down], C1[j], C4[k]);
     Calc_Next_eT_single(eTl_bak[i], Tn_single[i], PUs[iy], PLs[iy_up], eTl[j]);
-    Calc_Next_eT_single(eTl_bak[l], Tn_single[l], PUs[iy_down], PLs[iy], eTl[k]);
+    Calc_Next_eT_single(eTl_bak[l], Tn_single[l], PUs[iy_down], PLs[iy],
+                        eTl[k]);
   }
 }
 
 template <class tensor>
 void Right_move_single(const std::vector<tensor> &C1, std::vector<tensor> &C2,
-                std::vector<tensor> &C3, const std::vector<tensor> &C4,
-                const std::vector<tensor> &eTt, std::vector<tensor> &eTr,
-                const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
-                const std::vector<tensor> &Tn_single, const int ix,
-                const PEPS_Parameters peps_parameters,
-                const SquareLattice lattice) {
+                       std::vector<tensor> &C3, const std::vector<tensor> &C4,
+                       const std::vector<tensor> &eTt, std::vector<tensor> &eTr,
+                       const std::vector<tensor> &eTb,
+                       const std::vector<tensor> &eTl,
+                       const std::vector<tensor> &Tn_single, const int ix,
+                       const PEPS_Parameters peps_parameters,
+                       const SquareLattice lattice) {
   /*
     Do one step right move absorbing X=ix column
     part of C2, C3, eTr will be modified
@@ -558,10 +589,11 @@ void Right_move_single(const std::vector<tensor> &C1, std::vector<tensor> &C2,
     j = lattice.right(i);
 
     if (peps_parameters.CTM_Projector_corner) {
-      Calc_projector_left_block_single(C3[k], C2[j], eTb[k], eTt[j], eTr[j], eTr[k],
-                                transpose(Tn_single[k], Axes(2, 3, 0, 1)),
-                                transpose(Tn_single[j], Axes(2, 3, 0, 1)),
-                                peps_parameters, PUs[iy], PLs[iy]);
+      Calc_projector_left_block_single(
+          C3[k], C2[j], eTb[k], eTt[j], eTr[j], eTr[k],
+          transpose(Tn_single[k], Axes(2, 3, 0, 1)),
+          transpose(Tn_single[j], Axes(2, 3, 0, 1)), peps_parameters, PUs[iy],
+          PLs[iy]);
     } else {
       Calc_projector_updown_blocks_single(
           C3[k], C4[l], C1[i], C2[j], eTb[k], eTb[l], eTl[l], eTl[i], eTt[i],
@@ -591,23 +623,25 @@ void Right_move_single(const std::vector<tensor> &C1, std::vector<tensor> &C2,
     iy_down = (iy - 1 + lattice.LY_noskew) % lattice.LY_noskew;
 
     Calc_Next_CTM_single(C3_bak[k], C2_bak[j], eTb[k], eTt[j], PUs[iy_down],
-                  PLs[iy_up], C3[l], C2[i]);
+                         PLs[iy_up], C3[l], C2[i]);
 
-    Calc_Next_eT_single(eTr_bak[k], transpose(Tn_single[k], Axes(2, 3, 0, 1)), PUs[iy],
-                 PLs[iy_down], eTr[l]);
-    Calc_Next_eT_single(eTr_bak[j], transpose(Tn_single[j], Axes(2, 3, 0, 1)), PUs[iy_up],
-                 PLs[iy], eTr[i]);
+    Calc_Next_eT_single(eTr_bak[k], transpose(Tn_single[k], Axes(2, 3, 0, 1)),
+                        PUs[iy], PLs[iy_down], eTr[l]);
+    Calc_Next_eT_single(eTr_bak[j], transpose(Tn_single[j], Axes(2, 3, 0, 1)),
+                        PUs[iy_up], PLs[iy], eTr[i]);
   }
 }
 
 template <class tensor>
 void Top_move_single(std::vector<tensor> &C1, std::vector<tensor> &C2,
-              const std::vector<tensor> &C3, const std::vector<tensor> &C4,
-              std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
-              const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
-              const std::vector<tensor> &Tn_single, const int iy,
-              const PEPS_Parameters peps_parameters,
-              const SquareLattice lattice) {
+                     const std::vector<tensor> &C3,
+                     const std::vector<tensor> &C4, std::vector<tensor> &eTt,
+                     const std::vector<tensor> &eTr,
+                     const std::vector<tensor> &eTb,
+                     const std::vector<tensor> &eTl,
+                     const std::vector<tensor> &Tn_single, const int iy,
+                     const PEPS_Parameters peps_parameters,
+                     const SquareLattice lattice) {
   /*
     ## Do one step top move absorbing Y=iy row
     ## part of C1, C2, eTt will be modified
@@ -623,10 +657,11 @@ void Top_move_single(std::vector<tensor> &C1, std::vector<tensor> &C2,
     i = lattice.top(l);
 
     if (peps_parameters.CTM_Projector_corner) {
-      Calc_projector_left_block_single(C2[j], C1[i], eTr[j], eTl[i], eTt[i], eTt[j],
-                                transpose(Tn_single[j], Axes(1, 2, 3, 0)),
-                                transpose(Tn_single[i], Axes(1, 2, 3, 0)),
-                                peps_parameters, PUs[ix], PLs[ix]);
+      Calc_projector_left_block_single(
+          C2[j], C1[i], eTr[j], eTl[i], eTt[i], eTt[j],
+          transpose(Tn_single[j], Axes(1, 2, 3, 0)),
+          transpose(Tn_single[i], Axes(1, 2, 3, 0)), peps_parameters, PUs[ix],
+          PLs[ix]);
     } else {
       Calc_projector_updown_blocks_single(
           C2[j], C3[k], C4[l], C1[i], eTr[j], eTr[k], eTb[k], eTb[l], eTl[l],
@@ -656,23 +691,25 @@ void Top_move_single(std::vector<tensor> &C1, std::vector<tensor> &C2,
     ix_left = (ix - 1 + lattice.LX_noskew) % lattice.LX_noskew;
 
     Calc_Next_CTM_single(C2_bak[j], C1_bak[i], eTr[j], eTl[i], PUs[ix_right],
-                  PLs[ix_left], C2[k], C1[l]);
+                         PLs[ix_left], C2[k], C1[l]);
 
-    Calc_Next_eT_single(eTt_bak[j], transpose(Tn_single[j], Axes(1, 2, 3, 0)), PUs[ix],
-                 PLs[ix_right], eTt[k]);
+    Calc_Next_eT_single(eTt_bak[j], transpose(Tn_single[j], Axes(1, 2, 3, 0)),
+                        PUs[ix], PLs[ix_right], eTt[k]);
     Calc_Next_eT_single(eTt_bak[i], transpose(Tn_single[i], Axes(1, 2, 3, 0)),
-                 PUs[ix_left], PLs[ix], eTt[l]);
+                        PUs[ix_left], PLs[ix], eTt[l]);
   }
 }
 
 template <class tensor>
-void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor> &C2,
-                 std::vector<tensor> &C3, std::vector<tensor> &C4,
-                 const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
-                 std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
-                 const std::vector<tensor> &Tn_single, const int iy,
-                 const PEPS_Parameters peps_parameters,
-                 const SquareLattice lattice) {
+void Bottom_move_single(const std::vector<tensor> &C1,
+                        const std::vector<tensor> &C2, std::vector<tensor> &C3,
+                        std::vector<tensor> &C4, const std::vector<tensor> &eTt,
+                        const std::vector<tensor> &eTr,
+                        std::vector<tensor> &eTb,
+                        const std::vector<tensor> &eTl,
+                        const std::vector<tensor> &Tn_single, const int iy,
+                        const PEPS_Parameters peps_parameters,
+                        const SquareLattice lattice) {
   /*
     ## Do one step bottom move absorbing Y=iy row
     ## part of C3, C4, eTb will be modified
@@ -689,10 +726,11 @@ void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor>
     k = lattice.bottom(j);
 
     if (peps_parameters.CTM_Projector_corner) {
-      Calc_projector_left_block_single(C4[l], C3[k], eTl[l], eTr[k], eTb[k], eTb[l],
-                                transpose(Tn_single[l], Axes(3, 0, 1, 2)),
-                                transpose(Tn_single[k], Axes(3, 0, 1, 2)),
-                                peps_parameters, PUs[ix], PLs[ix]);
+      Calc_projector_left_block_single(
+          C4[l], C3[k], eTl[l], eTr[k], eTb[k], eTb[l],
+          transpose(Tn_single[l], Axes(3, 0, 1, 2)),
+          transpose(Tn_single[k], Axes(3, 0, 1, 2)), peps_parameters, PUs[ix],
+          PLs[ix]);
     } else {
       Calc_projector_updown_blocks_single(
           C4[l], C1[i], C2[j], C3[k], eTl[l], eTl[i], eTt[i], eTt[j], eTr[j],
@@ -723,23 +761,22 @@ void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor>
     ix_left = (ix - 1 + lattice.LX_noskew) % lattice.LX_noskew;
 
     Calc_Next_CTM_single(C4_bak[l], C3_bak[k], eTl[l], eTr[k], PUs[ix_left],
-                  PLs[ix_right], C4[i], C3[j]);
+                         PLs[ix_right], C4[i], C3[j]);
 
-    Calc_Next_eT_single(eTb_bak[l], transpose(Tn_single[l], Axes(3, 0, 1, 2)), PUs[ix],
-                 PLs[ix_left], eTb[i]);
+    Calc_Next_eT_single(eTb_bak[l], transpose(Tn_single[l], Axes(3, 0, 1, 2)),
+                        PUs[ix], PLs[ix_left], eTb[i]);
     Calc_Next_eT_single(eTb_bak[k], transpose(Tn_single[k], Axes(3, 0, 1, 2)),
-                 PUs[ix_right], PLs[ix], eTb[j]);
+                        PUs[ix_right], PLs[ix], eTb[j]);
   }
 }
 
 template <class tensor>
-int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C2,
-                         std::vector<tensor> &C3, std::vector<tensor> &C4,
-                         std::vector<tensor> &eTt, std::vector<tensor> &eTr,
-                         std::vector<tensor> &eTb, std::vector<tensor> &eTl,
-                         const std::vector<tensor> &Tn,
-                         const PEPS_Parameters peps_parameters,
-                         const SquareLattice lattice, bool initialize) {
+int Calc_CTM_Environment_density(
+    std::vector<tensor> &C1, std::vector<tensor> &C2, std::vector<tensor> &C3,
+    std::vector<tensor> &C4, std::vector<tensor> &eTt, std::vector<tensor> &eTr,
+    std::vector<tensor> &eTb, std::vector<tensor> &eTl,
+    const std::vector<tensor> &Tn, const PEPS_Parameters peps_parameters,
+    const SquareLattice lattice, bool initialize) {
   /*
     ## Calc environment tensors
     ## C1,C2,C3,C4 and eTt,eTl,eTr,eTb will be modified
@@ -751,36 +788,43 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
     int num, d1, d2, d34;
     Index index;
     tensor Projector;
-    
+
     tensor uniform_vector1, uniform_vector2;
     const auto comm = Tn[0].get_comm();
-      
+
     for (int i = 0; i < lattice.N_UNIT; ++i) {
       num = lattice.top(lattice.left(i));
       d1 = Tn[num].shape()[3];
       d2 = Tn[num].shape()[2];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
-      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[0], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[1], 1.0));
 
-      C1[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)), uniform_vector2, Axes(0), Axes(0)).transpose(Axes(1, 0));
+      C1[i] = mptensor::tensordot(
+                  mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0),
+                                      Axes(0)),
+                  uniform_vector2, Axes(0), Axes(0))
+                  .transpose(Axes(1, 0));
 
-      //C1[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 1, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+      // C1[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0,
+      // 1), 1, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
-	C1[i] =	extend(C1[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
+        C1[i] =	extend(C1[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
 
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        C1[i] = mptensor::slice(mptensor::slice(C1[i], 0, 0, peps_parameters.CHI), 1, 0,
-                      peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        C1[i] = mptensor::slice(mptensor::slice(C1[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         C1[i] = extend(mptensor::slice(C1[i], 1, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
       } else {
         // d1 >= CHI
         // d2 < CHI
-	
+
         C1[i] = extend(mptensor::slice(C1[i], 0, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
       }
@@ -790,19 +834,25 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[0];
       d2 = Tn[num].shape()[3];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
-      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[1], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[2], 1.0));
 
-      C2[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1), Axes(0)), uniform_vector2, Axes(1), Axes(0));
+      C2[i] = mptensor::tensordot(
+          mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1),
+                              Axes(0)),
+          uniform_vector2, Axes(1), Axes(0));
 
-      //      C2[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 1, 0, 1), 2, 0, 1), Shape(d1,d2));
+      //      C2[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 1,
+      //      0, 1), 2, 0, 1), Shape(d1,d2));
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         C2[i] = extend(C2[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        C2[i] = mptensor::slice(mptensor::slice(C2[i], 0, 0, peps_parameters.CHI), 1, 0,
-                      peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        C2[i] = mptensor::slice(mptensor::slice(C2[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         C2[i] = extend(mptensor::slice(C2[i], 1, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
@@ -817,20 +867,27 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d1 = Tn[num].shape()[1];
       d2 = Tn[num].shape()[0];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
-      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[2], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[3], 1.0));
 
-      C3[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2), Axes(0)), uniform_vector2, Axes(2), Axes(0)).transpose(Axes(1,0));
+      C3[i] = mptensor::tensordot(
+                  mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2),
+                                      Axes(0)),
+                  uniform_vector2, Axes(2), Axes(0))
+                  .transpose(Axes(1, 0));
 
-      //C3[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 2, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+      // C3[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 2, 0,
+      // 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         C3[i] = extend(C3[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        C3[i] = mptensor::slice(mptensor::slice(C3[i], 0, 0, peps_parameters.CHI), 1, 0,
-                      peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        C3[i] = mptensor::slice(mptensor::slice(C3[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         C3[i] = extend(mptensor::slice(C3[i], 1, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
@@ -841,24 +898,31 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
       }
       */
-      
+
       num = lattice.bottom(lattice.left(i));
       d1 = Tn[num].shape()[2];
       d2 = Tn[num].shape()[1];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
-      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
-      C4[i] = mptensor::tensordot(mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)), uniform_vector2, Axes(2), Axes(0)).transpose(Axes(1,0));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[0], 1.0));
+      uniform_vector2 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[3], 1.0));
+      C4[i] = mptensor::tensordot(
+                  mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0),
+                                      Axes(0)),
+                  uniform_vector2, Axes(2), Axes(0))
+                  .transpose(Axes(1, 0));
 
-      //C4[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0, 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
+      // C4[i] = reshape(mptensor::slice(mptensor::slice(Tn_single[num], 0, 0,
+      // 1), 3, 0, 1), Shape(d2, d1)).transpose(Axes(1, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         C4[i] = extend(C4[i], Shape(peps_parameters.CHI, peps_parameters.CHI));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        C4[i] = mptensor::slice(mptensor::slice(C4[i], 0, 0, peps_parameters.CHI), 1, 0,
-                      peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        C4[i] = mptensor::slice(mptensor::slice(C4[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         C4[i] = extend(mptensor::slice(C4[i], 1, 0, peps_parameters.CHI),
                        Shape(peps_parameters.CHI, peps_parameters.CHI));
@@ -875,19 +939,21 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
       d2 = Tn[num].shape()[2];
       d34 = Tn[num].shape()[3];
 
-
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[1], 1.0));
-      eTt[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1), Axes(0));
-      //eTt[i] = reshape(mptensor::slice(Tn_single[num], 1, 0, 1), Shape(d1, d2, d34));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[1], 1.0));
+      eTt[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(1),
+                                   Axes(0));
+      // eTt[i] = reshape(mptensor::slice(Tn_single[num], 1, 0, 1), Shape(d1,
+      // d2, d34));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         eTt[i] = extend(
             eTt[i], Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        eTt[i] = mptensor::slice(mptensor::slice(eTt[i], 0, 0, peps_parameters.CHI), 1, 0,
-                       peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        eTt[i] = mptensor::slice(mptensor::slice(eTt[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         eTt[i] =
             extend(mptensor::slice(eTt[i], 1, 0, peps_parameters.CHI),
@@ -900,25 +966,29 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       }
       */
-      
+
       num = lattice.right(i);
       d1 = Tn[num].shape()[1];
       d2 = Tn[num].shape()[3];
       d34 = Tn[num].shape()[0];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[2], 1.0));
-      eTr[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2), Axes(0)).transpose(Axes(1, 2, 0));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[2], 1.0));
+      eTr[i] =
+          mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(2), Axes(0))
+              .transpose(Axes(1, 2, 0));
 
-      //eTr[i] = reshape(mptensor::slice(Tn_single[num], 2, 0, 1), Shape(d34, d1, d2)).transpose(Axes(1, 2, 0));
+      // eTr[i] = reshape(mptensor::slice(Tn_single[num], 2, 0, 1), Shape(d34,
+      // d1, d2)).transpose(Axes(1, 2, 0));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         eTr[i] = extend(
             eTr[i], Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        eTr[i] = mptensor::slice(mptensor::slice(eTr[i], 0, 0, peps_parameters.CHI), 1, 0,
-                       peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        eTr[i] = mptensor::slice(mptensor::slice(eTr[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         eTr[i] =
             extend(mptensor::slice(eTr[i], 1, 0, peps_parameters.CHI),
@@ -931,24 +1001,28 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       }
       */
-      
+
       num = lattice.bottom(i);
       d1 = Tn[num].shape()[2];
       d2 = Tn[num].shape()[0];
       d34 = Tn[num].shape()[1];
 
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[3], 1.0));
-      eTb[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(3), Axes(0)).transpose(Axes(2, 0, 1));
-      //eTb[i] = reshape(mptensor::slice(Tn_single[num], 3, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[3], 1.0));
+      eTb[i] =
+          mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(3), Axes(0))
+              .transpose(Axes(2, 0, 1));
+      // eTb[i] = reshape(mptensor::slice(Tn_single[num], 3, 0, 1), Shape(d2,
+      // d34, d1)).transpose(Axes(2, 0, 1));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         eTb[i] = extend(
             eTb[i], Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        eTb[i] = mptensor::slice(mptensor::slice(eTb[i], 0, 0, peps_parameters.CHI), 1, 0,
-                       peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        eTb[i] = mptensor::slice(mptensor::slice(eTb[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         eTb[i] =
             extend(mptensor::slice(eTb[i], 1, 0, peps_parameters.CHI),
@@ -961,23 +1035,27 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
                    Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       }
       */
-      
+
       num = lattice.left(i);
       d1 = Tn[num].shape()[3];
       d2 = Tn[num].shape()[1];
       d34 = Tn[num].shape()[2];
-      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(Tn_single[num].shape()[0], 1.0));
-      eTl[i] = mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0)).transpose(Axes(2, 0, 1));
-      //eTl[i] = reshape(mptensor::slice(Tn_single[num], 0, 0, 1), Shape(d2, d34, d1)).transpose(Axes(2, 0, 1));
+      uniform_vector1 = tensor(comm, std::vector<typename tensor::value_type>(
+                                         Tn_single[num].shape()[0], 1.0));
+      eTl[i] =
+          mptensor::tensordot(Tn_single[num], uniform_vector1, Axes(0), Axes(0))
+              .transpose(Axes(2, 0, 1));
+      // eTl[i] = reshape(mptensor::slice(Tn_single[num], 0, 0, 1), Shape(d2,
+      // d34, d1)).transpose(Axes(2, 0, 1));
 
       /*
       if (d1 < peps_parameters.CHI && d2 < peps_parameters.CHI) {
         eTl[i] = extend(
             eTl[i], Shape(peps_parameters.CHI, peps_parameters.CHI, d34));
       } else if (d1 >= peps_parameters.CHI && d2 >= peps_parameters.CHI) {
-        eTl[i] = mptensor::slice(mptensor::slice(eTl[i], 0, 0, peps_parameters.CHI), 1, 0,
-                       peps_parameters.CHI);
-      } else if (d1 < peps_parameters.CHI) {
+        eTl[i] = mptensor::slice(mptensor::slice(eTl[i], 0, 0,
+      peps_parameters.CHI), 1, 0, peps_parameters.CHI); } else if (d1 <
+      peps_parameters.CHI) {
         // d2 >= CHI
         eTl[i] =
             extend(mptensor::slice(eTl[i], 1, 0, peps_parameters.CHI),
@@ -1004,27 +1082,29 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
     // left move
     for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
-      Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, ix, peps_parameters,
-                lattice);
+      Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, ix,
+                       peps_parameters, lattice);
     }
 
     // right move
     for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
       Right_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
-                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew, peps_parameters, lattice);
+                        (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
+                        peps_parameters, lattice);
     }
 
     // top move
     for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
       Top_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
-               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew, peps_parameters, lattice);
+                      (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
+                      peps_parameters, lattice);
     }
 
     // bottom move
 
     for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
-      Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, iy, peps_parameters,
-                  lattice);
+      Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, iy,
+                         peps_parameters, lattice);
     }
 
     convergence =
@@ -1052,7 +1132,6 @@ int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C
   return count;
 }
 
-  
 // template instantiate
 
 template std::vector<real_tensor> Make_single_tensor_density(
@@ -1094,21 +1173,24 @@ template void Calc_projector_updown_blocks_single(
     complex_tensor &PL);
 
 template void Calc_Next_CTM_single(const real_tensor &C1, const real_tensor &C4,
-                            const real_tensor &eT1, const real_tensor &eT6,
-                            const real_tensor &PU, const real_tensor &PL,
-                            real_tensor &C1_out, real_tensor &C4_out);
-template void Calc_Next_CTM_single(const complex_tensor &C1, const complex_tensor &C4,
-                            const complex_tensor &eT1,
-                            const complex_tensor &eT6, const complex_tensor &PU,
-                            const complex_tensor &PL, complex_tensor &C1_out,
-                            complex_tensor &C4_out);
+                                   const real_tensor &eT1,
+                                   const real_tensor &eT6,
+                                   const real_tensor &PU, const real_tensor &PL,
+                                   real_tensor &C1_out, real_tensor &C4_out);
+template void Calc_Next_CTM_single(
+    const complex_tensor &C1, const complex_tensor &C4,
+    const complex_tensor &eT1, const complex_tensor &eT6,
+    const complex_tensor &PU, const complex_tensor &PL, complex_tensor &C1_out,
+    complex_tensor &C4_out);
 
-template void Calc_Next_eT_single(const real_tensor &eT8, const real_tensor &Tn1,
-                           const real_tensor &PU, const real_tensor &PL,
-                           real_tensor &eT_out);
-template void Calc_Next_eT_single(const complex_tensor &eT8, const complex_tensor &Tn1,
-                           const complex_tensor &PU, const complex_tensor &PL,
-                           complex_tensor &eT_out);
+template void Calc_Next_eT_single(const real_tensor &eT8,
+                                  const real_tensor &Tn1, const real_tensor &PU,
+                                  const real_tensor &PL, real_tensor &eT_out);
+template void Calc_Next_eT_single(const complex_tensor &eT8,
+                                  const complex_tensor &Tn1,
+                                  const complex_tensor &PU,
+                                  const complex_tensor &PL,
+                                  complex_tensor &eT_out);
 
 template void Left_move_single(
     std::vector<real_tensor> &C1, const std::vector<real_tensor> &C2,
@@ -1149,17 +1231,15 @@ template void Top_move_single(
     const std::vector<real_tensor> &eTb, const std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const int iy,
     const PEPS_Parameters peps_parameters, const SquareLattice lattice);
-template void Top_move_single(std::vector<complex_tensor> &C1,
-                       std::vector<complex_tensor> &C2,
-                       const std::vector<complex_tensor> &C3,
-                       const std::vector<complex_tensor> &C4,
-                       std::vector<complex_tensor> &eTt,
-                       const std::vector<complex_tensor> &eTr,
-                       const std::vector<complex_tensor> &eTb,
-                       const std::vector<complex_tensor> &eTl,
-                       const std::vector<complex_tensor> &Tn, const int iy,
-                       const PEPS_Parameters peps_parameters,
-                       const SquareLattice lattice);
+template void Top_move_single(
+    std::vector<complex_tensor> &C1, std::vector<complex_tensor> &C2,
+    const std::vector<complex_tensor> &C3,
+    const std::vector<complex_tensor> &C4, std::vector<complex_tensor> &eTt,
+    const std::vector<complex_tensor> &eTr,
+    const std::vector<complex_tensor> &eTb,
+    const std::vector<complex_tensor> &eTl,
+    const std::vector<complex_tensor> &Tn, const int iy,
+    const PEPS_Parameters peps_parameters, const SquareLattice lattice);
 
 template void Bottom_move_single(
     const std::vector<real_tensor> &C1, const std::vector<real_tensor> &C2,
@@ -1176,7 +1256,6 @@ template void Bottom_move_single(
     const std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn, const int iy,
     const PEPS_Parameters peps_parameters, const SquareLattice lattice);
-
 
 template int Calc_CTM_Environment_density(
     std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,

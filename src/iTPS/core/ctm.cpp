@@ -51,14 +51,15 @@ using mptensor::Shape;
  *  Tn* has conjugate, cTn*
  */
 
-/*!
- *
+/*! @brief One of the two matvec functors handed to mptensor::rsvd for
+ *         the left half-column: contracts LB, then LT, into the boundary
+ *         vector (see the tensor layout above).
  */
 template <class tensor>
 class Mult_col {
  public:
   /*!
-   * @brief
+   * @brief Hold the two blocks of the half-column.
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
@@ -74,11 +75,10 @@ class Mult_col {
   Mult_col(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
-   * @brief
+   * @brief Apply the half-column to a boundary vector.
    * @param[in] T_in Input tensor
    *            legs = [0:Tn3_left, 1:eT5_left, 2:cTn3_left]
-   * @return
-   * @param[out] T_out Output tensor
+   * @return Output tensor with
    *            legs = [0:Tn1_right, 2:eT1_right, 3:cTn1_right]
    */
   tensor operator()(const tensor &T_in) {
@@ -87,15 +87,18 @@ class Mult_col {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief The complementary rsvd functor of Mult_col: contracts the
+ *         boundary vector into LT, then LB.
+ */
 template <class tensor>
 class Mult_row {
  public:
   /*!
-   * @brief
+   * @brief Hold the two blocks of the half-column.
    * @param[in] LT Left-top block tensor @n
    *               C1 eT1 @n
    *              eT8 Tn1 @n
@@ -111,11 +114,10 @@ class Mult_row {
   Mult_row(const tensor &LT, const tensor &LB) : LT_(LT), LB_(LB) {};
 
   /*!
-   * @brief
+   * @brief Contract a boundary vector through LT, then LB.
    * @param[in] T_in Input tensor
    *            legs = [0:Tn2_left, 1:eT2_left, 2:cTn2_left]
-   * @return
-   * @param[out] T_out Output tensor
+   * @return Output tensor with
    *            legs = [0:Tn4_right, 2:eT6_right, 3:cTn4_right]
    */
   tensor operator()(const tensor &T_in) {
@@ -124,16 +126,21 @@ class Mult_row {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief rsvd functor for the full plaquette (all four blocks),
+ *         contracting RB, LB, LT, RT into the boundary vector in turn.
+ */
 template <class tensor>
 class Mult_col_ud {
  public:
+  //! Hold the four corner blocks.
   Mult_col_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Apply the four blocks to a boundary vector.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         RT_,
@@ -146,18 +153,23 @@ class Mult_col_ud {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
+/*! @brief The complementary rsvd functor of Mult_col_ud: contracts the
+ *         boundary vector through RT, LT, LB, RB in turn.
+ */
 template <class tensor>
 class Mult_row_ud {
  public:
+  //! Hold the four corner blocks.
   Mult_row_ud(const tensor &LT, const tensor &RT, const tensor &RB,
               const tensor &LB)
       : LT_(LT), RT_(RT), RB_(RB), LB_(LB) {};
+  //! Contract a boundary vector through the four blocks.
   tensor operator()(const tensor &T_in) {
     return tensordot(
         tensordot(tensordot(tensordot(T_in, RT_, Axes(0, 1, 2), Axes(1, 2, 5)),
@@ -167,10 +179,10 @@ class Mult_row_ud {
   }
 
  private:
-  const tensor &LT_;
-  const tensor &RT_;
-  const tensor &RB_;
-  const tensor &LB_;
+  const tensor &LT_;  //!< left-top block
+  const tensor &RT_;  //!< right-top block
+  const tensor &RB_;  //!< right-bottom block
+  const tensor &LB_;  //!< left-bottom block
 };
 
 template <class tensor>
