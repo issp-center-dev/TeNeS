@@ -303,6 +303,9 @@ class iTPS {
   void load_tensors();
 
  private:
+  //! Reject measurement requests unsupported by the fermionic CTM path.
+  void validate_fermion_ctm_measurement() const;
+
   //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {
     return site_ops_indices[site][group];

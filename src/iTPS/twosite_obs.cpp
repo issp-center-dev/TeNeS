@@ -33,6 +33,8 @@ namespace tenes::itps {
 template <class ptensor>
 auto iTPS<ptensor>::measure_twosite()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
+  validate_fermion_ctm_measurement();
+
   Timer<> timer;
 
   const bool is_TPO = peps_parameters.calcmode ==

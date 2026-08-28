@@ -31,6 +31,8 @@ namespace tenes::itps {
 template <class ptensor>
 auto iTPS<ptensor>::measure_multisite()
     -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
+  validate_fermion_ctm_measurement();
+
   Timer<> timer;
 
   const bool is_meanfield = peps_parameters.MeanField_Env;
@@ -198,8 +200,8 @@ auto iTPS<ptensor>::measure_multisite()
       //         ? core::Contract_iTPS_MF(Tn_, op_)
       //         : core::Contract_iTPS_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
       //         op_);
-      auto localvalue =
-          core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_, is_density, is_meanfield);
+      auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_,
+                                       is_density, is_meanfield);
       value += localvalue;
     }
     ret[op.group][{op.source_site, op.dx, op.dy}] = op.coeff * value / norm;

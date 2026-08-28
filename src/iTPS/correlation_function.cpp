@@ -31,6 +31,8 @@ using mptensor::Shape;
 
 template <class ptensor>
 std::vector<Correlation> iTPS<ptensor>::measure_correlation() {
+  validate_fermion_ctm_measurement();
+
   if (peps_parameters.MeanField_Env) {
     return measure_correlation_mf();
   } else {
@@ -168,8 +170,9 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.top(right_index);
           ptensor tn =
-              is_tpo ? transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4, 5))
-                     : transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4));
+              is_tpo
+                  ? transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4, 5))
+                  : transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4));
           tensor_type norm =
               is_tpo ? core::FinishCorrelation_density_CTM(
                            correlation_norm, C1[right_index], C2[right_index],

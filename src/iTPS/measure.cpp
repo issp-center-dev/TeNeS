@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "iTPS.hpp"
+#include "../exception.hpp"
 #include "../fermion/fops.hpp"
 #include "../fermion/reduced_measure.hpp"
 #include "../util/datetime.hpp"
@@ -35,8 +36,38 @@
 namespace tenes::itps {
 
 template <class ptensor>
+void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
+  if (!finfo.enabled || peps_parameters.MeanField_Env) {
+    return;
+  }
+
+  bool has_non_nearest_twosite = false;
+  for (const auto &op : twosite_operators) {
+    const int abs_dx = std::abs(op.dx[0]);
+    const int abs_dy = std::abs(op.dy[0]);
+    const bool is_nearest_neighbor =
+        (abs_dx == 1 && abs_dy == 0) || (abs_dx == 0 && abs_dy == 1);
+    // A same-site pair falls through to the raw-Tn path in measure_twosite(),
+    // which would mix it with the reduced CTM environment and silently return
+    // an incorrect result.
+    if (!is_nearest_neighbor) {
+      has_non_nearest_twosite = true;
+      break;
+    }
+  }
+  if (has_non_nearest_twosite || !multisite_operators.empty() ||
+      corparam.r_max > 0) {
+    throw tenes::input_error(
+        "fermion CTM measurement supports nearest-neighbor two-site "
+        "observables only");
+  }
+}
+
+template <class ptensor>
 void iTPS<ptensor>::measure(std::optional<double> time,
                             std::string filename_prefix) {
+  validate_fermion_ctm_measurement();
+
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;
     std::cout << "  Start updating environment" << std::endl;
