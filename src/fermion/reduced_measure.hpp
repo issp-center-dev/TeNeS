@@ -139,10 +139,7 @@ typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair) {
  *        state.
  *
  * @warning op12 must be loaded with wrap_twosite_gate() (input-leg swap
- *          only): this is the single-layer convention pinned by the
- *          Fock-verified direct path (r2_expect_two in the R5 test and the
- *          mf_* oracle cases), not the blob convention
- *          (wrap_reduced_pair_op()).
+ *          only), the same convention used by the bundled-k CTM blob.
  */
 template <class tensor>
 typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair,

@@ -274,22 +274,34 @@ static double r3_plaquette_norm(int number_site, int seed) {
                                             mptensor::Axes(1, 3)));
 }
 
+// Since 2026-08-28 the blob builders take operators in the single-layer
+// convention (wrap_twosite_gate: INPUT swap only). The r2_*_op helpers
+// build the plain matrix elements as a verbatim ftensor, so the pair-norm
+// helpers below apply that input swap before handing the operator to the
+// blob. The reference values are physical and unchanged.
+static ft r3_blob_op(const ft& op) {
+  ft o = op;
+  tenes::fermion::apply_swap(o, 0, 1);
+  return o;
+}
+
 static double r3_horizontal_pair_norm(const ft& op, int seed) {
   return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
-      make_r2_tensor(2, 1, 0, seed), make_r2_tensor(2, 1, 1, seed), op,
-      tenes::fermion::reduced_pair_direction::horizontal));
+      make_r2_tensor(2, 1, 0, seed), make_r2_tensor(2, 1, 1, seed),
+      r3_blob_op(op), tenes::fermion::reduced_pair_direction::horizontal));
 }
 
 static double r3_vertical_pair_norm(const ft& op, int seed) {
   return r3_sum_entries(tenes::fermion::build_reduced_pair_naive(
-      make_r2_tensor(1, 2, 0, seed), make_r2_tensor(1, 2, 1, seed), op,
-      tenes::fermion::reduced_pair_direction::vertical));
+      make_r2_tensor(1, 2, 0, seed), make_r2_tensor(1, 2, 1, seed),
+      r3_blob_op(op), tenes::fermion::reduced_pair_direction::vertical));
 }
 
 static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
+  const ft o = r3_blob_op(op);
   if (a == 0 && b == 1) {
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
-        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 1, seed), op,
+        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 1, seed), o,
         tenes::fermion::reduced_pair_direction::horizontal);
     tenes::real_tensor bottom =
         mptensor::tensordot(r3_reduced_site(2, 2, 2, false, seed),
@@ -304,14 +316,14 @@ static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
                             r3_reduced_site(2, 2, 1, false, seed),
                             mptensor::Axes(2), mptensor::Axes(0));
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
-        make_r2_tensor(2, 2, 2, seed), make_r2_tensor(2, 2, 3, seed), op,
+        make_r2_tensor(2, 2, 2, seed), make_r2_tensor(2, 2, 3, seed), o,
         tenes::fermion::reduced_pair_direction::horizontal);
     return r3_sum_entries(mptensor::tensordot(top, blob, mptensor::Axes(2, 5),
                                               mptensor::Axes(1, 3)));
   }
   if (a == 0 && b == 2) {
     tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
-        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 2, seed), op,
+        make_r2_tensor(2, 2, 0, seed), make_r2_tensor(2, 2, 2, seed), o,
         tenes::fermion::reduced_pair_direction::vertical);
     tenes::real_tensor right =
         mptensor::tensordot(r3_reduced_site(2, 2, 1, false, seed),
@@ -325,7 +337,7 @@ static double r3_pair_plaquette_norm(int a, int b, const ft& op, int seed) {
                           r3_reduced_site(2, 2, 2, false, seed),
                           mptensor::Axes(3), mptensor::Axes(1));
   tenes::real_tensor blob = tenes::fermion::build_reduced_pair_naive(
-      make_r2_tensor(2, 2, 1, seed), make_r2_tensor(2, 2, 3, seed), op,
+      make_r2_tensor(2, 2, 1, seed), make_r2_tensor(2, 2, 3, seed), o,
       tenes::fermion::reduced_pair_direction::vertical);
   return r3_sum_entries(mptensor::tensordot(left, blob, mptensor::Axes(2, 4),
                                             mptensor::Axes(0, 3)));
@@ -496,13 +508,17 @@ TEST_CASE("R3 reduced physical-open tensor traces to reduced norm tensor") {
 
 // ===== R5: d = 4 (electron) oracle pinning of the reduced-pair blob ========
 //
-// The d = 2 oracle cannot distinguish verbatim operator loading from
-// in+out-swapped loading in the blob path (they differ only on channels
-// that require odd-sector multiplicity >= 2, e.g. (odd,odd)->(even,even)
-// present in the electron hopping at linear order). The reference here is
-// the direct f-primitive expectation with the canonical (input-swapped)
-// operator, which is verified against exact Fock evolution at d = 4 in the
-// plaquette and chain diagnostics.
+// Since 2026-08-28 the blob builders take operators in the single-layer
+// convention: wrap_twosite_gate, i.e. the INPUT swap only. R5 pins, on
+// d = 4 two-site shapes, that a blob loaded this way reproduces the
+// Fock-verified direct f-primitive expectation (the reference is the
+// direct graded expectation with the same input-swapped operator, verified
+// against exact Fock evolution at d = 4 in the plaquette and chain
+// diagnostics). d = 4 is what makes the loading convention observable at
+// all: the electron hopping has (odd,odd) input and output channels at
+// linear order, so both mis-loadings -- verbatim (no swap) and the retired
+// blob convention (in+out swaps) -- give visibly different hopping values,
+// which the negative checks below keep distinguishable.
 
 namespace {
 
@@ -660,13 +676,14 @@ TEST_CASE("R5 d=4 reduced pair blob against the Fock-verified direct path") {
       const double hop_ref =
           r2_expect_two(psi, 3, 7, r4_wrap(r4_hop_plain(), true, false));
 
-      // blob candidates
-      const double nn_plain =
-          r4_pair_norm_blob(r4_wrap(r4_nn_plain(), false, false), horizontal,
+      // blob candidates: the production loading (input swap only) and the
+      // two mis-loadings the d = 4 hopping can tell apart
+      const double nn_in =
+          r4_pair_norm_blob(r4_wrap(r4_nn_plain(), true, false), horizontal,
                             seed) /
           norm_blob;
-      const double nn_both =
-          r4_pair_norm_blob(r4_wrap(r4_nn_plain(), true, true), horizontal,
+      const double hop_in =
+          r4_pair_norm_blob(r4_wrap(r4_hop_plain(), true, false), horizontal,
                             seed) /
           norm_blob;
       const double hop_plain =
@@ -679,18 +696,20 @@ TEST_CASE("R5 d=4 reduced pair blob against the Fock-verified direct path") {
           norm_blob;
 
       std::cout << "R5 " << label << " n_ref=(" << n0_ref << ", " << n1_ref
-                << ") nn_ref=" << nn_ref << " nn_plain=" << nn_plain
-                << " nn_both=" << nn_both << " hop_ref=" << hop_ref
+                << ") nn_ref=" << nn_ref << " nn_in=" << nn_in
+                << " hop_ref=" << hop_ref << " hop_in=" << hop_in
                 << " hop_plain=" << hop_plain << " hop_both=" << hop_both
                 << std::endl;
 
-      // The production blob convention (wrap_reduced_pair_op = both swaps)
-      // must reproduce the Fock-verified direct path; verbatim loading is
-      // degenerate with it on the nn channel but wrong on the hopping.
-      CHECK(nn_both == doctest::Approx(nn_ref).epsilon(1e-10));
-      CHECK(hop_both == doctest::Approx(hop_ref).epsilon(1e-10));
+      // The production blob convention (wrap_twosite_gate = input swap
+      // only) must reproduce the Fock-verified direct path; verbatim
+      // loading and the retired in+out-swap convention are both wrong on
+      // the hopping.
+      CHECK(nn_in == doctest::Approx(nn_ref).epsilon(1e-10));
+      CHECK(hop_in == doctest::Approx(hop_ref).epsilon(1e-10));
       const double hop_scale = std::max(1.0e-6, std::abs(hop_ref));
       CHECK(std::abs(hop_plain - hop_ref) > 0.1 * hop_scale);
+      CHECK(std::abs(hop_both - hop_ref) > 0.1 * hop_scale);
     }
   }
 }

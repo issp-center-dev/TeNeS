@@ -108,8 +108,8 @@ class SwapForm {
 /*! @brief A diagonal factor multiplied onto one leg during a sign sweep.
  *
  * Unlike a SwapForm term this is linear, not bilinear: element n picks up
- * factor[idx[axis]] regardless of the other legs. Used e.g. for the
- * @f$(-1)^p@f$ masks that the direct blob fuse rewrites onto traced legs.
+ * factor[idx[axis]] regardless of the other legs. This is a general sign-sweep
+ * utility retained for callers that need a per-leg diagonal factor.
  */
 struct LegGauge {
   //! Leg the factor acts on.

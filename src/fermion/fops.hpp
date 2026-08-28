@@ -25,16 +25,14 @@
  *  even-first, factorize the even and odd diagonal blocks separately, and
  *  hand each factor a parity ledger for the new internal leg.
  *
- *  The header also hosts the operator loading adapters
- *  (wrap_twosite_gate(), wrap_reduced_pair_op()). There are three loading
- *  conventions for measurement/evolution operators, and confusing them is a
- *  real (d = 4) sign bug:
+ *  The header also hosts wrap_twosite_gate(), the shared loading adapter for
+ *  two-site evolution gates and bundled-k measurement blobs. There are two
+ *  loading conventions for measurement/evolution operators:
  *
- *  | path                       | loader                  | swap applied   |
- *  |----------------------------|-------------------------|----------------|
- *  | simple-update kernel       | wrap_twosite_gate()     | input legs     |
- *  | blob measurement (CTM)     | wrap_reduced_pair_op()  | input + output |
- *  | one-site operators         | plain ftensor wrap      | none           |
+ *  | path                       | loader              | swap applied |
+ *  |----------------------------|---------------------|--------------|
+ *  | two-site evolution / blob  | wrap_twosite_gate() | input legs   |
+ *  | one-site operators         | plain ftensor wrap  | none         |
  */
 
 #ifndef TENES_SRC_FERMION_FOPS_HPP_
@@ -292,7 +290,7 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
 }
 
 /*!
- * @brief Load an evolution gate for the simple-update kernel.
+ * @brief Load a two-site evolution or bundled-k measurement operator.
  *
  * The gate is given as plain matrix elements
  * @f$\langle out_1\, out_2 | O | in_1\, in_2 \rangle@f$ in the ordered
@@ -308,8 +306,8 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
  * the doubly-odd input channel of every parity-conserving gate (e.g.
  * |11><11| in exp(-tau h)) is silently negated.
  *
- * @warning One of three loading conventions — see the file description.
- *          Blob measurement must use wrap_reduced_pair_op() instead.
+ * @warning The bundled-k CTM blob and the simple-update kernel share this
+ *          input-leg-only loading convention; see the file description.
  *
  * @param[in] op Gate matrix elements, legs (in1, in2, out1, out2).
  * @param[in] p1 Physical-leg ledger of the first site.
@@ -320,38 +318,6 @@ ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
                                   const parity_vector& p2) {
   ftensor<tensor> fop{op, {p1, p2, p1, p2}};
   apply_swap(fop, 0, 1);
-  return fop;
-}
-
-/*!
- * @brief Load a measurement operator for the reduced-pair blob path.
- *
- * Same plain matrix elements as wrap_twosite_gate(), but here the
- * operator's output legs are also closed — against the bra layer — so both
- * leg pairs need the compensating mask. For physical dimension 2 this is
- * indistinguishable from verbatim loading on particle-number-conserving
- * operators (which is how the d = 2 oracle pinned the pipeline); the
- * distinction appears first in channels like (odd,odd) -> (even,even),
- * present e.g. in the spinful hopping at linear order, and is pinned by
- * the R5 d = 4 oracle test.
- *
- * @note When the measured source site is the SECOND site of the window,
- *       the caller additionally graded-transposes the result by
- *       (1, 0, 3, 2) (see the fermion CTM branch of twosite_obs.cpp).
- *       Hopping terms are symmetric under this, but antisymmetric
- *       operators such as the pairing @f$c_b c_a + h.c.@f$ acquire a
- *       minus sign relative to the first-site view.
- *
- * @param[in] op Operator matrix elements, legs (in1, in2, out1, out2).
- * @param[in] p1 Physical-leg ledger of the first site.
- * @param[in] p2 Physical-leg ledger of the second site.
- */
-template <class tensor>
-ftensor<tensor> wrap_reduced_pair_op(const tensor& op, const parity_vector& p1,
-                                     const parity_vector& p2) {
-  ftensor<tensor> fop{op, {p1, p2, p1, p2}};
-  apply_swap(fop, 0, 1);
-  apply_swap(fop, 2, 3);
   return fop;
 }
 

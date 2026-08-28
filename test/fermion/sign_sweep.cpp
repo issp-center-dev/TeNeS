@@ -1513,19 +1513,34 @@ TEST_CASE_TEMPLATE("SS C2-7 fermion transpose, tensordot and svd are unchanged",
 
 // ===== SS C3: the doubling pipeline rebuilt around the fused sweep ========
 //
-// `ss_reference3` holds VERBATIM COPIES of the pre-rewrite doubling pipeline,
-// taken from the tag wip/fermion_20260822:
+// `ss_reference3` holds STRUCTURALLY VERBATIM COPIES of the pre-rewrite
+// doubling pipeline, taken from the tag wip/fermion_20260822:
 //
-//   joint_bit / kDoubledJointMask / apply_joint_swaps / apply_fused_leg_gauge
-//   doubled_pipeline / fuse_doubled_cluster_naive (old two-argument signature)
+//   joint_bit / kDoubledJointMask / apply_joint_swaps
+//   doubled_pipeline
 //   build_reduced_op / build_reduced / build_pair_state / apply_pair_op
-//   build_reduced_pair_naive
 //                                       <- src/fermion/reduced.hpp
-//   build_reduced_identity_pair         <- src/fermion/reduced_measure.hpp
 //
-// Only namespace qualification was added.  As the task-3 contract allows, the
-// copies call the CURRENT tenes::fermion::apply_swap / transpose / conj /
-// tensordot: tasks 1 and 2 pinned those bit-identical to the pre-rewrite ones.
+// (The copies of the OLD pair fuse chain -- apply_fused_leg_gauge,
+// fuse_doubled_cluster_naive, build_reduced_pair_naive,
+// build_reduced_identity_pair -- were retired on 2026-08-28 together with
+// the C3-2/3/6 equivalence tests they served; see the note at the former
+// C3-2 site below.)
+//
+// Only namespace qualification was added, with ONE deliberate exception: the
+// kDoubledJointMask CONSTANT follows the intentional convention fix of
+// 2026-08-28 (six ordered pairs, one consistent planar routing of the bra
+// legs; see the doc comment on tenes::fermion::detail::kDoubledJointMask in
+// src/fermion/reduced.hpp for the reason and the Fock-oracle verification).
+// The tagged value {(0,3), (1,0), (2,3), (3,0)} was an inconsistent mixture
+// that only worked on chains and the 2x2 plaquette; keeping it here would
+// pin the production mask to the bug.  The code AROUND the constant remains
+// the tag's, so these tests still compare the sign-sweep rewrite against the
+// elementwise pre-rewrite pipeline, now both at the fixed mask.
+//
+// As the task-3 contract allows, the copies call the CURRENT
+// tenes::fermion::apply_swap / transpose / conj / tensordot: tasks 1 and 2
+// pinned those bit-identical to the pre-rewrite ones.
 //
 // reference_joint_forms() is NOT a copy: it mirrors the loop of
 // apply_joint_swaps but toggles the pairs into two SwapForms using the split
@@ -1542,10 +1557,13 @@ using tenes::fermion::reduced_pair_direction;
 // verbatim: tenes::fermion::detail::joint_bit
 constexpr int joint_bit(int x, int y) { return x * 3 + (y < x ? y : y - 1); }
 
-// verbatim: tenes::fermion::detail::kDoubledJointMask
+// tenes::fermion::detail::kDoubledJointMask -- NOT the tagged value: this
+// constant tracks the intentional 2026-08-28 fix (all six ordered pairs
+// (x, y) with y in {0 = left, 3 = bottom}); see the namespace comment above.
 constexpr unsigned kDoubledJointMask =
-    (1u << joint_bit(0, 3)) | (1u << joint_bit(1, 0)) |
-    (1u << joint_bit(2, 3)) | (1u << joint_bit(3, 0));
+    (1u << joint_bit(1, 0)) | (1u << joint_bit(2, 0)) |
+    (1u << joint_bit(3, 0)) | (1u << joint_bit(0, 3)) |
+    (1u << joint_bit(1, 3)) | (1u << joint_bit(2, 3));
 
 // verbatim: tenes::fermion::detail::apply_joint_swaps
 template <class tensor>
@@ -1607,22 +1625,6 @@ inline void reference_joint_forms(const std::vector<int>& bra_axes,
   }
 }
 
-// verbatim: tenes::fermion::detail::apply_fused_leg_gauge
-template <class tensor>
-void apply_fused_leg_gauge(tensor& a, const parity_vector& leg_parity,
-                           std::size_t ax, bool ket_odd_bra_even) {
-  std::vector<double> sign(leg_parity.size() * leg_parity.size(), 1.0);
-  for (std::size_t bra = 0; bra < leg_parity.size(); ++bra) {
-    for (std::size_t ket = 0; ket < leg_parity.size(); ++ket) {
-      const bool flip = ket_odd_bra_even
-                            ? (leg_parity[ket] && !leg_parity[bra])
-                            : (!leg_parity[ket] && leg_parity[bra]);
-      sign[ket + leg_parity.size() * bra] = flip ? -1.0 : 1.0;
-    }
-  }
-  a.multiply_vector(sign, ax);
-}
-
 // verbatim: tenes::fermion::detail::doubled_pipeline
 template <class tensor>
 tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
@@ -1646,45 +1648,6 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   sh.push(ordered.shape()[8]);
   sh.push(ordered.shape()[9]);
   return mptensor::reshape(ordered.t, sh);
-}
-
-// verbatim: tenes::fermion::detail::fuse_doubled_cluster_naive (old signature)
-template <class tensor>
-tensor fuse_doubled_cluster_naive(const ftensor<tensor>& doubled,
-                                  const std::vector<int>& leg_ids) {
-  ftensor<tensor> prepared = doubled;
-  constexpr std::size_t kExternalLegs = 6;
-  const std::vector<int> cluster_axes = {0, 1, 2, 4, 5, 6};
-  std::vector<int> bra_axes;
-  std::vector<int> ket_axes;
-  for (const int ax : cluster_axes) {
-    bra_axes.push_back(ax);
-    ket_axes.push_back(ax + 8);
-  }
-  ss_reference3::apply_joint_swaps(prepared, bra_axes, ket_axes, leg_ids);
-
-  mptensor::Axes interleaved;
-  for (std::size_t i = 0; i < kExternalLegs; ++i) {
-    interleaved.push(ket_axes[i]);
-    interleaved.push(bra_axes[i]);
-  }
-  interleaved.push(11);
-  interleaved.push(15);
-  interleaved.push(3);
-  interleaved.push(7);
-  ftensor<tensor> ordered = tenes::fermion::transpose(prepared, interleaved);
-
-  mptensor::Shape sh;
-  for (std::size_t ax = 0; ax < kExternalLegs; ++ax) {
-    sh.push(ordered.shape()[2 * ax] * ordered.shape()[2 * ax + 1]);
-  }
-  sh.push(ordered.shape()[12]);
-  sh.push(ordered.shape()[13]);
-  sh.push(ordered.shape()[14]);
-  sh.push(ordered.shape()[15]);
-
-  tensor fused = mptensor::reshape(ordered.t, sh);
-  return mptensor::contract(fused, mptensor::Axes(6, 7), mptensor::Axes(8, 9));
 }
 
 // verbatim: tenes::fermion::build_reduced_op
@@ -1738,56 +1701,13 @@ ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
                                    mptensor::Axes(0, 1, 2, 6, 3, 4, 5, 7));
 }
 
-// verbatim: tenes::fermion::build_reduced_pair_naive
-template <class tensor>
-tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
-                                const ftensor<tensor>& TnB,
-                                const ftensor<tensor>& op12,
-                                reduced_pair_direction direction) {
-  const ftensor<tensor> ket_ab =
-      ss_reference3::build_pair_state(TnA, TnB, direction);
-  std::vector<int> leg_ids;
-  switch (direction) {
-    case reduced_pair_direction::horizontal:
-      leg_ids = {0, 1, 3, 1, 2, 3};
-      break;
-    case reduced_pair_direction::vertical:
-      leg_ids = {0, 1, 2, 0, 2, 3};
-      break;
-    default:
-      throw std::runtime_error("doubled_cluster: invalid direction");
-  }
+// The frozen copies of the OLD pair fuse chain (apply_fused_leg_gauge,
+// fuse_doubled_cluster_naive, build_reduced_pair_naive,
+// build_reduced_identity_pair) were retired on 2026-08-28 together with the
+// C3-2/3/6 equivalence tests; see the comment at the former C3-2 site.
 
-  ftensor<tensor> ket_op = ss_reference3::apply_pair_op(ket_ab, op12);
-  ftensor<tensor> doubled = tenes::fermion::tensordot(
-      tenes::fermion::conj(ket_ab), ket_op, mptensor::Axes(), mptensor::Axes());
-  tensor ret = ss_reference3::fuse_doubled_cluster_naive(doubled, leg_ids);
-  if (direction == reduced_pair_direction::horizontal) {
-    ss_reference3::apply_fused_leg_gauge(ret, TnA.parity[3], 2, true);
-    ss_reference3::apply_fused_leg_gauge(ret, TnB.parity[3], 5, false);
-  } else {
-    ss_reference3::apply_fused_leg_gauge(ret, TnA.parity[0], 0, true);
-    ss_reference3::apply_fused_leg_gauge(ret, TnB.parity[0], 3, false);
-  }
-  return ret;
-}
-
-// verbatim: tenes::fermion::build_reduced_identity_pair (reduced_measure.hpp)
-template <class tensor>
-tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
-                                   const ftensor<tensor>& TnB,
-                                   reduced_pair_direction direction) {
-  if (direction == reduced_pair_direction::horizontal) {
-    return mptensor::tensordot(ss_reference3::build_reduced(TnA),
-                               ss_reference3::build_reduced(TnB),
-                               mptensor::Axes(2), mptensor::Axes(0));
-  }
-  return mptensor::tensordot(ss_reference3::build_reduced(TnA),
-                             ss_reference3::build_reduced(TnB),
-                             mptensor::Axes(3), mptensor::Axes(1));
-}
-
-// The leg_ids build_reduced_pair_naive uses for each direction.
+// The leg_ids the pair fuse uses for each direction (still exercised by the
+// C3-4 form-splitting checks).
 inline std::vector<int> leg_ids_for(reduced_pair_direction direction) {
   if (direction == reduced_pair_direction::horizontal) {
     return {0, 1, 3, 1, 2, 3};
@@ -1829,43 +1749,6 @@ tenes::fermion::leg_parities ss_c3_op_parity(
   return {TnA.parity[4], TnB.parity[4], TnA.parity[4], TnB.parity[4]};
 }
 
-template <class tensor>
-tenes::fermion::ftensor<tensor> ss_c3_op_identity(
-    const tenes::fermion::ftensor<tensor>& TnA,
-    const tenes::fermion::ftensor<tensor>& TnB) {
-  const std::size_t da = TnA.parity[4].size();
-  const std::size_t db = TnB.parity[4].size();
-  tensor t(mptensor::Shape(da, db, da, db));
-  for (std::size_t i = 0; i < da; ++i) {
-    for (std::size_t j = 0; j < db; ++j) {
-      t.set_value(mptensor::Index(i, j, i, j),
-                  typename tensor::value_type(1.0));
-    }
-  }
-  return tenes::fermion::ftensor<tensor>{t, ss_c3_op_parity(TnA, TnB)};
-}
-
-// A general parity-preserving operator: every element whose total parity is
-// even is random, the parity-odd ones stay exactly zero.
-template <class tensor>
-tenes::fermion::ftensor<tensor> ss_c3_op_random_even(
-    const tenes::fermion::ftensor<tensor>& TnA,
-    const tenes::fermion::ftensor<tensor>& TnB, unsigned seed) {
-  using value_type = typename tensor::value_type;
-  const tenes::fermion::leg_parities p = ss_c3_op_parity(TnA, TnB);
-  const std::size_t da = p[0].size();
-  const std::size_t db = p[1].size();
-  tensor t(mptensor::Shape(da, db, da, db));
-  std::mt19937 gen(seed);
-  for (std::size_t n = 0; n < t.local_size(); ++n) {
-    const mptensor::Index idx = t.global_index(n);
-    if (tenes::fermion::count_odd(p, idx) % 2 == 0) {
-      t.set_value(idx, ss_sampler<value_type>::get(gen));
-    }
-  }
-  return tenes::fermion::ftensor<tensor>{t, p};
-}
-
 // Spinless hopping c^dag_A c_B + h.c. on d = 2: the channel where BOTH sites
 // change parity.  Without it half of the swap-sign branches never run.
 template <class tensor>
@@ -1885,18 +1768,8 @@ tenes::fermion::ftensor<tensor> ss_c3_op_hopping(
       ss_c3_hopping_plain<tensor>(p[0].size(), p[1].size()), p};
 }
 
-// The same hopping as production loads it for the blob path.
-template <class tensor>
-tenes::fermion::ftensor<tensor> ss_c3_op_wrapped_hopping(
-    const tenes::fermion::ftensor<tensor>& TnA,
-    const tenes::fermion::ftensor<tensor>& TnB) {
-  return tenes::fermion::wrap_reduced_pair_op(
-      ss_c3_hopping_plain<tensor>(TnA.parity[4].size(), TnB.parity[4].size()),
-      TnA.parity[4], TnB.parity[4]);
-}
-
-// The rank-16 doubled tensor build_reduced_pair_naive works on, and the two
-// layers it is the outer product of.
+// The rank-16 doubled tensor the pair fuse works on, and the two layers it
+// is the outer product of.
 template <class tensor>
 void ss_c3_doubled_pair(const tenes::fermion::ftensor<tensor>& TnA,
                         const tenes::fermion::ftensor<tensor>& TnB,
@@ -1935,66 +1808,6 @@ std::size_t ss_count_nonzero_tensor(const tensor& a) {
     }
   }
   return n_nz;
-}
-
-// Shared body of C3-2 (horizontal) and C3-3 (vertical): the leg_ids differ
-// per direction, so both have to be walked.
-template <class tensor>
-void ss_c3_check_reduced_pair(tenes::fermion::reduced_pair_direction dir,
-                              const char* dir_name) {
-  tenes::fermion::ftensor<tensor> TnA, TnB;
-  ss_c3_pair_tensors<tensor>(dir, 24000u, TnA, TnB);
-
-  struct named_op {
-    std::string name;
-    tenes::fermion::ftensor<tensor> op;
-  };
-  std::vector<named_op> ops;
-  ops.push_back({"identity", ss_c3_op_identity<tensor>(TnA, TnB)});
-  ops.push_back(
-      {"random parity-even", ss_c3_op_random_even<tensor>(TnA, TnB, 24500u)});
-  ops.push_back({"hopping (both sites change parity)",
-                 ss_c3_op_hopping<tensor>(TnA, TnB)});
-  ops.push_back({"hopping wrapped for the blob path",
-                 ss_c3_op_wrapped_hopping<tensor>(TnA, TnB)});
-
-  for (const named_op& no : ops) {
-    INFO(dir_name << " op: " << no.name);
-    const tensor expected =
-        ss_reference3::build_reduced_pair_naive(TnA, TnB, no.op, dir);
-    const tensor got =
-        tenes::fermion::build_reduced_pair_naive(TnA, TnB, no.op, dir);
-    REQUIRE(got.shape() == expected.shape());
-    // an all-zero blob would make the comparison vacuous
-    REQUIRE(ss_count_nonzero_tensor(expected) > 0);
-    CHECK(ss_count_diff(got, expected) == 0);
-  }
-
-  {
-    INFO(dir_name << " build_reduced_identity_pair");
-    const tensor expected =
-        ss_reference3::build_reduced_identity_pair(TnA, TnB, dir);
-    const tensor got =
-        tenes::fermion::build_reduced_identity_pair(TnA, TnB, dir);
-    REQUIRE(got.shape() == expected.shape());
-    REQUIRE(ss_count_nonzero_tensor(expected) > 0);
-    CHECK(ss_count_diff(got, expected) == 0);
-  }
-
-  {
-    // the joint swaps must really change the doubled tensor for this
-    // direction, otherwise every comparison above would hold with no signs
-    tenes::fermion::ftensor<tensor> bra_pair, ket_pair;
-    ss_c3_doubled_pair<tensor>(TnA, TnB, ops[2].op, dir, bra_pair, ket_pair);
-    const tenes::fermion::ftensor<tensor> doubled = tenes::fermion::tensordot(
-        bra_pair, ket_pair, mptensor::Axes(), mptensor::Axes());
-    tenes::fermion::ftensor<tensor> swapped = doubled;
-    ss_reference3::apply_joint_swaps(swapped, ss_c3_cluster_bra_axes(),
-                                     ss_c3_cluster_ket_axes(),
-                                     ss_reference3::leg_ids_for(dir));
-    INFO(dir_name << " joint swaps are not a no-op");
-    REQUIRE(ss_count_diff(swapped.t, doubled.t) > 0);
-  }
 }
 
 // Shared body of C3-4: `first` is the bra layer (the outer product's first
@@ -2105,24 +1918,15 @@ TEST_CASE_TEMPLATE(
   }
 }
 
-// ------------------------------------------------------------------ C3-2
-
-TEST_CASE_TEMPLATE(
-    "SS C3-2 build_reduced_pair_naive matches the reference for horizontal "
-    "pairs",
-    tensor, tenes::real_tensor, tenes::complex_tensor) {
-  fermion_sign_sweep::ss_c3_check_reduced_pair<tensor>(
-      tenes::fermion::reduced_pair_direction::horizontal, "horizontal");
-}
-
-// ------------------------------------------------------------------ C3-3
-
-TEST_CASE_TEMPLATE(
-    "SS C3-3 build_reduced_pair_naive matches the reference for vertical pairs",
-    tensor, tenes::real_tensor, tenes::complex_tensor) {
-  fermion_sign_sweep::ss_c3_check_reduced_pair<tensor>(
-      tenes::fermion::reduced_pair_direction::vertical, "vertical");
-}
+// ------------------------------------------------------------- C3-2 / C3-3
+//
+// C3-2 and C3-3 (equivalence of build_reduced_pair_naive and
+// build_reduced_identity_pair against the frozen copy of the OLD pair fuse)
+// were retired on 2026-08-28 together with C3-6, ahead of the blob
+// reconstruction that replaces the insides of build_reduced_pair_naive /
+// build_reduced_pair_direct (signatures unchanged).  The correctness of the
+// pair blob is checked by test/fermion/fold_geometry.cpp T9-T13, grounded in
+// the single-layer graded truth instead of an implementation copy.
 
 // ------------------------------------------------------------------ C3-4
 
@@ -2164,12 +1968,34 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
   using namespace fermion_sign_sweep;
 
   // The expected term sets below are enumerated BY HAND from
-  // apply_joint_swaps: kDoubledJointMask selects (x,y) in
-  // {(0,3), (1,0), (2,3), (3,0)}; for each, every ix with leg_ids[ix]==x is
-  // paired with every iy with leg_ids[iy]==y, contributing
+  // apply_joint_swaps: kDoubledJointMask (2026-08-28 fix) selects (x,y) in
+  // {(0,3), (1,0), (1,3), (2,0), (2,3), (3,0)}; for each, every ix with
+  // leg_ids[ix]==x is paired with every iy with leg_ids[iy]==y, contributing
   //   (ket_axes[ix], bra_axes[iy]) to cross and
   //   (bra_axes[ix], bra_axes[iy]) to bra.
   // SwapForm normalises to first<second, sorts, and cancels duplicates.
+  //
+  // Hand derivation of the counts (positions i with leg_ids[i] == label):
+  //
+  // horizontal, leg_ids {0,1,3,1,2,3}: label 0 -> {i0}, 1 -> {i1,i3},
+  //   2 -> {i4}, 3 -> {i2,i5}.  Pair multiplicities: (0,3):1*2=2,
+  //   (1,0):2*1=2, (1,3):2*2=4, (2,0):1*1=1, (2,3):1*2=2, (3,0):2*1=2,
+  //   total 13.  cross: all 13 (ket, bra) pairs are distinct -> n_cross=13.
+  //   bra: the (0,3) pairs {(b0,b2),(b0,b5)} = {(0,2),(0,6)} reappear from
+  //   (3,0) as {(b2,b0),(b5,b0)} and toggle out; the other 9 are distinct
+  //   -> n_bra = 13 - 2*2 = 9.
+  //
+  // vertical, leg_ids {0,1,2,0,2,3}: label 0 -> {i0,i3}, 1 -> {i1},
+  //   2 -> {i2,i4}, 3 -> {i5}.  Multiplicities: (0,3):2, (1,0):2, (1,3):1,
+  //   (2,0):4, (2,3):2, (3,0):2, total 13.  cross: all distinct -> 13.
+  //   bra: (0,3) gives {(0,6),(4,6)}, (3,0) gives the same unordered pairs
+  //   -> toggle out -> n_bra = 9.
+  //
+  // doubled_pipeline, leg_ids {0,1,2,3}: one position per label, one term
+  //   per masked pair -> 6 cross terms, all distinct.  bra: (0,3) and (3,0)
+  //   both give (0,3) -> toggle out -> n_bra = 4.
+  //
+  // The term lists below follow the same enumeration, normalised and sorted.
   struct cfg {
     std::string name;
     std::vector<int> bra_axes;
@@ -2186,33 +2012,73 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
   const std::vector<int> cket = ss_c3_cluster_ket_axes();  // {8,9,10,12,13,14}
 
   const std::vector<cfg> cases = {
-      {"fuse_doubled_cluster_naive horizontal",
+      {"pair cluster horizontal",
        cbra,
        cket,
        {0, 1, 3, 1, 2, 3},
        8,
-       8,
-       4,
-       {{0, 9}, {0, 10}, {0, 12}, {0, 14}, {2, 8}, {2, 13}, {6, 8}, {6, 13}},
-       {{0, 1}, {0, 4}, {2, 5}, {5, 6}}},
-      {"fuse_doubled_cluster_naive vertical",
+       13,
+       9,
+       {{0, 9},
+        {0, 10},
+        {0, 12},
+        {0, 13},
+        {0, 14},
+        {2, 8},
+        {2, 9},
+        {2, 12},
+        {2, 13},
+        {6, 8},
+        {6, 9},
+        {6, 12},
+        {6, 13}},
+       {{0, 1},
+        {0, 4},
+        {0, 5},
+        {1, 2},
+        {1, 6},
+        {2, 4},
+        {2, 5},
+        {4, 6},
+        {5, 6}}},
+      {"pair cluster vertical",
        cbra,
        cket,
        {0, 1, 2, 0, 2, 3},
        8,
-       8,
-       4,
-       {{0, 9}, {0, 14}, {4, 9}, {4, 14}, {6, 8}, {6, 10}, {6, 12}, {6, 13}},
-       {{0, 1}, {1, 4}, {2, 6}, {5, 6}}},
+       13,
+       9,
+       {{0, 9},
+        {0, 10},
+        {0, 13},
+        {0, 14},
+        {4, 9},
+        {4, 10},
+        {4, 13},
+        {4, 14},
+        {6, 8},
+        {6, 9},
+        {6, 10},
+        {6, 12},
+        {6, 13}},
+       {{0, 1},
+        {0, 2},
+        {0, 5},
+        {1, 4},
+        {1, 6},
+        {2, 4},
+        {2, 6},
+        {4, 5},
+        {5, 6}}},
       {"doubled_pipeline",
        {0, 1, 2, 3},
        {5, 6, 7, 8},
        {0, 1, 2, 3},
        5,
+       6,
        4,
-       2,
-       {{0, 6}, {0, 8}, {3, 5}, {3, 7}},
-       {{0, 1}, {2, 3}}},
+       {{0, 6}, {0, 7}, {0, 8}, {3, 5}, {3, 6}, {3, 7}},
+       {{0, 1}, {0, 2}, {1, 3}, {2, 3}}},
   };
 
   for (const cfg& c : cases) {
@@ -2277,63 +2143,24 @@ TEST_CASE("SS C3-5 joint_swap_forms splits the pairs by where they apply") {
 }
 
 // ------------------------------------------------------------------ C3-6
-
-TEST_CASE_TEMPLATE(
-    "SS C3-6 fuse_doubled_cluster_naive does the outer product itself", tensor,
-    tenes::real_tensor, tenes::complex_tensor) {
-  using namespace fermion_sign_sweep;
-
-  for (const tenes::fermion::reduced_pair_direction dir :
-       {tenes::fermion::reduced_pair_direction::horizontal,
-        tenes::fermion::reduced_pair_direction::vertical}) {
-    const std::string dir_name =
-        dir == tenes::fermion::reduced_pair_direction::horizontal ? "horizontal"
-                                                                  : "vertical";
-    const std::vector<int> leg_ids = ss_reference3::leg_ids_for(dir);
-
-    tenes::fermion::ftensor<tensor> TnA, TnB;
-    ss_c3_pair_tensors<tensor>(dir, 28000u, TnA, TnB);
-
-    struct named_op {
-      std::string name;
-      tenes::fermion::ftensor<tensor> op;
-    };
-    std::vector<named_op> ops;
-    ops.push_back({"identity", ss_c3_op_identity<tensor>(TnA, TnB)});
-    ops.push_back({"hopping (both sites change parity)",
-                   ss_c3_op_hopping<tensor>(TnA, TnB)});
-    ops.push_back(
-        {"random parity-even", ss_c3_op_random_even<tensor>(TnA, TnB, 28500u)});
-
-    for (const named_op& no : ops) {
-      INFO(dir_name << " op: " << no.name);
-      tenes::fermion::ftensor<tensor> bra_pair, ket_pair;
-      ss_c3_doubled_pair<tensor>(TnA, TnB, no.op, dir, bra_pair, ket_pair);
-
-      const tenes::fermion::ftensor<tensor> doubled = tenes::fermion::tensordot(
-          bra_pair, ket_pair, mptensor::Axes(), mptensor::Axes());
-      REQUIRE(doubled.rank() == 16);
-
-      const tensor expected =
-          ss_reference3::fuse_doubled_cluster_naive(doubled, leg_ids);
-      const tensor got = tenes::fermion::detail::fuse_doubled_cluster_naive(
-          bra_pair, ket_pair, leg_ids);
-
-      REQUIRE(got.shape() == expected.shape());
-      REQUIRE(ss_count_nonzero_tensor(expected) > 0);
-      CHECK(ss_count_diff(got, expected) == 0);
-    }
-  }
-}
+//
+// C3-6 (fuse_doubled_cluster_naive against the frozen old two-argument
+// fuse) was retired on 2026-08-28; see the note at the former C3-2 site.
 
 // ===== SS C4: the input-validation guards ================================
 //
-// Every `throw std::runtime_error` in src/fermion/sign_sweep.hpp and
-// src/fermion/reduced.hpp is pinned here.  Several of them (validate_axes,
-// the form/gauge range checks) exist because the index they guard is used
-// immediately as a buffer offset -- without the throw the code writes out of
-// bounds instead of failing, so removing one silently is a memory safety
-// regression that no numerical test can see.
+// The input-validation guards of src/fermion/sign_sweep.hpp and
+// src/fermion/reduced.hpp are pinned here: every reachable
+// `throw std::runtime_error` -- the sweep/form/gauge range checks, the
+// joint_swap_forms preconditions, and the rank and direction guards of the
+// reduced pipeline including the 2026-08-28 pair-blob builders -- EXCEPT
+// the builders' "gate SVD failed" guards, which fire only on a nonzero
+// LAPACK info and cannot be provoked from a well-formed test input.
+// Several of the pinned ones (validate_axes, the form/gauge range checks)
+// exist because the index they guard is used immediately as a buffer
+// offset -- without the throw the code writes out of bounds instead of
+// failing, so removing one silently is a memory safety regression that no
+// numerical test can see.
 //
 // The assertions check the exception MESSAGE, not just the type.  Guards
 // shadow each other: without the rank check in build_reduced_op, for example,
@@ -2377,6 +2204,18 @@ constexpr const char* kMsgPairStateRank =
     "build_pair_state expects five-leg Tn ftensors";
 constexpr const char* kMsgPairStateDirection =
     "build_pair_state: invalid direction";
+// Messages of the pair-blob builders' own guards (2026-08-28). The
+// direction strings are the post-review ones (REVIEW-task34 minor 1); they
+// were pinned here ahead of the production change, and production now
+// throws exactly these.
+constexpr const char* kMsgPairNaiveDirection =
+    "build_reduced_pair_naive: invalid direction";
+constexpr const char* kMsgPairDirectDirection =
+    "build_reduced_pair_direct: invalid direction";
+constexpr const char* kMsgPairNaiveRank =
+    "build_reduced_pair_naive expects rank-5 sites and a rank-4 gate";
+constexpr const char* kMsgPairDirectRank =
+    "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate";
 constexpr const char* kMsgPairOpRank =
     "apply_pair_op expects an eight-leg pair state";
 constexpr const char* kMsgPairOpOperator =
@@ -2833,38 +2672,53 @@ TEST_CASE_TEMPLATE("SS C4-6 the reduced pipeline rejects malformed tensors",
                          kMsgPairOpOperator, std::runtime_error);
   }
 
-  SUBCASE("build_reduced_pair_naive rejects a direction no enumerator has") {
+  SUBCASE(
+      "build_reduced_pair_naive/direct reject a direction no enumerator "
+      "has") {
     tenes::fermion::ftensor<tensor> TnA, TnB;
     ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46500u, TnA,
                                TnB);
     const tenes::fermion::ftensor<tensor> op =
         ss_c3_op_hopping<tensor>(TnA, TnB);
-    // build_reduced_pair_naive calls build_pair_state first, so the message
-    // that comes out is build_pair_state's.  Its own `default:` branch (the
-    // "doubled_cluster: invalid direction" throw) is unreachable -- recorded
-    // in the task-6 report, not something this test can pin.
+    // The new (2026-08-28) builders carry their own direction guard, so the
+    // expected messages are the builders' own -- not build_pair_state's, as
+    // the pre-rewrite pipeline surfaced. The exact strings are the
+    // post-review ones (REVIEW-task34 minor 1); they were pinned ahead of
+    // the production message change (briefly RED), which has since landed.
     CHECK_THROWS_WITH_AS(
         tenes::fermion::build_reduced_pair_naive(TnA, TnB, op, bogus),
-        kMsgPairStateDirection, std::runtime_error);
+        kMsgPairNaiveDirection, std::runtime_error);
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_pair_direct(TnA, TnB, op, bogus),
+        kMsgPairDirectDirection, std::runtime_error);
   }
 
-  SUBCASE(
-      "fuse_doubled_cluster_naive forwards a bad leg_ids list to the guard") {
+  SUBCASE("build_reduced_pair_naive/direct reject malformed ranks") {
     tenes::fermion::ftensor<tensor> TnA, TnB;
-    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46600u, TnA,
+    ss_c3_pair_tensors<tensor>(reduced_pair_direction::horizontal, 46700u, TnA,
                                TnB);
     const tenes::fermion::ftensor<tensor> op =
         ss_c3_op_hopping<tensor>(TnA, TnB);
-    tenes::fermion::ftensor<tensor> bra_pair, ket_pair;
-    ss_c3_doubled_pair<tensor>(TnA, TnB, op, reduced_pair_direction::horizontal,
-                               bra_pair, ket_pair);
-    CHECK_NOTHROW(tenes::fermion::detail::fuse_doubled_cluster_naive(
-        bra_pair, ket_pair, {0, 1, 3, 1, 2, 3}));
-    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster_naive(
-                             bra_pair, ket_pair, {0, 1, 3}),
-                         kMsgJointSize, std::runtime_error);
-    CHECK_THROWS_WITH_AS(tenes::fermion::detail::fuse_doubled_cluster_naive(
-                             bra_pair, ket_pair, {0, 1, 3, 1, 2, 3, 0}),
-                         kMsgJointSize, std::runtime_error);
+    // Both a bad site (rank 4) and a bad gate (rank 5) must hit the
+    // builders' own combined rank guard, not a later shape failure.
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_pair_naive(
+                             bad4, TnB, op, reduced_pair_direction::horizontal),
+                         kMsgPairNaiveRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_pair_naive(
+            TnA, TnB, good5, reduced_pair_direction::horizontal),
+        kMsgPairNaiveRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_pair_direct(
+                             bad4, TnB, op, reduced_pair_direction::horizontal),
+                         kMsgPairDirectRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_pair_direct(
+            TnA, TnB, good5, reduced_pair_direction::horizontal),
+        kMsgPairDirectRank, std::runtime_error);
   }
+
+  // The SUBCASE that pinned the old cluster fuse forwarding a bad leg_ids
+  // list to the joint_swap_forms size guard was retired on 2026-08-28,
+  // ahead of the removal of the old blob path; the guard itself is still
+  // pinned directly by the joint_swap_forms C4 cases above.
 }

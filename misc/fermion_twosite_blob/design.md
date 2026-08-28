@@ -1,3 +1,10 @@
+> **[SUPERSEDED 2026-08-28]** この文書が記述する supersite fuse 構成
+> (joint mask + measured gauge alignment)は、2D で厳密性を失う欠陥が
+> 確定したため bundled-k 構成に全面置換された。現行設計は
+> `work/fermion/ctm-fold-fix/DESIGN.md`、根拠は
+> `work/fermion/ctm-fold-check/FINDINGS.md` を参照。本文書は旧構成の
+> 導出記録としてのみ残す。
+
 # フェルミオン2サイト blob の不純物分解 — 設計書
 
 - 日付: 2026-08-25

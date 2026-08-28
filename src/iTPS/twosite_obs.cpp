@@ -237,14 +237,8 @@ auto iTPS<ptensor>::measure_twosite()
           const int bottom = indices[1][0];
           if (finfo.enabled && !is_TPO) {
             const int target = top == source ? bottom : top;
-            // Two loading conventions, both pinned by the d = 4 R5 oracle:
-            //  - blob path: wrap_reduced_pair_op (input and output swaps),
-            //  - single-layer mean-field path: wrap_twosite_gate (input swap
-            //    only), the convention of the Fock-verified direct path.
-            auto o = is_mf ? tenes::fermion::wrap_twosite_gate(
-                                 op.op, finfo.phys[source], finfo.phys[target])
-                           : tenes::fermion::wrap_reduced_pair_op(
-                                 op.op, finfo.phys[source], finfo.phys[target]);
+            auto o = tenes::fermion::wrap_twosite_gate(
+                op.op, finfo.phys[source], finfo.phys[target]);
             if (top != source) {
               // Graded transpose: carries the Fock reordering sign
               // |n_B n_A> = (-1)^{n_A n_B} |n_A n_B> on both leg pairs.
@@ -294,11 +288,8 @@ auto iTPS<ptensor>::measure_twosite()
           const int right = indices[0][1];
           if (finfo.enabled && !is_TPO) {
             const int target = left == source ? right : left;
-            // Two loading conventions; see the vertical branch.
-            auto o = is_mf ? tenes::fermion::wrap_twosite_gate(
-                                 op.op, finfo.phys[source], finfo.phys[target])
-                           : tenes::fermion::wrap_reduced_pair_op(
-                                 op.op, finfo.phys[source], finfo.phys[target]);
+            auto o = tenes::fermion::wrap_twosite_gate(
+                op.op, finfo.phys[source], finfo.phys[target]);
             if (left != source) {
               // Graded transpose; see the vertical branch.
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));

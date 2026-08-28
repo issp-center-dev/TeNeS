@@ -141,12 +141,18 @@ def main():
     # match the handwritten expert-mode sample sample/07_spinless_fermion,
     # which solves the identical physics (t = 1, mu = 0, D = 2, chi = 8,
     # tau = 0.01, num_step = 1000, seed = 11, noise = 1.0, L_sub = [2, 2]).
-    # Measured Energy = -0.7328448954520573 against the sample's
-    # -7.32844895452057554e-01: identical to displayed precision. Exact
-    # free-fermion ground-state energy per site is -0.81056; D = 2 is a
-    # coarse approximation, so we pin to the sample's value, not the exact
-    # one.
-    E_REF = -7.32844895452057554e-01
+    # That intent -- simple-mode pipeline and expert sample are the SAME
+    # computation -- is unchanged, and both routes go through one binary, so
+    # a single reference still pins it. The value itself was re-measured on
+    # 2026-08-28: the original -7.32844895452057554e-01 was produced under
+    # the old folding convention (kDoubledJointMask missing two of its six
+    # pairs, wrong whenever a site has three or more nontrivial legs), and
+    # the fixed folding shifts the 2D CTM energy. The fix also moved the
+    # density to the particle-hole-symmetric exact value 0.5 at mu = 0 to
+    # near machine precision. Exact free-fermion ground-state energy per
+    # site is -0.81056; D = 2 is a coarse approximation, so we pin to the
+    # measured value, not the exact one.
+    E_REF = -7.23447685666101625e-01
     assert abs(energy - E_REF) < 1.0e-2 * abs(E_REF), \
         "energy {} moved away from the reference {}".format(energy, E_REF)
     print("OK", flush=True)
