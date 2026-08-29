@@ -34,6 +34,7 @@ auto iTPS<ptensor>::measure_multisite()
   validate_fermion_ctm_measurement();
 
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/multisite");
 
   const bool is_meanfield = peps_parameters.MeanField_Env;
   const bool is_density = peps_parameters.calcmode ==

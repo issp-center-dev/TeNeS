@@ -43,6 +43,7 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation() {
 template <class ptensor>
 std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/correlation");
 
   const bool is_tpo = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
@@ -226,6 +227,7 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
 
 template <class ptensor>
 std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
+  ScopedTimer scoped_timer("measure/correlation");
   const bool is_tpo = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
   if (is_tpo) {

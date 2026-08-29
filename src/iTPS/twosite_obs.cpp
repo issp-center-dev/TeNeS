@@ -36,6 +36,7 @@ auto iTPS<ptensor>::measure_twosite()
   validate_fermion_ctm_measurement();
 
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/twosite");
 
   const bool is_TPO = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
@@ -478,6 +479,7 @@ template <class ptensor>
 auto iTPS<ptensor>::measure_twosite_density()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/twosite");
 
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);

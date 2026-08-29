@@ -38,6 +38,7 @@ template <class tensor>
 auto iTPS<tensor>::measure_onesite()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/onesite");
   const bool is_meanfield = peps_parameters.MeanField_Env;
   const bool is_density = peps_parameters.calcmode ==
                           PEPS_Parameters::CalculationMode::finite_temperature;
@@ -223,6 +224,7 @@ template <class tensor>
 auto iTPS<tensor>::measure_onesite_density()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/onesite");
   const int nlops = num_onesite_operators;
   std::vector<std::vector<tensor_type>> local_obs(
       nlops, std::vector<tensor_type>(

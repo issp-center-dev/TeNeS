@@ -33,6 +33,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../timer.hpp"
 #include "fermion_info.hpp"
 #include "reduced.hpp"
 
@@ -99,6 +100,7 @@ template <class tensor>
 tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
                                    const ftensor<tensor>& TnB,
                                    reduced_pair_direction direction) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/blob");
   if (direction == reduced_pair_direction::horizontal) {
     return mptensor::tensordot(build_reduced(TnA), build_reduced(TnB),
                                mptensor::Axes(2), mptensor::Axes(0));
@@ -197,6 +199,7 @@ typename tensor::value_type contract_reduced_pair_horizontal_density_CTM(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6, const tensor& blob) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/close");
   using mptensor::Axes;
   const tensor left_lower = tensordot(
       eT5,
@@ -239,6 +242,7 @@ typename tensor::value_type contract_reduced_pair_vertical_density_CTM(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6, const tensor& blob) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/close");
   using mptensor::Axes;
   const tensor top_left = tensordot(
       eT6,

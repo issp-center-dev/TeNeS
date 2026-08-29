@@ -63,6 +63,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../timer.hpp"
 #include "fops.hpp"
 #include "ftensor.hpp"
 
@@ -438,6 +439,7 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
                                  const ftensor<tensor>& TnB,
                                  const ftensor<tensor>& op12,
                                  reduced_pair_direction direction) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/blob");
   if (TnA.rank() != 5 || TnB.rank() != 5 || op12.rank() != 4) {
     throw std::runtime_error(
         "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate");
