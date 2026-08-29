@@ -187,14 +187,14 @@ auto iTPS<ptensor>::measure_twosite()
                     fTop, fBottom,
                     tenes::fermion::reduced_pair_direction::vertical));
           } else {
-            const ptensor blob = tenes::fermion::build_reduced_identity_pair(
+            const auto halves = tenes::fermion::build_reduced_identity_halves(
                 fTop, fBottom,
                 tenes::fermion::reduced_pair_direction::vertical);
             norms[norm_key] =
-                tenes::fermion::contract_reduced_pair_vertical_density_CTM(
+                tenes::fermion::contract_reduced_pair_halves_density_CTM(
                     C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
                     eTr[top], eTr[bottom], eTb[bottom], eTl[bottom], eTl[top],
-                    blob);
+                    halves);
           }
         } else {
           const int left = indices[0][0];
@@ -208,14 +208,14 @@ auto iTPS<ptensor>::measure_twosite()
                     fLeft, fRight,
                     tenes::fermion::reduced_pair_direction::horizontal));
           } else {
-            const ptensor blob = tenes::fermion::build_reduced_identity_pair(
+            const auto halves = tenes::fermion::build_reduced_identity_halves(
                 fLeft, fRight,
                 tenes::fermion::reduced_pair_direction::horizontal);
             norms[norm_key] =
-                tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
+                tenes::fermion::contract_reduced_pair_halves_density_CTM(
                     C1[left], C2[right], C3[right], C4[left], eTt[left],
                     eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
-                    blob);
+                    halves);
           }
         }
       } else if (is_mf) {
@@ -259,14 +259,12 @@ auto iTPS<ptensor>::measure_twosite()
               // upper), and the infinite lattice has no boundary, so bonds
               // whose target wraps around the unit cell need no special
               // ordering.
-              const ptensor blob = tenes::fermion::build_reduced_pair_direct(
+              const auto halves = tenes::fermion::build_reduced_pair_halves(
                   fTop, fBottom, o,
                   tenes::fermion::reduced_pair_direction::vertical);
-              value =
-                  tenes::fermion::contract_reduced_pair_vertical_density_CTM(
-                      C1[top], C2[top], C3[bottom], C4[bottom], eTt[top],
-                      eTr[top], eTr[bottom], eTb[bottom], eTl[bottom], eTl[top],
-                      blob);
+              value = tenes::fermion::contract_reduced_pair_halves_density_CTM(
+                  C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
+                  eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], halves);
             }
           } else {
             ptensor o =
@@ -308,14 +306,13 @@ auto iTPS<ptensor>::measure_twosite()
             } else {
               // Window columns already carry geometric roles (col 0 = left);
               // see the vertical branch.
-              const ptensor blob = tenes::fermion::build_reduced_pair_direct(
+              const auto halves = tenes::fermion::build_reduced_pair_halves(
                   fLeft, fRight, o,
                   tenes::fermion::reduced_pair_direction::horizontal);
-              value =
-                  tenes::fermion::contract_reduced_pair_horizontal_density_CTM(
-                      C1[left], C2[right], C3[right], C4[left], eTt[left],
-                      eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
-                      blob);
+              value = tenes::fermion::contract_reduced_pair_halves_density_CTM(
+                  C1[left], C2[right], C3[right], C4[left], eTt[left],
+                  eTt[right], eTr[right], eTb[right], eTb[left], eTl[left],
+                  halves);
             }
           } else {
             ptensor o =

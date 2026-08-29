@@ -61,6 +61,7 @@
 #define TENES_SRC_FERMION_REDUCED_HPP_
 
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "../timer.hpp"
@@ -72,6 +73,34 @@ namespace tenes::fermion {
 //! Orientation of a two-site window: horizontal (A left of B) or vertical
 //! (A above B).
 enum class reduced_pair_direction { horizontal, vertical };
+
+/*! @brief The two folded site halves immediately before their shared-bond
+ *         contraction.
+ *
+ * The bundled channel is fused into the shared virtual leg. Thus PA/PB have
+ * leg orders (L_A,T_A,[R_A k],B_A) / ([L_B k],T_B,R_B,B_B) horizontally and
+ * (L_A,T_A,R_A,[B_A k]) / (L_B,[T_B k],R_B,B_B) vertically. The shared axes
+ * are derived from direction so inconsistent axis metadata cannot be stored.
+ */
+template <class tensor>
+struct reduced_pair_halves {
+  //! Folded first (left or top) site.
+  tensor PA;
+  //! Folded second (right or bottom) site.
+  tensor PB;
+  //! Orientation of the two-site window.
+  reduced_pair_direction direction;
+
+  //! Shared bundled-bond axis of PA.
+  std::size_t axis_a() const {
+    return direction == reduced_pair_direction::horizontal ? 2 : 3;
+  }
+
+  //! Shared bundled-bond axis of PB.
+  std::size_t axis_b() const {
+    return direction == reduced_pair_direction::horizontal ? 0 : 1;
+  }
+};
 
 namespace detail {
 
@@ -478,29 +507,29 @@ tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
 }
 
 /*!
- * @brief Solver bundled-k two-site operator blob builder.
+ * @brief Build the folded halves of a bundled-k two-site operator network.
  *
- * This currently duplicates build_reduced_pair_naive() intentionally, so the
- * solver implementation and its reference do not share construction code.
- * Do not deduplicate them. Future k batching or exact-zero singular-value
- * removal belongs only here, while T13 must continue to pin elementwise
- * equivalence with the reference. No numerical singular-value truncation is
- * performed. The operator loading and returned leg order are the same as for
- * build_reduced_pair_naive().
+ * Performs the direct builder's SVD, attachment, bundled-k crossing mask, and
+ * asymmetric folds, but leaves the final shared bond open. No numerical
+ * singular-value truncation is performed. The operator must be loaded with
+ * wrap_twosite_gate().
+ *
+ * @return The two rank-4 folded halves and their orientation.
+ * @throw std::runtime_error On rank mismatch, invalid direction, or failed
+ *        gate SVD.
  */
 template <class tensor>
-tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
-                                 const ftensor<tensor>& TnB,
-                                 const ftensor<tensor>& op12,
-                                 reduced_pair_direction direction) {
-  ::tenes::ScopedTimer scoped_timer("measure/twosite/blob");
+reduced_pair_halves<tensor> build_reduced_pair_halves(
+    const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+    const ftensor<tensor>& op12, reduced_pair_direction direction) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/halves");
   if (TnA.rank() != 5 || TnB.rank() != 5 || op12.rank() != 4) {
     throw std::runtime_error(
-        "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate");
+        "build_reduced_pair_halves expects rank-5 sites and a rank-4 gate");
   }
   if (direction != reduced_pair_direction::horizontal &&
       direction != reduced_pair_direction::vertical) {
-    throw std::runtime_error("build_reduced_pair_direct: invalid direction");
+    throw std::runtime_error("build_reduced_pair_halves: invalid direction");
   }
 
   ftensor<tensor> u, vt;
@@ -508,7 +537,7 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
   const int info =
       svd(op12, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s, vt);
   if (info != 0) {
-    throw std::runtime_error("build_reduced_pair_direct: gate SVD failed");
+    throw std::runtime_error("build_reduced_pair_halves: gate SVD failed");
   }
   u.multiply_vector(s, 2);
   const ftensor<tensor> TA6 =
@@ -532,8 +561,6 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
 
   ftensor<tensor> TA5;
   ftensor<tensor> TB5;
-  std::size_t contract_a;
-  std::size_t contract_b;
   if (direction == reduced_pair_direction::horizontal) {
     TA5 = reshape(
         transpose(TA6, mptensor::Axes(0, 1, 2, 5, 3, 4)),
@@ -544,8 +571,6 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
         transpose(TB6, mptensor::Axes(0, 4, 1, 2, 3, 5)),
         mptensor::Shape(TB6.shape()[0] * nk, TB6.shape()[1], TB6.shape()[2],
                         TB6.shape()[3], TB6.shape()[5]));
-    contract_a = 2;
-    contract_b = 0;
   } else {
     TA5 =
         reshape(transpose(TA6, mptensor::Axes(0, 1, 2, 3, 5, 4)),
@@ -556,14 +581,46 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
         transpose(TB6, mptensor::Axes(0, 1, 4, 2, 3, 5)),
         mptensor::Shape(TB6.shape()[0], TB6.shape()[1] * nk, TB6.shape()[2],
                         TB6.shape()[3], TB6.shape()[5]));
-    contract_a = 3;
-    contract_b = 1;
   }
 
-  const tensor PA = detail::doubled_pipeline_traced(TnA, TA5);
-  const tensor PB = detail::doubled_pipeline_traced(TnB, TB5);
-  return mptensor::tensordot(PA, PB, mptensor::Axes(contract_a),
-                             mptensor::Axes(contract_b));
+  return {detail::doubled_pipeline_traced(TnA, TA5),
+          detail::doubled_pipeline_traced(TnB, TB5), direction};
+}
+
+/*!
+ * @brief Solver bundled-k two-site operator blob builder.
+ *
+ * Thin compatibility wrapper over build_reduced_pair_halves(). The final
+ * bond contraction is deliberately plain mptensor::tensordot: a graded
+ * contraction would introduce an extra closed-loop supertrace sign. The
+ * returned leg order is unchanged from build_reduced_pair_naive().
+ */
+template <class tensor>
+tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
+                                 const ftensor<tensor>& TnB,
+                                 const ftensor<tensor>& op12,
+                                 reduced_pair_direction direction) {
+  reduced_pair_halves<tensor> halves;
+  try {
+    halves = build_reduced_pair_halves(TnA, TnB, op12, direction);
+  } catch (const std::runtime_error& error) {
+    const std::string message = error.what();
+    if (message ==
+        "build_reduced_pair_halves expects rank-5 sites and a rank-4 gate") {
+      throw std::runtime_error(
+          "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate");
+    }
+    if (message == "build_reduced_pair_halves: invalid direction") {
+      throw std::runtime_error("build_reduced_pair_direct: invalid direction");
+    }
+    if (message == "build_reduced_pair_halves: gate SVD failed") {
+      throw std::runtime_error("build_reduced_pair_direct: gate SVD failed");
+    }
+    throw;
+  }
+  return mptensor::tensordot(halves.PA, halves.PB,
+                             mptensor::Axes(halves.axis_a()),
+                             mptensor::Axes(halves.axis_b()));
 }
 
 }  // namespace tenes::fermion

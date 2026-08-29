@@ -1816,3 +1816,464 @@ TEST_CASE(
     }
   }
 }
+
+// ---- T15: absorbing the pair halves into the CTM environment ----------------
+//
+// Contract: work/fermion/twosite-speedup/CONTRACT-task3.md.
+//   C-1  contract_reduced_pair_halves_density_CTM(C.., eT.., halves) equals
+//        the existing blob closure
+//        contract_reduced_pair_{horizontal,vertical}_density_CTM(C.., eT..,
+//        blob) for the same sites, gate and environment (relative 1e-12).
+//   C-2  C-1 for the operator halves (build_reduced_pair_halves) AND for the
+//        norm halves (build_reduced_identity_halves).
+//   C-3  build_reduced_pair_direct() and build_reduced_identity_pair() still
+//        return, elementwise, tensordot(PA, PB, axis_a(), axis_b()) - the
+//        truth side is written out here, not taken from the new API - and the
+//        operator blob still equals build_reduced_pair_naive().
+//   C-4  axis_a() / axis_b() depend on the direction only: they agree between
+//        the operator and the norm halves, and across every row of the matrix
+//        that shares a direction. The concrete values are an internal
+//        convention and are deliberately NOT pinned.
+//
+// SCOPE LIMIT (contract section 3). The two sides of C-1 share the SAME
+// halves object, so C-1 constrains only the CLOSURE - how the environment is
+// absorbed around the two halves. It is blind to how the halves themselves
+// are built: fold routing, crossing signs, leg order. Any error common to
+// both halves moves both sides of C-1 by the same amount and leaves it
+// green. What grounds the halves in physical truth is upstream and already
+// exists: T9-T13 run the blob path against the single-layer graded
+// contraction and the Fock oracle. T15 passing does NOT mean the two-site
+// measurement is correct; it means the absorbing closure agrees with the
+// blob closure it replaces.
+//
+// This block is appended after T16/T16b rather than sitting between T13b and
+// T14 because it reuses the helpers introduced with T16 (fg_max_abs_diff,
+// fg_ledger_mixed, fg_ledger_has_odd).
+
+namespace {
+
+// General, structureless environment entries (contract N-1): every element of
+// every corner and edge comes from its own seed, so no two environment
+// tensors are equal and none is symmetric under exchanging its two chi legs.
+// ib_random_value() takes the rank explicitly, so it serves the rank-2
+// corners and the rank-3 edges alike.
+inline void fg15_set_env(tenes::real_tensor& t, const mptensor::Index& idx,
+                         int seed, std::size_t rank) {
+  t.set_value(idx, ib_random_value(seed, idx, rank));
+}
+
+inline void fg15_set_env(tenes::complex_tensor& t, const mptensor::Index& idx,
+                         int seed, std::size_t rank) {
+  t.set_value(idx,
+              std::complex<double>(ib_random_value(seed, idx, rank),
+                                   ib_random_value(seed + 500, idx, rank)));
+}
+
+template <class tensor>
+tensor fg15_make_env_tensor(const mptensor::Shape& sh, int seed) {
+  tensor t(sh);
+  for (std::size_t n = 0; n < t.local_size(); ++n) {
+    const mptensor::Index idx = t.global_index(n);
+    fg15_set_env(t, idx, seed, sh.size());
+  }
+  return t;
+}
+
+// The ten CTM tensors of a two-site window, named by the argument position
+// they occupy in the closure calls (corners rank 2 (chi, chi), edges rank 3
+// (chi, chi, D^2)).
+template <class tensor>
+struct fg15_env {
+  tensor C1, C2, C3, C4;
+  tensor eT1, eT2, eT3, eT4, eT5, eT6;
+};
+
+template <class tensor>
+fg15_env<tensor> fg15_make_environment(std::size_t chi, std::size_t dd,
+                                       int seed) {
+  const mptensor::Shape corner(chi, chi);
+  const mptensor::Shape edge(chi, chi, dd);
+  fg15_env<tensor> e;
+  e.C1 = fg15_make_env_tensor<tensor>(corner, seed + 1);
+  e.C2 = fg15_make_env_tensor<tensor>(corner, seed + 2);
+  e.C3 = fg15_make_env_tensor<tensor>(corner, seed + 3);
+  e.C4 = fg15_make_env_tensor<tensor>(corner, seed + 4);
+  e.eT1 = fg15_make_env_tensor<tensor>(edge, seed + 5);
+  e.eT2 = fg15_make_env_tensor<tensor>(edge, seed + 6);
+  e.eT3 = fg15_make_env_tensor<tensor>(edge, seed + 7);
+  e.eT4 = fg15_make_env_tensor<tensor>(edge, seed + 8);
+  e.eT5 = fg15_make_env_tensor<tensor>(edge, seed + 9);
+  e.eT6 = fg15_make_env_tensor<tensor>(edge, seed + 10);
+  return e;
+}
+
+// N-1: the environment must be general. Two equal environment tensors, or one
+// that is symmetric under exchanging its two chi legs, would make some
+// swapped wiring produce the very same number, and no test built on this
+// environment could see that mistake.
+template <class tensor>
+void fg15_require_general_environment(const fg15_env<tensor>& e,
+                                      const std::string& label) {
+  INFO(label << " [N-1 general environment]");
+  const tensor* corners[4] = {&e.C1, &e.C2, &e.C3, &e.C4};
+  const tensor* edges[6] = {&e.eT1, &e.eT2, &e.eT3, &e.eT4, &e.eT5, &e.eT6};
+  for (int i = 0; i < 4; ++i) {
+    REQUIRE(fg_max_abs_entry(*corners[i]) > 0.0);
+    REQUIRE(fg_max_abs_diff(*corners[i],
+                            mptensor::transpose(*corners[i],
+                                                mptensor::Axes(1, 0))) > 0.0);
+    for (int j = i + 1; j < 4; ++j) {
+      REQUIRE(fg_max_abs_diff(*corners[i], *corners[j]) > 0.0);
+    }
+  }
+  for (int i = 0; i < 6; ++i) {
+    REQUIRE(fg_max_abs_entry(*edges[i]) > 0.0);
+    REQUIRE(fg_max_abs_diff(*edges[i],
+                            mptensor::transpose(*edges[i],
+                                                mptensor::Axes(1, 0, 2))) >
+            0.0);
+    for (int j = i + 1; j < 6; ++j) {
+      REQUIRE(fg_max_abs_diff(*edges[i], *edges[j]) > 0.0);
+    }
+  }
+}
+
+// The reference side: the existing blob closure, dispatched on direction.
+template <class tensor>
+typename tensor::value_type fg15_close_blob(const fg15_env<tensor>& e, char dir,
+                                            const tensor& blob) {
+  if (dir == 'h') {
+    return fgf::contract_reduced_pair_horizontal_density_CTM(
+        e.C1, e.C2, e.C3, e.C4, e.eT1, e.eT2, e.eT3, e.eT4, e.eT5, e.eT6, blob);
+  }
+  return fgf::contract_reduced_pair_vertical_density_CTM(
+      e.C1, e.C2, e.C3, e.C4, e.eT1, e.eT2, e.eT3, e.eT4, e.eT5, e.eT6, blob);
+}
+
+// A copy of the environment with two slots exchanged; every corner has the
+// same shape as every other corner, and likewise for the edges, so any of
+// these swaps is a legal - and wrong - wiring of the same window.
+template <class tensor>
+fg15_env<tensor> fg15_swapped(const fg15_env<tensor>& e, int which) {
+  fg15_env<tensor> p = e;
+  switch (which) {
+    case 0:
+      std::swap(p.C1, p.C2);
+      break;
+    case 1:
+      std::swap(p.eT1, p.eT2);
+      break;
+    case 2:
+      std::swap(p.eT4, p.eT5);
+      break;
+    default:
+      throw std::runtime_error("fg15_swapped: unknown swap");
+  }
+  return p;
+}
+
+const char* fg15_swap_name(int which) {
+  switch (which) {
+    case 0:
+      return "C1<->C2";
+    case 1:
+      return "eT1<->eT2";
+    case 2:
+      return "eT4<->eT5";
+    default:
+      return "?";
+  }
+}
+
+// N-2, wiring sensitivity. Exchange two environment slots and require the
+// REFERENCE value to move by a relative amount far above round-off. Only the
+// reference side is perturbed, so nothing here assumes how the absorbing
+// closure is implemented. On a case where this fails, the environment cannot
+// tell any wiring apart and C-1 would hold for a mis-wired implementation
+// too - the case would be vacuous.
+template <class tensor>
+void fg15_require_wiring_sensitivity(const fg15_env<tensor>& e, char dir,
+                                     const tensor& blob,
+                                     typename tensor::value_type ref,
+                                     const std::string& label) {
+  const double floor = 1.0e-8 * std::abs(ref);
+  for (int which = 0; which < 3; ++which) {
+    const auto moved = fg15_close_blob(fg15_swapped(e, which), dir, blob);
+    INFO(label << " [N-2 swap " << std::string(fg15_swap_name(which))
+               << "]: ref=" << ref
+               << " swapped=" << moved << " |diff|=" << std::abs(moved - ref)
+               << " floor=" << floor);
+    REQUIRE(std::abs(moved - ref) > floor);
+  }
+}
+
+// C-1 judgment: relative 1e-12 against the blob-closure reference.
+template <class V>
+void fg15_check_rel(const std::string& label, V got, V ref) {
+  const double tol = 1.0e-12 * std::max(std::abs(got), std::abs(ref));
+  INFO(label << ": got=" << got << " ref=" << ref
+             << " |diff|=" << std::abs(got - ref) << " tol=" << tol);
+  CHECK(std::abs(got - ref) <= tol);
+}
+
+// Number of singular values the GRADED svd of the loaded gate carries above
+// the noise floor. This is the number of operator channels the gate has to
+// bundle into the shared bond, computed here with the same public primitive
+// the contract describes the construction in terms of (fgf::svd, as used by
+// T7/T8) - never from the halves under test. A rank-1 gate (nn = n_A x n_B
+// at d = 2, say) has exactly one channel and can legitimately bundle to
+// exactly D^2; see the N-4 note in fg15_run_case().
+template <class tensor>
+std::size_t fg15_graded_gate_rank(const fg_ftensor<tensor>& gate) {
+  fg_ftensor<tensor> u, vt;
+  std::vector<double> s;
+  REQUIRE(fgf::svd(gate, mptensor::Axes(0, 2), mptensor::Axes(1, 3), u, s,
+                   vt) == 0);
+  REQUIRE(!s.empty());
+  // The graded svd fills its singular values sector by sector, so they are
+  // not globally sorted; take the largest explicitly.
+  double smax = 0.0;
+  for (const double sv : s) {
+    smax = std::max(smax, sv);
+  }
+  REQUIRE(smax > 0.0);
+  std::size_t rank = 0;
+  for (const double sv : s) {
+    if (sv > 1.0e-12 * smax) {
+      ++rank;
+    }
+  }
+  return rank;
+}
+
+// C-4 accumulator: the axes observed so far per direction (0 = horizontal,
+// 1 = vertical), shared by every row of the matrix. It also counts the rows
+// that took the strict form of N-4, so the TEST_CASE can insist at least one
+// of them ran.
+struct fg15_axis_ledger {
+  bool seen[2] = {false, false};
+  std::size_t a[2] = {0, 0};
+  std::size_t b[2] = {0, 0};
+  int strict_n4_rows = 0;
+};
+
+template <class tensor>
+void fg15_run_case(int d, const std::string& vps, char dir,
+                   const std::string& op_kind, int op_seed, std::size_t chi,
+                   int env_seed, const char* type_name,
+                   fg15_axis_ledger& ledger) {
+  const std::string label =
+      "T15 d=" + std::to_string(d) + " vp=" + vps + " dir=" + dir +
+      " op=" + op_kind + " chi=" + std::to_string(chi) + " " + type_name +
+      " op_seed=" + std::to_string(op_seed) +
+      " env_seed=" + std::to_string(env_seed) + " site_seeds=(61,62)";
+  INFO(label);
+
+  const fgf::parity_vector vp = fg_pv(vps);
+  const fgf::parity_vector phys = ib_phys_parity(d);
+  const std::size_t D = vp.size();
+  const std::size_t dd = D * D;
+  // Contract section 5: the ledgers must mix even and odd, and chi must
+  // differ from D^2 (equal shapes would let an environment leg and a blob leg
+  // be exchanged without any shape error).
+  REQUIRE(fg_ledger_mixed(vp));
+  REQUIRE(fg_ledger_has_odd(phys));
+  REQUIRE(chi != dd);
+
+  const fg_ftensor<tensor> TnA = fg_make_bond_site<tensor>(0, vp, phys, 61);
+  const fg_ftensor<tensor> TnB = fg_make_bond_site<tensor>(1, vp, phys, 62);
+  REQUIRE(fgf::parity_violation(TnA) == 0.0);
+  REQUIRE(fgf::parity_violation(TnB) == 0.0);
+
+  const tensor plain = fg_op_plain<tensor>(op_kind, d, op_seed);
+  REQUIRE(fg_max_abs_entry(plain) > 0.0);
+  // Production loading convention (twosite_obs.cpp): wrap_twosite_gate, i.e.
+  // the input-leg swap only.
+  const fg_ftensor<tensor> gate = fgf::wrap_twosite_gate(plain, phys, phys);
+  const auto dir_e = dir == 'h' ? fgf::reduced_pair_direction::horizontal
+                                : fgf::reduced_pair_direction::vertical;
+
+  const fg15_env<tensor> env = fg15_make_environment<tensor>(chi, dd, env_seed);
+  fg15_require_general_environment(env, label);
+
+  // ---- reference side: the blob path that already exists.
+  const tensor blob_op =
+      fgf::build_reduced_pair_direct(TnA, TnB, gate, dir_e);
+  const tensor blob_naive = fgf::build_reduced_pair_naive(TnA, TnB, gate, dir_e);
+  const tensor blob_id = fgf::build_reduced_identity_pair(TnA, TnB, dir_e);
+  REQUIRE(blob_op.shape().size() == 6);
+  REQUIRE(blob_id.shape().size() == 6);
+  for (std::size_t ax = 0; ax < 6; ++ax) {
+    REQUIRE(blob_op.shape()[ax] == dd);
+    REQUIRE(blob_id.shape()[ax] == dd);
+  }
+  // C-3, independent-reference clause: the operator blob must not have moved
+  // against the untouched naive builder.
+  fg_check_allclose(blob_op, blob_naive,
+                    label + " [C-3 direct blob vs naive blob]");
+
+  const auto ref_op = fg15_close_blob(env, dir, blob_op);
+  const auto ref_id = fg15_close_blob(env, dir, blob_id);
+  // N-3: neither reference value is zero.
+  INFO(label << " [N-3 closure values]: op=" << ref_op << " id=" << ref_id);
+  REQUIRE(std::abs(ref_op) > 0.0);
+  REQUIRE(std::abs(ref_id) > 0.0);
+  fg15_require_wiring_sensitivity(env, dir, blob_op, ref_op,
+                                  label + " [operator blob]");
+  fg15_require_wiring_sensitivity(env, dir, blob_id, ref_id,
+                                  label + " [identity blob]");
+
+  // ---- the halves under test.
+  const auto halves_op =
+      fgf::build_reduced_pair_halves(TnA, TnB, gate, dir_e);
+  const auto halves_id = fgf::build_reduced_identity_halves(TnA, TnB, dir_e);
+
+  // C-4: the shared-bond axes are a function of the direction alone. The
+  // concrete values are not contracted, so they are only required to be
+  // consistent - between the operator and the norm halves here, and across
+  // every row of the matrix through the shared ledger.
+  REQUIRE(halves_op.direction == dir_e);
+  REQUIRE(halves_id.direction == dir_e);
+  REQUIRE(halves_op.axis_a() == halves_id.axis_a());
+  REQUIRE(halves_op.axis_b() == halves_id.axis_b());
+  REQUIRE(halves_op.axis_a() < 4u);
+  REQUIRE(halves_op.axis_b() < 4u);
+  const int slot = dir == 'h' ? 0 : 1;
+  if (ledger.seen[slot]) {
+    INFO(label << " [C-4 axes vs earlier rows of the same direction]");
+    REQUIRE(ledger.a[slot] == halves_op.axis_a());
+    REQUIRE(ledger.b[slot] == halves_op.axis_b());
+  } else {
+    ledger.seen[slot] = true;
+    ledger.a[slot] = halves_op.axis_a();
+    ledger.b[slot] = halves_op.axis_b();
+  }
+
+  REQUIRE(halves_op.PA.shape().size() == 4);
+  REQUIRE(halves_op.PB.shape().size() == 4);
+  REQUIRE(halves_id.PA.shape().size() == 4);
+  REQUIRE(halves_id.PB.shape().size() == 4);
+  // N-3: the halves themselves are not zero.
+  REQUIRE(fg_max_abs_entry(halves_op.PA) > 0.0);
+  REQUIRE(fg_max_abs_entry(halves_op.PB) > 0.0);
+  REQUIRE(fg_max_abs_entry(halves_id.PA) > 0.0);
+  REQUIRE(fg_max_abs_entry(halves_id.PB) > 0.0);
+  // N-4 (contract revision, 2026-08-29): the operator channel really is
+  // bundled into the shared bond. Everywhere, the bundled dimension is a
+  // whole number of virtual pairs and at least one of them; and on a gate
+  // whose graded SVD carries more than one channel it is strictly fatter than
+  // a bare pair.
+  //
+  // The first draft required "strictly fatter" unconditionally. That would
+  // have become a false alarm two tasks later: once exact zero singular
+  // values are dropped (a separate task, out of scope here per contract
+  // section 7), a rank-1 gate bundles exactly one channel and D^2 is then the
+  // correct width. The rank is measured from the gate itself rather than
+  // hard-coded per operator name, so the strict rows stay strict for the
+  // right reason whichever gates the matrix grows.
+  const std::size_t bundled_a = halves_op.PA.shape()[halves_op.axis_a()];
+  const std::size_t bundled_b = halves_op.PB.shape()[halves_op.axis_b()];
+  const std::size_t gate_rank = fg15_graded_gate_rank(gate);
+  INFO(label << " [N-4 shared bond]: bundled=" << bundled_a << " D^2=" << dd
+             << " graded gate rank=" << gate_rank);
+  REQUIRE(bundled_a == bundled_b);
+  REQUIRE(bundled_a % dd == 0);
+  REQUIRE(bundled_a >= dd);
+  if (gate_rank > 1) {
+    REQUIRE(bundled_a > dd);
+    ++ledger.strict_n4_rows;
+  }
+  REQUIRE(halves_id.PA.shape()[halves_id.axis_a()] ==
+          halves_id.PB.shape()[halves_id.axis_b()]);
+
+  // C-3: the blob builders are the halves contracted over the shared bond.
+  // The truth side is written out here rather than taken from the new API.
+  const tensor rebuilt_op =
+      fg_dot(halves_op.PA, halves_op.PB, mptensor::Axes(halves_op.axis_a()),
+             mptensor::Axes(halves_op.axis_b()));
+  fg_check_allclose(rebuilt_op, blob_op,
+                    label + " [C-3 tensordot(PA,PB) vs "
+                            "build_reduced_pair_direct]");
+  const tensor rebuilt_id =
+      fg_dot(halves_id.PA, halves_id.PB, mptensor::Axes(halves_id.axis_a()),
+             mptensor::Axes(halves_id.axis_b()));
+  fg_check_allclose(rebuilt_id, blob_id,
+                    label + " [C-3 tensordot(PA,PB) vs "
+                            "build_reduced_identity_pair]");
+
+  // C-1 / C-2: the absorbing closure equals the blob closure, for the
+  // operator halves and for the norm halves.
+  const auto got_op = fgf::contract_reduced_pair_halves_density_CTM(
+      env.C1, env.C2, env.C3, env.C4, env.eT1, env.eT2, env.eT3, env.eT4,
+      env.eT5, env.eT6, halves_op);
+  fg15_check_rel(label + " [C-1 operator halves closure vs blob closure]",
+                 got_op, ref_op);
+  const auto got_id = fgf::contract_reduced_pair_halves_density_CTM(
+      env.C1, env.C2, env.C3, env.C4, env.eT1, env.eT2, env.eT3, env.eT4,
+      env.eT5, env.eT6, halves_id);
+  fg15_check_rel(label + " [C-2 identity halves closure vs blob closure]",
+                 got_id, ref_id);
+}
+
+struct fg15_row {
+  int d;
+  const char* vps;
+  char dir;
+  const char* op;
+  std::size_t chi;
+  bool complex_case;
+};
+
+// Contract section 5. Both directions; both halves kinds run inside every
+// row; d in {2, 4} with the mandated physical ledgers ([e,o] and [e,o,o,e],
+// supplied by ib_phys_parity); three mixed virtual ledgers (eo -> D=2,
+// eeo/eoo -> D=3); hopping and the diagonal nn as the two mandated gate
+// shapes, plus a dense parity-even random gate; real and complex scalars;
+// and chi in {3, 5}, never equal to D^2 (4 or 9).
+const fg15_row fg15_rows[] = {
+    {2, "eo", 'h', "hopping", 3, false},
+    {2, "eo", 'v', "hopping", 3, false},
+    {2, "eo", 'h', "nn", 5, false},
+    {2, "eo", 'v', "nn", 5, false},
+    {2, "eeo", 'h', "hopping", 5, false},
+    {2, "eeo", 'v', "nn", 5, false},
+    {2, "eoo", 'h', "random", 3, false},
+    {2, "eo", 'h', "random", 3, true},
+    {2, "eo", 'v', "hopping", 5, true},
+    {4, "eo", 'h', "hopping", 3, false},
+    {4, "eo", 'v', "hopping", 3, false},
+    {4, "eo", 'h', "nn", 5, false},
+    {4, "eo", 'v', "nn", 5, false},
+    {4, "eeo", 'h', "hopping", 5, false},
+    {4, "eeo", 'v', "nn", 5, false},
+    {4, "eo", 'h', "hopping", 5, true},
+    {4, "eo", 'v', "random", 3, true},
+};
+
+}  // namespace
+
+TEST_CASE(
+    "fold geometry T15: closing the pair halves by absorbing them into the "
+    "CTM environment equals the blob closure") {
+  fg15_axis_ledger ledger;
+  int row_id = 0;
+  for (const auto& row : fg15_rows) {
+    ++row_id;
+    const int env_seed = 100 + 20 * row_id;
+    if (row.complex_case) {
+      fg15_run_case<tenes::complex_tensor>(row.d, row.vps, row.dir, row.op, 31,
+                                           row.chi, env_seed, "complex",
+                                           ledger);
+    } else {
+      fg15_run_case<tenes::real_tensor>(row.d, row.vps, row.dir, row.op, 31,
+                                        row.chi, env_seed, "real", ledger);
+    }
+  }
+  // Both directions must have been exercised (contract section 5), and at
+  // least one row must have taken the strict form of N-4 - otherwise the
+  // matrix would consist entirely of single-channel gates and nothing here
+  // would pin the bundling at all.
+  REQUIRE(ledger.seen[0]);
+  REQUIRE(ledger.seen[1]);
+  REQUIRE(ledger.strict_n4_rows >= 1);
+}

@@ -872,19 +872,50 @@ TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
                          static_cast<double>(in_a + in_b));
     }
   }
+  // The three-way triangle demanded by
+  // work/fermion/twosite-speedup/CONTRACT-task3.md section 6: the bosonic
+  // reference path, the fermionic blob path and the fermionic absorbing
+  // (halves) path must all produce the same norm and the same operator value
+  // on this all-even-operator window. Until 2026-08-29 only the norm leg was
+  // pinned; the operator value was merely required to be finite and in range,
+  // which hid the fact that the gate was being loaded without
+  // wrap_twosite_gate() (giving <n_A+n_B> = 0.2046 instead of 0.9832 on the
+  // horizontal bond).
   auto check_pair_density = [&](int first, int second,
                                 f::reduced_pair_direction direction) {
     f::ftensor<tenes::real_tensor> fid{id2, {phys, phys, phys, phys}};
-    f::ftensor<tenes::real_tensor> fdensity{density2, {phys, phys, phys, phys}};
+    // Production loading convention (src/iTPS/twosite_obs.cpp): the blob and
+    // halves builders take the gate through wrap_twosite_gate().
+    const f::ftensor<tenes::real_tensor> fdensity =
+        f::wrap_twosite_gate(density2, phys, phys);
+    // The same gate loaded the wrong way, kept only as a mutation guard
+    // below: if these two agreed, this case could not see the gate's graded
+    // input swap at all.
+    const f::ftensor<tenes::real_tensor> fdensity_unwrapped{
+        density2, {phys, phys, phys, phys}};
     const tenes::real_tensor norm_blob = f::build_reduced_identity_pair(
         f::wrap_Tn(Tn[first], finfo, first),
         f::wrap_Tn(Tn[second], finfo, second), direction);
     const tenes::real_tensor density_blob = f::build_reduced_pair_naive(
         f::wrap_Tn(Tn[first], finfo, first),
         f::wrap_Tn(Tn[second], finfo, second), fdensity, direction);
+    const tenes::real_tensor density_blob_unwrapped =
+        f::build_reduced_pair_naive(f::wrap_Tn(Tn[first], finfo, first),
+                                    f::wrap_Tn(Tn[second], finfo, second),
+                                    fdensity_unwrapped, direction);
+    const auto norm_halves = f::build_reduced_identity_halves(
+        f::wrap_Tn(Tn[first], finfo, first),
+        f::wrap_Tn(Tn[second], finfo, second), direction);
+    const auto density_halves = f::build_reduced_pair_halves(
+        f::wrap_Tn(Tn[first], finfo, first),
+        f::wrap_Tn(Tn[second], finfo, second), fdensity, direction);
     double norm = 0.0;
     double val = 0.0;
+    double val_unwrapped = 0.0;
     double ref_norm = 0.0;
+    double ref_val = 0.0;
+    double norm_absorbed = 0.0;
+    double val_absorbed = 0.0;
     if (direction == f::reduced_pair_direction::horizontal) {
       norm = f::contract_reduced_pair_horizontal_density_CTM(
           C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
@@ -892,11 +923,26 @@ TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
       val = f::contract_reduced_pair_horizontal_density_CTM(
           C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
           eTr[second], eTb[second], eTb[first], eTl[first], density_blob);
+      val_unwrapped = f::contract_reduced_pair_horizontal_density_CTM(
+          C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
+          eTr[second], eTb[second], eTb[first], eTl[first],
+          density_blob_unwrapped);
       ref_norm =
           tenes::itps::core::Contract_two_sites_horizontal_op12_density_CTM(
               C1[first], C2[second], C3[second], C4[first], eTt[first],
               eTt[second], eTr[second], eTb[second], eTb[first], eTl[first],
               reduced[first], reduced[second], id2);
+      ref_val =
+          tenes::itps::core::Contract_two_sites_horizontal_op12_density_CTM(
+              C1[first], C2[second], C3[second], C4[first], eTt[first],
+              eTt[second], eTr[second], eTb[second], eTb[first], eTl[first],
+              reduced[first], reduced[second], density2);
+      norm_absorbed = f::contract_reduced_pair_halves_density_CTM(
+          C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
+          eTr[second], eTb[second], eTb[first], eTl[first], norm_halves);
+      val_absorbed = f::contract_reduced_pair_halves_density_CTM(
+          C1[first], C2[second], C3[second], C4[first], eTt[first], eTt[second],
+          eTr[second], eTb[second], eTb[first], eTl[first], density_halves);
     } else {
       norm = f::contract_reduced_pair_vertical_density_CTM(
           C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
@@ -904,17 +950,44 @@ TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
       val = f::contract_reduced_pair_vertical_density_CTM(
           C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
           eTr[second], eTb[second], eTl[second], eTl[first], density_blob);
+      val_unwrapped = f::contract_reduced_pair_vertical_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first],
+          density_blob_unwrapped);
       ref_norm =
           tenes::itps::core::Contract_two_sites_vertical_op12_density_CTM(
               C1[first], C2[first], C3[second], C4[second], eTt[first],
               eTr[first], eTr[second], eTb[second], eTl[second], eTl[first],
               reduced[first], reduced[second], id2);
+      ref_val =
+          tenes::itps::core::Contract_two_sites_vertical_op12_density_CTM(
+              C1[first], C2[first], C3[second], C4[second], eTt[first],
+              eTr[first], eTr[second], eTb[second], eTl[second], eTl[first],
+              reduced[first], reduced[second], density2);
+      norm_absorbed = f::contract_reduced_pair_halves_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first], norm_halves);
+      val_absorbed = f::contract_reduced_pair_halves_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first], density_halves);
     }
     CHECK(norm > 0.0);
     CHECK(norm == doctest::Approx(ref_norm).epsilon(1.0e-12));
     CHECK(std::isfinite(val / norm));
     CHECK(val / norm >= doctest::Approx(0.0).epsilon(1.0e-12));
     CHECK(val / norm <= doctest::Approx(2.0).epsilon(1.0e-12));
+    // The operator value is not the norm in disguise, and it is not zero:
+    // without this the value legs of the triangle below could be satisfied by
+    // an implementation that ignored the operator entirely.
+    REQUIRE(std::abs(ref_val) > 0.0);
+    REQUIRE(std::abs(ref_val - ref_norm) > 1.0e-8 * std::abs(ref_norm));
+    // Mutation guard on the gate loading (see fdensity_unwrapped above).
+    REQUIRE(std::abs(val_unwrapped - val) > 1.0e-8 * std::abs(val));
+    // Boson path <-> fermion blob path.
+    CHECK(val == doctest::Approx(ref_val).epsilon(1.0e-12));
+    // Fermion blob path <-> fermion absorbing path.
+    CHECK(val_absorbed == doctest::Approx(val).epsilon(1.0e-12));
+    CHECK(norm_absorbed == doctest::Approx(norm).epsilon(1.0e-12));
   };
   check_pair_density(0, lattice.right(0),
                      f::reduced_pair_direction::horizontal);

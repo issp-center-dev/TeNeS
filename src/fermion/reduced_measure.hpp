@@ -87,26 +87,38 @@ std::vector<tensor> build_reduced_density_tensors(const std::vector<tensor>& Tn,
 }
 
 /*!
+ * @brief Folded halves of a two-site identity network.
+ *
+ * Builds one physical-traced reduced tensor per site and leaves their shared
+ * bond open. The rank-4 leg orders and derived shared axes match
+ * build_reduced_pair_halves().
+ *
+ * @return The two folded identity halves and their orientation.
+ */
+template <class tensor>
+reduced_pair_halves<tensor> build_reduced_identity_halves(
+    const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+    reduced_pair_direction direction) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/halves");
+  return {build_reduced(TnA), build_reduced(TnB), direction};
+}
+
+/*!
  * @brief Norm blob of a two-site window: the identity-operator counterpart
  *        of build_reduced_pair_direct().
  *
- * Composed from the two single-site reduced tensors (build_reduced())
- * contracted over the shared bond — no operator, hence no pair pipeline
- * needed. Same rank-6 leg order as the operator blobs; dividing the
- * operator blob's CTM value by this one's normalizes the expectation
- * value.
+ * Thin compatibility wrapper over build_reduced_identity_halves(). The final
+ * shared-bond contraction remains a plain mptensor::tensordot and preserves
+ * the established rank-6 blob leg order.
  */
 template <class tensor>
 tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
                                    const ftensor<tensor>& TnB,
                                    reduced_pair_direction direction) {
-  ::tenes::ScopedTimer scoped_timer("measure/twosite/blob");
-  if (direction == reduced_pair_direction::horizontal) {
-    return mptensor::tensordot(build_reduced(TnA), build_reduced(TnB),
-                               mptensor::Axes(2), mptensor::Axes(0));
-  }
-  return mptensor::tensordot(build_reduced(TnA), build_reduced(TnB),
-                             mptensor::Axes(3), mptensor::Axes(1));
+  const auto halves = build_reduced_identity_halves(TnA, TnB, direction);
+  return mptensor::tensordot(halves.PA, halves.PB,
+                             mptensor::Axes(halves.axis_a()),
+                             mptensor::Axes(halves.axis_b()));
 }
 
 namespace detail {
@@ -199,7 +211,7 @@ typename tensor::value_type contract_reduced_pair_horizontal_density_CTM(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6, const tensor& blob) {
-  ::tenes::ScopedTimer scoped_timer("measure/twosite/close");
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
   using mptensor::Axes;
   const tensor left_lower = tensordot(
       eT5,
@@ -242,7 +254,7 @@ typename tensor::value_type contract_reduced_pair_vertical_density_CTM(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6, const tensor& blob) {
-  ::tenes::ScopedTimer scoped_timer("measure/twosite/close");
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
   using mptensor::Axes;
   const tensor top_left = tensordot(
       eT6,
@@ -276,6 +288,108 @@ typename tensor::value_type contract_reduced_pair_density_CTM(
   }
   return contract_reduced_pair_vertical_density_CTM(C1, C2, C3, C4, eT1, eT2,
                                                     eT3, eT4, eT5, eT6, blob);
+}
+
+/*!
+ * @brief Absorb horizontal pair halves into their CTM environment without
+ *        materializing the rank-6 blob.
+ *
+ * Environment arguments and leg conventions are identical to
+ * contract_reduced_pair_horizontal_density_CTM(). PA/PB carry the leg orders
+ * documented by reduced_pair_halves.
+ *
+ * @return The scalar value of the closed network.
+ */
+template <class tensor>
+typename tensor::value_type contract_reduced_pair_halves_horizontal_density_CTM(
+    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
+    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
+    const tensor& eT5, const tensor& eT6,
+    const reduced_pair_halves<tensor>& halves) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
+  using mptensor::Axes;
+  const tensor left_lower = mptensor::tensordot(
+      eT5,
+      mptensor::tensordot(C1, mptensor::tensordot(C4, eT6, Axes(1), Axes(0)),
+                          Axes(0), Axes(1)),
+      Axes(1), Axes(1));
+  tensor left =
+      mptensor::tensordot(halves.PA, left_lower, Axes(0, 3), Axes(3, 1));
+  left = mptensor::tensordot(eT1, left, Axes(0, 2), Axes(3, 0));
+
+  const tensor right_lower = mptensor::tensordot(
+      eT4,
+      mptensor::tensordot(C2, mptensor::tensordot(C3, eT3, Axes(0), Axes(1)),
+                          Axes(1), Axes(1)),
+      Axes(0), Axes(1));
+  tensor right =
+      mptensor::tensordot(halves.PB, right_lower, Axes(2, 3), Axes(3, 1));
+  right = mptensor::tensordot(eT2, right, Axes(1, 2), Axes(3, 1));
+
+  tensor joined = mptensor::tensordot(left, right, Axes(1), Axes(1));
+  joined = mptensor::transpose(joined, Axes(0, 2, 1, 3));
+  return detail::trace_boundary_pairs(joined);
+}
+
+/*!
+ * @brief Absorb vertical pair halves into their CTM environment without
+ *        materializing the rank-6 blob.
+ *
+ * Environment arguments and leg conventions are identical to
+ * contract_reduced_pair_vertical_density_CTM(). PA is the top-site half and
+ * PB is the bottom-site half.
+ *
+ * @return The scalar value of the closed network.
+ */
+template <class tensor>
+typename tensor::value_type contract_reduced_pair_halves_vertical_density_CTM(
+    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
+    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
+    const tensor& eT5, const tensor& eT6,
+    const reduced_pair_halves<tensor>& halves) {
+  ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
+  using mptensor::Axes;
+  const tensor top_left = mptensor::tensordot(
+      eT6,
+      mptensor::tensordot(C1, mptensor::tensordot(C2, eT1, Axes(0), Axes(1)),
+                          Axes(1), Axes(1)),
+      Axes(1), Axes(0));
+  tensor top = mptensor::tensordot(halves.PA, top_left, Axes(0, 1), Axes(1, 3));
+  top = mptensor::tensordot(eT2, top, Axes(0, 2), Axes(3, 0));
+
+  const tensor bottom_right = mptensor::tensordot(
+      eT5,
+      mptensor::tensordot(C3, mptensor::tensordot(C4, eT4, Axes(0), Axes(1)),
+                          Axes(1), Axes(1)),
+      Axes(0), Axes(1));
+  tensor bot =
+      mptensor::tensordot(halves.PB, bottom_right, Axes(0, 3), Axes(1, 3));
+  bot = mptensor::tensordot(eT3, bot, Axes(1, 2), Axes(3, 1));
+
+  tensor joined = mptensor::tensordot(top, bot, Axes(1), Axes(1));
+  joined = mptensor::transpose(joined, Axes(0, 2, 1, 3));
+  return detail::trace_boundary_pairs(joined);
+}
+
+/*!
+ * @brief Direction dispatcher for absorbing pair halves into a CTM
+ *        environment.
+ *
+ * The orientation is taken solely from halves.direction; callers cannot pass
+ * independent direction metadata that disagrees with the folded tensors.
+ */
+template <class tensor>
+typename tensor::value_type contract_reduced_pair_halves_density_CTM(
+    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
+    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
+    const tensor& eT5, const tensor& eT6,
+    const reduced_pair_halves<tensor>& halves) {
+  if (halves.direction == reduced_pair_direction::horizontal) {
+    return contract_reduced_pair_halves_horizontal_density_CTM(
+        C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, halves);
+  }
+  return contract_reduced_pair_halves_vertical_density_CTM(
+      C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, halves);
 }
 
 }  // namespace tenes::fermion
