@@ -1472,3 +1472,347 @@ TEST_CASE(
   fgdp_run_asymmetric_case<tenes::real_tensor>("real");
   fgdp_run_asymmetric_case<tenes::complex_tensor>("complex");
 }
+
+// ---- T16: doubled_pipeline_traced -------------------------------------------
+//
+// Contract: work/fermion/twosite-speedup/CONTRACT-task1.md.
+//   C-1  detail::doubled_pipeline_traced(bra, ket) equals
+//        contract(detail::doubled_pipeline(bra, ket), Axes(4), Axes(5))
+//        elementwise, for parity-even rank-5 layers whose virtual legs may
+//        differ in dimension and ledger between the two layers.
+//   C-2  build_reduced(Tn) does not move against that same truth formula,
+//        and build_reduced_op(Tn) keeps its rank-6 shape.
+//   C-4  both layers are parity even on the way in (checked here, not a
+//        behavioural requirement on the function).
+// The truth side always goes through doubled_pipeline and closes the two
+// physical legs here. It must never go through build_reduced: C-2 moves
+// build_reduced onto the function under test, so using it as a reference
+// would close the loop.
+//
+// Non-vacuity (contract section 3) is enforced per case rather than by
+// construction: ledgers are asserted to carry odd indices (N-1) and to mix
+// even with odd (N-2), the built layers are measured for weight in the
+// odd-physical sector (N-3, both in the "is populated" and in the stronger
+// "actually moves the truth" form), and the truth tensor is asserted
+// nonzero (N-4). Complex cases additionally assert a nonzero imaginary
+// part, so conjugating the bra layer is not the identity.
+
+namespace {
+
+// N-1: the ledger has at least one odd index.
+bool fg_ledger_has_odd(const fgf::parity_vector& p) {
+  for (const bool odd : p) {
+    if (odd) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// N-2: the ledger mixes even and odd indices.
+bool fg_ledger_mixed(const fgf::parity_vector& p) {
+  bool has_even = false;
+  bool has_odd = false;
+  for (const bool odd : p) {
+    if (odd) {
+      has_odd = true;
+    } else {
+      has_even = true;
+    }
+  }
+  return has_even && has_odd;
+}
+
+// Largest |element| in the sector where the PHYSICAL index (axis 4) is odd.
+// N-3: with no weight there, the physical ledger might as well be all even
+// and any sign convention on the physical trace would pass.
+template <class tensor>
+double fg_max_abs_phys_odd(const fg_ftensor<tensor>& a) {
+  const fgf::parity_vector& phys = a.parity[4];
+  double m = 0.0;
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    const mptensor::Index idx = a.t.global_index(n);
+    if (!phys[idx[4]]) {
+      continue;
+    }
+    typename tensor::value_type v;
+    a.t.get_value(idx, v);
+    m = std::max(m, std::abs(v));
+  }
+  return m;
+}
+
+// The same layer with that sector deleted; still parity even, since
+// dropping elements never creates an odd one. Used for the strong form of
+// N-3: the truth must actually depend on the odd-physical sector.
+template <class tensor>
+fg_ftensor<tensor> fg_drop_phys_odd(const fg_ftensor<tensor>& a) {
+  fg_ftensor<tensor> r = a;
+  const fgf::parity_vector& phys = r.parity[4];
+  for (std::size_t n = 0; n < r.t.local_size(); ++n) {
+    const mptensor::Index idx = r.t.global_index(n);
+    if (phys[idx[4]]) {
+      r.t.set_value(idx, typename tensor::value_type(0));
+    }
+  }
+  return r;
+}
+
+inline double fg_abs_imag(double) { return 0.0; }
+inline double fg_abs_imag(const std::complex<double>& v) {
+  return std::abs(v.imag());
+}
+
+template <class tensor>
+double fg_max_abs_imag(const tensor& a) {
+  double m = 0.0;
+  for (std::size_t n = 0; n < a.local_size(); ++n) {
+    typename tensor::value_type v;
+    a.get_value(a.global_index(n), v);
+    m = std::max(m, fg_abs_imag(v));
+  }
+  return m;
+}
+
+template <class tensor>
+double fg_max_abs_diff(const tensor& a, const tensor& b) {
+  REQUIRE(a.shape() == b.shape());
+  double m = 0.0;
+  for (std::size_t n = 0; n < a.local_size(); ++n) {
+    const mptensor::Index idx = a.global_index(n);
+    typename tensor::value_type va, vb;
+    a.get_value(idx, va);
+    b.get_value(idx, vb);
+    m = std::max(m, std::abs(va - vb));
+  }
+  return m;
+}
+
+// The C-1 / C-2 truth: the existing rank-6 pipeline with its two physical
+// legs closed against each other.
+template <class tensor>
+tensor fg_close_phys(const tensor& open) {
+  REQUIRE(open.shape().size() == 6);
+  return mptensor::contract(open, mptensor::Axes(4), mptensor::Axes(5));
+}
+
+template <class tensor>
+tensor fg_pipeline_closed(const fg_ftensor<tensor>& bra,
+                          const fg_ftensor<tensor>& ket) {
+  return fg_close_phys(fgf::detail::doubled_pipeline(bra, ket));
+}
+
+// Mutation defense for N-1: how much the closed tensor moves if the sign
+// (-1)^{|s|} of the odd physical indices is dropped on the way in. A case
+// where this is 0 is satisfied by any physical sign convention and can
+// never fail on a sign mistake, whatever the implementation does.
+template <class tensor>
+double fg_phys_sign_sensitivity(const tensor& open,
+                                const fgf::parity_vector& phys) {
+  REQUIRE(open.shape()[4] == phys.size());
+  tensor flipped = open;
+  std::vector<double> sign(phys.size());
+  for (std::size_t i = 0; i < phys.size(); ++i) {
+    sign[i] = phys[i] ? -1.0 : 1.0;
+  }
+  flipped.multiply_vector(sign, 4);
+  return fg_max_abs_diff(fg_close_phys(open), fg_close_phys(flipped));
+}
+
+struct fg_t16_layers {
+  std::string name;
+  fgf::leg_parities bra;
+  fgf::leg_parities ket;
+  //! ket is literally the bra tensor (symmetric double layer).
+  bool same;
+};
+
+std::vector<fg_t16_layers> fg_t16_layer_cases() {
+  const fgf::parity_vector eo = fg_pv("eo");
+  const fgf::parity_vector eoo = fg_pv("eoo");
+  const fgf::parity_vector eooe = fg_pv("eooe");
+  const fgf::parity_vector d2 = ib_phys_parity(2);  // [e,o]
+  const fgf::parity_vector d4 = ib_phys_parity(4);  // [e,o,o,e]
+  std::vector<fg_t16_layers> cases;
+  // bra == ket, the build_reduced shape.
+  cases.push_back(
+      {"sym d=2 D=2(eo)", {eo, eo, eo, eo, d2}, {eo, eo, eo, eo, d2}, true});
+  cases.push_back({"sym d=4 D=3(eoo)",
+                   {eoo, eoo, eoo, eoo, d4},
+                   {eoo, eoo, eoo, eoo, d4},
+                   true});
+  // bra != ket with matching ledgers (different site id and seed).
+  cases.push_back(
+      {"asym d=2 D=2(eo)", {eo, eo, eo, eo, d2}, {eo, eo, eo, eo, d2}, false});
+  // bra != ket with per-leg ledgers that differ between the layers.
+  cases.push_back({"asym d=4 per-leg mixed ledgers",
+                   {eo, eoo, eo, eoo, d4},
+                   {eoo, eo, eoo, eo, d4},
+                   false});
+  // C-3: one ket leg wider than bra's AND on a different ledger (the gate's
+  // bundled-k channel fused into a bond leg), horizontal bond.
+  cases.push_back({"asym d=2 bundled ket right D=4(eooe)",
+                   {eo, eo, eo, eo, d2},
+                   {eo, eo, eooe, eo, d2},
+                   false});
+  // the same on a vertical bond, at d = 4.
+  cases.push_back({"asym d=4 bundled ket bottom D=4(eooe)",
+                   {eo, eo, eo, eo, d4},
+                   {eo, eo, eo, eooe, d4},
+                   false});
+  // Mirror: the wide leg on the BRA side. C-1 lets either layer carry it
+  // ("the virtual dimensions and ledgers may differ from each other"), so a
+  // pipeline that quietly assumed ket >= bra would be a contract violation.
+  cases.push_back({"asym d=2 bundled bra top D=4(eooe)",
+                   {eo, eooe, eo, eo, d2},
+                   {eo, eo, eo, eo, d2},
+                   false});
+  return cases;
+}
+
+template <class tensor>
+void fg_run_t16_case(const fg_t16_layers& layers, int bra_seed, int ket_seed,
+                     bool complex_scalars, const char* type_name) {
+  const std::string seeds_desc =
+      layers.same ? "seed=" + std::to_string(bra_seed) + " (ket == bra)"
+                  : "seeds=(" + std::to_string(bra_seed) + "," +
+                        std::to_string(ket_seed) + ")";
+  const std::string label =
+      std::string("T16 ") + layers.name + " " + type_name + " " + seeds_desc;
+  INFO(label);
+
+  // Ledger preconditions: rank 5 layers, matching physical ledgers (C-3),
+  // an odd physical index (N-1), mixed virtual ledgers (N-2).
+  REQUIRE(layers.bra.size() == 5);
+  REQUIRE(layers.ket.size() == 5);
+  REQUIRE(layers.bra[4] == layers.ket[4]);
+  REQUIRE(fg_ledger_has_odd(layers.bra[4]));
+  for (int ax = 0; ax < 4; ++ax) {
+    REQUIRE(fg_ledger_mixed(layers.bra[ax]));
+    REQUIRE(fg_ledger_mixed(layers.ket[ax]));
+  }
+  if (layers.same) {
+    REQUIRE(layers.bra == layers.ket);
+  }
+
+  const fg_ftensor<tensor> bra =
+      fgdp_make_site<tensor>(layers.bra, 0, bra_seed);
+  const fg_ftensor<tensor> ket =
+      layers.same ? bra : fgdp_make_site<tensor>(layers.ket, 1, ket_seed);
+
+  // C-4: the inputs satisfy the precondition the function assumes.
+  REQUIRE(fgf::parity_violation(bra) == 0.0);
+  REQUIRE(fgf::parity_violation(ket) == 0.0);
+  // N-3, populated form.
+  REQUIRE(fg_max_abs_phys_odd(bra) > 0.0);
+  REQUIRE(fg_max_abs_phys_odd(ket) > 0.0);
+  if (complex_scalars) {
+    REQUIRE(fg_max_abs_imag(bra.t) > 0.0);
+    REQUIRE(fg_max_abs_imag(ket.t) > 0.0);
+  }
+
+  const tensor open = fgf::detail::doubled_pipeline(bra, ket);
+  const tensor want = fg_close_phys(open);
+  REQUIRE(want.shape().size() == 4);
+  // N-4.
+  REQUIRE(fg_max_abs_entry(want) > 0.0);
+  // N-3, strong form: deleting the odd-physical sector must move the truth,
+  // otherwise nothing in this case can see the sign under test.
+  const tensor want_even_phys =
+      fg_pipeline_closed(fg_drop_phys_odd(bra), fg_drop_phys_odd(ket));
+  REQUIRE(fg_max_abs_diff(want, want_even_phys) > 0.0);
+  // N-1, mutation defense: this case can tell a dropped physical sign apart.
+  REQUIRE(fg_phys_sign_sensitivity(open, layers.bra[4]) > 0.0);
+
+  const tensor got = fgf::detail::doubled_pipeline_traced(bra, ket);
+  REQUIRE(got.shape().size() == 4);
+  fg_check_allclose(got, want, label + " [traced vs closed doubled_pipeline]");
+}
+
+template <class tensor>
+void fg_run_t16_reduced_case(const std::string& name,
+                             const fgf::leg_parities& lp, int seed,
+                             bool complex_scalars, const char* type_name) {
+  const std::string label = std::string("T16b ") + name + " " + type_name +
+                            " seed=" + std::to_string(seed);
+  INFO(label);
+  REQUIRE(lp.size() == 5);
+  REQUIRE(fg_ledger_has_odd(lp[4]));
+  for (int ax = 0; ax < 4; ++ax) {
+    REQUIRE(fg_ledger_mixed(lp[ax]));
+  }
+
+  const fg_ftensor<tensor> Tn = fgdp_make_site<tensor>(lp, 0, seed);
+  REQUIRE(fgf::parity_violation(Tn) == 0.0);
+  REQUIRE(fg_max_abs_phys_odd(Tn) > 0.0);
+  if (complex_scalars) {
+    REQUIRE(fg_max_abs_imag(Tn.t) > 0.0);
+  }
+
+  // build_reduced_op is not part of this task: it must still be the rank-6
+  // pipeline, with the four fused virtual legs and the two physical legs
+  // open, element for element.
+  const tensor open = fgf::detail::doubled_pipeline(Tn, Tn);
+  const tensor op = fgf::build_reduced_op(Tn);
+  REQUIRE(op.shape().size() == 6);
+  mptensor::Shape expected;
+  for (int ax = 0; ax < 4; ++ax) {
+    expected.push(lp[ax].size() * lp[ax].size());
+  }
+  expected.push(lp[4].size());
+  expected.push(lp[4].size());
+  CHECK(op.shape() == expected);
+  fg_check_allclose(op, open, label + " [build_reduced_op vs pipeline]");
+
+  // build_reduced must not move by a single element, judged against the
+  // C-1 truth formula written out here rather than taken from the function.
+  const tensor want = fg_close_phys(open);
+  REQUIRE(fg_max_abs_entry(want) > 0.0);
+  const tensor want_even_phys = fg_pipeline_closed(
+      fg_drop_phys_odd(Tn), fg_drop_phys_odd(Tn));  // N-3, strong form
+  REQUIRE(fg_max_abs_diff(want, want_even_phys) > 0.0);
+  // N-1, mutation defense (see fg_phys_sign_sensitivity).
+  REQUIRE(fg_phys_sign_sensitivity(open, lp[4]) > 0.0);
+  const tensor got = fgf::build_reduced(Tn);
+  REQUIRE(got.shape().size() == 4);
+  fg_check_allclose(got, want,
+                    label + " [build_reduced vs closed doubled_pipeline]");
+}
+
+}  // namespace
+
+TEST_CASE(
+    "fold geometry T16: doubled_pipeline_traced equals doubled_pipeline with "
+    "the two physical legs closed") {
+  const std::pair<int, int> seed_pairs[] = {{51, 52}, {67, 71}};
+  for (const auto& layers : fg_t16_layer_cases()) {
+    for (const auto& seeds : seed_pairs) {
+      fg_run_t16_case<tenes::real_tensor>(layers, seeds.first, seeds.second,
+                                          false, "real");
+      fg_run_t16_case<tenes::complex_tensor>(layers, seeds.first, seeds.second,
+                                             true, "complex");
+    }
+  }
+}
+
+TEST_CASE(
+    "fold geometry T16b: build_reduced still equals the closed "
+    "doubled_pipeline and build_reduced_op keeps its rank-6 shape") {
+  const fgf::parity_vector eo = fg_pv("eo");
+  const fgf::parity_vector eoo = fg_pv("eoo");
+  const fgf::parity_vector d2 = ib_phys_parity(2);
+  const fgf::parity_vector d4 = ib_phys_parity(4);
+  const std::vector<std::pair<std::string, fgf::leg_parities>> cases = {
+      {"d=2 D=2(eo)", {eo, eo, eo, eo, d2}},
+      {"d=4 D=3(eoo)", {eoo, eoo, eoo, eoo, d4}},
+      {"d=4 per-leg mixed ledgers", {eo, eoo, eo, eoo, d4}},
+  };
+  for (const auto& c : cases) {
+    for (const int seed : {51, 67}) {
+      fg_run_t16_reduced_case<tenes::real_tensor>(c.first, c.second, seed,
+                                                  false, "real");
+      fg_run_t16_reduced_case<tenes::complex_tensor>(c.first, c.second, seed,
+                                                     true, "complex");
+    }
+  }
+}

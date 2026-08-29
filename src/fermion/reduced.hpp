@@ -245,6 +245,60 @@ tensor doubled_pipeline(const ftensor<tensor>& bra_Tn,
   return mptensor::reshape(doubled.t, sh);
 }
 
+/*!
+ * @brief Physical-traced single-site double-layer pipeline.
+ *
+ * Contracts the matching physical legs before the frozen joint-swap
+ * dressing, (ket, bra) interleave, and column-major fusion. Output legs:
+ * ([l lb], [t tb], [r rb], [b bb]) — the four virtual legs fused with ket
+ * first and fastest-varying. The bra and ket layers may have different
+ * virtual dimensions and parity ledgers, but their physical legs must match.
+ * Both layers must be parity-even under their own ledgers; the equivalence
+ * to doubled_pipeline() followed by a plain physical trace relies on this
+ * premise.
+ *
+ * @param[in] bra_Tn Rank-5 wrapped Tn to conjugate into the bra layer.
+ * @param[in] ket_Tn Rank-5 wrapped Tn forming the ket layer.
+ * @return Rank-4 plain tensor with the four fused virtual legs.
+ * @throw std::runtime_error In debug builds, if either layer violates even
+ *        parity above the numerical tolerance.
+ */
+template <class tensor>
+tensor doubled_pipeline_traced(const ftensor<tensor>& bra_Tn,
+                               const ftensor<tensor>& ket_Tn) {
+#ifndef NDEBUG
+  const double bra_violation = parity_violation(bra_Tn);
+  const double bra_threshold = 1.0e-10 * std::max(1.0, max_abs(bra_Tn));
+  if (bra_violation > bra_threshold) {
+    throw std::runtime_error(
+        "doubled_pipeline_traced: bra layer is not parity even");
+  }
+  const double ket_violation = parity_violation(ket_Tn);
+  const double ket_threshold = 1.0e-10 * std::max(1.0, max_abs(ket_Tn));
+  if (ket_violation > ket_threshold) {
+    throw std::runtime_error(
+        "doubled_pipeline_traced: ket layer is not parity even");
+  }
+#endif
+  const auto forms = joint_swap_forms({0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 2, 3});
+  ftensor<tensor> bra = conj(bra_Tn);
+  apply_swap_form(bra, forms.bra);
+  std::vector<double> phys_sign(bra.parity[4].size());
+  for (std::size_t i = 0; i < phys_sign.size(); ++i) {
+    phys_sign[i] = bra.parity[4][i] ? -1.0 : 1.0;
+  }
+  bra.multiply_vector(phys_sign, 4);
+  ftensor<tensor> doubled =
+      tensordot(bra, ket_Tn, mptensor::Axes(4), mptensor::Axes(4));
+  transpose_with_swap_form(doubled, forms.cross,
+                           mptensor::Axes(4, 0, 5, 1, 6, 2, 7, 3));
+  mptensor::Shape sh;
+  for (std::size_t ax = 0; ax < 4; ++ax) {
+    sh.push(doubled.shape()[2 * ax] * doubled.shape()[2 * ax + 1]);
+  }
+  return mptensor::reshape(doubled.t, sh);
+}
+
 }  // namespace detail
 
 /*!
@@ -506,10 +560,8 @@ tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
     contract_b = 1;
   }
 
-  const tensor PA = mptensor::contract(detail::doubled_pipeline(TnA, TA5),
-                                       mptensor::Axes(4), mptensor::Axes(5));
-  const tensor PB = mptensor::contract(detail::doubled_pipeline(TnB, TB5),
-                                       mptensor::Axes(4), mptensor::Axes(5));
+  const tensor PA = detail::doubled_pipeline_traced(TnA, TA5);
+  const tensor PB = detail::doubled_pipeline_traced(TnB, TB5);
   return mptensor::tensordot(PA, PB, mptensor::Axes(contract_a),
                              mptensor::Axes(contract_b));
 }
