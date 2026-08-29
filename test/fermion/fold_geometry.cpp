@@ -1919,19 +1919,18 @@ void fg15_require_general_environment(const fg15_env<tensor>& e,
   const tensor* edges[6] = {&e.eT1, &e.eT2, &e.eT3, &e.eT4, &e.eT5, &e.eT6};
   for (int i = 0; i < 4; ++i) {
     REQUIRE(fg_max_abs_entry(*corners[i]) > 0.0);
-    REQUIRE(fg_max_abs_diff(*corners[i],
-                            mptensor::transpose(*corners[i],
-                                                mptensor::Axes(1, 0))) > 0.0);
+    REQUIRE(fg_max_abs_diff(
+                *corners[i],
+                mptensor::transpose(*corners[i], mptensor::Axes(1, 0))) > 0.0);
     for (int j = i + 1; j < 4; ++j) {
       REQUIRE(fg_max_abs_diff(*corners[i], *corners[j]) > 0.0);
     }
   }
   for (int i = 0; i < 6; ++i) {
     REQUIRE(fg_max_abs_entry(*edges[i]) > 0.0);
-    REQUIRE(fg_max_abs_diff(*edges[i],
-                            mptensor::transpose(*edges[i],
-                                                mptensor::Axes(1, 0, 2))) >
-            0.0);
+    REQUIRE(fg_max_abs_diff(
+                *edges[i],
+                mptensor::transpose(*edges[i], mptensor::Axes(1, 0, 2))) > 0.0);
     for (int j = i + 1; j < 6; ++j) {
       REQUIRE(fg_max_abs_diff(*edges[i], *edges[j]) > 0.0);
     }
@@ -2000,9 +1999,8 @@ void fg15_require_wiring_sensitivity(const fg15_env<tensor>& e, char dir,
   for (int which = 0; which < 3; ++which) {
     const auto moved = fg15_close_blob(fg15_swapped(e, which), dir, blob);
     INFO(label << " [N-2 swap " << std::string(fg15_swap_name(which))
-               << "]: ref=" << ref
-               << " swapped=" << moved << " |diff|=" << std::abs(moved - ref)
-               << " floor=" << floor);
+               << "]: ref=" << ref << " swapped=" << moved
+               << " |diff|=" << std::abs(moved - ref) << " floor=" << floor);
     REQUIRE(std::abs(moved - ref) > floor);
   }
 }
@@ -2097,9 +2095,9 @@ void fg15_run_case(int d, const std::string& vps, char dir,
   fg15_require_general_environment(env, label);
 
   // ---- reference side: the blob path that already exists.
-  const tensor blob_op =
-      fgf::build_reduced_pair_direct(TnA, TnB, gate, dir_e);
-  const tensor blob_naive = fgf::build_reduced_pair_naive(TnA, TnB, gate, dir_e);
+  const tensor blob_op = fgf::build_reduced_pair_direct(TnA, TnB, gate, dir_e);
+  const tensor blob_naive =
+      fgf::build_reduced_pair_naive(TnA, TnB, gate, dir_e);
   const tensor blob_id = fgf::build_reduced_identity_pair(TnA, TnB, dir_e);
   REQUIRE(blob_op.shape().size() == 6);
   REQUIRE(blob_id.shape().size() == 6);
@@ -2124,8 +2122,7 @@ void fg15_run_case(int d, const std::string& vps, char dir,
                                   label + " [identity blob]");
 
   // ---- the halves under test.
-  const auto halves_op =
-      fgf::build_reduced_pair_halves(TnA, TnB, gate, dir_e);
+  const auto halves_op = fgf::build_reduced_pair_halves(TnA, TnB, gate, dir_e);
   const auto halves_id = fgf::build_reduced_identity_halves(TnA, TnB, dir_e);
 
   // C-4: the shared-bond axes are a function of the direction alone. The
@@ -2192,14 +2189,16 @@ void fg15_run_case(int d, const std::string& vps, char dir,
       fg_dot(halves_op.PA, halves_op.PB, mptensor::Axes(halves_op.axis_a()),
              mptensor::Axes(halves_op.axis_b()));
   fg_check_allclose(rebuilt_op, blob_op,
-                    label + " [C-3 tensordot(PA,PB) vs "
-                            "build_reduced_pair_direct]");
+                    label +
+                        " [C-3 tensordot(PA,PB) vs "
+                        "build_reduced_pair_direct]");
   const tensor rebuilt_id =
       fg_dot(halves_id.PA, halves_id.PB, mptensor::Axes(halves_id.axis_a()),
              mptensor::Axes(halves_id.axis_b()));
   fg_check_allclose(rebuilt_id, blob_id,
-                    label + " [C-3 tensordot(PA,PB) vs "
-                            "build_reduced_identity_pair]");
+                    label +
+                        " [C-3 tensordot(PA,PB) vs "
+                        "build_reduced_identity_pair]");
 
   // C-1 / C-2: the absorbing closure equals the blob closure, for the
   // operator halves and for the norm halves.
@@ -2231,22 +2230,14 @@ struct fg15_row {
 // shapes, plus a dense parity-even random gate; real and complex scalars;
 // and chi in {3, 5}, never equal to D^2 (4 or 9).
 const fg15_row fg15_rows[] = {
-    {2, "eo", 'h', "hopping", 3, false},
-    {2, "eo", 'v', "hopping", 3, false},
-    {2, "eo", 'h', "nn", 5, false},
-    {2, "eo", 'v', "nn", 5, false},
-    {2, "eeo", 'h', "hopping", 5, false},
-    {2, "eeo", 'v', "nn", 5, false},
-    {2, "eoo", 'h', "random", 3, false},
-    {2, "eo", 'h', "random", 3, true},
-    {2, "eo", 'v', "hopping", 5, true},
-    {4, "eo", 'h', "hopping", 3, false},
-    {4, "eo", 'v', "hopping", 3, false},
-    {4, "eo", 'h', "nn", 5, false},
-    {4, "eo", 'v', "nn", 5, false},
-    {4, "eeo", 'h', "hopping", 5, false},
-    {4, "eeo", 'v', "nn", 5, false},
-    {4, "eo", 'h', "hopping", 5, true},
+    {2, "eo", 'h', "hopping", 3, false},  {2, "eo", 'v', "hopping", 3, false},
+    {2, "eo", 'h', "nn", 5, false},       {2, "eo", 'v', "nn", 5, false},
+    {2, "eeo", 'h', "hopping", 5, false}, {2, "eeo", 'v', "nn", 5, false},
+    {2, "eoo", 'h', "random", 3, false},  {2, "eo", 'h', "random", 3, true},
+    {2, "eo", 'v', "hopping", 5, true},   {4, "eo", 'h', "hopping", 3, false},
+    {4, "eo", 'v', "hopping", 3, false},  {4, "eo", 'h', "nn", 5, false},
+    {4, "eo", 'v', "nn", 5, false},       {4, "eeo", 'h', "hopping", 5, false},
+    {4, "eeo", 'v', "nn", 5, false},      {4, "eo", 'h', "hopping", 5, true},
     {4, "eo", 'v', "random", 3, true},
 };
 

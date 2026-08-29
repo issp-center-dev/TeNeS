@@ -23,8 +23,8 @@
  *  bra x ket network before each virtual pair is fused. Two-site operator
  *  blobs use the bundled-k construction: a graded SVD of the operator,
  *  attachment of its factors to the sites, fusion of the channel k into the
- *  shared virtual bond, the required crossing mask, the same asymmetric
- *  one-site fold on both sites, and a final plain bond contraction.
+ *  shared virtual bond, the required crossing mask, and the same asymmetric
+ *  one-site fold on both sites.
  *
  *  Thus every fermionic crossing is resolved before the resulting reduced
  *  tensors are handed to the existing bosonic CTM contraction machinery.
@@ -33,13 +33,16 @@
  *  bookkeeping on closed loops.
  *
  *  build_reduced() / build_reduced_op() produce the one-site reduced
- *  tensor; build_reduced_pair_naive() / build_reduced_pair_direct()
- *  produce the two-site "blob" with the operator already inserted. The
- *  pair builders use a graded SVD of the gate and bundle its channel
- *  leg k into the shared virtual bond. Each resulting asymmetric site is
- *  folded by the same one-site pipeline before the two folded sites are
- *  contracted. Blob leg orders (each external leg is a fused (ket, bra)
- *  pair of dimension @f$D^2@f$):
+ *  tensor. build_reduced_pair_halves() stops at the two folded sites and
+ *  returns them as a reduced_pair_halves; that is what the production
+ *  measurement path consumes, absorbing each half into its side of the CTM
+ *  environment without ever forming their product (see
+ *  reduced_measure.hpp). build_reduced_pair_direct() joins the halves over
+ *  the shared bond with a plain contraction to produce the two-site "blob",
+ *  and build_reduced_pair_naive() builds that same blob through an
+ *  independent transcription of the construction; both exist so the tests
+ *  have a materialized object to pin. Blob leg orders (each external leg is
+ *  a fused (ket, bra) pair of dimension @f$D^2@f$):
  *
  *  @verbatim
     horizontal pair (A left, B right):     vertical pair (A top, B bottom):
@@ -420,12 +423,17 @@ ftensor<tensor> apply_pair_op(const ftensor<tensor>& pair,
  * @brief Reference bundled-k two-site operator blob builder.
  *
  * Implements the SVD, attach, bundle, crossing-mask, asymmetric-fold, and
- * final-contraction construction literally. This reference currently has the
- * same implementation as build_reduced_pair_direct(); the duplication is
- * intentional so the reference and solver paths remain independent. Do not
- * deduplicate their construction code: future optimizations belong only in
- * the direct builder, with T13 pinning elementwise equivalence. The operator
- * must be loaded with wrap_twosite_gate() (input swap only).
+ * final-contraction construction literally, and folds each site with the
+ * physical legs left open (detail::doubled_pipeline() followed by a plain
+ * physical trace).
+ *
+ * The solver path has since diverged: build_reduced_pair_halves() folds with
+ * the physical legs contracted first (detail::doubled_pipeline_traced()) and
+ * stops before the join. That divergence is the point — the reference and the
+ * solver must not share construction code, so T13 compares two independent
+ * implementations rather than a function against itself. Do not deduplicate
+ * them, and keep future optimizations out of this one. The operator must be
+ * loaded with wrap_twosite_gate() (input swap only).
  */
 template <class tensor>
 tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,

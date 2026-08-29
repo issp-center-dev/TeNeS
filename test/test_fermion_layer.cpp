@@ -959,11 +959,10 @@ TEST_CASE("reduced density CTM measurement gives positive fermion norms") {
               C1[first], C2[first], C3[second], C4[second], eTt[first],
               eTr[first], eTr[second], eTb[second], eTl[second], eTl[first],
               reduced[first], reduced[second], id2);
-      ref_val =
-          tenes::itps::core::Contract_two_sites_vertical_op12_density_CTM(
-              C1[first], C2[first], C3[second], C4[second], eTt[first],
-              eTr[first], eTr[second], eTb[second], eTl[second], eTl[first],
-              reduced[first], reduced[second], density2);
+      ref_val = tenes::itps::core::Contract_two_sites_vertical_op12_density_CTM(
+          C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
+          eTr[second], eTb[second], eTl[second], eTl[first], reduced[first],
+          reduced[second], density2);
       norm_absorbed = f::contract_reduced_pair_halves_density_CTM(
           C1[first], C2[first], C3[second], C4[second], eTt[first], eTr[first],
           eTr[second], eTb[second], eTl[second], eTl[first], norm_halves);

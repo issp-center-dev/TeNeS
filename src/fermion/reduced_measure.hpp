@@ -100,6 +100,15 @@ reduced_pair_halves<tensor> build_reduced_identity_halves(
     const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
     reduced_pair_direction direction) {
   ::tenes::ScopedTimer scoped_timer("measure/twosite/halves");
+  if (direction != reduced_pair_direction::horizontal &&
+      direction != reduced_pair_direction::vertical) {
+    // Same contract as build_reduced_pair_halves(): a direction outside the
+    // enumeration must not be stored, because axis_a() / axis_b() and the
+    // closure dispatcher all treat "not horizontal" as vertical and would
+    // silently contract the wrong network.
+    throw std::runtime_error(
+        "build_reduced_identity_halves: invalid direction");
+  }
   return {build_reduced(TnA), build_reduced(TnB), direction};
 }
 
