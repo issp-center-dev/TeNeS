@@ -20,11 +20,14 @@
  *  Two environment flavors are served: the mean-field path
  *  (contract_pair_MF(), on lambda-dressed pair states with no environment
  *  tensors) and the CTM path
- *  (contract_reduced_pair_density_CTM(), closing a two-site blob from
- *  reduced.hpp with the corner and edge tensors of the standard 6-edge
- *  two-site CTM window). Helpers build the lambda-dressed site tensors and
- *  the per-site reduced density tensors the drivers hand to these
- *  contractions.
+ *  (contract_reduced_pair_halves_density_CTM(), absorbing the two folded
+ *  halves from reduced.hpp into the corner and edge tensors of the standard
+ *  6-edge two-site CTM window). The blob-closing counterparts
+ *  contract_reduced_pair_{horizontal,vertical}_density_CTM() take a
+ *  materialized rank-6 blob instead; the solver no longer forms one, and
+ *  they remain as the independent reference the tests close against.
+ *  Helpers build the lambda-dressed site tensors and the per-site reduced
+ *  density tensors the drivers hand to these contractions.
  */
 
 #ifndef TENES_SRC_FERMION_REDUCED_MEASURE_HPP_
@@ -279,24 +282,6 @@ typename tensor::value_type contract_reduced_pair_vertical_density_CTM(
   work = tensordot(work, bottom_right, Axes(1, 3), Axes(1, 3));
   work = tensordot(eT3, work, Axes(1, 2), Axes(4, 1));
   return detail::trace_boundary_pairs(work);
-}
-
-/*!
- * @brief Direction dispatcher over the two blob-closing contractions
- *        above.
- */
-template <class tensor>
-typename tensor::value_type contract_reduced_pair_density_CTM(
-    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
-    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
-    const tensor& eT5, const tensor& eT6, const tensor& blob,
-    reduced_pair_direction direction) {
-  if (direction == reduced_pair_direction::horizontal) {
-    return contract_reduced_pair_horizontal_density_CTM(
-        C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, blob);
-  }
-  return contract_reduced_pair_vertical_density_CTM(C1, C2, C3, C4, eT1, eT2,
-                                                    eT3, eT4, eT5, eT6, blob);
 }
 
 /*!

@@ -64,7 +64,6 @@
 #define TENES_SRC_FERMION_REDUCED_HPP_
 
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "../timer.hpp"
@@ -596,36 +595,37 @@ reduced_pair_halves<tensor> build_reduced_pair_halves(
 }
 
 /*!
- * @brief Solver bundled-k two-site operator blob builder.
+ * @brief Bundled-k two-site operator blob, materialized.
  *
- * Thin compatibility wrapper over build_reduced_pair_halves(). The final
+ * Thin wrapper over build_reduced_pair_halves() that joins the halves so
+ * the tests have an object to pin; the solver stops at the halves. The
  * bond contraction is deliberately plain mptensor::tensordot: a graded
  * contraction would introduce an extra closed-loop supertrace sign. The
  * returned leg order is unchanged from build_reduced_pair_naive().
+ *
+ * @throw std::runtime_error On rank mismatch or invalid direction, under
+ *        this function's own name. A failing gate SVD is reported by
+ *        build_reduced_pair_halves() and propagates unchanged.
  */
 template <class tensor>
 tensor build_reduced_pair_direct(const ftensor<tensor>& TnA,
                                  const ftensor<tensor>& TnB,
                                  const ftensor<tensor>& op12,
                                  reduced_pair_direction direction) {
-  reduced_pair_halves<tensor> halves;
-  try {
-    halves = build_reduced_pair_halves(TnA, TnB, op12, direction);
-  } catch (const std::runtime_error& error) {
-    const std::string message = error.what();
-    if (message ==
-        "build_reduced_pair_halves expects rank-5 sites and a rank-4 gate") {
-      throw std::runtime_error(
-          "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate");
-    }
-    if (message == "build_reduced_pair_halves: invalid direction") {
-      throw std::runtime_error("build_reduced_pair_direct: invalid direction");
-    }
-    if (message == "build_reduced_pair_halves: gate SVD failed") {
-      throw std::runtime_error("build_reduced_pair_direct: gate SVD failed");
-    }
-    throw;
+  // Checked here rather than caught and renamed on the way out of
+  // build_reduced_pair_halves(): the tests pin these two messages under
+  // this function's name, and recognizing the callee's exceptions by their
+  // wording made that link break silently when the wording moved.
+  if (TnA.rank() != 5 || TnB.rank() != 5 || op12.rank() != 4) {
+    throw std::runtime_error(
+        "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate");
   }
+  if (direction != reduced_pair_direction::horizontal &&
+      direction != reduced_pair_direction::vertical) {
+    throw std::runtime_error("build_reduced_pair_direct: invalid direction");
+  }
+  const reduced_pair_halves<tensor> halves =
+      build_reduced_pair_halves(TnA, TnB, op12, direction);
   return mptensor::tensordot(halves.PA, halves.PB,
                              mptensor::Axes(halves.axis_a()),
                              mptensor::Axes(halves.axis_b()));
