@@ -1817,6 +1817,107 @@ TEST_CASE(
   }
 }
 
+// ---- T16c: the debug parity precondition of doubled_pipeline_traced --------
+//
+// The derivation of the physical-traced pipeline (DESIGN section 4.4, R-1)
+// rests on both layers being parity even, and the function checks that
+// premise in debug builds. T16 and T16b only ever hand it clean layers, so
+// deleting the whole #ifndef NDEBUG block leaves all of them green: the
+// check is production behaviour with nothing guarding it.
+//
+// One assertion per mutation this defends against:
+//   - a contaminated bra layer is rejected AND named as the bra,
+//   - a contaminated ket layer AND named as the ket, so dropping either
+//     half of the block, or pasting one message over the other, is caught;
+//   - the tolerance is RELATIVE to the layer's magnitude: an odd element
+//     three orders above the bare 1e-10 constant but three below
+//     1e-10*max|.| must pass, so dropping the max_abs() scaling is caught;
+//   - the clean pair does not throw, so the case cannot pass by the guard
+//     firing unconditionally.
+
+namespace {
+
+inline void fg16c_set(tenes::real_tensor& t, const mptensor::Index& idx,
+                      double v) {
+  t.set_value(idx, v);
+}
+
+inline void fg16c_set(tenes::complex_tensor& t, const mptensor::Index& idx,
+                      double v) {
+  t.set_value(idx, std::complex<double>(v, 0.0));
+}
+
+// Put `value` on a parity-odd index, leaving the ledger alone: the tensor
+// stops being parity even by exactly that amount. The index is passed in
+// rather than searched for, so every rank contaminates the same element.
+template <class tensor>
+fg_ftensor<tensor> fg16c_contaminate(const fg_ftensor<tensor>& a,
+                                     const mptensor::Index& idx, double value) {
+  REQUIRE(fgf::count_odd(a.parity, idx) % 2 == 1);
+  fg_ftensor<tensor> bad = a;
+  fg16c_set(bad.t, idx, value);
+  REQUIRE(fgf::parity_violation(bad) == doctest::Approx(value));
+  return bad;
+}
+
+template <class tensor>
+void fg_run_t16c_case(const char* type_name) {
+  const std::string label =
+      std::string("T16c doubled_pipeline_traced parity guard ") + type_name;
+  INFO(label);
+
+  const fgf::parity_vector eo = fg_pv("eo");
+  const fgf::leg_parities lp = {eo, eo, eo, eo, ib_phys_parity(2)};
+  const fg_ftensor<tensor> bra = fgdp_make_site<tensor>(lp, 0, 71);
+  const fg_ftensor<tensor> ket = fgdp_make_site<tensor>(lp, 1, 72);
+  REQUIRE(fgf::parity_violation(bra) == 0.0);
+  REQUIRE(fgf::parity_violation(ket) == 0.0);
+
+  // Exactly one odd leg is selected, and the entry is one the generator
+  // left at zero, so the injected value IS the resulting violation.
+  const mptensor::Index odd_idx = mptensor::Index(1, 0, 0, 0, 0);
+  REQUIRE(fgf::count_odd(lp, odd_idx) % 2 == 1);
+
+  CHECK_NOTHROW(fgf::detail::doubled_pipeline_traced(bra, ket));
+
+  const double gross = 1.0;
+  const fg_ftensor<tensor> bad_bra = fg16c_contaminate(bra, odd_idx, gross);
+  const fg_ftensor<tensor> bad_ket = fg16c_contaminate(ket, odd_idx, gross);
+
+#ifndef NDEBUG
+  CHECK_THROWS_WITH_AS(fgf::detail::doubled_pipeline_traced(bad_bra, ket),
+                       doctest::Contains("bra layer is not parity even"),
+                       std::runtime_error);
+  CHECK_THROWS_WITH_AS(fgf::detail::doubled_pipeline_traced(bra, bad_ket),
+                       doctest::Contains("ket layer is not parity even"),
+                       std::runtime_error);
+#else
+  CHECK_NOTHROW(fgf::detail::doubled_pipeline_traced(bad_bra, ket));
+  CHECK_NOTHROW(fgf::detail::doubled_pipeline_traced(bra, bad_ket));
+#endif
+
+  // Scale one layer up so that "1e-10 relative" and "1e-10 absolute" are
+  // six orders apart, and contaminate strictly between them.
+  fg_ftensor<tensor> big = bra;
+  const std::vector<double> scale(lp[0].size(), 1.0e6);
+  big.multiply_vector(scale, 0);
+  const double tol = 1.0e-10 * std::max(1.0, fgf::max_abs(big));
+  const double subtle = 1.0e-3 * tol;
+  REQUIRE(subtle > 1.0e-10);
+  REQUIRE(subtle < tol);
+  const fg_ftensor<tensor> subtle_bra = fg16c_contaminate(big, odd_idx, subtle);
+  CHECK_NOTHROW(fgf::detail::doubled_pipeline_traced(subtle_bra, ket));
+}
+
+}  // namespace
+
+TEST_CASE(
+    "fold geometry T16c: doubled_pipeline_traced checks its parity premise "
+    "in debug builds") {
+  fg_run_t16c_case<tenes::real_tensor>("real");
+  fg_run_t16c_case<tenes::complex_tensor>("complex");
+}
+
 // ---- T15: absorbing the pair halves into the CTM environment ----------------
 //
 // Contract: work/fermion/twosite-speedup/CONTRACT-task3.md.
