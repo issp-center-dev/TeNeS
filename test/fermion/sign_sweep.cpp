@@ -2216,6 +2216,14 @@ constexpr const char* kMsgPairNaiveRank =
     "build_reduced_pair_naive expects rank-5 sites and a rank-4 gate";
 constexpr const char* kMsgPairDirectRank =
     "build_reduced_pair_direct expects rank-5 sites and a rank-4 gate";
+// The norm halves' own guards. The direction one landed with 1228ecd1 and
+// was never pinned; the rank one replaces the guard they used to inherit
+// from build_reduced_op() before the fold moved to
+// detail::doubled_pipeline_traced().
+constexpr const char* kMsgIdentityHalvesDirection =
+    "build_reduced_identity_halves: invalid direction";
+constexpr const char* kMsgIdentityHalvesRank =
+    "build_reduced_identity_halves expects rank-5 sites";
 constexpr const char* kMsgPairOpRank =
     "apply_pair_op expects an eight-leg pair state";
 constexpr const char* kMsgPairOpOperator =
@@ -2715,6 +2723,48 @@ TEST_CASE_TEMPLATE("SS C4-6 the reduced pipeline rejects malformed tensors",
         tenes::fermion::build_reduced_pair_direct(
             TnA, TnB, good5, reduced_pair_direction::horizontal),
         kMsgPairDirectRank, std::runtime_error);
+  }
+
+  SUBCASE(
+      "build_reduced_identity_halves/pair reject a bogus direction and "
+      "malformed ranks") {
+    // The positive control has to be parity even: the fold now runs through
+    // detail::doubled_pipeline_traced(), which checks that premise in debug
+    // builds, while ss_c4_good() / ss_c3_pair_tensors() fill every element.
+    const tenes::fermion::ftensor<tensor> even_a =
+        ss_random_even_ftensor<tensor>(mptensor::Shape(2, 3, 2, 2, 2), 46900u);
+    const tenes::fermion::ftensor<tensor> even_b =
+        ss_random_even_ftensor<tensor>(mptensor::Shape(2, 2, 2, 2, 2), 46901u);
+    CHECK_NOTHROW(tenes::fermion::build_reduced_identity_halves(
+        even_a, even_b, reduced_pair_direction::horizontal));
+    // The direction guard: without it a bogus enumerator is STORED, and
+    // axis_a()/axis_b() and the closure dispatcher all read "not horizontal"
+    // as vertical, so a uniform lattice contracts the wrong network and
+    // returns a number instead of failing.
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_identity_halves(even_a, even_b, bogus),
+        kMsgIdentityHalvesDirection, std::runtime_error);
+    // The rank guard is the halves' own since the fold stopped going
+    // through build_reduced_op(). The malformed site is parity EVEN here,
+    // deliberately: a plain random one trips the fold's own parity check
+    // first, which would let this case pass on the wrong guard. Both sites
+    // are checked, not just the first.
+    const tenes::fermion::ftensor<tensor> even4 =
+        ss_random_even_ftensor<tensor>(mptensor::Shape(2, 2, 2, 2), 46902u);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_identity_halves(
+                             even4, even_b, reduced_pair_direction::horizontal),
+                         kMsgIdentityHalvesRank, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_identity_halves(
+                             even_a, even4, reduced_pair_direction::horizontal),
+                         kMsgIdentityHalvesRank, std::runtime_error);
+    // The blob wrapper adds no guards of its own, so it must surface the
+    // halves' messages unchanged rather than fail later on a shape.
+    CHECK_THROWS_WITH_AS(
+        tenes::fermion::build_reduced_identity_pair(even_a, even_b, bogus),
+        kMsgIdentityHalvesDirection, std::runtime_error);
+    CHECK_THROWS_WITH_AS(tenes::fermion::build_reduced_identity_pair(
+                             even4, even_b, reduced_pair_direction::horizontal),
+                         kMsgIdentityHalvesRank, std::runtime_error);
   }
 
   // The SUBCASE that pinned the old cluster fuse forwarding a bad leg_ids

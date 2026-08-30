@@ -94,15 +94,30 @@ std::vector<tensor> build_reduced_density_tensors(const std::vector<tensor>& Tn,
  *
  * Builds one physical-traced reduced tensor per site and leaves their shared
  * bond open. The rank-4 leg orders and derived shared axes match
- * build_reduced_pair_halves().
+ * build_reduced_pair_halves(), and so does the fold: both go through
+ * detail::doubled_pipeline_traced(), which contracts the physical legs
+ * before the fold rather than after.
  *
+ * @param[in] TnA,TnB Rank-5 wrapped center tensors of the two sites.
+ * @param[in] direction Orientation of the window.
  * @return The two folded identity halves and their orientation.
+ * @throw std::runtime_error On rank mismatch or invalid direction; in debug
+ *        builds, also if a site violates even parity (see
+ *        detail::doubled_pipeline_traced()).
  */
 template <class tensor>
 reduced_pair_halves<tensor> build_reduced_identity_halves(
     const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
     reduced_pair_direction direction) {
   ::tenes::ScopedTimer scoped_timer("measure/twosite/halves");
+  if (TnA.rank() != 5 || TnB.rank() != 5) {
+    // Stated here because the fold below no longer runs through
+    // build_reduced_op(), which used to supply this guard on the way past.
+    // Without it a rank-4 site that happens to be parity even reaches the
+    // fold and aborts the process instead of raising.
+    throw std::runtime_error(
+        "build_reduced_identity_halves expects rank-5 sites");
+  }
   if (direction != reduced_pair_direction::horizontal &&
       direction != reduced_pair_direction::vertical) {
     // Same contract as build_reduced_pair_halves(): a direction outside the
@@ -112,16 +127,21 @@ reduced_pair_halves<tensor> build_reduced_identity_halves(
     throw std::runtime_error(
         "build_reduced_identity_halves: invalid direction");
   }
-  return {build_reduced(TnA), build_reduced(TnB), direction};
+  return {detail::doubled_pipeline_traced(TnA, TnA),
+          detail::doubled_pipeline_traced(TnB, TnB), direction};
 }
 
 /*!
  * @brief Norm blob of a two-site window: the identity-operator counterpart
  *        of build_reduced_pair_direct().
  *
- * Thin compatibility wrapper over build_reduced_identity_halves(). The final
+ * Thin wrapper over build_reduced_identity_halves() that joins the halves so
+ * the tests have an object to pin; the solver stops at the halves. The final
  * shared-bond contraction remains a plain mptensor::tensordot and preserves
  * the established rank-6 blob leg order.
+ *
+ * @throw std::runtime_error Whatever build_reduced_identity_halves() throws,
+ *        under that function's name: this wrapper adds no guards of its own.
  */
 template <class tensor>
 tensor build_reduced_identity_pair(const ftensor<tensor>& TnA,
