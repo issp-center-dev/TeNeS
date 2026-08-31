@@ -97,6 +97,11 @@ typename tensor::value_type Contract_one_site_iTPS_MF(const tensor &Tn_0_0,
 }
 
 template <class tensor>
+tensor Contract_one_site_RDM_iTPS_MF(const tensor &Tn_0_0) {
+  return tensordot(Tn_0_0, conj(Tn_0_0), Axes(0, 1, 2, 3), Axes(0, 1, 2, 3));
+}
+
+template <class tensor>
 typename tensor::value_type Contract_two_sites_vertical_iTPS_MF(
     const tensor &Tn_0_0, const tensor &Tn_1_0, const tensor &op_0_0,
     const tensor &op_1_0) {

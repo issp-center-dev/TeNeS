@@ -47,6 +47,19 @@ template <class tensor>
 typename tensor::value_type Contract_one_site_iTPS_MF(const tensor &Tn_0_0,
                                                       const tensor &op_0_0);
 
+/*! @brief contract one-site reduced density matrix with mean field environment
+ *
+ *  The returned d x d tensor is not normalized.  Its first index is the ket
+ *  index and its second index is the bra (conj side) index, as fixed by
+ *  trace(op, RDM, Axes(0, 1), Axes(0, 1)) ==
+ *  Contract_one_site_iTPS_MF(Tn, op).
+ *
+ *  @pre
+ *  Tn should absorb MF environment
+ */
+template <class tensor>
+tensor Contract_one_site_RDM_iTPS_MF(const tensor &Tn_0_0);
+
 template <class tensor>
 typename tensor::value_type Contract_two_sites_vertical_iTPS_MF(
     const tensor &Tn_0_0, const tensor &Tn_1_0, const tensor &op_0_0,

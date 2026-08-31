@@ -95,13 +95,27 @@ DECLARE_CONTRACT(3, 4);
 DECLARE_CONTRACT(4, 4);
 //! @endcond
 
-#undef DECLARE_CONTRACT_iTPS_CTM
+#undef DECLARE_CONTRACT
 
 template <class tensor>
 typename tensor::value_type Contract_one_site_iTPS_CTM(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
     const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
     const tensor &Tn1, const tensor &op1);
+
+/*! @brief contract one-site reduced density matrix with CTM
+ *
+ *  The returned d x d tensor is not normalized.  Its first index is the bra
+ *  (conj side) index and its second index is the ket index, as fixed by
+ *  trace(RDM, op, Axes(0, 1), Axes(1, 0)) ==
+ *  Contract_one_site_iTPS_CTM(..., op).
+ */
+template <class tensor>
+tensor Contract_one_site_RDM_iTPS_CTM(const tensor &C1, const tensor &C2,
+                                      const tensor &C3, const tensor &C4,
+                                      const tensor &eT1, const tensor &eT2,
+                                      const tensor &eT3, const tensor &eT4,
+                                      const tensor &Tn1);
 
 template <class tensor>
 typename tensor::value_type Contract_two_sites_horizontal_iTPS_CTM(
