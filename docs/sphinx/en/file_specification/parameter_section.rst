@@ -138,11 +138,18 @@ Parameters for corner transfer matrices, CTM.
    ``dimension``,                "Bond Dimension of CTM :math:`\chi`",                                                             Integer, 4
    ``projector_cutoff``,         "Cutoff of singular values to be considered as zero when computing CTM projectors",                          Real,    1e-12
    ``convergence_epsilon``,      "CTM convergence criteria",                                                                                  Real,    1e-6
+   ``use_onesite_rdm_convergence``, "Use one-site RDM distances between CTM iterations for convergence",                                      Boolean, true
    ``iteration_max``,            "Maximum iteration number of convergence for CTM",                                                           Integer, 100
    ``projector_corner``,         "Whether to use only the 1/4 corner tensor in the CTM projector calculation",                                Boolean, true
    ``use_rsvd``,                 "Whether to replace SVD with random SVD",                                                                    Boolean, false
    ``rsvd_oversampling_factor``, "Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method", Real,    2.0
    ``meanfield_env``,            "Use mean field environment obtained through simple update instead of CTM", Boolean, false
+
+When ``use_onesite_rdm_convergence`` is ``true``, CTM convergence is checked by using the singular-value spectrum of the corner transfer matrices and the distance between one-site reduced density matrices in successive iterations.
+The one-site RDMs are normalized by their traces, and the distance is the maximum elementwise norm over all sites and matrix elements.
+This avoids false convergence detected only from the corner spectrum in networks with virtual bonds of dimension one, such as quasi-one-dimensional systems or trivial bonds in honeycomb lattices.
+When it is ``false``, TeNeS uses the previous criterion based only on the corner spectrum.
+The residual error of observables at convergence is typically on the scale of ``convergence_epsilon``; decrease ``convergence_epsilon`` when higher accuracy is required.
 
 For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ .
 
