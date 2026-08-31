@@ -122,6 +122,18 @@ def setup_failure(msg):
     sys.exit(1)
 
 
+def skip_test(msg):
+    """Skip the test (ctest SKIP_RETURN_CODE 77).
+
+    Used when the saved tensors are in a layout this reader cannot
+    decode.  Skipping rather than failing keeps the test from turning
+    red on a configuration it cannot judge, and skipping rather than
+    passing keeps it from reporting a bogus exact reference.
+    """
+    print("SKIP: {}".format(msg))
+    sys.exit(77)
+
+
 def run(cmd, cwd):
     print("+ " + " ".join(cmd))
     ret = subprocess.call(cmd, cwd=cwd)
@@ -130,7 +142,7 @@ def run(cmd, cwd):
 
 
 def load_mptensor(path):
-    """Read a tensor saved by mptensor 0.5.0 (single process, LAPACK).
+    """Read a tensor saved by mptensor 0.5.0 from a single process.
 
     File layout (see deps/mptensor/include/mptensor/file_io/save.hpp):
     an ASCII header <path> and a binary file <path>.0000.bin holding the
@@ -141,6 +153,16 @@ def load_mptensor(path):
     axes_map[upper_rank:] with the first axis of each group running
     fastest.  For a single process this makes the storage order simply
     "axes_map[0] fastest ... axes_map[ndim-1] slowest".
+
+    Both backends are accepted as long as there is a single rank: on one
+    process the ScaLAPACK layout coincides with the LAPACK one.  In
+    matrix_scalapack_impl.hpp, prep_local_to_global (:256) reduces to the
+    identity for nprow = npcol = 1 (global_row = BLOCK_SIZE * ((l_row /
+    BLOCK_SIZE) * nprow + myprow) + l_row % BLOCK_SIZE = l_row), and
+    global_index (:165) is the same column-major l_row = i % lld,
+    l_col = i / lld with lld equal to the number of rows.  With more than
+    one rank the distribution is block-cyclic and the elements are split
+    over per-rank .bin files, which this reader does not handle.
     """
     header = {}
     with open(path) as f:
@@ -153,21 +175,23 @@ def load_mptensor(path):
             key, val = line.split("=", 1)
             header[key.strip()] = val.strip()
 
-    if "(LAPACK)" not in header["matrix_type"]:
+    comm_size = int(header["comm_size"])
+    if comm_size != 1:
+        skip_test(
+            "tensor files are distributed over {} ranks; this reader "
+            "supports a single rank ({})".format(comm_size, path)
+        )
+    if not any(tag in header["matrix_type"] for tag in ("(LAPACK)", "(ScaLAPACK)")):
         setup_failure(
-            "{}: unsupported matrix_type '{}' (reader assumes the "
-            "single-process LAPACK backend)".format(path, header["matrix_type"])
+            "{}: unsupported matrix_type '{}' (reader supports the LAPACK "
+            "and the single-rank ScaLAPACK backends)".format(
+                path, header["matrix_type"]
+            )
         )
     if "(double)" not in header["value_type"]:
         setup_failure(
             "{}: unsupported value_type '{}' (reader assumes real "
             "tensors; is_real = true)".format(path, header["value_type"])
-        )
-    if int(header["comm_size"]) != 1:
-        setup_failure(
-            "{}: comm_size = {} (reader assumes a single process)".format(
-                path, header["comm_size"]
-            )
         )
 
     ndim = int(header["ndim"])

@@ -80,6 +80,12 @@ foreach(name quasi1d_ctm onesite_rdm_output)
                                 ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
 endforeach()
 
+# quasi1d_ctm reads the saved tensors back with its own mptensor reader,
+# which only understands single-rank files. On more than one rank it
+# exits 77 so that the test is skipped instead of reporting a bogus
+# reference value or turning red.
+set_tests_properties(quasi1d_ctm PROPERTIES SKIP_RETURN_CODE 77)
+
 if(ENABLE_MPI)
   set(BENCH_SMOKE_LAUNCHER
       "${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_POSTFLAGS}")
