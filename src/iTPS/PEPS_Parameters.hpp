@@ -80,6 +80,9 @@ struct PEPS_Parameters {
   bool CTM_Projector_corner;
   //! Replace SVD with randomized SVD (use_rsvd).
   bool Use_RSVD;
+  //! Include one-site RDM distance in the CTM convergence check
+  //! (use_onesite_rdm_convergence).
+  bool CTM_Convergence_Onesite_RDM;
   //! Oversampling ratio of the randomized SVD
   //! (rsvd_oversampling_factor).
   double RSVD_Oversampling_factor;

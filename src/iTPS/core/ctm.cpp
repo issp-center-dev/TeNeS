@@ -17,20 +17,27 @@
 #include "ctm.hpp"
 
 #include <cmath>
+#include <complex>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
+#include <type_traits>
 #include <vector>
 #include <mptensor/complex.hpp>
 #include <mptensor/tensor.hpp>
 #include <mptensor/rsvd.hpp>
 
 #include "../../SquareLattice.hpp"
+#include "../../mpi.hpp"
 #include "../../tensor.hpp"
+#include "../../timer.hpp"
 #include "../PEPS_Parameters.hpp"
+#include "contract_density_ctm.hpp"
+#include "contract_itps_ctm.hpp"
 
 namespace tenes::itps::core {
 
@@ -849,6 +856,19 @@ inline double singular_value_distance(const std::vector<double> &lam_new,
   }
   return std::sqrt(sig);
 }
+
+inline std::complex<double> to_complex(double v) { return {v, 0.0}; }
+
+inline std::complex<double> to_complex(std::complex<double> v) { return v; }
+
+template <class T>
+T from_complex(std::complex<double> v) {
+  if constexpr (std::is_same_v<T, double>) {
+    return v.real();
+  } else {
+    return v;
+  }
+}
 }  // unnamed namespace
 
 template <class tensor>
@@ -989,6 +1009,101 @@ bool Check_Convergence_CTM(
     }
   }
   return convergence;
+}
+
+template <class tensor>
+bool Check_Convergence_CTM_RDM(
+    const std::vector<tensor> &C1, const std::vector<tensor> &C2,
+    const std::vector<tensor> &C3, const std::vector<tensor> &C4,
+    const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
+    const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
+    const std::vector<tensor> &Tn, const SquareLattice lattice,
+    std::vector<small_tensor<typename tensor::value_type>> &rdm_old,
+    bool &has_rdm_old, const double epsilon, const bool is_density,
+    double &rdm_dist) {
+  using value_type = typename tensor::value_type;
+
+  rdm_dist = std::numeric_limits<double>::quiet_NaN();
+  bool valid = true;
+  std::vector<small_tensor<value_type>> rdm_new;
+  rdm_new.reserve(lattice.N_UNIT);
+
+  for (int i = 0; i < lattice.N_UNIT; ++i) {
+    tensor rdm =
+        is_density
+            ? Contract_one_site_RDM_density_CTM(C1[i], C2[i], C3[i], C4[i],
+                                                eTt[i], eTr[i], eTb[i], eTl[i],
+                                                Tn[i])
+            : Contract_one_site_RDM_iTPS_CTM(C1[i], C2[i], C3[i], C4[i], eTt[i],
+                                             eTr[i], eTb[i], eTl[i], Tn[i]);
+    const size_t d0 = rdm.shape()[0];
+    const size_t d1 = rdm.shape()[1];
+    std::vector<value_type> rdm_buf(d0 * d1, 0.0);
+    std::complex<double> trace = 0.0;
+    double max_abs = 0.0;
+
+    for (size_t local = 0; local < rdm.local_size(); ++local) {
+      const auto index = rdm.global_index(local);
+      value_type v;
+      if (rdm.get_value(index, v)) {
+        rdm_buf[index[0] * d1 + index[1]] = v;
+      }
+    }
+    allreduce_sum(rdm_buf, rdm.get_comm());
+
+    small_tensor<value_type> rdm_local{Shape(d0, d1)};
+    for (size_t row = 0; row < d0; ++row) {
+      for (size_t col = 0; col < d1; ++col) {
+        value_type v = rdm_buf[row * d1 + col];
+        rdm_local.set_value({row, col}, v);
+        max_abs = std::max(max_abs, std::abs(v));
+        if (row == col) {
+          trace += to_complex(v);
+        }
+      }
+    }
+
+    const double trace_abs = std::abs(trace);
+    if (trace_abs < 1.0e-12 * max_abs || trace.real() <= 0.0 ||
+        std::abs(trace.imag()) > 1.0e-6 * trace_abs) {
+      valid = false;
+    } else {
+      const value_type trace_value = from_complex<value_type>(trace);
+      for (size_t row = 0; row < d0; ++row) {
+        for (size_t col = 0; col < d1; ++col) {
+          value_type v;
+          rdm_local.get_value({row, col}, v);
+          rdm_local.set_value({row, col}, v / trace_value);
+        }
+      }
+    }
+
+    rdm_new.push_back(rdm_local);
+  }
+
+  if (valid && has_rdm_old && rdm_old.size() == rdm_new.size()) {
+    rdm_dist = 0.0;
+    for (size_t i = 0; i < rdm_new.size(); ++i) {
+      const size_t d0 = rdm_new[i].shape()[0];
+      const size_t d1 = rdm_new[i].shape()[1];
+      for (size_t row = 0; row < d0; ++row) {
+        for (size_t col = 0; col < d1; ++col) {
+          value_type v_new, v_old;
+          rdm_new[i].get_value({row, col}, v_new);
+          rdm_old[i].get_value({row, col}, v_old);
+          rdm_dist = std::max(rdm_dist, std::abs(v_new - v_old));
+        }
+      }
+    }
+  } else {
+    valid = false;
+  }
+
+  // Even when the trace guard fails, keep the raw RDMs.  This makes the next
+  // iteration compare against a conservative, usually larger, distance.
+  rdm_old = rdm_new;
+  has_rdm_old = true;
+  return valid && rdm_dist < epsilon;
 }
 
 template <class tensor>
@@ -1221,39 +1336,58 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
   std::vector<tensor> C2_old = C2;
   std::vector<tensor> C3_old = C3;
   std::vector<tensor> C4_old = C4;
+  std::vector<small_tensor<typename tensor::value_type>> rdm_old;
+  bool has_rdm_old = false;
 
   double sig_max = 0.0;
+  double rdm_dist = std::numeric_limits<double>::quiet_NaN();
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
-    // left move
-    for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
-      Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
-                lattice);
-    }
-
-    // right move
-    for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
-      Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                 (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
-                 peps_parameters, lattice);
-    }
-
-    // top move
-    for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
-      Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-               (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
-               peps_parameters, lattice);
-    }
-
-    // bottom move
-
-    for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
-      Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy, peps_parameters,
+    {
+      // phase/environment includes this moves timer, the RDM convergence timer
+      // below, and the existing CTM singular-spectrum convergence check.
+      ScopedTimer scoped_timer("environment/ctm/moves");
+      // left move
+      for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+        Left_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, ix, peps_parameters,
                   lattice);
+      }
+
+      // right move
+      for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
+        Right_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                   (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
+                   peps_parameters, lattice);
+      }
+
+      // top move
+      for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
+        Top_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                 (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
+                 peps_parameters, lattice);
+      }
+
+      // bottom move
+
+      for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+        Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, iy, peps_parameters,
+                    lattice);
+      }
     }
 
     convergence =
         Check_Convergence_CTM(C1, C2, C3, C4, C1_old, C2_old, C3_old, C4_old,
                               peps_parameters, lattice, sig_max);
+    if (peps_parameters.CTM_Convergence_Onesite_RDM) {
+      bool rdm_convergence;
+      {
+        ScopedTimer scoped_timer("environment/ctm/convergence_rdm");
+        rdm_convergence = Check_Convergence_CTM_RDM(
+            C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, lattice, rdm_old,
+            has_rdm_old, peps_parameters.CTM_Convergence_Epsilon, false,
+            rdm_dist);
+      }
+      convergence = convergence && rdm_convergence;
+    }
     count += 1;
 
     C1_old = C1;
@@ -1262,13 +1396,13 @@ int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
     C4_old = C4;
     if (peps_parameters.print_level >= PrintLevel::debug) {
       std::cout << "CTM: count, sig_max " << count << " " << sig_max
-                << std::endl;
+                << " rdm_dist " << rdm_dist << std::endl;
     }
   }
 
   if (!convergence && peps_parameters.print_level >= PrintLevel::warn) {
-    std::cout << "Warning: CTM did not converge! count, sig_max = " << count
-              << " " << sig_max << std::endl;
+    std::cout << "Warning: CTM did not converge! count, sig_max, rdm_dist = "
+              << count << " " << sig_max << " " << rdm_dist << std::endl;
   }
   if (peps_parameters.print_level >= PrintLevel::debug) {
     std::cout << "CTM: count to convergence= " << count << std::endl;
@@ -1417,6 +1551,29 @@ template bool Check_Convergence_CTM(const std::vector<complex_tensor> &C1,
                                     const PEPS_Parameters peps_parameters,
                                     const SquareLattice lattice,
                                     double &sig_max);
+
+template bool Check_Convergence_CTM_RDM(
+    const std::vector<real_tensor> &C1, const std::vector<real_tensor> &C2,
+    const std::vector<real_tensor> &C3, const std::vector<real_tensor> &C4,
+    const std::vector<real_tensor> &eTt, const std::vector<real_tensor> &eTr,
+    const std::vector<real_tensor> &eTb, const std::vector<real_tensor> &eTl,
+    const std::vector<real_tensor> &Tn, const SquareLattice lattice,
+    std::vector<small_tensor<real_tensor::value_type>> &rdm_old,
+    bool &has_rdm_old, const double epsilon, const bool is_density,
+    double &rdm_dist);
+template bool Check_Convergence_CTM_RDM(
+    const std::vector<complex_tensor> &C1,
+    const std::vector<complex_tensor> &C2,
+    const std::vector<complex_tensor> &C3,
+    const std::vector<complex_tensor> &C4,
+    const std::vector<complex_tensor> &eTt,
+    const std::vector<complex_tensor> &eTr,
+    const std::vector<complex_tensor> &eTb,
+    const std::vector<complex_tensor> &eTl,
+    const std::vector<complex_tensor> &Tn, const SquareLattice lattice,
+    std::vector<small_tensor<complex_tensor::value_type>> &rdm_old,
+    bool &has_rdm_old, const double epsilon, const bool is_density,
+    double &rdm_dist);
 
 template int Calc_CTM_Environment(
     std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,
