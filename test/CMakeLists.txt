@@ -7,7 +7,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
-    correlation_length saveload arnoldi timer_registry)
+    correlation_length saveload arnoldi timer_registry onesite_rdm)
 if(TENES_ARPACK_FOUND)
   list(APPEND tenes_unit_tests arpack)
 endif()
@@ -71,6 +71,13 @@ foreach(
   FT_Kitaev)
   add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
                                 ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
+endforeach()
+
+foreach(name quasi1d_ctm onesite_rdm_output)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/${name}.py @ONLY)
+  add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
+                                ${CMAKE_CURRENT_BINARY_DIR}/${name}.py)
 endforeach()
 
 if(ENABLE_MPI)

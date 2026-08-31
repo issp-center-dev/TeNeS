@@ -1,0 +1,265 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Output test for the one-site reduced density matrix.
+#
+# When the measurement phase runs, the normalized one-site RDM of every
+# site must be written to output/onesite_density_matrix.dat with the
+# 5-column format "site row(bra) col(ket) real imag".  This is checked
+# for both the CTM environment and the mean-field environment
+# (meanfield_env = true).  The physical accuracy of the values is not
+# the subject here; only existence, completeness, trace = 1, and
+# hermiticity are checked.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+os.environ["OMP_NUM_THREADS"] = "1"
+
+TOL = 1.0e-10
+
+WORKDIR = join("@CMAKE_CURRENT_BINARY_DIR@", "onesite_rdm_output_work")
+
+N_SITES = 4
+PHYS_DIM = 2
+
+HAM_ELEMENTS = """
+0 0 0 0 0.25 0.0
+0 1 0 1 -0.25 0.0
+1 0 1 0 -0.25 0.0
+1 1 1 1 0.25 0.0
+0 1 1 0 0.5 0.0
+1 0 0 1 0.5 0.0
+"""
+
+BONDS = """
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+"""
+
+STD_TOML = """\
+[parameter]
+[parameter.general]
+is_real = true
+output = "output"
+[parameter.simple_update]
+num_step = 500
+tau = 0.01
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 50
+meanfield_env = {meanfield_env}
+[parameter.random]
+seed = 2
+
+[tensor]
+L_sub = [2, 2]
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [1, 4, 1, 4]
+noise = 1.0
+initial_state = [0.0]
+
+[[hamiltonian]]
+dim = [2, 2]
+bonds = \"\"\"{bonds}\"\"\"
+elements = \"\"\"{elements}\"\"\"
+
+[observable]
+# At least one onesite observable is required: the ground-state branch of
+# save_density (src/iTPS/density.cpp) reads onesite_operator_names[0] for
+# column padding and crashes without one (its name must also be at least
+# as long as "Energy").  This observable is not used by the test.
+[[observable.onesite]]
+name = "onesite_sz"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+0 0 0.5 0.0
+1 1 -0.5 0.0
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+dim = [2, 2]
+bonds = \"\"\"{bonds}\"\"\"
+elements = \"\"\"{elements}\"\"\"
+"""
+
+
+def setup_failure(msg):
+    """A failure before the checks proper (a defect of the test rig)."""
+    print("SETUP FAILURE: {}".format(msg))
+    sys.exit(1)
+
+
+def run(cmd, cwd):
+    print("+ " + " ".join(cmd))
+    ret = subprocess.call(cmd, cwd=cwd)
+    if ret != 0:
+        setup_failure("command {} exited with code {}".format(cmd, ret))
+
+
+def run_case(casename, meanfield_env):
+    casedir = join(WORKDIR, casename)
+    os.makedirs(casedir)
+
+    with open(join(casedir, "std.toml"), "w") as f:
+        f.write(
+            STD_TOML.format(
+                meanfield_env="true" if meanfield_env else "false",
+                bonds=BONDS,
+                elements=HAM_ELEMENTS,
+            )
+        )
+
+    run(
+        [
+            join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"),
+            "-o",
+            "input.toml",
+            "std.toml",
+        ],
+        cwd=casedir,
+    )
+
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append("input.toml")
+    run(cmd, cwd=casedir)
+
+    return join(casedir, "output", "onesite_density_matrix.dat")
+
+
+def check_rdm_file(casename, filename):
+    ok = True
+
+    if not os.path.exists(filename):
+        print("{}: {} does not exist".format(casename, filename))
+        return False
+
+    # rho[site][(row, col)] = complex value
+    rho = {}
+    with open(filename) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            words = line.split()
+            if len(words) != 5:
+                print(
+                    "{}: line '{}' does not have 5 columns "
+                    "(site row col real imag)".format(casename, line)
+                )
+                return False
+            site, row, col = int(words[0]), int(words[1]), int(words[2])
+            value = complex(float(words[3]), float(words[4]))
+            if site in rho and (row, col) in rho[site]:
+                print(
+                    "{}: duplicated entry for site {} row {} col {}".format(
+                        casename, site, row, col
+                    )
+                )
+                return False
+            rho.setdefault(site, {})[(row, col)] = value
+
+    # completeness: sites 0..3, all d x d = 4 elements each
+    if sorted(rho.keys()) != list(range(N_SITES)):
+        print(
+            "{}: sites are {}, expected {}".format(
+                casename, sorted(rho.keys()), list(range(N_SITES))
+            )
+        )
+        return False
+    expected_keys = sorted(
+        (r, c) for r in range(PHYS_DIM) for c in range(PHYS_DIM)
+    )
+    for site in range(N_SITES):
+        if sorted(rho[site].keys()) != expected_keys:
+            print(
+                "{}: site {} has entries {}, expected {}".format(
+                    casename, site, sorted(rho[site].keys()), expected_keys
+                )
+            )
+            return False
+
+    for site in range(N_SITES):
+        # trace = 1 (real part), imaginary part ~ 0
+        tr = sum(rho[site][(a, a)] for a in range(PHYS_DIM))
+        if abs(tr.real - 1.0) > TOL or abs(tr.imag) > TOL:
+            print(
+                "{}: site {} trace is {} (should be 1 within {})".format(
+                    casename, site, tr, TOL
+                )
+            )
+            ok = False
+        # hermiticity: rho[r, c] == conj(rho[c, r])
+        for r in range(PHYS_DIM):
+            for c in range(PHYS_DIM):
+                diff = abs(rho[site][(r, c)] - rho[site][(c, r)].conjugate())
+                if diff > TOL:
+                    print(
+                        "{}: site {} violates hermiticity at ({}, {}): "
+                        "{} vs conj({})".format(
+                            casename,
+                            site,
+                            r,
+                            c,
+                            rho[site][(r, c)],
+                            rho[site][(c, r)],
+                        )
+                    )
+                    ok = False
+
+    if ok:
+        print("{}: OK".format(casename))
+    return ok
+
+
+def main():
+    if os.path.exists(WORKDIR):
+        shutil.rmtree(WORKDIR)
+    os.makedirs(WORKDIR)
+
+    result = True
+
+    filename = run_case("ctm", meanfield_env=False)
+    result = check_rdm_file("ctm", filename) and result
+
+    filename = run_case("mf", meanfield_env=True)
+    result = check_rdm_file("mf", filename) and result
+
+    sys.exit(0 if result else 1)
+
+
+if __name__ == "__main__":
+    main()
