@@ -108,9 +108,8 @@ std::vector<tensor> make_operators(int d) {
     for (int j = 0; j < d; ++j) {
       identity.set_value(Index(i, j),
                          (i == j) ? value_type(1.0) : value_type(0.0));
-      diagonal.set_value(Index(i, j), (i == j)
-                                          ? value_type(0.3 - 0.9 * i)
-                                          : value_type(0.0));
+      diagonal.set_value(
+          Index(i, j), (i == j) ? value_type(0.3 - 0.9 * i) : value_type(0.0));
       // dense and non-symmetric (complex entries in the complex case)
       nonsym.set_value(Index(i, j), random_value<value_type>(gen, dist));
     }
@@ -123,8 +122,8 @@ std::vector<tensor> make_operators(int d) {
 
 template <class value_type>
 double relative_difference(value_type a, value_type b) {
-  const double scale = std::max(
-      {std::abs(a), std::abs(b), std::numeric_limits<double>::min()});
+  const double scale =
+      std::max({std::abs(a), std::abs(b), std::numeric_limits<double>::min()});
   return std::abs(a - b) / scale;
 }
 

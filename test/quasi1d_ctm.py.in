@@ -109,9 +109,7 @@ group = 0
 dim = [2, 2]
 bonds = \"\"\"{bonds}\"\"\"
 elements = \"\"\"{elements}\"\"\"
-""".format(
-    bonds=BONDS, elements=HAM_ELEMENTS
-)
+""".format(bonds=BONDS, elements=HAM_ELEMENTS)
 
 
 def setup_failure(msg):
@@ -186,9 +184,7 @@ def load_mptensor(path):
     data = np.fromfile(path + ".0000.bin", dtype=np.float64)
     if data.size != np.prod(shape):
         setup_failure(
-            "{}: binary size {} does not match shape {}".format(
-                path, data.size, shape
-            )
+            "{}: binary size {} does not match shape {}".format(path, data.size, shape)
         )
 
     storage_dims = [shape[a] for a in axes_map]
@@ -379,8 +375,7 @@ def main():
         sys.exit(0)
     else:
         print(
-            "FAILED: CTM measurement deviates from the exact "
-            "transfer-matrix value"
+            "FAILED: CTM measurement deviates from the exact " "transfer-matrix value"
         )
         sys.exit(1)
 

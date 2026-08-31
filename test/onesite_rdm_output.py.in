@@ -200,9 +200,7 @@ def check_rdm_file(casename, filename):
             )
         )
         return False
-    expected_keys = sorted(
-        (r, c) for r in range(PHYS_DIM) for c in range(PHYS_DIM)
-    )
+    expected_keys = sorted((r, c) for r in range(PHYS_DIM) for c in range(PHYS_DIM))
     for site in range(N_SITES):
         if sorted(rho[site].keys()) != expected_keys:
             print(
