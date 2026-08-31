@@ -200,6 +200,8 @@ class iTPS {
 
   //! Measure the one-site observables; result indexed by [operator][site].
   std::vector<std::vector<tensor_type>> measure_onesite();
+  //! Measure the normalized one-site RDM; result indexed by [site].
+  std::vector<small_tensor<tensor_type>> measure_onesite_rdm();
   //! Finite-temperature variant of measure_onesite().
   std::vector<std::vector<tensor_type>> measure_onesite_density();
 
@@ -232,6 +234,17 @@ class iTPS {
   void save_onesite(std::vector<std::vector<tensor_type>> const &onesite_obs,
                     std::optional<double> time = std::nullopt,
                     std::string filename_prefix = "");
+
+  /*! @brief write measured one-site RDMs
+   *
+   *  @param[in] onesite_rdm normalized RDMs with row = bra and col = ket
+   *  @param[in] time
+   *  @param[in] filename_prefix
+   */
+  void save_onesite_rdm(
+      std::vector<small_tensor<tensor_type>> const &onesite_rdm,
+      std::optional<double> time = std::nullopt,
+      std::string filename_prefix = "");
 
   /*! @brief write measured twosite observables
    *

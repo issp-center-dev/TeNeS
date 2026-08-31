@@ -15,8 +15,10 @@
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
 #define _USE_MATH_DEFINES
+#include <cassert>
 #include <cmath>
 #include <complex>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -30,6 +32,27 @@
 #include "core/contract.hpp"
 
 namespace tenes::itps {
+
+namespace {
+
+template <class tensor>
+std::vector<typename tensor::value_type> gather_rank2_tensor(tensor const &t) {
+  using value_type = typename tensor::value_type;
+  const size_t d0 = t.shape()[0];
+  const size_t d1 = t.shape()[1];
+  std::vector<value_type> buf(d0 * d1, 0.0);
+  for (size_t local = 0; local < t.local_size(); ++local) {
+    const auto index = t.global_index(local);
+    value_type v;
+    if (t.get_value(index, v)) {
+      buf[index[0] * d1 + index[1]] = v;
+    }
+  }
+  allreduce_sum(buf, t.get_comm());
+  return buf;
+}
+
+}  // namespace
 
 template <class tensor>
 auto iTPS<tensor>::measure_onesite()
@@ -121,6 +144,64 @@ auto iTPS<tensor>::measure_onesite()
   return local_obs;
 }
 
+template <class tensor>
+auto iTPS<tensor>::measure_onesite_rdm()
+    -> std::vector<small_tensor<typename iTPS<tensor>::tensor_type>> {
+  const bool is_meanfield = peps_parameters.MeanField_Env;
+  const bool is_density = peps_parameters.calcmode ==
+                          PEPS_Parameters::CalculationMode::finite_temperature;
+
+  std::vector<small_tensor<tensor_type>> rdm_all;
+  rdm_all.reserve(N_UNIT);
+
+  std::vector<tensor> Tn_mf;
+  if (is_meanfield) {
+    if (is_density) {
+      throw std::runtime_error(
+          "Mean field calculation is not implemented for finite temperature.");
+    }
+    Tn_mf = Tn;
+    for (int i = 0; i < N_UNIT; ++i) {
+      for (int leg = 0; leg < nleg; ++leg) {
+        const std::vector<double> mf = lambda_tensor[i][leg];
+        Tn_mf[i].multiply_vector(mf, leg);
+      }
+    }
+  }
+
+  for (int i = 0; i < N_UNIT; ++i) {
+    tensor rdm = is_meanfield ? core::Contract_one_site_RDM_iTPS_MF(Tn_mf[i])
+                 : is_density ? core::Contract_one_site_RDM_density_CTM(
+                                    C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                    eTb[i], eTl[i], Tn[i])
+                              : core::Contract_one_site_RDM_iTPS_CTM(
+                                    C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
+                                    eTb[i], eTl[i], Tn[i]);
+    const size_t d0 = rdm.shape()[0];
+    const size_t d1 = rdm.shape()[1];
+    assert(d0 == d1);
+    const auto buf = gather_rank2_tensor(rdm);
+    small_tensor<tensor_type> rdm_local{mptensor::Shape(d0, d1)};
+    tensor_type tr = 0.0;
+
+    for (size_t a = 0; a < d0; ++a) {
+      tr += buf[a * d1 + a];
+    }
+
+    for (size_t row = 0; row < d0; ++row) {
+      for (size_t col = 0; col < d1; ++col) {
+        const tensor_type v = (is_meanfield || is_density)
+                                  ? buf[col * d1 + row]
+                                  : buf[row * d1 + col];
+        rdm_local.set_value({row, col}, v / tr);
+      }
+    }
+    rdm_all.push_back(rdm_local);
+  }
+
+  return rdm_all;
+}
+
 template <class ptensor>
 void iTPS<ptensor>::save_onesite(
     std::vector<std::vector<typename iTPS<ptensor>::tensor_type>> const
@@ -195,6 +276,65 @@ void iTPS<ptensor>::save_onesite(
       }
       ofs << "-1 " << i << " " << std::real(v) << " " << std::imag(v)
           << std::endl;
+    }
+  }
+}
+
+template <class ptensor>
+void iTPS<ptensor>::save_onesite_rdm(
+    std::vector<small_tensor<typename iTPS<ptensor>::tensor_type>> const
+        &onesite_rdm,
+    std::optional<double> time, std::string filename_prefix) {
+  if (mpirank != 0) {
+    return;
+  }
+
+  std::string filepath =
+      outdir + "/" + filename_prefix + "onesite_density_matrix.dat";
+  if (!time && peps_parameters.print_level >= PrintLevel::info) {
+    std::cout << "    Save one-site RDMs to " << filepath << std::endl;
+  }
+
+  static bool first_time = true;
+  if (first_time) {
+    first_time = false;
+    std::ofstream ofs(filepath.c_str());
+    ofs << "# The meaning of each column is the following: \n";
+    int index = 1;
+    if (time) {
+      if (peps_parameters.calcmode ==
+          PEPS_Parameters::CalculationMode::time_evolution) {
+        ofs << "# $" << index++ << ": time\n";
+      } else if (peps_parameters.calcmode ==
+                 PEPS_Parameters::CalculationMode::finite_temperature) {
+        ofs << "# $" << index++ << ": inverse temperature\n";
+      }
+    }
+    ofs << "# $" << index++ << ": site\n";
+    ofs << "# $" << index++ << ": row index (bra)\n";
+    ofs << "# $" << index++ << ": col index (ket)\n";
+    ofs << "# $" << index++ << ": real part\n";
+    ofs << "# $" << index++ << ": imag part\n";
+    ofs << std::endl;
+  }
+
+  std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::app);
+  ofs << std::scientific
+      << std::setprecision(std::numeric_limits<double>::max_digits10);
+
+  for (int i = 0; i < N_UNIT; ++i) {
+    const size_t d0 = onesite_rdm[i].shape()[0];
+    const size_t d1 = onesite_rdm[i].shape()[1];
+    for (size_t row = 0; row < d0; ++row) {
+      for (size_t col = 0; col < d1; ++col) {
+        tensor_type v;
+        onesite_rdm[i].get_value({row, col}, v);
+        if (time) {
+          ofs << (*time) << " ";
+        }
+        ofs << i << " " << row << " " << col << " " << std::real(v) << " "
+            << std::imag(v) << std::endl;
+      }
     }
   }
 }
