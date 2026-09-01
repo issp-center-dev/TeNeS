@@ -137,9 +137,10 @@ Example::
 ``onesite_density_matrix.dat``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The normalized one-site reduced density matrix is outputted for all sites.
+The one-site reduced density matrix :math:`\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|`  is outputted for all sites.
 The row index denotes the bra, or conjugate, side, and the column index denotes the ket side.
-The trace is normalized to one for each site.
+Note that it is **not normalized**: its trace equals the norm of the wave function :math:`\langle \Psi | \Psi \rangle`, the same value that ``onesite_obs.dat`` reports with ``op_group`` = -1.
+Divide by the trace, as in :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i`, when an expectation value is needed.
 Each row consists of five columns.
 
 1. Index of the site
@@ -157,10 +158,10 @@ Example::
    # $4: real part
    # $5: imag part
 
-   0 0 0 9.99999000000000000e-01 0.00000000000000000e+00
-   0 0 1 1.00000000000000000e-06 0.00000000000000000e+00
-   0 1 0 1.00000000000000000e-06 0.00000000000000000e+00
-   0 1 1 1.00000000000000000e-06 0.00000000000000000e+00
+   0 0 0 6.19123326170666233e-01 0.00000000000000000e+00
+   0 0 1 2.14890351912208927e-01 0.00000000000000000e+00
+   0 1 0 2.14890351912208843e-01 0.00000000000000000e+00
+   0 1 1 6.00231817060733031e-01 0.00000000000000000e+00
 
 ``twosite_obs.dat``
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -370,7 +371,7 @@ Example::
 ``TE_onesite_density_matrix.dat``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The normalized one-site reduced density matrix is outputted with the same row and column convention as ``onesite_density_matrix.dat``.
+The one-site reduced density matrix is outputted, without normalization, with the same row and column convention as ``onesite_density_matrix.dat``.
 Each row has the time :math:`t` as the first column, as in ``TE_onesite_obs.dat``, and consists of six columns.
 
 1. Time :math:`t`
@@ -527,4 +528,4 @@ For finite temperature calculation mode
 
 The formats of the files are the same as those in the real time evolution mode.
 The only difference is that the file name starts with ``FT_`` instead of ``TE_``, and the first column is the inverse temperature :math:`\beta = 1/T` instead of the time :math:`t`.
-For example, the normalized one-site reduced density matrices are written to ``FT_onesite_density_matrix.dat``; the first column is the inverse temperature, followed by site, row (bra), column (ket), real part, and imaginary part.
+For example, the one-site reduced density matrices are written, without normalization, to ``FT_onesite_density_matrix.dat``; the first column is the inverse temperature, followed by site, row (bra), column (ket), real part, and imaginary part.
