@@ -25,7 +25,6 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <type_traits>
 #include <vector>
 #include <mptensor/complex.hpp>
 #include <mptensor/tensor.hpp>
@@ -860,15 +859,6 @@ inline double singular_value_distance(const std::vector<double> &lam_new,
 inline std::complex<double> to_complex(double v) { return {v, 0.0}; }
 
 inline std::complex<double> to_complex(std::complex<double> v) { return v; }
-
-template <class T>
-T from_complex(std::complex<double> v) {
-  if constexpr (std::is_same_v<T, double>) {
-    return v.real();
-  } else {
-    return v;
-  }
-}
 }  // unnamed namespace
 
 template <class tensor>
@@ -1027,6 +1017,8 @@ bool Check_Convergence_CTM_RDM(
   bool valid = true;
   std::vector<small_tensor<value_type>> rdm_new;
   rdm_new.reserve(lattice.N_UNIT);
+  std::vector<double> trace_abs_new;
+  trace_abs_new.reserve(lattice.N_UNIT);
 
   for (int i = 0; i < lattice.N_UNIT; ++i) {
     tensor rdm =
@@ -1064,18 +1056,10 @@ bool Check_Convergence_CTM_RDM(
     }
 
     const double trace_abs = std::abs(trace);
+    trace_abs_new.push_back(trace_abs);
     if (trace_abs < 1.0e-12 * max_abs || trace.real() <= 0.0 ||
         std::abs(trace.imag()) > 1.0e-6 * trace_abs) {
       valid = false;
-    } else {
-      const value_type trace_value = from_complex<value_type>(trace);
-      for (size_t row = 0; row < d0; ++row) {
-        for (size_t col = 0; col < d1; ++col) {
-          value_type v;
-          rdm_local.get_value({row, col}, v);
-          rdm_local.set_value({row, col}, v / trace_value);
-        }
-      }
     }
 
     rdm_new.push_back(rdm_local);
@@ -1091,7 +1075,8 @@ bool Check_Convergence_CTM_RDM(
           value_type v_new, v_old;
           rdm_new[i].get_value({row, col}, v_new);
           rdm_old[i].get_value({row, col}, v_old);
-          rdm_dist = std::max(rdm_dist, std::abs(v_new - v_old));
+          rdm_dist =
+              std::max(rdm_dist, std::abs(v_new - v_old) / trace_abs_new[i]);
         }
       }
     }

@@ -182,18 +182,13 @@ auto iTPS<tensor>::measure_onesite_rdm()
     assert(d0 == d1);
     const auto buf = gather_rank2_tensor(rdm);
     small_tensor<tensor_type> rdm_local{mptensor::Shape(d0, d1)};
-    tensor_type tr = 0.0;
-
-    for (size_t a = 0; a < d0; ++a) {
-      tr += buf[a * d1 + a];
-    }
 
     for (size_t row = 0; row < d0; ++row) {
       for (size_t col = 0; col < d1; ++col) {
         const tensor_type v = (is_meanfield || is_density)
                                   ? buf[col * d1 + row]
                                   : buf[row * d1 + col];
-        rdm_local.set_value({row, col}, v / tr);
+        rdm_local.set_value({row, col}, v);
       }
     }
     rdm_all.push_back(rdm_local);

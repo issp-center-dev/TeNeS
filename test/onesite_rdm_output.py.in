@@ -16,13 +16,23 @@
 
 # Output test for the one-site reduced density matrix.
 #
-# When the measurement phase runs, the normalized one-site RDM of every
-# site must be written to output/onesite_density_matrix.dat with the
-# 5-column format "site row(bra) col(ket) real imag".  This is checked
-# for both the CTM environment and the mean-field environment
-# (meanfield_env = true).  The physical accuracy of the values is not
-# the subject here; only existence, completeness, trace = 1, and
-# hermiticity are checked.
+# When the measurement phase runs, the one-site RDM of every site must be
+# written to output/onesite_density_matrix.dat with the 5-column format
+# "site row(bra) col(ket) real imag".  The RDM is written *unnormalized*:
+# its trace is the norm, so normalizing here would throw that
+# information away, while a reader who wants the normalized matrix can
+# divide by the trace.
+#
+# Accordingly the trace of each site's RDM must equal the norm that the
+# existing measurement code reports for that site in onesite_obs.dat
+# (the rows with op_group = -1).  That is a cross-check of the new RDM
+# contraction against the established norm computation, not merely a
+# restatement of the output format.
+#
+# Checked for both the CTM environment and the mean-field environment
+# (meanfield_env = true): existence, the 5-column format, completeness
+# (every site x d^2 entries), trace == norm, and hermiticity.  The
+# physical accuracy of the values is not the subject here.
 
 import os
 import shutil
@@ -33,6 +43,7 @@ from os.path import join
 os.environ["OMP_NUM_THREADS"] = "1"
 
 TOL = 1.0e-10
+RTOL_NORM = 1.0e-10
 
 WORKDIR = join("@CMAKE_CURRENT_BINARY_DIR@", "onesite_rdm_output_work")
 
@@ -61,7 +72,7 @@ STD_TOML = """\
 is_real = true
 output = "output"
 [parameter.simple_update]
-num_step = 500
+num_step = {num_step}
 tau = 0.01
 [parameter.ctm]
 dimension = 8
@@ -123,7 +134,7 @@ def run(cmd, cwd):
         setup_failure("command {} exited with code {}".format(cmd, ret))
 
 
-def run_case(casename, meanfield_env):
+def run_case(casename, meanfield_env, num_step=500):
     casedir = join(WORKDIR, casename)
     os.makedirs(casedir)
 
@@ -131,6 +142,7 @@ def run_case(casename, meanfield_env):
         f.write(
             STD_TOML.format(
                 meanfield_env="true" if meanfield_env else "false",
+                num_step=num_step,
                 bonds=BONDS,
                 elements=HAM_ELEMENTS,
             )
@@ -157,12 +169,51 @@ def run_case(casename, meanfield_env):
     cmd.append("input.toml")
     run(cmd, cwd=casedir)
 
-    return join(casedir, "output", "onesite_density_matrix.dat")
+    return join(casedir, "output")
 
 
-def check_rdm_file(casename, filename):
+def read_norms(casename, outdir):
+    """Read the per-site norms from onesite_obs.dat (op_group = -1).
+
+    These are written by the existing measurement code (save_onesite in
+    src/iTPS/onesite_obs.cpp), so anything wrong here is a defect of the
+    test rig rather than of the RDM output under test.  The ground-state
+    runs of this test have no leading time column, so the format is
+    "op_group site_index real imag".
+    """
+    filename = join(outdir, "onesite_obs.dat")
+    if not os.path.exists(filename):
+        setup_failure("{}: {} does not exist".format(casename, filename))
+
+    norms = {}
+    with open(filename) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            words = line.split()
+            if len(words) != 4:
+                setup_failure(
+                    "{}: onesite_obs.dat line '{}' does not have 4 columns "
+                    "(op_group site real imag)".format(casename, line)
+                )
+            if int(words[0]) != -1:
+                continue
+            site = int(words[1])
+            norms[site] = complex(float(words[2]), float(words[3]))
+
+    if sorted(norms.keys()) != list(range(N_SITES)):
+        setup_failure(
+            "{}: onesite_obs.dat has norms (op_group = -1) for sites {}, "
+            "expected {}".format(casename, sorted(norms.keys()), list(range(N_SITES)))
+        )
+    return norms
+
+
+def check_rdm_file(casename, outdir):
     ok = True
 
+    filename = join(outdir, "onesite_density_matrix.dat")
     if not os.path.exists(filename):
         print("{}: {} does not exist".format(casename, filename))
         return False
@@ -210,13 +261,19 @@ def check_rdm_file(casename, filename):
             )
             return False
 
+    norms = read_norms(casename, outdir)
+
     for site in range(N_SITES):
-        # trace = 1 (real part), imaginary part ~ 0
+        # The RDM is unnormalized: its trace is the norm of that site,
+        # cross-checked against the value the existing measurement code
+        # reports in onesite_obs.dat.
         tr = sum(rho[site][(a, a)] for a in range(PHYS_DIM))
-        if abs(tr.real - 1.0) > TOL or abs(tr.imag) > TOL:
+        norm = norms[site]
+        if abs(tr - norm) > RTOL_NORM * abs(norm):
             print(
-                "{}: site {} trace is {} (should be 1 within {})".format(
-                    casename, site, tr, TOL
+                "{}: site {} trace is {} but onesite_obs.dat reports "
+                "norm {} (relative tolerance {})".format(
+                    casename, site, tr, norm, RTOL_NORM
                 )
             )
             ok = False
@@ -250,11 +307,20 @@ def main():
 
     result = True
 
-    filename = run_case("ctm", meanfield_env=False)
-    result = check_rdm_file("ctm", filename) and result
+    outdir = run_case("ctm", meanfield_env=False)
+    result = check_rdm_file("ctm", outdir) and result
 
-    filename = run_case("mf", meanfield_env=True)
-    result = check_rdm_file("mf", filename) and result
+    outdir = run_case("mf", meanfield_env=True)
+    result = check_rdm_file("mf", outdir) and result
+
+    # After simple update the mean-field tensors are normalized, so the
+    # norm of the "mf" case above is 1 to rounding and its trace == norm
+    # check cannot tell a normalized RDM from an unnormalized one.  This
+    # third case skips the imaginary-time evolution (num_step = 0) so
+    # that the random initial tensors give norms far from 1 and the MF
+    # contraction path is actually discriminated.
+    outdir = run_case("mf_unnormalized", meanfield_env=True, num_step=0)
+    result = check_rdm_file("mf_unnormalized", outdir) and result
 
     sys.exit(0 if result else 1)
 
