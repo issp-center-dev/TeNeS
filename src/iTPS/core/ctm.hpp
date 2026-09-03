@@ -127,14 +127,14 @@ bool Check_Convergence_CTM(
     double &sig_max);
 
 /**
- * @brief Check CTM convergence from normalized one-site RDMs.
+ * @brief Check CTM convergence from one-site RDMs.
  *
- * For every site, this routine contracts the one-site reduced density matrix,
- * gathers its distributed elements over MPI, normalizes it by its trace, and
- * computes the maximum elementwise distance from the previous iteration over
- * all sites.  The function returns true only when that distance is smaller than
- * @p epsilon.  The first iteration always returns false because no previous RDM
- * exists.
+ * For every site, this routine contracts the one-site reduced density matrix
+ * (RDM), gathers its distributed elements over MPI, and computes the maximum
+ * elementwise distance from the previous iteration divided by the current
+ * trace magnitude.  The function returns true only when that scaled distance
+ * is smaller than @p epsilon.  The first iteration always returns false because
+ * no previous RDM exists.
  *
  * If the trace is too small, has a non-positive real part, or has a sizable
  * imaginary part, the current iteration is treated as unconverged and the
@@ -143,7 +143,7 @@ bool Check_Convergence_CTM(
  * and column order and use an allreduce sum, so @p rdm_dist and the return
  * value are identical on every rank.
  *
- * @param epsilon Threshold for the trace-normalized one-site RDM distance.
+ * @param epsilon Threshold for the trace-scaled one-site RDM distance.
  * @param rdm_dist Output distance; NaN when the distance is not evaluated.
  */
 template <class tensor>
