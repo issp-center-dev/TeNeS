@@ -163,6 +163,35 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </pre></div>
 </div>
 </section>
+<section id="onesite-density-matrix-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">onesite_density_matrix.dat</span></code><a class="headerlink" href="#onesite-density-matrix-dat" title="Link to this heading">¶</a></h3>
+<p>The one-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|\)</span>  is outputted for all sites.
+The row index denotes the bra, or conjugate, side, and the column index denotes the ket side.
+Note that it is <strong>not normalized</strong>: its trace equals the norm of the wave function <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span>, the same value that <code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code> reports with <code class="docutils literal notranslate"><span class="pre">op_group</span></code> = -1.
+Divide by the trace, as in <span class="math notranslate nohighlight">\(\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i\)</span>, when an expectation value is needed.
+Each row consists of five columns.</p>
+<ol class="arabic simple">
+<li><p>Index of the site</p></li>
+<li><p>Row index (bra)</p></li>
+<li><p>Column index (ket)</p></li>
+<li><p>Real part of the matrix element</p></li>
+<li><p>Imaginary part of the matrix element</p></li>
+</ol>
+<p>Example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: site
+# $2: row index (bra)
+# $3: col index (ket)
+# $4: real part
+# $5: imag part
+
+0 0 0 6.19123326170666233e-01 0.00000000000000000e+00
+0 0 1 2.14890351912208927e-01 0.00000000000000000e+00
+0 1 0 2.14890351912208843e-01 0.00000000000000000e+00
+0 1 1 6.00231817060733031e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</section>
 <section id="twosite-obs-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <ul>
@@ -386,6 +415,19 @@ Each row consists of five columns.</p>
 </pre></div>
 </div>
 </section>
+<section id="te-onesite-density-matrix-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">TE_onesite_density_matrix.dat</span></code><a class="headerlink" href="#te-onesite-density-matrix-dat" title="Link to this heading">¶</a></h3>
+<p>The one-site reduced density matrix is outputted, without normalization, with the same row and column convention as <code class="docutils literal notranslate"><span class="pre">onesite_density_matrix.dat</span></code>.
+Each row has the time <span class="math notranslate nohighlight">\(t\)</span> as the first column, as in <code class="docutils literal notranslate"><span class="pre">TE_onesite_obs.dat</span></code>, and consists of six columns.</p>
+<ol class="arabic simple">
+<li><p>Time <span class="math notranslate nohighlight">\(t\)</span></p></li>
+<li><p>Index of the site</p></li>
+<li><p>Row index (bra)</p></li>
+<li><p>Column index (ket)</p></li>
+<li><p>Real part of the matrix element</p></li>
+<li><p>Imaginary part of the matrix element</p></li>
+</ol>
+</section>
 <section id="te-twosite-obs-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">TE_twosite_obs.dat</span></code><a class="headerlink" href="#te-twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <ul>
@@ -543,7 +585,8 @@ See PRX <strong>8</strong>, 041033 (2018) and PRX <strong>8</strong>, 031030 (20
 <section id="for-finite-temperature-calculation-mode">
 <h2><span class="section-number">5.5.4. </span>For finite temperature calculation mode<a class="headerlink" href="#for-finite-temperature-calculation-mode" title="Link to this heading">¶</a></h2>
 <p>The formats of the files are the same as those in the real time evolution mode.
-The only difference is that the file name starts with <code class="docutils literal notranslate"><span class="pre">FT_</span></code> instead of <code class="docutils literal notranslate"><span class="pre">TE_</span></code>, and the first column is the inverse temperature <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> instead of the time <span class="math notranslate nohighlight">\(t\)</span>.</p>
+The only difference is that the file name starts with <code class="docutils literal notranslate"><span class="pre">FT_</span></code> instead of <code class="docutils literal notranslate"><span class="pre">TE_</span></code>, and the first column is the inverse temperature <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> instead of the time <span class="math notranslate nohighlight">\(t\)</span>.
+For example, the one-site reduced density matrices are written, without normalization, to <code class="docutils literal notranslate"><span class="pre">FT_onesite_density_matrix.dat</span></code>; the first column is the inverse temperature, followed by site, row (bra), column (ket), real part, and imaginary part.</p>
 </section>
 </section>
 

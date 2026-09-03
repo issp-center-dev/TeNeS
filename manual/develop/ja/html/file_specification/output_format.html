@@ -158,6 +158,35 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </pre></div>
 </div>
 </section>
+<section id="onesite-density-matrix-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">onesite_density_matrix.dat</span></code><a class="headerlink" href="#onesite-density-matrix-dat" title="Link to this heading">¶</a></h3>
+<p>1サイト縮約密度行列 <span class="math notranslate nohighlight">\(\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|\)</span> が出力されます。
+行番号は bra (conj 側)、列番号は ket を表します。
+<strong>規格化されていない</strong> ことに注意してください。そのトレースは波動関数のノルム <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> に等しく、<code class="docutils literal notranslate"><span class="pre">onesite_obs.dat</span></code> に <code class="docutils literal notranslate"><span class="pre">op_group</span></code> が -1 として出力される値と一致します。
+期待値が必要な場合は、 <span class="math notranslate nohighlight">\(\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i\)</span> のようにトレースで割ってください。
+各行5列からなります。</p>
+<ol class="arabic simple">
+<li><p>サイトの番号</p></li>
+<li><p>行番号 (bra)</p></li>
+<li><p>列番号 (ket)</p></li>
+<li><p>行列要素の実部</p></li>
+<li><p>行列要素の虚部</p></li>
+</ol>
+<p>例:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># The meaning of each column is the following:
+# $1: site
+# $2: row index (bra)
+# $3: col index (ket)
+# $4: real part
+# $5: imag part
+
+0 0 0 6.19123326170666233e-01 0.00000000000000000e+00
+0 0 1 2.14890351912208927e-01 0.00000000000000000e+00
+0 1 0 2.14890351912208843e-01 0.00000000000000000e+00
+0 1 1 6.00231817060733031e-01 0.00000000000000000e+00
+</pre></div>
+</div>
+</section>
 <section id="twosite-obs-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>twosite 演算子の期待値が出力されます。
@@ -354,6 +383,19 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 </pre></div>
 </div>
 </section>
+<section id="te-onesite-density-matrix-dat">
+<h3><code class="docutils literal notranslate"><span class="pre">TE_onesite_density_matrix.dat</span></code><a class="headerlink" href="#te-onesite-density-matrix-dat" title="Link to this heading">¶</a></h3>
+<p>1サイト縮約密度行列が、 <code class="docutils literal notranslate"><span class="pre">onesite_density_matrix.dat</span></code> と同じ行・列規約で（規格化せずに）出力されます。
+各行は <code class="docutils literal notranslate"><span class="pre">TE_onesite_obs.dat</span></code> と同様に先頭列に時刻 <span class="math notranslate nohighlight">\(t\)</span> を持ち、6列からなります。</p>
+<ol class="arabic simple">
+<li><p>時刻 <span class="math notranslate nohighlight">\(t\)</span></p></li>
+<li><p>サイトの番号</p></li>
+<li><p>行番号 (bra)</p></li>
+<li><p>列番号 (ket)</p></li>
+<li><p>行列要素の実部</p></li>
+<li><p>行列要素の虚部</p></li>
+</ol>
+</section>
 <section id="te-twosite-obs-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">TE_twosite_obs.dat</span></code><a class="headerlink" href="#te-twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>twosite 演算子の期待値が出力されます。
@@ -490,7 +532,8 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 <section id="id5">
 <h2><span class="section-number">5.5.4. </span>有限温度計算モード<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
 <p>実時間発展計算モードと同様のファイルが出力されます。
-ファイル名の先頭が <code class="docutils literal notranslate"><span class="pre">TE_</span></code> のかわりに <code class="docutils literal notranslate"><span class="pre">FT_</span></code> になっていることと、1列目が時間 <span class="math notranslate nohighlight">\(t\)</span> ではなく逆温度 <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> になっていることが異なります。</p>
+ファイル名の先頭が <code class="docutils literal notranslate"><span class="pre">TE_</span></code> のかわりに <code class="docutils literal notranslate"><span class="pre">FT_</span></code> になっていることと、1列目が時間 <span class="math notranslate nohighlight">\(t\)</span> ではなく逆温度 <span class="math notranslate nohighlight">\(\beta = 1/T\)</span> になっていることが異なります。
+例えば、1サイト縮約密度行列は（規格化されずに） <code class="docutils literal notranslate"><span class="pre">FT_onesite_density_matrix.dat</span></code> に出力され、1列目に逆温度、2列目以降に site、row (bra)、col (ket)、実部、虚部が並びます。</p>
 </section>
 </section>
 

@@ -886,33 +886,44 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <td><p>Real</p></td>
 <td><p>1e-6</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code></p></td>
+<td><p>Use one-site RDM distances between CTM iterations for convergence</p></td>
+<td><p>Boolean</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
 <td><p>Maximum iteration number of convergence for CTM</p></td>
 <td><p>Integer</p></td>
 <td><p>100</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
 <td><p>Whether to use only the 1/4 corner tensor in the CTM projector calculation</p></td>
 <td><p>Boolean</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
 <td><p>Whether to replace SVD with random SVD</p></td>
 <td><p>Boolean</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
 <td><p>Ratio of the number of the oversampled elements to that of the obtained elements in random SVD method</p></td>
 <td><p>Real</p></td>
 <td><p>2.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
 <td><p>Use mean field environment obtained through simple update instead of CTM</p></td>
 <td><p>Boolean</p></td>
 <td><p>false</p></td>
 </tr>
 </tbody>
 </table>
+<p>When <code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code>, CTM convergence is checked by using the singular-value spectrum of the corner transfer matrices and the distance between one-site reduced density matrices in successive iterations.
+The distance is the maximum elementwise norm over all sites and matrix elements, divided by the trace of the density matrix, so that it contains both the change of the shape of the density matrix and the relative change of its norm.
+This avoids false convergence detected only from the corner spectrum on a network that virtual bonds of dimension one decompose into independent pieces, for example a quasi-one-dimensional calculation where the horizontal virtual bond dimension is set to one (see also the description of the algorithm).
+This is not a recommendation to run such a quasi-one-dimensional calculation; TeNeS targets two-dimensional lattices.
+When it is <code class="docutils literal notranslate"><span class="pre">false</span></code>, TeNeS uses the previous criterion based only on the corner spectrum.
+The residual error of observables at convergence is typically on the scale of <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code>; decrease <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> when higher accuracy is required.</p>
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
 </section>
 <section id="parameter-random">

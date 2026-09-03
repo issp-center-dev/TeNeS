@@ -345,33 +345,44 @@
 <td><p>実数</p></td>
 <td><p>1e-6</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code></p></td>
+<td><p>CTMの収束判定に1サイト縮約密度行列の反復間距離も用いる</p></td>
+<td><p>真偽値</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iteration_max</span></code></p></td>
 <td><p>CTMの収束iterationの最大回数</p></td>
 <td><p>整数</p></td>
 <td><p>100</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">projector_corner</span></code></p></td>
 <td><p>CTMのprojector計算で1/4角のテンソルのみを使う</p></td>
 <td><p>真偽値</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">use_rsvd</span></code></p></td>
 <td><p>SVD を 乱択SVD で置き換えるかどうか</p></td>
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rsvd_oversampling_factor</span></code></p></td>
 <td><p>乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率</p></td>
 <td><p>実数</p></td>
 <td><p>2.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
 <td><p>CTM ではなく simple update で得られる平均場環境を用いる</p></td>
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
 </tbody>
 </table>
+<p><code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code> が <code class="docutils literal notranslate"><span class="pre">true</span></code> の場合、角転送行列の特異値スペクトルに加えて、1サイト縮約密度行列の反復間距離を用いて CTM の収束を判定します。
+距離は全サイト・全行列要素に対する max 要素ノルムを、その密度行列のトレースで割ったものです（密度行列の形の変化とノルムの相対変化の両方が含まれます）。
+次元1の仮想ボンドによってテンソルネットワークが独立な部分に分解する構成、例えば横方向の仮想ボンド次元を1とした擬一次元的な計算では、角スペクトルだけでは収束を誤検知することがあるため、その対策として使われます（アルゴリズムの説明も参照してください）。
+なお、そのような擬一次元的な計算を推奨しているわけではありません。TeNeS が対象としているのは2次元格子です。
+<code class="docutils literal notranslate"><span class="pre">false</span></code> にすると、従来の角スペクトルのみの収束判定に戻ります。
+収束時の観測量の残差はおおむね <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> 程度のスケールになるため、より高精度が必要な場合は <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> を小さくしてください。</p>
 <p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
 </section>
 <section id="parameter-random">

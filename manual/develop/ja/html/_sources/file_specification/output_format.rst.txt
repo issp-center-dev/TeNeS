@@ -136,6 +136,35 @@ onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle = \langle\Ps
       ... Skipped ...
    -1 3 1.00000000000000044e+00 0.00000000000000000e+00
 
+``onesite_density_matrix.dat``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1サイト縮約密度行列 :math:`\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|` が出力されます。
+行番号は bra (conj 側)、列番号は ket を表します。
+**規格化されていない** ことに注意してください。そのトレースは波動関数のノルム :math:`\langle \Psi | \Psi \rangle` に等しく、``onesite_obs.dat`` に ``op_group`` が -1 として出力される値と一致します。
+期待値が必要な場合は、 :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i` のようにトレースで割ってください。
+各行5列からなります。
+
+1. サイトの番号
+2. 行番号 (bra)
+3. 列番号 (ket)
+4. 行列要素の実部
+5. 行列要素の虚部
+
+例::
+
+   # The meaning of each column is the following:
+   # $1: site
+   # $2: row index (bra)
+   # $3: col index (ket)
+   # $4: real part
+   # $5: imag part
+
+   0 0 0 6.19123326170666233e-01 0.00000000000000000e+00
+   0 0 1 2.14890351912208927e-01 0.00000000000000000e+00
+   0 1 0 2.14890351912208843e-01 0.00000000000000000e+00
+   0 1 1 6.00231817060733031e-01 0.00000000000000000e+00
+
 ``twosite_obs.dat``
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -342,6 +371,19 @@ onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle = \langle\Ps
       ... Skipped ...
    4.99999999999993783e+00 -1 3 9.99999999999999667e-01 0.00000000000000000e+00
 
+``TE_onesite_density_matrix.dat``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1サイト縮約密度行列が、 ``onesite_density_matrix.dat`` と同じ行・列規約で（規格化せずに）出力されます。
+各行は ``TE_onesite_obs.dat`` と同様に先頭列に時刻 :math:`t` を持ち、6列からなります。
+
+1. 時刻 :math:`t`
+2. サイトの番号
+3. 行番号 (bra)
+4. 列番号 (ket)
+5. 行列要素の実部
+6. 行列要素の虚部
+
 ``TE_twosite_obs.dat``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -487,3 +529,4 @@ multisite 演算子の期待値が出力されます。
 
 実時間発展計算モードと同様のファイルが出力されます。
 ファイル名の先頭が ``TE_`` のかわりに ``FT_`` になっていることと、1列目が時間 :math:`t` ではなく逆温度 :math:`\beta = 1/T` になっていることが異なります。
+例えば、1サイト縮約密度行列は（規格化されずに） ``FT_onesite_density_matrix.dat`` に出力され、1列目に逆温度、2列目以降に site、row (bra)、col (ket)、実部、虚部が並びます。
