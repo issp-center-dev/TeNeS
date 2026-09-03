@@ -35,6 +35,8 @@ template TENSOR_TYPE::value_type Contract_iTPS_MF(
 template TENSOR_TYPE::value_type Contract_one_site_iTPS_MF(
     const TENSOR_TYPE &Tn_0_0, const TENSOR_TYPE &op_0_0);
 
+template TENSOR_TYPE Contract_one_site_RDM_iTPS_MF(const TENSOR_TYPE &Tn_0_0);
+
 template TENSOR_TYPE::value_type Contract_two_sites_vertical_iTPS_MF(
     const TENSOR_TYPE &Tn_0_0, const TENSOR_TYPE &Tn_1_0,
     const TENSOR_TYPE &op_0_0, const TENSOR_TYPE &op_1_0);

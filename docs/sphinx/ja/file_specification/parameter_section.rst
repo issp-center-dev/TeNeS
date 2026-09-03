@@ -158,11 +158,19 @@ full update に関するパラメータ
    ``dimension``,                "CTM のボンド次元 :math:`\chi`",                                  整数,   4
    ``projector_cutoff``,         "CTMのprojectorを計算する際にゼロとみなす特異値のcutoff",         実数,   1e-12
    ``convergence_epsilon``,      "CTMの収束判定値",                                                実数,   1e-6
+   ``use_onesite_rdm_convergence``, "CTMの収束判定に1サイト縮約密度行列の反復間距離も用いる",     真偽値, true
    ``iteration_max``,            "CTMの収束iterationの最大回数",                                   整数,   100
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
    ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン模式でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
+
+``use_onesite_rdm_convergence`` が ``true`` の場合、角転送行列の特異値スペクトルに加えて、1サイト縮約密度行列の反復間距離を用いて CTM の収束を判定します。
+距離は全サイト・全行列要素に対する max 要素ノルムを、その密度行列のトレースで割ったものです（密度行列の形の変化とノルムの相対変化の両方が含まれます）。
+次元1の仮想ボンドによってテンソルネットワークが独立な部分に分解する構成、例えば横方向の仮想ボンド次元を1とした擬一次元的な計算では、角スペクトルだけでは収束を誤検知することがあるため、その対策として使われます（アルゴリズムの説明も参照してください）。
+なお、そのような擬一次元的な計算を推奨しているわけではありません。TeNeS が対象としているのは2次元格子です。
+``false`` にすると、従来の角スペクトルのみの収束判定に戻ります。
+収束時の観測量の残差はおおむね ``convergence_epsilon`` 程度のスケールになるため、より高精度が必要な場合は ``convergence_epsilon`` を小さくしてください。
 
 乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, `Phys. Rev. E 97, 033310 (2018) <https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310>`_ を参照してください。
 
