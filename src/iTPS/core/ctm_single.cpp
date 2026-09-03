@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <vector>
 #include <mptensor/complex.hpp>
@@ -30,6 +31,7 @@
 
 #include "../../SquareLattice.hpp"
 #include "../../tensor.hpp"
+#include "../../timer.hpp"
 #include "../PEPS_Parameters.hpp"
 
 namespace tenes::itps::core {
@@ -1077,39 +1079,58 @@ int Calc_CTM_Environment_density(
   std::vector<tensor> C2_old = C2;
   std::vector<tensor> C3_old = C3;
   std::vector<tensor> C4_old = C4;
+  std::vector<small_tensor<typename tensor::value_type>> rdm_old;
+  bool has_rdm_old = false;
 
   double sig_max = 0.0;
+  double rdm_dist = std::numeric_limits<double>::quiet_NaN();
   while ((!convergence) && (count < peps_parameters.Max_CTM_Iteration)) {
-    // left move
-    for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
-      Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, ix,
-                       peps_parameters, lattice);
-    }
-
-    // right move
-    for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
-      Right_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
-                        (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
-                        peps_parameters, lattice);
-    }
-
-    // top move
-    for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
-      Top_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
-                      (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
-                      peps_parameters, lattice);
-    }
-
-    // bottom move
-
-    for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
-      Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, iy,
+    {
+      // phase/environment includes this moves timer, the RDM convergence timer
+      // below, and the existing CTM singular-spectrum convergence check.
+      ScopedTimer scoped_timer("environment/ctm/moves");
+      // left move
+      for (int ix = 0; ix < lattice.LX_noskew; ++ix) {
+        Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, ix,
                          peps_parameters, lattice);
+      }
+
+      // right move
+      for (int ix = 0; ix > -lattice.LX_noskew; --ix) {
+        Right_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                          (ix + 1 + lattice.LX_noskew) % lattice.LX_noskew,
+                          peps_parameters, lattice);
+      }
+
+      // top move
+      for (int iy = 0; iy > -lattice.LY_noskew; --iy) {
+        Top_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                        (iy + 1 + lattice.LY_noskew) % lattice.LY_noskew,
+                        peps_parameters, lattice);
+      }
+
+      // bottom move
+
+      for (int iy = 0; iy < lattice.LY_noskew; ++iy) {
+        Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, iy,
+                           peps_parameters, lattice);
+      }
     }
 
     convergence =
         Check_Convergence_CTM(C1, C2, C3, C4, C1_old, C2_old, C3_old, C4_old,
                               peps_parameters, lattice, sig_max);
+    if (peps_parameters.CTM_Convergence_Onesite_RDM) {
+      bool rdm_convergence;
+      {
+        ScopedTimer scoped_timer("environment/ctm/convergence_rdm");
+        rdm_convergence = Check_Convergence_CTM_RDM(
+            C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, lattice, rdm_old,
+            has_rdm_old, peps_parameters.CTM_Convergence_Epsilon, true,
+            rdm_dist);
+      }
+      convergence = convergence && rdm_convergence;
+    }
     count += 1;
 
     C1_old = C1;
@@ -1118,13 +1139,13 @@ int Calc_CTM_Environment_density(
     C4_old = C4;
     if (peps_parameters.print_level >= PrintLevel::debug) {
       std::cout << "CTM: count, sig_max " << count << " " << sig_max
-                << std::endl;
+                << " rdm_dist " << rdm_dist << std::endl;
     }
   }
 
   if (!convergence && peps_parameters.print_level >= PrintLevel::warn) {
-    std::cout << "Warning: CTM did not converge! count, sig_max = " << count
-              << " " << sig_max << std::endl;
+    std::cout << "Warning: CTM did not converge! count, sig_max, rdm_dist = "
+              << count << " " << sig_max << " " << rdm_dist << std::endl;
   }
   if (peps_parameters.print_level >= PrintLevel::debug) {
     std::cout << "CTM: count to convergence= " << count << std::endl;

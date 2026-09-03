@@ -118,6 +118,24 @@ typename tensor::value_type Contract_one_site_density_CTM(
 }
 
 template <class tensor>
+tensor Contract_one_site_RDM_density_CTM(const tensor &C1, const tensor &C2,
+                                         const tensor &C3, const tensor &C4,
+                                         const tensor &eT1, const tensor &eT2,
+                                         const tensor &eT3, const tensor &eT4,
+                                         const tensor &Tn1) {
+  return tensordot(
+      Tn1,
+      tensordot(tensordot(eT1, tensordot(C1, eT4, Axes(0), Axes(1)), Axes(0),
+                          Axes(0)),
+                tensordot(tensordot(C2, eT2, Axes(1), Axes(0)),
+                          tensordot(C3, tensordot(C4, eT3, Axes(0), Axes(1)),
+                                    Axes(1), Axes(1)),
+                          Axes(1), Axes(0)),
+                Axes(0, 2), Axes(0, 2)),
+      Axes(0, 1, 2, 3), Axes(1, 0, 2, 3));
+}
+
+template <class tensor>
 typename tensor::value_type Contract_two_sites_horizontal_density_CTM(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
     const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,

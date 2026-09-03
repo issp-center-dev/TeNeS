@@ -73,6 +73,14 @@ In the CTMRG algorithm, we iteratively optimise corner transfer matrices and edg
 
 The projectors in the above diagram is calculated in several ways :ref:`[CTMRG] <Ref-CTMRG>` and they reduces the degree of freedoms to :math:`\chi`.
 
+TeNeS uses two conditions to decide that the iteration has converged, and stops when both of them hold. The first one is that, for each of the four corner transfer matrices, the change of the normalized singular value spectrum between two successive iterations is smaller than ``convergence_epsilon``. The second one is that, for the one-site reduced density matrices of all the sites, the change between two successive iterations (the largest difference over the elements, divided by the trace) is also smaller than ``convergence_epsilon``. Since the difference is taken before the normalization, this quantity contains both the change of the "shape" of the density matrix and the relative change of its norm (the trace), and hence requires both of them to converge.
+
+The second condition is used because the singular values of the corner transfer matrices alone cannot always detect convergence. On a lattice that contains virtual bonds of dimension one and therefore decomposes the tensor network into independent pieces (for example, a quasi-one-dimensional setup where the horizontal virtual bond dimension is set to one), the corner transfer matrices become effectively rank one and their singular value spectra stop changing from the very first iterations. The iteration is then judged to have converged while the edge tensors are still far from their fixed point, and a non-negligible error remains in the expectation values. The one-site reduced density matrix is computed from both the corner transfer matrices and the edge tensors, and hence it detects this situation. This second condition can be turned off by ``use_onesite_rdm_convergence`` (it is enabled by default).
+
+The quasi-one-dimensional setup above is quoted as an example of when the convergence check can fail, and **not as a recommendation to run such a calculation**. TeNeS targets two-dimensional lattices. Once the width is one, the transfer matrix built from the corner transfer matrices and the edge tensors collapses to rank one, so quantities that depend on the environment tensors — the correlation length, for instance — lose their meaning. Use a method suited to the purpose for one-dimensional systems.
+
+Note that the error remaining in the expectation values at convergence is of the order of ``convergence_epsilon``. Use a smaller ``convergence_epsilon`` if you need a higher accuracy.
+
 When we consider iTPS with the bond dimension :math:`D` and CTMs with the bond dimension :math:`\chi`, the leading computation cost of CTMRG scales as :math:`O(\chi^2 D^6)` and :math:`O(\chi^3 D^4)`. Notice that the bond dimension of the double layered tensor network becomes :math:`D^2` by using locally contracted tensors. Thus, typically we increase :math:`\chi` as :math:`\chi \propto O(D^2)`. In this setup, the leading computation cost of CTMRG algorithm is reduced to :math:`O(D^{10})`, while the memory usage scales :math:`O(D^{8})`. In order to achieve the computation cost discussed above, we need to use a partial singular value decomposition (SVD)  (or the truncated SVD) technique. When we use the full SVD instead of the partial SVD, the computation cost becomes :math:`O(D^{12})`. 
 
 Once we obtain the corner transfer matrices and edge tensors, we can also calculate :math:`\langle \Psi|O|\Psi\rangle` efficiently. For example, a local magnetization :math:`\langle \Psi|S^z_i|\Psi\rangle` is represented as
@@ -87,6 +95,8 @@ and similarly the nearest neighbor correlation :math:`\langle \Psi|S^z_iS^z_{i+1
    :align: center
 
 Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operator, the computation cost to contract the tensor network becomes huge for larger clusters.
+
+Removing the operator :math:`S^z_i` from the diagram of the local magnetization and leaving the two physical legs uncontracted gives the one-site reduced density matrix :math:`\rho_i` of that site. Since the expectation value of any one-site operator follows from :math:`\rho_i` as :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i`, TeNeS also writes out :math:`\rho_i` itself for every site (``onesite_density_matrix.dat``). It is not normalized, so its trace is the norm of the wave function :math:`\langle \Psi | \Psi \rangle` itself. This :math:`\rho_i` is what the convergence criterion described above uses as well.
 
 Optimization of iTPS
 ===========================

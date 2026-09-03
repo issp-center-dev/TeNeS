@@ -116,6 +116,24 @@ typename tensor::value_type Contract_one_site_iTPS_CTM(
 }
 
 template <class tensor>
+tensor Contract_one_site_RDM_iTPS_CTM(const tensor &C1, const tensor &C2,
+                                      const tensor &C3, const tensor &C4,
+                                      const tensor &eT1, const tensor &eT2,
+                                      const tensor &eT3, const tensor &eT4,
+                                      const tensor &Tn1) {
+  return tensordot(
+      tensordot(
+          tensordot(tensordot(C2, tensordot(C3, eT2, Axes(0), Axes(1)), Axes(1),
+                              Axes(1)),
+                    tensordot(C1, eT1, Axes(1), Axes(0)), Axes(0), Axes(1)),
+          tensordot(tensordot(tensordot(C4, eT4, Axes(1), Axes(0)), eT3,
+                              Axes(0), Axes(1)),
+                    conj(Tn1), Axes(2, 5), Axes(0, 3)),
+          Axes(0, 2, 3, 5), Axes(2, 5, 0, 4)),
+      Tn1, Axes(0, 1, 2, 3), Axes(2, 1, 0, 3));
+}
+
+template <class tensor>
 typename tensor::value_type Contract_two_sites_horizontal_iTPS_CTM(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
     const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,

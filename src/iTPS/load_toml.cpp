@@ -473,6 +473,8 @@ PEPS_Parameters gen_param(const toml::value &param) {
     load_if(pparam.Max_CTM_Iteration, *ctm, "iteration_max");
     load_if(pparam.CTM_Projector_corner, *ctm, "projector_corner");
     load_if(pparam.Use_RSVD, *ctm, "use_rsvd");
+    load_if(pparam.CTM_Convergence_Onesite_RDM, *ctm,
+            "use_onesite_rdm_convergence");
     load_if(pparam.RSVD_Oversampling_factor, *ctm, "rsvd_oversampling_factor");
     load_if(pparam.MeanField_Env, *ctm, "meanfield_env");
 

@@ -1,0 +1,416 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Quasi-1D regression test for the CTM convergence.
+#
+# A square-lattice iTPS with virtual_dim = [1, 4, 1, 4] (horizontal legs
+# of dimension 1) decomposes into a product of independent vertical
+# chains.  The bond energy per site can then be computed exactly (up to
+# double-precision rounding) from the saved center tensors via the
+# leading eigenvectors of the doubled-layer 1D transfer matrix.  The
+# value measured through the CTM environment must agree with this
+# exact reference.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+import toml
+
+os.environ["OMP_NUM_THREADS"] = "1"
+
+RTOL = 1.0e-9
+
+WORKDIR = join("@CMAKE_CURRENT_BINARY_DIR@", "quasi1d_ctm_work")
+
+HAM_ELEMENTS = """
+0 0 0 0 0.25 0.0
+0 1 0 1 -0.25 0.0
+1 0 1 0 -0.25 0.0
+1 1 1 1 0.25 0.0
+0 1 1 0 0.5 0.0
+1 0 0 1 0.5 0.0
+"""
+
+BONDS = """
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+"""
+
+STD_TOML = """\
+[parameter]
+[parameter.general]
+is_real = true
+output = "output"
+tensor_save = "save_tensor"
+[parameter.simple_update]
+num_step = 8000
+tau = 0.01
+[parameter.ctm]
+dimension = 16
+convergence_epsilon = 1.0e-10
+iteration_max = 200
+meanfield_env = false
+[parameter.random]
+seed = 2
+
+# The correlation length is built from the CTM environment, which here
+# collapses to rank 1 along the width-1 direction; TeNeS targets 2D
+# lattices, not chains. This unit cell exists only to compare the CTM
+# convergence against an exact reference, so the measurement (on by
+# default) is meaningless for it and is switched off.
+[correlation_length]
+measure = false
+
+[tensor]
+L_sub = [2, 2]
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [1, 4, 1, 4]
+noise = 1.0
+initial_state = [0.0]
+
+[[hamiltonian]]
+dim = [2, 2]
+bonds = \"\"\"{bonds}\"\"\"
+elements = \"\"\"{elements}\"\"\"
+
+[observable]
+# At least one onesite observable is required: the ground-state branch of
+# save_density (src/iTPS/density.cpp) reads onesite_operator_names[0] for
+# column padding and crashes without one (its name must also be at least
+# as long as "Energy").  This observable is not used by the test.
+[[observable.onesite]]
+name = "onesite_sz"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+0 0 0.5 0.0
+1 1 -0.5 0.0
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+dim = [2, 2]
+bonds = \"\"\"{bonds}\"\"\"
+elements = \"\"\"{elements}\"\"\"
+""".format(bonds=BONDS, elements=HAM_ELEMENTS)
+
+
+def setup_failure(msg):
+    """A failure in the setup or in the reference computation.
+
+    This is a defect of the test itself, not the expected RED/GREEN
+    outcome of the physics assertion.
+    """
+    print("SETUP FAILURE: {}".format(msg))
+    sys.exit(1)
+
+
+def skip_test(msg):
+    """Skip the test (ctest SKIP_RETURN_CODE 77).
+
+    Used when the saved tensors are in a layout this reader cannot
+    decode.  Skipping rather than failing keeps the test from turning
+    red on a configuration it cannot judge, and skipping rather than
+    passing keeps it from reporting a bogus exact reference.
+    """
+    print("SKIP: {}".format(msg))
+    sys.exit(77)
+
+
+def run(cmd, cwd):
+    print("+ " + " ".join(cmd))
+    ret = subprocess.call(cmd, cwd=cwd)
+    if ret != 0:
+        setup_failure("command {} exited with code {}".format(cmd, ret))
+
+
+def load_mptensor(path):
+    """Read a tensor saved by mptensor 0.5.0 from a single process.
+
+    File layout (see deps/mptensor/include/mptensor/file_io/save.hpp):
+    an ASCII header <path> and a binary file <path>.0000.bin holding the
+    raw column-major matrix elements.  The matrix element with local
+    index i sits at (g_row, g_col) = (i % n_row, i / n_row) (see
+    deps/mptensor/include/mptensor/matrix/lapack/matrix_lapack_impl.hpp),
+    and g_row / g_col decompose over the axes axes_map[0:upper_rank] /
+    axes_map[upper_rank:] with the first axis of each group running
+    fastest.  For a single process this makes the storage order simply
+    "axes_map[0] fastest ... axes_map[ndim-1] slowest".
+
+    Both backends are accepted as long as there is a single rank: on one
+    process the ScaLAPACK layout coincides with the LAPACK one.  In
+    matrix_scalapack_impl.hpp, prep_local_to_global (:256) reduces to the
+    identity for nprow = npcol = 1 (global_row = BLOCK_SIZE * ((l_row /
+    BLOCK_SIZE) * nprow + myprow) + l_row % BLOCK_SIZE = l_row), and
+    global_index (:165) is the same column-major l_row = i % lld,
+    l_col = i / lld with lld equal to the number of rows.  With more than
+    one rank the distribution is block-cyclic and the elements are split
+    over per-rank .bin files, which this reader does not handle.
+    """
+    header = {}
+    with open(path) as f:
+        first = f.readline()
+        if not first.startswith("mptensor"):
+            setup_failure("{} is not an mptensor save file".format(path))
+        for line in f:
+            if "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            header[key.strip()] = val.strip()
+
+    comm_size = int(header["comm_size"])
+    if comm_size != 1:
+        skip_test(
+            "tensor files are distributed over {} ranks; this reader "
+            "supports a single rank ({})".format(comm_size, path)
+        )
+    if not any(tag in header["matrix_type"] for tag in ("(LAPACK)", "(ScaLAPACK)")):
+        setup_failure(
+            "{}: unsupported matrix_type '{}' (reader supports the LAPACK "
+            "and the single-rank ScaLAPACK backends)".format(
+                path, header["matrix_type"]
+            )
+        )
+    if "(double)" not in header["value_type"]:
+        setup_failure(
+            "{}: unsupported value_type '{}' (reader assumes real "
+            "tensors; is_real = true)".format(path, header["value_type"])
+        )
+
+    ndim = int(header["ndim"])
+    upper_rank = int(header["upper_rank"])
+    shape = [int(x) for x in header["shape"].split()]
+    axes_map = [int(x) for x in header["axes_map"].split()]
+    if len(shape) != ndim or len(axes_map) != ndim:
+        setup_failure("{}: inconsistent header".format(path))
+    if not 0 <= upper_rank <= ndim:
+        setup_failure("{}: invalid upper_rank {}".format(path, upper_rank))
+    if sorted(axes_map) != list(range(ndim)):
+        setup_failure("{}: axes_map {} is not a permutation".format(path, axes_map))
+
+    data = np.fromfile(path + ".0000.bin", dtype=np.float64)
+    if data.size != np.prod(shape):
+        setup_failure(
+            "{}: binary size {} does not match shape {}".format(path, data.size, shape)
+        )
+
+    storage_dims = [shape[a] for a in axes_map]
+    arr = data.reshape(storage_dims, order="F")
+    tensor = arr.transpose(np.argsort(axes_map))
+    if tensor.shape != tuple(shape):
+        setup_failure("{}: reconstructed shape mismatch".format(path))
+    return tensor
+
+
+def parse_bonds(s):
+    bonds = []
+    for line in s.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        words = line.split()
+        if len(words) != 3:
+            setup_failure("bond line '{}' does not have 3 integers".format(line))
+        bonds.append(tuple(int(w) for w in words))
+    return bonds
+
+
+def parse_twosite_elements(s, dims):
+    h = np.zeros(dims, dtype=np.float64)
+    for line in s.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        words = line.split()
+        if len(words) != 6:
+            setup_failure("element line '{}' does not have 6 fields".format(line))
+        i, j, k, l = (int(w) for w in words[:4])
+        re, im = float(words[4]), float(words[5])
+        if im != 0.0:
+            setup_failure(
+                "element line '{}' has a nonzero imaginary part; the "
+                "real reference computation does not support it".format(line)
+            )
+        h[i, j, k, l] = re
+    return h
+
+
+def main():
+    # ----- run the pipeline ---------------------------------------
+    if os.path.exists(WORKDIR):
+        shutil.rmtree(WORKDIR)
+    os.makedirs(WORKDIR)
+
+    with open(join(WORKDIR, "std.toml"), "w") as f:
+        f.write(STD_TOML)
+
+    run(
+        [
+            join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"),
+            "-o",
+            "input.toml",
+            "std.toml",
+        ],
+        cwd=WORKDIR,
+    )
+
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append("input.toml")
+    run(cmd, cwd=WORKDIR)
+
+    # ----- read the bond Hamiltonian back from input.toml ---------
+    # The matrix elements are read from the generated input.toml (the
+    # very matrix that tenes measures) instead of being rebuilt here,
+    # so that no spin-basis convention has to be guessed.
+    param = toml.load(join(WORKDIR, "input.toml"))
+
+    ham = None
+    for obs in param["observable"]["twosite"]:
+        if obs["name"] == "bond_hamiltonian":
+            ham = obs
+            break
+    if ham is None:
+        setup_failure("no observable.twosite named 'bond_hamiltonian' in input.toml")
+    if list(ham["dim"]) != [2, 2]:
+        setup_failure("bond_hamiltonian dim is {}".format(ham["dim"]))
+
+    bonds = parse_bonds(ham["bonds"])
+    if len(bonds) != 4:
+        setup_failure("expected 4 bonds, got {}".format(bonds))
+    for source, dx, dy in bonds:
+        if (dx, dy) != (0, 1):
+            setup_failure(
+                "bond ({}, {}, {}) is not of the (source, dx=0, dy=1) "
+                "type".format(source, dx, dy)
+            )
+    if sorted(b[0] for b in bonds) != [0, 1, 2, 3]:
+        setup_failure("bond sources are not 0..3: {}".format(bonds))
+
+    h = parse_twosite_elements(ham["elements"], (2, 2, 2, 2))
+
+    # ----- load the saved center tensors --------------------------
+    T = []
+    for i in range(4):
+        t = load_mptensor(join(WORKDIR, "save_tensor", "T_{}.dat".format(i)))
+        # Self-check of the reader and of the run configuration: legs
+        # are (left, top, right, bottom, phys) and the horizontal legs
+        # (0 and 2) must have dimension 1.
+        if t.shape != (1, 4, 1, 4, 2):
+            setup_failure(
+                "T_{} has shape {}, expected (1, 4, 1, 4, 2)".format(i, t.shape)
+            )
+        T.append(t)
+
+    # ----- exact reference from the 1D transfer matrix ------------
+    # With the horizontal legs of dimension 1 the network is a product
+    # of independent vertical chains.  A_s[top, bottom, phys]:
+    A = [t[0, :, 0, :, :] for t in T]
+
+    def doubled(As):
+        # doubled-layer transfer matrix, row = (t, T), col = (b, B)
+        return np.einsum("tbp,TBp->tTbB", As, As).reshape(16, 16)
+
+    def bond_energy(a, b):
+        # bond (a, b): site b sits above site a ((source, dx=0, dy=1));
+        # the top leg of a is contracted with the bottom leg of b.
+        U = doubled(A[b]) @ doubled(A[a])
+        # ket-layer two-site segment: K[t, bot, p(site a), q(site b)]
+        K = np.einsum("tmq,mbp->tbpq", A[b], A[a])
+        # h[i, j, k, l]: (i, k) act on the source site a and (j, l) on
+        # the target site b (elements index order: site1 site2 site1
+        # site2); h is symmetric so the bra/ket pairing is irrelevant.
+        Ep = np.einsum("tbpq,TBPQ,pqPQ->tTbB", K, K, h).reshape(16, 16)
+
+        # The leading eigenvalue is degenerate in modulus (AF
+        # 2-sublattice structure); one eigenvector of largest |lambda|
+        # is enough since the average over the 4 bonds does not depend
+        # on the choice.
+        w, v = np.linalg.eig(U)
+        r = v[:, np.argmax(np.abs(w))]
+        wl, vl = np.linalg.eig(U.T)
+        l = vl[:, np.argmax(np.abs(wl))]
+
+        den = l @ U @ r
+        num = l @ Ep @ r
+        if abs(den) < 1.0e-12 * np.max(np.abs(w)):
+            setup_failure(
+                "left/right eigenvectors give a vanishing normalization "
+                "for bond ({}, {})".format(a, b)
+            )
+        return num / den
+
+    values = []
+    for source, dx, dy in bonds:
+        a = source
+        b = (source + 2) % 4  # neighbor in the +y direction for L_sub = [2, 2]
+        values.append(bond_energy(a, b))
+    exact = np.mean(values)
+    if abs(exact.imag) > 1.0e-9 * abs(exact.real):
+        setup_failure(
+            "exact reference has a non-negligible imaginary part: {}".format(exact)
+        )
+    exact = exact.real
+
+    # ----- compare with the CTM measurement -----------------------
+    measured = None
+    with open(join(WORKDIR, "output", "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() == "bond_hamiltonian":
+                re, im = value.split()
+                measured = float(re)
+    if measured is None:
+        setup_failure("bond_hamiltonian not found in output/density.dat")
+
+    rel_diff = abs(measured - exact) / abs(exact)
+    print("bond_hamiltonian (CTM measurement): {:.17e}".format(measured))
+    print("bond_hamiltonian (exact reference): {:.17e}".format(exact))
+    print("relative difference:                {:.3e}".format(rel_diff))
+    print("tolerance (rtol):                   {:.3e}".format(RTOL))
+
+    if rel_diff <= RTOL:
+        print("OK")
+        sys.exit(0)
+    else:
+        print(
+            "FAILED: CTM measurement deviates from the exact " "transfer-matrix value"
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

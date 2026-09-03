@@ -19,6 +19,8 @@
 
 #include <vector>
 
+#include "../../tensor.hpp"
+
 namespace tenes {
 class SquareLattice;
 
@@ -123,6 +125,37 @@ bool Check_Convergence_CTM(
     const std::vector<tensor> &C3_old, const std::vector<tensor> &C4_old,
     const PEPS_Parameters peps_parameters, const SquareLattice lattice,
     double &sig_max);
+
+/**
+ * @brief Check CTM convergence from one-site RDMs.
+ *
+ * For every site, this routine contracts the one-site reduced density matrix
+ * (RDM), gathers its distributed elements over MPI, and computes the maximum
+ * elementwise distance from the previous iteration divided by the current
+ * trace magnitude.  The function returns true only when that scaled distance
+ * is smaller than @p epsilon.  The first iteration always returns false because
+ * no previous RDM exists.
+ *
+ * If the trace is too small, has a non-positive real part, or has a sizable
+ * imaginary part, the current iteration is treated as unconverged and the
+ * distance output is left as NaN.  The latest RDMs are still stored in
+ * @p rdm_old for the next iteration.  All MPI ranks follow the same site, row,
+ * and column order and use an allreduce sum, so @p rdm_dist and the return
+ * value are identical on every rank.
+ *
+ * @param epsilon Threshold for the trace-scaled one-site RDM distance.
+ * @param rdm_dist Output distance; NaN when the distance is not evaluated.
+ */
+template <class tensor>
+bool Check_Convergence_CTM_RDM(
+    const std::vector<tensor> &C1, const std::vector<tensor> &C2,
+    const std::vector<tensor> &C3, const std::vector<tensor> &C4,
+    const std::vector<tensor> &eTt, const std::vector<tensor> &eTr,
+    const std::vector<tensor> &eTb, const std::vector<tensor> &eTl,
+    const std::vector<tensor> &Tn, const SquareLattice lattice,
+    std::vector<small_tensor<typename tensor::value_type>> &rdm_old,
+    bool &has_rdm_old, const double epsilon, const bool is_density,
+    double &rdm_dist);
 
 template <class tensor>
 int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,

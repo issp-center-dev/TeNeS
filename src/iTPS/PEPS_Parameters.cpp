@@ -47,6 +47,7 @@ PEPS_Parameters::PEPS_Parameters() {
   Max_CTM_Iteration = 100;
   CTM_Projector_corner = true;
   Use_RSVD = false;
+  CTM_Convergence_Onesite_RDM = true;
   RSVD_Oversampling_factor = 2.0;
   MeanField_Env = false;
 
@@ -91,6 +92,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     I_Max_CTM_Iteration,
     I_CTM_Projector_corner,
     I_Use_RSVD,
+    I_CTM_Convergence_Onesite_RDM,
     I_MeanField_Env,
     I_num_full_step,
     I_Full_max_iteration,
@@ -141,6 +143,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     SAVE_PARAM(Max_CTM_Iteration, int);
     SAVE_PARAM(CTM_Projector_corner, int);
     SAVE_PARAM(Use_RSVD, int);
+    SAVE_PARAM(CTM_Convergence_Onesite_RDM, int);
     SAVE_PARAM(MeanField_Env, int);
     // SAVE_PARAM(num_full_step, int);
     SAVE_PARAM(Full_max_iteration, int);
@@ -187,6 +190,7 @@ void PEPS_Parameters::Bcast(MPI_Comm comm, int root) {
     LOAD_PARAM(Max_CTM_Iteration, int);
     LOAD_PARAM(CTM_Projector_corner, int);
     LOAD_PARAM(Use_RSVD, int);
+    LOAD_PARAM(CTM_Convergence_Onesite_RDM, int);
     LOAD_PARAM(MeanField_Env, int);
     // LOAD_PARAM(num_full_step, int);
     LOAD_PARAM(Full_max_iteration, int);
@@ -272,6 +276,8 @@ void PEPS_Parameters::save(const char *filename, bool append) {
   ofs << "ctm_projector_corner = " << (CTM_Projector_corner ? "true" : "false")
       << std::endl;
   ofs << "use_rsvd = " << (Use_RSVD ? "true" : "false") << std::endl;
+  ofs << "use_onesite_rdm_convergence = "
+      << (CTM_Convergence_Onesite_RDM ? "true" : "false") << std::endl;
   ofs << "rsvd_oversampling_factor = " << RSVD_Oversampling_factor << std::endl;
   ofs << "meanfield_env = " << (MeanField_Env ? "true" : "false") << std::endl;
 

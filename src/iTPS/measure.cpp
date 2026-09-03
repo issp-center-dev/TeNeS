@@ -48,6 +48,8 @@ void iTPS<ptensor>::measure(std::optional<double> time,
   }
   auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs, time, filename_prefix);
+  auto onesite_rdm = measure_onesite_rdm();
+  save_onesite_rdm(onesite_rdm, time, filename_prefix);
 
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "  Start calculating twosite operators" << std::endl;
@@ -139,6 +141,8 @@ void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
   // auto onesite_obs = measure_onesite_density();
   auto onesite_obs = measure_onesite();
   save_onesite(onesite_obs, beta, filename_prefix);
+  auto onesite_rdm = measure_onesite_rdm();
+  save_onesite_rdm(onesite_rdm, beta, filename_prefix);
 
   // auto twosite_obs = measure_twosite_density();
   auto twosite_obs = measure_twosite();
