@@ -73,6 +73,14 @@ meanfield_env = false
 [parameter.random]
 seed = 2
 
+# The correlation length is built from the CTM environment, which here
+# collapses to rank 1 along the width-1 direction; TeNeS targets 2D
+# lattices, not chains. This unit cell exists only to compare the CTM
+# convergence against an exact reference, so the measurement (on by
+# default) is meaningless for it and is switched off.
+[correlation_length]
+measure = false
+
 [tensor]
 L_sub = [2, 2]
 

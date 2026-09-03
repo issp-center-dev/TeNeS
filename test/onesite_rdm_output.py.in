@@ -82,6 +82,13 @@ meanfield_env = {meanfield_env}
 [parameter.random]
 seed = 2
 
+# Switched off for the same reason as in quasi1d_ctm.py.in: the
+# correlation length comes from the CTM environment, which collapses to
+# rank 1 along the width-1 direction of this artificial unit cell, so
+# the measurement carries no meaning for the RDM output checked here.
+[correlation_length]
+measure = false
+
 [tensor]
 L_sub = [2, 2]
 

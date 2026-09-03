@@ -148,6 +148,7 @@ Parameters for corner transfer matrices, CTM.
 When ``use_onesite_rdm_convergence`` is ``true``, CTM convergence is checked by using the singular-value spectrum of the corner transfer matrices and the distance between one-site reduced density matrices in successive iterations.
 The distance is the maximum elementwise norm over all sites and matrix elements, divided by the trace of the density matrix, so that it contains both the change of the shape of the density matrix and the relative change of its norm.
 This avoids false convergence detected only from the corner spectrum on a network that virtual bonds of dimension one decompose into independent pieces, for example a quasi-one-dimensional calculation where the horizontal virtual bond dimension is set to one (see also the description of the algorithm).
+This is not a recommendation to run such a quasi-one-dimensional calculation; TeNeS targets two-dimensional lattices.
 When it is ``false``, TeNeS uses the previous criterion based only on the corner spectrum.
 The residual error of observables at convergence is typically on the scale of ``convergence_epsilon``; decrease ``convergence_epsilon`` when higher accuracy is required.
 
