@@ -346,12 +346,25 @@ bosonic 経路は既存 doctest `test/full_update.cpp` と golden(fast 経路も
 `contract_reduced_pair_halves_*_density_CTM`)は `test/fermion/fold_geometry.cpp` の
 Fock oracle アンカー(T5 群)と有限パッチ厳密縮約で**独立に固定済み**なので、
 T2(i) の「開放版 == 閉鎖版」は自己参照ではない。ただし T2(i) は Q′ 詰め替え(§3.1)を
-両辺で共有するため、そこだけは T2(iv) の独立 oracle と T3(i) が受け持つ。
+両辺で共有するため、そこだけは T2(iv) の独立 oracle が受け持つ。
+
+**重要(検出力の限界)**: T3(i) の厳密性検査は **N の符号を検出しない**。
+費用関数 ‖ψ(R1R2) − ψ(Θ)‖²_N の目標 Θ がボンド次元 D で厳密に表現できる場合、
+最小値 0 は N が正定値でありさえすれば計量によらず ψ = Θ で達成される。
+したがって N の符号を誤っても(正定値である限り)T3(i) は緑のままになる。
+役割分担は次のとおりで、契約書にもこの限界を明記する:
+
+| 壊した箇所 | 検出するテスト |
+|---|---|
+| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2(iv) の独立 oracle**(および T4/T5 の E2E) |
+| Q′ 詰め替え、QR 軸 | T2(iv)、T3(i) |
+| Θ の graded 合成、`mask_{m s1}`、初期推定の転置、Tn_new 転置 | **T3(i)** |
+| ゲージ因子のパリティ漏れ | T3(iii)、T3(vii) |
 
 | # | 対象 | 検査 | 合格基準 | 形式 |
 |---|---|---|---|---|
 | T2 | N 構成(§3) | (i) **開放 == 閉鎖**: ランダム偶 O(wrap 形式)で Σ N·O == `contract_reduced_pair_halves_density_CTM(env, build_reduced_pair_halves(QA′,QB′,O,dir))`。水平・垂直 × real/complex × 非自明台帳(D=2 と D=3、d=2 と d=4)× `nA ≠ nB` になる形状。(ii) **forbidden block**: `max_abs(M_forbidden)/max_abs(M)` を報告し閾値内。(iii) N_plain のエルミート残差・最小固有値 ≥ −tol。(iv) **独立 oracle**: `fold_geometry.cpp` の治具(3×2 パッチの厳密縮約 / Fock oracle)を環境に使い、Σ N·O が厳密真値と一致。CTM ではなく有限窓の厳密縮約を真値にすることで、Q′ 詰め替えと開放 join を共有経路の外から押さえる。(v) **bosonic 退化**: 全偶台帳で N == `Create_Environment_two_sites`(fold 環境の eT を (ket,bra) 順に reshape)。これは bosonic 回帰であり、fermion 符号の検出力は無いものとして扱う | (i)(iv)(v) 1e-12 相対、(ii) 1e-8 相対 | doctest `test/fermion/full_update_env.cpp` |
-| T3 | `Full_update_bond_fermion`(§4) | (i) **厳密性**(主変異防衛)。条件を契約で固定する: 初期状態はボンド Schmidt rank 1 で、**ゲート適用後に奇チャネル振幅が実際に立つ**基底の重ね合わせ(単なる占有数固有状態は不可 — ホッピングがゼロ作用になり検出力を失う)。ゲートは適用後の厳密 pair state の Schmidt rank が D 以下、かつ各パリティセクタ内でも保持次元に収まるもの。`Inverse_Env_cut` と `Full_Inverse_precision` は必要方向を落とさない十分小さい値に設定する。合格条件は出力の pair state == `apply_pair_op(pair_old, G)`(正規化後)。**水平・垂直の両方**で行う。(ii) 恒等ゲート → pair state 不変(両方向)。(iii) 出力の `parity_violation` ≤ 1e-12、および §4.3 のゲージ因子 forbidden block が閾値内。(iv) 全偶台帳で bosonic `Full_update_bond` と pair state 一致(ゲージ差を吸収するため Tn ではなく pair state で比較)。(v) 一般ゲートで bra≠ket fold oracle による費用 ‖ψ_new − ψ_Θ‖²_E が初期推定の費用以下。(vi) `Full_Gauge_Fix = false` でも (i) が通る。(vii) 人工的な N_plain(偶奇で固有値が縮退するもの、`Inverse_Env_cut` でランク落ちするもの)で §4.3 の射影・検査が働く。(viii) **変異テストを契約に含める**: N_plain の入力マスク / `mask_{m s1}` / Θ の graded 合成 / Q′ 詰め替えのいずれか 1 つを外したコピーで (i) が赤になること | (i)(ii)(iv) 1e-8、(iii) 1e-12 | doctest `test/fermion/full_update_bond.cpp` |
+| T3 | `Full_update_bond_fermion`(§4) | (i) **厳密性**(主変異防衛)。条件を契約で固定する: 初期状態はボンド Schmidt rank 1 で、**ゲート適用後に奇チャネル振幅が実際に立つ**基底の重ね合わせ(単なる占有数固有状態は不可 — ホッピングがゼロ作用になり検出力を失う)。ゲートは適用後の厳密 pair state の Schmidt rank が D 以下、かつ各パリティセクタ内でも保持次元に収まるもの。`Inverse_Env_cut` と `Full_Inverse_precision` は必要方向を落とさない十分小さい値に設定する。合格条件は出力の pair state == `apply_pair_op(pair_old, G)`(正規化後)。**水平・垂直の両方**で行う。(ii) 恒等ゲート → pair state 不変(両方向)。(iii) 出力の `parity_violation` ≤ 1e-12、および §4.3 のゲージ因子 forbidden block が閾値内。(iv) 全偶台帳で bosonic `Full_update_bond` と pair state 一致(ゲージ差を吸収するため Tn ではなく pair state で比較)。(v) 一般ゲートで bra≠ket fold oracle による費用 ‖ψ_new − ψ_Θ‖²_E が初期推定の費用以下。(vi) `Full_Gauge_Fix = false` でも (i) が通る。(vii) 人工的な N_plain(偶奇で固有値が縮退するもの、`Inverse_Env_cut` でランク落ちするもの)で §4.3 の射影・検査が働く。(viii) **変異テストを契約に含める**: `mask_{m s1}` / Θ の graded 合成 / Q′ 詰め替え / Tn_new 転置 のいずれか 1 つを外したコピーで (i) が赤になること(N_plain の入力マスクは上表のとおり T3(i) では捕まらないので、その変異は T2(iv) で確認する) | (i)(ii)(iv) 1e-8、(iii) 1e-12 | doctest `test/fermion/full_update_bond.cpp` |
 | T4 | driver、全偶同値 | AFH 2×2(`test/data/AntiferroHeisenberg_real.toml` から `[correlation]` を除き `fastfullupdate = false`)を fermion=false と fermion=true + parity=[0,0] で走らせ、エネルギー・onesite・twosite を比較 | 1e-6 相対(fold CTM と素 CTM の収束差を許容) | `test/fermion/boson_equivalence_full.py.in` |
 | T5 | 物理 | 自由フェルミオン **D=2、小さい CHI、`Max_CTM_Iteration` を明示的に小さく**した入力で simple update 後に full update 数ステップ → エネルギー非増加かつ厳密値へ接近。source_leg 0/1 の swap を含む垂直ボンドを必ず通す配置にする。ctest には**明示 TIMEOUT** を付ける | E_FU ≤ E_SU + 1e-8、\|E_FU − E_exact\| < \|E_SU − E_exact\| | `test/fermion/free_fermion_full.py.in` |
 | T6 | ガード(§5.3) | fermion + `num_full_step > 0` が受理される。fermion + `fastfullupdate = true` は警告して非高速版で完走(出力に警告文字列)。`meanfield_env = true` + full は従来どおり拒否。source_leg 0/1 swap 後に `validate_neighbor_consistency` が通ること | — | `test/input.cpp` 追記 + python |
