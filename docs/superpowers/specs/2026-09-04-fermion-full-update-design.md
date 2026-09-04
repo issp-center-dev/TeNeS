@@ -188,9 +188,25 @@ rig では走らせず、方向依存部(§3.1 の QR 軸・Q′ 詰め替え・
 - ただしこの一意性は**フルランクでのみ**成り立つ。`Inverse_Env_cut` で正値化がランク落ちした場合、
   および偶/奇セクタで固有値が縮退して `eigh` が混合固有ベクトルを返した場合、上三角 R は
   一意でなくなり、LAPACK がブロック外成分を持つ因子を返し得る。したがって
-  **`prepare_environment` の直後にパリティ射影と検査を置く**: LR1, LR2, LR1_inv, LR2_inv,
-  Θ′, Env′ の forbidden block について `max_abs(forbidden) / max_abs(全体) > 1e-8` なら
-  `std::runtime_error`、以下ならゼロ射影してから先に進む。射影誤差は違反量で抑えられる。
+  **`prepare_environment` の直後にパリティ射影と検査を置く**。閾値の扱いは対象で分ける
+  (2026-09-04 改訂2、実装時に判明した契約 T3-vi との衝突を解消):
+
+  - **入力(Θ、環境)と出力(R1, R2, Tn1_new, Tn2_new)は厳格**: forbidden block が
+    `max_abs(forbidden) / max(1, max_abs(全体)) > 1e-8` なら `std::runtime_error`。
+  - **`prepare_environment` が作るゲージ中間量(LR1, LR2, LR1_inv, LR2_inv, Θ′, Env′)は
+    射影してログを出すだけで、例外を投げない**。環境がランク落ちすると QR の R は一意でなくなり、
+    LAPACK が正当にブロック外成分を返す。ここで投げると契約 T3-vi
+    (縮退・ランク落ちの計量でも例外なく完走)が満たせない。
+
+  実測(タスク 4、`TENES_FERMION_FULL_UPDATE_LOG=1`)がこの分割を裏づける:
+
+  | ケース | Env′ | Θ′ | LR1_inv |
+  |---|---|---|---|
+  | T3-i(物理的、正定値環境) | 4.9e-15 | 3.5e-26 | 1.1e-15 |
+  | T3-iv(全偶台帳) | 0 | 0 | 0 |
+  | T3-vi(意図的に縮退・ランク落ち) | **7.0e-3** | **6.7e-3** | **1.5e-2** |
+
+  物理的な状況では射影は丸めレベルの no-op であり、大きな違反は病的な計量でのみ起きる。
 - graded が必要なのは次の 3 箇所だけ:
   1. **Θ の構成**: `Θ = fermion::tensordot(X, wrapped_gate, Axes(2,3), Axes(0,1))`、Θ̃ = mask_{aβ}Θ。
      `wrapped_gate` は driver が作る(§5.1): `wrap_twosite_gate(op, p1, p2)` と source swap 用の
