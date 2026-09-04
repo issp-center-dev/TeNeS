@@ -292,11 +292,25 @@ horizontal と vertical の両方で行う。
 
 ### 3.5 driver とガード(T4, T5, T6)
 
-**(T4) bosonic 同値。** `test/data/AntiferroHeisenberg_real.toml` を元に、
-`[correlation]` セクションを除き `[parameter.ctm] ... fastfullupdate = false` にした入力を作る。
-これを (a) fermion なし、(b) `fermion = true` かつ全サイトの物理パリティを `[0, 0]`
-(全偶)にした版、の 2 通りで走らせ、エネルギー・onesite 観測量・twosite 観測量が一致すること。
+**(T4) bosonic 同値。** `test/data/AntiferroHeisenberg_real.toml` を元にした入力を、
+(a) fermion なし、(b) `fermion = true` かつ全サイトの物理パリティを `[0, 0]`(全偶)にした版、
+の 2 通りで走らせ、エネルギー・onesite 観測量・twosite 観測量が一致すること。
 許容: 相対 1e-6(fold CTM と素 CTM の収束差を許容する)。
+
+**入力の作り方(2026-09-04 訂正)**:
+
+- `fastfullupdate = false` は **`[parameter.full_update]`** に書く
+  (`[parameter.ctm]` ではない。`load_toml.cpp:467` は `[parameter.full_update]` から読む)。
+- `validate_fermion_constraints`(`load_toml.cpp:606-654`)が拒否するものを取り除く:
+  `[correlation]`(`r_max > 0`)、`[[observable.multisite]]`、`ops = [...]` 形式の
+  二サイト観測量(明示 `elements` に書き下す)、`Simple_Gauge_Fix`、`Use_RSVD`。
+- **`noise = 0.0` にする(必須)。** 仮想台帳は物理パリティと無関係に
+  `even_first_parity(D)`(`tensors.cpp:80-90`)で初期化され、fermion 初期化は総パリティが奇の
+  Tn 要素をゼロにする(`tensors.cpp:155-159`)。したがって `noise != 0` では 2 つの run が
+  **違う初期テンソルから始まり**、どんな許容値でも一致しない。`noise = 0.0` なら非ゼロ要素が
+  仮想インデックス `(0,0,0,0)`(どの台帳でも偶)だけになり初期テンソルがビット一致する。
+- この前提(初期テンソル一致、および走行後の台帳が全偶であること)を、テスト自身が
+  `fermion.dat` を読んで明示アサートすること。
 
 **(T5) 物理。** 自由フェルミオン(既存 `test/fermion/free_fermion*.py.in` の模型)を
 **D=2、小さい CHI、`Max_CTM_Iteration` を明示的に小さく**した設定で、
@@ -338,15 +352,20 @@ simple update のあとに full update を数ステップ走らせる。要求:
 
 役割分担:
 
+**T4 も符号バグを検出しない(2026-09-04 追記)。** T4 は台帳が全偶なので、
+入力脚マスク・crossing mask・graded transpose の符号がすべて +1 に退化する。
+T4 が捕まえるのは構造のバグ(driver の配線、窓環境の選択、台帳更新、次元)だけである。
+
 | 壊した箇所 | 検出するテスト |
 |---|---|
-| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2-iv**(独立 oracle)、および T4 / T5 |
+| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2-iv**(独立 oracle)。E2E では **T5 のみ** |
 | Q′ 詰め替え、QR 軸 | T2-iv、T3-i |
 | Θ の graded 合成、`mask_{m s1}`、初期推定の転置、`Tn_new` の転置 | **T3-i** |
 | ゲージ因子のパリティ漏れ | T3-iii、T3-vi |
+| driver の配線、窓環境の選択、台帳更新 | T4、T5、T6 |
 
 したがって **T2-iv は省略できない**。ここを共有コード経由の自己整合だけで済ませると、
-N の符号バグが E2E まで誰にも捕まらない。
+N の符号バグは T5 まで誰にも捕まらない(そして T5 が落ちても原因の切り分けができない)。
 
 ## 5. 契約書チェックリスト(作成者が自分で確認する)
 
