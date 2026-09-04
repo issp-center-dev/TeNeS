@@ -243,6 +243,10 @@ void Full_update_bond_fermion(
 
 いずれの場合も、CTM が収束していること(`Calc_CTM_Environment_density` の収束、および
 `build_full_update_environment` の `forbidden_ratio ≤ 1e-10`)を**前提アサート**する。
+**complex_tensor は当面対象外**(テスト作成者の観察、2026-09-04): ランダム複素 Tn では
+CTM の corner 特異値が収束しても one-site RDM の trace が「実部 > 0・虚部 ≤ 1e-6」の収束判定を
+通らず(初期化の全体位相を引きずる)、`iteration_max` まで回る。これは D≥3 の実数で全体符号が
+負になる問題と同根で、CTM 初期化の対処後に complex を追加する。
 CTM 未収束のパリティ漏れは N_plain の誤差として現れ、比較の許容を破るのは正しい挙動だが、
 それをテストの失敗と区別できるようにしておく。
 §3.3 の窓選択で 10 個の環境テンソルを取り、`fermion::qr` で QA, RA, QB, RB を作る(bosonic と同じ軸):
@@ -366,9 +370,13 @@ horizontal と vertical の両方で行う。
   最小二乗で係数 c を合わせて `|pair_new − c·pair_old| / max|pair_old|` を相対 1e-10 で見る。
   位相(実なら符号)も c に吸収させる。両方向。
 - hopping ゲート(τ=0.01 程度): 返った pair state の ⟨G⟩(T2-vi の 2 の形で測定経路から計算)が、
-  元の pair state の ⟨G⟩ より大きいこと(そのボンドの局所エネルギーが下がる)。これは D に依らず
-  成り立つ(D=2 でも 1.00360 → 1.00368 を本番で確認済み)。全体エネルギーが下がることは
-  D=2 では要求しない(§3.5 T5 の注記)。
+  元の pair state の ⟨G⟩ より大きいこと(そのボンドの局所エネルギーが下がる)。全体エネルギーが
+  下がることは D=2 では要求しない(§3.5 T5 の注記)。
+  **注意(テスト作成者の指摘、2026-09-04)**: これは打ち切りなしなら log-convexity から従うが、
+  D への打ち切り後まで含めた定理ではなく状態依存でありうる。SU 収束状態(1.00360 → 1.00368)と
+  ランダム偶状態(+1.6e-5 / +2.5e-5)で成立を確認済みだが、別の seed で落ちた場合は
+  実装バグと即断せず、状態依存の可能性から切り分けること。
+- パラメータは T3-i と同じ(`Inverse_Env_cut` / `Full_Inverse_precision` = 1e-14 など)。
 
 ### 3.5 driver とガード(T4, T5, T6)
 
@@ -449,7 +457,7 @@ T4 が捕まえるのは構造のバグ(driver の配線、窓環境の選択、
 
 | 壊した箇所 | 検出するテスト |
 |---|---|
-| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2-iv**(独立 oracle)、**T2-vi**(実 CTM・一般ブロック)。E2E では **T5 のみ** |
+| N の入力脚マスク、開放 join、crossing mask、N の graded transpose の Koszul 符号 | **T2-iv**(独立 oracle)、**T2-vi**(実 CTM・一般ブロック)。E2E では **T5 のみ** |
 | Q′ 詰め替え、QR 軸 | T2-iv、T3-i |
 | Θ の graded 合成、`mask_{m s1}`、初期推定の転置、`Tn_new` の転置 | **T3-i** |
 | ゲージ因子のパリティ漏れ | T3-iii、T3-vi |
