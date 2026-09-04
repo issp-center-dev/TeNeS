@@ -27,7 +27,7 @@ bosonic のコードをそのまま共有する。graded 演算が要るのは �
 - **formatter を実行しない。** 新しい行は周囲のスタイルに手で合わせる。
 - **リポジトリ直下や build ツリーで `tenes` やテストバイナリを実行しない。**
   実行が必要なら CWD を `work/fermion/full-update-design/` にする。
-- ビルドは `cmake --preset gcc && cmake --build --preset gcc`、テストは `ctest --preset gcc`。
+- ビルドは `cmake --preset gcc-release && cmake --build --preset gcc-release`、テストは `ctest --preset gcc-release`。
 - コミットはしない(sandbox では `.git/index.lock` を作れない)。Claude が代理でコミットする。
 - 各タスクの最後に報告ファイルを書く。**報告ファイルは成果物であり、無いこと自体が欠陥。**
 
@@ -93,14 +93,19 @@ tensor Create_Environment_two_sites(const tensor &C1, const tensor &C2,
 }  // namespace tenes::itps::core
 ```
 
-- [ ] **Step 1: 分割前の基準を取る**
+- [ ] **Step 1: 分割前の基準は取得済み**
 
-```bash
-cmake --preset gcc && cmake --build --preset gcc
-ctest --preset gcc -R "test_full_update|AntiferroHeisenberg|Honeycomb|J1J2_AFH|RSVD|Kitaev" --output-on-failure
-```
+統括が分割前に取得した基準が次に置いてある。**自分で取り直す必要はない**
+(新しいテストファイルが入っているので `test_fermion_layer` はこの時点でビルドできない)。
 
-すべて緑であることを確認し、出力を報告ファイルに残す。ここが赤なら BLOCKED として報告する。
+- `work/fermion/full-update-design/baseline-ctest.log` — ctest 全件 34/34 緑、48 秒
+- `work/fermion/full-update-design/baseline-fu-checksums.txt` — `tenes` を
+  `AntiferroHeisenberg_real` / `AntiferroHeisenberg_complex` / `Honeycomb` / `J1J2_AFH` の
+  4 入力で走らせた `output/` の全ファイル(`time.dat` と `timers.json` を除く)の SHA-1、32 件
+- `work/fermion/full-update-design/baseline-fu/` — その出力そのもの
+
+golden 比較の許容(rtol 1e-3)では分割による演算順序の変化を見逃すので、
+**Step 6 ではこのチェックサムとの完全一致**を要求する。
 
 - [ ] **Step 2: `prepare_environment` を切り出す**
 
@@ -138,11 +143,25 @@ QR → `Theta` → `Create_Environment_two_sites` → `prepare_environment` →
 - [ ] **Step 6: 挙動不変を確認する**
 
 ```bash
-cmake --build --preset gcc
-ctest --preset gcc -R "test_full_update|AntiferroHeisenberg|Honeycomb|J1J2_AFH|RSVD|Kitaev" --output-on-failure
+cmake --build --preset gcc-release --target tenes
+cd work/fermion/full-update-design
+mkdir -p verify-fu && cd verify-fu
+for c in AntiferroHeisenberg_real AntiferroHeisenberg_complex Honeycomb J1J2_AFH; do
+  rm -rf output_$c output
+  ../../../../out-gcc-release/build/src/tenes ../../../../test/data/$c.toml > run_$c.log 2>&1
+  mv output output_$c
+done
+find output_* -type f ! -name 'time.dat' ! -name 'timers.json' | sort | xargs shasum > ../verify-fu-checksums.txt
+diff ../baseline-fu-checksums.txt ../verify-fu-checksums.txt && echo "BYTE-IDENTICAL"
 ```
 
-Step 1 と同じ結果になること。数値が 1 桁でも動いたら分割が演算順序を変えている。
+**32 件すべてがバイト単位で一致すること。** 1 ファイルでも違えば分割が演算順序を変えている。
+一致したら ctest も走らせる(この時点では `test_fermion_layer` が未実装関数を参照して
+ビルドできないので、それ以外を指定する):
+
+```bash
+ctest --preset gcc-release -E "test_fermion_layer|FreeFermionFull|BosonEquivalenceFull" --output-on-failure
+```
 
 - [ ] **Step 7: 報告**
 
@@ -162,13 +181,11 @@ ctest 出力、演算順序を変えていないことの根拠(移動した行�
 - Consumes: なし(既存 API のみ)
 - Produces: `iTPS<tensor>::update_CTM()` が fermion 模式でも正しい環境を作る。タスク 5 が使う。
 
-- [ ] **Step 1: 基準を取る**
+- [ ] **Step 1: 基準は取得済み**
 
-```bash
-ctest --preset gcc -R "FreeFermion|test_fermion_layer" --output-on-failure
-```
-
-緑であることを確認して報告ファイルに残す。
+`work/fermion/full-update-design/baseline-ctest.log`(34/34 緑)を参照する。
+新しいテストファイルのせいで `test_fermion_layer` はこの時点でビルドできないので、
+自分で取り直そうとしないこと。
 
 - [ ] **Step 2: `update_CTM()` に分岐を入れる**
 
@@ -223,11 +240,13 @@ void iTPS<ptensor>::update_CTM() {
 - [ ] **Step 5: 確認**
 
 ```bash
-cmake --build --preset gcc
-ctest --preset gcc --output-on-failure
+cmake --build --preset gcc-release
+ctest --preset gcc-release -E "test_fermion_layer|FreeFermionFull|BosonEquivalenceFull" --output-on-failure
 ```
 
-**全件**走らせる。共有コードを触っているので範囲を絞らない。
+タスク 3 / 4 / 5 が終わるまで `test_fermion_layer` と新しい python テストはビルド・成功しないので
+除外する。**それ以外は全件**走らせる。共有コードを触っているので範囲を絞らない。
+基準は `work/fermion/full-update-design/baseline-ctest.log`。
 
 - [ ] **Step 6: 報告**
 
@@ -251,7 +270,7 @@ ctest --preset gcc --output-on-failure
 - [ ] **Step 1: 失敗を確認する**
 
 ```bash
-cmake --build --preset gcc 2>&1 | tail -40
+cmake --build --preset gcc-release 2>&1 | tail -40
 ```
 
 `test/fermion/full_update_env.cpp` が未実装の関数を呼ぶのでリンクまたはコンパイルで落ちる。
@@ -351,8 +370,8 @@ GPL v3 ヘッダとインクルードガード `TENES_SRC_FERMION_FULL_UPDATE_EN
 - [ ] **Step 5: ビルドとテスト**
 
 ```bash
-cmake --build --preset gcc
-ctest --preset gcc --output-on-failure
+cmake --build --preset gcc-release
+ctest --preset gcc-release --output-on-failure
 ```
 
 `test_fermion_layer` の新しい `TEST_CASE`(契約書 T2)が緑になり、
@@ -382,7 +401,7 @@ ctest --preset gcc --output-on-failure
 - [ ] **Step 1: 失敗を確認する**
 
 ```bash
-cmake --build --preset gcc 2>&1 | tail -40
+cmake --build --preset gcc-release 2>&1 | tail -40
 ```
 
 - [ ] **Step 2: QR と環境**
@@ -523,8 +542,8 @@ plain 配列にして次を呼ぶ(引数順はタスク 1 の宣言どおり: �
 - [ ] **Step 9: ビルドとテスト**
 
 ```bash
-cmake --build --preset gcc
-ctest --preset gcc --output-on-failure
+cmake --build --preset gcc-release
+ctest --preset gcc-release --output-on-failure
 ```
 
 契約書 T3 のテストが緑になり、既存テストが全部緑のままであること。
@@ -551,7 +570,7 @@ ctest --preset gcc --output-on-failure
 
 - [ ] **Step 1: 失敗を確認する**
 
-`ctest --preset gcc -R "input|BosonEquivalenceFull|FreeFermionFull" --output-on-failure`
+`ctest --preset gcc-release -R "input|BosonEquivalenceFull|FreeFermionFull" --output-on-failure`
 
 - [ ] **Step 2: driver のフェルミオン分岐**
 
@@ -694,8 +713,8 @@ set_tests_properties(FreeFermionFull PROPERTIES TIMEOUT 1800)
 - [ ] **Step 6: ビルドとテスト**
 
 ```bash
-cmake --build --preset gcc
-ctest --preset gcc --output-on-failure
+cmake --build --preset gcc-release
+ctest --preset gcc-release --output-on-failure
 ```
 
 全件緑であること。
