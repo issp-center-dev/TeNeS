@@ -233,10 +233,18 @@ void Full_update_bond_fermion(
 自己整合、T2-iv は有限パッチ oracle であり、`Calc_CTM_Environment_density` が作る**実際の CTM 環境**を
 通すテストが無かった。本番でのバグ探しを 1 セッション長引かせた穴なので、次を要求する。
 
-環境: 自由フェルミオン(`test/fermion/free_fermion*.py.in` の模型、D=2、chi=8)を simple update で
-数百ステップ収束させた状態の CTM 環境(`iTPS::update_CTM()` が作るもの)。C++ から直接作るのが
-難しければ、E2E で `tensor_save` したテンソルと `fermion.dat` を読み、
-`build_reduced_density_tensors` → `Calc_CTM_Environment_density` で環境を作ってよい。
+環境: `build_reduced_density_tensors(Tn, finfo)` → `Calc_CTM_Environment_density` が作る**実際の CTM
+環境**(`iTPS::update_CTM()` と同じ経路)。Tn は次のいずれか:
+
+- 自由フェルミオン(`test/fermion/free_fermion*.py.in` の模型、D=2、chi=8)を simple update で
+  数百ステップ収束させた状態(E2E で `tensor_save` したテンソルと `fermion.dat` を読んでもよい)。
+- それが難しければ、**パリティ偶なランダム Tn**(2×2 セル、D=2、d=2、偶奇混在台帳)でよい。
+  計量検証としての検出力は状態に依らない。
+
+いずれの場合も、CTM が収束していること(`Calc_CTM_Environment_density` の収束、および
+`build_full_update_environment` の `forbidden_ratio ≤ 1e-10`)を**前提アサート**する。
+CTM 未収束のパリティ漏れは N_plain の誤差として現れ、比較の許容を破るのは正しい挙動だが、
+それをテストの失敗と区別できるようにしておく。
 §3.3 の窓選択で 10 個の環境テンソルを取り、`fermion::qr` で QA, RA, QB, RB を作る(bosonic と同じ軸):
 
 | direction | site 1 | site 2 |
