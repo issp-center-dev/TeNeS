@@ -22,6 +22,12 @@
 - **契約に誤りを見つけたら、テストを実装に合わせず、誤りとして報告すること。**
 - 実験・一時ファイルは `work/fermion/full-update-design/` に置く。リポジトリ直下や build ツリーで
   バイナリを実行しない。
+- **テンソルの要素比較は global index 経由で行う(2026-09-04 セッション 2 追加)。**
+  `mptensor::Tensor` は `transpose` を遅延評価する(axes_map)ので、shape が同じでも 2 つのテンソルの
+  local index `n` が指す global index は一致しない。`a[n]` と `b[n]` を直接比べると、要素の最大値は
+  一致するのに並びだけずれて相対差 O(1) に見える。必ず `a.global_index(n)`(または
+  `global_index_fast`)で index を取り、`b.get_value(index, v)` で対応する要素を読む。
+  本番でのバグ探しがこれで丸 1 セッション空費した。
 
 ## 1. テストの置き場所と登録
 
@@ -223,6 +229,46 @@ void Full_update_bond_fermion(
 これは **bosonic 回帰**であり、フェルミオン符号の検出力は無いものとして扱う。
 許容: 相対 1e-12。
 
+**(T2-vi) 実 CTM 環境での計量検証(2026-09-04 セッション 2 追加)。** T2-i は共有コードの
+自己整合、T2-iv は有限パッチ oracle であり、`Calc_CTM_Environment_density` が作る**実際の CTM 環境**を
+通すテストが無かった。本番でのバグ探しを 1 セッション長引かせた穴なので、次を要求する。
+
+環境: 自由フェルミオン(`test/fermion/free_fermion*.py.in` の模型、D=2、chi=8)を simple update で
+数百ステップ収束させた状態の CTM 環境(`iTPS::update_CTM()` が作るもの)。C++ から直接作るのが
+難しければ、E2E で `tensor_save` したテンソルと `fermion.dat` を読み、
+`build_reduced_density_tensors` → `Calc_CTM_Environment_density` で環境を作ってよい。
+§3.3 の窓選択で 10 個の環境テンソルを取り、`fermion::qr`(設計書 §3.1 の軸)で QA, RA, QB, RB を作る。
+
+パリティ偶なブロック Y(a, β, s1, s2)(台帳 {p_a, p_β, p_s1, p_s2}、p_a / p_β は QR の内部脚台帳)
+について:
+
+1. Y を `fermion::svd(Y, Axes(0,2), Axes(1,3), U, s, VT)`(打ち切りなし)で分け、`U` に s を
+   軸 2 で掛けたものを R1(a, s1, m)、`transpose(VT, Axes(1,2,0))` を R2(β, s2, m) として、
+   設計書 §4.5 の式で Tn1(Y), Tn2(Y) を組み立てる。
+2. 測定経路で ⟨ψ(Y)|ψ(Y)⟩ =
+   `contract_reduced_pair_halves_density_CTM(env, build_reduced_pair_halves(Tn1(Y), Tn2(Y), I, direction))`
+   (I は `wrap_twosite_gate(恒等)`)と、同じ形で ⟨ψ(Y)|G|ψ(Y)⟩(G は wrap 済みの偶ゲート。
+   hopping の虚時間ゲートでよい)を計算する。
+3. Ỹ = mask_{aβ} ⊙ Y(a と β がともに奇の要素に −1)、Θ_Y = `fermion::tensordot(Y, G, Axes(2,3), Axes(0,1))`、
+   Θ̃_Y = mask_{aβ} ⊙ Θ_Y として、bosonic 規約の二次形式
+   ⟨Ỹ|N_plain|Z̃⟩ = `trace(tensordot(N_plain, Z̃, Axes(0,1), Axes(0,1)), conj(Ỹ), all, all)`
+   で ⟨Ỹ|N_plain|Ỹ⟩ と ⟨Ỹ|N_plain|Θ̃_Y⟩ を計算する。
+4. 2 と 3 が一致すること。ノルムは相対 1e-10、⟨G⟩ は比 ⟨Y|G|Y⟩/⟨Y|Y⟩ の形で 1e-10。
+
+Y は次をすべて含める: X = `transpose(tensordot(RA, RB, Axes(1), Axes(1)), Axes(0,2,1,3))`(元の状態)、
+Θ = X·G、パリティ偶なランダム 2 種、X + 0.05·ランダム。horizontal と vertical の両方。
+
+検出するもの: N_plain の符号(入力脚マスク、開放 join、crossing mask、transpose)を実 CTM 環境で、
+かつ ALS が探索する**一般のブロック**で。X と Θ の組だけでは ⟨X|Θ⟩ = ⟨G⟩ の 1 点しか見ないので
+不十分(本番の最初の診断はここで止まっていた)。
+
+**(T2-vii) 擬似サイトの状態同一性(2026-09-04 セッション 2 追加)。** 同じ環境・同じ QR で、
+QA′, QB′(T2-i の詰め替え)と X について
+
+    apply_pair_op(build_pair_state(QA′, QB′, direction), X)  ==  build_pair_state(Tn1, Tn2, direction)
+
+要素ごと(§0 のとおり global index 経由)、相対 1e-12、両方向。設計書 §4.2 C1 の production 版。
+
 ### 3.3 環境窓の選択
 
 `build_full_update_environment` と `Full_update_bond_fermion` に渡す 10 個の環境テンソルは、
@@ -290,6 +336,18 @@ horizontal と vertical の両方で行う。
 `Tn_new` の転置の入れ替え。
 **N_plain の入力脚マスクの除去はここでは赤にならない**(§4)。
 
+**(T3-viii) 実 CTM 環境での恒等ゲート不変性(2026-09-04 セッション 2 追加)。** T2-vi と同じ
+実 CTM 環境で `Full_update_bond_fermion` を呼ぶ。
+
+- 恒等ゲート: 返った `Tn1_new`, `Tn2_new` の pair state が元の pair state と一致。
+  **全体スケールは変わるのが正常**(接続ボンドの λ を Σλ²=1 に正規化するため)なので、
+  最小二乗で係数 c を合わせて `|pair_new − c·pair_old| / max|pair_old|` を相対 1e-10 で見る。
+  位相(実なら符号)も c に吸収させる。両方向。
+- hopping ゲート(τ=0.01 程度): 返った pair state の ⟨G⟩(T2-vi の 2 の形で測定経路から計算)が、
+  元の pair state の ⟨G⟩ より大きいこと(そのボンドの局所エネルギーが下がる)。これは D に依らず
+  成り立つ(D=2 でも 1.00360 → 1.00368 を本番で確認済み)。全体エネルギーが下がることは
+  D=2 では要求しない(§3.5 T5 の注記)。
+
 ### 3.5 driver とガード(T4, T5, T6)
 
 **(T4) bosonic 同値。** `test/data/AntiferroHeisenberg_real.toml` を元にした入力を、
@@ -323,6 +381,17 @@ simple update のあとに full update を数ステップ走らせる。要求:
 - ctest 登録時に明示 `TIMEOUT` を付ける。既存の `FreeFermionMF`(1800 秒)を上限の目安にする。
   非高速版はボンドごとに CTM を再収束するので、`[[evolution.full]]` の数だけ
   1 ステップあたり CTM 収束が走る。
+
+**T5 への注記(2026-09-04 セッション 2、改訂予定)。** D=2 の自由フェルミオンでは、SU 収束状態からの
+full update がエネルギーを**上げる**ことが確定した。実装は正しく(核の全段階を実 CTM で検証、ALS は
+大域最適に到達)、D=2 の表現力不足で射影虚時間発展の固定点が SU 固定点より高くなる性質による
+(`work/fermion/full-update-design/FINDINGS-task5-energy.md`)。D=3(chi=12)では SU 1000 step
+収束後に FU 1 sweep で −3.2e-4、4 sweep で −1.1e-3 下がる。したがって **上の要求は D=2 では
+満たせない**。T5 は D=3 に改訂する予定だが、D≥3 では CTM の全体符号が負になり
+`build_full_update_environment` 以降が止まる別問題があり、その対処後に確定する。
+また「`Max_CTM_Iteration` を明示的に小さく」は、CTM 未収束のパリティ漏れが
+`build_full_update_environment` の forbidden 閾値(1e-8)に当たるので、閾値の扱いが決まるまで
+指示から外す。
 
 **(T6) ガードとフォールバック。**
 
@@ -358,7 +427,7 @@ T4 が捕まえるのは構造のバグ(driver の配線、窓環境の選択、
 
 | 壊した箇所 | 検出するテスト |
 |---|---|
-| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2-iv**(独立 oracle)。E2E では **T5 のみ** |
+| N の入力脚マスク、開放 join、crossing mask、N の transpose 符号 | **T2-iv**(独立 oracle)、**T2-vi**(実 CTM・一般ブロック)。E2E では **T5 のみ** |
 | Q′ 詰め替え、QR 軸 | T2-iv、T3-i |
 | Θ の graded 合成、`mask_{m s1}`、初期推定の転置、`Tn_new` の転置 | **T3-i** |
 | ゲージ因子のパリティ漏れ | T3-iii、T3-vi |
@@ -376,3 +445,5 @@ N の符号バグは T5 まで誰にも捕まらない(そして T5 が落ちて
 - [ ] `nA != nB` になる形状を T2 に入れた
 - [ ] 検査が原理的に不可能なもの(§4 の限界)をテストに要求していない
 - [ ] テストは `work/` 以下でのみ一時ファイルを作り、リポジトリ直下を汚さない
+- [ ] テンソルの要素比較は global index 経由で行った(§0)
+- [ ] T2-vi の Y に X・Θ 以外の一般ブロック(ランダム、X+0.05·ランダム)を含めた
