@@ -101,7 +101,8 @@ tensor Create_Environment_two_sites(const tensor &C1, const tensor &C2,
 - `work/fermion/full-update-design/baseline-ctest.log` — ctest 全件 34/34 緑、48 秒
 - `work/fermion/full-update-design/baseline-fu-checksums.txt` — `tenes` を
   `AntiferroHeisenberg_real` / `AntiferroHeisenberg_complex` / `Honeycomb` / `J1J2_AFH` の
-  4 入力で走らせた `output/` の全ファイル(`time.dat` と `timers.json` を除く)の SHA-1、32 件
+  4 入力で走らせた `output/` の全ファイル(`time.dat` と `timers.json` を除き、
+  `parameters.dat` の `start_datetime` 行を落としたうえで)の SHA-1、32 件
 - `work/fermion/full-update-design/baseline-fu/` — その出力そのもの
 
 golden 比較の許容(rtol 1e-3)では分割による演算順序の変化を見逃すので、
@@ -151,7 +152,10 @@ for c in AntiferroHeisenberg_real AntiferroHeisenberg_complex Honeycomb J1J2_AFH
   ../../../../out-gcc-release/build/src/tenes ../../../../test/data/$c.toml > run_$c.log 2>&1
   mv output output_$c
 done
-find output_* -type f ! -name 'time.dat' ! -name 'timers.json' | sort | xargs shasum > ../verify-fu-checksums.txt
+# parameters.dat carries a start_datetime line; strip it before hashing.
+find output_* -type f ! -name 'time.dat' ! -name 'timers.json' | sort | while read f; do
+  printf "%s  %s\n" "$(grep -v 'start_datetime' "$f" | shasum | cut -d' ' -f1)" "$f"
+done > ../verify-fu-checksums.txt
 diff ../baseline-fu-checksums.txt ../verify-fu-checksums.txt && echo "BYTE-IDENTICAL"
 ```
 

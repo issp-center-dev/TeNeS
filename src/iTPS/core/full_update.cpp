@@ -81,45 +81,14 @@ tensor Create_Environment_two_sites(const tensor &C1, const tensor &C2,
 }
 
 template <class tensor>
-void Full_update_bond_horizontal(
-    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
-    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
-    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
-    const tensor &op12, const PEPS_Parameters peps_parameters, tensor &Tn1_new,
-    tensor &Tn2_new) {
-  Shape Tn1_shape = Tn1.shape();
-  Shape Tn2_shape = Tn2.shape();
+void prepare_environment(const tensor &Environment_in, const tensor &Theta_in,
+                         const PEPS_Parameters &peps_parameters,
+                         tensor &Environment_out, tensor &Theta_out,
+                         tensor &LR1_inv, tensor &LR2_inv) {
+  int envR1 = Environment_in.shape()[0];
+  int envR2 = Environment_in.shape()[1];
 
-  int D_connect = Tn1_shape[2];
-
-  // Connecting [2] bond of Tn1 and [0] bond of Tn2
-  // QR decomposition
-  tensor Q1, R1, Q2, R2;
-
-  int info = qr(Tn1, Axes(0, 1, 3), Axes(2, 4), Q1, R1);
-  info = qr(Tn2, Axes(1, 2, 3), Axes(0, 4), Q2, R2);
-
-  int envR1 = R1.shape()[0];
-  int envR2 = R2.shape()[0];
-
-  /*
-    ## apply time evolution
-    INFO:8 (1,2) Finish 7/8 script=[0, 1, -1, 2, -1]
-    ##############################
-    # ((R1*R2)*op12)
-    # cpu_cost= 22400  memory= 3216
-    # final_bond_order  (c1, c2, m1o, m2o)
-    ##############################
-  */
-
-  tensor Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
-                           Axes(1, 3), Axes(0, 1));
-  // Environment
-  // bond order (t1, t2, tc1, tc2)
-
-  tensor Environment =
-      Create_Environment_two_sites(C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6,
-                                   Q1, transpose(Q2, Axes(3, 0, 1, 2)));
+  tensor Environment = Environment_in;
 
   // Hermite
   Environment =
@@ -129,7 +98,7 @@ void Full_update_bond_horizontal(
   tensor Z;
   std::vector<double> w;
 
-  info = eigh(Environment, Axes(0, 1), Axes(2, 3), w, Z);
+  int info = eigh(Environment, Axes(0, 1), Axes(2, 3), w, Z);
 
   // positive
   double w_max = fabs(w[envR1 * envR2 - 1]);
@@ -143,15 +112,16 @@ void Full_update_bond_horizontal(
 
   Z.multiply_vector(w, 2);
 
-  tensor LR1, LR2, LR1_inv, LR2_inv;
   if (peps_parameters.Full_Gauge_Fix) {
+    tensor LR1, LR2;
+
     // gauge fix
     tensor Q_temp;
     info = qr(Z, Axes(2, 1), Axes(0), Q_temp, LR1);
     info = qr(Z, Axes(2, 0), Axes(1), Q_temp, LR2);
     // for theta
-    Theta = tensordot(LR1, tensordot(LR2, Theta, Axes(1), Axes(1)), Axes(1),
-                      Axes(1));
+    Theta_out = tensordot(LR1, tensordot(LR2, Theta_in, Axes(1), Axes(1)),
+                          Axes(1), Axes(1));
 
     // for environment
     tensor u, vt;
@@ -186,54 +156,25 @@ void Full_update_bond_horizontal(
     Z = tensordot(tensordot(Z, LR1_inv, Axes(0), Axes(1)), LR2_inv, Axes(0),
                   Axes(1));
 
-    Environment = tensordot(Z, conj(Z), Axes(0), Axes(0));
+    Environment_out = tensordot(Z, conj(Z), Axes(0), Axes(0));
 
   } else {
-    Environment = tensordot(Z, conj(Z), Axes(2), Axes(2));
+    Theta_out = Theta_in;
+    LR1_inv = tensor();
+    LR2_inv = tensor();
+    Environment_out = tensordot(Z, conj(Z), Axes(2), Axes(2));
   }
+}
 
-  /*
-  // test//
-  for (int i=0; i < Environment.local_size();++i){
-    Index index = Environment.global_index(i);
-    if (index[2]==0 && index[3]==0){
-      std::cout<<"Environment[i,j,0,0]= "<<index<<",
-  "<<Environment[i]<<std::endl;
-    }
-    }*/
+template <class tensor>
+void als_iterate(const tensor &Environment, const tensor &Theta,
+                 const PEPS_Parameters &peps_parameters, tensor &R1,
+                 tensor &R2) {
+  int envR1 = R1.shape()[0];
+  int envR2 = R2.shape()[0];
+  int D_connect = R1.shape()[1];
 
   bool convergence = false;
-
-  // create initial guess
-  // SVD of Theta
-
-  tensor U, VT;
-  std::vector<double> s;
-
-  svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
-
-  // truncation
-  std::vector<double> lambda_c = s;
-  lambda_c.resize(D_connect);
-  U = slice(U, 2, 0, D_connect);
-  VT = slice(VT, 0, 0, D_connect);
-
-  double norm = 0.0;
-  for (int i = 0; i < D_connect; ++i) {
-    norm += lambda_c[i] * lambda_c[i];
-  }
-
-  norm = sqrt(norm);
-
-  for (int i = 0; i < D_connect; ++i) {
-    lambda_c[i] = sqrt(lambda_c[i] / norm);
-  }
-
-  U.multiply_vector(lambda_c, 2);
-  VT.multiply_vector(lambda_c, 0);
-  R1 = transpose(U, Axes(0, 2, 1));   // envR1 , D_connect, m1
-  R2 = transpose(VT, Axes(1, 0, 2));  // envR2 , D_connect, m2
-
   int count = 0;
   typename tensor::value_type delta = 0;
   auto C_phi = trace(tensordot(Environment, Theta, Axes(0, 1), Axes(0, 1)),
@@ -252,7 +193,9 @@ void Full_update_bond_horizontal(
                      Axes(0, 2), Axes(1, 3)),
            Axes(0, 1, 2), Axes(1, 0, 2)));
 
-  tensor W_vec, N_mat, N_mat_inv;
+  tensor U, VT, W_vec, N_mat, N_mat_inv;
+  std::vector<double> s;
+  int info;
   double denom;
   while (!convergence && (count < peps_parameters.Full_max_iteration)) {
     /*
@@ -357,6 +300,94 @@ void Full_update_bond_horizontal(
     std::cout << "Full Update: count, delta,original_norm = " << count << " "
               << delta + C_phi << " " << C_phi << std::endl;
   }
+}
+
+template <class tensor>
+void Full_update_bond_horizontal(
+    const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
+    const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,
+    const tensor &eT5, const tensor &eT6, const tensor &Tn1, const tensor &Tn2,
+    const tensor &op12, const PEPS_Parameters peps_parameters, tensor &Tn1_new,
+    tensor &Tn2_new) {
+  Shape Tn1_shape = Tn1.shape();
+  Shape Tn2_shape = Tn2.shape();
+
+  int D_connect = Tn1_shape[2];
+
+  // Connecting [2] bond of Tn1 and [0] bond of Tn2
+  // QR decomposition
+  tensor Q1, R1, Q2, R2;
+
+  int info = qr(Tn1, Axes(0, 1, 3), Axes(2, 4), Q1, R1);
+  info = qr(Tn2, Axes(1, 2, 3), Axes(0, 4), Q2, R2);
+
+  /*
+    ## apply time evolution
+    INFO:8 (1,2) Finish 7/8 script=[0, 1, -1, 2, -1]
+    ##############################
+    # ((R1*R2)*op12)
+    # cpu_cost= 22400  memory= 3216
+    # final_bond_order  (c1, c2, m1o, m2o)
+    ##############################
+  */
+
+  tensor Theta = tensordot(tensordot(R1, R2, Axes(1), Axes(1)), op12,
+                           Axes(1, 3), Axes(0, 1));
+  // Environment
+  // bond order (t1, t2, tc1, tc2)
+
+  tensor Environment =
+      Create_Environment_two_sites(C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6,
+                                   Q1, transpose(Q2, Axes(3, 0, 1, 2)));
+
+  tensor Environment_prepared, Theta_prepared, LR1_inv, LR2_inv;
+  prepare_environment(Environment, Theta, peps_parameters, Environment_prepared,
+                      Theta_prepared, LR1_inv, LR2_inv);
+  Environment = Environment_prepared;
+  Theta = Theta_prepared;
+
+  /*
+  // test//
+  for (int i=0; i < Environment.local_size();++i){
+    Index index = Environment.global_index(i);
+    if (index[2]==0 && index[3]==0){
+      std::cout<<"Environment[i,j,0,0]= "<<index<<",
+  "<<Environment[i]<<std::endl;
+    }
+    }*/
+
+  // create initial guess
+  // SVD of Theta
+
+  tensor U, VT;
+  std::vector<double> s;
+
+  svd(Theta, Axes(0, 2), Axes(1, 3), U, s, VT);
+
+  // truncation
+  std::vector<double> lambda_c = s;
+  lambda_c.resize(D_connect);
+  U = slice(U, 2, 0, D_connect);
+  VT = slice(VT, 0, 0, D_connect);
+
+  double norm = 0.0;
+  for (int i = 0; i < D_connect; ++i) {
+    norm += lambda_c[i] * lambda_c[i];
+  }
+
+  norm = sqrt(norm);
+
+  for (int i = 0; i < D_connect; ++i) {
+    lambda_c[i] = sqrt(lambda_c[i] / norm);
+  }
+
+  U.multiply_vector(lambda_c, 2);
+  VT.multiply_vector(lambda_c, 0);
+  R1 = transpose(U, Axes(0, 2, 1));   // envR1 , D_connect, m1
+  R2 = transpose(VT, Axes(1, 0, 2));  // envR2 , D_connect, m2
+
+  als_iterate(Environment, Theta, peps_parameters, R1, R2);
+
   if (peps_parameters.Full_Gauge_Fix) {
     // remove gauge
 
@@ -439,6 +470,45 @@ void Full_update_bond(const tensor &C1, const tensor &C2, const tensor &C3,
 }
 
 // template instantiations
+
+template void prepare_environment(const real_tensor &Environment_in,
+                                  const real_tensor &Theta_in,
+                                  const PEPS_Parameters &peps_parameters,
+                                  real_tensor &Environment_out,
+                                  real_tensor &Theta_out,
+                                  real_tensor &LR1_inv, real_tensor &LR2_inv);
+
+template void prepare_environment(const complex_tensor &Environment_in,
+                                  const complex_tensor &Theta_in,
+                                  const PEPS_Parameters &peps_parameters,
+                                  complex_tensor &Environment_out,
+                                  complex_tensor &Theta_out,
+                                  complex_tensor &LR1_inv,
+                                  complex_tensor &LR2_inv);
+
+template void als_iterate(const real_tensor &Environment,
+                          const real_tensor &Theta,
+                          const PEPS_Parameters &peps_parameters,
+                          real_tensor &R1, real_tensor &R2);
+
+template void als_iterate(const complex_tensor &Environment,
+                          const complex_tensor &Theta,
+                          const PEPS_Parameters &peps_parameters,
+                          complex_tensor &R1, complex_tensor &R2);
+
+template real_tensor Create_Environment_two_sites(
+    const real_tensor &C1, const real_tensor &C2, const real_tensor &C3,
+    const real_tensor &C4, const real_tensor &eT1, const real_tensor &eT2,
+    const real_tensor &eT3, const real_tensor &eT4, const real_tensor &eT5,
+    const real_tensor &eT6, const real_tensor &Q1, const real_tensor &Q2);
+
+template complex_tensor Create_Environment_two_sites(
+    const complex_tensor &C1, const complex_tensor &C2,
+    const complex_tensor &C3, const complex_tensor &C4,
+    const complex_tensor &eT1, const complex_tensor &eT2,
+    const complex_tensor &eT3, const complex_tensor &eT4,
+    const complex_tensor &eT5, const complex_tensor &eT6,
+    const complex_tensor &Q1, const complex_tensor &Q2);
 
 template void Full_update_bond_horizontal(
     const real_tensor &C1, const real_tensor &C2, const real_tensor &C3,
