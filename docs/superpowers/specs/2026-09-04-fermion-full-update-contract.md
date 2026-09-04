@@ -237,14 +237,28 @@ void Full_update_bond_fermion(
 数百ステップ収束させた状態の CTM 環境(`iTPS::update_CTM()` が作るもの)。C++ から直接作るのが
 難しければ、E2E で `tensor_save` したテンソルと `fermion.dat` を読み、
 `build_reduced_density_tensors` → `Calc_CTM_Environment_density` で環境を作ってよい。
-§3.3 の窓選択で 10 個の環境テンソルを取り、`fermion::qr`(設計書 §3.1 の軸)で QA, RA, QB, RB を作る。
+§3.3 の窓選択で 10 個の環境テンソルを取り、`fermion::qr` で QA, RA, QB, RB を作る(bosonic と同じ軸):
+
+| direction | site 1 | site 2 |
+|---|---|---|
+| horizontal | `qr(Tn1, Axes(0,1,3), Axes(2,4), QA, RA)` → QA(l,t,b,a), RA(a,r,s1) | `qr(Tn2, Axes(1,2,3), Axes(0,4), QB, RB)` → QB(t,r,b,β), RB(β,l,s2) |
+| vertical | `qr(Tn1, Axes(0,1,2), Axes(3,4), QA, RA)` → QA(l,t,r,a), RA(a,b,s1) | `qr(Tn2, Axes(0,2,3), Axes(1,4), QB, RB)` → QB(l,r,b,β), RB(β,t,s2) |
 
 パリティ偶なブロック Y(a, β, s1, s2)(台帳 {p_a, p_β, p_s1, p_s2}、p_a / p_β は QR の内部脚台帳)
 について:
 
 1. Y を `fermion::svd(Y, Axes(0,2), Axes(1,3), U, s, VT)`(打ち切りなし)で分け、`U` に s を
    軸 2 で掛けたものを R1(a, s1, m)、`transpose(VT, Axes(1,2,0))` を R2(β, s2, m) として、
-   設計書 §4.5 の式で Tn1(Y), Tn2(Y) を組み立てる。
+   次の式(すべて graded 演算)で Tn1(Y), Tn2(Y) を組み立てる:
+
+   | direction | Tn1(Y) | Tn2(Y) |
+   |---|---|---|
+   | horizontal | `transpose(tensordot(QA, R1, Axes(3), Axes(0)), Axes(0,1,4,2,3))` | `transpose(tensordot(QB, R2, Axes(3), Axes(0)), Axes(4,0,1,2,3))` |
+   | vertical | `transpose(tensordot(QA, R1, Axes(3), Axes(0)), Axes(0,1,2,4,3))` | `transpose(tensordot(QB, R2, Axes(3), Axes(0)), Axes(0,4,1,2,3))` |
+
+   **前提アサーション**: Y = X(下記)のとき、この組み立てで得た pair state が
+   `build_pair_state(Tn1, Tn2, direction)` と(全体スケールを除き、§0 のとおり global index 経由で)
+   一致すること。これが通らなければ組み立て式の写し間違いであり、以降の比較は無意味になる。
 2. 測定経路で ⟨ψ(Y)|ψ(Y)⟩ =
    `contract_reduced_pair_halves_density_CTM(env, build_reduced_pair_halves(Tn1(Y), Tn2(Y), I, direction))`
    (I は `wrap_twosite_gate(恒等)`)と、同じ形で ⟨ψ(Y)|G|ψ(Y)⟩(G は wrap 済みの偶ゲート。
