@@ -304,6 +304,13 @@ typename tensor::value_type contract_reduced_pair_vertical_density_CTM(
   return detail::trace_boundary_pairs(work);
 }
 
+template <class tensor>
+void absorb_reduced_pair_halves(
+    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
+    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
+    const tensor& eT5, const tensor& eT6,
+    const reduced_pair_halves<tensor>& halves, tensor& left, tensor& right);
+
 /*!
  * @brief Absorb horizontal pair halves into their CTM environment without
  *        materializing the rank-6 blob.
@@ -321,28 +328,60 @@ typename tensor::value_type contract_reduced_pair_halves_horizontal_density_CTM(
     const tensor& eT5, const tensor& eT6,
     const reduced_pair_halves<tensor>& halves) {
   ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
-  using mptensor::Axes;
-  const tensor left_lower = mptensor::tensordot(
-      eT5,
-      mptensor::tensordot(C1, mptensor::tensordot(C4, eT6, Axes(1), Axes(0)),
-                          Axes(0), Axes(1)),
-      Axes(1), Axes(1));
-  tensor left =
-      mptensor::tensordot(halves.PA, left_lower, Axes(0, 3), Axes(3, 1));
-  left = mptensor::tensordot(eT1, left, Axes(0, 2), Axes(3, 0));
+  tensor left, right;
+  absorb_reduced_pair_halves(C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6,
+                             halves, left, right);
+  tensor joined = mptensor::tensordot(left, right, mptensor::Axes(1),
+                                      mptensor::Axes(1));
+  joined = mptensor::transpose(joined, mptensor::Axes(0, 2, 1, 3));
+  return detail::trace_boundary_pairs(joined);
+}
 
-  const tensor right_lower = mptensor::tensordot(
-      eT4,
-      mptensor::tensordot(C2, mptensor::tensordot(C3, eT3, Axes(0), Axes(1)),
+template <class tensor>
+void absorb_reduced_pair_halves(
+    const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
+    const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
+    const tensor& eT5, const tensor& eT6,
+    const reduced_pair_halves<tensor>& halves, tensor& left, tensor& right) {
+  using mptensor::Axes;
+  if (halves.direction == reduced_pair_direction::horizontal) {
+    const tensor left_lower = mptensor::tensordot(
+        eT5,
+        mptensor::tensordot(C1, mptensor::tensordot(C4, eT6, Axes(1), Axes(0)),
+                            Axes(0), Axes(1)),
+        Axes(1), Axes(1));
+    left = mptensor::tensordot(halves.PA, left_lower, Axes(0, 3), Axes(3, 1));
+    left = mptensor::tensordot(eT1, left, Axes(0, 2), Axes(3, 0));
+
+    const tensor right_lower = mptensor::tensordot(
+        eT4,
+        mptensor::tensordot(C2, mptensor::tensordot(C3, eT3, Axes(0), Axes(1)),
+                            Axes(1), Axes(1)),
+        Axes(0), Axes(1));
+    right =
+        mptensor::tensordot(halves.PB, right_lower, Axes(2, 3), Axes(3, 1));
+    right = mptensor::tensordot(eT2, right, Axes(1, 2), Axes(3, 1));
+    return;
+  }
+  if (halves.direction != reduced_pair_direction::vertical) {
+    throw std::runtime_error("absorb_reduced_pair_halves: invalid direction");
+  }
+  const tensor top_left = mptensor::tensordot(
+      eT6,
+      mptensor::tensordot(C1, mptensor::tensordot(C2, eT1, Axes(0), Axes(1)),
+                          Axes(1), Axes(1)),
+      Axes(1), Axes(0));
+  left = mptensor::tensordot(halves.PA, top_left, Axes(0, 1), Axes(1, 3));
+  left = mptensor::tensordot(eT2, left, Axes(0, 2), Axes(3, 0));
+
+  const tensor bottom_right = mptensor::tensordot(
+      eT5,
+      mptensor::tensordot(C3, mptensor::tensordot(C4, eT4, Axes(0), Axes(1)),
                           Axes(1), Axes(1)),
       Axes(0), Axes(1));
-  tensor right =
-      mptensor::tensordot(halves.PB, right_lower, Axes(2, 3), Axes(3, 1));
-  right = mptensor::tensordot(eT2, right, Axes(1, 2), Axes(3, 1));
-
-  tensor joined = mptensor::tensordot(left, right, Axes(1), Axes(1));
-  joined = mptensor::transpose(joined, Axes(0, 2, 1, 3));
-  return detail::trace_boundary_pairs(joined);
+  right =
+      mptensor::tensordot(halves.PB, bottom_right, Axes(0, 3), Axes(1, 3));
+  right = mptensor::tensordot(eT3, right, Axes(1, 2), Axes(3, 1));
 }
 
 /*!
@@ -362,26 +401,12 @@ typename tensor::value_type contract_reduced_pair_halves_vertical_density_CTM(
     const tensor& eT5, const tensor& eT6,
     const reduced_pair_halves<tensor>& halves) {
   ::tenes::ScopedTimer scoped_timer("measure/twosite/absorb");
-  using mptensor::Axes;
-  const tensor top_left = mptensor::tensordot(
-      eT6,
-      mptensor::tensordot(C1, mptensor::tensordot(C2, eT1, Axes(0), Axes(1)),
-                          Axes(1), Axes(1)),
-      Axes(1), Axes(0));
-  tensor top = mptensor::tensordot(halves.PA, top_left, Axes(0, 1), Axes(1, 3));
-  top = mptensor::tensordot(eT2, top, Axes(0, 2), Axes(3, 0));
-
-  const tensor bottom_right = mptensor::tensordot(
-      eT5,
-      mptensor::tensordot(C3, mptensor::tensordot(C4, eT4, Axes(0), Axes(1)),
-                          Axes(1), Axes(1)),
-      Axes(0), Axes(1));
-  tensor bot =
-      mptensor::tensordot(halves.PB, bottom_right, Axes(0, 3), Axes(1, 3));
-  bot = mptensor::tensordot(eT3, bot, Axes(1, 2), Axes(3, 1));
-
-  tensor joined = mptensor::tensordot(top, bot, Axes(1), Axes(1));
-  joined = mptensor::transpose(joined, Axes(0, 2, 1, 3));
+  tensor left, right;
+  absorb_reduced_pair_halves(C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6,
+                             halves, left, right);
+  tensor joined = mptensor::tensordot(left, right, mptensor::Axes(1),
+                                      mptensor::Axes(1));
+  joined = mptensor::transpose(joined, mptensor::Axes(0, 2, 1, 3));
   return detail::trace_boundary_pairs(joined);
 }
 

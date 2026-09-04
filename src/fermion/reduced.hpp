@@ -513,6 +513,12 @@ tensor build_reduced_pair_naive(const ftensor<tensor>& TnA,
                              mptensor::Axes(contract_b));
 }
 
+template <class tensor>
+reduced_pair_halves<tensor> build_reduced_pair_halves_from_factors(
+    const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+    const ftensor<tensor>& u, const ftensor<tensor>& vt,
+    reduced_pair_direction direction);
+
 /*!
  * @brief Build the folded halves of a bundled-k two-site operator network.
  *
@@ -547,18 +553,47 @@ reduced_pair_halves<tensor> build_reduced_pair_halves(
     throw std::runtime_error("build_reduced_pair_halves: gate SVD failed");
   }
   u.multiply_vector(s, 2);
+
+  return build_reduced_pair_halves_from_factors(TnA, TnB, u, vt, direction);
+}
+
+/*!
+ * @brief Build folded halves from already-factorized two-site operator legs.
+ *
+ * u carries legs (in_A, out_A, k_A), vt carries (k_B, in_B, out_B). The two
+ * k-channel dimensions are intentionally independent: the open full-update
+ * channel uses nA^2 and nB^2, which need not match. The closed SVD path above
+ * remains the special case nkA == nkB.
+ */
+template <class tensor>
+reduced_pair_halves<tensor> build_reduced_pair_halves_from_factors(
+    const ftensor<tensor>& TnA, const ftensor<tensor>& TnB,
+    const ftensor<tensor>& u, const ftensor<tensor>& vt,
+    reduced_pair_direction direction) {
+  if (TnA.rank() != 5 || TnB.rank() != 5 || u.rank() != 3 || vt.rank() != 3) {
+    throw std::runtime_error(
+        "build_reduced_pair_halves_from_factors expects rank-5 sites and "
+        "rank-3 factors");
+  }
+  if (direction != reduced_pair_direction::horizontal &&
+      direction != reduced_pair_direction::vertical) {
+    throw std::runtime_error(
+        "build_reduced_pair_halves_from_factors: invalid direction");
+  }
+
   const ftensor<tensor> TA6 =
       tensordot(TnA, u, mptensor::Axes(4), mptensor::Axes(0));
   const ftensor<tensor> TB6 =
       tensordot(TnB, vt, mptensor::Axes(4), mptensor::Axes(1));
 
-  const std::size_t nk = s.size();
+  const std::size_t nkA = u.parity[2].size();
+  const std::size_t nkB = vt.parity[0].size();
   const std::size_t bond_axis =
       direction == reduced_pair_direction::horizontal ? 2 : 3;
   const parity_vector& bond_parity = TnA.parity[bond_axis];
   const parity_vector& k_parity = u.parity[2];
-  std::vector<double> crossing_mask(bond_parity.size() * nk, 1.0);
-  for (std::size_t k = 0; k < nk; ++k) {
+  std::vector<double> crossing_mask(bond_parity.size() * nkA, 1.0);
+  for (std::size_t k = 0; k < nkA; ++k) {
     for (std::size_t b = 0; b < bond_parity.size(); ++b) {
       if (bond_parity[b] && k_parity[k]) {
         crossing_mask[b + bond_parity.size() * k] = -1.0;
@@ -571,22 +606,22 @@ reduced_pair_halves<tensor> build_reduced_pair_halves(
   if (direction == reduced_pair_direction::horizontal) {
     TA5 = reshape(
         transpose(TA6, mptensor::Axes(0, 1, 2, 5, 3, 4)),
-        mptensor::Shape(TA6.shape()[0], TA6.shape()[1], TA6.shape()[2] * nk,
+        mptensor::Shape(TA6.shape()[0], TA6.shape()[1], TA6.shape()[2] * nkA,
                         TA6.shape()[3], TA6.shape()[4]));
     TA5.multiply_vector(crossing_mask, 2);
     TB5 = reshape(
         transpose(TB6, mptensor::Axes(0, 4, 1, 2, 3, 5)),
-        mptensor::Shape(TB6.shape()[0] * nk, TB6.shape()[1], TB6.shape()[2],
+        mptensor::Shape(TB6.shape()[0] * nkB, TB6.shape()[1], TB6.shape()[2],
                         TB6.shape()[3], TB6.shape()[5]));
   } else {
     TA5 =
         reshape(transpose(TA6, mptensor::Axes(0, 1, 2, 3, 5, 4)),
                 mptensor::Shape(TA6.shape()[0], TA6.shape()[1], TA6.shape()[2],
-                                TA6.shape()[3] * nk, TA6.shape()[4]));
+                                TA6.shape()[3] * nkA, TA6.shape()[4]));
     TA5.multiply_vector(crossing_mask, 3);
     TB5 = reshape(
         transpose(TB6, mptensor::Axes(0, 1, 4, 2, 3, 5)),
-        mptensor::Shape(TB6.shape()[0], TB6.shape()[1] * nk, TB6.shape()[2],
+        mptensor::Shape(TB6.shape()[0], TB6.shape()[1] * nkB, TB6.shape()[2],
                         TB6.shape()[3], TB6.shape()[5]));
   }
 
