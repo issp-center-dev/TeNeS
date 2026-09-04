@@ -18,14 +18,19 @@
 #include "doctest.h"
 #include "test_workdir.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <iostream>
+#include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "../src/tensor.hpp"
 #include "../src/mpi.hpp"
+#include "../src/fermion/fermion_info.hpp"
 #include "../src/fermion/fops.hpp"
 #include "../src/util/string.hpp"
 #include "../src/arpack_solver.hpp"
@@ -784,4 +789,403 @@ virtual_dim = )" + vdim + R"(
     CHECK(g0 == 4);
     CHECK(g1 == 4);
   }
+}
+
+namespace {
+
+//! Redirect std::cerr into a string for the lifetime of the object.
+//! The fermionic fast-full-update fallback has to announce itself on the
+//! standard error stream (contract 3.5, T6), and a doctest cannot read the
+//! process' stderr, so the stream buffer is swapped instead.
+class cerr_capture {
+ public:
+  cerr_capture() { saved_ = std::cerr.rdbuf(buffer_.rdbuf()); }
+  ~cerr_capture() { std::cerr.rdbuf(saved_); }
+  cerr_capture(cerr_capture const &) = delete;
+  cerr_capture &operator=(cerr_capture const &) = delete;
+  std::string str() const { return buffer_.str(); }
+
+ private:
+  std::ostringstream buffer_;
+  std::streambuf *saved_ = nullptr;
+};
+
+//! (source_site, source_leg) of eight gates that cover the eight bonds of a
+//! 2x2 unit cell exactly once, using every source_leg value.
+//!
+//! src/SquareLattice.cpp maps leg 0 to (x-1, y), leg 1 to (x, y+1), leg 2 to
+//! (x+1, y) and leg 3 to (x, y-1), with site = x + 2 * y. The raster-earlier
+//! site of a bond is its left (horizontal) or upper (vertical) end, so legs 2
+//! and 3 name a bond from the earlier end and legs 0 and 1 from the later
+//! one; the latter are the cases that force the driver to swap the two sites.
+constexpr int kFullUpdateBonds[8][2] = {{0, 2}, {2, 2}, {0, 0}, {2, 0},
+                                        {0, 1}, {2, 1}, {1, 3}, {3, 3}};
+
+std::string fermion_cell_toml() {
+  return R"(
+[tensor]
+L_sub = [2, 2]
+skew = 0
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+)";
+}
+
+}  // namespace
+
+TEST_CASE("fermion mode accepts the full update") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  auto tensor_toml = parse_str(fermion_cell_toml());
+  SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+
+  auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+)");
+  PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+  peps_parameters.phys_parity = gen_phys_parity(tensor_toml.at("tensor"), lattice);
+
+  // Preconditions: the guard this subcase is about has to be reachable at
+  // all. Without these the CHECK_NOTHROW below would also pass for an input
+  // that simply has no full update in it.
+  REQUIRE(peps_parameters.fermion == true);
+  REQUIRE(peps_parameters.num_full_step.size() == 1);
+  REQUIRE(peps_parameters.num_full_step[0] == 1);
+
+  SUBCASE("a positive full-update step count is no longer refused") {
+    INFO("a positive full-update step count is no longer refused");
+    CHECK_NOTHROW(validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}));
+  }
+
+  SUBCASE("a parity-odd full-update gate is still refused") {
+    INFO("a parity-odd full-update gate is still refused");
+    // Lifting the "full update" guard must not take the parity check on the
+    // full-update gates with it. (0, 0, 0, 1) has one odd leg, so with the
+    // physical ledger [0, 1] the gate is parity odd.
+    ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+    op.set_value(mptensor::Index(0, 0, 0, 1), 1.0);
+    EvolutionOperators<ptensor> full_updates{
+        make_twosite_EvolutionOperator<ptensor>(0, 2, 0, op)};
+    CHECK_THROWS_AS(
+        validate_fermion_constraints(
+            peps_parameters, lattice, EvolutionOperators<ptensor>{},
+            full_updates, Operators<ptensor>{}, Operators<ptensor>{},
+            Operators<ptensor>{}, CorrelationParameter{}),
+        tenes::input_error);
+  }
+}
+
+TEST_CASE("fermion mode refuses the mean-field environment with a full update") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+
+  auto tensor_toml = parse_str(fermion_cell_toml());
+  SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+
+  auto make_parameters = [&](bool meanfield) {
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+[parameter.ctm]
+dimension = 4
+)");
+    PEPS_Parameters p = gen_param(param_toml.at("parameter"));
+    p.phys_parity = gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    p.print_level = PrintLevel::none;
+    p.outdir = "output_test_input_fermion_full_meanfield";
+    p.MeanField_Env = meanfield;
+    return p;
+  };
+
+  auto build = [&](PEPS_Parameters const &p) {
+    return iTPS<ptensor>(MPI_COMM_WORLD, p, lattice,
+                         EvolutionOperators<ptensor>{},
+                         EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+                         Operators<ptensor>{}, Operators<ptensor>{},
+                         CorrelationParameter{}, TransferMatrix_Parameters{});
+  };
+
+  // Precondition / control: the very same configuration without the
+  // mean-field environment must be accepted, otherwise the CHECK_THROWS
+  // below would be passing because of the full update rather than because
+  // of meanfield_env.
+  auto plain = make_parameters(false);
+  REQUIRE(plain.num_full_step[0] == 1);
+  REQUIRE(plain.MeanField_Env == false);
+  CHECK_NOTHROW(build(plain));
+
+  auto meanfield = make_parameters(true);
+  REQUIRE(meanfield.MeanField_Env == true);
+  REQUIRE(meanfield.num_full_step[0] == 1);
+  CHECK_THROWS_AS(build(meanfield), tenes::input_error);
+}
+
+TEST_CASE("fermion mode falls back from the fast full update with a warning") {
+  using namespace tenes;
+  using namespace tenes::itps;
+
+  // Precondition: fastfullupdate really is on by default, so the input
+  // below exercises the fallback rather than the plain path.
+  {
+    auto defaults = gen_param(parse_str(R"([parameter])").at("parameter"));
+    REQUIRE(defaults.Full_Use_FastFullUpdate == true);
+  }
+
+  const std::string input_filename =
+      "test_input_fermion_fast_full_update.toml";
+  const std::string outdir = "output_test_input_fermion_fast_full_update";
+
+  // A parity-even hopping gate; the diagonal keeps the state from collapsing
+  // and the off-diagonal block makes the bond genuinely correlated.
+  const std::string gate_elements =
+      "0 0 0 0  1.0 0.0\n"
+      "0 1 0 1  1.0 0.0\n"
+      "1 0 1 0  1.0 0.0\n"
+      "1 1 1 1  1.0 0.0\n"
+      "0 1 1 0  0.1 0.0\n"
+      "1 0 0 1  0.1 0.0";
+
+  {
+    std::ostringstream ofs;
+    ofs << R"(
+[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = ")"
+        << outdir << R"("
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 20
+
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 20
+
+[parameter.random]
+seed = 11
+)" << fermion_cell_toml()
+        << R"(
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = """
+1 1  1.0 0.0
+"""
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = """
+0 1 0
+1 1 0
+2 1 0
+3 1 0
+0 0 1
+1 0 1
+2 0 1
+3 0 1
+"""
+dim = [2, 2]
+elements = """
+0 1 1 0  -1.0 0.0
+1 0 0 1  -1.0 0.0
+"""
+
+[evolution]
+)";
+    for (int leg : {2, 1}) {
+      for (int site = 0; site < 4; ++site) {
+        for (const char *kind : {"simple", "full"}) {
+          ofs << "[[evolution." << kind << "]]\n"
+              << "group = 0\n"
+              << "source_site = " << site << "\n"
+              << "source_leg = " << leg << "\n"
+              << "dimensions = [2, 2, 2, 2]\n"
+              << "elements = \"\"\"\n"
+              << gate_elements << "\n\"\"\"\n";
+        }
+      }
+    }
+    std::ofstream out(input_filename.c_str());
+    out << ofs.str();
+  }
+
+  std::string captured;
+  {
+    cerr_capture capture;
+    CHECK_NOTHROW(
+        tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, PrintLevel::none));
+    captured = capture.str();
+  }
+  INFO("captured stderr: " << captured);
+  CHECK(captured.find("Full_Use_FastFullUpdate") != std::string::npos);
+
+  std::remove(input_filename.c_str());
+  std::error_code ec;
+  std::filesystem::remove_all(outdir, ec);
+}
+
+TEST_CASE("a fermionic full update leaves the parity ledger consistent") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  auto tensor_toml = parse_str(fermion_cell_toml());
+  SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+
+  auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.simple_update]
+tau = 0.01
+num_step = 20
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+fastfullupdate = false
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 20
+[parameter.random]
+seed = 11
+)");
+  PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+  peps_parameters.phys_parity =
+      gen_phys_parity(tensor_toml.at("tensor"), lattice);
+  peps_parameters.print_level = PrintLevel::none;
+  peps_parameters.outdir = "output_test_input_fermion_full_ledger";
+
+  auto gate = [&]() {
+    ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        op.set_value(mptensor::Index(i, j, i, j), 1.0);
+      }
+    }
+    op.set_value(mptensor::Index(0, 1, 1, 0), 0.1);
+    op.set_value(mptensor::Index(1, 0, 0, 1), 0.1);
+    return op;
+  }();
+
+  EvolutionOperators<ptensor> simple_updates;
+  for (int leg : {2, 1}) {
+    for (int site = 0; site < 4; ++site) {
+      simple_updates.push_back(
+          make_twosite_EvolutionOperator<ptensor>(site, leg, 0, gate));
+    }
+  }
+  EvolutionOperators<ptensor> full_updates;
+  for (const auto &bond : kFullUpdateBonds) {
+    full_updates.push_back(
+        make_twosite_EvolutionOperator<ptensor>(bond[0], bond[1], 0, gate));
+  }
+
+  // Preconditions. The bonds must be gated from the raster-later end at
+  // least once (source_leg 0 and 1), because that is the path whose ledger
+  // bookkeeping this test is about; and the eight gates must name eight
+  // different bonds.
+  auto bond_name = [&](int site, int leg) {
+    const int x = site % lattice.LX;
+    const int y = site / lattice.LX;
+    if (leg == 2) return std::make_tuple(0, x, y);
+    if (leg == 0) return std::make_tuple(0, (x - 1 + lattice.LX) % lattice.LX, y);
+    if (leg == 1) return std::make_tuple(1, x, y);
+    return std::make_tuple(1, x, (y - 1 + lattice.LY) % lattice.LY);
+  };
+  std::set<std::tuple<int, int, int>> named;
+  bool has_leg0 = false;
+  bool has_leg1 = false;
+  for (const auto &up : full_updates) {
+    named.insert(bond_name(up.source_site, up.source_leg));
+    has_leg0 = has_leg0 || up.source_leg == 0;
+    has_leg1 = has_leg1 || up.source_leg == 1;
+  }
+  REQUIRE(has_leg0);
+  REQUIRE(has_leg1);
+  REQUIRE(named.size() == 8);
+  REQUIRE(peps_parameters.num_full_step[0] == 1);
+  REQUIRE(peps_parameters.Full_Use_FastFullUpdate == false);
+
+  iTPS<ptensor> state(comm, peps_parameters, lattice, simple_updates,
+                      full_updates, Operators<ptensor>{}, Operators<ptensor>{},
+                      Operators<ptensor>{}, CorrelationParameter{},
+                      TransferMatrix_Parameters{});
+  REQUIRE(iTPSTestAccessor::finfo(state).enabled);
+
+  CHECK_NOTHROW(state.optimize());
+
+  // The full update must actually have moved the state: a no-op would keep
+  // every ledger trivially consistent and make the checks below hollow. The
+  // baseline runs the identical simple update and stops there.
+  {
+    PEPS_Parameters su_only = peps_parameters;
+    su_only.num_full_step.assign(su_only.num_full_step.size(), 0);
+    iTPS<ptensor> baseline(comm, su_only, lattice, simple_updates,
+                           full_updates, Operators<ptensor>{},
+                           Operators<ptensor>{}, Operators<ptensor>{},
+                           CorrelationParameter{},
+                           TransferMatrix_Parameters{});
+    baseline.optimize();
+    const auto &after = iTPSTestAccessor::Tn(state);
+    const auto &before = iTPSTestAccessor::Tn(baseline);
+    REQUIRE(after.size() == before.size());
+    double moved = 0.0;
+    for (std::size_t site = 0; site < after.size(); ++site) {
+      moved = std::max(moved, mptensor::max_abs(after[site] - before[site]));
+    }
+    INFO("largest change of Tn caused by the full update: " << moved);
+    REQUIRE(moved > 1e-8);
+  }
+
+  const auto &fi = iTPSTestAccessor::finfo(state);
+  CHECK_NOTHROW(tenes::fermion::validate_neighbor_consistency(fi, lattice));
+
+  // The per-bond contract (T3-iii) asks for 1e-12 * max_abs on a single
+  // bond update; this runs twenty simple-update steps and a full-update
+  // sweep before looking, so the bound is relaxed by two decades. It is
+  // still far tighter than anything a leaked odd component would satisfy.
+  const auto &tensors = iTPSTestAccessor::Tn(state);
+  REQUIRE(tensors.size() == static_cast<std::size_t>(lattice.N_UNIT));
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    auto ft = tenes::fermion::wrap_Tn(tensors[site], fi, site);
+    const double scale = tenes::fermion::max_abs(ft);
+    REQUIRE(scale > 0.0);
+    CHECK(tenes::fermion::parity_violation(ft) <= 1e-10 * scale);
+  }
+
+  std::error_code ec;
+  std::filesystem::remove_all(peps_parameters.outdir, ec);
 }

@@ -1,0 +1,528 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# T5 of docs/superpowers/specs/2026-09-04-fermion-full-update-contract.md:
+# the fermionic full update has to be physically useful, not merely
+# self-consistent.
+#
+# The model is the free spinless fermion model of the other
+# test/fermion/free_fermion*.py.in tests (t = 1, mu = 0, half filling,
+# L_sub = [2, 2], D = 2, chi = 8, tau = 0.01, seed = 11).  Two runs share
+# the seed and the whole simple-update schedule and differ only in
+# [parameter.full_update] num_step:
+#
+#   run "su": num_step = 0   -> E_SU, the simple-update fixed point
+#   run "fu": num_step = N   -> E_FU, the same state after N full-update
+#                               steps
+#
+# so that the difference between the two energies is the full update and
+# nothing else.  The reference energy is analytic: the free Fermi sea of
+# eps(k) = -2 t (cos kx + cos ky) - mu, evaluated exactly the same way as in
+# free_fermion.py.in and free_fermion_mf.py.in.  No number in this file is
+# taken from a tenes run.
+#
+# The full-update gate list deliberately spans all four source_leg values.
+# The solver's raster convention (src/iTPS/simple_update.cpp) is that the
+# raster-earlier site is the left site of a horizontal bond (source_leg 2)
+# and the upper site of a vertical bond (source_leg 3); source_leg 0 and 1
+# name the same bonds from the other end and force the driver to swap the
+# two sites.  The eight gates below cover the eight bonds of the 2x2 cell
+# exactly once each, using every source_leg, and check_bond_cover() asserts
+# that they really do - if that assertion ever breaks, the swap path stops
+# being exercised and this test quietly loses most of its power.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MU = 0.0
+D = 2
+CHI = 8
+TAU = 0.01
+SEED = 11
+LX = 2
+LY = 2
+N_UNIT = LX * LY
+
+# The mu = 0 simple update of free_fermion.py.in is converged after 1000
+# steps at tau = 0.01; the same schedule is used here so that E_SU is a real
+# fixed point rather than a half-finished trajectory.
+NUM_SIMPLE_STEP = 1000
+NUM_FULL_STEP = 4
+
+# The plain (non fast) full update re-converges the CTM once per bond, so
+# the wall time is dominated by NUM_FULL_STEP * 8 CTM convergences.  Both
+# knobs are therefore pinned small and explicit, as the contract asks.
+CTM_CONVERGENCE_EPSILON = 1.0e-8
+MAX_CTM_ITERATION = 50
+
+# Contract 3.5 (T5).
+ENERGY_NONINCREASE_TOL = 1.0e-8
+
+# Sanity band for the simple-update baseline.  free_fermion.py.in documents
+# that the D = 2 quick mode sits within 20% of the exact energy; anything
+# outside 25% means the baseline run is broken and the comparison below
+# would be meaningless.
+BASELINE_EXACT_RTOL = 0.25
+# Half filling is fixed by particle-hole symmetry at mu = 0.
+DENSITY_TOL = 0.05
+
+# (source_site, source_leg) of the full-update gates.  See check_bond_cover.
+FULL_UPDATE_BONDS = [
+    (0, 2),
+    (2, 2),
+    (0, 0),
+    (2, 0),
+    (0, 1),
+    (2, 1),
+    (1, 3),
+    (3, 3),
+]
+
+
+def exact_free_fermion(t, mu, nk=512):
+    # Same discretisation of the Fermi sea as free_fermion.py.in: the
+    # midpoint rule on a nk x nk grid of the Brillouin zone.
+    k = np.linspace(-np.pi, np.pi, nk, endpoint=False) + np.pi / nk
+    kx, ky = np.meshgrid(k, k)
+    eps = -2.0 * t * (np.cos(kx) + np.cos(ky)) - mu
+    occ = eps < 0.0
+    n = occ.mean()
+    e = (eps * occ).mean()
+    return e, n
+
+
+def relerr(value, reference):
+    return abs(value - reference) / max(1.0, abs(reference))
+
+
+def bond_key(site, leg):
+    # Canonical name of the lattice bond a (source_site, source_leg) pair
+    # refers to, following src/SquareLattice.cpp:
+    #   leg 0 -> (x - 1, y), leg 1 -> (x, y + 1),
+    #   leg 2 -> (x + 1, y), leg 3 -> (x, y - 1),
+    # with site = x + LX * y.  A horizontal bond is named by its left end
+    # and a vertical one by its lower end.
+    x = site % LX
+    y = site // LX
+    if leg == 2:
+        return ("h", x, y)
+    if leg == 0:
+        return ("h", (x - 1) % LX, y)
+    if leg == 1:
+        return ("v", x, y)
+    if leg == 3:
+        return ("v", x, (y - 1) % LY)
+    raise ValueError(f"source_leg must be 0..3, got {leg}")
+
+
+def check_bond_cover(bonds):
+    # Preconditions of the whole test, asserted instead of assumed.
+    failures = []
+    keys = [bond_key(site, leg) for site, leg in bonds]
+    if len(set(keys)) != len(keys):
+        failures.append(f"the full-update gates repeat a bond: {keys}")
+    expected = {("h", x, y) for x in range(LX) for y in range(LY)}
+    expected |= {("v", x, y) for x in range(LX) for y in range(LY)}
+    if set(keys) != expected:
+        failures.append(
+            "the full-update gates do not cover every bond of the unit cell "
+            f"exactly once: {sorted(set(keys))} versus {sorted(expected)}"
+        )
+    legs = {leg for _, leg in bonds}
+    if not legs & {0, 1}:
+        failures.append(
+            "no full-update gate has source_leg 0 or 1, so the driver's "
+            "raster normalisation (the site swap) is never exercised"
+        )
+    if not legs & {1, 3}:
+        failures.append("no full-update gate acts on a vertical bond")
+    if not legs & {0, 2}:
+        failures.append("no full-update gate acts on a horizontal bond")
+    return failures
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = [f"{site} 1 0" for site in range(N_UNIT)]
+    lines += [f"{site} 0 1" for site in range(N_UNIT)]
+    return "\n".join(lines)
+
+
+def simple_evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(N_UNIT):
+            blocks.append(
+                f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+            )
+    return "\n".join(blocks)
+
+
+def full_evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for site, source_leg in FULL_UPDATE_BONDS:
+        blocks.append(
+            f"""[[evolution.full]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+        )
+    return "\n".join(blocks)
+
+
+def input_toml(outdir, num_full_step):
+    h = two_site_hamiltonian(T, MU)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_SIMPLE_STEP}
+
+[parameter.full_update]
+tau = {TAU}
+num_step = {num_full_step}
+fastfullupdate = false
+
+[parameter.ctm]
+dimension = {CHI}
+convergence_epsilon = {CTM_CONVERGENCE_EPSILON}
+iteration_max = {MAX_CTM_ITERATION}
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [{LX}, {LY}]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{simple_evolution_blocks(gate)}
+{full_evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[name.strip()] = float(raw.split()[0])
+    return values
+
+
+def read_time(outdir):
+    # time.dat lines look like "time full update   = 1.234" (note the
+    # irregular spacing before "="), so split on "=" and normalize the name.
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[" ".join(name.split())] = float(raw.split()[0])
+    return values
+
+
+def write_summary(path, rows):
+    with open(path, "w") as f:
+        f.write("# run energy density exact_energy exact_density\n")
+        for row in rows:
+            f.write(
+                "{run} {energy:.17e} {density:.17e} "
+                "{exact_energy:.17e} {exact_density:.17e}\n".format(**row)
+            )
+
+
+def main():
+    output_root = "output_FreeFermionFull"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    failures = check_bond_cover(FULL_UPDATE_BONDS)
+    if failures:
+        for message in failures:
+            print("FreeFermionFull fixture check failed: " + message)
+        return 1
+
+    exact_energy, exact_density = exact_free_fermion(T, MU)
+
+    cases = (("su", 0), ("fu", NUM_FULL_STEP))
+    results = {}
+    texts = {}
+    for label, num_full_step in cases:
+        outdir = join(output_root, label)
+        inputfile = join(output_root, f"input_{label}.toml")
+        text = input_toml(outdir, num_full_step)
+        texts[label] = text
+        with open(inputfile, "w") as f:
+            f.write(text)
+
+        proc = run_tenes(inputfile)
+        if proc.returncode != 0:
+            print(proc.stdout + proc.stderr)
+            print(f"tenes failed for the {label} run: exit {proc.returncode}")
+            return 1
+        results[label] = {
+            "outdir": outdir,
+            "stderr": proc.stderr,
+            "density": read_density(outdir),
+            "times": read_time(outdir),
+        }
+
+    # --- the two inputs must differ only in the full-update step count ----
+    su_lines = texts["su"].splitlines()
+    fu_lines = texts["fu"].splitlines()
+    expected_diff = [
+        ("num_step = 0", f"num_step = {NUM_FULL_STEP}"),
+    ]
+    diff = [
+        (a, b)
+        for a, b in zip(su_lines, fu_lines)
+        if a != b and "output" not in a
+    ]
+    if len(su_lines) != len(fu_lines) or diff != expected_diff:
+        print(
+            "the two inputs must differ only in the full-update step count; "
+            f"they differ in {diff}"
+        )
+        return 1
+
+    failures = []
+
+    su_times = results["su"]["times"]
+    fu_times = results["fu"]["times"]
+    if su_times.get("time full update", -1.0) != 0.0:
+        failures.append(
+            "the baseline run reports a nonzero 'time full update' "
+            f"({su_times.get('time full update')}); it was supposed to run "
+            "the simple update only"
+        )
+    if not fu_times.get("time full update", 0.0) > 0.0:
+        failures.append(
+            "the full-update run reports 'time full update' = "
+            f"{fu_times.get('time full update')}; the full update never ran, "
+            "so this test compares a state with itself"
+        )
+
+    for label in ("su", "fu"):
+        if "Full_Use_FastFullUpdate" in results[label]["stderr"]:
+            failures.append(
+                f"{label}: tenes warned about Full_Use_FastFullUpdate even "
+                "though the input sets fastfullupdate = false"
+            )
+
+    for label in ("su", "fu"):
+        density = results[label]["density"]
+        for name in ("Energy", "n"):
+            if name not in density:
+                failures.append(f"{label}: density.dat has no {name} row")
+        if os.path.exists(join(results[label]["outdir"], "correlation_length.dat")):
+            failures.append(f"{label}: correlation_length.dat was written")
+
+    if failures:
+        for message in failures:
+            print("FreeFermionFull failed: " + message)
+        return 1
+
+    energy_su = results["su"]["density"]["Energy"]
+    energy_fu = results["fu"]["density"]["Energy"]
+    density_su = results["su"]["density"]["n"]
+    density_fu = results["fu"]["density"]["n"]
+
+    rows = [
+        {
+            "run": "su",
+            "energy": energy_su,
+            "density": density_su,
+            "exact_energy": exact_energy,
+            "exact_density": exact_density,
+        },
+        {
+            "run": "fu",
+            "energy": energy_fu,
+            "density": density_fu,
+            "exact_energy": exact_energy,
+            "exact_density": exact_density,
+        },
+    ]
+    summary = join(output_root, "free_fermion_full.dat")
+    write_summary(summary, rows)
+    print(f"result file: {summary}")
+    print(
+        "FreeFermionFull E_SU={:.17e} E_FU={:.17e} E_exact={:.17e} "
+        "improvement={:.6e}".format(
+            energy_su, energy_fu, exact_energy, energy_su - energy_fu
+        )
+    )
+    print(
+        "FreeFermionFull n_SU={:.12e} n_FU={:.12e} n_exact={:.12e}".format(
+            density_su, density_fu, exact_density
+        )
+    )
+
+    # --- the baseline has to be a real free-fermion state -----------------
+    baseline_relerr = relerr(energy_su, exact_energy)
+    if not baseline_relerr < BASELINE_EXACT_RTOL:
+        failures.append(
+            f"the simple-update baseline energy {energy_su} is {baseline_relerr:.3e} "
+            f"away from the exact {exact_energy} (threshold "
+            f"{BASELINE_EXACT_RTOL:g}); the baseline run is broken"
+        )
+    for label, density in (("su", density_su), ("fu", density_fu)):
+        if not abs(density - exact_density) < DENSITY_TOL:
+            failures.append(
+                f"{label}: density {density} is not at half filling "
+                f"({exact_density} +- {DENSITY_TOL:g})"
+            )
+    # Both states must sit above the exact ground-state energy, otherwise
+    # "closer to exact" would be comparing across it.
+    for label, energy in (("su", energy_su), ("fu", energy_fu)):
+        if not energy > exact_energy:
+            failures.append(
+                f"{label}: energy {energy} is below the exact "
+                f"{exact_energy}; a D = {D} state cannot be, so either the "
+                "measurement or the exact reference is wrong"
+            )
+
+    # --- the contract's two requirements ----------------------------------
+    if not energy_fu <= energy_su + ENERGY_NONINCREASE_TOL:
+        failures.append(
+            f"the full update raised the energy: E_FU = {energy_fu} > "
+            f"E_SU = {energy_su} + {ENERGY_NONINCREASE_TOL:g}"
+        )
+    if not abs(energy_fu - exact_energy) < abs(energy_su - exact_energy):
+        failures.append(
+            f"the full update did not move the energy towards the exact "
+            f"value: |E_FU - E_exact| = {abs(energy_fu - exact_energy)} is "
+            f"not below |E_SU - E_exact| = {abs(energy_su - exact_energy)}"
+        )
+
+    if failures:
+        for message in failures:
+            print("FreeFermionFull failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

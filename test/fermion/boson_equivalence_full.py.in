@@ -1,0 +1,604 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# T4 of docs/superpowers/specs/2026-09-04-fermion-full-update-contract.md:
+# the fermionic full update must reduce to the bosonic one when the grading
+# is trivial.
+#
+# The model is the antiferromagnetic Heisenberg model of
+# test/data/AntiferroHeisenberg_real.toml (same tau, same number of steps,
+# same seed, same CHI, same operators), rebuilt here in python so that the
+# bosonic and the fermionic input differ in exactly two lines:
+#
+#   [parameter.general]  fermion = true
+#   [[tensor.unitcell]]  parity  = [0, 0]
+#
+# Everything else - the Hamiltonian, the observables, the Trotter gates - is
+# generated once and pasted into both files, and the test asserts that the
+# two files really are identical apart from those two lines.
+#
+# Deviations from the literal wording of the contract, and why (see the
+# report in work/fermion/full-update-design/):
+#
+# * fastfullupdate lives in [parameter.full_update], not in [parameter.ctm].
+# * The [correlation] section is dropped (r_max > 0 is refused in fermion
+#   mode), and so are the two [[observable.multisite]] blocks and the
+#   ops = [...] form of the two-site observables, which fermion mode also
+#   refuses. SzSz / SxSx / 2SzSz are written out as explicit elements.
+# * noise = 0.0.  This one is load bearing.  The virtual-bond ledgers are
+#   seeded even-first (src/iTPS/tensors.cpp), so at D = 2 they start as
+#   [even, odd] whatever the physical parity is, and the fermionic
+#   initializer zeroes every Tn entry whose total parity is odd.  With
+#   noise > 0 that mask deletes half of the random entries, the two runs
+#   start from different states, and "bosonic equivalence" is not even
+#   defined.  With noise = 0 the only nonzero entries sit at the virtual
+#   index (0, 0, 0, 0), which is even under any ledger, so the two runs
+#   start from bit-identical tensors; the graded svd_trunc then relabels
+#   every bond all-even and the whole trajectory stays in the sector where
+#   the graded contraction is the plain one.  check_all_even_ledger() below
+#   asserts that this really happened - without it the comparison could pass
+#   for the wrong reason (or fail without saying why).
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+TAU = 0.01
+NUM_SIMPLE_STEP = 100
+NUM_FULL_STEP = 1
+CHI = 5
+D = 2
+SEED = 11
+
+# Contract 3.5 (T4): relative error max_abs(diff) / max(1, max_abs(ref)),
+# tolerance 1e-6, which leaves room for the difference between the folded
+# (fermionic) CTM and the plain one.
+TOL = 1.0e-6
+
+# The two runs must land on an entangled state, otherwise the comparison
+# would only be testing that two product states agree.  The best product
+# state of the square-lattice Heisenberg model has energy -0.5 per site
+# (two bonds per site, -0.25 each), so an energy safely below that means the
+# simple update did build correlations.  test/data/output_*/density.dat of
+# the shipped AntiferroHeisenberg_real run (same parameters, noise = 0.01)
+# reads -0.5437.
+PRODUCT_STATE_ENERGY = -0.5
+ENERGY_MARGIN = 5.0e-3
+
+
+def spin_matrices():
+    sz = np.array([[0.5, 0.0], [0.0, -0.5]], dtype=complex)
+    sx = np.array([[0.0, 0.5], [0.5, 0.0]], dtype=complex)
+    sy = np.array([[0.0, -0.5j], [0.5j, 0.0]], dtype=complex)
+    return sz, sx, sy
+
+
+def as_real(matrix, what):
+    # Everything this test writes has to be exactly real: the input sets
+    # is_real = true, and tenes refuses a complex operator there.
+    if np.max(np.abs(matrix.imag)) > 0.0:
+        raise AssertionError(f"{what} is not real: {matrix}")
+    return np.array(matrix.real, dtype=float)
+
+
+def twosite_matrix(op1, op2, what="two-site operator"):
+    # An [[observable.twosite]] / [[evolution.*]] element line reads
+    #   in1 in2 out1 out2  re im
+    # and the shipped AntiferroHeisenberg_real.toml fixes the convention:
+    # the value is op1[in1, out1] * op2[in2, out2].  (Checked against its
+    # SySy block, whose signs only come out right in this convention.)
+    # The returned matrix is indexed by the flat pair (in1 * 2 + in2,
+    # out1 * 2 + out2), which is the layout numpy needs for the matrix
+    # exponential.
+    return as_real(np.einsum("ac,bd->abcd", op1, op2).reshape(4, 4), what)
+
+
+def bond_hamiltonian():
+    sz, sx, sy = spin_matrices()
+    return (
+        twosite_matrix(sz, sz, "SzSz")
+        + twosite_matrix(sx, sx, "SxSx")
+        + twosite_matrix(sy, sy, "SySy")
+    )
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def elements_block(matrix, tol=1.0e-14):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = float(matrix[in_flat, out_flat])
+                    if abs(value) > tol:
+                        lines.append(
+                            f"{in1} {in2} {out1} {out2}  {value:.17e} 0.0"
+                        )
+    return "\n".join(lines)
+
+
+def onesite_elements_block(matrix, tol=1.0e-14):
+    lines = []
+    for i in range(2):
+        for j in range(2):
+            value = float(matrix[i, j])
+            if abs(value) > tol:
+                lines.append(f"{i} {j}  {value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    # The bond list of AntiferroHeisenberg_real.toml: every site as the
+    # source of one horizontal and one vertical nearest-neighbour bond.
+    lines = [f"{site} 1 0" for site in range(4)]
+    lines += [f"{site} 0 1" for site in range(4)]
+    return "\n".join(lines)
+
+
+def evolution_blocks(kind, gate):
+    elems = elements_block(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(
+                f"""[[evolution.{kind}]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+            )
+    return "\n".join(blocks)
+
+
+# The shipped test/data/AntiferroHeisenberg_real.toml spells out the same
+# model; these are its [[evolution.simple]] elements. They are not reference
+# values for anything the solver computes - they only prove that the
+# generator above rebuilds the shipped model instead of some other one.
+SHIPPED_GATE_ELEMENTS = {
+    (0, 0, 0, 0): 0.9975031223974601,
+    (1, 0, 1, 0): 1.0025156589209967,
+    (0, 1, 1, 0): -0.005012536523536871,
+    (1, 0, 0, 1): -0.005012536523536871,
+    (0, 1, 0, 1): 1.0025156589209967,
+    (1, 1, 1, 1): 0.9975031223974601,
+}
+
+
+def check_generator_matches_shipped_model(gate):
+    failures = []
+    for (in1, in2, out1, out2), expected in SHIPPED_GATE_ELEMENTS.items():
+        value = gate[in1 * 2 + in2, out1 * 2 + out2]
+        if not np.isclose(value, expected, rtol=1.0e-12, atol=1.0e-14):
+            failures.append(
+                f"the generated Trotter gate element "
+                f"({in1} {in2} {out1} {out2}) is {value!r}, but "
+                f"AntiferroHeisenberg_real.toml has {expected!r}"
+            )
+    nonzero = np.count_nonzero(np.abs(gate) > 1.0e-14)
+    if nonzero != len(SHIPPED_GATE_ELEMENTS):
+        failures.append(
+            f"the generated Trotter gate has {nonzero} nonzero elements, "
+            f"but AntiferroHeisenberg_real.toml has "
+            f"{len(SHIPPED_GATE_ELEMENTS)}"
+        )
+    return failures
+
+
+def input_toml(outdir, savedir, fermion):
+    sz_c, sx_c, sy = spin_matrices()
+    sz = as_real(sz_c, "Sz")
+    sx = as_real(sx_c, "Sx")
+    h = bond_hamiltonian()
+    gate = imaginary_time_gate(h, TAU)
+
+    fermion_line = "fermion = true\n" if fermion else ""
+    parity_line = "parity = [0, 0]\n" if fermion else ""
+
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+{fermion_line}output = "{outdir}"
+tensor_save = "{savedir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_SIMPLE_STEP}
+
+[parameter.full_update]
+tau = {TAU}
+num_step = {NUM_FULL_STEP}
+fastfullupdate = false
+
+[parameter.ctm]
+dimension = {CHI}
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+{parity_line}initial_state = [0.0]
+noise = 0.0
+
+[observable]
+[[observable.onesite]]
+name = "Sz"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{onesite_elements_block(sz)}
+\"\"\"
+[[observable.onesite]]
+name = "Sx"
+group = 1
+sites = []
+dim = 2
+elements = \"\"\"
+{onesite_elements_block(sx)}
+\"\"\"
+[[observable.onesite]]
+name = "2Sz"
+group = 2
+sites = []
+dim = 2
+elements = \"\"\"
+{onesite_elements_block(sz)}
+\"\"\"
+coeff = 2.0
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{elements_block(h)}
+\"\"\"
+[[observable.twosite]]
+name = "SzSz"
+group = 1
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{elements_block(twosite_matrix(sz, sz))}
+\"\"\"
+[[observable.twosite]]
+name = "SxSx"
+group = 2
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{elements_block(twosite_matrix(sx, sx))}
+\"\"\"
+[[observable.twosite]]
+name = "SySy"
+group = 3
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{elements_block(twosite_matrix(sy, sy))}
+\"\"\"
+[[observable.twosite]]
+name = "2SzSz"
+group = 4
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{elements_block(twosite_matrix(sz, sz))}
+\"\"\"
+coeff = 2.0
+
+[evolution]
+{evolution_blocks("simple", gate)}
+{evolution_blocks("full", gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    order = []
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            name = name.strip()
+            values[name] = complex(float(words[0]), float(words[1]))
+            order.append(name)
+    return values, order
+
+
+def read_table(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_time(outdir):
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[" ".join(name.split())] = float(raw.split()[0])
+    return values
+
+
+def read_parity_rows(path):
+    # fermion.dat uses the "value # comment" style of params.dat; see
+    # test/fermion/free_fermion_saveload.py.in for the full format check.
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            rows.append(line.split())
+    return rows
+
+
+def check_all_even_ledger(path, n_unit):
+    # Precondition of the whole comparison: the fermionic run has to live in
+    # the sector where every leg is even, because that is the only sector in
+    # which the graded contraction and the plain one are the same object.
+    if not os.path.exists(path):
+        return [f"{path} was not written; cannot check the parity ledger"]
+    rows = read_parity_rows(path)
+    header_lines = 4  # format version, N_UNIT, L_sub, skew
+    parity_rows = rows[header_lines:]
+    if len(parity_rows) != 5 * n_unit:
+        return [
+            f"{path} has {len(parity_rows)} parity rows, expected {5 * n_unit}"
+        ]
+    failures = []
+    for site in range(n_unit):
+        block = parity_rows[5 * site : 5 * (site + 1)]
+        names = ["physical leg"] + [f"virtual leg {leg}" for leg in range(4)]
+        for name, row in zip(names, block):
+            if any(word != "0" for word in row):
+                failures.append(
+                    f"{path}: the {name} of Tn[{site}] is {' '.join(row)}, "
+                    "expected an all-even ledger (0 ...); the fermionic run "
+                    "left the trivially graded sector, so it is no longer "
+                    "comparable with the bosonic one"
+                )
+    return failures
+
+
+def relerr(value, reference):
+    return abs(value - reference) / max(1.0, abs(reference))
+
+
+def compare_density(boson, fermion):
+    failures = []
+    bvalues, border = boson
+    fvalues, forder = fermion
+    if border != forder:
+        failures.append(
+            f"density.dat lists different observables: {border} vs {forder}"
+        )
+        return failures
+    for name in border:
+        err = relerr(fvalues[name], bvalues[name])
+        if not err <= TOL:
+            failures.append(
+                f"density.dat: {name} differs by {err:.6e} "
+                f"(boson {bvalues[name]}, fermion {fvalues[name]})"
+            )
+    return failures
+
+
+def compare_table(name, boson_rows, fermion_rows):
+    failures = []
+    if len(boson_rows) != len(fermion_rows):
+        return [
+            f"{name}: {len(boson_rows)} rows in the bosonic run versus "
+            f"{len(fermion_rows)} in the fermionic one"
+        ]
+    if not boson_rows:
+        return [f"{name}: no data rows; the comparison would be empty"]
+    for index, (brow, frow) in enumerate(zip(boson_rows, fermion_rows)):
+        if len(brow) != len(frow):
+            failures.append(f"{name}: row {index} has a different width")
+            continue
+        for column, (bvalue, fvalue) in enumerate(zip(brow, frow)):
+            err = relerr(fvalue, bvalue)
+            if not err <= TOL:
+                failures.append(
+                    f"{name}: row {index} column {column} differs by "
+                    f"{err:.6e} (boson {bvalue}, fermion {fvalue})"
+                )
+    return failures
+
+
+def diff_lines(a, b):
+    alines = a.splitlines()
+    blines = b.splitlines()
+    only_a = [line for line in alines if line not in blines]
+    only_b = [line for line in blines if line not in alines]
+    return only_a, only_b
+
+
+def main():
+    output_root = "output_BosonEquivalenceFull"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    generator_failures = check_generator_matches_shipped_model(
+        imaginary_time_gate(bond_hamiltonian(), TAU)
+    )
+    if generator_failures:
+        for message in generator_failures:
+            print("BosonEquivalenceFull fixture check failed: " + message)
+        return 1
+
+    runs = {}
+    for label, fermion in (("boson", False), ("fermion", True)):
+        outdir = join(output_root, label)
+        savedir = join(output_root, f"{label}_tensors")
+        inputfile = join(output_root, f"input_{label}.toml")
+        text = input_toml(outdir, savedir, fermion)
+        with open(inputfile, "w") as f:
+            f.write(text)
+        runs[label] = {
+            "outdir": outdir,
+            "savedir": savedir,
+            "inputfile": inputfile,
+            "text": text,
+        }
+
+    # --- the two inputs must differ only in the fermion switch -------------
+    # Without this the test could silently compare two unrelated models.
+    boson_only, fermion_only = diff_lines(
+        runs["boson"]["text"].replace('"' + runs["boson"]["outdir"] + '"', "OUT")
+        .replace('"' + runs["boson"]["savedir"] + '"', "SAVE"),
+        runs["fermion"]["text"]
+        .replace('"' + runs["fermion"]["outdir"] + '"', "OUT")
+        .replace('"' + runs["fermion"]["savedir"] + '"', "SAVE"),
+    )
+    if boson_only:
+        print("the bosonic input has lines the fermionic one lacks:")
+        for line in boson_only:
+            print("  " + line)
+        return 1
+    if sorted(fermion_only) != ["fermion = true", "parity = [0, 0]"]:
+        print(
+            "the fermionic input must add exactly 'fermion = true' and "
+            f"'parity = [0, 0]'; it adds {fermion_only}"
+        )
+        return 1
+
+    for label in ("boson", "fermion"):
+        proc = run_tenes(runs[label]["inputfile"])
+        combined = proc.stdout + proc.stderr
+        if proc.returncode != 0:
+            print(combined)
+            print(f"tenes failed for the {label} run: exit {proc.returncode}")
+            return 1
+        runs[label]["stderr"] = proc.stderr
+
+    failures = []
+
+    # --- preconditions ----------------------------------------------------
+    for label in ("boson", "fermion"):
+        times = read_time(runs[label]["outdir"])
+        if "time full update" not in times:
+            failures.append(f"{label}: time.dat has no 'time full update' row")
+        elif not times["time full update"] > 0.0:
+            failures.append(
+                f"{label}: the full update never ran "
+                f"(time full update = {times['time full update']})"
+            )
+
+    failures += check_all_even_ledger(
+        join(runs["fermion"]["savedir"], "fermion.dat"), 4
+    )
+
+    # We asked for the plain (non fast) full update, so neither run may fall
+    # back to the fast one.
+    for label in ("boson", "fermion"):
+        if "Full_Use_FastFullUpdate" in runs[label]["stderr"]:
+            failures.append(
+                f"{label}: tenes warned about Full_Use_FastFullUpdate even "
+                "though the input sets fastfullupdate = false"
+            )
+
+    boson_density = read_density(runs["boson"]["outdir"])
+    fermion_density = read_density(runs["fermion"]["outdir"])
+    boson_energy = boson_density[0]["Energy"].real
+    fermion_energy = fermion_density[0]["Energy"].real
+    print(
+        f"BosonEquivalenceFull energy boson={boson_energy:.17e} "
+        f"fermion={fermion_energy:.17e} "
+        f"relerr={relerr(fermion_energy, boson_energy):.6e}"
+    )
+    for label, energy in (("boson", boson_energy), ("fermion", fermion_energy)):
+        if not energy < PRODUCT_STATE_ENERGY - ENERGY_MARGIN:
+            failures.append(
+                f"{label}: energy {energy} is not below the best product "
+                f"state ({PRODUCT_STATE_ENERGY}); the state is not entangled "
+                "and the comparison has no content"
+            )
+
+    # --- the comparison itself -------------------------------------------
+    failures += compare_density(boson_density, fermion_density)
+    for filename in ("onesite_obs.dat", "twosite_obs.dat"):
+        failures += compare_table(
+            filename,
+            read_table(join(runs["boson"]["outdir"], filename)),
+            read_table(join(runs["fermion"]["outdir"], filename)),
+        )
+
+    if failures:
+        for message in failures:
+            print("BosonEquivalenceFull failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
