@@ -34,6 +34,7 @@ int omp_get_max_threads() { return 1; }
 #include "../tensor.hpp"
 
 #include "../operator.hpp"
+#include "../fermion/reduced_measure.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 #include "../util/file.hpp"
@@ -445,8 +446,20 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 template <class ptensor>
 void iTPS<ptensor>::update_CTM() {
   Timer<> timer;
-  core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                             peps_parameters, lattice);
+  if (finfo.enabled) {
+    // Bare Tn: the kernel writes sqrt-Schmidt weights into both ends of every
+    // bond, so the state is the direct contraction of Tn (same convention the
+    // bosonic CTM relies on). Dressing with the full lambda here would
+    // double-count the environment weights the CTM itself provides (that is
+    // the MeanField-path convention, not the CTM one).
+    const std::vector<ptensor> reduced_Tn =
+        tenes::fermion::build_reduced_density_tensors(Tn, finfo);
+    core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
+                                       reduced_Tn, peps_parameters, lattice);
+  } else {
+    core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                               peps_parameters, lattice);
+  }
   time_environment += timer.elapsed();
 }
 

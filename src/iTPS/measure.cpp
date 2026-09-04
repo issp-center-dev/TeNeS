@@ -73,19 +73,7 @@ void iTPS<ptensor>::measure(std::optional<double> time,
     std::cout << "  Start updating environment" << std::endl;
   }
 
-  if (!peps_parameters.MeanField_Env && finfo.enabled) {
-    Timer<> timer;
-    // Bare Tn: the kernel writes sqrt-Schmidt weights into both ends of every
-    // bond, so the state is the direct contraction of Tn (same convention the
-    // bosonic CTM relies on). Dressing with the full lambda here would
-    // double-count the environment weights the CTM itself provides (that is
-    // the MeanField-path convention, not the CTM one).
-    const std::vector<ptensor> reduced_Tn =
-        tenes::fermion::build_reduced_density_tensors(Tn, finfo);
-    core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
-                                       reduced_Tn, peps_parameters, lattice);
-    time_environment += timer.elapsed();
-  } else if (!peps_parameters.MeanField_Env) {
+  if (!peps_parameters.MeanField_Env) {
     update_CTM();
   }
 
