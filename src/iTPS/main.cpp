@@ -16,6 +16,7 @@
 
 #include "main.hpp"
 
+#include <algorithm>
 #include <complex>  // for complex
 #include <cstdlib>  // for abs, size_t
 
@@ -246,6 +247,18 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   PEPS_Parameters peps_parameters =
       (toml_param != nullptr ? gen_param(*toml_param) : PEPS_Parameters());
   peps_parameters.print_level = print_level;
+  if (peps_parameters.fermion && peps_parameters.Full_Use_FastFullUpdate &&
+      std::any_of(peps_parameters.num_full_step.begin(),
+                  peps_parameters.num_full_step.end(),
+                  [](int n) { return n > 0; })) {
+    if (mpirank == 0) {
+      std::cerr << "WARNING: fermion mode disables Full_Use_FastFullUpdate "
+                   "because the fast update reuses bare-Tn CTM moves that are "
+                   "not fermion-aware in this version"
+                << std::endl;
+    }
+    peps_parameters.Full_Use_FastFullUpdate = false;
+  }
   peps_parameters.Bcast(comm);
 
   const toml::value *toml_lattice = section("tensor");

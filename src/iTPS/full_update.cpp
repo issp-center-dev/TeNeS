@@ -20,7 +20,9 @@
 #include "../timer.hpp"
 
 #include "core/full_update.hpp"
+#include "core/full_update_fermion.hpp"
 #include "core/ctm.hpp"
+#include "../fermion/fops.hpp"
 #include "../tensor.hpp"
 
 namespace tenes::itps {
@@ -29,6 +31,10 @@ template <class tensor>
 void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
+    if (finfo.enabled) {
+      apply_onesite_gate_fermion(up);
+      return;
+    }
     Tn[source] =
         tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
   } else {
@@ -36,7 +42,44 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
     const int source = up.source_site;
     const int source_leg = up.source_leg;
     const int target = lattice.neighbor(source, source_leg);
-    // const int target_leg = (source_leg + 2) % 4;
+    const int target_leg = (source_leg + 2) % 4;
+
+    if (finfo.enabled) {
+      int s1 = source;
+      int s2 = target;
+      int s1_leg = source_leg;
+      int s2_leg = target_leg;
+      auto fop = tenes::fermion::wrap_twosite_gate(up.op, finfo.phys[source],
+                                                   finfo.phys[target]);
+      if (source_leg == 0 || source_leg == 1) {
+        std::swap(s1, s2);
+        std::swap(s1_leg, s2_leg);
+        fop = tenes::fermion::transpose(fop, mptensor::Axes(1, 0, 3, 2));
+      }
+      auto fTn1 = tenes::fermion::wrap_Tn(Tn[s1], finfo, s1);
+      auto fTn2 = tenes::fermion::wrap_Tn(Tn[s2], finfo, s2);
+      tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
+      if (s1_leg == 2) {
+        core::Full_update_bond_fermion(
+            C1[s1], C2[s2], C3[s2], C4[s1], eTt[s1], eTt[s2], eTr[s2],
+            eTb[s2], eTb[s1], eTl[s1], fTn1, fTn2, fop,
+            tenes::fermion::reduced_pair_direction::horizontal,
+            peps_parameters, fTn1_work, fTn2_work);
+      } else {
+        core::Full_update_bond_fermion(
+            C1[s1], C2[s1], C3[s2], C4[s2], eTt[s1], eTr[s1], eTr[s2],
+            eTb[s2], eTl[s2], eTl[s1], fTn1, fTn2, fop,
+            tenes::fermion::reduced_pair_direction::vertical,
+            peps_parameters, fTn1_work, fTn2_work);
+      }
+      finfo.virt[s1][s1_leg] = fTn1_work.parity[s1_leg];
+      finfo.virt[s2][s2_leg] = fTn2_work.parity[s2_leg];
+      tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
+      tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
+      tenes::fermion::validate_neighbor_consistency(finfo, lattice);
+      update_CTM();
+      return;
+    }
 
     if (source_leg == 0) {
       /*

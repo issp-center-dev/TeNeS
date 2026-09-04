@@ -554,10 +554,6 @@ void throw_fermion_guard(std::string const &reason) {
                            "; disable fermion mode or remove this setting");
 }
 
-bool has_positive_steps(std::vector<int> const &steps) {
-  return std::any_of(steps.begin(), steps.end(), [](int n) { return n > 0; });
-}
-
 int count_index_odd(std::vector<std::vector<bool>> const &parity,
                     mptensor::Index const &idx) {
   int n = 0;
@@ -637,9 +633,6 @@ void validate_fermion_constraints(
   }
   if (peps_parameters.calcmode != PEPS_Parameters::ground_state) {
     throw_fermion_guard("non-ground-state mode");
-  }
-  if (has_positive_steps(peps_parameters.num_full_step)) {
-    throw_fermion_guard("full update");
   }
   if (peps_parameters.Simple_Gauge_Fix) {
     throw_fermion_guard("Simple_Gauge_Fix=true");

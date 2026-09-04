@@ -133,6 +133,20 @@ add_test(NAME FreeFermionMF
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_mf.py)
 set_tests_properties(FreeFermionMF PROPERTIES TIMEOUT 1800)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/boson_equivalence_full.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_full.py @ONLY)
+add_test(NAME BosonEquivalenceFull
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_full.py)
+set_tests_properties(BosonEquivalenceFull PROPERTIES TIMEOUT 900)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_full.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_full.py @ONLY)
+add_test(NAME FreeFermionFull
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_full.py)
+set_tests_properties(FreeFermionFull PROPERTIES TIMEOUT 1800)
+
 # End-to-end test of tensor_save / tensor_load in fermion mode: the parity
 # ledger written next to the tensors, the reload round trip, a parameter scan
 # seeded from a checkpoint, and the two checkpoints that must be refused.

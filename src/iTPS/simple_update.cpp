@@ -62,16 +62,23 @@ void log_fermion_sector_dimensions(const tenes::fermion::FermionInfo& finfo,
 }  // namespace
 
 template <class tensor>
+void iTPS<tensor>::apply_onesite_gate_fermion(
+    EvolutionOperator<tensor> const& up) {
+  const int source = up.source_site;
+  auto fTn = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
+  tenes::fermion::ftensor<tensor> fop{
+      up.op, {finfo.phys[source], finfo.phys[source]}};
+  auto updated = tenes::fermion::tensordot(fTn, fop, mptensor::Axes(4),
+                                           mptensor::Axes(0));
+  tenes::fermion::unwrap_Tn(updated, Tn[source], finfo, source);
+}
+
+template <class tensor>
 void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     if (finfo.enabled) {
-      auto fTn = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
-      tenes::fermion::ftensor<tensor> fop{
-          up.op, {finfo.phys[source], finfo.phys[source]}};
-      auto updated = tenes::fermion::tensordot(fTn, fop, mptensor::Axes(4),
-                                               mptensor::Axes(0));
-      tenes::fermion::unwrap_Tn(updated, Tn[source], finfo, source);
+      apply_onesite_gate_fermion(up);
       return;
     }
     Tn[source] =

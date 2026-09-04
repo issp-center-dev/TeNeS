@@ -318,6 +318,8 @@ class iTPS {
  private:
   //! Reject measurement requests unsupported by the fermionic CTM path.
   void validate_fermion_ctm_measurement() const;
+  //! Apply a one-site gate through the fermionic wrapper.
+  void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);
 
   //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {
