@@ -135,7 +135,8 @@ trace 正規化は本設計の外)。
 
 fermion CTM 経路(`finfo.enabled && !MeanField_Env`)では、各窓の norm を診断する前に
 `norm_i / (norm_i/|norm_i|)` = |norm_i| に置き換えてから既存の警告条件(`min Re ≤ 0`、
-`max |Im| > 1e-6`)を評価する。ただし norm が非有限またはゼロのときは既存の警告を出す。
+`max |Im| > 1e-6`)を評価する。norm が非有限またはゼロのときは、両方の警告(負・非実)を出す
+(実装は `norm_real_min = −∞`、`norm_imag_abs_max = +∞` に落として既存の条件に流す。fermion 経路限定)。
 **観測量の値の計算(⟨O⟩/⟨1⟩ の除算)は変えない**。bosonic / finite-T / MF の診断経路は触らない。
 対象: `onesite_obs.cpp` の measure_onesite(111-162 行付近)、`twosite_obs.cpp` の
 measure_twosite(373-397 行付近)。multisite / correlation / transfer-matrix は fermion mode で
@@ -158,6 +159,9 @@ measure_twosite(373-397 行付近)。multisite / correlation / transfer-matrix �
   触らない。ビット同一は要求しない。
 - 位相 ≠ 1 のケース(複素、D≥3)は CTM の反復回数が減り(判定が効く)、FU が動くようになる。
 - `onesite_density_matrix.dat` の fermion 出力は trace が実正になる(bosonic と同じ見た目)。
+  一方 `onesite_obs.dat` / `twosite_obs.dat` の `-1: norm` 行(生の窓ノルム)は位相付きのまま出力する。
+  観測量は ⟨O⟩/⟨1⟩ で正規化済みなので値には影響しない。生ノルムの位相を落とすかは本設計の外
+  (レビュアーの指摘。bosonic の生出力規約と揃えるなら別途)。
 - 複素 fermion の測定で「Norm is negative / not real」の偽警告が出なくなる。
 - CTM の環境テンソル(C, eT)そのものの位相は不定のまま。将来、環境を直接消費する新しい経路
   (multisite の fermion 対応など)を足すときは、その窓の ⟨1⟩ で位相を決めること。
