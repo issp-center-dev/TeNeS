@@ -12,10 +12,10 @@
 | テスト作成(T8-i〜v、T2-vi complex、T5 改訂) | テスト作成者 | 済(76249cd4、11 TEST_CASE + 2 E2E、報告 `report-testauthor.md`) |
 | RED 確認・スナップショット | Claude | 済(E2E 2 件を現行バイナリで RED 確認、`test-snapshot.sha256`) |
 | 変更前バイナリの A/B 基準出力 | Claude | 済(`TeNeS-ab-before` worktree、`work/fermion/ctm-phase/ab/before/sha256.txt`、72 ファイル) |
-| 実装(タスク 1) | Codex | 進行中(2026-09-05 09:45〜、`codex-task1-prompt.txt`) |
-| 独立検証(ctest 全件、A/B sha256、D=3 FU、複素) | Claude | — |
-| レビュー | サブエージェント | — |
-| 整形・コミット | Claude | — |
+| 実装(タスク 1) | Codex | 済(9ce4d155。窓ノルムの分散対応を 1 件修正させた) |
+| 独立検証(ctest 全件、A/B sha256、D=3 FU、複素) | Claude | 済(36/37、A/B 62 ファイル一致、D=3 ビット一致、複素 FU 完走) |
+| レビュー | サブエージェント | 済(`report-reviewer.md`: 承認、major 1 = 変異 (e) の検出穴 → T8-ii 追加ケースをテスト作成者に差し戻し中) |
+| 整形・コミット | Claude | 済(`git clang-format` 変更行のみ、9ce4d155) |
 
 ## タスク 1: 位相不変判定・N の位相正規化・RDM 出力(1 バッチ、設計書改訂 2)
 
