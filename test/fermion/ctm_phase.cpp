@@ -342,12 +342,16 @@ void fcp_normalize_phase_by_hand(fur_env<tensor>& e, bool is_density,
 //! ledger even_first_parity(D), which is mixed for D >= 2) and its converged
 //! fold CTM environment through the NEW driver
 //! Calc_CTM_Environment_density(..., initialize = true, phase_invariant =
-//! true). Premise asserted: the CTM converged before Max_CTM_Iteration.
+//! true). `odd_scale` > 1 multiplies every Tn element by
+//! odd_scale^(number of odd virtual indices), pushing the state's weight into
+//! the odd bond sectors (contract T8-ii item 6, the odd-odd dominated window).
+//! Premise asserted: the CTM converged before Max_CTM_Iteration.
 template <class tensor>
 fur_env<tensor> fcp_make_fold_env(int seed, int chi, int D, int lx, int ly,
                                   const char* type_name, int perturb_seed = 0,
                                   double perturb = 0.0,
-                                  bool checkerboard_d = false) {
+                                  bool checkerboard_d = false,
+                                  double odd_scale = 1.0) {
   fur_env<tensor> e;
   e.lattice = tenes::SquareLattice(lx, ly);
   e.label =
@@ -356,7 +360,8 @@ fur_env<tensor> fcp_make_fold_env(int seed, int chi, int D, int lx, int ly,
       " D=" + std::to_string(D) + " cell=" + std::to_string(lx) + "x" +
       std::to_string(ly) +
       (perturb != 0.0 ? " perturbed(" + std::to_string(perturb) + ")" : "") +
-      (checkerboard_d ? " d=2/4 checkerboard" : "");
+      (checkerboard_d ? " d=2/4 checkerboard" : "") +
+      (odd_scale != 1.0 ? " odd_scale=" + std::to_string(odd_scale) : "");
   INFO(e.label);
   const int N = e.lattice.N_UNIT;
   REQUIRE(N == lx * ly);
@@ -390,6 +395,18 @@ fur_env<tensor> fcp_make_fold_env(int seed, int chi, int D, int lx, int ly,
       const mptensor::Index idx = t.global_index(n);
       if (fgf::count_odd(lp, idx) % 2 == 0) {
         fcp_set(t, idx, seed + 7 * s, 5);
+        if (odd_scale != 1.0) {
+          int odd_virtual = 0;
+          for (int ax = 0; ax < 4; ++ax) {
+            if (lp[ax][idx[ax]]) {
+              ++odd_virtual;
+            }
+          }
+          typename tensor::value_type v;
+          t.get_value(idx, v);
+          t.set_value(idx, v * typename tensor::value_type(
+                                   std::pow(odd_scale, odd_virtual)));
+        }
         if (perturb != 0.0) {
           typename tensor::value_type v;
           t.get_value(idx, v);
@@ -840,6 +857,7 @@ template <class tensor>
 void fcp_run_t8ii_window(const fur_env<tensor>& e, int s1, char dir,
                          const std::complex<double>& factor,
                          bool require_unequal_internal,
+                         bool require_odd_odd_dominant,
                          const std::string& label) {
   const fur_window<tensor> wa = fcp_make_window(e, s1, dir, label);
   INFO(wa.label);
@@ -878,6 +896,45 @@ void fcp_run_t8ii_window(const fur_env<tensor>& e, int s1, char dir,
   REQUIRE(Na.N.rank() == 4);
   REQUIRE(Na.N.parity == fgf::leg_parities{wa.pa, wa.pb, wa.pa, wa.pb});
   REQUIRE(fg_max_abs_entry(Na.N.t) > 0.0);
+
+  // Contract T8-ii item 6 (reviewer's mutation, 2026-09-05): the window
+  // norm computed with the UNWRAPPED identity I_plain = delta delta differs
+  // from the wrapped one by the real factor (even-pair weight - odd-odd
+  // weight), so a norm that forgets the wrap mask is only visible in a window
+  // whose odd-odd channel dominates. That is a property of the state, so it
+  // is asserted as a premise: Re(sum N I_plain / sum N I_wrap) < 0. The same
+  // ratio is also taken from the closed measurement path on the pseudo-sites,
+  // which does not go through the code under test.
+  {
+    const fg_ftensor<tensor> I_wrap = fgf::wrap_twosite_gate(
+        fue_internal_identity<tensor>(wa.pa, wa.pb), wa.pa, wa.pb);
+    const fg_ftensor<tensor> I_plain{
+        fue_internal_identity<tensor>(wa.pa, wa.pb), I_wrap.parity};
+    // Anti-vacuity: the wrap really changed something, i.e. the odd-odd
+    // sector of the internal legs exists.
+    REQUIRE(fur_rel_diff(I_plain.t, I_wrap.t) > 0.5);
+    const std::complex<double> open_wrap =
+        fcp_to_complex(fue_sum_product(Na.N.t, I_wrap.t));
+    const std::complex<double> open_plain =
+        fcp_to_complex(fue_sum_product(Na.N.t, I_plain.t));
+    const std::complex<double> closed_wrap = fcp_closed_pseudo(wa, I_wrap);
+    const std::complex<double> closed_plain = fcp_closed_pseudo(wa, I_plain);
+    REQUIRE(std::abs(open_wrap) > 0.0);
+    REQUIRE(std::abs(closed_wrap) > 0.0);
+    const std::complex<double> ratio_open = open_plain / open_wrap;
+    const std::complex<double> ratio_closed = closed_plain / closed_wrap;
+    INFO(wa.label << " [odd-odd weight] sum N I_plain / sum N I_wrap = "
+                  << ratio_open << " (closed path: " << ratio_closed << ")");
+    // The ratio is real (both sums share the window's phase) and the two
+    // routes agree on it.
+    REQUIRE(std::abs(ratio_open.imag()) <= 1.0e-10 * std::abs(ratio_open));
+    REQUIRE(std::abs(ratio_open - ratio_closed) <=
+            1.0e-10 * std::abs(ratio_open));
+    if (require_odd_odd_dominant) {
+      REQUIRE(ratio_open.real() < 0.0);
+      REQUIRE(ratio_closed.real() < 0.0);
+    }
+  }
 
   // (1) N.t and N_plain are the same for the three inputs.
   for (const auto* other : {&Nb, &Nc}) {
@@ -965,16 +1022,18 @@ void fcp_run_t8ii_window(const fur_env<tensor>& e, int s1, char dir,
 
 template <class tensor>
 void fcp_run_t8ii_state(int seed, int chi, int D, int lx, int ly, int v_site,
-                        const char* type_name, bool checkerboard_d = false) {
+                        const char* type_name, bool checkerboard_d = false,
+                        double odd_scale = 1.0) {
   const fur_env<tensor> e = fcp_make_fold_env<tensor>(
-      seed, chi, D, lx, ly, type_name, 0, 0.0, checkerboard_d);
+      seed, chi, D, lx, ly, type_name, 0, 0.0, checkerboard_d, odd_scale);
   const std::string label = "T8-ii " + e.label;
   INFO(label);
   const std::complex<double> factor = fcp_is_complex<tensor>()
                                           ? std::polar(1.0, 1.3)
                                           : std::complex<double>(-1.0, 0.0);
-  fcp_run_t8ii_window(e, 0, 'h', factor, checkerboard_d, label);
-  fcp_run_t8ii_window(e, v_site, 'v', factor, checkerboard_d, label);
+  const bool odd_odd = odd_scale != 1.0;
+  fcp_run_t8ii_window(e, 0, 'h', factor, checkerboard_d, odd_odd, label);
+  fcp_run_t8ii_window(e, v_site, 'v', factor, checkerboard_d, odd_odd, label);
 
   // (7) the environments the fold must refuse: an all-zero C1 (no window
   // norm to normalise with), and a single NaN or Inf element in one of the
@@ -1051,6 +1110,16 @@ TEST_CASE(
     "unnormalised window norm matches the closed measurement path") {
   fcp_run_t8ii_state<tenes::complex_tensor>(6500, 8, 2, 2, 2, 0, "complex",
                                             true);
+}
+
+TEST_CASE(
+    "ctm phase T8-ii (e): in an odd-odd dominated window the normalised N "
+    "still has a positive window norm and a positive metric") {
+  // Odd virtual indices scaled by 4 per leg: the odd-odd channel of the
+  // internal legs carries more than half of the window norm (asserted; at
+  // this seed the ratio is about -0.56 horizontally and -0.76 vertically).
+  fcp_run_t8ii_state<tenes::complex_tensor>(6620, 8, 2, 2, 2, 3, "complex",
+                                            false, 4.0);
 }
 
 // ---- T8-iv: the full-update kernel is blind to a phase on C1 --------------
