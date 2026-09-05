@@ -304,6 +304,22 @@ typename tensor::value_type contract_reduced_pair_vertical_density_CTM(
   return detail::trace_boundary_pairs(work);
 }
 
+/*! @brief Absorb two folded pair halves into an open CTM window.
+ *
+ *  For a horizontal pair, @p left and @p right have legs
+ *  (boundary_top, k_A, boundary_bottom) and
+ *  (boundary_top, k_B, boundary_bottom), respectively.  For a vertical pair
+ *  they use the analogous (boundary_left, k_A, boundary_right) and
+ *  (boundary_left, k_B, boundary_right) convention.  The k axes are the
+ *  bundled shared-bond channels documented by reduced_pair_halves.
+ *
+ *  @param[in] C1,C2,C3,C4 Corner transfer matrices of the two-site window.
+ *  @param[in] eT1,eT2,eT3,eT4,eT5,eT6 Edge tensors of the window.
+ *  @param[in] halves Folded left/right or top/bottom site halves.
+ *  @param[out] left Absorbed left or top half with its k_A channel open.
+ *  @param[out] right Absorbed right or bottom half with its k_B channel open.
+ *  @throw std::runtime_error If halves.direction is invalid.
+ */
 template <class tensor>
 void absorb_reduced_pair_halves(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,

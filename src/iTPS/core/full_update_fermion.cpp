@@ -14,6 +14,10 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+/*! @file
+ *  @brief Fermionic two-site full-update implementation.
+ */
+
 #include "full_update_fermion.hpp"
 
 #include <algorithm>
@@ -87,9 +91,18 @@ void project_even(tenes::fermion::ftensor<tensor>& a) {
 template <class tensor>
 double parity_ratio(const tenes::fermion::ftensor<tensor>& a,
                     double& forbidden_abs, double& scale) {
-  forbidden_abs = tenes::fermion::parity_violation(a);
+  std::vector<double> forbidden_collective{tenes::fermion::parity_violation(a)};
+  tenes::allreduce_max(forbidden_collective, a.t.get_comm());
+  forbidden_abs = forbidden_collective[0];
   scale = std::max(1.0, tenes::fermion::max_abs(a));
   return forbidden_abs / scale;
+}
+
+void check_decomposition_info(int info, const char* decomposition) {
+  if (info != 0) {
+    throw std::runtime_error(std::string("fermion Full_update_bond: ") +
+                             decomposition + " failed");
+  }
 }
 
 template <class tensor>
@@ -190,15 +203,23 @@ void Full_update_bond_fermion(
 
   tenes::fermion::ftensor<tensor> QA, RA, QB, RB;
   int info = 0;
+  // QR separates the unchanged environment legs from the open update channel;
+  // its axes follow the direction-specific pseudo-site convention in
+  // section 3.1.
   if (direction == tenes::fermion::reduced_pair_direction::horizontal) {
     info = tenes::fermion::qr(Tn1, Axes(0, 1, 3), Axes(2, 4), QA, RA);
+    check_decomposition_info(info, "first QR");
     info = tenes::fermion::qr(Tn2, Axes(1, 2, 3), Axes(0, 4), QB, RB);
+    check_decomposition_info(info, "second QR");
   } else {
     info = tenes::fermion::qr(Tn1, Axes(0, 1, 2), Axes(3, 4), QA, RA);
+    check_decomposition_info(info, "first QR");
     info = tenes::fermion::qr(Tn2, Axes(0, 2, 3), Axes(1, 4), QB, RB);
+    check_decomposition_info(info, "second QR");
   }
-  static_cast<void>(info);
 
+  // Folding QA/QB with open identity channels exposes the CTM metric needed
+  // by ALS without materializing the closed two-site reduced tensor.
   const auto env = tenes::fermion::build_full_update_environment(
       C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, QA, QB, direction,
       std::max(1.0e-8, peps_parameters.CTM_Convergence_Epsilon));
@@ -208,6 +229,8 @@ void Full_update_bond_fermion(
               << " N_forbidden_ratio=" << env.forbidden_ratio << "\n";
   }
 
+  // Theta must be assembled with graded contractions so the gate crossing
+  // signs are retained before entering the plain-array optimization core.
   const auto X =
       tenes::fermion::transpose(tenes::fermion::tensordot(RA, RB, Axes(1),
                                                           Axes(1)),
@@ -218,9 +241,13 @@ void Full_update_bond_fermion(
   project_or_throw(Theta_input_checked, "Theta_before_prepare");
 
   tensor Theta_tilde = Theta_input_checked.t;
+  // The input-pair Koszul mask converts the graded quadratic form to the
+  // plain representation shared with the bosonic prepare_environment path.
   apply_pair_mask(Theta_tilde, Theta.parity[0], Theta.parity[1], 0, 1);
 
   tensor Env_out, Theta_out, LR1_inv, LR2_inv;
+  // Hermitianization, positive-metric preparation, and gauge fixing are
+  // representation-independent after the environment and Theta are masked.
   prepare_environment(env.N_plain, Theta_tilde, peps_parameters, Env_out,
                       Theta_out, LR1_inv, LR2_inv);
 
@@ -252,6 +279,8 @@ void Full_update_bond_fermion(
 
   tenes::fermion::ftensor<tensor> Theta_graded{
       Theta_out, {pA, pB, ps1, ps2}};
+  // Restore the graded Theta representation before truncation; graded SVD
+  // keeps accidentally degenerate even and odd singular spaces separated.
   apply_pair_mask(Theta_graded.t, pA, pB, 0, 1);
 
   tenes::fermion::ftensor<tensor> U, VT;
@@ -260,7 +289,7 @@ void Full_update_bond_fermion(
       static_cast<int>(Tn1.parity[connect_leg_a(direction)].size());
   info = tenes::fermion::svd_trunc(Theta_graded, Axes(0, 2), Axes(1, 3), U, s,
                                    VT, D_connect);
-  static_cast<void>(info);
+  check_decomposition_info(info, "initial truncated SVD");
   log_sector_dimensions(U, direction, peps_parameters);
 
   std::vector<double> lambda_c =
@@ -274,8 +303,12 @@ void Full_update_bond_fermion(
   tensor R1_plain = R1.t;
   apply_pair_mask(R1_plain, pm, ps1, 1, 2);
   tensor R2_plain = R2.t;
+  // ALS operates on the mask-adjusted plain factors, exactly matching the
+  // prepared bosonic quadratic form while preserving the chosen bond ledger.
   als_iterate(Env_out, Theta_out, peps_parameters, R1_plain, R2_plain);
 
+  // Remove the metric gauge in plain form, then restore the R1 Koszul mask
+  // before enforcing the graded parity contract.
   if (peps_parameters.Full_Gauge_Fix) {
     R1_plain = mptensor::tensordot(LR1_inv, R1_plain, Axes(0), Axes(0));
     R2_plain = mptensor::tensordot(LR2_inv, R2_plain, Axes(0), Axes(0));
@@ -288,15 +321,19 @@ void Full_update_bond_fermion(
   project_or_throw(R2, "R2_after_ALS");
 
   tenes::fermion::ftensor<tensor> q1, r1, q2, r2;
+  // Graded QR/SVD balancing redistributes Schmidt weights without allowing
+  // LAPACK degeneracies to mix the even and odd bond sectors.
   info = tenes::fermion::qr(R1, Axes(0, 2), Axes(1), q1, r1);
+  check_decomposition_info(info, "first balancing QR");
   info = tenes::fermion::qr(R2, Axes(0, 2), Axes(1), q2, r2);
+  check_decomposition_info(info, "second balancing QR");
 
   tenes::fermion::ftensor<tensor> U2, VT2;
   std::vector<double> s2;
   info = tenes::fermion::svd(
       tenes::fermion::tensordot(r1, r2, Axes(1), Axes(1)), Axes(0), Axes(1),
       U2, s2, VT2);
-  static_cast<void>(info);
+  check_decomposition_info(info, "balancing SVD");
 
   std::vector<double> lambda2 = normalized_square_root_weights<tensor>(s2);
   U2.multiply_vector(lambda2, 1);
@@ -304,6 +341,8 @@ void Full_update_bond_fermion(
   R1 = tenes::fermion::tensordot(q1, U2, Axes(2), Axes(0));
   R2 = tenes::fermion::tensordot(q2, VT2, Axes(2), Axes(1));
 
+  // Reattach the unchanged Q factors with graded contractions; the final
+  // transposes restore the canonical (left,top,right,bottom,physical) legs.
   if (direction == tenes::fermion::reduced_pair_direction::horizontal) {
     Tn1_new =
         tenes::fermion::transpose(tenes::fermion::tensordot(QA, R1, Axes(3),

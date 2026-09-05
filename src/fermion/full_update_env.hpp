@@ -28,20 +28,31 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "../mpi.hpp"
 #include "reduced_measure.hpp"
 
 namespace tenes::fermion {
 
 template <class tensor>
 struct full_update_environment {
+  //! Phase-normalized graded environment with legs (in_A,in_B,out_A,out_B).
   ftensor<tensor> N;
+  //! Plain-array environment after removing the input-pair Koszul mask.
   tensor N_plain;
+  //! Collective maximum forbidden-parity magnitude divided by max_abs(N).
   double forbidden_ratio = 0.0;
+  //! Trace phase removed from N (unity when no phase rotation was needed).
   std::complex<double> phase = {1.0, 0.0};
 };
 
 namespace detail {
 
+/*! @brief Insert a dimension-one even leg without permuting the other legs.
+ *  @param[in] Q Rank-4 graded QR factor.
+ *  @param[in] slot Position of the new leg in the rank-5 result.
+ *  @return @p Q reshaped with the even dummy leg at @p slot.
+ *  @throw std::runtime_error If @p Q is not rank 4.
+ */
 template <class tensor>
 ftensor<tensor> insert_even_dummy_leg(const ftensor<tensor>& Q, int slot) {
   if (Q.rank() != 4) {
@@ -63,6 +74,10 @@ ftensor<tensor> insert_even_dummy_leg(const ftensor<tensor>& Q, int slot) {
   return ftensor<tensor>{mptensor::reshape(Q.t, shape), parity};
 }
 
+/*! @brief Build the left open-channel identity factor.
+ *  @param[in] p Parity ledger of the open QR channel.
+ *  @return Rank-3 factor (in,out,[in' out']) with fused final ledger.
+ */
 template <class tensor>
 ftensor<tensor> make_left_identity_factor(const parity_vector& p) {
   const std::size_t n = p.size();
@@ -76,6 +91,10 @@ ftensor<tensor> make_left_identity_factor(const parity_vector& p) {
   return reshape(I, mptensor::Shape(n, n, n * n));
 }
 
+/*! @brief Build the right open-channel identity factor.
+ *  @param[in] p Parity ledger of the open QR channel.
+ *  @return Rank-3 factor ([in' out'],in,out) with fused first ledger.
+ */
 template <class tensor>
 ftensor<tensor> make_right_identity_factor(const parity_vector& p) {
   const std::size_t n = p.size();
@@ -89,6 +108,9 @@ ftensor<tensor> make_right_identity_factor(const parity_vector& p) {
   return reshape(I, mptensor::Shape(n * n, n, n));
 }
 
+/*! @brief Project a graded tensor onto its total-even parity sector.
+ *  @param[in,out] a Tensor whose process-local forbidden elements are zeroed.
+ */
 template <class tensor>
 void project_even(ftensor<tensor>& a) {
   mptensor::Index idx;
@@ -101,6 +123,11 @@ void project_even(ftensor<tensor>& a) {
   }
 }
 
+/*! @brief Apply the Koszul mask for two input-channel legs.
+ *  @param[in,out] a Plain tensor to mask on axes 0 and 1.
+ *  @param[in] p0 Parity ledger for axis 0.
+ *  @param[in] p1 Parity ledger for axis 1.
+ */
 template <class tensor>
 void apply_input_pair_mask(tensor& a, const parity_vector& p0,
                            const parity_vector& p1) {
@@ -116,6 +143,31 @@ void apply_input_pair_mask(tensor& a, const parity_vector& p0,
 
 }  // namespace detail
 
+/*! @brief Build the open-channel folded CTM environment for full update.
+ *
+ *  The horizontal and vertical CTM window argument conventions are those in
+ *  the table in the fermion full-update design, section 3.3.
+ *
+ *  @param[in] C1 First corner transfer matrix of the two-site window.
+ *  @param[in] C2 Second corner transfer matrix.
+ *  @param[in] C3 Third corner transfer matrix.
+ *  @param[in] C4 Fourth corner transfer matrix.
+ *  @param[in] eT1 First edge tensor of the direction-dependent window.
+ *  @param[in] eT2 Second edge tensor.
+ *  @param[in] eT3 Third edge tensor.
+ *  @param[in] eT4 Fourth edge tensor.
+ *  @param[in] eT5 Fifth edge tensor.
+ *  @param[in] eT6 Sixth edge tensor.
+ *  @param[in] QA Environment-side graded QR factor of the left/top site.
+ *  @param[in] QB Environment-side graded QR factor of the right/bottom site.
+ *  @param[in] direction Horizontal (A left of B) or vertical (A above B).
+ *  @param[in] forbidden_tol Maximum accepted collective forbidden-block ratio.
+ *  @return Phase-normalized graded and plain open-channel environments.
+ *  @throw std::runtime_error If the direction is invalid.
+ *  @throw std::runtime_error If either QR factor is not rank 4.
+ *  @throw std::runtime_error If a forbidden block exceeds @p forbidden_tol or
+ *         the environment has non-finite elements or an invalid window norm.
+ */
 template <class tensor>
 full_update_environment<tensor> build_full_update_environment(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
@@ -159,7 +211,9 @@ full_update_environment<tensor> build_full_update_environment(
                                  mptensor::Axes(0, 2));
   M = mptensor::reshape(M, mptensor::Shape(nA, nA, nB, nB));
   ftensor<tensor> Ntilde{M, {pA, pA, pB, pB}};
-  const double forbidden_abs = parity_violation(Ntilde);
+  std::vector<double> forbidden_collective{parity_violation(Ntilde)};
+  tenes::allreduce_max(forbidden_collective, Ntilde.t.get_comm());
+  const double forbidden_abs = forbidden_collective[0];
   const double scale = max_abs(Ntilde);
   const double forbidden_ratio = scale > 0.0 ? forbidden_abs / scale : 0.0;
   if (forbidden_ratio > forbidden_tol) {

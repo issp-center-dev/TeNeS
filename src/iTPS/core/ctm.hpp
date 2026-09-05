@@ -137,15 +137,19 @@ bool Check_Convergence_CTM(
  * is smaller than @p epsilon.  The first iteration always returns false because
  * no previous RDM exists.
  *
- * If the trace is too small, has a non-positive real part, or has a sizable
- * imaginary part, the current iteration is treated as unconverged and the
- * distance output is left as NaN.  The latest RDMs are still stored in
+ * Every path rejects non-finite elements and a non-finite or zero trace as
+ * unhealthy.  With @p phase_invariant false, a non-positive real trace or a
+ * sizable imaginary trace also makes the iteration unconverged.  With it
+ * true, each RDM is divided by its trace phase before comparison and no
+ * real-positive trace condition is imposed.  When the distance is not
+ * evaluated, the output is left as NaN.  The latest RDMs are still stored in
  * @p rdm_old for the next iteration.  All MPI ranks follow the same site, row,
  * and column order and use an allreduce sum, so @p rdm_dist and the return
  * value are identical on every rank.
  *
  * @param epsilon Threshold for the trace-scaled one-site RDM distance.
  * @param rdm_dist Output distance; NaN when the distance is not evaluated.
+ * @param phase_invariant Whether to remove the trace phase before comparison.
  */
 template <class tensor>
 bool Check_Convergence_CTM_RDM(
@@ -158,6 +162,13 @@ bool Check_Convergence_CTM_RDM(
     bool &has_rdm_old, const double epsilon, const bool is_density,
     double &rdm_dist, const bool phase_invariant = false);
 
+/*! @brief Divide an RDM by the phase of its trace.
+ *  @param[in,out] rdm RDM to phase-normalize; it must have finite elements and
+ *                 a finite, nonzero trace.
+ *  @return Unit complex trace phase removed from @p rdm.
+ *  @throw std::runtime_error If @p rdm is not square, if an element or the
+ *         trace is non-finite, or if the trace is zero.
+ */
 template <class value_type>
 std::complex<double> normalize_rdm_phase(small_tensor<value_type> &rdm);
 
@@ -208,6 +219,22 @@ void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor>
                  const PEPS_Parameters peps_parameters,
                  const SquareLattice lattice);
 
+/*! @brief Calculate a CTM environment for density tensors.
+ *
+ *  Every convergence path checks for finite RDM elements and a finite,
+ *  nonzero trace.  When @p phase_invariant is true, convergence comparison
+ *  divides each RDM by its trace phase and does not require the trace to be
+ *  real and positive.
+ *
+ *  @param[in,out] C1,C2,C3,C4 Corner transfer matrices.
+ *  @param[in,out] eTt,eTr,eTb,eTl Edge tensors.
+ *  @param[in] Tn Density tensors for the unit cell.
+ *  @param[in] peps_parameters CTM hyperparameters.
+ *  @param[in] lattice Unit-cell geometry.
+ *  @param[in] initialize Whether to initialize rather than reuse the input CTM.
+ *  @param[in] phase_invariant Whether to compare RDMs modulo trace phase.
+ *  @return Number of CTM iterations performed.
+ */
 template <class tensor>
 int Calc_CTM_Environment_density(
     std::vector<tensor> &C1, std::vector<tensor> &C2, std::vector<tensor> &C3,
