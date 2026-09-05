@@ -6,13 +6,13 @@
 
 | 手順 | 担当 | 状態 |
 |---|---|---|
-| 設計書 | Claude | 改訂 2(改訂 1 はテスト作成者の計測で棄却) |
-| 設計レビュー | Codex | 済(`work/fermion/ctm-phase/codex-review-design.md`、11 件反映) |
-| 契約追記 | Claude | 済(315a8622) |
-| テスト作成(T8-i〜v、T2-vi complex、T5 改訂) | テスト作成者 | 改訂 1 で作成済み → 改訂 2 で差し戻し |
-| RED 確認・スナップショット | Claude | — |
+| 設計書 | Claude | 改訂 2.1(改訂 1 はテスト作成者の計測で棄却) |
+| 設計レビュー | Codex | 済(改訂 1: `codex-review-design.md` 11 件、改訂 2: `codex-review-design2.md` 7 件、いずれも反映) |
+| 契約追記 | Claude | 済(改訂 2.1: 49a24ae4, a5e287f6, 2632fd36) |
+| テスト作成(T8-i〜v、T2-vi complex、T5 改訂) | テスト作成者 | 済(76249cd4、11 TEST_CASE + 2 E2E、報告 `report-testauthor.md`) |
+| RED 確認・スナップショット | Claude | 済(E2E 2 件を現行バイナリで RED 確認、`test-snapshot.sha256`) |
 | 変更前バイナリの A/B 基準出力 | Claude | 済(`TeNeS-ab-before` worktree、`work/fermion/ctm-phase/ab/before/sha256.txt`、72 ファイル) |
-| 実装(タスク 1) | Codex | — |
+| 実装(タスク 1) | Codex | 進行中(2026-09-05 09:45〜、`codex-task1-prompt.txt`) |
 | 独立検証(ctest 全件、A/B sha256、D=3 FU、複素) | Claude | — |
 | レビュー | サブエージェント | — |
 | 整形・コミット | Claude | — |
