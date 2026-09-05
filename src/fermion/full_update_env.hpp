@@ -22,8 +22,11 @@
 #define TENES_SRC_FERMION_FULL_UPDATE_ENV_HPP_
 
 #include <algorithm>
+#include <cmath>
+#include <complex>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 
 #include "reduced_measure.hpp"
 
@@ -34,6 +37,7 @@ struct full_update_environment {
   ftensor<tensor> N;
   tensor N_plain;
   double forbidden_ratio = 0.0;
+  std::complex<double> phase = {1.0, 0.0};
 };
 
 namespace detail {
@@ -168,6 +172,51 @@ full_update_environment<tensor> build_full_update_environment(
 
   full_update_environment<tensor> result;
   result.N = transpose(Ntilde, mptensor::Axes(0, 2, 1, 3));
+
+  tensor identity(mptensor::Shape(nA, nB, nA, nB));
+  for (std::size_t a = 0; a < nA; ++a) {
+    for (std::size_t b = 0; b < nB; ++b) {
+      identity.set_value(mptensor::Index(a, b, a, b),
+                         typename tensor::value_type(1.0));
+    }
+  }
+  const ftensor<tensor> identity_wrap = wrap_twosite_gate(identity, pA, pB);
+
+  double local_finite = 1.0;
+  for (std::size_t local = 0; local < result.N.t.local_size(); ++local) {
+    const auto value = result.N.t[local];
+    if (!std::isfinite(std::real(value)) || !std::isfinite(std::imag(value))) {
+      local_finite = 0.0;
+    }
+  }
+  std::vector<double> finite_collective{local_finite};
+  tenes::allreduce_min(finite_collective, result.N.t.get_comm());
+  const double N_max_abs = tenes::fermion::max_abs(result.N);
+  const mptensor::Axes all4(0, 1, 2, 3);
+  const std::complex<double> norm =
+      mptensor::trace(result.N.t, identity_wrap.t, all4, all4);
+  const double norm_abs = std::abs(norm);
+  if (finite_collective[0] == 0.0 || !std::isfinite(N_max_abs) ||
+      !std::isfinite(norm.real()) || !std::isfinite(norm.imag()) ||
+      norm_abs <= 1.0e-12 * N_max_abs * nA * nB) {
+    std::stringstream ss;
+    ss << "build_full_update_environment: invalid window norm " << norm
+       << " (max_abs=" << N_max_abs << ", nA=" << nA << ", nB=" << nB
+       << ", elements_finite=" << finite_collective[0] << ")";
+    throw std::runtime_error(ss.str());
+  }
+  const std::complex<double> phase = norm / norm_abs;
+  if (std::abs(phase - std::complex<double>(1.0, 0.0)) > 1.0e-14) {
+    for (std::size_t local = 0; local < result.N.t.local_size(); ++local) {
+      if constexpr (std::is_same_v<typename tensor::value_type,
+                                   std::complex<double>>) {
+        result.N.t[local] *= std::conj(phase);
+      } else {
+        result.N.t[local] *= phase.real();
+      }
+    }
+    result.phase = phase;
+  }
   result.N_plain = result.N.t;
   detail::apply_input_pair_mask(result.N_plain, result.N.parity[0],
                                 result.N.parity[1]);

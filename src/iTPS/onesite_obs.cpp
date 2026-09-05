@@ -33,6 +33,7 @@
 #include "../tensor.hpp"
 
 #include "core/contract.hpp"
+#include "core/ctm.hpp"
 
 namespace tenes::itps {
 
@@ -143,9 +144,20 @@ auto iTPS<tensor>::measure_onesite()
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
   for (int i = 0; i < N_UNIT; ++i) {
-    norm_real_min = std::min(std::real(norm[i]), norm_real_min);
+    tensor_type diagnostic_norm = norm[i];
+    if (finfo.enabled && !is_meanfield) {
+      if (std::isfinite(std::real(norm[i])) &&
+          std::isfinite(std::imag(norm[i])) && std::abs(norm[i]) > 0.0) {
+        diagnostic_norm = tensor_type(std::abs(norm[i]));
+      } else {
+        norm_real_min = -std::numeric_limits<double>::infinity();
+        norm_imag_abs_max = std::numeric_limits<double>::infinity();
+        continue;
+      }
+    }
+    norm_real_min = std::min(std::real(diagnostic_norm), norm_real_min);
     norm_imag_abs_max =
-        std::max(std::abs(std::imag(norm[i])), norm_imag_abs_max);
+        std::max(std::abs(std::imag(diagnostic_norm)), norm_imag_abs_max);
   }
   if (mpirank == 0) {
     if (norm_real_min <= 0.0) {
@@ -225,6 +237,9 @@ auto iTPS<tensor>::measure_onesite_rdm()
                                   : buf[row * d1 + col];
         rdm_local.set_value({row, col}, v);
       }
+    }
+    if (is_fermion_ctm) {
+      core::normalize_rdm_phase(rdm_local);
     }
     rdm_all.push_back(rdm_local);
   }

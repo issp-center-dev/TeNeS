@@ -455,7 +455,8 @@ void iTPS<ptensor>::update_CTM() {
     const std::vector<ptensor> reduced_Tn =
         tenes::fermion::build_reduced_density_tensors(Tn, finfo);
     core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
-                                       reduced_Tn, peps_parameters, lattice);
+                                       reduced_Tn, peps_parameters, lattice,
+                                       true, true);
   } else {
     core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
                                peps_parameters, lattice);

@@ -17,6 +17,7 @@
 #ifndef TENES_SRC_ITPS_CORE_CTM_HPP_
 #define TENES_SRC_ITPS_CORE_CTM_HPP_
 
+#include <complex>
 #include <vector>
 
 #include "../../tensor.hpp"
@@ -155,7 +156,10 @@ bool Check_Convergence_CTM_RDM(
     const std::vector<tensor> &Tn, const SquareLattice lattice,
     std::vector<small_tensor<typename tensor::value_type>> &rdm_old,
     bool &has_rdm_old, const double epsilon, const bool is_density,
-    double &rdm_dist);
+    double &rdm_dist, const bool phase_invariant = false);
+
+template <class value_type>
+std::complex<double> normalize_rdm_phase(small_tensor<value_type> &rdm);
 
 template <class tensor>
 int Calc_CTM_Environment(std::vector<tensor> &C1, std::vector<tensor> &C2,
@@ -203,15 +207,15 @@ void Bottom_move_single(const std::vector<tensor> &C1, const std::vector<tensor>
                  const std::vector<tensor> &Tn, const int iy,
                  const PEPS_Parameters peps_parameters,
                  const SquareLattice lattice);
-  
+
 template <class tensor>
-int Calc_CTM_Environment_density(std::vector<tensor> &C1, std::vector<tensor> &C2,
-                         std::vector<tensor> &C3, std::vector<tensor> &C4,
-                         std::vector<tensor> &eTt, std::vector<tensor> &eTr,
-                         std::vector<tensor> &eTb, std::vector<tensor> &eTl,
-                         const std::vector<tensor> &Tn,
-                         const PEPS_Parameters peps_parameters,
-                         const SquareLattice lattice, bool initialize = true);
+int Calc_CTM_Environment_density(
+    std::vector<tensor> &C1, std::vector<tensor> &C2, std::vector<tensor> &C3,
+    std::vector<tensor> &C4, std::vector<tensor> &eTt, std::vector<tensor> &eTr,
+    std::vector<tensor> &eTb, std::vector<tensor> &eTl,
+    const std::vector<tensor> &Tn, const PEPS_Parameters peps_parameters,
+    const SquareLattice lattice, bool initialize = true,
+    bool phase_invariant = false);
 
 template <class tensor>
 std::vector<tensor> Make_single_tensor_density(const std::vector<tensor> &Tn);

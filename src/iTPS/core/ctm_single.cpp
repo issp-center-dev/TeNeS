@@ -778,7 +778,7 @@ int Calc_CTM_Environment_density(
     std::vector<tensor> &C4, std::vector<tensor> &eTt, std::vector<tensor> &eTr,
     std::vector<tensor> &eTb, std::vector<tensor> &eTl,
     const std::vector<tensor> &Tn, const PEPS_Parameters peps_parameters,
-    const SquareLattice lattice, bool initialize) {
+    const SquareLattice lattice, bool initialize, bool phase_invariant) {
   /*
     ## Calc environment tensors
     ## C1,C2,C3,C4 and eTt,eTl,eTr,eTb will be modified
@@ -1127,7 +1127,7 @@ int Calc_CTM_Environment_density(
         rdm_convergence = Check_Convergence_CTM_RDM(
             C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, lattice, rdm_old,
             has_rdm_old, peps_parameters.CTM_Convergence_Epsilon, true,
-            rdm_dist);
+            rdm_dist, phase_invariant);
       }
       convergence = convergence && rdm_convergence;
     }
@@ -1284,7 +1284,7 @@ template int Calc_CTM_Environment_density(
     std::vector<real_tensor> &eTt, std::vector<real_tensor> &eTr,
     std::vector<real_tensor> &eTb, std::vector<real_tensor> &eTl,
     const std::vector<real_tensor> &Tn, const PEPS_Parameters peps_parameters,
-    const SquareLattice lattice, bool initialize);
+    const SquareLattice lattice, bool initialize, bool phase_invariant);
 
 template int Calc_CTM_Environment_density(
     std::vector<complex_tensor> &C1, std::vector<complex_tensor> &C2,
@@ -1293,6 +1293,6 @@ template int Calc_CTM_Environment_density(
     std::vector<complex_tensor> &eTb, std::vector<complex_tensor> &eTl,
     const std::vector<complex_tensor> &Tn,
     const PEPS_Parameters peps_parameters, const SquareLattice lattice,
-    bool initialize);
+    bool initialize, bool phase_invariant);
 
 }  // namespace tenes::itps::core

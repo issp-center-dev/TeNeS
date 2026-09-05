@@ -1020,7 +1020,7 @@ bool Check_Convergence_CTM_RDM(
     const std::vector<tensor> &Tn, const SquareLattice lattice,
     std::vector<small_tensor<typename tensor::value_type>> &rdm_old,
     bool &has_rdm_old, const double epsilon, const bool is_density,
-    double &rdm_dist) {
+    double &rdm_dist, const bool phase_invariant) {
   using value_type = typename tensor::value_type;
 
   rdm_dist = std::numeric_limits<double>::quiet_NaN();
@@ -1043,6 +1043,7 @@ bool Check_Convergence_CTM_RDM(
     std::vector<value_type> rdm_buf(d0 * d1, 0.0);
     std::complex<double> trace = 0.0;
     double max_abs = 0.0;
+    bool elements_finite = true;
 
     for (size_t local = 0; local < rdm.local_size(); ++local) {
       const auto index = rdm.global_index(local);
@@ -1059,6 +1060,8 @@ bool Check_Convergence_CTM_RDM(
         value_type v = rdm_buf[row * d1 + col];
         rdm_local.set_value({row, col}, v);
         max_abs = std::max(max_abs, std::abs(v));
+        elements_finite = elements_finite && std::isfinite(std::real(v)) &&
+                          std::isfinite(std::imag(v));
         if (row == col) {
           trace += to_complex(v);
         }
@@ -1067,9 +1070,28 @@ bool Check_Convergence_CTM_RDM(
 
     const double trace_abs = std::abs(trace);
     trace_abs_new.push_back(trace_abs);
-    if (trace_abs < 1.0e-12 * max_abs || trace.real() <= 0.0 ||
-        std::abs(trace.imag()) > 1.0e-6 * trace_abs) {
+    if (!elements_finite || !std::isfinite(trace_abs) ||
+        !std::isfinite(max_abs) || trace_abs <= 0.0 ||
+        trace_abs < 1.0e-12 * max_abs ||
+        (!phase_invariant && (trace.real() <= 0.0 ||
+                              std::abs(trace.imag()) > 1.0e-6 * trace_abs))) {
       valid = false;
+    }
+
+    if (phase_invariant && elements_finite && std::isfinite(trace_abs) &&
+        trace_abs > 0.0) {
+      const std::complex<double> phase = trace / trace_abs;
+      for (size_t row = 0; row < d0; ++row) {
+        for (size_t col = 0; col < d1; ++col) {
+          value_type v;
+          rdm_local.get_value({row, col}, v);
+          if constexpr (std::is_same_v<value_type, std::complex<double>>) {
+            rdm_local.set_value({row, col}, v / phase);
+          } else {
+            rdm_local.set_value({row, col}, v / phase.real());
+          }
+        }
+      }
     }
 
     rdm_new.push_back(rdm_local);
@@ -1099,6 +1121,49 @@ bool Check_Convergence_CTM_RDM(
   rdm_old = rdm_new;
   has_rdm_old = true;
   return valid && rdm_dist < epsilon;
+}
+
+template <class value_type>
+std::complex<double> normalize_rdm_phase(small_tensor<value_type> &rdm) {
+  const auto shape = rdm.shape();
+  if (shape.size() != 2 || shape[0] != shape[1]) {
+    throw std::runtime_error("normalize_rdm_phase: RDM must be square");
+  }
+
+  std::complex<double> trace = 0.0;
+  for (size_t row = 0; row < shape[0]; ++row) {
+    for (size_t col = 0; col < shape[1]; ++col) {
+      value_type value;
+      rdm.get_value({row, col}, value);
+      if (!std::isfinite(std::real(value)) ||
+          !std::isfinite(std::imag(value))) {
+        throw std::runtime_error("normalize_rdm_phase: non-finite RDM element");
+      }
+      if (row == col) {
+        trace += to_complex(value);
+      }
+    }
+  }
+  const double trace_abs = std::abs(trace);
+  if (!std::isfinite(trace_abs) || trace_abs == 0.0) {
+    throw std::runtime_error("normalize_rdm_phase: trace vanishes");
+  }
+  const std::complex<double> phase = trace / trace_abs;
+  if (std::abs(phase - std::complex<double>(1.0, 0.0)) <= 1.0e-14) {
+    return {1.0, 0.0};
+  }
+  for (size_t row = 0; row < shape[0]; ++row) {
+    for (size_t col = 0; col < shape[1]; ++col) {
+      value_type value;
+      rdm.get_value({row, col}, value);
+      if constexpr (std::is_same_v<value_type, std::complex<double>>) {
+        rdm.set_value({row, col}, value / phase);
+      } else {
+        rdm.set_value({row, col}, value / phase.real());
+      }
+    }
+  }
+  return phase;
 }
 
 template <class tensor>
@@ -1555,7 +1620,7 @@ template bool Check_Convergence_CTM_RDM(
     const std::vector<real_tensor> &Tn, const SquareLattice lattice,
     std::vector<small_tensor<real_tensor::value_type>> &rdm_old,
     bool &has_rdm_old, const double epsilon, const bool is_density,
-    double &rdm_dist);
+    double &rdm_dist, const bool phase_invariant);
 template bool Check_Convergence_CTM_RDM(
     const std::vector<complex_tensor> &C1,
     const std::vector<complex_tensor> &C2,
@@ -1568,7 +1633,11 @@ template bool Check_Convergence_CTM_RDM(
     const std::vector<complex_tensor> &Tn, const SquareLattice lattice,
     std::vector<small_tensor<complex_tensor::value_type>> &rdm_old,
     bool &has_rdm_old, const double epsilon, const bool is_density,
-    double &rdm_dist);
+    double &rdm_dist, const bool phase_invariant);
+
+template std::complex<double> normalize_rdm_phase(small_tensor<double> &rdm);
+template std::complex<double> normalize_rdm_phase(
+    small_tensor<std::complex<double>> &rdm);
 
 template int Calc_CTM_Environment(
     std::vector<real_tensor> &C1, std::vector<real_tensor> &C2,

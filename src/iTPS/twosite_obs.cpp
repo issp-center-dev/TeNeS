@@ -378,8 +378,19 @@ auto iTPS<ptensor>::measure_twosite()
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
   for (const auto &[bond, norm] : norms) {
-    double norm_re = std::real(norm);
-    double norm_im = std::imag(norm);
+    tensor_type diagnostic_norm = norm;
+    if (finfo.enabled && !is_mf) {
+      if (std::isfinite(std::real(norm)) && std::isfinite(std::imag(norm)) &&
+          std::abs(norm) > 0.0) {
+        diagnostic_norm = tensor_type(std::abs(norm));
+      } else {
+        norm_real_min = -std::numeric_limits<double>::infinity();
+        norm_imag_abs_max = std::numeric_limits<double>::infinity();
+        continue;
+      }
+    }
+    double norm_re = std::real(diagnostic_norm);
+    double norm_im = std::imag(diagnostic_norm);
     norm_real_min = std::min(norm_re, norm_real_min);
     norm_imag_abs_max = std::max(std::abs(norm_im), norm_imag_abs_max);
   }
