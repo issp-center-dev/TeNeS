@@ -140,6 +140,7 @@ Example::
 The one-site reduced density matrix :math:`\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|`  is outputted for all sites.
 The row index denotes the bra, or conjugate, side, and the column index denotes the ket side.
 Note that it is **not normalized**: its trace equals the norm of the wave function :math:`\langle \Psi | \Psi \rangle`, the same value that ``onesite_obs.dat`` reports with ``op_group`` = -1.
+In fermion mode with the CTM environment the environment carries an arbitrary overall phase (a sign for real tensors); :math:`\rho_i` is then divided by the phase of its trace before it is written, so its trace is :math:`|\langle \Psi | \Psi \rangle|` and differs from the ``op_group`` = -1 value of ``onesite_obs.dat`` (which is written as is) by that phase only.
 Divide by the trace, as in :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i`, when an expectation value is needed.
 Each row consists of five columns.
 

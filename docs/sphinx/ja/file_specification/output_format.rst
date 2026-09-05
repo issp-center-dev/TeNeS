@@ -142,6 +142,7 @@ onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle = \langle\Ps
 1サイト縮約密度行列 :math:`\rho_i = \sum_{\{\sigma_j\}_{j \ne i}} | \Psi \rangle \langle \Psi|` が出力されます。
 行番号は bra (conj 側)、列番号は ket を表します。
 **規格化されていない** ことに注意してください。そのトレースは波動関数のノルム :math:`\langle \Psi | \Psi \rangle` に等しく、``onesite_obs.dat`` に ``op_group`` が -1 として出力される値と一致します。
+フェルミオン模式で CTM 環境を用いる場合、環境は任意の全体位相(実テンソルでは符号)を持つため、:math:`\rho_i` はそのトレースの位相で割ってから出力されます。したがってトレースは :math:`|\langle \Psi | \Psi \rangle|` となり、``onesite_obs.dat`` の ``op_group`` = -1 の値(そのまま出力されます)とはその位相の分だけ異なります。
 期待値が必要な場合は、 :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i` のようにトレースで割ってください。
 各行5列からなります。
 
