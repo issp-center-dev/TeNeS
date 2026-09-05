@@ -96,14 +96,16 @@ struct full_update_environment {
 //! contract_reduced_pair_halves_density_CTM().
 //!
 //! Throws std::runtime_error if the forbidden parity block of the folded
-//! coefficient tensor exceeds 1e-8 relative to its largest element.
+//! coefficient tensor exceeds forbidden_tol (default 1e-8) relative to its
+//! largest element.
 template <class tensor>
 full_update_environment<tensor> build_full_update_environment(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6,
     const ftensor<tensor>& QA, const ftensor<tensor>& QB,
-    reduced_pair_direction direction);
+    reduced_pair_direction direction,
+    double forbidden_tol = 1.0e-8);   // 2026-09-05 追加、§3.2 T2-ii
 
 }  // namespace tenes::fermion
 ```
@@ -290,6 +292,15 @@ plain 要素積和)の位相 `norm/|norm|` で N を割ってから返す。`N.t
 **(T2-ii) forbidden block。** 返り値の `forbidden_ratio` が 1e-10 以下であること。
 また、環境をわざと壊した(たとえば eT のどれかに偶でない成分を足した)入力では
 `build_full_update_environment` が `std::runtime_error` を投げること。
+
+**2026-09-05 追記(閾値の CTM 精度連動)**: `build_full_update_environment` は末尾に引数
+`double forbidden_tol = 1.0e-8` を持ち、`forbidden_ratio > forbidden_tol` で投げる(既定値は従来どおり)。
+`Full_update_bond_fermion` は `std::max(1.0e-8, peps_parameters.CTM_Convergence_Epsilon)` を渡す。
+根拠(実測、SU 収束状態 chi=8): 収束した CTM の forbidden ratio は CTM の収束 ε の約 1e-4 倍
+(ε=1e-6 で 2.5e-10、1e-8 で 1.8e-12)で、1e-8 を超えるのは CTM 未収束(6.4e-5)か特異な状態だけ。
+例外メッセージには「CTM が収束していない可能性(`iteration_max` を確認)」を含める。
+追加要求: 壊した環境で `forbidden_tol = 1.0` を渡すと投げず、forbidden ブロックが射影されて
+返り値の `N` が偶(`parity_violation(N) == 0`)であること。
 
 **(T2-iii) N_plain の性質。** `N_plain` はエルミート:
 `N_plain(a,β,a′,β′) == conj(N_plain(a′,β′,a,β))`、相対 1e-12。
