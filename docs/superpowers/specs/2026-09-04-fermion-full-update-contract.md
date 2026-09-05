@@ -51,7 +51,7 @@ Python E2E テストは `test/fermion/<name>.py.in` を作り、`test/CMakeLists
   `test/test_fermion_layer.cpp` の末尾に `#include "fermion/ctm_phase.cpp"` を 1 行足す。
   既存の `full_update_env.cpp` / `full_update_bond.cpp` / `full_update_realctm.cpp` は変更しない
   (治具の再利用は `#include` 経由でなく、同じ翻訳単位にあるので直接呼べる)。
-- T8-iii は新規 `test/fermion/free_fermion_complex.py.in`(ctest 名 `FreeFermionComplex`)。
+- T8-iii と T8-v は新規 `test/fermion/free_fermion_complex.py.in`(ctest 名 `FreeFermionComplex`)。
 - T5 改訂は既存 `test/fermion/free_fermion_full.py.in` を書き換える(このファイルだけは変更を許可する)。
   ctest 名 `FreeFermionFull` と TIMEOUT は `test/CMakeLists.txt` で調整してよい。
 
@@ -78,6 +78,10 @@ struct full_update_environment {
   tensor N_plain;
   //! max |forbidden block| / max |all| before the block was projected out.
   double forbidden_ratio;
+  //! Phase removed from N so that the window norm sum_x N(x) I_wrap(x) is
+  //! real positive (exactly 1 when nothing was changed). Added 2026-09-05,
+  //! see §2.5 and §3.6.
+  std::complex<double> phase;
 };
 
 //! Build the two-site environment for a full-update bond by folding the two
@@ -185,7 +189,7 @@ void Full_update_bond_fermion(
 - `test/fermion/fold_geometry.cpp` の既存治具(有限パッチの厳密縮約、Fock oracle アンカー)。
   同じ doctest バイナリに入るので、そこで定義済みの補助関数は再利用できる。
 
-### 2.5 CTM 環境の位相(2026-09-05 追加、設計書 `2026-09-05-fermion-ctm-phase-design.md`)
+### 2.5 CTM 環境の位相(2026-09-05 追加、改訂 2。設計書 `2026-09-05-fermion-ctm-phase-design.md`)
 
 ```cpp
 namespace tenes::itps::core {
@@ -211,26 +215,29 @@ int Calc_CTM_Environment_density(
     const SquareLattice lattice, bool initialize = true,
     bool phase_invariant = false);   // 戻り値は反復回数
 
-//! Fix the overall phase of a folded (fermion) CTM environment so that the
-//! one-site norm trace(Contract_one_site_RDM_density_CTM(...)) is real and
-//! positive on every site. Multiplies every C1[i] by the conjugate phase and
-//! returns the phase that was removed (exactly 1 when nothing was changed).
-//! Throws std::runtime_error if any one-site norm vanishes or is not finite,
-//! or if the sites do not share one phase (|phase_i - phase_0| > 1e-8).
-template <class tensor>
-std::complex<double> fix_environment_phase(
-    std::vector<tensor>& C1, const std::vector<tensor>& C2,
-    const std::vector<tensor>& C3, const std::vector<tensor>& C4,
-    const std::vector<tensor>& eTt, const std::vector<tensor>& eTr,
-    const std::vector<tensor>& eTb, const std::vector<tensor>& eTl,
-    const std::vector<tensor>& reduced_Tn, const SquareLattice& lattice);
-
 }  // namespace tenes::itps::core
+
+namespace tenes::fermion {
+
+// §2.1 の構造体にメンバを足す
+template <class tensor>
+struct full_update_environment {
+  ftensor<tensor> N;        // 位相正規化済み: Σ_x N.t(x)·I_wrap.t(x) が実正
+  tensor N_plain;           // 正規化済み N から作る
+  double forbidden_ratio;
+  std::complex<double> phase;  // N から取り除いた位相(何もしなければ exactly 1)
+};
+
+}  // namespace tenes::fermion
 ```
 
-`Contract_one_site_RDM_density_CTM(C1, C2, C3, C4, eTt, eTr, eTb, eTl, reduced_Tn)`
-(`src/iTPS/core/contract_density_ctm.hpp:114`)は既存。one-site norm はその戻り値(rank 2)の
-対角和。分散テンソルなので対角要素は `get_value` で拾い `allreduce_sum` で集める。
+`build_full_update_environment` は、開放 join と forbidden 検査の後、その窓の
+`norm = Σ_x N.t(x) · I_wrap.t(x)`(`I_wrap = wrap_twosite_gate(δ_{in_A,out_A} δ_{in_B,out_B}, p_a, p_β)`、
+plain 要素積和)の位相 `norm/|norm|` で N を割ってから返す。`norm` が非有限または実質ゼロ
+(`|norm| ≤ 1e-12·max_abs(N)·nA·nB`)なら `std::runtime_error`。
+
+改訂 1 にあった `fix_environment_phase` は**存在しない**(環境の位相は窓ごとに異なるので、
+環境を一括で回すことはできない。設計書 §1・§2)。
 
 ## 3. 振る舞い契約
 
@@ -258,6 +265,10 @@ std::complex<double> fix_environment_phase(
 
 が成り立つ。左辺は **plain な要素積和**であり、`fermion::trace` ではない
 (`fermion::trace` は奇脚数 4 に対する追加符号を持つので使ってはならない)。
+
+**2026-09-05 注記**: 右辺(閉じた測定経路)は環境の位相を含み、左辺の N は §2.5 の位相正規化を
+経ているので、実 CTM 環境では両辺は `phase`(返り値)倍だけ異なる。T2-i は有限パッチの環境
+(位相 1)で要求する。実 CTM での N の性質は T2-vi と T8-ii で扱う。
 
 覆う条件: direction は horizontal と vertical の両方、`real_tensor` と `complex_tensor` の両方、
 仮想脚台帳は非自明(偶奇混在)なもの、物理次元は d=2 と d=4 の両方、そして
@@ -489,66 +500,71 @@ SU 固定点より高い。`work/fermion/full-update-design/FINDINGS-task5-energ
 `RSVD` / `Kitaev`、および既存フェルミオンテスト `FreeFermion` / `FreeFermionMF` /
 `FreeFermionSaveLoad` / `FreeFermionSimple` / `test_fermion_layer`。
 
-### 3.6 CTM 環境の全体位相(T8、2026-09-05 追加)
+### 3.6 CTM 環境の位相(T8、2026-09-05 追加、改訂 2)
 
 背景: フェルミオン mode の CTM(`build_reduced_density_tensors` → `Calc_CTM_Environment_density`)は、
-fold 済みテンソルを一様ベクトルで潰して初期化するため、収束した環境が「正しい環境 × e^{iφ}」になる
-(実数なら ±1、複素なら任意)。測定値は位相が打ち消されるので影響しないが、
-`Check_Convergence_CTM_RDM` の実正値判定と full update の正値化が壊れる。
-設計書 `2026-09-05-fermion-ctm-phase-design.md`。API は §2.5。
+fold 済みテンソルを一様ベクトルで潰して初期化するため、収束した環境の C, eT は状態依存の位相を持つ
+(実数なら ±1、複素なら任意)。位相は**窓ごとに異なり**、複素では反復ごとに回る
+(`work/fermion/ctm-phase/report-testauthor.md` §7.1 の計測)。測定値 ⟨O⟩/⟨1⟩ は位相が打ち消されるので
+影響しないが、`Check_Convergence_CTM_RDM` の実正値判定、full update の N のエルミート化・正値化、
+`onesite_density_matrix.dat` の出力が壊れる。対処は「判定を位相不変にし、環境を消費する側が
+自分の窓の ⟨1⟩ で位相を決める」。設計書 `2026-09-05-fermion-ctm-phase-design.md`、API は §2.5。
 
 **(T8-i) 収束判定の位相不変性。** `core::Check_Convergence_CTM_RDM` を、独立な履歴
 (`rdm_old`, `has_rdm_old`)を持つ **2 系列**で **2 回ずつ**呼ぶ:
 
-- 基準系列: 環境 E0 → 環境 E1(E1 は E0 と少し違う環境。たとえば E0 の CTM を 1 反復進めたもの、
-  または E0 の C1..eT に小さな摂動を足したもの)。
+- 基準系列: 環境 E0 → 環境 E1(E1 は E0 と少し違う環境。たとえば E0 の C1..eT に 1% の摂動を足したもの)。
 - 変換系列: e^{iφ0}·E0 → e^{iφ1}·E1(位相は全 `C1[i]` に掛ける。φ0 ≠ φ1。実数テンソルでは
   (−1, +1) と (+1, −1) の両方、複素では任意の 2 値、たとえば 0.7 と 2.9)。
 
 要求(`phase_invariant = true`): 各系列の初回は未収束(戻り値 false、`rdm_dist` は NaN)。
 2 回目の戻り値が両系列で一致し、`rdm_dist` が相対 1e-12 で一致し、NaN でない。
-`is_density = true`(fold 済み Tn、`Contract_one_site_RDM_density_CTM`)と `false`(bosonic Tn)の両方、
-real と complex の両方。環境は既存の治具(有限パッチ、または `Calc_CTM_Environment*` の収束結果)でよい。
+`is_density = true`(fold 済み Tn)と `false`(bosonic Tn)の両方、real と complex の両方。
 
 追加要求:
 - 健全性: 全 `C1[i]` をゼロにした環境、NaN を 1 要素含む環境、Inf を 1 要素含む環境では、
   2 回目も戻り値 false かつ `rdm_dist` が NaN(`phase_invariant` の真偽どちらでも)。
-- `phase_invariant = false`(既定)では、実数で −1 を掛けた系列は 2 回目も未収束のまま
-  (現行挙動が保たれる)。
+- `phase_invariant = false`(既定)では、実数で −1 を掛けた系列は 2 回目も未収束のまま(現行挙動)。
 
-**(T8-ii) 位相固定。** パリティ偶ランダム Tn(全台帳 {偶,奇} など偶奇混在)から
+**(T8-ii) N の位相不変性。** パリティ偶ランダム Tn(全台帳 {偶,奇} など偶奇混在)から
 `build_reduced_density_tensors` → `Calc_CTM_Environment_density(..., phase_invariant = true)`
-(`count < iteration_max` を前提アサート)で環境を作り、`fix_environment_phase` を呼ぶ。
-状態は最低 3 つ: (a) 2×2 実数 D=3、(b) 2×2 複素 D=2、(c) **3×2** 複素 D=2。要求:
+(`count < iteration_max` を前提アサート)で環境を作り、§3.3 の窓で `build_full_update_environment` を
+(a) 環境そのまま、(b) 全 `C1[i]` に e^{iφ}(実数は −1)を掛けた環境、(c) 窓に含まれる eT の 1 つ
+(たとえば `eTt[s1]`)に e^{iφ} を掛けた環境、の 3 通りで呼ぶ。状態は最低 3 つ:
+2×2 実数 D=3、2×2 複素 D=2、**3×2** 複素 D=2。両方向。要求:
 
-1. 呼出後、全サイトの one-site norm `n_i` が `|Im n_i| ≤ 1e-10·|n_i|`、`Re n_i > 0`。
-2. 呼出前後で、two-site 水平・垂直の ⟨O⟩/⟨1⟩(`contract_reduced_pair_halves_density_CTM`、O は hopping)
-   と、FU の N_plain 経由の ⟨G⟩(T2-vi の 3 の形)が相対 1e-12 で不変。
-3. 呼出前後で、未正規化の one-site norm と `build_full_update_environment` の `N_plain` は
-   戻り値 `phase` の `conj(phase)` 倍(相対 1e-12)。
-4. C2, C3, C4, eTt, eTr, eTb, eTl は byte 不変(要素ごとに完全一致)。
-5. 戻り値が 1 のとき(たとえば位相固定を 2 回続けて呼んだ 2 回目)、C1 も byte 不変。
-6. (b)(c) の複素で、呼出後の `N_plain`(水平・垂直)がエルミート(相対 1e-12)かつ半正定値
-   (`eigh` の最小固有値 ≥ −1e-12·最大固有値)。
-7. 例外: 全 `C1[i]` をゼロにした環境では `std::runtime_error`。1 サイトの `C1[i]` だけに −1 を掛けた
-   環境(位相がサイト間で不一致)でも `std::runtime_error`。
+1. (a)(b)(c) の `N.t` と `N_plain` が相対 1e-12 で一致する。
+2. 返り値 `phase` は (a) に対して (b) では e^{iφ} 倍、(c) でも e^{iφ} 倍(相対 1e-12)。
+   (a) の `phase` は |phase| = 1。
+3. `Σ_x N.t(x)·I_wrap.t(x)` が実正(`|Im| ≤ 1e-12·|·|`、Re > 0)。
+4. `N_plain` がエルミート(相対 1e-12)かつ半正定値(`eigh` の最小固有値 ≥ −1e-12·最大固有値)。
+   複素を含む。
+5. `forbidden_ratio` は (a)(b)(c) で一致する。
+6. 例外: 全 `C1[i]` をゼロにした環境では `std::runtime_error`。
 
-**(T8-iii) 複素 E2E。** 自由フェルミオン D=2 を `is_real = false` で走らせ(SU のみ、`num_step` は
-既存 `FreeFermion` と同じ)、標準出力に「CTM did not converge」が無いこと、エネルギーの虚部が
-1e-10 以下、密度が既存 `FreeFermion` と同じ許容内であること。
+**(T8-iii) 複素 E2E。** 自由フェルミオン D=2、**mu = 0**(半充填)を `is_real = false` で走らせ
+(SU のみ、`num_step` は既存 `FreeFermion` の mu = 0 と同じ)、標準出力に「CTM did not converge」が
+無いこと、エネルギーの虚部が 1e-10 以下、密度が既存 `FreeFermion`(mu = 0)と同じ許容内であること。
+mu ≠ 0 は複素の初期状態が別の固定点に落ちるので密度比較の対象にしない
+(テスト作成者の観察、`report-testauthor.md` §7.2)。
 
-**(T8-iv) FU 核のガード。** T3-i の入力で、(a) `C1` を −1 倍して `Full_update_bond_fermion` を呼ぶと
-`std::runtime_error`、(b) 複素で `C1` に e^{iφ}(φ = 2.0)を掛けると `std::runtime_error`、
-(c) 変えない入力では投げない。両方向。窓の縮約は C1 をちょうど 1 つ含むので、(a) では N が
-−1 倍、(b) では e^{iφ} 倍になる。
+**(T8-iv) full update の位相不変性。** T3-i の入力で、(a) そのまま、(b) `C1` に −1(複素は e^{iφ}、
+φ = 2.0)を掛けたもの、で `Full_update_bond_fermion` を呼び、出力の pair state が一致すること
+(全体スケールと位相を最小二乗で吸収、相対 1e-10)。両方向。(b) が例外を投げてはならない。
+
+**(T8-v) one-site RDM 出力。** T8-iii の実行が書く `onesite_density_matrix.dat` の各サイトの
+trace が実正(`|Im| ≤ 1e-10·|tr|`、Re > 0)。
 
 **(T2-vi complex)** 既存 T2-vi を `complex_tensor` でも行う。環境は
-`Calc_CTM_Environment_density(..., phase_invariant = true)`(`count < iteration_max` を前提アサート)
-→ `fix_environment_phase` で作る。比較の許容は real と同じ。
+`Calc_CTM_Environment_density(..., phase_invariant = true)`(`count < iteration_max` を前提アサート)で
+作る(位相固定は無い)。測定経路のノルム ⟨ψ(Y)|ψ(Y)⟩ は環境の位相を含むので、比較は
+**|ノルム|** どうし(相対 1e-10)と、**比** ⟨ψ(Y)|G|ψ(Y)⟩/⟨ψ(Y)|ψ(Y)⟩ どうし(1e-10)で行う。
+`N_plain` 側は位相正規化済みなので ⟨Ỹ|N_plain|Ỹ⟩ は実正。
 
-**(T7 追記、検証者が実施)** bosonic golden(`AntiferroHeisenberg_real/complex`、`Honeycomb`、
-`J1J2_AFH`、`Kitaev`)と finite-T golden(`FT_*`)は、本変更の前後のバイナリを同一入力・
-1 thread・MPI off・固定 seed で走らせて `output_*/*.dat` の **sha256 が一致**すること。
+**(T7 追記、検証者が実施)** bosonic golden(`AntiferroHeisenberg_real/complex/mf`、`RSVD`、`J1J2_AFH`、
+`Honeycomb`、`Honeycomb_skew`、`TE_TFI`)と finite-T golden(`FT_TFI_square`、`FT_Kitaev`)は、
+本変更の前後のバイナリを同一入力・1 thread・MPI off で走らせて `output_*/*.dat`(`time.dat` を除く)の
+**sha256 が一致**すること。基準は `work/fermion/ctm-phase/ab/before/sha256.txt`。
 これはテストではなく検証者(Claude)が機械的に確認する。
 
 ## 4. 検出力の限界(重要)
@@ -588,4 +604,4 @@ N の符号バグは T5 まで誰にも捕まらない(そして T5 が落ちて
 - [ ] テンソルの要素比較は global index 経由で行った(§0)
 - [ ] T2-vi の Y に X・Θ 以外の一般ブロック(ランダム、X+0.05·ランダム)を含めた
 - [ ] T8-i は独立な履歴を持つ 2 系列で 2 回ずつ呼び、φ0 ≠ φ1 にした
-- [ ] T8-ii は 3×2 セルと複素を含め、C2..eT の byte 不変と phase=1 での C1 byte 不変を検査した
+- [ ] T8-ii は 3×2 セルと複素を含め、C1 と eT の両方に位相を掛けた場合の N の不変性を検査した
