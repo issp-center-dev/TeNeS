@@ -54,6 +54,9 @@ Python E2E テストは `test/fermion/<name>.py.in` を作り、`test/CMakeLists
 - T8-iii と T8-v は新規 `test/fermion/free_fermion_complex.py.in`(ctest 名 `FreeFermionComplex`)。
 - T5 改訂は既存 `test/fermion/free_fermion_full.py.in` を書き換える(このファイルだけは変更を許可する)。
   ctest 名 `FreeFermionFull` と TIMEOUT は `test/CMakeLists.txt` で調整してよい。
+- T6 の実行を伴う 2 ケースは `test/input.cpp` から新規 `test/fermion/fermion_guards.cpp` へ移す
+  (2026-09-05 改訂。`test/input.cpp` のその 2 つの `TEST_CASE` を削除し、`test/test_fermion_layer.cpp` に
+  `#include "fermion/fermion_guards.cpp"` を足す)。
 
 ## 2. テストが呼ぶ公開 API
 
@@ -502,6 +505,17 @@ SU 固定点より高い。`work/fermion/full-update-design/FINDINGS-task5-energ
 - `source_leg` が 0 または 1 のボンドを含む fermion + full update の実行後、
   仮想パリティ台帳が全ボンドで両端一致していること
   (`tenes::fermion::validate_neighbor_consistency` が投げない)。
+
+**2026-09-05 改訂(設定と置き場所)**: T6 のうち `itps_main` を丸ごと走らせる 2 ケース
+(fast full update のフォールバック、台帳整合)は、**CTM が収束する設定**で行う:
+simple update を 200 step 以上、`[parameter.ctm] iteration_max` を 100 以上、`convergence_epsilon = 1e-8`、
+D=2、chi=8。短い設定(SU 20 step、CTM 20 反復)では CTM 未収束のパリティ漏れが
+`build_full_update_environment` の forbidden 検査(1e-8)に当たり、ガードとは無関係の理由で落ちる
+(実測: SU 20/CTM 20 で 6.4e-5、SU 20/CTM 100 で 3.7e-8、SU 200/CTM 100 で 5.5e-13)。
+テスト自身が「CTM did not converge」が出ないことを前提アサートすること。
+置き場所は `test/input.cpp` ではなく `test/fermion/fermion_guards.cpp`(新規、`test/test_fermion_layer.cpp` に
+`#include`)に移す。`test/input.cpp` には入力機構のテストだけを残す(T6 の「受理される」「拒否される」の
+純粋な load 検査はそのままでよい)。
 
 **(T7) bosonic 回帰。** 既存テストが無変更で緑であること。新規テストは不要。
 対象: doctest `test_full_update`、golden の `AntiferroHeisenberg_real` /
