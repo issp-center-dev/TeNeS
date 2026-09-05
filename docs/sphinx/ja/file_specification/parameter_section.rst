@@ -64,7 +64,7 @@
   - full update に関する注意:
 
     - ``fastfullupdate = true``(既定値)は非対応です。フェルミオン模式では警告を出したうえで非高速版(ボンドごとに CTM を再収束する)にフォールバックします。``meanfield_env = true`` との組み合わせはエラーになります
-    - full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(``1e-8`` と ``[parameter.ctm]`` の ``convergence_epsilon`` の大きい方)を超えるとエラーで停止します。その場合は ``[parameter.ctm]`` の ``iteration_max`` を増やすか ``convergence_epsilon`` を小さくしてください
+    - full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(``1e-8`` と ``[parameter.ctm]`` の ``convergence_epsilon`` の 100 倍の大きい方)を超えるとエラーで停止します。その場合は ``[parameter.ctm]`` の ``iteration_max`` を増やすか ``convergence_epsilon`` を小さくしてください
     - ボンド次元が小さいとき(例: 自由フェルミオンの ``D = 2``)、simple update で収束した状態から full update を始めるとエネルギーが**上がる**ことがあります。これは射影虚時間発展の固定点が表現力不足の状態空間では simple update の固定点より高くなりうるためで、実装の誤りではありません。フェルミオン系では ``D >= 3`` を推奨します
   - ``tensor_save`` / ``tensor_load`` はフェルミオン模式でも使えます。仮想ボンドの偶奇台帳が保存先の ``fermion.dat`` に書き出され、読み込み時に物理脚のパリティ・``virtual_dim``・``L_sub``・``skew``・テンソル自身のパリティが検証されます。``virtual_dim`` を変えての読み込みは非対応です(偶奇ブロックの構造が保てないため)
 

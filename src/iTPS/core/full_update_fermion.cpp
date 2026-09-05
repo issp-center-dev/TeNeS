@@ -222,7 +222,7 @@ void Full_update_bond_fermion(
   // by ALS without materializing the closed two-site reduced tensor.
   const auto env = tenes::fermion::build_full_update_environment(
       C1, C2, C3, C4, eT1, eT2, eT3, eT4, eT5, eT6, QA, QB, direction,
-      std::max(1.0e-8, peps_parameters.CTM_Convergence_Epsilon));
+      std::max(1.0e-8, 100.0 * peps_parameters.CTM_Convergence_Epsilon));
   if (fermion_full_update_log_enabled() && Tn1.t.get_comm_rank() == 0) {
     std::cerr << "TENES_FERMION_FULL_UPDATE_ENV direction="
               << direction_name(direction)
