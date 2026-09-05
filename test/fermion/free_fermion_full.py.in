@@ -14,25 +14,36 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 #
-# T5 of docs/superpowers/specs/2026-09-04-fermion-full-update-contract.md:
-# the fermionic full update has to be physically useful, not merely
+# T5 (2026-09-05 revision) of
+# docs/superpowers/specs/2026-09-04-fermion-full-update-contract.md: the
+# fermionic full update has to be physically useful, not merely
 # self-consistent.
 #
 # The model is the free spinless fermion model of the other
 # test/fermion/free_fermion*.py.in tests (t = 1, mu = 0, half filling,
-# L_sub = [2, 2], D = 2, chi = 8, tau = 0.01, seed = 11).  Two runs share
-# the seed and the whole simple-update schedule and differ only in
-# [parameter.full_update] num_step:
+# L_sub = [2, 2], tau = 0.01, seed = 11) at D = 3, chi = 12 and
+# [parameter.ctm] iteration_max = 200, as the revised contract fixes them.
+# Two runs share the seed and the whole simple-update schedule and differ
+# only in [parameter.full_update] num_step:
 #
 #   run "su": num_step = 0   -> E_SU, the simple-update fixed point
 #   run "fu": num_step = N   -> E_FU, the same state after N full-update
-#                               steps
+#                               sweeps (one num_step applies every gate of
+#                               the list below once, i.e. one sweep)
 #
 # so that the difference between the two energies is the full update and
 # nothing else.  The reference energy is analytic: the free Fermi sea of
 # eps(k) = -2 t (cos kx + cos ky) - mu, evaluated exactly the same way as in
 # free_fermion.py.in and free_fermion_mf.py.in.  No number in this file is
 # taken from a tenes run.
+#
+# The revised contract asks for a strict energy DECREASE (E_FU < E_SU - 1e-4)
+# rather than mere non-increase: at D = 2 the projected imaginary-time fixed
+# point of the free fermion sits above the simple-update fixed point (a
+# representability limit, not an implementation error), which is why D = 3
+# is required here.  It also asks that neither run prints the CTM
+# non-convergence warning, since a fermion-mode CTM whose environment picked
+# up a global phase used to spin to iteration_max without ever converging.
 #
 # The full-update gate list deliberately spans all four source_leg values.
 # The solver's raster convention (src/iTPS/simple_update.cpp) is that the
@@ -54,8 +65,8 @@ import numpy as np
 
 T = 1.0
 MU = 0.0
-D = 2
-CHI = 8
+D = 3
+CHI = 12
 TAU = 0.01
 SEED = 11
 LX = 2
@@ -70,12 +81,17 @@ NUM_FULL_STEP = 4
 
 # The plain (non fast) full update re-converges the CTM once per bond, so
 # the wall time is dominated by NUM_FULL_STEP * 8 CTM convergences.  Both
-# knobs are therefore pinned small and explicit, as the contract asks.
+# knobs are pinned explicitly; iteration_max = 200 is the contract's value.
 CTM_CONVERGENCE_EPSILON = 1.0e-8
-MAX_CTM_ITERATION = 50
+MAX_CTM_ITERATION = 200
 
-# Contract 3.5 (T5).
-ENERGY_NONINCREASE_TOL = 1.0e-8
+# Contract 3.5 (T5, 2026-09-05 revision): the full update must LOWER the
+# energy by at least this much.
+ENERGY_DECREASE_MIN = 1.0e-4
+
+# The warning Calc_CTM_Environment(_density) prints on standard output when
+# it hits iteration_max.  Neither run may print it.
+CTM_WARNING = "CTM did not converge"
 
 # Sanity band for the simple-update baseline.  free_fermion.py.in documents
 # that the D = 2 quick mode sits within 20% of the exact energy; anything
@@ -384,6 +400,7 @@ def main():
             return 1
         results[label] = {
             "outdir": outdir,
+            "stdout": proc.stdout,
             "stderr": proc.stderr,
             "density": read_density(outdir),
             "times": read_time(outdir),
@@ -429,6 +446,14 @@ def main():
             failures.append(
                 f"{label}: tenes warned about Full_Use_FastFullUpdate even "
                 "though the input sets fastfullupdate = false"
+            )
+        combined = results[label]["stdout"] + results[label]["stderr"]
+        if CTM_WARNING in combined:
+            count = combined.count(CTM_WARNING)
+            failures.append(
+                f"{label}: tenes printed '{CTM_WARNING}' {count} time(s); "
+                "every CTM of the run has to converge within "
+                f"iteration_max = {MAX_CTM_ITERATION}"
             )
 
     for label in ("su", "fu"):
@@ -504,11 +529,12 @@ def main():
                 "measurement or the exact reference is wrong"
             )
 
-    # --- the contract's two requirements ----------------------------------
-    if not energy_fu <= energy_su + ENERGY_NONINCREASE_TOL:
+    # --- the contract's energy requirements --------------------------------
+    if not energy_fu < energy_su - ENERGY_DECREASE_MIN:
         failures.append(
-            f"the full update raised the energy: E_FU = {energy_fu} > "
-            f"E_SU = {energy_su} + {ENERGY_NONINCREASE_TOL:g}"
+            f"the full update did not lower the energy by {ENERGY_DECREASE_MIN:g}: "
+            f"E_FU = {energy_fu} is not below E_SU - {ENERGY_DECREASE_MIN:g} = "
+            f"{energy_su - ENERGY_DECREASE_MIN}"
         )
     if not abs(energy_fu - exact_energy) < abs(energy_su - exact_energy):
         failures.append(

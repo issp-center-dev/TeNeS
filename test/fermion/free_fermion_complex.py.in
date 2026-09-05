@@ -1,0 +1,409 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# T8-iii and T8-v (E2E part) of
+# docs/superpowers/specs/2026-09-04-fermion-full-update-contract.md
+# (section 3.6, 2026-09-05, revision 2.1): the fermionic CTM has to converge
+# for COMPLEX tensors, and what it measures has to be real.
+#
+# The fold-mode CTM initialises its corners by crushing the folded site
+# tensors with uniform vectors, so the converged corners and edges carry
+# state-dependent phases.  For real tensors they are signs and usually +1;
+# for complex tensors they are generic, the one-site RDM convergence check
+# never sees a real positive trace, and the CTM used to spin to
+# iteration_max on every measurement, printing
+# "Warning: CTM did not converge!".  This test runs the free spinless
+# fermion model of free_fermion.py.in at mu = 0 (half filling; t = 1,
+# L_sub = [2, 2], D = 2, chi = 8, tau = 0.01, seed = 11, simple update only,
+# the same num_step as FreeFermion at mu = 0) with is_real = false and
+# requires
+#
+#   - that none of "CTM did not converge", "Norm is negative",
+#     "Norm is not real" is printed on standard output or standard error,
+#   - that the imaginary part of the energy is at most 1e-10,
+#   - that the density agrees with the real-tensor golden file
+#     test/data/output_FreeFermion/free_fermion.dat within the tolerance
+#     free_fermion.py.in itself uses (rtol 1e-3, atol 1e-4),
+#   - (T8-v) that the trace of every site's block of
+#     onesite_density_matrix.dat is real positive (|Im| <= 1e-10 |tr|).
+#
+# The golden density is a REAL-tensor result, not a complex one, so no
+# number here was ever produced by the code path under test; the energy is
+# additionally held to the same provisional distance from the analytic
+# Fermi-sea value that free_fermion.py.in uses at D = 2.
+#
+# Why mu = 0 only (contract T8-iii): at half filling the density is pinned
+# to 1/2 by particle-hole symmetry, independently of which simple-update
+# fixed point the run lands in, so the comparison tests the complex
+# measurement path and nothing else.  Away from half filling the fixed point
+# depends on the initial tensors, and the complex-noise start of
+# is_real = false was observed (2026-09-05, current binary) to stay at
+# n = 0.4995 after 4500 steps at mu = -1 where the real-noise golden run has
+# n = 0.288; that is a property of the simple-update trajectory, not of the
+# CTM phase this test is about.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MUS = [0.0]
+D = 2
+TAU = 0.01
+SEED = 11
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+# free_fermion.py.in's quick-mode (D = 2) distance from the exact energy.
+EXACT_RTOL = 2.0e-1
+# Contract T8-iii: |Im E| <= 1e-10.
+IMAG_TOL = 1.0e-10
+# What Calc_CTM_Environment_density prints on standard output when it hits
+# iteration_max, and what the measurement prints when the norm it divides by
+# is not a positive real number.  None may appear, on either stream.
+FORBIDDEN_MESSAGES = ("CTM did not converge", "Norm is negative", "Norm is not real")
+MAX_CTM_ITERATION = 100
+# Contract T8-v: the trace of every site's one-site RDM is real positive.
+RDM_TRACE_IMAG_TOL = 1.0e-10
+
+
+def num_steps(mu):
+    # Same schedule as free_fermion.py.in (see the comment there).
+    return 1000 if mu == 0.0 else 4500
+
+
+def exact_free_fermion(t, mu, nk=512):
+    k = np.linspace(-np.pi, np.pi, nk, endpoint=False) + np.pi / nk
+    kx, ky = np.meshgrid(k, k)
+    eps = -2.0 * t * (np.cos(kx) + np.cos(ky)) - mu
+    occ = eps < 0.0
+    n = occ.mean()
+    e = (eps * occ).mean()
+    return e, n
+
+
+def relerr(value, reference):
+    return abs(value - reference) / max(1.0, abs(reference))
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = []
+    for site in range(4):
+        lines.append(f"{site} 1 0")
+    for site in range(4):
+        lines.append(f"{site} 0 1")
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+""")
+    return "\n".join(blocks)
+
+
+def input_toml(mu, D, outdir):
+    chi = 2 * D * D
+    h = two_site_hamiltonian(T, mu)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block()
+    return f"""[parameter]
+[parameter.general]
+is_real = false
+fermion = true
+output = "{outdir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {num_steps(mu)}
+
+[parameter.ctm]
+dimension = {chi}
+convergence_epsilon = 1.0e-8
+iteration_max = {MAX_CTM_ITERATION}
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    # density.dat rows are "name = re im"; both columns are kept.
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            if len(words) < 2:
+                raise ValueError(
+                    f"density.dat row '{line.strip()}' has no imaginary column; "
+                    "the run was not complex"
+                )
+            values[name.strip()] = complex(float(words[0]), float(words[1]))
+    return values
+
+
+def read_onesite_rdm_traces(outdir):
+    # onesite_density_matrix.dat rows are "site row col re im"; the trace of
+    # each site's block is the sum of its diagonal elements.
+    traces = {}
+    with open(join(outdir, "onesite_density_matrix.dat")) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            site, row, col, re, im = line.split()
+            if row == col:
+                traces[int(site)] = traces.get(int(site), 0.0) + complex(
+                    float(re), float(im)
+                )
+    return traces
+
+
+def read_golden(path):
+    # The real-tensor golden file of FreeFermion: "# mu D energy n ...".
+    rows = {}
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            words = line.split()
+            rows[(float(words[0]), int(words[1]))] = {
+                "energy": float(words[2]),
+                "density": float(words[3]),
+            }
+    return rows
+
+
+def main():
+    output_root = "output_FreeFermionComplex"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    golden_path = join("data", "output_FreeFermion", "free_fermion.dat")
+    if not os.path.exists(golden_path):
+        print(f"reference file is missing: {golden_path}")
+        return 1
+    golden = read_golden(golden_path)
+
+    failures = []
+    for mu in MUS:
+        exact_energy, exact_density = exact_free_fermion(T, mu)
+        label = f"mu{mu:g}".replace("-", "m").replace(".", "p")
+        outdir = join(output_root, f"{label}_D{D}")
+        inputfile = join(output_root, f"input_{label}_D{D}.toml")
+        with open(inputfile, "w") as f:
+            f.write(input_toml(mu, D, outdir))
+
+        proc = run_tenes(inputfile)
+        combined = proc.stdout + proc.stderr
+        if proc.returncode != 0:
+            print(combined)
+            print(f"tenes failed for mu={mu}: exit {proc.returncode}")
+            return 1
+        with open(join(output_root, f"stdout_{label}.txt"), "w") as f:
+            f.write(proc.stdout)
+        with open(join(output_root, f"stderr_{label}.txt"), "w") as f:
+            f.write(proc.stderr)
+
+        # --- the CTM converged every time it was asked to, and the norms it
+        #     divided by were real positive --------------------------------
+        for message in FORBIDDEN_MESSAGES:
+            if message in combined:
+                failures.append(
+                    f"mu={mu}: tenes printed '{message}' "
+                    f"{combined.count(message)} time(s)"
+                )
+
+        # --- T8-v: every one-site RDM has a real positive trace -----------
+        traces = read_onesite_rdm_traces(outdir)
+        if len(traces) != 4:
+            failures.append(
+                f"mu={mu}: onesite_density_matrix.dat has blocks for sites "
+                f"{sorted(traces)} instead of 0..3"
+            )
+        for site in sorted(traces):
+            tr = traces[site]
+            print(f"FreeFermionComplex mu={mu:.1f} site {site} RDM trace = {tr}")
+            if not (np.isfinite(tr.real) and np.isfinite(tr.imag)):
+                failures.append(f"mu={mu}: site {site} RDM trace {tr} is not finite")
+                continue
+            if not tr.real > 0.0:
+                failures.append(
+                    f"mu={mu}: site {site} RDM trace {tr} has a non-positive real part"
+                )
+            if not abs(tr.imag) <= RDM_TRACE_IMAG_TOL * abs(tr):
+                failures.append(
+                    f"mu={mu}: site {site} RDM trace {tr} is not real "
+                    f"(|Im| > {RDM_TRACE_IMAG_TOL:g} |tr|)"
+                )
+
+        density = read_density(outdir)
+        missing = [name for name in ("Energy", "n") if name not in density]
+        if missing:
+            failures.append(f"mu={mu}: density.dat has no {missing} row")
+            continue
+        energy = density["Energy"]
+        n = density["n"]
+        print(
+            "FreeFermionComplex mu={:.1f} D={} energy=({:.12e}, {:.3e}) "
+            "n=({:.12e}, {:.3e}) exact_energy={:.12e} exact_n={:.12e}".format(
+                mu, D, energy.real, energy.imag, n.real, n.imag, exact_energy,
+                exact_density
+            )
+        )
+
+        # --- the energy is real ---------------------------------------------
+        if not abs(energy.imag) <= IMAG_TOL:
+            failures.append(
+                f"mu={mu}: Im(Energy) = {energy.imag} exceeds {IMAG_TOL:g}"
+            )
+        if not abs(n.imag) <= IMAG_TOL:
+            failures.append(f"mu={mu}: Im(n) = {n.imag} exceeds {IMAG_TOL:g}")
+        if not (np.isfinite(energy.real) and np.isfinite(n.real)):
+            failures.append(f"mu={mu}: energy or density is not finite")
+            continue
+
+        # --- the density agrees with the real-tensor golden ----------------
+        key = (mu, D)
+        if key not in golden:
+            failures.append(f"mu={mu}: no golden row for mu={mu} D={D}")
+            continue
+        if not np.isclose(n.real, golden[key]["density"], rtol=RTOL, atol=ATOL):
+            failures.append(
+                f"mu={mu}: density {n.real} differs from the real-tensor "
+                f"golden {golden[key]['density']} (rtol {RTOL:g}, atol {ATOL:g})"
+            )
+        # --- and the energy is a free-fermion energy at all -----------------
+        if relerr(energy.real, exact_energy) > EXACT_RTOL:
+            failures.append(
+                f"mu={mu}: energy {energy.real} is outside the provisional "
+                f"{EXACT_RTOL:g} relative-error band around the exact "
+                f"{exact_energy}"
+            )
+
+    if failures:
+        for message in failures:
+            print("FreeFermionComplex failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -140,12 +140,26 @@ add_test(NAME BosonEquivalenceFull
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_full.py)
 set_tests_properties(BosonEquivalenceFull PROPERTIES TIMEOUT 900)
 
+# Contract T5 (2026-09-05 revision): D = 3, chi = 12, 1000 simple-update
+# steps and 4 full-update sweeps; about a minute in a Release build, and the
+# TIMEOUT is well above three times that.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_full.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_full.py @ONLY)
 add_test(NAME FreeFermionFull
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_full.py)
 set_tests_properties(FreeFermionFull PROPERTIES TIMEOUT 1800)
+
+# Contract T8-iii and T8-v (E2E part): the free-fermion simple update with
+# complex tensors (is_real = false) at half filling; the fold CTM has to
+# converge without any norm warning, the energy and every one-site RDM trace
+# have to be real, and the density has to agree with the real-tensor golden.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_complex.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_complex.py @ONLY)
+add_test(NAME FreeFermionComplex
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_complex.py)
+set_tests_properties(FreeFermionComplex PROPERTIES TIMEOUT 900)
 
 # End-to-end test of tensor_save / tensor_load in fermion mode: the parity
 # ledger written next to the tensors, the reload round trip, a parameter scan
