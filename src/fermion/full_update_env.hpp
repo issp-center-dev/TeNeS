@@ -121,7 +121,8 @@ full_update_environment<tensor> build_full_update_environment(
     const tensor& C1, const tensor& C2, const tensor& C3, const tensor& C4,
     const tensor& eT1, const tensor& eT2, const tensor& eT3, const tensor& eT4,
     const tensor& eT5, const tensor& eT6, const ftensor<tensor>& QA,
-    const ftensor<tensor>& QB, reduced_pair_direction direction) {
+    const ftensor<tensor>& QB, reduced_pair_direction direction,
+    double forbidden_tol = 1.0e-8) {
   if (direction != reduced_pair_direction::horizontal &&
       direction != reduced_pair_direction::vertical) {
     throw std::runtime_error("build_full_update_environment: invalid direction");
@@ -161,11 +162,13 @@ full_update_environment<tensor> build_full_update_environment(
   const double forbidden_abs = parity_violation(Ntilde);
   const double scale = max_abs(Ntilde);
   const double forbidden_ratio = scale > 0.0 ? forbidden_abs / scale : 0.0;
-  if (forbidden_ratio > 1.0e-8) {
+  if (forbidden_ratio > forbidden_tol) {
     std::stringstream ss;
     ss << "build_full_update_environment: forbidden parity block ratio "
-       << forbidden_ratio << " exceeds 1e-8 (forbidden max_abs="
-       << forbidden_abs << ", max_abs=" << scale << ")";
+       << forbidden_ratio << " exceeds " << forbidden_tol
+       << " (forbidden max_abs=" << forbidden_abs << ", max_abs=" << scale
+       << "); the CTM may not have converged (check iteration_max and "
+          "CTM_Convergence_Epsilon)";
     throw std::runtime_error(ss.str());
   }
   detail::project_even(Ntilde);
