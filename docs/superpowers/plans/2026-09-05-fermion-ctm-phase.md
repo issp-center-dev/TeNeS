@@ -38,3 +38,10 @@
 完了条件: `cmake --build --preset gcc-release` が通り、`ctest --preset gcc-release` で
 `test_fermion_layer`(T8 を含む)、`FreeFermionComplex`、`FreeFermionFull`(D=3)が緑、
 既存テストが緑。`test/` は変更しない。報告 `work/fermion/ctm-phase/report-task1.md`。
+
+## タスク 2: forbidden 閾値の CTM 精度連動(2026-09-05、済)
+
+契約 T2-ii の 2026-09-05 追記(52753442)。テスト(f744ae1c、T2-ii tol 2 ケース)→ Codex 実装(74ea09a7)。
+`build_full_update_environment(..., double forbidden_tol = 1e-8)`、核は `max(1e-8, CTM_Convergence_Epsilon)` を渡す。
+実測: 収束 CTM で forbidden ratio ≈ 1e-4·ε。T6 のガード E2E は `test/fermion/fermion_guards.cpp` へ移設し
+CTM 収束設定に(2d839476)。**ctest 37/37 全件緑。**
