@@ -171,6 +171,18 @@ add_test(NAME FreeFermionSaveLoad
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload.py)
 set_tests_properties(FreeFermionSaveLoad PROPERTIES TIMEOUT 1800)
 
+# Contract S-1 and S-2 of
+# docs/superpowers/specs/2026-09-06-fermion-saveload-ctm-contract.md: the
+# save/load round trip FreeFermionSaveLoad does not cover, namely fermion mode
+# with the CTM environment (meanfield_env = false) and a full update, which
+# folds the CTM edge tensors and used to make the checkpoint unreadable.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_saveload_ctm.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload_ctm.py @ONLY)
+add_test(NAME FreeFermionSaveLoadCTM
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload_ctm.py)
+set_tests_properties(FreeFermionSaveLoadCTM PROPERTIES TIMEOUT 1800)
+
 # End-to-end test of the full three-stage pipeline (tenes_simple -> tenes_std
 # -> tenes) for the fermionic model, checked against the handwritten
 # expert-mode sample sample/07_spinless_fermion.

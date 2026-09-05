@@ -63,18 +63,55 @@ void iTPS<ptensor>::save_tensors() const {
       ofs << lattice.physical_dims[i] << " # Shape of Tn[" << i << "]\n";
     }
   }
+  // The CTM environment a fermionic run holds cannot be written out as it
+  // stands: update_CTM() builds it through Calc_CTM_Environment_density, so
+  // the edge tensors are folded to the single-layer form (CHI, CHI, D*D),
+  // while initialize_tensors() allocates the double-layer (CHI, CHI, D, D)
+  // that load_tensor() then insists on. A run that took a full-update step
+  // therefore used to write a checkpoint it could not read back.
+  //
+  // Saving the environment in the shape a fresh run starts with costs nothing,
+  // because the loaded environment is never used: Calc_CTM_Environment and its
+  // density twin default to initialize = true and update_CTM() calls them that
+  // way in both branches, so the environment is rebuilt from the site tensors
+  // whichever mode we are in. Zero rather than whatever the allocator left
+  // behind, so that the checkpoint of a given state is the same file every
+  // time.
+  const auto save_placeholder = [this](const mptensor::Shape &shape,
+                                       const std::string &path) {
+    ptensor t(comm, shape);
+    for (size_t n = 0; n < t.local_size(); ++n) {
+      t.set_value(t.global_index(n), typename ptensor::value_type(0.0));
+    }
+    t.save(path.c_str());
+  };
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = save_dir + "/";
     std::string suffix = "_" + std::to_string(i) + ".dat";
     Tn[i].save((filename + "T" + suffix).c_str());
-    eTt[i].save((filename + "Et" + suffix).c_str());
-    eTr[i].save((filename + "Er" + suffix).c_str());
-    eTb[i].save((filename + "Eb" + suffix).c_str());
-    eTl[i].save((filename + "El" + suffix).c_str());
-    C1[i].save((filename + "C1" + suffix).c_str());
-    C2[i].save((filename + "C2" + suffix).c_str());
-    C3[i].save((filename + "C3" + suffix).c_str());
-    C4[i].save((filename + "C4" + suffix).c_str());
+    if (finfo.enabled) {
+      const auto vdim = lattice.virtual_dims[i];
+      save_placeholder(mptensor::Shape(CHI, CHI, vdim[1], vdim[1]),
+                       filename + "Et" + suffix);
+      save_placeholder(mptensor::Shape(CHI, CHI, vdim[2], vdim[2]),
+                       filename + "Er" + suffix);
+      save_placeholder(mptensor::Shape(CHI, CHI, vdim[3], vdim[3]),
+                       filename + "Eb" + suffix);
+      save_placeholder(mptensor::Shape(CHI, CHI, vdim[0], vdim[0]),
+                       filename + "El" + suffix);
+      for (const char *name : {"C1", "C2", "C3", "C4"}) {
+        save_placeholder(mptensor::Shape(CHI, CHI), filename + name + suffix);
+      }
+    } else {
+      eTt[i].save((filename + "Et" + suffix).c_str());
+      eTr[i].save((filename + "Er" + suffix).c_str());
+      eTb[i].save((filename + "Eb" + suffix).c_str());
+      eTl[i].save((filename + "El" + suffix).c_str());
+      C1[i].save((filename + "C1" + suffix).c_str());
+      C2[i].save((filename + "C2" + suffix).c_str());
+      C3[i].save((filename + "C3" + suffix).c_str());
+      C4[i].save((filename + "C4" + suffix).c_str());
+    }
   }
   if (mpirank == 0) {
     for (int i = 0; i < N_UNIT; ++i) {
@@ -96,9 +133,7 @@ void iTPS<ptensor>::save_tensors() const {
     // reloading with a stale ledger changes the measured energy without any
     // error message.
     //
-    // The CTM environment tensors saved above carry no information in fermion
-    // mode: save_tensors() runs before measure() (main.cpp, run_groundstate)
-    // and the fermionic CTM is rebuilt from scratch inside measure().
+    // The CTM environment saved above is a placeholder, see the comment there.
     save_fermion_parity(save_dir);
   }
   if (peps_parameters.print_level >= PrintLevel::info) {
@@ -360,7 +395,7 @@ void load_tensor(ptensor &A, std::string const &name,
   if (A.rank() != temp.rank()) {
     std::stringstream ss;
     ss << "ERROR: rank mismatch in load_tensor: ";
-    ss << name << "[" << iunit << "] has " << A.rank() << " legs, but";
+    ss << name << "[" << iunit << "] has " << A.rank() << " legs, but ";
     ss << "loaded one has " << temp.rank() << " legs." << std::endl;
     ss << "HINT: check the calculation mode. The number of legs differs "
           "between ground state calculation and finite temperature "
