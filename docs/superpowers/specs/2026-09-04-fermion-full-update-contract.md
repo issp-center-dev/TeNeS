@@ -215,6 +215,14 @@ int Calc_CTM_Environment_density(
     const SquareLattice lattice, bool initialize = true,
     bool phase_invariant = false);   // 戻り値は反復回数
 
+//! Divide a gathered one-site RDM by the phase of its trace so that the
+//! trace becomes real positive. |trace| and the Frobenius norm are kept.
+//! Returns the phase that was removed (exactly 1 when nothing was changed:
+//! |phase - 1| <= 1e-14 leaves the matrix untouched).
+//! Throws std::runtime_error if any element is not finite or the trace vanishes.
+template <class value_type>
+std::complex<double> normalize_rdm_phase(small_tensor<value_type>& rdm);
+
 }  // namespace tenes::itps::core
 
 namespace tenes::fermion {
@@ -233,8 +241,9 @@ struct full_update_environment {
 
 `build_full_update_environment` は、開放 join と forbidden 検査の後、その窓の
 `norm = Σ_x N.t(x) · I_wrap.t(x)`(`I_wrap = wrap_twosite_gate(δ_{in_A,out_A} δ_{in_B,out_B}, p_a, p_β)`、
-plain 要素積和)の位相 `norm/|norm|` で N を割ってから返す。`norm` が非有限または実質ゼロ
-(`|norm| ≤ 1e-12·max_abs(N)·nA·nB`)なら `std::runtime_error`。
+plain 要素積和)の位相 `norm/|norm|` で N を割ってから返す。`N.t` に非有限な要素があるか、`norm` が
+非有限または実質ゼロ(`|norm| ≤ 1e-12·max_abs(N)·nA·nB`)なら `std::runtime_error`。
+`small_tensor` は `src/tensor.hpp` の非分散テンソル。
 
 改訂 1 にあった `fix_environment_phase` は**存在しない**(環境の位相は窓ごとに異なるので、
 環境を一括で回すことはできない。設計書 §1・§2)。
@@ -540,11 +549,18 @@ fold 済みテンソルを一様ベクトルで潰して初期化するため、
 4. `N_plain` がエルミート(相対 1e-12)かつ半正定値(`eigh` の最小固有値 ≥ −1e-12·最大固有値)。
    複素を含む。
 5. `forbidden_ratio` は (a)(b)(c) で一致する。
-6. 例外: 全 `C1[i]` をゼロにした環境では `std::runtime_error`。
+6. **独立検証**: 正規化前の窓ノルム(`phase` × 正規化後の `Σ_x N.t(x)·I_wrap.t(x)`)が、閉じた測定経路
+   `contract_reduced_pair_halves_density_CTM(env, build_reduced_pair_halves(QA′, QB′, I_wrap, direction))`
+   (QA′, QB′ は T2-i の擬似サイト)と相対 1e-12 で一致する。**nA ≠ nB になる形状を最低 1 ケース**含める
+   (I の脚順・wrap マスク・plain 積和が同じ仕方で誤っていると (1)〜(5) だけでは通ってしまう)。
+7. 例外: 全 `C1[i]` をゼロにした環境、窓内の C か eT の 1 要素に NaN を注入した環境、Inf を注入した環境の
+   それぞれで `std::runtime_error`(N の I_wrap の台の外にだけ非有限が入る位置を選び、norm だけの検査では
+   通ってしまうことを確認する)。
 
 **(T8-iii) 複素 E2E。** 自由フェルミオン D=2、**mu = 0**(半充填)を `is_real = false` で走らせ
-(SU のみ、`num_step` は既存 `FreeFermion` の mu = 0 と同じ)、標準出力に「CTM did not converge」が
-無いこと、エネルギーの虚部が 1e-10 以下、密度が既存 `FreeFermion`(mu = 0)と同じ許容内であること。
+(SU のみ、`num_step` は既存 `FreeFermion` の mu = 0 と同じ)、標準出力・標準エラー出力に「CTM did not converge」
+「Norm is negative」「Norm is not real」のいずれも無いこと、エネルギーの虚部が 1e-10 以下、密度が既存
+`FreeFermion`(mu = 0)と同じ許容内であること。
 mu ≠ 0 は複素の初期状態が別の固定点に落ちるので密度比較の対象にしない
 (テスト作成者の観察、`report-testauthor.md` §7.2)。
 
@@ -552,7 +568,12 @@ mu ≠ 0 は複素の初期状態が別の固定点に落ちるので密度比�
 φ = 2.0)を掛けたもの、で `Full_update_bond_fermion` を呼び、出力の pair state が一致すること
 (全体スケールと位相を最小二乗で吸収、相対 1e-10)。両方向。(b) が例外を投げてはならない。
 
-**(T8-v) one-site RDM 出力。** T8-iii の実行が書く `onesite_density_matrix.dat` の各サイトの
+**(T8-v) one-site RDM の位相正規化。** doctest: `core::normalize_rdm_phase` に、
+(a) trace が実正の RDM(ランダムなエルミート正定値行列でよい)を渡すと要素が完全一致(no-op)で
+戻り値が exactly 1、(b) 同じ RDM に既知の位相 e^{iφ}(実数は −1)を掛けたものを渡すと (a) の
+RDM と全要素が相対 1e-12 で一致し、戻り値が e^{iφ}(相対 1e-12)、|trace| と Frobenius ノルムが
+保存される、(c) ゼロ行列、NaN を非対角にだけ含む行列、Inf を含む行列で `std::runtime_error`。
+real と complex。加えて E2E: T8-iii の実行が書く `onesite_density_matrix.dat` の各サイトの
 trace が実正(`|Im| ≤ 1e-10·|tr|`、Re > 0)。
 
 **(T2-vi complex)** 既存 T2-vi を `complex_tensor` でも行う。環境は
