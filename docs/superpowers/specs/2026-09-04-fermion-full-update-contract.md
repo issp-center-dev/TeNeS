@@ -548,14 +548,16 @@ fold 済みテンソルを一様ベクトルで潰して初期化するため、
 3. `Σ_x N.t(x)·I_wrap.t(x)` が実正(`|Im| ≤ 1e-12·|·|`、Re > 0)。
 4. `N_plain` がエルミート(相対 1e-12)かつ半正定値(`eigh` の最小固有値 ≥ −1e-12·最大固有値)。
    複素を含む。
-5. `forbidden_ratio` は (a)(b)(c) で一致する。
+5. `forbidden_ratio` は (a)(b)(c) で一致する(値は丸め水準なので **絶対 1e-12** で判定する)。
 6. **独立検証**: 正規化前の窓ノルム(`phase` × 正規化後の `Σ_x N.t(x)·I_wrap.t(x)`)が、閉じた測定経路
    `contract_reduced_pair_halves_density_CTM(env, build_reduced_pair_halves(QA′, QB′, I_wrap, direction))`
    (QA′, QB′ は T2-i の擬似サイト)と相対 1e-12 で一致する。**nA ≠ nB になる形状を最低 1 ケース**含める
-   (I の脚順・wrap マスク・plain 積和が同じ仕方で誤っていると (1)〜(5) だけでは通ってしまう)。
+   (一様な D・d では nA = nB になるので、窓の 2 サイトの物理次元を変える — たとえば市松に d=2 と d=4 —
+   ことで作る。I の脚順・wrap マスク・plain 積和が同じ仕方で誤っていると (1)〜(5) だけでは通ってしまう)。
 7. 例外: 全 `C1[i]` をゼロにした環境、窓内の C か eT の 1 要素に NaN を注入した環境、Inf を注入した環境の
-   それぞれで `std::runtime_error`(N の I_wrap の台の外にだけ非有限が入る位置を選び、norm だけの検査では
-   通ってしまうことを確認する)。
+   それぞれで `std::runtime_error`。密な縮約では非有限が N の全要素と窓ノルムに伝播するので、
+   「N の全要素検査」と「norm の検査」をテストで区別することは要求しない(両方が実装にあることは
+   設計書 §3.2 の要求であり、レビューで確認する)。
 
 **(T8-iii) 複素 E2E。** 自由フェルミオン D=2、**mu = 0**(半充填)を `is_real = false` で走らせ
 (SU のみ、`num_step` は既存 `FreeFermion` の mu = 0 と同じ)、標準出力・標準エラー出力に「CTM did not converge」
@@ -569,8 +571,9 @@ mu ≠ 0 は複素の初期状態が別の固定点に落ちるので密度比�
 (全体スケールと位相を最小二乗で吸収、相対 1e-10)。両方向。(b) が例外を投げてはならない。
 
 **(T8-v) one-site RDM の位相正規化。** doctest: `core::normalize_rdm_phase` に、
-(a) trace が実正の RDM(ランダムなエルミート正定値行列でよい)を渡すと要素が完全一致(no-op)で
-戻り値が exactly 1、(b) 同じ RDM に既知の位相 e^{iφ}(実数は −1)を掛けたものを渡すと (a) の
+(a) trace が実正の RDM(ランダムなエルミート正定値行列でよい。**trace の虚部が厳密に 0 になるよう
+対角要素は実数で作る** — BLAS の丸めで 1e-17 の虚部が残ると |phase − 1| ≤ 1e-14 の分岐が不定になる)を
+渡すと要素が完全一致(no-op)で戻り値が exactly 1、(b) 同じ RDM に既知の位相 e^{iφ}(実数は −1)を掛けたものを渡すと (a) の
 RDM と全要素が相対 1e-12 で一致し、戻り値が e^{iφ}(相対 1e-12)、|trace| と Frobenius ノルムが
 保存される、(c) ゼロ行列、NaN を非対角にだけ含む行列、Inf を含む行列で `std::runtime_error`。
 real と complex。加えて E2E: T8-iii の実行が書く `onesite_density_matrix.dat` の各サイトの
