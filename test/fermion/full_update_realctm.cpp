@@ -880,7 +880,13 @@ void fur_run_t3viii_window(const fur_env<tensor>& e, int s1, char dir) {
       INFO(w.label << " [hopping: state moved] dev=" << dev);
       REQUIRE(dev > 1.0e-6);
     }
-    CHECK(fur_re(r_new) > fur_re(r_old));
+    // Not a bare ">": T3-iv measured the two ALS routes disagreeing on the
+    // solution by up to 5e-8 (als_iterate stops on the cost, not on the
+    // iterate), so a rise smaller than that would be round-off rather than
+    // the update. The measured rise here is 1.6e-5 (h) and 2.5e-5 (v), so a
+    // floor of 1e-7 sits two orders of magnitude above that noise and two
+    // below the signal.
+    CHECK(fur_re(r_new) > fur_re(r_old) + 1.0e-7);
   }
 }
 

@@ -1004,17 +1004,36 @@ void fcp_run_t8ii_window(const fur_env<tensor>& e, int s1, char dir,
     const std::vector<std::pair<const fur_window<tensor>*,
                                 const fue::full_update_environment<tensor>*>>
         variants{{&wa, &Na}, {&wb, &Nb}, {&wc, &Nc}};
+    // The tolerance is anchored on the largest closed value of this window
+    // rather than on each one separately: round-off in the closure is set by
+    // the size of its largest intermediate, not by how much the final sum
+    // cancels, so the smaller of two closures of the SAME network carries the
+    // same absolute error as the larger one (fold_geometry T15, CI
+    // 2026-09-05). `scale` is taken from the closed path, which does not go
+    // through the code under test, so a broken fold cannot inflate its own
+    // tolerance; and it never exceeds the largest closure, whose judgment is
+    // therefore numerically unchanged.
+    double closed_scale = 0.0;
+    for (const auto& v : variants) {
+      for (const auto* O : {&I, &R}) {
+        closed_scale =
+            std::max(closed_scale, std::abs(fcp_closed_pseudo(*v.first, *O)));
+      }
+    }
     for (const auto& v : variants) {
       for (const auto* O : {&I, &R}) {
         const std::complex<double> closed = fcp_closed_pseudo(*v.first, *O);
         const std::complex<double> open =
             fcp_to_complex(fue_sum_product(v.second->N.t, O->t));
         const std::complex<double> want = v.second->phase * open;
+        const double tol = 1.0e-12 * std::max(std::abs(closed), closed_scale);
         INFO(wa.label << " [T2-i note: closed = phase * sum N O] O="
                       << (O == &I ? "identity" : "random")
-                      << " closed=" << closed << " phase*open=" << want);
+                      << " closed=" << closed << " phase*open=" << want
+                      << " |diff|=" << std::abs(closed - want) << " tol=" << tol
+                      << " scale=" << closed_scale);
         REQUIRE(std::abs(closed) > 0.0);
-        CHECK(std::abs(closed - want) <= 1.0e-12 * std::abs(closed));
+        CHECK(std::abs(closed - want) <= tol);
       }
     }
   }

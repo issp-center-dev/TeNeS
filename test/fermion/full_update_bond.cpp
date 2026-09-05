@@ -536,7 +536,29 @@ void fub_run_boson_case(char dir, int d, int seed, bool exact,
   const fg_ftensor<tensor> got =
       fgf::build_pair_state(Tn1_new, Tn2_new, c.dir_e);
   const fg_ftensor<tensor> want = fgf::build_pair_state(Bn1, Bn2, c.dir_e);
-  fub_check_proportional(got, want, 1.0e-8,
+  // Why the tolerance depends on `exact`:
+  //
+  // als_iterate() (src/iTPS/core/full_update.cpp) stops on the change of the
+  // COST, not on the change of the iterate -
+  //   |Old_delta - delta| / |C_phi| < Full_Convergence_Epsilon
+  // - so it only pins the solution to sqrt(Full_Convergence_Epsilon) once the
+  // optimum is flat. On the generic rows it is: they need 37 sweeps, and the
+  // two routes stop one sweep apart. Their costs then agree to a relative
+  // 3.3e-15 while the pair states differ by up to 4.9e-8 (macOS g++-13,
+  // reproduced locally by rebuilding with -ffp-contract=off; sqrt(1e-14) =
+  // 1e-7 is the scale that predicts it). "The two solutions agree to 1e-8" is
+  // therefore a claim ALS does not support; "they agree to sqrt(eps_cost)"
+  // is.
+  //
+  // The exact rows are not flat: the gate is exactly representable, the
+  // residual is zero, ALS converges in 2 sweeps, and the two routes agree to
+  // 5e-16. Nothing about them justifies a loose tolerance, so they keep a
+  // strict one and the detection power of this test case with it.
+  const double tol =
+      exact
+          ? 1.0e-12
+          : std::max(1.0e-8, 10.0 * std::sqrt(params.Full_Convergence_Epsilon));
+  fub_check_proportional(got, want, tol,
                          c.label + " [T3-iv fermion vs bosonic pair state]");
 }
 

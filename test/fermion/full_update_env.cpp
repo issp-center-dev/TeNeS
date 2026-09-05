@@ -148,13 +148,28 @@ typename tensor::value_type fue_sum_product_flipped(
   return v;
 }
 
-//! Relative judgment, tol = rel * max(|got|, |ref|) (fold_geometry T15's
-//! convention).
+//! Relative judgment, tol = rel * max(|got|, |ref|, scale) (fold_geometry
+//! T15's convention).
+//!
+//! `scale` is the largest REFERENCE closure of the same kind computed in the
+//! same case - the window's identity closure, or the patch norm. Round-off in
+//! a contraction is set by the size of its largest intermediate, not by how
+//! much the final sum cancels, so a probe whose closure is two orders of
+//! magnitude below the identity closure of the same window still carries the
+//! identity closure's absolute round-off; judging it against itself asks for
+//! more than the arithmetic delivers and leaves a compiler-dependent margin
+//! (fold_geometry T15, CI 2026-09-05). Taking `scale` from the reference side
+//! keeps a broken implementation from inflating its own tolerance, and since
+//! `scale` never exceeds the largest closure of the case, the judgment on
+//! that largest closure is numerically unchanged. Callers that have no such
+//! closure to anchor on leave `scale` at 0 and get the plain relative form.
 template <class V>
-void fue_check_rel(const std::string& label, V got, V ref, double rel) {
-  const double tol = rel * std::max(std::abs(got), std::abs(ref));
-  INFO(label << ": got=" << got << " ref=" << ref
-             << " |diff|=" << std::abs(got - ref) << " tol=" << tol);
+void fue_check_rel(const std::string& label, V got, V ref, double rel,
+                   double scale = 0.0) {
+  const double tol =
+      rel * std::max(std::max(std::abs(got), std::abs(ref)), scale);
+  INFO(label << ": got=" << got << " ref=" << ref << " |diff|="
+             << std::abs(got - ref) << " tol=" << tol << " scale=" << scale);
   CHECK(std::abs(got - ref) <= tol);
 }
 
@@ -406,7 +421,8 @@ fue_case<tensor> fue_make_case(char dir, const fue_geom& g,
   INFO(c.label << " [premise: exact patch norm = " << norm_patch << "]");
   REQUIRE(std::abs(norm_patch) > 0.0);
   fue_check_rel(c.label + " [premise: env wiring, identity blob]",
-                fue_close_blob(c.env, dir, id_blob), norm_patch, 1.0e-12);
+                fue_close_blob(c.env, dir, id_blob), norm_patch, 1.0e-12,
+                std::abs(norm_patch));
   {
     // ... and once more with a dense operator blob, so a slot swap that the
     // norm happens to be blind to is caught too.
@@ -420,7 +436,8 @@ fue_case<tensor> fue_make_case(char dir, const fue_geom& g,
         fg_blob_closure(c.patch, c.reduced, c.a, c.b, dir, op_blob);
     REQUIRE(std::abs(ref) > 0.0);
     fue_check_rel(c.label + " [premise: env wiring, operator blob]",
-                  fue_close_blob(c.env, dir, op_blob), ref, 1.0e-12);
+                  fue_close_blob(c.env, dir, op_blob), ref, 1.0e-12,
+                  std::abs(norm_patch));
   }
 
   // Environment-side QR factors, leg orders exactly as tabulated in
@@ -499,7 +516,7 @@ void fue_run_probe(const fue_case<tensor>& c,
   INFO(label << " [signal]: ref=" << ref << " floor=" << floor);
   REQUIRE(std::abs(ref) > floor);
 
-  fue_check_rel(label + " [T2-i open vs closed]", got, ref, 1.0e-12);
+  fue_check_rel(label + " [T2-i open vs closed]", got, ref, 1.0e-12, ref_scale);
 
   // ... and it must reach the odd sector of N's first leg, otherwise a sign
   // error confined to that block would not show up in this scalar.
@@ -568,7 +585,7 @@ void fue_run_t2i_case(char dir, const std::string& vps, int dA, int dB,
     ref_scale = std::abs(ref_id);
     // The identity probe is itself a T2-i row.
     fue_check_rel(c.label + " [T2-i open vs closed, identity probe]",
-                  fue_sum_product(N.N.t, Oid.t), ref_id, 1.0e-12);
+                  fue_sum_product(N.N.t, Oid.t), ref_id, 1.0e-12, ref_scale);
   }
 
   for (const int op_seed : {13, 57, 91}) {
@@ -841,7 +858,7 @@ void fue_run_t2iv_case(char dir, const fue_geom& g, const std::string& vps,
   REQUIRE(std::abs(ref) > floor);
 
   fue_check_rel(c.label + " [T2-iv open N vs graded single-layer truth]", got,
-                ref, 1.0e-12);
+                ref, 1.0e-12, std::abs(norm_psi));
 
   // The probe must reach the odd sector of N's first leg.
   const auto flipped = fue_sum_product_flipped(N.N.t, O.t, c.pa);

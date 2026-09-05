@@ -2106,12 +2106,27 @@ void fg15_require_wiring_sensitivity(const fg15_env<tensor>& e, char dir,
   }
 }
 
-// C-1 judgment: relative 1e-12 against the blob-closure reference.
+// C-1 judgment: relative 1e-12 against the blob-closure reference, anchored
+// on the SCALE of the closure rather than on the compared value alone.
+//
+// Round-off in a contraction is set by the size of its largest intermediate,
+// not by how much the final sum happens to cancel. C-1 and C-2 of one row
+// close the same environment against blobs of the same shape, and their
+// |got - ref| comes out bit-identical - while |ref| itself differs by up to
+// 4700x between them. Measuring the smaller closure against itself therefore
+// asks for far more than the arithmetic can deliver: it left 1.5x of head
+// room and turned a 2-ulp difference into a compiler-dependent failure (CI,
+// 2026-09-05). `scale` is the largest REFERENCE closure of the row, so an
+// implementation that returns a huge `got` cannot inflate its own tolerance;
+// and because it never exceeds the larger closure, the judgment on that
+// larger closure is numerically unchanged. This is the design
+// fg_check_scalar() (see above) already uses.
 template <class V>
-void fg15_check_rel(const std::string& label, V got, V ref) {
-  const double tol = 1.0e-12 * std::max(std::abs(got), std::abs(ref));
-  INFO(label << ": got=" << got << " ref=" << ref
-             << " |diff|=" << std::abs(got - ref) << " tol=" << tol);
+void fg15_check_rel(const std::string& label, V got, V ref, double scale) {
+  const double tol =
+      1.0e-12 * std::max(std::max(std::abs(got), std::abs(ref)), scale);
+  INFO(label << ": got=" << got << " ref=" << ref << " |diff|="
+             << std::abs(got - ref) << " tol=" << tol << " scale=" << scale);
   CHECK(std::abs(got - ref) <= tol);
 }
 
@@ -2301,18 +2316,22 @@ void fg15_run_case(int d, const std::string& vps, char dir,
                         " [C-3 tensordot(PA,PB) vs "
                         "build_reduced_identity_pair]");
 
+  // The common scale of the two closures of this row, taken from the
+  // reference side only (see fg15_check_rel).
+  const double closure_scale = std::max(std::abs(ref_op), std::abs(ref_id));
+
   // C-1 / C-2: the absorbing closure equals the blob closure, for the
   // operator halves and for the norm halves.
   const auto got_op = fgf::contract_reduced_pair_halves_density_CTM(
       env.C1, env.C2, env.C3, env.C4, env.eT1, env.eT2, env.eT3, env.eT4,
       env.eT5, env.eT6, halves_op);
   fg15_check_rel(label + " [C-1 operator halves closure vs blob closure]",
-                 got_op, ref_op);
+                 got_op, ref_op, closure_scale);
   const auto got_id = fgf::contract_reduced_pair_halves_density_CTM(
       env.C1, env.C2, env.C3, env.C4, env.eT1, env.eT2, env.eT3, env.eT4,
       env.eT5, env.eT6, halves_id);
   fg15_check_rel(label + " [C-2 identity halves closure vs blob closure]",
-                 got_id, ref_id);
+                 got_id, ref_id, closure_scale);
 }
 
 struct fg15_row {

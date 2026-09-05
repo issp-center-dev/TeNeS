@@ -38,6 +38,36 @@
 #   mode), and so are the two [[observable.multisite]] blocks and the
 #   ops = [...] form of the two-site observables, which fermion mode also
 #   refuses. SzSz / SxSx / 2SzSz are written out as explicit elements.
+# * The ALS settings of [parameter.full_update] are written out instead of
+#   left at their defaults.  This one is load bearing too.  als_iterate()
+#   (src/iTPS/core/full_update.cpp) stops on the change of the COST, not of
+#   the iterate, so on a flat optimum the solution is only determined to
+#   sqrt(Full_Convergence_Epsilon); and the pseudo-inverse of the metric is
+#   cut at Full_Inverse_precision.  At the defaults those are 1e-6 and
+#   1e-12, i.e. sqrt(eps_cost) = 1e-3 and sqrt(Full_Inverse_precision) =
+#   1e-6 = TOL: the indeterminacy of the comparison would be the size of the
+#   tolerance it is judged with, and the test would be measuring the
+#   defaults rather than the two code paths.  The values below are the ones
+#   fub_exact_params() uses for the unit-level version of this same claim
+#   (test/fermion/full_update_bond.cpp, T3-iv), so the two levels agree on
+#   what "the same ALS problem" means.  Measured effect on the worst
+#   relative error of the whole comparison: 2.20e-8 -> 3.87e-9.
+#
+# * [parameter.ctm] convergence_epsilon is written out for the same reason,
+#   and it is the one that actually binds here: what the two runs differ by
+#   is the folded (fermionic) CTM against the plain one, so once the ALS is
+#   pinned the residual is set by how far the CTM was iterated.  The default
+#   is 1e-6 - the size of TOL itself - which would again leave the
+#   indeterminacy of the comparison as large as the tolerance judging it.
+#   At 1e-12 the worst relative error drops 3.87e-9 -> 2.81e-10.  Both runs
+#   reach it without a "CTM did not converge" warning, and well inside the
+#   default budget of 100 sweeps (a run with iteration_max left at the
+#   default is bit-identical to this one); iteration_max = 400 is headroom
+#   for the CI platforms this cannot be measured on, and costs nothing
+#   because the budget is not consumed.  check_ctm_converged() below asserts
+#   the no-warning part, so a platform where the setting is not reachable
+#   fails loudly instead of quietly comparing two unconverged environments.
+#
 # * noise = 0.0.  This one is load bearing.  The virtual-bond ledgers are
 #   seeded even-first (src/iTPS/tensors.cpp), so at D = 2 they start as
 #   [even, odd] whatever the physical parity is, and the fermionic
@@ -69,7 +99,12 @@ SEED = 11
 
 # Contract 3.5 (T4): relative error max_abs(diff) / max(1, max_abs(ref)),
 # tolerance 1e-6, which leaves room for the difference between the folded
-# (fermionic) CTM and the plain one.
+# (fermionic) CTM and the plain one.  With the ALS and CTM settings pinned
+# below, the worst relative error over all 362 compared numbers is 2.81e-10,
+# i.e. TOL has a factor of 3563 of head room.  Leaving either of those
+# settings at its default puts the residual at 3.87e-9 (CTM default) or
+# 2.20e-8 (both defaults), where the indeterminacy of the comparison
+# approaches the tolerance judging it.
 TOL = 1.0e-6
 
 # The two runs must land on an entangled state, otherwise the comparison
@@ -235,9 +270,14 @@ num_step = {NUM_SIMPLE_STEP}
 tau = {TAU}
 num_step = {NUM_FULL_STEP}
 fastfullupdate = false
+convergence_epsilon = 1.0e-14
+inverse_precision = 1.0e-14
+iteration_max = 200
 
 [parameter.ctm]
 dimension = {CHI}
+convergence_epsilon = 1.0e-12
+iteration_max = 400
 
 [parameter.random]
 seed = {SEED}
@@ -428,6 +468,32 @@ def check_all_even_ledger(path, n_unit):
     return failures
 
 
+def check_ctm_converged(label, output):
+    # The comparison pins [parameter.ctm] convergence_epsilon well below the
+    # default (see the header).  A tolerance the CTM cannot actually reach
+    # inside iteration_max would be worse than the default: tenes prints
+    # "Warning: CTM did not converge!" and carries on, and the two runs would
+    # then be compared on two environments that were both stopped early - the
+    # numbers could look good for the wrong reason.  So the setting is only
+    # accepted if both runs really got there.
+    hits = [
+        line.strip()
+        for line in output.splitlines()
+        if "CTM did not converge" in line
+    ]
+    if not hits:
+        return []
+    # One line per run, not per sweep: a single unconverged CTM warns on every
+    # measurement it touches.
+    return [
+        f"{label}: tenes printed {len(hits)} \"CTM did not converge\" "
+        f"warning(s), first one: {hits[0]!r}. The pinned [parameter.ctm] "
+        "convergence_epsilon is not reachable within iteration_max on this "
+        "platform, so the two runs would be compared on environments that "
+        "were both stopped early"
+    ]
+
+
 def relerr(value, reference):
     return abs(value - reference) / max(1.0, abs(reference))
 
@@ -540,6 +606,7 @@ def main():
             print(f"tenes failed for the {label} run: exit {proc.returncode}")
             return 1
         runs[label]["stderr"] = proc.stderr
+        runs[label]["output"] = combined
 
     failures = []
 
@@ -566,6 +633,10 @@ def main():
                 f"{label}: tenes warned about Full_Use_FastFullUpdate even "
                 "though the input sets fastfullupdate = false"
             )
+
+    # ... and the tightened CTM tolerance has to be one both runs reach.
+    for label in ("boson", "fermion"):
+        failures += check_ctm_converged(label, runs[label]["output"])
 
     boson_density = read_density(runs["boson"]["outdir"])
     fermion_density = read_density(runs["fermion"]["outdir"])
