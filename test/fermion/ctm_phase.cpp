@@ -1559,3 +1559,220 @@ TEST_CASE(
   fcp_run_t8v<double>("real", 8300);
   fcp_run_t8v<std::complex<double>>("complex", 8400);
 }
+
+// ---- T2-ii tol: the forbidden threshold is an argument ---------------------
+
+namespace {
+
+//! build_full_update_environment with the explicit forbidden_tol argument
+//! (contract 2.1 / 3.2 T2-ii, 2026-09-05 addition).
+template <class tensor>
+fue::full_update_environment<tensor> fcp_build_N_tol(
+    const std::vector<tensor>& e, const fg_ftensor<tensor>& QA,
+    const fg_ftensor<tensor>& QB, fgf::reduced_pair_direction dir,
+    double forbidden_tol) {
+  return fue::build_full_update_environment(e[0], e[1], e[2], e[3], e[4], e[5],
+                                            e[6], e[7], e[8], e[9], QA, QB, dir,
+                                            forbidden_tol);
+}
+
+//! Run `f`, require a std::runtime_error, and hand back its message.
+template <class F>
+std::string fcp_message_of(F&& f, const std::string& label) {
+  INFO(label);
+  std::string message;
+  bool thrown = false;
+  try {
+    f();
+  } catch (const std::runtime_error& ex) {
+    thrown = true;
+    message = ex.what();
+  }
+  INFO(label << " [message] " << message);
+  REQUIRE(thrown);
+  return message;
+}
+
+/*! (a) and (b) of contract T2-ii tol on one exactly contracted window: the
+ *  contaminated environment of the existing T2-ii (an eT with a parity-odd
+ *  component on its fused leg) is refused with the default threshold and
+ *  accepted with forbidden_tol = 1; what comes back then is parity even,
+ *  reports the pre-projection ratio, and still has the section 2.1 shape
+ *  (a real positive window norm, N_plain = mask * N). It is NOT the clean
+ *  N: the chi legs of the environment carry no ledger, so the contamination
+ *  is not purely odd in the total parity and leaks into the even block too
+ *  (that is also why the closed identity value moves, which the existing
+ *  T2-ii uses as its anti-vacuity premise).
+ */
+template <class tensor>
+void fcp_run_t2ii_tol_contaminated(char dir, int seed, const char* type_name) {
+  const fue_case<tensor> c =
+      fue_make_case<tensor>(dir, fue_full_geom(dir), "eo", 2, 2, 2, seed, false,
+                            std::string("T2-ii tol ") + type_name);
+  INFO(c.label);
+  // Control: the clean environment is accepted with the default threshold
+  // and its forbidden block is empty.
+  const auto clean = fue_build_N(c.env, c.QA, c.QB, c.dir_e);
+  INFO(c.label << " [clean forbidden_ratio = " << clean.forbidden_ratio
+               << ", phase = " << clean.phase << "]");
+  REQUIRE(clean.forbidden_ratio <= 1.0e-10);
+  REQUIRE(fg_max_abs_entry(clean.N.t) > 0.0);
+
+  const tensor id_blob =
+      fgf::build_reduced_identity_pair(c.sites[c.a], c.sites[c.b], c.dir_e);
+  const auto clean_value = fue_close_blob(c.env, dir, id_blob);
+  REQUIRE(std::abs(clean_value) > 0.0);
+
+  for (const int slot : {4, 6}) {
+    const std::vector<tensor> bad =
+        fue_contaminate_env(c.env, slot, fg_pv("eo"), 91 + slot);
+    const std::string label =
+        c.label + " [contaminated slot " + std::to_string(slot) + "]";
+    INFO(label);
+    // Anti-vacuity: the contamination reaches the network.
+    const auto bad_value = fue_close_blob(bad, dir, id_blob);
+    REQUIRE(std::abs(bad_value - clean_value) > 1.0e-6 * std::abs(clean_value));
+
+    // (a) the default threshold refuses it - both through the defaulted
+    // argument and through an explicit 1e-8 - and the message points at
+    // the usual cause (an unconverged CTM, iteration_max).
+    const std::string msg_default =
+        fcp_message_of([&] { fue_build_N(bad, c.QA, c.QB, c.dir_e); },
+                       label + " [T2-ii tol a: default]");
+    CHECK(msg_default.find("iteration_max") != std::string::npos);
+    const std::string msg_explicit = fcp_message_of(
+        [&] { fcp_build_N_tol(bad, c.QA, c.QB, c.dir_e, 1.0e-8); },
+        label + " [T2-ii tol a: explicit 1e-8]");
+    CHECK(msg_explicit.find("iteration_max") != std::string::npos);
+
+    // (b) forbidden_tol = 1 accepts it: the forbidden block is projected
+    // out, the returned N is even, and forbidden_ratio reports the block
+    // that was there before the projection.
+    fue::full_update_environment<tensor> loose;
+    REQUIRE_NOTHROW(loose = fcp_build_N_tol(bad, c.QA, c.QB, c.dir_e, 1.0));
+    INFO(label << " [T2-ii tol b] forbidden_ratio=" << loose.forbidden_ratio
+               << " phase=" << loose.phase);
+    REQUIRE(loose.N.rank() == 4);
+    REQUIRE(loose.N.parity == clean.N.parity);
+    REQUIRE(fg_max_abs_entry(loose.N.t) > 0.0);
+    CHECK(fgf::parity_violation(loose.N) == 0.0);
+    // The pre-projection ratio: above the default threshold (that is why
+    // (a) threw), at most 1 by definition, and far above the clean value.
+    CHECK(loose.forbidden_ratio > 1.0e-8);
+    CHECK(loose.forbidden_ratio <= 1.0);
+    CHECK(loose.forbidden_ratio > 1.0e3 * clean.forbidden_ratio);
+    // A larger tolerance reports the same ratio and the same N: both are
+    // properties of the input, not of the threshold.
+    {
+      const auto looser = fcp_build_N_tol(bad, c.QA, c.QB, c.dir_e, 10.0);
+      CHECK(looser.forbidden_ratio == loose.forbidden_ratio);
+      CHECK(fcp_identical(looser.N.t, loose.N.t));
+    }
+    // Section 2.1 still holds for what is returned: the window norm of the
+    // projected N is real positive, and N_plain is N with the input-pair
+    // mask (fur_mask_ab acts on legs 0 and 1 = in_A, in_B).
+    {
+      const fg_ftensor<tensor> I_wrap = fgf::wrap_twosite_gate(
+          fue_internal_identity<tensor>(c.pa, c.pb), c.pa, c.pb);
+      const std::complex<double> norm =
+          fcp_to_complex(fue_sum_product(loose.N.t, I_wrap.t));
+      INFO(label << " [T2-ii tol b] window norm of the projected N = " << norm);
+      REQUIRE(std::isfinite(std::abs(norm)));
+      CHECK(norm.real() > 0.0);
+      CHECK(std::abs(norm.imag()) <= 1.0e-12 * std::abs(norm));
+      CHECK(std::abs(std::abs(loose.phase) - 1.0) <= 1.0e-12);
+      const fg_ftensor<tensor> masked = fur_mask_ab(loose.N);
+      CHECK(fcp_scaled_rel_diff(loose.N_plain, masked.t, 1.0) <= 1.0e-12);
+    }
+  }
+}
+
+/*! Companion of (c) for an EXACTLY contracted environment: its forbidden
+ *  block is exactly empty (the reduced tensors have exact zeros in their
+ *  odd blocks and the closure is a plain contraction of them), so
+ *  forbidden_ratio is exactly 0 and even forbidden_tol = 0 accepts it.
+ */
+template <class tensor>
+void fcp_check_t2ii_tol_exact(const fue_case<tensor>& c) {
+  INFO(c.label);
+  const auto ref = fue_build_N(c.env, c.QA, c.QB, c.dir_e);
+  INFO(c.label << " [T2-ii tol c, exact patch] forbidden_ratio = "
+               << ref.forbidden_ratio);
+  REQUIRE(ref.forbidden_ratio == 0.0);
+  fue::full_update_environment<tensor> zero_tol;
+  REQUIRE_NOTHROW(zero_tol = fcp_build_N_tol(c.env, c.QA, c.QB, c.dir_e, 0.0));
+  CHECK(zero_tol.forbidden_ratio == 0.0);
+  CHECK(fcp_identical(zero_tol.N.t, ref.N.t));
+}
+
+/*! (c) of contract T2-ii tol: on a CLEAN environment the threshold is
+ *  compared against the actual (roundoff-level) forbidden ratio r: a
+ *  tolerance below r throws, one above r does not. r is read off the
+ *  default call; the premise is that it is a positive finite number, so
+ *  that "below r" exists at all.
+ */
+template <class tensor>
+void fcp_check_t2ii_tol_clean(const std::vector<tensor>& env,
+                              const fg_ftensor<tensor>& QA,
+                              const fg_ftensor<tensor>& QB,
+                              fgf::reduced_pair_direction dir,
+                              const std::string& label) {
+  INFO(label);
+  const auto ref = fue_build_N(env, QA, QB, dir);
+  const double r = ref.forbidden_ratio;
+  INFO(label << " [T2-ii tol c] clean forbidden_ratio r = " << r);
+  REQUIRE(std::isfinite(r));
+  REQUIRE(r <= 1.0e-10);
+  // Premise: a threshold strictly below r exists.
+  REQUIRE(r > 0.0);
+  const double below = 0.5 * r;
+  const double above = 2.0 * r;
+  REQUIRE(below < r);
+  REQUIRE(above > r);
+  const std::string msg =
+      fcp_message_of([&] { fcp_build_N_tol(env, QA, QB, dir, below); },
+                     label + " [T2-ii tol c: tol = r/2]");
+  CHECK(msg.find("iteration_max") != std::string::npos);
+  fue::full_update_environment<tensor> ok;
+  REQUIRE_NOTHROW(ok = fcp_build_N_tol(env, QA, QB, dir, above));
+  CHECK(ok.forbidden_ratio == r);
+  CHECK(fcp_scaled_rel_diff(ok.N.t, ref.N.t, 1.0) <= 1.0e-12);
+  // The contract's production choice, max(1e-8, CTM epsilon), is at least
+  // the default and therefore also accepts a clean environment.
+  REQUIRE_NOTHROW(fcp_build_N_tol(env, QA, QB, dir, std::max(1.0e-8, 1.0e-12)));
+}
+
+}  // namespace
+
+TEST_CASE(
+    "full update T2-ii tol: forbidden_tol = 1 accepts a contaminated "
+    "environment and returns a parity-even N with the pre-projection ratio") {
+  fcp_run_t2ii_tol_contaminated<tenes::real_tensor>('h', 1450, "real");
+  fcp_run_t2ii_tol_contaminated<tenes::real_tensor>('v', 1460, "real");
+  fcp_run_t2ii_tol_contaminated<tenes::complex_tensor>('h', 1470, "complex");
+}
+
+TEST_CASE(
+    "full update T2-ii tol: on a clean environment a threshold below the "
+    "measured forbidden ratio throws and one above it does not") {
+  // The exactly contracted patch has an exactly empty forbidden block, so
+  // there is no threshold below it: even 0 accepts it ...
+  for (const char dir : {'h', 'v'}) {
+    const fue_case<tenes::real_tensor> c = fue_make_case<tenes::real_tensor>(
+        dir, fue_full_geom(dir), "eo", 2, 2, 2, 1480, false,
+        "T2-ii tol real patch");
+    fcp_check_t2ii_tol_exact(c);
+  }
+  // ... and a real converged CTM environment, the case the threshold is
+  // meant for, has the CTM's own parity leak as its ratio (about 1e-13).
+  {
+    const fur_env<tenes::real_tensor> e =
+        fcp_make_fold_env<tenes::real_tensor>(7700, 8, 2, 2, 2, "real");
+    for (const auto& sw :
+         std::vector<std::pair<int, char>>{{0, 'h'}, {3, 'v'}}) {
+      const fur_window<tenes::real_tensor> w =
+          fcp_make_window(e, sw.first, sw.second, "T2-ii tol");
+      fcp_check_t2ii_tol_clean(w.env, w.QA, w.QB, w.dir_e, w.label);
+    }
+  }
+}
