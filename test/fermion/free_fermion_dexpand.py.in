@@ -1,0 +1,460 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# End-to-end test of S-1..S-4 of
+# docs/superpowers/specs/2026-09-06-fermion-tensor-load-d-expansion-contract.md:
+# a fermionic checkpoint saved at D = 2 must be loadable by a run that asks
+# for D = 4, and the expansion has to actually buy something.
+#
+# The model is the one of sample/07_spinless_fermion: spinless free fermions
+# on the square lattice, t = 1, mu = 0, L_sub = [2, 2], seed 11, simple update
+# with tau = 0.01 for 1000 steps, chi = 8, CTM environment (meanfield_env is
+# left at its default false).
+#
+#   run A: virtual_dim = 2, tensor_save
+#   run B: virtual_dim = 4, tensor_load = run A's save directory (and its own
+#          tensor_save, so that the checkpoint it writes can be inspected)
+#
+# Both inputs come out of one generator and the test asserts that they differ
+# in nothing but virtual_dim / output / tensor_save / tensor_load, so a run
+# that silently used a different tau, num_step, chi or seed cannot pass.
+#
+# What this test can NOT see: the parity ledger read from fermion.dat is
+# rewritten by the graded svd_trunc on the first bond update, so the padding
+# rule of extend_parity() does not reach the numbers here. A wrong padding
+# rule leaves this test green. That part of the contract is pinned by the
+# doctest cases "DE layer1 ..." / "DE layer2 ..." in test/fermion/dexpand.cpp.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+MU = 0.0
+D_SMALL = 2
+D_LARGE = 4
+CHI = 8
+NUM_STEP = 1000
+TAU = 0.01
+SEED = 11
+
+# S-2 thresholds, all from work/fermion/dexpand/FINDINGS.md:
+#   E(D=2) = -0.723448, E(D=2 -> 4) = -0.791099, difference 0.0677.
+E_B_REFERENCE = -0.791099
+E_B_TOL = 1.0e-3
+# Half of the measured gain, so seed-to-seed noise (5.5e-6 across five seeds)
+# cannot reach it.
+E_GAIN_MIN = 0.03
+N_HALF_FILLING_TOL = 1.0e-6
+
+# chi = 8 is smaller than D*D = 16 at D = 4; the solver says so and the test
+# must not mistake it for a failure (S-4).
+CHI_WARNING = "WARNING: CTM may be too small (chi < D*D) for iTPS"
+
+# The keys whose values run A and run B are allowed to differ in (S-2).
+INPUT_DIFF_KEYS = ("output", "tensor_save", "tensor_load", "virtual_dim")
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = []
+    for site in range(4):
+        lines.append(f"{site} 1 0")
+    for site in range(4):
+        lines.append(f"{site} 0 1")
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(4):
+            blocks.append(
+                f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+            )
+    return "\n".join(blocks)
+
+
+def input_toml(dim, outdir, save_dir=None, load_dir=None):
+    h = two_site_hamiltonian(T, MU)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block()
+    general_extra = ""
+    if save_dir is not None:
+        general_extra += f'tensor_save = "{save_dir}"\n'
+    if load_dir is not None:
+        general_extra += f'tensor_load = "{load_dir}"\n'
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+{general_extra}
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_STEP}
+
+[parameter.ctm]
+dimension = {CHI}
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [2, 2]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{dim}, {dim}, {dim}, {dim}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = false
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate)}
+"""
+
+
+def strip_allowed_differences(text):
+    """Drop the lines run A and run B are allowed to differ in."""
+    kept = []
+    for line in text.splitlines():
+        key = line.split("=", 1)[0].strip()
+        if key in INPUT_DIFF_KEYS:
+            continue
+        kept.append(line)
+    return kept
+
+
+def check_inputs_agree(text_a, text_b):
+    # S-2: everything that is not virtual_dim / output / tensor_save /
+    # tensor_load has to be identical, otherwise the energies of the two runs
+    # are not comparable at all.
+    a = strip_allowed_differences(text_a)
+    b = strip_allowed_differences(text_b)
+    if a == b:
+        return []
+    failures = ["the two inputs differ outside " + ", ".join(INPUT_DIFF_KEYS)]
+    for index, (la, lb) in enumerate(zip(a, b)):
+        if la != lb:
+            failures.append(f"  line {index}: run A {la!r} vs run B {lb!r}")
+    if len(a) != len(b):
+        failures.append(f"  run A has {len(a)} lines, run B has {len(b)}")
+    return failures
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values[name.strip()] = float(words[0])
+    return values
+
+
+def read_data_rows(path):
+    # params.dat and fermion.dat share the "values # comment" line style.
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            rows.append(line.split())
+    return rows
+
+
+def check_params_shape(path, n_unit, dim, pdim=2):
+    """S-3: the 'Shape of Tn[i]' rows of params.dat name the bond dimension
+    the run really used, not the one the input asked for."""
+    failures = []
+    if not os.path.exists(path):
+        return [f"{path} was not written"]
+    rows = read_data_rows(path)
+    # 0: format version, 1: N_UNIT, 2: CHI, then one shape row per site.
+    if len(rows) < 3 + n_unit:
+        return [f"{path} has only {len(rows)} data lines"]
+    expected = [str(dim)] * 4 + [str(pdim)]
+    for site in range(n_unit):
+        row = rows[3 + site]
+        if row != expected:
+            failures.append(
+                f"{path}: the shape of Tn[{site}] is {' '.join(row)}, "
+                f"expected {' '.join(expected)}"
+            )
+    return failures
+
+
+def check_fermion_ledger_length(path, n_unit, dim, pdim=2):
+    """S-3: every virtual-leg row of fermion.dat carries `dim` parities."""
+    failures = []
+    if not os.path.exists(path):
+        return [f"{path} was not written"]
+    rows = read_data_rows(path)
+    header = 4  # version, N_UNIT, L_sub, skew
+    parity_rows = rows[header:]
+    if len(parity_rows) != 5 * n_unit:
+        return [
+            f"{path} has {len(parity_rows)} parity rows, expected {5 * n_unit}"
+        ]
+    for site in range(n_unit):
+        block = parity_rows[5 * site : 5 * (site + 1)]
+        for leg, (row, length) in enumerate(zip(block, [pdim] + [dim] * 4)):
+            what = "physical leg" if leg == 0 else f"virtual leg {leg - 1}"
+            if len(row) != length:
+                failures.append(
+                    f"{path}: the {what} of Tn[{site}] has {len(row)} "
+                    f"parities, expected {length}"
+                )
+            bad = [word for word in row if word not in ("0", "1")]
+            if bad:
+                failures.append(
+                    f"{path}: the {what} of Tn[{site}] has non-binary "
+                    f"parities {' '.join(bad)}"
+                )
+    return failures
+
+
+def report(proc, name):
+    print(f"--- {name} output ---")
+    print(proc.stdout + proc.stderr)
+
+
+def main():
+    output_root = "output_FreeFermionDExpand"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    save_a = join(output_root, "save_d2")
+    save_b = join(output_root, "save_d4")
+    out_a = join(output_root, "runA")
+    out_b = join(output_root, "runB")
+    input_a = join(output_root, "input_runA.toml")
+    input_b = join(output_root, "input_runB.toml")
+
+    text_a = input_toml(D_SMALL, out_a, save_dir=save_a)
+    text_b = input_toml(D_LARGE, out_b, save_dir=save_b, load_dir=save_a)
+    failures = check_inputs_agree(text_a, text_b)
+    if failures:
+        for message in failures:
+            print("FreeFermionDExpand input check failed: " + message)
+        return 1
+    with open(input_a, "w") as f:
+        f.write(text_a)
+    with open(input_b, "w") as f:
+        f.write(text_b)
+
+    # --- run A: D = 2 from scratch, saving the checkpoint ---
+    proc_a = run_tenes(input_a)
+    if proc_a.returncode != 0:
+        report(proc_a, "runA")
+        print(f"runA (D = {D_SMALL}, tensor_save) failed: exit {proc_a.returncode}")
+        return 1
+    density_a = read_density(out_a)
+    if "Energy" not in density_a or "n" not in density_a:
+        print(f"runA density.dat lacks Energy or n: {density_a}")
+        return 1
+    energy_a = density_a["Energy"]
+    print(
+        "FreeFermionDExpand runA (D={}) Energy={:.12e} n={:.12e}".format(
+            D_SMALL, energy_a, density_a["n"]
+        )
+    )
+
+    # S-3: run A really ran at D = 2. Without this, a run that somehow used
+    # D = 4 would make the energy comparison below meaningless.
+    failures = check_params_shape(join(save_a, "params.dat"), 4, D_SMALL)
+    failures += check_fermion_ledger_length(
+        join(save_a, "fermion.dat"), 4, D_SMALL
+    )
+    if failures:
+        for message in failures:
+            print("FreeFermionDExpand runA checkpoint check failed: " + message)
+        return 1
+
+    # S-4: at D = 2 with chi = 8 there is nothing to warn about.
+    if CHI_WARNING in proc_a.stdout + proc_a.stderr:
+        print(f"runA warned about chi < D*D although D = {D_SMALL}, chi = {CHI}")
+        return 1
+
+    # --- run B: D = 4 seeded from run A's checkpoint ---
+    proc_b = run_tenes(input_b)
+    message_b = proc_b.stdout + proc_b.stderr
+    if proc_b.returncode != 0:
+        report(proc_b, "runB")
+        print(
+            f"runB (D = {D_LARGE}, tensor_load) failed: exit {proc_b.returncode}; "
+            "expanding virtual_dim on tensor_load must be accepted"
+        )
+        return 1
+    density_b = read_density(out_b)
+    if "Energy" not in density_b or "n" not in density_b:
+        print(f"runB density.dat lacks Energy or n: {density_b}")
+        return 1
+    energy_b = density_b["Energy"]
+    n_b = density_b["n"]
+    print(
+        "FreeFermionDExpand runB (D={} from D={}) Energy={:.12e} n={:.12e}".format(
+            D_LARGE, D_SMALL, energy_b, n_b
+        )
+    )
+
+    # S-4: chi = 8 < D*D = 16, the warning is expected and is not a failure.
+    # Its presence also witnesses that run B really used D = 4.
+    if CHI_WARNING not in message_b:
+        report(proc_b, "runB")
+        print(
+            f"runB did not warn about chi < D*D although D = {D_LARGE}, "
+            f"chi = {CHI}"
+        )
+        return 1
+
+    # S-3: run B wrote a D = 4 checkpoint, ledger included.
+    failures = check_params_shape(join(save_b, "params.dat"), 4, D_LARGE)
+    failures += check_fermion_ledger_length(
+        join(save_b, "fermion.dat"), 4, D_LARGE
+    )
+    if failures:
+        for message in failures:
+            print("FreeFermionDExpand runB checkpoint check failed: " + message)
+        return 1
+
+    # S-2: the expansion has to buy something, and it has to land on the
+    # fixed point the measurement in FINDINGS.md found.
+    ok = True
+    gain = energy_a - energy_b
+    print(f"FreeFermionDExpand E(A) - E(B) = {gain:.6e}")
+    if not gain > E_GAIN_MIN:
+        print(
+            f"runB energy {energy_b} is not below runA {energy_a} by at least "
+            f"{E_GAIN_MIN:g} (gain {gain:.6e}); the D expansion did not take"
+        )
+        ok = False
+    if not abs(energy_b - E_B_REFERENCE) < E_B_TOL:
+        print(
+            f"runB energy {energy_b} is not within {E_B_TOL:g} of the "
+            f"reference {E_B_REFERENCE}"
+        )
+        ok = False
+    if not abs(n_b - 0.5) < N_HALF_FILLING_TOL:
+        print(
+            f"runB density {n_b} is not within {N_HALF_FILLING_TOL:g} of half "
+            "filling"
+        )
+        ok = False
+    if not ok:
+        return 1
+
+    print("FreeFermionDExpand: D = 2 -> D = 4 tensor_load accepted and effective")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

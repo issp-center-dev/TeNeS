@@ -115,6 +115,39 @@ inline parity_vector even_first_parity(std::size_t dim) {
 }
 
 /*!
+ * @brief Extend a parity ledger without reordering existing entries.
+ *
+ * The result is not generally even-first; existing entries keep their order.
+ *
+ * @param[in] p Existing parity ledger.
+ * @param[in] new_dim Requested leg dimension.
+ * @throw std::runtime_error If @p new_dim is smaller than @p p.
+ */
+inline parity_vector extend_parity(const parity_vector& p,
+                                   std::size_t new_dim) {
+  if (new_dim < p.size()) {
+    throw std::runtime_error("extend_parity cannot shrink a ledger");
+  }
+  parity_vector q = p;
+  std::size_t neven = 0;
+  for (bool parity : q) {
+    if (!parity) {
+      ++neven;
+    }
+  }
+  while (q.size() < new_dim) {
+    const std::size_t n = q.size() + 1;
+    const std::size_t target_neven = (n + 1) / 2;
+    const bool parity = !(neven < target_neven);
+    q.push_back(parity);
+    if (!parity) {
+      ++neven;
+    }
+  }
+  return q;
+}
+
+/*!
  * @brief Ledgers of one site's Tn in the wrapped leg order (l, t, r, b, s).
  *
  * @param[in] fi Ledger set; must be populated for @p site.

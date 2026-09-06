@@ -183,6 +183,20 @@ add_test(NAME FreeFermionSaveLoadCTM
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_saveload_ctm.py)
 set_tests_properties(FreeFermionSaveLoadCTM PROPERTIES TIMEOUT 1800)
 
+# Contract S-1..S-4 of
+# docs/superpowers/specs/2026-09-06-fermion-tensor-load-d-expansion-contract.md:
+# a fermionic checkpoint saved at D = 2 has to be loadable by a run asking for
+# D = 4, and the expansion has to reach the better fixed point. Two 1000-step
+# simple updates (D = 2 then D = 4, chi = 8) take about a minute in a Release
+# build with four threads; ctest runs single-threaded, so the TIMEOUT is set
+# well above that.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_dexpand.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_dexpand.py @ONLY)
+add_test(NAME FreeFermionDExpand
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_dexpand.py)
+set_tests_properties(FreeFermionDExpand PROPERTIES TIMEOUT 3600)
+
 # End-to-end test of the full three-stage pipeline (tenes_simple -> tenes_std
 # -> tenes) for the fermionic model, checked against the handwritten
 # expert-mode sample sample/07_spinless_fermion.

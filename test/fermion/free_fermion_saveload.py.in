@@ -23,8 +23,14 @@
 #   * that a checkpoint can seed a run with different model parameters
 #     (run3, the parameter-scan use case),
 #   * that the two checkpoints that would silently give wrong numbers are
-#     rejected instead: a different virtual_dim (run4) and a bosonic run
+#     rejected instead: a smaller virtual_dim (run4) and a bosonic run
 #     reading fermionic tensors (run5).
+#
+# run4 shrinks rather than grows the bond dimension on purpose. Growing it is
+# supported since the D-expansion contract
+# (docs/superpowers/specs/2026-09-06-fermion-tensor-load-d-expansion-contract.md,
+# end-to-end test FreeFermionDExpand); shrinking still has no parity-correct
+# truncation and is refused.
 #
 # No golden file is used: run1 versus run2 is self-contained.
 
@@ -394,22 +400,32 @@ def main():
         )
         return 1
 
-    # --- run4: a different virtual_dim must be refused ---
+    # --- run4: a smaller virtual_dim must be refused ---
+    # D - 1 rather than D + 1: a larger virtual_dim is a supported restart
+    # since the D-expansion contract, a smaller one is not (truncating a
+    # graded leg from the front would drop a whole parity sector).
     out4 = join(output_root, "run4")
     input4 = join(output_root, "input_run4.toml")
     with open(input4, "w") as f:
-        f.write(input_toml(MU, 3, out4, 0, load_dir=save_dir))
+        f.write(input_toml(MU, D - 1, out4, 0, load_dir=save_dir))
     proc = run_tenes(input4)
     message4 = proc.stdout + proc.stderr
     if proc.returncode == 0:
         report(proc, "run4")
-        print("run4 loaded a checkpoint saved with a different virtual_dim")
+        print("run4 loaded a checkpoint saved with a larger virtual_dim")
         return 1
-    if "virtual_dim" not in message4:
+    # The ERROR: prefix is load bearing. "virtual dimension" on its own also
+    # matches the WARNING that load_tensors_v1() prints for every leg whose
+    # input dimension differs from the saved one ("WARNING: virtual dimension
+    # of the leg ..."), which a D-changing run emits N_UNIT * 4 times whether
+    # or not the guard under test fires -- so the bare substring passed even
+    # when the shrink guard had been deleted and tenes died of an unrelated
+    # exception.
+    if "ERROR: the virtual dimension of the leg" not in message4:
         report(proc, "run4")
-        print("run4 failed without mentioning virtual_dim")
+        print("run4 failed without the shrink guard's ERROR line")
         return 1
-    print("FreeFermionSaveLoad run4 (virtual_dim mismatch) rejected as expected")
+    print("FreeFermionSaveLoad run4 (virtual_dim shrunk) rejected as expected")
 
     # --- run5: a bosonic run must refuse fermionic tensors ---
     out5 = join(output_root, "run5")

@@ -236,11 +236,11 @@ void Simple_update_bond(const tensor &Tn1, const tensor &Tn2,
   //  std::inner_product(lambda_c.begin(),lambda_c.end(),lambda_c.begin(),0.0);
 
   double norm = 0.0;
-  for (int i = 0; i < dc; ++i) {
+  for (std::size_t i = 0; i < lambda_c.size(); ++i) {
     norm += lambda_c[i] * lambda_c[i];
   }
   norm = sqrt(norm);
-  for (int i = 0; i < dc; ++i) {
+  for (std::size_t i = 0; i < lambda_c.size(); ++i) {
     lambda_c[i] = sqrt(lambda_c[i] / norm);
   }
 

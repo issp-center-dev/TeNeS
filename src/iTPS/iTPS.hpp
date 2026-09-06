@@ -357,7 +357,9 @@ class iTPS {
    * (fermion.dat present but fermion = false, or vice versa), or when the
    * file does not match the current geometry.
    */
-  void load_fermion_ledger(std::string const &load_dir);
+  void load_fermion_ledger(std::string const &load_dir,
+                           std::vector<std::vector<int>> const &saved_shape,
+                           bool validate_saved_shape);
   //! check the loaded tensors against the restored ledger (after reading them)
   void validate_loaded_fermion_tensors() const;
 

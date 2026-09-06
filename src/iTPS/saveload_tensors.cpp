@@ -189,9 +189,16 @@ void iTPS<ptensor>::load_tensors() {
   }
   bcast(tensor_format_version, 0, comm);
 
-  load_fermion_ledger(load_dir);
-
   if (tensor_format_version == 0) {
+    std::vector<std::vector<int>> current_shape(N_UNIT,
+                                                std::vector<int>(nleg + 1));
+    for (int i = 0; i < N_UNIT; ++i) {
+      for (int leg = 0; leg < nleg; ++leg) {
+        current_shape[i][leg] = lattice.virtual_dims[i][leg];
+      }
+      current_shape[i][nleg] = lattice.physical_dims[i];
+    }
+    load_fermion_ledger(load_dir, current_shape, false);
     load_tensors_v0();
   } else if (tensor_format_version == 1) {
     load_tensors_v1();
@@ -206,7 +213,10 @@ void iTPS<ptensor>::load_tensors() {
 }
 
 template <class ptensor>
-void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
+void iTPS<ptensor>::load_fermion_ledger(
+    std::string const &load_dir,
+    std::vector<std::vector<int>> const &saved_shape,
+    bool validate_saved_shape) {
   const std::string filename = load_dir + "/fermion.dat";
   int exists = 0;
   if (mpirank == 0) {
@@ -329,16 +339,42 @@ void iTPS<ptensor>::load_fermion_ledger(std::string const &load_dir) {
     }
     for (int leg = 0; leg < nleg; ++leg) {
       auto p = to_parity(next_ints());
-      if (static_cast<int>(p.size()) != lattice.virtual_dims[i][leg]) {
+      const int saved_dim = saved_shape[i][leg];
+      if (!validate_saved_shape &&
+          lattice.virtual_dims[i][leg] != static_cast<int>(p.size())) {
         std::stringstream ss;
         ss << "ERROR: the virtual dimension of the leg " << leg
            << " of the tensor " << i << " is " << lattice.virtual_dims[i][leg]
            << " but the saved tensors have " << p.size() << ".\n"
-           << "HINT: fermion mode cannot change virtual_dim on restart, "
-              "because resizing a leg does not preserve its even/odd blocks. "
-              "Keep virtual_dim as it was, or start without tensor_load.";
+           << "HINT: legacy fermion tensor checkpoints cannot change "
+              "virtual_dim on restart. Keep virtual_dim as it was, or start "
+              "without tensor_load.";
         throw tenes::load_error(ss.str());
       }
+      if (validate_saved_shape && static_cast<int>(p.size()) != saved_dim) {
+        std::stringstream ss;
+        ss << "ERROR: the virtual parity ledger of the leg " << leg
+           << " of the tensor " << i << " in " << filename << " has "
+           << p.size() << " entries but the saved tensor has dimension "
+           << saved_dim << ".\n"
+           << "HINT: the checkpoint is inconsistent; fermion.dat and "
+              "params.dat do not describe the same saved tensors.";
+        throw tenes::load_error(ss.str());
+      }
+      const int loaded_dim =
+          validate_saved_shape ? saved_dim : static_cast<int>(p.size());
+      if (lattice.virtual_dims[i][leg] < loaded_dim) {
+        std::stringstream ss;
+        ss << "ERROR: the virtual dimension of the leg " << leg
+           << " of the tensor " << i << " is " << lattice.virtual_dims[i][leg]
+           << " but the saved tensors have " << loaded_dim << ".\n"
+           << "HINT: fermion mode can expand virtual_dim on restart, but "
+              "cannot shrink it. Keep virtual_dim at least as large as the "
+              "saved tensors, or start without tensor_load.";
+        throw tenes::load_error(ss.str());
+      }
+      p = tenes::fermion::extend_parity(
+          p, static_cast<std::size_t>(lattice.virtual_dims[i][leg]));
       virt[i][leg] = p;
     }
   }
@@ -410,6 +446,8 @@ void iTPS<ptensor>::load_tensors_v1() {
   std::string const &load_dir = peps_parameters.tensor_load_dir;
 
   int loaded_CHI = 1;
+  int format_version = 0;
+  int loaded_N_UNIT = 0;
   std::vector<std::vector<int>> loaded_shape(N_UNIT,
                                              std::vector<int>(nleg + 1));
   if (mpirank == 0) {
@@ -418,23 +456,9 @@ void iTPS<ptensor>::load_tensors_v1() {
     std::ifstream ifs(filename.c_str());
 
     std::getline(ifs, line);
-    const int format_version = std::stoi(util::drop_comment(line));
-    if (format_version != 1) {
-      std::stringstream ss;
-      ss << "ERROR: " << filename << " has format version " << format_version
-         << " but load_tensors_v1 supports only version 1";
-      throw tenes::load_error(ss.str());
-    }
-
+    format_version = std::stoi(util::drop_comment(line));
     std::getline(ifs, line);
-    const int loaded_N_UNIT = std::stoi(util::drop_comment(line));
-    if (N_UNIT != loaded_N_UNIT) {
-      std::stringstream ss;
-      ss << "ERROR: N_UNIT is " << N_UNIT << " but loaded N_UNIT has "
-         << loaded_N_UNIT << std::endl;
-      throw tenes::load_error(ss.str());
-    }
-
+    loaded_N_UNIT = std::stoi(util::drop_comment(line));
     std::getline(ifs, line);
     loaded_CHI = std::stoi(util::drop_comment(line));
     if (CHI != static_cast<std::size_t>(loaded_CHI)) {
@@ -461,19 +485,37 @@ void iTPS<ptensor>::load_tensors_v1() {
         }
       }
       loaded_shape[i][nleg] = std::stoi(shape[nleg]);
-      const int pdim = lattice.physical_dims[i];
-      if (pdim != loaded_shape[i][nleg]) {
-        std::stringstream ss;
-        ss << "ERROR: dimension of the physical bond of the tensor " << i
-           << " is " << pdim << " but loaded tensor has "
-           << loaded_shape[i][nleg] << std::endl;
-        throw tenes::load_error(ss.str());
-      }
     }
+  }
+  bcast(format_version, 0, comm);
+  if (format_version != 1) {
+    std::stringstream ss;
+    ss << "ERROR: " << load_dir << "/params.dat has format version "
+       << format_version << " but load_tensors_v1 supports only version 1";
+    throw tenes::load_error(ss.str());
+  }
+  bcast(loaded_N_UNIT, 0, comm);
+  if (N_UNIT != loaded_N_UNIT) {
+    std::stringstream ss;
+    ss << "ERROR: N_UNIT is " << N_UNIT << " but loaded N_UNIT has "
+       << loaded_N_UNIT << std::endl;
+    throw tenes::load_error(ss.str());
   }
   for (int i = 0; i < N_UNIT; ++i) {
     bcast(loaded_shape[i], 0, comm);
   }
+  for (int i = 0; i < N_UNIT; ++i) {
+    const int pdim = lattice.physical_dims[i];
+    if (pdim != loaded_shape[i][nleg]) {
+      std::stringstream ss;
+      ss << "ERROR: dimension of the physical bond of the tensor " << i
+         << " is " << pdim << " but loaded tensor has " << loaded_shape[i][nleg]
+         << std::endl;
+      throw tenes::load_error(ss.str());
+    }
+  }
+
+  load_fermion_ledger(load_dir, loaded_shape, true);
 
   // #define LOAD_TENSOR_(A, name)                      \
   //   do {                                             \
