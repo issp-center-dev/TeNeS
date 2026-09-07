@@ -22,11 +22,17 @@ CTMRG を収束させ直す**。
 これが 2 つの問題を生んでいる。
 
 1. **遅い。** 最終レビューの実測で D=4 d=4 chi=16 の 1 sweep が 61 秒、うち `environment` が 88%。
-2. **D >= 3 で完走しない。** 自由フェルミオン D=3 では chi=12 でも chi=24 でも、
+2. **simple update が収束していない状態から D >= 3 に入ると完走しない。**
+   simple update 50 step の自由フェルミオン D=3 では chi=12 でも chi=24 でも、
    `build_full_update_environment` の forbidden parity ガードに引っかかって異常終了する。
    chi=12 では `rdm_dist` が 8.23657e-05 に固着し、`iteration_max` を 50 から 200 に増やしても
    **同じ値**から動かない。反復不足ではなく、毎ボンドのゼロスタートで CTMRG が別の固定点に入る。
-   現状のフェルミオン full update が完走した実績は D=2 chi=8 だけである。
+
+   **ただし D >= 3 が常に落ちるわけではない**(初版の「完走した実績は D=2 chi=8 だけ」という
+   記述を訂正)。既存 ctest `FreeFermionFull` は D=3 chi=12 を `fastfullupdate = false` で
+   回して緑であり、違いは simple update の step 数(1000)である。同じ入力の SU を 1000 step に
+   すると非 fast も完走する(177.65 秒、ただし 80 ボンド中 3 回は CTM 未収束の警告が出る)。
+   fast はこの固着を踏まないが、「fast でなければ D >= 3 が動かない」ではない。
 
 「bare-Tn の move を使うので fermion-aware でない」という警告の理由は、実は成り立たない。
 フェルミオン経路の `update_CTM()` は
@@ -54,8 +60,9 @@ core::Calc_CTM_Environment_density(..., reduced_Tn, ..., true, true);
 | ケース | 現状 | fast | 速度比 | Energy 差(相対) |
 |---|---|---|---|---|
 | D=2 chi=8, FU 10 sweep | 78.2 s | 5.6 s | 14x | 5.8e-4 |
-| D=3 chi=12, FU 10 sweep | throw | 7.4 s | — | 参照が取れない |
-| D=3 chi=24, FU 10 sweep | throw (283.9 s) | 14.2 s | — | 参照が取れない |
+| D=3 chi=12, FU 10 sweep(SU 50 step) | throw | 7.4 s | — | 非 fast が落ちる |
+| D=3 chi=24, FU 10 sweep(SU 50 step) | throw (283.9 s) | 14.2 s | — | 非 fast が落ちる |
+| D=3 chi=12, FU 10 sweep(SU 1000 step) | 177.7 s | 未測定 | — | **A/B は実装後 (T5) に取る** |
 | D=4 chi=16, FU 1 sweep | 91.6 s | 21.5 s | 4.3x | **2.4e-6** |
 
 - **D=4 の 1 sweep で相対 2.4e-6 の一致**が fast 経路の正しさの直接の裏付け。
@@ -202,7 +209,8 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 
 - `src/iTPS/main.cpp:250-261` の強制 OFF と警告を撤去する。
 - `Full_Use_FastFullUpdate` の既定値は true のまま。**フェルミオン模式の既定の挙動が変わる**
-  (非 fast → fast)。現状の非 fast が D >= 3 で完走しないことを踏まえれば妥当な既定。
+  (非 fast → fast)。非 fast が simple update 未収束の D >= 3 で固着することと、
+  速度差(§2)を踏まえれば妥当な既定。
 - `docs/sphinx/{ja,en}/file_specification/parameter_section.rst` の
   「``fastfullupdate = true``(既定値)は非対応です」の箇条書きを差し替える。
   `meanfield_env = true` との組み合わせがエラーである点は変えない。

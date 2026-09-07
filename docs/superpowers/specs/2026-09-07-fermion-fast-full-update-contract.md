@@ -40,6 +40,8 @@ CTM を一様ベクトル初期化から収束させ直している。
   `Calc_CTM_Environment_density` は内部で `core::Make_single_tensor_density` を通してから
   `core::*_move_single` を回すだけで、move 自体はボゾンの有限温度経路と同一コードである。
   **フェルミオン性は reduced tensor の構築に閉じており、move には入っていない。**
+  fast 経路が move に渡すテンソルも同じ
+  `Make_single_tensor_density(build_reduced_density_tensors(Tn, finfo))` である。
 - `phase_invariant` は `Check_Convergence_CTM_RDM` の中でしか使われない。move 本体に位相処理はない。
 - 4 つの move は、**吸収する行・列と書き換える行・列が 1 セルずれる**。
 
@@ -59,8 +61,13 @@ CTM を一様ベクトル初期化から収束させ直している。
   エネルギーが**相対 2.4e-6** で一致した(base 92 秒 / fast 22 秒)。
   同じ系で D=2 chi=8 の 10 sweep では相対 5.8e-4 まで開く。D=2 は full update が
   エネルギーを上げる病的領域であり、sweep 数を積むほど差が開く。
-- 非 fast 経路は D=3 では完走しない(chi=12 / chi=24 のいずれでも forbidden parity ガードで
-  異常終了)。**D=3 で fast と非 fast の A/B は取れない。**
+- **simple update が収束していない状態から D >= 3 の full update に入ると**、非 fast 経路は
+  毎ボンドの cold start で CTMRG が別の固定点に固着し、forbidden parity ガードで異常終了する
+  (SU 50 step の D=3 では chi=12 / chi=24 のいずれでも落ちる)。
+  **ただし D >= 3 が常に落ちるわけではない**(初版の記述を 2026-09-08 に訂正)。既存 ctest
+  `FreeFermionFull` は D=3 chi=12 を `fastfullupdate = false` で回して緑であり、違いは
+  simple update の step 数(1000)。同じ入力の SU を 1000 step にすると非 fast も完走する
+  (177.65 秒、80 ボンド中 3 回は CTM 未収束の警告が出る)。
 
 ## 3. 要求
 
@@ -74,6 +81,11 @@ CTM を一様ベクトル初期化から収束させ直している。
 - run が正常終了する
 
 `meanfield_env = true` との組み合わせが入力読み込みでエラーになる現在の振る舞いは変えない。
+
+**既存テストとの矛盾**: `test/fermion/fermion_guards.cpp` の T6 は現在「fallback 警告が
+**出ること**」を要求している。R1 はこれを禁じるので、実装が入るとこの既存テストが赤になる。
+実装者はテストファイルを変更できないので、**テスト作成者が反転させた**(2026-09-08 対応済み)。
+実装後もここが赤のままなら、警告が別の場所からも出ている。
 
 ### R2: fast のときに呼ばれる move
 
@@ -110,7 +122,10 @@ warm start を使うのはフェルミオンのボンド更新後の再収束だ
 - ボゾン経路のすべての環境構築
 
 環境が有効かどうかの状態は、環境テンソルの形が変わりうる操作(テンソルの初期化、
-チェックポイントの読み込み)で無効に戻ること。
+チェックポイントの読み込み `iTPS::load_tensors()`)で無効に戻ること。
+
+**シグネチャは `void update_CTM(bool warm_start)` とすること**(既定値 `= false` を付けてよい)。
+enum や `update_CTM_warm()` のような別の綴りにしない。テストがこの形を直接呼ぶ。
 
 ### R4: skew を前提にしない
 
@@ -142,7 +157,13 @@ skew の折り返しは `SquareLattice` 側が処理する。
 - **より軽い条件を選ぶ場合は、その条件で実際に A/B を回して差を実測し、許容誤差を
   実測から決めること。** 契約の 1e-5 をそのまま軽い条件に流用しない。
 - **D=2 を使うなら full update は 1 sweep に絞ること。** 10 sweep 積むと相対 5.8e-4 になる。
-- **D=3 では非 fast 側が完走しない**ので、この形の A/B は書けない。
+- **非 fast 側の CTM が収束していることを要求しないこと。** 非 fast 経路はボンドごとの
+  cold start のうち 1 本が別の固定点に固着することがあり(D=2 chi=8 / SU 200 step では
+  `iteration_max` を 400、`convergence_epsilon` を 1e-10 にしても `rdm_dist` が 7.06e-4 で
+  固着する)、これは **R3 が緩和しようとしている病理そのもの**であって S-1 の主題ではない。
+  fast 側の収束は要求してよい。非 fast 側は回数を印字するに留めること。
+- **D >= 3 でも SU を十分回した状態なら非 fast は完走する**ので A/B は取れるが、
+  条件によっては上の固着を踏む。条件は実測で選ぶこと。
 
 ### S-2: grading が自明なとき boson と一致する(E2E)
 
@@ -218,8 +239,10 @@ fast 経路で `build_full_update_environment` の forbidden parity 比が閾値
   レビューで担保する。実装差分から `skew` と `noskew` を含む行を拾って確認すること。
   ボゾンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が緑のままであることも確認する
   (どちらも skew を使い、後者は `*_move_single` を通る)。
-- **D=3 の A/B が取れない。** 非 fast 経路が完走しないため、fast が「非 fast より良い」ことを
-  D=3 で直接示すことはできない。
+- **fast が「非 fast より良い」ことは直接は示せない。** 速度差は測れるが、
+  「毎ボンドの cold start が踏む固着を fast は踏まない」ことは、固着する条件を選んで
+  はじめて見える性質であり、安定した回帰テストにしにくい。実装後の検証 (T5) で
+  Claude が A/B を取る項目とする。
 - **1 サイトの full ゲートは CTM を更新しない**(現状の振る舞い、ボゾンも同じ)。
   この経路は本契約の対象外で、既存のテストも無い。
 
