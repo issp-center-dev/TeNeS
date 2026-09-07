@@ -180,6 +180,7 @@ void iTPS<ptensor>::initialize_tensors() {
                 << std::endl;
     }
   }  // end of else part of if(load_dir.empty())
+  ctm_valid_ = false;
 }
 
 template <class ptensor>
@@ -255,6 +256,7 @@ void iTPS<ptensor>::initialize_tensors_density() {
                 << std::endl;
     }
   }  // end of else part of if(load_dir.empty())
+  ctm_valid_ = false;
 }
 
 // template specialization

@@ -122,7 +122,7 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
       if (peps_parameters.Full_Use_FastFullUpdate) {
         update_CTM_fast_fermion(source, target, source_leg);
       } else {
-        update_CTM();
+        update_CTM(true);
       }
       return;
     }

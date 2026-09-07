@@ -444,8 +444,9 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 }
 
 template <class ptensor>
-void iTPS<ptensor>::update_CTM() {
+void iTPS<ptensor>::update_CTM(bool warm_start) {
   Timer<> timer;
+  const bool initialize = !(warm_start && ctm_valid_);
   if (finfo.enabled) {
     // Bare Tn: the kernel writes sqrt-Schmidt weights into both ends of every
     // bond, so the state is the direct contraction of Tn (same convention the
@@ -456,11 +457,12 @@ void iTPS<ptensor>::update_CTM() {
         tenes::fermion::build_reduced_density_tensors(Tn, finfo);
     core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
                                        reduced_Tn, peps_parameters, lattice,
-                                       true, true);
+                                       initialize, true);
   } else {
     core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                               peps_parameters, lattice);
+                               peps_parameters, lattice, initialize);
   }
+  ctm_valid_ = true;
   time_environment += timer.elapsed();
 }
 

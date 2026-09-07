@@ -141,7 +141,7 @@ class iTPS {
   std::vector<tensor> make_single_tensor_density();
 
   //! Converge the corner transfer matrices for the current state.
-  void update_CTM();
+  void update_CTM(bool warm_start = false);
   //! Finite-temperature variant of update_CTM().
   void update_CTM_density();
 
@@ -208,6 +208,7 @@ class iTPS {
   //! Measure the one-site observables; result indexed by [operator][site].
   std::vector<std::vector<tensor_type>> measure_onesite();
   //! Measure the unnormalized one-site RDM (trace = norm); result indexed by [site].
+  //! [site].
   std::vector<small_tensor<tensor_type>> measure_onesite_rdm();
   //! Finite-temperature variant of measure_onesite().
   std::vector<std::vector<tensor_type>> measure_onesite_density();
@@ -452,6 +453,8 @@ class iTPS {
   std::vector<tensor> C2;   //!< Right-top CTM for each center
   std::vector<tensor> C3;   //!< Right-bottom CTM for each center
   std::vector<tensor> C4;   //!< Left-bottom CTM for each center
+  //! True after the CTM environment has been built for the current shapes.
+  bool ctm_valid_ = false;
   //!@}
   //! Parity ledgers of every site tensor (fermion mode). Mutable state:
   //! the simple update rewrites the virtual-bond ledgers through the

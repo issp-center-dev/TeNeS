@@ -210,6 +210,7 @@ void iTPS<ptensor>::load_tensors() {
   }
 
   validate_loaded_fermion_tensors();
+  ctm_valid_ = false;
 }
 
 template <class ptensor>
