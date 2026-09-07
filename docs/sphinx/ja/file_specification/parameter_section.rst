@@ -63,7 +63,8 @@
   - 現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。``Use_RSVD``、``Simple_Gauge_Fix``、有限温度計算、実時間発展、マルチサイト演算子、``ops`` 形式2サイト観測量、距離2以上の2サイト演算子、skew セル、1幅セル(``LX < 2`` または ``LY < 2``)、相関関数、相関長は非対応で、入力読み込み時にエラーになります(相関長は強制的に無効化されます)
   - full update に関する注意:
 
-    - ``fastfullupdate = true``(既定値)は非対応です。フェルミオン模式では警告を出したうえで非高速版(ボンドごとに CTM を再収束する)にフォールバックします。``meanfield_env = true`` との組み合わせはエラーになります
+    - ``fastfullupdate = true``(既定値)はフェルミオン模式でも利用できます。full update は CTM 環境のみ対応しており、``meanfield_env = true`` との組み合わせはエラーになります
+    - 非高速版(``fastfullupdate = false``)ではボンドごとに CTM を再収束するため、fast full update より遅くなります。また、simple update が十分に収束していない状態から ``D >= 3`` の full update を始めると、CTM が別の固定点に固着し、forbidden parity ガードで停止することがあります。その場合は simple update の step 数を増やすか、fast full update を使ってください
     - full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(``1e-8`` と ``[parameter.ctm]`` の ``convergence_epsilon`` の 100 倍の大きい方)を超えるとエラーで停止します。その場合は ``[parameter.ctm]`` の ``iteration_max`` を増やすか ``convergence_epsilon`` を小さくしてください
     - ボンド次元が小さいとき(例: 自由フェルミオンの ``D = 2``)、simple update で収束した状態から full update を始めるとエネルギーが**上がる**ことがあります。これは射影虚時間発展の固定点が表現力不足の状態空間では simple update の固定点より高くなりうるためで、実装の誤りではありません。フェルミオン系では ``D >= 3`` を推奨します
   - ``tensor_save`` / ``tensor_load`` はフェルミオン模式でも使えます。仮想ボンドの偶奇台帳が保存先の ``fermion.dat`` に書き出され、読み込み時に物理脚のパリティ・``virtual_dim``・``L_sub``・``skew``・テンソル自身のパリティが検証されます。``virtual_dim`` を大きくしての読み込みは可能ですが、小さくしての読み込みは非対応です。拡張された成分はゼロ詰めされるため、広げた空間を使うには読み込み後に simple update を回す必要があり、測定だけでは広がりません
