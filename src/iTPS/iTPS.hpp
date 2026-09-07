@@ -170,6 +170,8 @@ class iTPS {
   void full_update();
   //! Apply one full-update gate.
   void full_update(EvolutionOperator<tensor> const &up);
+  //! Fermionic counterpart of the bosonic fast full-update CTM move.
+  void update_CTM_fast_fermion(int source, int target, int source_leg);
 
   //! Optimize the state in ground-state mode: simple updates, then full
   //! updates.

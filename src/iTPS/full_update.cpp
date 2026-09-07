@@ -23,9 +23,51 @@
 #include "core/full_update_fermion.hpp"
 #include "core/ctm.hpp"
 #include "../fermion/fops.hpp"
+#include "../fermion/reduced_measure.hpp"
 #include "../tensor.hpp"
 
 namespace tenes::itps {
+
+template <class tensor>
+void iTPS<tensor>::update_CTM_fast_fermion(int source, int target,
+                                           int source_leg) {
+  Timer<> timer;
+  const std::vector<tensor> Tn_single = core::Make_single_tensor_density(
+      tenes::fermion::build_reduced_density_tensors(Tn, finfo));
+
+  // Keep this table in sync with the bosonic fast full-update branch below.
+  if (source_leg == 0) {
+    const int source_x = source % LX;
+    const int target_x = target % LX;
+    core::Right_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                            source_x, peps_parameters, lattice);
+    core::Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                           target_x, peps_parameters, lattice);
+  } else if (source_leg == 1) {
+    const int source_y = source / LX;
+    const int target_y = target / LX;
+    core::Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                             source_y, peps_parameters, lattice);
+    core::Top_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                          target_y, peps_parameters, lattice);
+  } else if (source_leg == 2) {
+    const int source_x = source % LX;
+    const int target_x = target % LX;
+    core::Left_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                           source_x, peps_parameters, lattice);
+    core::Right_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                            target_x, peps_parameters, lattice);
+  } else {
+    const int source_y = source / LX;
+    const int target_y = target / LX;
+    core::Top_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                          source_y, peps_parameters, lattice);
+    core::Bottom_move_single(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single,
+                             target_y, peps_parameters, lattice);
+  }
+
+  time_environment += timer.elapsed();
+}
 
 template <class tensor>
 void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
@@ -77,7 +119,11 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
       tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
       tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
       tenes::fermion::validate_neighbor_consistency(finfo, lattice);
-      update_CTM();
+      if (peps_parameters.Full_Use_FastFullUpdate) {
+        update_CTM_fast_fermion(source, target, source_leg);
+      } else {
+        update_CTM();
+      }
       return;
     }
 
