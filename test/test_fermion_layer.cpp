@@ -79,6 +79,58 @@ struct iTPSTestAccessor {
         state.C1, state.C2, state.C3, state.C4, state.eTt, state.eTr, state.eTb,
         state.eTl, reduced, state.peps_parameters, state.lattice);
   }
+
+  // ---- the CTM environment -------------------------------------------------
+  //
+  // The ten environment slots are private members of iTPS (iTPS.hpp, after the
+  // `private:` on line 318). fermion/fast_full_update.cpp needs to read them
+  // before and after a single full-update bond to see which CTM move ran, so
+  // they are exposed here rather than by widening iTPS' own interface.
+  template <class tensor>
+  static std::vector<tensor>& C1(iTPS<tensor>& state) {
+    return state.C1;
+  }
+  template <class tensor>
+  static std::vector<tensor>& C2(iTPS<tensor>& state) {
+    return state.C2;
+  }
+  template <class tensor>
+  static std::vector<tensor>& C3(iTPS<tensor>& state) {
+    return state.C3;
+  }
+  template <class tensor>
+  static std::vector<tensor>& C4(iTPS<tensor>& state) {
+    return state.C4;
+  }
+  template <class tensor>
+  static std::vector<tensor>& eTt(iTPS<tensor>& state) {
+    return state.eTt;
+  }
+  template <class tensor>
+  static std::vector<tensor>& eTr(iTPS<tensor>& state) {
+    return state.eTr;
+  }
+  template <class tensor>
+  static std::vector<tensor>& eTb(iTPS<tensor>& state) {
+    return state.eTb;
+  }
+  template <class tensor>
+  static std::vector<tensor>& eTl(iTPS<tensor>& state) {
+    return state.eTl;
+  }
+
+  //! The parameter set and the geometry the state was built with. The
+  //! oracle of fermion/fast_full_update.cpp replays the two CTM moves with
+  //! exactly the objects the solver used, so that a discrepancy cannot come
+  //! from the test having rebuilt them differently.
+  template <class tensor>
+  static PEPS_Parameters const& peps_parameters(iTPS<tensor>& state) {
+    return state.peps_parameters;
+  }
+  template <class tensor>
+  static SquareLattice const& lattice(iTPS<tensor>& state) {
+    return state.lattice;
+  }
 };
 }  // namespace tenes::itps
 
@@ -3936,3 +3988,4 @@ TEST_CASE("MF layer4 fermion mean-field two-site values match the oracle") {
 #include "fermion/full_update_realctm.cpp"
 #include "fermion/ctm_phase.cpp"
 #include "fermion/fermion_guards.cpp"
+#include "fermion/fast_full_update.cpp"

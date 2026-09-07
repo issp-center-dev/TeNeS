@@ -40,6 +40,28 @@ else()
   add_test(NAME test_fermion_layer COMMAND $<TARGET_FILE:test_fermion_layer>)
 endif()
 
+# S-5 of
+# docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the
+# warm start of iTPS::update_CTM(). Its own executable rather than another
+# file included into test_fermion_layer.cpp, because it is the only test that
+# calls the new signature: a translation unit that does not compile would take
+# every other fermion unit test with it.
+add_executable(test_fermion_ctm_warm_start fermion/ctm_warm_start.cpp)
+target_link_libraries(test_fermion_ctm_warm_start PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_ctm_warm_start
+  PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_ctm_warm_start
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS}
+                   $<TARGET_FILE:test_fermion_ctm_warm_start>)
+else()
+  add_test(NAME test_fermion_ctm_warm_start
+           COMMAND $<TARGET_FILE:test_fermion_ctm_warm_start>)
+endif()
+set_tests_properties(test_fermion_ctm_warm_start PROPERTIES TIMEOUT 1800)
+
 # A syntactically broken input file must lead to a clean error exit,
 # not to an abort by an uncaught exception (WILL_FAIL passes on a
 # nonzero exit code but still fails if the process dies on a signal).
@@ -140,6 +162,19 @@ add_test(NAME BosonEquivalenceFull
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_full.py)
 set_tests_properties(BosonEquivalenceFull PROPERTIES TIMEOUT 900)
 
+# S-2 of
+# docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the
+# same boson/fermion equivalence with fastfullupdate = true. Same script, one
+# argument; the fast comparison is between two different implementations of
+# the partial CTM move (bosonic core::*_move on the bare Tn against fermionic
+# core::*_move_single on the reduced tensors) and, unlike S-1, does not depend
+# on the non-fast fermionic path completing.
+add_test(NAME BosonEquivalenceFastFull
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_full.py
+                 --fast)
+set_tests_properties(BosonEquivalenceFastFull PROPERTIES TIMEOUT 900)
+
 # Contract T5 (2026-09-05 revision): D = 3, chi = 12, 1000 simple-update
 # steps and 4 full-update sweeps; about a minute in a Release build, and the
 # TIMEOUT is well above three times that.
@@ -206,6 +241,24 @@ add_test(NAME FreeFermionSimple
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_simple.py)
 set_tests_properties(FreeFermionSimple PROPERTIES TIMEOUT 600)
+
+# S-1, S-4 and S-6 of
+# docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the
+# free-fermion run with fastfullupdate = false against the same run with
+# fastfullupdate = true. The quick condition (D = 2, chi = 8, one full-update
+# sweep) takes about 15 s in a Release build; TENES_FERMION_FULL_TEST /
+# TENES_FREE_FERMION_FULL switches it to the contract's reference condition
+# (D = 4, chi = 16), which the contract measures at 92 s + 22 s.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/fast_full_update_ab.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/fast_full_update_ab.py @ONLY)
+add_test(NAME FreeFermionFastFullUpdate
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/fast_full_update_ab.py)
+if(TENES_FERMION_FULL_TEST)
+  set_tests_properties(FreeFermionFastFullUpdate PROPERTIES TIMEOUT 3600)
+else()
+  set_tests_properties(FreeFermionFastFullUpdate PROPERTIES TIMEOUT 900)
+endif()
 
 if(ENABLE_MPI)
   set(BENCH_SMOKE_LAUNCHER

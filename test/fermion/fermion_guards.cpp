@@ -27,12 +27,20 @@
 // cases fail for a reason that has nothing to do with the guards. They are
 // now run on a schedule the CTM converges on - 200 simple-update steps,
 // iteration_max 100, convergence_epsilon 1e-8, D = 2, chi = 8 - and assert
-// as a PREMISE that the run never printed "CTM did not converge". The
-// requirements themselves are unchanged: the fallback announces itself with
-// a warning naming Full_Use_FastFullUpdate and completes, and the virtual
-// parity ledgers agree at both ends of every bond afterwards.
+// as a PREMISE that the run never printed "CTM did not converge".
 //
-// The solver prints the CTM warning on standard output and the fallback
+// R1 of
+// docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md
+// REVERSES the first of the two cases. Fermion mode used to force
+// Full_Use_FastFullUpdate to false and announce the fallback on standard
+// error; it now honours fastfullupdate = true, so the very same run must
+// complete WITHOUT any warning naming Full_Use_FastFullUpdate. The second
+// case (the parity ledger after a full update) is unchanged and keeps
+// fastfullupdate = false, which makes it the control for the first: it is
+// the non-fast path that must still run and still leave the ledgers
+// consistent.
+//
+// The solver prints the CTM warning on standard output and any parameter
 // warning on standard error, both only at print level warn or above; the
 // runs are therefore made at PrintLevel::warn with both streams captured.
 // The pure load checks of T6 ("accepted", "refused") stay in test/input.cpp.
@@ -110,13 +118,14 @@ noise = 0.01
 }  // namespace
 
 TEST_CASE(
-    "fermion guards T6: fermion mode falls back from the fast full update "
-    "with a warning on a converged CTM") {
+    "fermion fast full update R1: fermion mode honours fastfullupdate = true "
+    "and says nothing about it") {
   using namespace tenes;
   using namespace tenes::itps;
 
   // Precondition: fastfullupdate really is on by default, so the input
-  // below exercises the fallback rather than the plain path.
+  // below exercises the fast path rather than the plain one, without saying
+  // so anywhere in the toml.
   {
     auto defaults =
         gen_param(toml::parse_str(R"([parameter])").at("parameter"));
@@ -125,6 +134,7 @@ TEST_CASE(
 
   const std::string input_filename = "fermion_guards_fast_full_update.toml";
   const std::string outdir = "output_fermion_guards_fast_full_update";
+  const std::string fast_flag = "Full_Use_FastFullUpdate";
 
   // A parity-even hopping gate; the diagonal keeps the state from collapsing
   // and the off-diagonal block makes the bond genuinely correlated.
@@ -246,9 +256,10 @@ elements = """
   // parity-clean environment and any failure below is about the guard.
   REQUIRE(captured_out.find(fgd_ctm_warning) == std::string::npos);
   REQUIRE(captured_err.find(fgd_ctm_warning) == std::string::npos);
-  // T6: the fallback announces itself on standard error and the run
-  // completes (the CHECK_NOTHROW above).
-  CHECK(captured_err.find("Full_Use_FastFullUpdate") != std::string::npos);
+  // R1: no warning about the flag on either stream, and the run completes
+  // (the CHECK_NOTHROW above).
+  CHECK(captured_err.find(fast_flag) == std::string::npos);
+  CHECK(captured_out.find(fast_flag) == std::string::npos);
   // ... and it really ran the full update: the run wrote its density file.
   CHECK(std::filesystem::exists(std::filesystem::path(outdir) / "density.dat"));
 
@@ -259,7 +270,7 @@ elements = """
 
 TEST_CASE(
     "fermion guards T6: a fermionic full update leaves the parity ledger "
-    "consistent on a converged CTM") {
+    "consistent on a converged CTM (fastfullupdate = false)") {
   using namespace tenes;
   using namespace tenes::itps;
   using ptensor = complex_tensor;

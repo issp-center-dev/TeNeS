@@ -18,6 +18,24 @@
 # the fermionic full update must reduce to the bosonic one when the grading
 # is trivial.
 #
+# S-2 of
+# docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md asks
+# for the same comparison with fastfullupdate = true, so the script takes one
+# optional argument:
+#
+#   (no argument)   fastfullupdate = false, the original T4 comparison
+#   --fast          fastfullupdate = true
+#
+# and ctest registers it twice (BosonEquivalenceFull, BosonEquivalenceFastFull).
+# In the --fast mode the comparison is between two DIFFERENT implementations
+# of the same partial CTM move: the bosonic fast update absorbs the updated
+# row/column with core::*_move on the bare rank-5 Tn, while the fermionic one
+# uses core::*_move_single on the reduced (already doubled) rank-4 tensors.
+# The two agree only if the reduced tensors, the parity bookkeeping and the
+# move arguments are all right, which is why the contract calls this the
+# stronger of its two end-to-end checks; and unlike S-1 it does not depend on
+# the non-fast fermionic path completing at all.
+#
 # The model is the antiferromagnetic Heisenberg model of
 # test/data/AntiferroHeisenberg_real.toml (same tau, same number of steps,
 # same seed, same CHI, same operators), rebuilt here in python so that the
@@ -90,6 +108,9 @@ from os.path import join
 
 import numpy as np
 
+FAST = "--fast" in sys.argv[1:]
+LABEL = "BosonEquivalenceFastFull" if FAST else "BosonEquivalenceFull"
+
 TAU = 0.01
 NUM_SIMPLE_STEP = 100
 NUM_FULL_STEP = 1
@@ -105,6 +126,17 @@ SEED = 11
 # settings at its default puts the residual at 3.87e-9 (CTM default) or
 # 2.20e-8 (both defaults), where the indeterminacy of the comparison
 # approaches the tolerance judging it.
+#
+# The --fast mode is judged with the same TOL, and it deserves it: measured
+# the same way on a build carrying R1 and R2 and nothing else
+# (work/fermion/fastfu/spike.patch plus the removal of the R1 fallback in
+# src/iTPS/main.cpp), the worst relative error of the fast comparison is
+# 2.90e-10 - within 3% of the 2.81e-10 of the non-fast one, i.e. the fast
+# fermionic path reproduces the fast bosonic one just as closely as the
+# non-fast pair reproduce each other.  With fermion mode falling back to the
+# non-fast update (the behaviour R1 replaces) the same comparison reads
+# 1.51e-05, five decades worse and far outside TOL, so this test also notices
+# a silent fallback.
 TOL = 1.0e-6
 
 # The two runs must land on an entangled state, otherwise the comparison
@@ -269,7 +301,7 @@ num_step = {NUM_SIMPLE_STEP}
 [parameter.full_update]
 tau = {TAU}
 num_step = {NUM_FULL_STEP}
-fastfullupdate = false
+fastfullupdate = {"true" if FAST else "false"}
 convergence_epsilon = 1.0e-14
 inverse_precision = 1.0e-14
 iteration_max = 200
@@ -494,8 +526,19 @@ def check_ctm_converged(label, output):
     ]
 
 
-def relerr(value, reference):
-    return abs(value - reference) / max(1.0, abs(reference))
+# Every relative error the comparison computes, so that the worst one can be
+# reported.  It is the number the tolerance note at the top of this file is
+# about, and printing it is what lets a later change to the model or to the
+# solver be judged against a measured value instead of a remembered one.
+WORST = {"err": 0.0, "what": "(nothing compared)"}
+
+
+def relerr(value, reference, what=None):
+    err = abs(value - reference) / max(1.0, abs(reference))
+    if what is not None and err > WORST["err"]:
+        WORST["err"] = err
+        WORST["what"] = what
+    return err
 
 
 def compare_density(boson, fermion):
@@ -508,7 +551,7 @@ def compare_density(boson, fermion):
         )
         return failures
     for name in border:
-        err = relerr(fvalues[name], bvalues[name])
+        err = relerr(fvalues[name], bvalues[name], f"density.dat {name}")
         if not err <= TOL:
             failures.append(
                 f"density.dat: {name} differs by {err:.6e} "
@@ -531,7 +574,7 @@ def compare_table(name, boson_rows, fermion_rows):
             failures.append(f"{name}: row {index} has a different width")
             continue
         for column, (bvalue, fvalue) in enumerate(zip(brow, frow)):
-            err = relerr(fvalue, bvalue)
+            err = relerr(fvalue, bvalue, f"{name} row {index} column {column}")
             if not err <= TOL:
                 failures.append(
                     f"{name}: row {index} column {column} differs by "
@@ -549,7 +592,7 @@ def diff_lines(a, b):
 
 
 def main():
-    output_root = "output_BosonEquivalenceFull"
+    output_root = "output_" + LABEL
     if os.path.exists(output_root):
         shutil.rmtree(output_root)
     os.makedirs(output_root)
@@ -559,7 +602,7 @@ def main():
     )
     if generator_failures:
         for message in generator_failures:
-            print("BosonEquivalenceFull fixture check failed: " + message)
+            print(LABEL + " fixture check failed: " + message)
         return 1
 
     runs = {}
@@ -625,13 +668,16 @@ def main():
         join(runs["fermion"]["savedir"], "fermion.dat"), 4
     )
 
-    # We asked for the plain (non fast) full update, so neither run may fall
-    # back to the fast one.
+    # Neither run may say anything about Full_Use_FastFullUpdate: in the
+    # default mode because the input already asks for the plain full update,
+    # and in the --fast mode because contract R1 says fermion mode now honours
+    # fastfullupdate = true instead of falling back with a warning. A fallback
+    # here would silently turn the fast comparison back into the slow one.
     for label in ("boson", "fermion"):
         if "Full_Use_FastFullUpdate" in runs[label]["stderr"]:
             failures.append(
-                f"{label}: tenes warned about Full_Use_FastFullUpdate even "
-                "though the input sets fastfullupdate = false"
+                f"{label}: tenes warned about Full_Use_FastFullUpdate, but "
+                f"the input sets fastfullupdate = {'true' if FAST else 'false'}"
             )
 
     # ... and the tightened CTM tolerance has to be one both runs reach.
@@ -643,7 +689,7 @@ def main():
     boson_energy = boson_density[0]["Energy"].real
     fermion_energy = fermion_density[0]["Energy"].real
     print(
-        f"BosonEquivalenceFull energy boson={boson_energy:.17e} "
+        f"{LABEL} energy boson={boson_energy:.17e} "
         f"fermion={fermion_energy:.17e} "
         f"relerr={relerr(fermion_energy, boson_energy):.6e}"
     )
@@ -664,9 +710,14 @@ def main():
             read_table(join(runs["fermion"]["outdir"], filename)),
         )
 
+    print(
+        f"{LABEL} worst relative error {WORST['err']:.6e} on {WORST['what']} "
+        f"(tol {TOL:g})"
+    )
+
     if failures:
         for message in failures:
-            print("BosonEquivalenceFull failed: " + message)
+            print(LABEL + " failed: " + message)
         return 1
     return 0
 

@@ -1,0 +1,559 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# S-1, S-4 and S-6 of
+# docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md.
+#
+# Two runs of the free spinless fermion model (the model of the other
+# test/fermion/free_fermion*.py.in tests: t = 1, mu = 0, half filling,
+# L_sub = [2, 2], tau = 0.01, seed = 11) that differ in ONE line of the
+# input, [parameter.full_update] fastfullupdate.  What is asserted:
+#
+#   S-4  the fast run does not print a warning naming Full_Use_FastFullUpdate
+#        and exits 0 (requirement R1 - fermion mode used to force the flag to
+#        false and say so on standard error).  The non-fast run must not print
+#        it either; that half is the control, and it is the check the existing
+#        boson_equivalence_full.py.in already makes.
+#   S-1  the two runs agree on every per-site density in output/density.dat.
+#   S-6  every forbidden-parity ratio the fast run's
+#        build_full_update_environment reports stays far below its own guard
+#        threshold, max(1e-8, 100 * CTM_Convergence_Epsilon).  The diagnostic
+#        is the pre-existing one behind TENES_FERMION_FULL_UPDATE_LOG
+#        (src/iTPS/core/full_update_fermion.cpp).
+#
+# The eight full-update gates span all four source_leg values and cover the
+# eight bonds of the 2x2 cell once each, so the whole of the contract's R2
+# table is exercised; check_bond_cover() asserts that instead of assuming it.
+#
+# --- what this test can and cannot see (contract section 5) ----------------
+#
+# The fast full update is an APPROXIMATION: it absorbs the updated row/column
+# once instead of re-converging the environment, so the two runs are not
+# supposed to agree exactly.  All this test can say is that the difference
+# stays in the band that was measured for a conforming implementation.  The
+# check with real power over the move table is the unit test
+# test/fermion/fast_full_update.cpp (S-3); the check with power over the
+# fermionic bookkeeping is the boson equivalence (S-2).
+#
+# --- where TOL comes from --------------------------------------------------
+#
+# Measured on this exact input (2026-09-07, macOS arm64, g++-16 -O3, the
+# spike of work/fermion/fastfu/spike.patch, which is R2 and nothing else),
+# as the worst relative difference over the three rows of density.dat:
+#
+#   conforming implementation                                     9.68e-06
+#   the move table of source_leg 2 with Left/Right swapped        2.79e-04
+#   the moves given the sites AFTER the driver's swap (legs 0,1)  8.41e-05
+#   the second move of source_leg 2 dropped                       2.15e-04
+#
+# TOL = 5e-5 sits 5.2x above the conforming number and below all three
+# mutations, the closest by a factor of 1.7.  It is deliberately not tighter:
+# the quantity being bounded is a physical approximation error of order 1e-5,
+# not round-off, and squeezing the band would buy detection power that S-3
+# already provides at machine precision while risking a red CI on a platform
+# whose CTM lands on a slightly different fixed point.
+#
+# In the full mode below (D = 4, chi = 16) the same comparison was measured
+# at 2.4e-06 (work/fermion/fastfu/FINDINGS.md), so the same TOL has 20x of
+# head room there.
+#
+# --- why the quick condition is what it is ---------------------------------
+#
+# D = 2, chi = 8, 50 simple-update steps, ONE full-update sweep.  The contract
+# warns that D = 2 is the regime in which the full update RAISES the energy
+# and that the fast/non-fast gap grows with the sweep count (5.8e-4 after ten
+# sweeps), which is why exactly one sweep is used.  50 simple-update steps is
+# the point at which both runs' CTMs still converge; at 200 steps the NON-FAST
+# run's per-bond cold restart stops converging (count = 400, rdm_dist stuck at
+# 7.1e-4 - the very pathology R3's warm start is about), and the comparison
+# would then be against an unconverged reference.  The fast run's CTM
+# convergence is asserted below; the non-fast run's is only reported, because
+# the non-fast path is the one being replaced and its convergence is not this
+# test's subject.
+
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+# The contract allows S-1 to live under the same switch as the other slow
+# fermion end-to-end tests.  Here the switch selects the CONDITION rather than
+# skipping the test: the quick condition runs everywhere, and the contract's
+# reference condition (D = 4, chi = 16; base 92 s / fast 22 s in a Release
+# build) is what the switch buys.
+FULL = os.environ.get("TENES_FREE_FERMION_FULL", "@TENES_FERMION_FULL_TEST_PY@") == "1"
+
+T = 1.0
+MU = 0.0
+TAU = 0.01
+SEED = 11
+LX = 2
+LY = 2
+N_UNIT = LX * LY
+NUM_SIMPLE_STEP = 50
+NUM_FULL_STEP = 1
+
+D = 4 if FULL else 2
+CHI = 16 if FULL else 8
+CTM_CONVERGENCE_EPSILON = 1.0e-8
+MAX_CTM_ITERATION = 50
+
+TOL = 5.0e-5
+
+# ... and the two runs must NOT be identical.  If fermion mode ever falls back
+# to the plain full update again - silently this time - the fast run is the
+# slow run, every difference is exactly zero and the S-1 comparison passes
+# while testing nothing.  Measured difference of a conforming implementation:
+# 9.68e-06 (D = 2) and 2.4e-06 (D = 4), so 1e-8 is two decades of margin below
+# the smaller of the two and still far above the 0.0 a fallback produces.
+MIN_DIFFERENCE = 1.0e-8
+
+# A product state of this model has zero hopping energy, so an energy this
+# far below zero means the runs really are comparing correlated states.
+# Measured on the quick condition: -1.32e-1.
+ENERGY_MAX = -5.0e-2
+
+CTM_WARNING = "CTM did not converge"
+FAST_FLAG = "Full_Use_FastFullUpdate"
+
+# src/iTPS/core/full_update_fermion.cpp guards the folded two-site
+# environment with this ratio and throws above the threshold.  S-6 asks for
+# the fast path to stay clear of it, not merely inside it; measured worst
+# value on the quick condition, fast run: 1.70e-10 (non-fast: 1.05e-9).
+FORBIDDEN_THRESHOLD = max(1.0e-8, 100.0 * CTM_CONVERGENCE_EPSILON)
+FORBIDDEN_MARGIN = 0.1
+FORBIDDEN_RE = re.compile(r"N_forbidden_ratio=([0-9.eE+-]+)")
+
+# (source_site, source_leg) of the full-update gates: the eight bonds of the
+# 2x2 cell, once each, using every source_leg.  Same list as
+# test/fermion/free_fermion_full.py.in.
+FULL_UPDATE_BONDS = [
+    (0, 2),
+    (2, 2),
+    (0, 0),
+    (2, 0),
+    (0, 1),
+    (2, 1),
+    (1, 3),
+    (3, 3),
+]
+
+
+def bond_key(site, leg):
+    x = site % LX
+    y = site // LX
+    if leg == 2:
+        return ("h", x, y)
+    if leg == 0:
+        return ("h", (x - 1) % LX, y)
+    if leg == 1:
+        return ("v", x, y)
+    if leg == 3:
+        return ("v", x, (y - 1) % LY)
+    raise ValueError(f"source_leg must be 0..3, got {leg}")
+
+
+def check_bond_cover(bonds):
+    failures = []
+    keys = [bond_key(site, leg) for site, leg in bonds]
+    if len(set(keys)) != len(keys):
+        failures.append(f"the full-update gates repeat a bond: {keys}")
+    expected = {("h", x, y) for x in range(LX) for y in range(LY)}
+    expected |= {("v", x, y) for x in range(LX) for y in range(LY)}
+    if set(keys) != expected:
+        failures.append(
+            "the full-update gates do not cover every bond of the unit cell "
+            f"exactly once: {sorted(set(keys))} versus {sorted(expected)}"
+        )
+    legs = {leg for _, leg in bonds}
+    if legs != {0, 1, 2, 3}:
+        failures.append(
+            f"the full-update gates use source_leg {sorted(legs)}; all four "
+            "are needed, because the contract's R2 table has a different "
+            "pair of CTM moves for each of them"
+        )
+    return failures
+
+
+def two_site_hamiltonian(t, mu):
+    # Basis |00>, |01>, |10>, |11>; the chemical potential is split over the
+    # four bonds incident on a site.  Same as free_fermion_full.py.in.
+    h = [[0.0] * 4 for _ in range(4)]
+    h[1][1] = -0.25 * mu
+    h[2][2] = -0.25 * mu
+    h[3][3] = -0.5 * mu
+    h[1][2] = -t
+    h[2][1] = -t
+    return h
+
+
+def imaginary_time_gate(tau, t, mu):
+    # exp(-tau h) in closed form for the free-fermion h above: the hopping
+    # block is 2x2 and the two other basis states are eigenvectors.  Written
+    # out rather than diagonalized numerically so that the gate this test
+    # feeds tenes is an analytic object, not the output of a library call.
+    if mu != 0.0:
+        raise AssertionError("the closed form below assumes mu = 0")
+    g = [[0.0] * 4 for _ in range(4)]
+    g[0][0] = 1.0
+    g[3][3] = 1.0
+    g[1][1] = math.cosh(tau * t)
+    g[2][2] = math.cosh(tau * t)
+    g[1][2] = math.sinh(tau * t)
+    g[2][1] = math.sinh(tau * t)
+    return g
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat][out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  {value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = [f"{site} 1 0" for site in range(N_UNIT)]
+    lines += [f"{site} 0 1" for site in range(N_UNIT)]
+    return "\n".join(lines)
+
+
+def evolution_blocks(kind, gate, bonds):
+    elems = tensor_elements(gate)
+    blocks = []
+    for site, source_leg in bonds:
+        blocks.append(
+            f"""[[evolution.{kind}]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+        )
+    return "\n".join(blocks)
+
+
+def input_toml(outdir, fast):
+    h = two_site_hamiltonian(T, MU)
+    gate = imaginary_time_gate(TAU, T, MU)
+    simple_bonds = [(site, leg) for leg in (2, 1) for site in range(N_UNIT)]
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {NUM_SIMPLE_STEP}
+
+[parameter.full_update]
+tau = {TAU}
+num_step = {NUM_FULL_STEP}
+fastfullupdate = {"true" if fast else "false"}
+
+[parameter.ctm]
+dimension = {CHI}
+convergence_epsilon = {CTM_CONVERGENCE_EPSILON}
+iteration_max = {MAX_CTM_ITERATION}
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [{LX}, {LY}]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+1 1  1.0 0.0
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{tensor_elements(h)}
+\"\"\"
+
+[evolution]
+{evolution_blocks("simple", gate, simple_bonds)}
+{evolution_blocks("full", gate, FULL_UPDATE_BONDS)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    env = dict(os.environ)
+    # The permanent diagnostic S-6 reads.
+    env["TENES_FERMION_FULL_UPDATE_LOG"] = "1"
+    return subprocess.run(cmd, check=False, text=True, capture_output=True, env=env)
+
+
+def read_density(outdir):
+    values = {}
+    order = []
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            name = name.strip()
+            values[name] = float(raw.split()[0])
+            order.append(name)
+    return values, order
+
+
+def read_time(outdir):
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[" ".join(name.split())] = float(raw.split()[0])
+    return values
+
+
+def forbidden_ratios(text):
+    return [float(m) for m in FORBIDDEN_RE.findall(text)]
+
+
+def main():
+    output_root = "output_FreeFermionFastFullUpdate"
+    if os.path.exists(output_root):
+        shutil.rmtree(output_root)
+    os.makedirs(output_root)
+
+    failures = check_bond_cover(FULL_UPDATE_BONDS)
+    if failures:
+        for message in failures:
+            print("FreeFermionFastFullUpdate fixture check failed: " + message)
+        return 1
+
+    runs = {}
+    for label, fast in (("slow", False), ("fast", True)):
+        outdir = join(output_root, label)
+        inputfile = join(output_root, f"input_{label}.toml")
+        text = input_toml(outdir, fast)
+        with open(inputfile, "w") as f:
+            f.write(text)
+        runs[label] = {"outdir": outdir, "inputfile": inputfile, "text": text}
+
+    # --- the two inputs must differ in exactly one line -------------------
+    slow_lines = runs["slow"]["text"].splitlines()
+    fast_lines = runs["fast"]["text"].splitlines()
+    if len(slow_lines) != len(fast_lines):
+        print("the two generated inputs have different lengths")
+        return 1
+    diff = [
+        (a, b)
+        for a, b in zip(slow_lines, fast_lines)
+        if a != b and "output" not in a
+    ]
+    if diff != [("fastfullupdate = false", "fastfullupdate = true")]:
+        print(
+            "the two inputs must differ only in fastfullupdate; they differ "
+            f"in {diff}"
+        )
+        return 1
+
+    for label in ("slow", "fast"):
+        proc = run_tenes(runs[label]["inputfile"])
+        runs[label]["stdout"] = proc.stdout
+        runs[label]["stderr"] = proc.stderr
+        runs[label]["combined"] = proc.stdout + proc.stderr
+        if proc.returncode != 0:
+            print(runs[label]["combined"])
+            print(f"tenes failed for the {label} run: exit {proc.returncode}")
+            return 1
+
+    failures = []
+
+    # --- R1 / S-4 ---------------------------------------------------------
+    for label in ("slow", "fast"):
+        if FAST_FLAG in runs[label]["stderr"]:
+            hit = [
+                line.strip()
+                for line in runs[label]["stderr"].splitlines()
+                if FAST_FLAG in line
+            ]
+            failures.append(
+                f"{label}: tenes printed a warning naming {FAST_FLAG}: "
+                f"{hit[0]!r}. Fermion mode must honour fastfullupdate now "
+                "(contract R1), and it must not complain about a "
+                "fastfullupdate = false input either"
+            )
+
+    # --- premises ---------------------------------------------------------
+    for label in ("slow", "fast"):
+        times = read_time(runs[label]["outdir"])
+        if not times.get("time full update", 0.0) > 0.0:
+            failures.append(
+                f"{label}: 'time full update' = "
+                f"{times.get('time full update')}; the full update never "
+                "ran, so the comparison has no content"
+            )
+
+    fast_ctm_warnings = runs["fast"]["combined"].count(CTM_WARNING)
+    slow_ctm_warnings = runs["slow"]["combined"].count(CTM_WARNING)
+    print(
+        f"FreeFermionFastFullUpdate '{CTM_WARNING}' count: "
+        f"slow={slow_ctm_warnings} fast={fast_ctm_warnings}"
+    )
+    if fast_ctm_warnings:
+        failures.append(
+            f"fast: tenes printed '{CTM_WARNING}' {fast_ctm_warnings} "
+            "time(s); the fast path only runs full CTM convergences before "
+            "the full update and before the measurement, and both have to "
+            "converge for the comparison to mean anything"
+        )
+    # The non-fast run's per-bond cold restart is NOT required to converge:
+    # that it sometimes does not is the pathology the warm start of R3
+    # addresses, and it is a property of the path being replaced. The count
+    # is printed above so that a change in it is visible.
+
+    slow_density, slow_order = read_density(runs["slow"]["outdir"])
+    fast_density, fast_order = read_density(runs["fast"]["outdir"])
+    if slow_order != fast_order:
+        print(f"density.dat lists different observables: {slow_order} vs {fast_order}")
+        return 1
+    for label, density in (("slow", slow_density), ("fast", fast_density)):
+        if not density["Energy"] < ENERGY_MAX:
+            failures.append(
+                f"{label}: energy {density['Energy']} is not below "
+                f"{ENERGY_MAX}; a product state of this model has energy 0, "
+                "so the runs are not comparing correlated states"
+            )
+
+    # --- S-1 --------------------------------------------------------------
+    worst = 0.0
+    worst_name = None
+    for name in slow_order:
+        ref = slow_density[name]
+        err = abs(fast_density[name] - ref) / max(abs(ref), 1.0e-12)
+        if err > worst:
+            worst, worst_name = err, name
+        if not err <= TOL:
+            failures.append(
+                f"density.dat: {name} differs by {err:.6e} > {TOL:g} "
+                f"(slow {ref!r}, fast {fast_density[name]!r})"
+            )
+    if not worst > MIN_DIFFERENCE:
+        failures.append(
+            f"the two runs agree to {worst:.6e}, which is below "
+            f"{MIN_DIFFERENCE:g}: the fast run reproduced the non-fast one "
+            "exactly, so fermion mode fell back to the plain full update and "
+            "this comparison has no content"
+        )
+    print(
+        "FreeFermionFastFullUpdate D={} chi={} sweeps={}: "
+        "E_slow={:.17e} E_fast={:.17e} worst relative difference "
+        "{:.6e} on {} (tol {:g})".format(
+            D,
+            CHI,
+            NUM_FULL_STEP,
+            slow_density["Energy"],
+            fast_density["Energy"],
+            worst,
+            worst_name,
+            TOL,
+        )
+    )
+
+    # --- S-6 --------------------------------------------------------------
+    ratios = {label: forbidden_ratios(runs[label]["combined"]) for label in runs}
+    print(
+        "FreeFermionFastFullUpdate forbidden-parity ratio: "
+        "slow n={} max={:.3e}, fast n={} max={:.3e} (guard threshold "
+        "{:.1e})".format(
+            len(ratios["slow"]),
+            max(ratios["slow"]) if ratios["slow"] else float("nan"),
+            len(ratios["fast"]),
+            max(ratios["fast"]) if ratios["fast"] else float("nan"),
+            FORBIDDEN_THRESHOLD,
+        )
+    )
+    if len(ratios["fast"]) != len(FULL_UPDATE_BONDS) * NUM_FULL_STEP:
+        failures.append(
+            "the fast run reported "
+            f"{len(ratios['fast'])} N_forbidden_ratio lines, expected one per "
+            f"bond per sweep ({len(FULL_UPDATE_BONDS) * NUM_FULL_STEP}); the "
+            "TENES_FERMION_FULL_UPDATE_LOG diagnostic S-6 reads is missing, "
+            "so S-6 would be checking nothing"
+        )
+    else:
+        limit = FORBIDDEN_MARGIN * FORBIDDEN_THRESHOLD
+        for ratio in ratios["fast"]:
+            if not ratio <= limit:
+                failures.append(
+                    f"fast: a forbidden-parity ratio of {ratio:.6e} is above "
+                    f"{limit:.1e} ({FORBIDDEN_MARGIN:g} of the guard "
+                    f"threshold {FORBIDDEN_THRESHOLD:.1e}); the environment "
+                    "the fast path hands to the ALS has lost its parity "
+                    "structure"
+                )
+
+    if failures:
+        for message in failures:
+            print("FreeFermionFastFullUpdate failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
