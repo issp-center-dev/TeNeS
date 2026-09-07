@@ -62,7 +62,11 @@ core::Calc_CTM_Environment_density(..., reduced_Tn, ..., true, true);
 | D=2 chi=8, FU 10 sweep | 78.2 s | 5.6 s | 14x | 5.8e-4 |
 | D=3 chi=12, FU 10 sweep(SU 50 step) | throw | 7.4 s | — | 非 fast が落ちる |
 | D=3 chi=24, FU 10 sweep(SU 50 step) | throw (283.9 s) | 14.2 s | — | 非 fast が落ちる |
-| D=3 chi=12, FU 10 sweep(SU 1000 step) | 177.7 s | 未測定 | — | **A/B は実装後 (T5) に取る** |
+| D=3 chi=12, FU 10 sweep(SU 1000 step) | 177.7 s | 未測定 | — | — |
+| D=3 chi=12, FU 10 sweep(SU 50 step、**warm start 実装後**) | 68.9 s | 7.4 s | 9.3x | **5.1e-5** |
+
+最後の行は実装後に取ったもので、**warm start が §1 の固着を解消した**ことも示している
+(同じ入力が実装前は 16.7 秒で forbidden ガードに落ちていた)。
 | D=4 chi=16, FU 1 sweep | 91.6 s | 21.5 s | 4.3x | **2.4e-6** |
 
 - **D=4 の 1 sweep で相対 2.4e-6 の一致**が fast 経路の正しさの直接の裏付け。
