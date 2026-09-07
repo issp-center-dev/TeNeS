@@ -208,7 +208,6 @@ class iTPS {
   //! Measure the one-site observables; result indexed by [operator][site].
   std::vector<std::vector<tensor_type>> measure_onesite();
   //! Measure the unnormalized one-site RDM (trace = norm); result indexed by [site].
-  //! [site].
   std::vector<small_tensor<tensor_type>> measure_onesite_rdm();
   //! Finite-temperature variant of measure_onesite().
   std::vector<std::vector<tensor_type>> measure_onesite_density();

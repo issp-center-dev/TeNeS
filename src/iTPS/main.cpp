@@ -16,7 +16,6 @@
 
 #include "main.hpp"
 
-#include <algorithm>
 #include <complex>  // for complex
 #include <cstdlib>  // for abs, size_t
 

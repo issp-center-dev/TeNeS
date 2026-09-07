@@ -204,6 +204,9 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
     Tn[target] = Tn2_work;
 
     if (peps_parameters.Full_Use_FastFullUpdate) {
+      // Charged to time_environment like every other environment update, so
+      // that the fast and the plain path stay comparable in time.dat.
+      Timer<> timer;
       if (source_leg == 0) {
         const int source_x = source % LX;
         const int target_x = target % LX;
@@ -233,6 +236,7 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
         core::Bottom_move(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn, target_y,
                           peps_parameters, lattice);
       }
+      time_environment += timer.elapsed();
     } else {
       update_CTM();
     }
