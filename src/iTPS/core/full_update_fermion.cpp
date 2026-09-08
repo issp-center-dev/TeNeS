@@ -106,8 +106,8 @@ void check_decomposition_info(
     int info, const char* decomposition,
     const tenes::fermion::decomposition_diagnostics& diag) {
   if (info != 0) {
-    throw tenes::runtime_error(
-        fermion_full_update_failure_message(decomposition, diag.describe()));
+    throw tenes::runtime_error(fermion_full_update_failure_message(
+        decomposition, diag.describe(), diag.suspect_library()));
   }
 }
 

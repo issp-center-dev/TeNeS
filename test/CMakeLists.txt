@@ -40,6 +40,17 @@ else()
   add_test(NAME test_fermion_layer COMMAND $<TARGET_FILE:test_fermion_layer>)
 endif()
 
+# The finiteness predicate of the fermion diagnostics, compiled with
+# -ffast-math on purpose. Under finite-math-only the compiler may assume no
+# operand is Inf or NaN, and a std::isfinite-based check folds to a constant
+# true - which is how a real oneAPI run reported "all elements finite" about
+# a matrix that had already diverged. Its own executable because the flag
+# must not reach any other test. Header-only, so it links nothing.
+add_executable(test_fermion_finite_math fermion/finite_under_fast_math.cpp)
+target_compile_options(test_fermion_finite_math PRIVATE -ffast-math)
+add_test(NAME test_fermion_finite_math
+         COMMAND $<TARGET_FILE:test_fermion_finite_math>)
+
 # S-5 of
 # docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the
 # warm start of iTPS::update_CTM(). Its own executable rather than another

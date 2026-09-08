@@ -43,12 +43,14 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "finite_check.hpp"
 #include "ftensor.hpp"
 #include "sign_sweep.hpp"
 
@@ -553,16 +555,19 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
 
 namespace detail {
 
-//! Finiteness of one tensor element; the complex overload wants both parts.
-template <class T>
-inline bool is_finite_value(const T& v) {
-  return std::isfinite(v);
-}
-
-//! is_finite_value() for complex elements.
-template <class T>
-inline bool is_finite_value(const std::complex<T>& v) {
-  return std::isfinite(v.real()) && std::isfinite(v.imag());
+/*! @brief True when info cannot have come from a conforming LAPACK.
+ *
+ * A positive info from ?gesvd counts the superdiagonals of an intermediate
+ * bidiagonal form that failed to converge; that form is
+ * min(rows, cols) square, so it has min(rows, cols) - 1 of them. The bound
+ * used here is the looser min(rows, cols), so that only a value no
+ * implementation can justify is called out. A oneAPI 2022.2.1 MKL returned
+ * 3 for a 2x2 block of finite, O(1) entries: no state can produce that, and
+ * saying "did not converge" about it sends the reader after the wrong
+ * thing.
+ */
+inline bool info_out_of_range(std::size_t rows, std::size_t cols, int info) {
+  return info > 0 && static_cast<std::size_t>(info) > std::min(rows, cols);
 }
 
 //! "even sector 9x9 info=3 (LAPACK: did not converge)", or "odd sector
@@ -576,11 +581,54 @@ inline std::string sector_phrase(const char* name, std::size_t rows,
     return ss.str();
   }
   ss << rows << "x" << cols << " info=" << info;
-  if (info > 0) {
+  if (info_out_of_range(rows, cols, info)) {
+    ss << " (LAPACK: out of range, at most " << std::min(rows, cols)
+       << " for a " << rows << "x" << cols
+       << " block - suspect the LAPACK/BLAS build, not the state)";
+  } else if (info > 0) {
     ss << " (LAPACK: did not converge)";
   } else if (info < 0) {
     ss << " (LAPACK: illegal argument " << -info << ")";
   }
+  return ss.str();
+}
+
+/*! @brief Write out a failed block, if it is small enough to be read.
+ *
+ * Small means "few enough numbers to retype into a standalone LAPACK
+ * call": the point of the dump is to turn a failure that only reproduces
+ * after two five-thousand-step simple updates into four numbers anyone can
+ * hand to ?gesvd. Printed at 17 significant digits, or it would not
+ * reproduce. Rank-local, like the rest of the scan: an element another
+ * process holds is shown as "?".
+ */
+template <class tensor>
+std::string format_block(const tensor& m, const char* name, std::size_t r0,
+                         std::size_t c0, std::size_t rows, std::size_t cols) {
+  const std::size_t max_elements = 16;
+  if (rows == 0 || cols == 0 || rows * cols > max_elements) {
+    return std::string();
+  }
+  std::stringstream ss;
+  ss << std::setprecision(17);
+  ss << "; " << name << " block (" << rows << "x" << cols << ", row-major) [";
+  for (std::size_t i = 0; i < rows; ++i) {
+    if (i > 0) {
+      ss << "; ";
+    }
+    for (std::size_t j = 0; j < cols; ++j) {
+      if (j > 0) {
+        ss << ", ";
+      }
+      typename tensor::value_type value;
+      if (m.get_value(mptensor::Index(r0 + i, c0 + j), value)) {
+        ss << value;
+      } else {
+        ss << "?";
+      }
+    }
+  }
+  ss << "]";
   return ss.str();
 }
 
@@ -607,9 +655,17 @@ struct decomposition_diagnostics {
   bool scanned = false;        //!< True once note_failed_input() has run.
   bool has_nonfinite = false;  //!< NaN or Inf found by that scan.
   double max_abs = 0.0;        //!< Largest finite |element| found by it.
+  std::string block_dump;      //!< Elements of a small failed block.
 
   //! True iff either block factorization reported a failure.
   bool failed() const { return info_even != 0 || info_odd != 0; }
+
+  //! True when a reported info cannot have come from a conforming LAPACK,
+  //! i.e. when the build rather than the state is the thing to look at.
+  bool suspect_library() const {
+    return detail::info_out_of_range(row_even, col_even, info_even) ||
+           detail::info_out_of_range(row_odd, col_odd, info_odd);
+  }
 
   /*! @brief Scan the decomposed matrix, but only after a failure.
    *
@@ -634,6 +690,17 @@ struct decomposition_diagnostics {
       }
       max_abs = std::max(max_abs, std::abs(v));
     }
+    if (m.shape().size() != 2) {
+      return;
+    }
+    // Only the sector that failed: the other one is not evidence.
+    if (info_even != 0) {
+      block_dump += detail::format_block(m, "even", 0, 0, row_even, col_even);
+    }
+    if (info_odd != 0) {
+      block_dump +=
+          detail::format_block(m, "odd", row_even, col_even, row_odd, col_odd);
+    }
   }
 
   //! One line naming each sector, its shape, and its LAPACK info, plus
@@ -648,6 +715,7 @@ struct decomposition_diagnostics {
                            : "all elements finite")
          << " (rank-local scan)";
     }
+    ss << block_dump;
     return ss.str();
   }
 };

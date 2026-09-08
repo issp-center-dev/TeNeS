@@ -42,17 +42,31 @@ namespace itps {
  * @return The message to hand tenes::runtime_error.
  */
 inline std::string fermion_full_update_failure_message(
-    const std::string &what, const std::string &detail) {
+    const std::string &what, const std::string &detail,
+    bool library_suspect = false) {
   std::ostringstream ss;
   ss << "fermion full update: " << what << " failed.\n"
-     << "  " << detail << "\n"
-     << "This is a condition of the run, not an internal error: the "
-        "two-site\n"
-     << "state became numerically intractable. Look just above this line "
-        "for\n"
-     << "\"CTM did not converge\" or \"kept an empty parity sector\" - "
-        "those\n"
-     << "are usually the real cause. What to change, in order:\n"
+     << "  " << detail << "\n";
+  if (library_suspect) {
+    ss << "The info above is outside what the LAPACK documentation allows "
+          "for a\n"
+       << "block that size, so no state can have produced it: check the "
+          "LAPACK\n"
+       << "and BLAS this binary is linked against (and try another "
+          "implementation\n"
+       << "or version) before anything else. The settings below are\n"
+       << "unlikely to help; they are listed only in case the library\n"
+       << "turns out to be innocent.\n";
+  } else {
+    ss << "This is a condition of the run, not an internal error: the "
+          "two-site\n"
+       << "state became numerically intractable. Look just above this line "
+          "for\n"
+       << "\"CTM did not converge\" or \"kept an empty parity sector\" - "
+          "those\n"
+       << "are usually the real cause.\n";
+  }
+  ss << "What to change, in order:\n"
      << "  1. parameter.ctm.iteration_max, parameter.ctm.convergence_epsilon\n"
      << "     - let the corner transfer matrices converge first\n"
      << "  2. parameter.ctm.dimension - chi >= D*D is recommended\n"

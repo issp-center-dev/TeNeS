@@ -29,6 +29,9 @@
 // whose fue_make_case / fub_gate_plain / fub_run_fermion helpers drive the
 // one guard that a test can actually reach end to end.
 
+#include <complex>
+#include <cstdint>
+#include <cstring>
 #include <limits>
 #include <string>
 
@@ -364,4 +367,170 @@ TEST_CASE(
     return;
   }
   FAIL("build_full_update_environment accepted a window with no norm");
+}
+
+// ===== What a real failure taught the message ==============================
+//
+// A run on oneAPI 2022.2.1 (icpx + MKL) failed the balancing SVD with
+//
+//   even sector 2x2 info=3 (LAPACK: did not converge), odd sector 1x1 info=0;
+//   input max|.|=0.975684, all elements finite
+//
+// and every word of that was misleading. dgesvd's positive info counts the
+// superdiagonals of an intermediate bidiagonal form that did not converge;
+// a 2x2 block has one, so 3 cannot come out of a conforming LAPACK whatever
+// the matrix held - the message pointed at parameter.ctm.* when the lead was
+// the library. The three cases below pin the corrections: name an
+// out-of-range info as such and stop recommending solver parameters for it;
+// decide finiteness from the bit pattern, since the toolchain that produced
+// this report defaults to -fp-model=fast, under which std::isfinite folds to
+// true and "all elements finite" is worth nothing; and print a small failing
+// block, because four numbers at full precision turn "it failed" into a
+// standalone LAPACK reproducer.
+
+// ---- 1. an info outside the LAPACK contract -------------------------------
+
+TEST_CASE("describe() names an info that LAPACK cannot have returned") {
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.row_odd = 1;
+  d.col_odd = 1;
+  d.info_even = 3;
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "out of range"));
+  // The bound must be stated, so the reader can check the arithmetic.
+  CHECK(fdd_contains(text, "at most 2"));
+  CHECK(fdd_contains(text, "2x2"));
+  // The old wording asserted a convergence failure that cannot have happened.
+  CHECK_FALSE(fdd_contains(text, "did not converge"));
+}
+
+TEST_CASE(
+    "describe() still reports an in-range info as a convergence failure") {
+  decomposition_diagnostics d;
+  d.row_even = 4;
+  d.col_even = 4;
+  d.row_odd = 2;
+  d.col_odd = 2;
+  d.info_even = 3;
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "did not converge"));
+  CHECK_FALSE(fdd_contains(text, "out of range"));
+}
+
+TEST_CASE("suspect_library() is what separates the two") {
+  decomposition_diagnostics bad;
+  bad.row_even = 2;
+  bad.col_even = 2;
+  bad.info_even = 3;
+  CHECK(bad.suspect_library());
+
+  decomposition_diagnostics ordinary;
+  ordinary.row_even = 4;
+  ordinary.col_even = 4;
+  ordinary.info_even = 3;
+  CHECK_FALSE(ordinary.suspect_library());
+
+  decomposition_diagnostics clean;
+  clean.row_even = 2;
+  clean.col_even = 2;
+  CHECK_FALSE(clean.suspect_library());
+}
+
+TEST_CASE(
+    "the failure message stops recommending solver parameters once the "
+    "library is the suspect") {
+  const std::string msg = tenes::itps::fermion_full_update_failure_message(
+      "balancing SVD", "even sector 2x2 info=3 (LAPACK: out of range)", true);
+  INFO(msg);
+  CHECK(fdd_contains(msg, "LAPACK"));
+  // The knobs are still listed - they are what to try if the library turns
+  // out to be innocent - but the message must say so first.
+  CHECK(fdd_contains(msg, "unlikely to help"));
+  CHECK(fdd_contains(msg, "parameter.ctm.iteration_max"));
+}
+
+TEST_CASE("the failure message leads with the parameters when it should") {
+  const std::string msg = tenes::itps::fermion_full_update_failure_message(
+      "balancing SVD", "even sector 4x4 info=3 (LAPACK: did not converge)");
+  INFO(msg);
+  CHECK_FALSE(fdd_contains(msg, "unlikely to help"));
+  CHECK(fdd_contains(msg, "parameter.ctm.iteration_max"));
+}
+
+// ---- 3. the failing block itself ------------------------------------------
+
+TEST_CASE(
+    "a small failing block is printed at a precision that reproduces it") {
+  tenes::real_tensor m(mptensor::Shape(3, 3));
+  m.set_value(mptensor::Index(0, 0), 0.1);
+  m.set_value(mptensor::Index(0, 1), -0.25);
+  m.set_value(mptensor::Index(1, 0), 0.5);
+  m.set_value(mptensor::Index(1, 1), 2.0);
+  // The odd block sits at (2,2) and must not appear: only the sector that
+  // failed is worth printing.
+  m.set_value(mptensor::Index(2, 2), 7.5);
+
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.row_odd = 1;
+  d.col_odd = 1;
+  d.info_even = 3;
+  d.note_failed_input(m);
+
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "even block"));
+  // 17 significant digits, or the numbers cannot be fed back to LAPACK.
+  CHECK(fdd_contains(text, "0.10000000000000001"));
+  CHECK(fdd_contains(text, "-0.25"));
+  CHECK(fdd_contains(text, "0.5"));
+  CHECK(fdd_contains(text, "2"));
+  // 7.5 is the odd block's entry. It legitimately shows up as the scan's
+  // max|.|, so the exclusion has to be checked on the dump itself.
+  CHECK_FALSE(fdd_contains(d.block_dump, "7.5"));
+}
+
+TEST_CASE("the odd block is the one printed when the odd block failed") {
+  tenes::real_tensor m(mptensor::Shape(3, 3));
+  m.set_value(mptensor::Index(0, 0), 4.25);
+  m.set_value(mptensor::Index(2, 2), 7.5);
+
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.row_odd = 1;
+  d.col_odd = 1;
+  d.info_odd = 1;
+  d.note_failed_input(m);
+
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "odd block"));
+  CHECK(fdd_contains(text, "7.5"));
+  CHECK_FALSE(fdd_contains(text, "4.25"));
+}
+
+TEST_CASE("a block too large to read is summarized rather than printed") {
+  // 5x5 is 25 elements; the dump is for blocks a human can retype into a
+  // LAPACK call, not for pouring a matrix into a log.
+  tenes::real_tensor m(mptensor::Shape(5, 5));
+  m.set_value(mptensor::Index(0, 0), 1.0);
+
+  decomposition_diagnostics d;
+  d.row_even = 5;
+  d.col_even = 5;
+  d.info_even = 2;
+  d.note_failed_input(m);
+
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(d.scanned == true);
+  CHECK_FALSE(fdd_contains(text, "even block"));
+  // The scan still reports what it always did.
+  CHECK(fdd_contains(text, "max|.|="));
 }
