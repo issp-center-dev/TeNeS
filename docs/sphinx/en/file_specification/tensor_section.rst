@@ -54,6 +54,9 @@ and :math:`n` indicates the site number.
 Multiple sites can be specified at once by setting a list to ``index``.
 An empty list ``[]`` means all sites.
 
+By setting a list to ``virtual_dim``, individual bond dimensions in four directions can be specified.
+The order is left (-x), top (+y), right (+x), and bottom (-y).
+
 ``parity`` is required when ``parameter.general.fermion = true`` and must have
 ``physical_dim`` entries, each 0 (even) or 1 (odd):
 ``parity[i]`` is the parity of the number of fermions in the ``i``-th physical
@@ -76,15 +79,12 @@ internal order. For example, with the internal order :math:`(\uparrow, \downarro
 gives ``parity = [0, 1, 1, 0]``.
 The chosen ordering does not appear in the ``parity`` list itself, but it
 determines the signs of the operator matrix elements (see the ``fermion``
-entry of the ``parameter.general`` section), so all operators, gates, and
-initial states must be written in the same convention; mixing conventions
-produces silently wrong signs.
+entry of the ``parameter.general`` section).
+All operators, gates, and initial states have to be written in the same
+convention for the calculation to be correct.
 
 The initial product state must be parity even on every site; parity-odd
 ``initial_state`` vectors are rejected.
-
-By setting a list to ``virtual_dim``, individual bond dimensions in four directions can be specified.
-The order is left (-x), top (+y), right (+x), and bottom (-y).
 
 An initial state of a system :math:`|\Psi\rangle` is represented as
 the direct product state of the initial states at each site :math:`i`, :math:`|\Psi_i\rangle`:
