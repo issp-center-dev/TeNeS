@@ -41,13 +41,24 @@ namespace detail {
  * for a diverged state, so it must not be something the optimizer is
  * allowed to reason away. IEEE-754 binary64: an all-ones exponent field
  * is Inf (zero mantissa) or NaN (nonzero mantissa), and nothing else is.
+ *
+ * Reading the bits is not by itself enough. clang recognises the
+ * mask-and-compare as a floating-point predicate and rewrites it back into
+ * one -- the IR for the plain version is `fabs(v) != Inf` -- and under
+ * finite-math-only the argument arrives with nofpclass(nan inf), which
+ * folds that to a constant. Apple clang 21 at -O1 and above emits
+ * `ret i1 true` for the whole function; GCC 16 does not. The volatile
+ * stops the rewrite by making the value an opaque integer, and the store
+ * and load it costs are on a path that only runs once a decomposition has
+ * already failed (fops.hpp, note_failed_block).
  */
 inline bool is_finite_value(double v) {
   static_assert(sizeof(double) == sizeof(std::uint64_t),
                 "is_finite_value assumes IEEE-754 binary64");
   std::uint64_t bits = 0;
   std::memcpy(&bits, &v, sizeof(bits));
-  return (bits & 0x7ff0000000000000ULL) != 0x7ff0000000000000ULL;
+  volatile std::uint64_t opaque = bits;
+  return (opaque & 0x7ff0000000000000ULL) != 0x7ff0000000000000ULL;
 }
 
 //! is_finite_value() for a complex element: both parts must be finite.

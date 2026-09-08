@@ -27,6 +27,15 @@
 // "all elements finite" about a matrix full of NaN - which is what a real
 // oneAPI 2022.2.1 run did. So it must not be written in terms the
 // finite-math assumption can reason about.
+//
+// Reading the bits is not enough on its own, which is what this test found
+// on 2026-09-09: clang recognises the mask-and-compare as a floating-point
+// predicate and rewrites it back into fabs(v) != Inf, and finite-math-only
+// then folds that against the argument's nofpclass(nan inf). Apple clang 21
+// emitted `ret i1 true` for the whole predicate at -O1 and above, so every
+// CHECK_FALSE below failed while GCC 16 passed them. The predicate now
+// launders the bits through a volatile; these cases are what says whether
+// that is still doing its job on a given compiler.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../doctest.h"
