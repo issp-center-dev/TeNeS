@@ -203,8 +203,9 @@ add_test(NAME BosonEquivalenceFastFull
 set_tests_properties(BosonEquivalenceFastFull PROPERTIES TIMEOUT 900)
 
 # Contract T5 (2026-09-05 revision): D = 3, chi = 12, 1000 simple-update
-# steps and 4 full-update sweeps; about a minute in a Release build, and the
-# TIMEOUT is well above three times that.
+# steps and two full-update sweeps (the contract allows one to four; the
+# sweep count and what it buys are tabulated in the .py.in).  About ten
+# seconds in a Release build, and the TIMEOUT is orders above that.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_full.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_full.py @ONLY)
 add_test(NAME FreeFermionFull

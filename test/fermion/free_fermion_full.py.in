@@ -77,7 +77,24 @@ N_UNIT = LX * LY
 # steps at tau = 0.01; the same schedule is used here so that E_SU is a real
 # fixed point rather than a half-finished trajectory.
 NUM_SIMPLE_STEP = 1000
-NUM_FULL_STEP = 4
+
+# Contract 3.5 (T5) allows 1 to 4 sweeps and recommends 4.  Two is enough for
+# what this test asserts and costs less than half the time.  Measured at
+# D = 3, chi = 12 in a Release build (E_SU = -7.444988397532e-01, exact
+# -8.105643828087e-01):
+#
+#   sweeps          E_FU      improvement   t_fu
+#        1  -7.4481614e-01     3.173e-04    5.2 s
+#        2  -7.4512259e-01     6.238e-04    7.6 s
+#        3  -7.4539064e-01     8.918e-04   10.5 s
+#        4  -7.4561426e-01     1.115e-03   16.5 s
+#
+# Every sweep count satisfies all three assertions below (the energy falls by
+# more than ENERGY_DECREASE_MIN, it moves towards the exact value, and the
+# density stays at half filling).  Two keeps a factor of six above the
+# threshold, which is the margin the four-sweep value had against the
+# contract's own reference numbers.
+NUM_FULL_STEP = 2
 
 # The plain (non fast) full update re-converges the CTM once per bond, so
 # the wall time is dominated by NUM_FULL_STEP * 8 CTM convergences.  Both
