@@ -106,8 +106,12 @@ void check_decomposition_info(
     int info, const char* decomposition,
     const tenes::fermion::decomposition_diagnostics& diag) {
   if (info != 0) {
+    const full_update_failure_lead lead =
+        diag.grid_heterogeneity() ? full_update_failure_lead::process_grid
+        : diag.suspect_library()  ? full_update_failure_lead::library
+                                  : full_update_failure_lead::state;
     throw tenes::runtime_error(fermion_full_update_failure_message(
-        decomposition, diag.describe(), diag.suspect_library()));
+        decomposition, diag.describe(), lead));
   }
 }
 

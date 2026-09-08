@@ -33,21 +33,47 @@
 namespace tenes {
 namespace itps {
 
+//! What a full-update failure message should send the reader after first.
+enum class full_update_failure_lead {
+  state,         //!< The run's own numerics: the default.
+  library,       //!< An info no conforming LAPACK can return.
+  process_grid,  //!< ScaLAPACK reported that the MPI ranks disagreed.
+};
+
 /*!
  * @brief Assemble the error text for a failed fermionic full update.
  *
  * @param[in] what Which step gave up, e.g. "balancing SVD".
  * @param[in] detail One line of evidence, typically
  *        tenes::fermion::decomposition_diagnostics::describe().
+ * @param[in] lead What to send the reader after first.
  * @return The message to hand tenes::runtime_error.
  */
 inline std::string fermion_full_update_failure_message(
     const std::string &what, const std::string &detail,
-    bool library_suspect = false) {
+    full_update_failure_lead lead = full_update_failure_lead::state) {
   std::ostringstream ss;
   ss << "fermion full update: " << what << " failed.\n"
      << "  " << detail << "\n";
-  if (library_suspect) {
+  if (lead == full_update_failure_lead::process_grid) {
+    ss << "That is ScaLAPACK's MIN(M,N)+1: pdgesvd found that the MPI ranks\n"
+       << "did not agree on this block's singular values. It is a property "
+          "of\n"
+       << "spreading the decomposition over a process grid, not of the "
+          "state.\n"
+       << "The graded decomposition splits every matrix by parity, so its\n"
+       << "blocks are small - 2x2 and 1x1 are routine - and their singular\n"
+       << "values are often nearly degenerate, which is where ranks stop\n"
+       << "agreeing. What to do:\n"
+       << "  - rerun with fewer MPI processes; one rank cannot disagree "
+          "with\n"
+       << "    itself, and a block this small gains nothing from being "
+          "spread\n"
+       << "  - check that every rank is the same CPU model with the same "
+          "math\n"
+       << "    library dispatch (heterogeneous nodes produce exactly this)\n"
+       << "The settings below are unlikely to help.\n";
+  } else if (lead == full_update_failure_lead::library) {
     ss << "The info above is outside what the LAPACK documentation allows "
           "for a\n"
        << "block that size, so no state can have produced it: check the "

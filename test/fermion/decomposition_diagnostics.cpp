@@ -69,6 +69,7 @@ TEST_CASE("graded SVD reports the shape and the LAPACK info of each sector") {
   CHECK(diag.col_odd == 2);
   CHECK(diag.info_even == 0);
   CHECK(diag.info_odd == 0);
+  CHECK(diag.from_svd == true);
   // A successful decomposition must not pay for the input scan: it is an
   // extra pass over the matrix (and, under MPI, an extra reduction) on a
   // path that runs once per bond per full-update step.
@@ -89,6 +90,7 @@ TEST_CASE("graded QR reports the shape and the LAPACK info of each sector") {
   CHECK(diag.col_odd == 2);
   CHECK(diag.info_even == 0);
   CHECK(diag.info_odd == 0);
+  CHECK(diag.from_svd == false);
   CHECK(diag.scanned == false);
 }
 
@@ -108,6 +110,7 @@ TEST_CASE("truncated graded SVD forwards the diagnostics of the full one") {
   CHECK(diag.col_even == 2);
   CHECK(diag.row_odd == 1);
   CHECK(diag.col_odd == 1);
+  CHECK(diag.from_svd == true);
 }
 
 // ---- the input scan, and the condition that gates it ----------------------
@@ -119,14 +122,14 @@ TEST_CASE("the input scan runs only after a sector has failed") {
   m.set_value(mptensor::Index(1, 1), std::numeric_limits<double>::quiet_NaN());
 
   decomposition_diagnostics clean;
-  clean.note_failed_input(m);
+  clean.note_failed_block(m, "even");
   CHECK(clean.scanned == false);
   CHECK(clean.has_nonfinite == false);
   CHECK(clean.max_abs == 0.0);
 
   decomposition_diagnostics failed;
-  failed.info_odd = 3;
-  failed.note_failed_input(m);
+  failed.info_odd = 1;
+  failed.note_failed_block(m, "odd");
   CHECK(failed.scanned == true);
   CHECK(failed.has_nonfinite == true);
   // The NaN must not poison the magnitude that gets reported alongside it.
@@ -396,7 +399,10 @@ TEST_CASE("describe() names an info that LAPACK cannot have returned") {
   d.col_even = 2;
   d.row_odd = 1;
   d.col_odd = 1;
-  d.info_even = 3;
+  // 9, not 3: under MPI, MIN(M,N)+1 = 3 is a legal ScaLAPACK code (see
+  // below), so the out-of-range case needs a value neither convention can
+  // justify.
+  d.info_even = 9;
   const std::string text = d.describe();
   INFO(text);
   CHECK(fdd_contains(text, "out of range"));
@@ -425,7 +431,7 @@ TEST_CASE("suspect_library() is what separates the two") {
   decomposition_diagnostics bad;
   bad.row_even = 2;
   bad.col_even = 2;
-  bad.info_even = 3;
+  bad.info_even = 9;
   CHECK(bad.suspect_library());
 
   decomposition_diagnostics ordinary;
@@ -444,13 +450,86 @@ TEST_CASE(
     "the failure message stops recommending solver parameters once the "
     "library is the suspect") {
   const std::string msg = tenes::itps::fermion_full_update_failure_message(
-      "balancing SVD", "even sector 2x2 info=3 (LAPACK: out of range)", true);
+      "balancing SVD", "even sector 2x2 info=9 (LAPACK: out of range)",
+      tenes::itps::full_update_failure_lead::library);
   INFO(msg);
   CHECK(fdd_contains(msg, "LAPACK"));
   // The knobs are still listed - they are what to try if the library turns
   // out to be innocent - but the message must say so first.
   CHECK(fdd_contains(msg, "unlikely to help"));
   CHECK(fdd_contains(msg, "parameter.ctm.iteration_max"));
+}
+
+TEST_CASE(
+    "MIN(M,N)+1 is ScaLAPACK's heterogeneity code, not a broken library") {
+  // Reference ScaLAPACK, SRC/pdgesvd.f, on INFO:
+  //   "> 0: if DBDSQR did not converge. If INFO = MIN(M,N) + 1, then
+  //    PDGESVD has detected heterogeneity by finding that eigenvalues were
+  //    not identical across the process grid."
+  // A real run met exactly this: info=3 on a 2x2 under mpiexec -np 4, gone
+  // at -np 1, with the block's two singular values agreeing to 2e-5. A
+  // serial build never calls pdgesvd, so there the same value is out of
+  // range for LAPACK's dgesvd and means what it meant before.
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.row_odd = 1;
+  d.col_odd = 1;
+  d.info_even = 3;
+  d.from_svd = true;
+  const std::string text = d.describe();
+  INFO(text);
+#ifdef _NO_MPI
+  CHECK(fdd_contains(text, "out of range"));
+  CHECK(d.suspect_library());
+  CHECK_FALSE(d.grid_heterogeneity());
+#else
+  CHECK(fdd_contains(text, "process grid"));
+  CHECK(fdd_contains(text, "heterogeneity"));
+  CHECK(d.grid_heterogeneity());
+  CHECK_FALSE(d.suspect_library());
+#endif
+}
+
+TEST_CASE("only an SVD can report ScaLAPACK's heterogeneity code") {
+  // pdgeqrf documents INFO as 0 or -i only: it has no MIN(M,N)+1 code, so
+  // a positive info from a QR is out of spec even under MPI. Reading the
+  // SVD's convention into it would be the same mislabelling this change
+  // exists to remove.
+  decomposition_diagnostics from_qr;
+  from_qr.row_even = 2;
+  from_qr.col_even = 2;
+  from_qr.info_even = 3;
+  CHECK_FALSE(from_qr.grid_heterogeneity());
+  CHECK(from_qr.suspect_library());
+
+  decomposition_diagnostics from_svd;
+  from_svd.row_even = 2;
+  from_svd.col_even = 2;
+  from_svd.info_even = 3;
+  from_svd.from_svd = true;
+#ifdef _NO_MPI
+  CHECK_FALSE(from_svd.grid_heterogeneity());
+#else
+  CHECK(from_svd.grid_heterogeneity());
+  CHECK_FALSE(from_svd.suspect_library());
+#endif
+}
+
+TEST_CASE(
+    "the failure message blames the process grid, not the state or the "
+    "library, for a heterogeneity code") {
+  const std::string msg = tenes::itps::fermion_full_update_failure_message(
+      "balancing SVD", "even sector 2x2 info=3 (ScaLAPACK: heterogeneity)",
+      tenes::itps::full_update_failure_lead::process_grid);
+  INFO(msg);
+  CHECK(fdd_contains(msg, "process grid"));
+  // The one thing that is known to work, because it was measured.
+  CHECK(fdd_contains(msg, "fewer MPI processes"));
+  CHECK(fdd_contains(msg, "unlikely to help"));
+  // Not the state, and not the library.
+  CHECK_FALSE(fdd_contains(msg, "CTM did not converge"));
+  CHECK_FALSE(fdd_contains(msg, "LAPACK and BLAS this binary"));
 }
 
 TEST_CASE("the failure message leads with the parameters when it should") {
@@ -465,40 +544,33 @@ TEST_CASE("the failure message leads with the parameters when it should") {
 
 TEST_CASE(
     "a small failing block is printed at a precision that reproduces it") {
-  tenes::real_tensor m(mptensor::Shape(3, 3));
-  m.set_value(mptensor::Index(0, 0), 0.1);
-  m.set_value(mptensor::Index(0, 1), -0.25);
-  m.set_value(mptensor::Index(1, 0), 0.5);
-  m.set_value(mptensor::Index(1, 1), 2.0);
-  // The odd block sits at (2,2) and must not appear: only the sector that
-  // failed is worth printing.
-  m.set_value(mptensor::Index(2, 2), 7.5);
+  tenes::real_tensor block(mptensor::Shape(2, 2));
+  block.set_value(mptensor::Index(0, 0), 0.1);
+  block.set_value(mptensor::Index(0, 1), -0.25);
+  block.set_value(mptensor::Index(1, 0), 0.5);
+  block.set_value(mptensor::Index(1, 1), 2.0);
 
   decomposition_diagnostics d;
   d.row_even = 2;
   d.col_even = 2;
   d.row_odd = 1;
   d.col_odd = 1;
-  d.info_even = 3;
-  d.note_failed_input(m);
+  d.info_even = 1;
+  d.note_failed_block(block, "even");
 
   const std::string text = d.describe();
   INFO(text);
-  CHECK(fdd_contains(text, "even block"));
+  CHECK(fdd_contains(text, "even block (2x2, row-major)"));
   // 17 significant digits, or the numbers cannot be fed back to LAPACK.
   CHECK(fdd_contains(text, "0.10000000000000001"));
   CHECK(fdd_contains(text, "-0.25"));
   CHECK(fdd_contains(text, "0.5"));
   CHECK(fdd_contains(text, "2"));
-  // 7.5 is the odd block's entry. It legitimately shows up as the scan's
-  // max|.|, so the exclusion has to be checked on the dump itself.
-  CHECK_FALSE(fdd_contains(d.block_dump, "7.5"));
 }
 
-TEST_CASE("the odd block is the one printed when the odd block failed") {
-  tenes::real_tensor m(mptensor::Shape(3, 3));
-  m.set_value(mptensor::Index(0, 0), 4.25);
-  m.set_value(mptensor::Index(2, 2), 7.5);
+TEST_CASE("the odd block is named as such when the odd block failed") {
+  tenes::real_tensor block(mptensor::Shape(1, 1));
+  block.set_value(mptensor::Index(0, 0), 7.5);
 
   decomposition_diagnostics d;
   d.row_even = 2;
@@ -506,26 +578,26 @@ TEST_CASE("the odd block is the one printed when the odd block failed") {
   d.row_odd = 1;
   d.col_odd = 1;
   d.info_odd = 1;
-  d.note_failed_input(m);
+  d.note_failed_block(block, "odd");
 
   const std::string text = d.describe();
   INFO(text);
-  CHECK(fdd_contains(text, "odd block"));
+  CHECK(fdd_contains(text, "odd block (1x1, row-major)"));
   CHECK(fdd_contains(text, "7.5"));
-  CHECK_FALSE(fdd_contains(text, "4.25"));
+  CHECK_FALSE(fdd_contains(text, "even block"));
 }
 
 TEST_CASE("a block too large to read is summarized rather than printed") {
   // 5x5 is 25 elements; the dump is for blocks a human can retype into a
   // LAPACK call, not for pouring a matrix into a log.
-  tenes::real_tensor m(mptensor::Shape(5, 5));
-  m.set_value(mptensor::Index(0, 0), 1.0);
+  tenes::real_tensor block(mptensor::Shape(5, 5));
+  block.set_value(mptensor::Index(0, 0), 1.0);
 
   decomposition_diagnostics d;
   d.row_even = 5;
   d.col_even = 5;
   d.info_even = 2;
-  d.note_failed_input(m);
+  d.note_failed_block(block, "even");
 
   const std::string text = d.describe();
   INFO(text);
@@ -533,4 +605,84 @@ TEST_CASE("a block too large to read is summarized rather than printed") {
   CHECK_FALSE(fdd_contains(text, "even block"));
   // The scan still reports what it always did.
   CHECK(fdd_contains(text, "max|.|="));
+}
+
+// ===== The scan must describe what LAPACK was handed =======================
+//
+// fermion::svd() and qr() do not decompose the parity-sorted matrix; they
+// decompose a slice() copy of each diagonal block. The first version of
+// these diagnostics scanned and dumped the SOURCE matrix instead, so a
+// block that got corrupted on its way into LAPACK would be reported as
+// healthy - which is exactly the question left open by a oneAPI 2022.2.1
+// failure whose dumped 2x2 decomposed perfectly when fed to the same
+// machine's dgesvd on its own. The recorder therefore takes the block, and
+// the call sites sit next to the LAPACK call so the two cannot drift apart.
+
+TEST_CASE("the recorder describes the tensor it is given, not its source") {
+  // A 3x3 whose odd corner is huge and whose even block is small: if the
+  // scan ever reads the whole matrix again, max_abs gives it away.
+  tenes::real_tensor block(mptensor::Shape(2, 2));
+  block.set_value(mptensor::Index(0, 0), 0.25);
+  block.set_value(mptensor::Index(1, 1), -0.5);
+
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.row_odd = 1;
+  d.col_odd = 1;
+  d.info_even = 3;
+  d.note_failed_block(block, "even");
+
+  CHECK(d.scanned == true);
+  CHECK(d.max_abs == doctest::Approx(0.5));
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "even block (2x2"));
+  CHECK(fdd_contains(text, "0.25"));
+}
+
+TEST_CASE("the recorder finds a non-finite element in the block it is given") {
+  tenes::real_tensor block(mptensor::Shape(2, 2));
+  block.set_value(mptensor::Index(0, 0), 1.0);
+  block.set_value(mptensor::Index(1, 1),
+                  std::numeric_limits<double>::quiet_NaN());
+
+  decomposition_diagnostics d;
+  d.row_odd = 2;
+  d.col_odd = 2;
+  d.info_odd = 1;
+  d.note_failed_block(block, "odd");
+
+  CHECK(d.has_nonfinite == true);
+  CHECK(d.max_abs == doctest::Approx(1.0));
+  const std::string text = d.describe();
+  INFO(text);
+  CHECK(fdd_contains(text, "non-finite"));
+  CHECK(fdd_contains(text, "odd block (2x2"));
+}
+
+TEST_CASE("the recorder does nothing for a decomposition that succeeded") {
+  tenes::real_tensor block(mptensor::Shape(2, 2));
+  block.set_value(mptensor::Index(0, 0), 3.0);
+
+  decomposition_diagnostics d;
+  d.row_even = 2;
+  d.col_even = 2;
+  d.note_failed_block(block, "even");
+
+  CHECK(d.scanned == false);
+  CHECK(d.max_abs == 0.0);
+  CHECK(d.block_dump.empty());
+}
+
+TEST_CASE("a graded SVD that succeeds records no block at all") {
+  tenes::fermion::leg_parities p{{false, true, false}, {false, true, true}};
+  ft a = make_even_ft(mptensor::Shape(3, 3), p, 63);
+  ft u, vt;
+  std::vector<double> s;
+  decomposition_diagnostics diag;
+  REQUIRE(tenes::fermion::svd(a, mptensor::Axes(0), mptensor::Axes(1), u, s, vt,
+                              &diag) == 0);
+  CHECK(diag.block_dump.empty());
+  CHECK(diag.scanned == false);
 }

@@ -555,25 +555,60 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
 
 namespace detail {
 
-/*! @brief True when info cannot have come from a conforming LAPACK.
+/*! @brief True for ScaLAPACK's "the ranks disagreed" code.
+ *
+ * An MPI build decomposes through pdgesvd, not dgesvd, and pdgesvd.f
+ * documents one positive info specially:
+ *
+ *   "> 0: if DBDSQR did not converge. If INFO = MIN(M,N) + 1, then PDGESVD
+ *    has detected heterogeneity by finding that eigenvalues were not
+ *    identical across the process grid. In this case, the accuracy of the
+ *    results from PDGESVD cannot be guaranteed."
+ *
+ * The graded decomposition splits every matrix by parity, so its blocks
+ * are small - 2x2 and 1x1 are routine - and their singular values often
+ * nearly degenerate, which is where ranks stop agreeing. A run met exactly
+ * this: info=3 on a 2x2 under four MPI processes, gone at one, with the
+ * two singular values agreeing to 2e-5. A serial build never reaches
+ * pdgesvd, so there the same value carries no such meaning.
+ */
+inline bool info_is_grid_heterogeneity(std::size_t rows, std::size_t cols,
+                                       int info, bool from_svd) {
+#ifdef _NO_MPI
+  static_cast<void>(rows);
+  static_cast<void>(cols);
+  static_cast<void>(info);
+  static_cast<void>(from_svd);
+  return false;
+#else
+  // pdgeqrf documents INFO as 0 or -i only, so the code belongs to the SVD
+  // alone; reading it into a QR would be the same mislabelling in reverse.
+  return from_svd && info > 0 &&
+         static_cast<std::size_t>(info) == std::min(rows, cols) + 1;
+#endif
+}
+
+/*! @brief True when info cannot have come from a conforming library.
  *
  * A positive info from ?gesvd counts the superdiagonals of an intermediate
- * bidiagonal form that failed to converge; that form is
- * min(rows, cols) square, so it has min(rows, cols) - 1 of them. The bound
- * used here is the looser min(rows, cols), so that only a value no
- * implementation can justify is called out. A oneAPI 2022.2.1 MKL returned
- * 3 for a 2x2 block of finite, O(1) entries: no state can produce that, and
- * saying "did not converge" about it sends the reader after the wrong
- * thing.
+ * bidiagonal form that failed to converge; that form is min(rows, cols)
+ * square, so it has min(rows, cols) - 1 of them. The bound used here is
+ * the looser min(rows, cols), so only a value no implementation can
+ * justify is called out - and ScaLAPACK's MIN(M,N)+1 is excluded first,
+ * since it is a documented code rather than a count.
  */
-inline bool info_out_of_range(std::size_t rows, std::size_t cols, int info) {
+inline bool info_out_of_range(std::size_t rows, std::size_t cols, int info,
+                              bool from_svd) {
+  if (info_is_grid_heterogeneity(rows, cols, info, from_svd)) {
+    return false;
+  }
   return info > 0 && static_cast<std::size_t>(info) > std::min(rows, cols);
 }
 
 //! "even sector 9x9 info=3 (LAPACK: did not converge)", or "odd sector
 //! empty" for a sector the decomposition never had a block for.
 inline std::string sector_phrase(const char* name, std::size_t rows,
-                                 std::size_t cols, int info) {
+                                 std::size_t cols, int info, bool from_svd) {
   std::stringstream ss;
   ss << name << " sector ";
   if (rows == 0 || cols == 0) {
@@ -581,7 +616,11 @@ inline std::string sector_phrase(const char* name, std::size_t rows,
     return ss.str();
   }
   ss << rows << "x" << cols << " info=" << info;
-  if (info_out_of_range(rows, cols, info)) {
+  if (info_is_grid_heterogeneity(rows, cols, info, from_svd)) {
+    ss << " (ScaLAPACK: MIN(M,N)+1 - pdgesvd detected heterogeneity, i.e. "
+          "the process grid did not agree on this block's singular values; "
+          "not a bad matrix)";
+  } else if (info_out_of_range(rows, cols, info, from_svd)) {
     ss << " (LAPACK: out of range, at most " << std::min(rows, cols)
        << " for a " << rows << "x" << cols
        << " block - suspect the LAPACK/BLAS build, not the state)";
@@ -598,14 +637,19 @@ inline std::string sector_phrase(const char* name, std::size_t rows,
  * Small means "few enough numbers to retype into a standalone LAPACK
  * call": the point of the dump is to turn a failure that only reproduces
  * after two five-thousand-step simple updates into four numbers anyone can
- * hand to ?gesvd. Printed at 17 significant digits, or it would not
+ * hand to ?gesvd. @p m is the block as it was handed to LAPACK, not the
+ * matrix it came from. Printed at 17 significant digits, or it would not
  * reproduce. Rank-local, like the rest of the scan: an element another
  * process holds is shown as "?".
  */
 template <class tensor>
-std::string format_block(const tensor& m, const char* name, std::size_t r0,
-                         std::size_t c0, std::size_t rows, std::size_t cols) {
+std::string format_block(const tensor& m, const char* name) {
   const std::size_t max_elements = 16;
+  if (m.shape().size() != 2) {
+    return std::string();
+  }
+  const std::size_t rows = m.shape()[0];
+  const std::size_t cols = m.shape()[1];
   if (rows == 0 || cols == 0 || rows * cols > max_elements) {
     return std::string();
   }
@@ -621,7 +665,7 @@ std::string format_block(const tensor& m, const char* name, std::size_t r0,
         ss << ", ";
       }
       typename tensor::value_type value;
-      if (m.get_value(mptensor::Index(r0 + i, c0 + j), value)) {
+      if (m.get_value(mptensor::Index(i, j), value)) {
         ss << value;
       } else {
         ss << "?";
@@ -652,10 +696,13 @@ struct decomposition_diagnostics {
   std::size_t col_even = 0;    //!< Columns of even parity.
   std::size_t row_odd = 0;     //!< Rows of odd parity.
   std::size_t col_odd = 0;     //!< Columns of odd parity.
-  bool scanned = false;        //!< True once note_failed_input() has run.
+  bool scanned = false;        //!< True once note_failed_block() has run.
   bool has_nonfinite = false;  //!< NaN or Inf found by that scan.
   double max_abs = 0.0;        //!< Largest finite |element| found by it.
   std::string block_dump;      //!< Elements of a small failed block.
+  //! True when the infos came from svd(), whose ScaLAPACK counterpart has
+  //! a documented code that qr()'s does not.
+  bool from_svd = false;
 
   //! True iff either block factorization reported a failure.
   bool failed() const { return info_even != 0 || info_odd != 0; }
@@ -663,21 +710,34 @@ struct decomposition_diagnostics {
   //! True when a reported info cannot have come from a conforming LAPACK,
   //! i.e. when the build rather than the state is the thing to look at.
   bool suspect_library() const {
-    return detail::info_out_of_range(row_even, col_even, info_even) ||
-           detail::info_out_of_range(row_odd, col_odd, info_odd);
+    return detail::info_out_of_range(row_even, col_even, info_even, from_svd) ||
+           detail::info_out_of_range(row_odd, col_odd, info_odd, from_svd);
   }
 
-  /*! @brief Scan the decomposed matrix, but only after a failure.
+  //! True when ScaLAPACK reported that the MPI ranks disagreed; then it is
+  //! the process grid, not the state and not the library.
+  bool grid_heterogeneity() const {
+    return detail::info_is_grid_heterogeneity(row_even, col_even, info_even,
+                                              from_svd) ||
+           detail::info_is_grid_heterogeneity(row_odd, col_odd, info_odd,
+                                              from_svd);
+  }
+
+  /*! @brief Record the block a failed decomposition was given.
    *
-   * A non-finite input is the usual reason LAPACK gives up, and it says
-   * something the sector shapes cannot: the state had already diverged
-   * before the decomposition was reached. The scan is an extra pass over
-   * the matrix on a path that runs once per bond per full-update step,
-   * so it is skipped while both factorizations succeed. Process-local,
-   * like parity_violation().
+   * Called with the very tensor that went into LAPACK - qr() and svd()
+   * decompose a slice() copy of each diagonal block, not the parity-sorted
+   * matrix, and a block that was damaged on its way in would otherwise be
+   * reported through a healthy source. The scan is an extra pass over the
+   * block, so it is skipped while the factorization succeeds; a non-finite
+   * element says what the sector shapes cannot, namely that the state had
+   * already diverged. Process-local, like parity_violation().
+   *
+   * @param[in] m The block as handed to LAPACK.
+   * @param[in] name "even" or "odd", for the message.
    */
   template <class tensor>
-  void note_failed_input(const tensor& m) {
+  void note_failed_block(const tensor& m, const char* name) {
     if (!failed()) {
       return;
     }
@@ -690,25 +750,16 @@ struct decomposition_diagnostics {
       }
       max_abs = std::max(max_abs, std::abs(v));
     }
-    if (m.shape().size() != 2) {
-      return;
-    }
-    // Only the sector that failed: the other one is not evidence.
-    if (info_even != 0) {
-      block_dump += detail::format_block(m, "even", 0, 0, row_even, col_even);
-    }
-    if (info_odd != 0) {
-      block_dump +=
-          detail::format_block(m, "odd", row_even, col_even, row_odd, col_odd);
-    }
+    block_dump += detail::format_block(m, name);
   }
 
   //! One line naming each sector, its shape, and its LAPACK info, plus
   //! what the input scan found once it has run.
   std::string describe() const {
     std::stringstream ss;
-    ss << detail::sector_phrase("even", row_even, col_even, info_even) << ", "
-       << detail::sector_phrase("odd", row_odd, col_odd, info_odd);
+    ss << detail::sector_phrase("even", row_even, col_even, info_even, from_svd)
+       << ", "
+       << detail::sector_phrase("odd", row_odd, col_odd, info_odd, from_svd);
     if (scanned) {
       ss << "; input max|.|=" << max_abs << ", "
          << (has_nonfinite ? "non-finite elements present"
@@ -775,6 +826,14 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
 
   tensor q_sorted(comm, mptensor::Shape(drow, size));
   tensor r_sorted(comm, mptensor::Shape(size, dcol));
+  if (diag != nullptr) {
+    // Fully overwritten, so one instance can be reused across calls.
+    *diag = decomposition_diagnostics{};
+    diag->row_even = row_even;
+    diag->col_even = col_even;
+    diag->row_odd = row_odd;
+    diag->col_odd = col_odd;
+  }
   int info_even_block = 0;
   int info_odd_block = 0;
   if (size_even > 0) {
@@ -783,6 +842,13 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor qe, re;
     info_even_block =
         mptensor::qr(even_block, mptensor::Axes(0), mptensor::Axes(1), qe, re);
+    // Recorded here, where the block LAPACK actually saw is still in scope.
+    if (diag != nullptr) {
+      diag->info_even = info_even_block;
+      if (info_even_block != 0) {
+        diag->note_failed_block(even_block, "even");
+      }
+    }
     q_sorted.set_slice(qe, mptensor::Index(0, 0),
                        mptensor::Index(row_even, size_even));
     r_sorted.set_slice(re, mptensor::Index(0, 0),
@@ -795,6 +861,12 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor qo, ro;
     info_odd_block =
         mptensor::qr(odd_block, mptensor::Axes(0), mptensor::Axes(1), qo, ro);
+    if (diag != nullptr) {
+      diag->info_odd = info_odd_block;
+      if (info_odd_block != 0) {
+        diag->note_failed_block(odd_block, "odd");
+      }
+    }
     q_sorted.set_slice(qo, mptensor::Index(row_even, size_even),
                        mptensor::Index(drow, size));
     r_sorted.set_slice(ro, mptensor::Index(size_even, col_even),
@@ -802,17 +874,6 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
   }
   // The even block's failure is reported first, as it always has been.
   int info = info_even_block != 0 ? info_even_block : info_odd_block;
-  if (diag != nullptr) {
-    // Fully overwritten, so one instance can be reused across calls.
-    *diag = decomposition_diagnostics{};
-    diag->row_even = row_even;
-    diag->col_even = col_even;
-    diag->row_odd = row_odd;
-    diag->col_odd = col_odd;
-    diag->info_even = info_even_block;
-    diag->info_odd = info_odd_block;
-    diag->note_failed_input(sorted);
-  }
 
   tensor q_mat =
       mptensor::tensordot(prow, q_sorted, mptensor::Axes(0), mptensor::Axes(0));
@@ -901,6 +962,15 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
   tensor u_sorted(comm, mptensor::Shape(drow, size));
   tensor vt_sorted(comm, mptensor::Shape(size, dcol));
   std::vector<double> s_even, s_odd;
+  if (diag != nullptr) {
+    // Fully overwritten, so one instance can be reused across calls.
+    *diag = decomposition_diagnostics{};
+    diag->row_even = row_even;
+    diag->col_even = col_even;
+    diag->row_odd = row_odd;
+    diag->col_odd = col_odd;
+    diag->from_svd = true;
+  }
   int info_even_block = 0;
   int info_odd_block = 0;
   if (size_even > 0) {
@@ -909,6 +979,13 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor ue, vte;
     info_even_block = mptensor::svd(even_block, mptensor::Axes(0),
                                     mptensor::Axes(1), ue, s_even, vte);
+    // Recorded here, where the block LAPACK actually saw is still in scope.
+    if (diag != nullptr) {
+      diag->info_even = info_even_block;
+      if (info_even_block != 0) {
+        diag->note_failed_block(even_block, "even");
+      }
+    }
     u_sorted.set_slice(ue, mptensor::Index(0, 0),
                        mptensor::Index(row_even, size_even));
     vt_sorted.set_slice(vte, mptensor::Index(0, 0),
@@ -921,6 +998,12 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor uo, vto;
     info_odd_block = mptensor::svd(odd_block, mptensor::Axes(0),
                                    mptensor::Axes(1), uo, s_odd, vto);
+    if (diag != nullptr) {
+      diag->info_odd = info_odd_block;
+      if (info_odd_block != 0) {
+        diag->note_failed_block(odd_block, "odd");
+      }
+    }
     u_sorted.set_slice(uo, mptensor::Index(row_even, size_even),
                        mptensor::Index(drow, size));
     vt_sorted.set_slice(vto, mptensor::Index(size_even, col_even),
@@ -928,17 +1011,6 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
   }
   // The even block's failure is reported first, as it always has been.
   int info = info_even_block != 0 ? info_even_block : info_odd_block;
-  if (diag != nullptr) {
-    // Fully overwritten, so one instance can be reused across calls.
-    *diag = decomposition_diagnostics{};
-    diag->row_even = row_even;
-    diag->col_even = col_even;
-    diag->row_odd = row_odd;
-    diag->col_odd = col_odd;
-    diag->info_even = info_even_block;
-    diag->info_odd = info_odd_block;
-    diag->note_failed_input(sorted);
-  }
 
   tensor u_mat =
       mptensor::tensordot(prow, u_sorted, mptensor::Axes(0), mptensor::Axes(0));
