@@ -301,7 +301,7 @@ spinless の `"full"` / `"cdw"` と Hubbard の Néel 型が作れないのは�
 
 現状 `validate_fermion_constraints` の2サイト観測量ループは
 `if (op.ops_indices.empty())` のときだけパリティ検査をしており、`ops` 形式は素通しで
-測定時に `twosite_obs.cpp` のボゾン経路(`core::Contract(...)`)へ落ちる。
+測定時に `twosite_obs.cpp` のボソン経路(`core::Contract(...)`)へ落ちる。
 
 これはツール層の拒否(§6.2)だけでは塞げない。`input.toml` を直書きする expert
 利用者が同じ経路に入れるからである。したがってツール側と独立の**必須修正**として、
@@ -327,7 +327,7 @@ if (!op.ops_indices.empty()) {
 | 3. パイプライン | `simple.toml` → `tenes_simple` → `tenes_std` → 生成された `input.toml` に `fermion = true` と `parity` が入っていること、`ops =` が現れないこと |
 | 3b. ガード | §6.3 の各拒否が実際に発火すること: 非正方格子、2近傍非ゼロ、`fermion = false` 明示、`[correlation_length]`、`tenes_std` の長距離ボンド、`ops` 形式の2サイト観測量 |
 | 4. E2E(ctest 1件) | 自由フェルミオン(t = 1, μ = 0, D = 2, χ = 8)を3段パイプラインで解き、厳密値と比較。既存 `FreeFermion` と同じ閾値・実行時間(1分以内) |
-| 5. 回帰 | 既存 ctest 28件が不変(ボゾン経路・golden に触れない) |
+| 5. 回帰 | 既存 ctest 28件が不変(ボソン経路・golden に触れない) |
 
 層 1b を独立に立てるのは、**d = 2 では規約の違いが見えないため**である。実装解説の
 三経路の表のとおり、reduced-pair blob の「素ロード」と「入力+出力 swap」は

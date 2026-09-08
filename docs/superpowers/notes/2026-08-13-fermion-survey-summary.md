@@ -6,7 +6,7 @@
 ## 主要結論
 
 1. **フェルミオン iPEPS は確立技術**(2009–2010 年確立)。符号処理を加えても縮約計算量の
-   リーディングオーダーはボゾン系と同一(Barthel–Pineda–Eisert, PRA 80, 042333 (2009),
+   リーディングオーダーはボソン系と同一(Barthel–Pineda–Eisert, PRA 80, 042333 (2009),
    arXiv:0907.3689)。
 2. **3 つの等価な定式化**: swap gate(Corboz–Orús–Bauer–Vidal, PRB 81, 165104 (2010),
    arXiv:0912.0646)/ Z₂グレード(統一レビュー: Mortier et al., SciPost Phys. 18, 012

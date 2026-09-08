@@ -10,7 +10,7 @@
 
 フェルミオンの反交換符号は、テンソルネットワークでは「脚の交差」に局在する。
 本実装は**脚ごとの Z₂ パリティを持つ薄いラッパー `ftensor` を導入し、縮約・転置・分解のたびに交差符号を機械生成する**。
-既存のテンプレートカーネル(simple update)はそのまま `ftensor` でインスタンス化するだけで済み、ボゾン経路のコードと golden は一切変わらない。
+既存のテンプレートカーネル(simple update)はそのまま `ftensor` でインスタンス化するだけで済み、ボソン経路のコードと golden は一切変わらない。
 
 ---
 
@@ -48,7 +48,7 @@ CTM 環境は**閉ループ**を含む。開いたネットワーク(状態の�
 
 - **simple update**(開ネットワーク)→ `ftensor` で直接計算
 - **測定・環境**(ループあり)→ サイトごとに bra/ket 2層を融合した **reduced tensor** をまず構築し、
-  そこから先は**交差の無い通常のテンソルネットワーク**として既存のボゾン用 density-CTM をそのまま使う
+  そこから先は**交差の無い通常のテンソルネットワーク**として既存のボソン用 density-CTM をそのまま使う
 
 つまり**フェルミオン符号を reduced tensor の構築関数1箇所に閉じ込める**。これが本実装の中心的な設計判断。
 
@@ -162,9 +162,9 @@ interleaved の軸指定を `svd_trunc` にそのまま渡している。
 
 ### 4.1 カーネル(`src/iTPS/core/simple_update.cpp`)
 
-**ボゾンと完全に同一のソース**を `ftensor` でインスタンス化する。カーネル側の変更は1点のみ:
+**ボソンと完全に同一のソース**を `ftensor` でインスタンス化する。カーネル側の変更は1点のみ:
 
-- 「svd → slice で切断」を `svd_trunc(...)` に置換(ボゾン用オーバーロードを `src/tensor.hpp` に追加して共通化)
+- 「svd → slice で切断」を `svd_trunc(...)` に置換(ボソン用オーバーロードを `src/tensor.hpp` に追加して共通化)
 
 θ の脚順序は (aux1, aux2, out1, out2) で、二分割はサイト1 = (aux1, out1) 対 サイト2 = (aux2, out2)。
 この軸指定を `svd_trunc` にそのまま渡す(§3.4 のとおり、必要な graded transpose は分解側が行う)。
@@ -212,7 +212,7 @@ auto fop = wrap_twosite_gate(op12, finfo.phys[s1], finfo.phys[s2]);
 ### 5.1 考え方
 
 サイトごとに bra 層と ket 層を融合した4本脚テンソル a[(l l̄), (t t̄), (r r̄), (b b̄)] を作る。
-この粗視化格子の上では**交差が存在しない**ので、以降は既存のボゾン用 density-CTM 一式
+この粗視化格子の上では**交差が存在しない**ので、以降は既存のボソン用 density-CTM 一式
 (`Calc_CTM_Environment_density` + `contract_density_ctm/`)を**無改造で**使える。
 
 ### 5.2 構築パイプライン(`reduced.hpp`)
@@ -230,7 +230,7 @@ auto fop = wrap_twosite_gate(op12, finfo.phys[s1], finfo.phys[s2]);
 | 4 | `mptensor::reshape` で隣接ペアを融合 | `([l l̄], [t t̄], [r r̄], [b b̄], s_ket, s_bra)`(rank 6) |
 
 段階 2–3 で全てのフェルミオン符号が数値に焼き込まれるため、**出力は普通の(符号を持たない)テンソル**
-になる。だからこれ以降の CTM はボゾン用実装をそのまま使える。
+になる。だからこれ以降の CTM はボソン用実装をそのまま使える。
 
 `apply_joint_swaps` は `kDoubledJointMask` が指定する脚ペア (x,y) について
 `apply_swap(a, ket_axes[ix], bra_axes[iy])` と `apply_swap(a, bra_axes[ix], bra_axes[iy])` を掛ける。
@@ -331,7 +331,7 @@ d=4(電子系)の (odd,odd)→(even,even) チャネル(スピンありホッピ�
 
 | 環境変数 | 用途 |
 |---|---|
-| `TENES_RUN_LAMBDA_TRAJECTORY_DIAG` | 横鎖 λ 軌跡を JW 双子ボゾンと比較(case=A/B 判定)|
+| `TENES_RUN_LAMBDA_TRAJECTORY_DIAG` | 横鎖 λ 軌跡を JW 双子ボソンと比較(case=A/B 判定)|
 | `TENES_RUN_VERTICAL_LAMBDA_DIAG` | 同・縦鎖(leg 1/3 で向き規約を判別)|
 | `TENES_RUN_PLAQUETTE_TROTTER_DIAG` | 開放 2×2 パッチでカーネル vs 厳密 Trotter vs Fock(3者)|
 | `TENES_RUN_WEAK2D_DIAG` | 弱2D結合で CTM 測定 vs CTM 非依存の平均場推定(測定バグの切り分け)|
@@ -351,7 +351,7 @@ d=4(電子系)の (odd,odd)→(even,even) チャネル(スピンありホッピ�
 4. **`validate_noninterleaved_split` の責任分界** — ガードで拒否 + 呼び出し側が regroup、で妥当か
 5. **性能**: `doubled_cluster` が D¹² スケーリング(D=4 の2サイト測定に6時間超)。
    改善案は設計書の性能課題節に記載(bra 要素ループ + ket ベクトル演算で ~100× 見込み)
-6. **`iTPS.hpp` の `finfo` メンバと分岐の入り方** — ボゾン経路への影響がゼロであることの確認
+6. **`iTPS.hpp` の `finfo` メンバと分岐の入り方** — ボソン経路への影響がゼロであることの確認
 
 ---
 

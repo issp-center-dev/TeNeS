@@ -52,7 +52,7 @@
 - observable の D=3→4 比 32.0 は (4/3)¹² = 31.6 に一致する。**D¹² スケーリングである**。
 - environment の 30.1 倍は射影子 SVD の行列サイズ χ·D² に対する (χD²)³ = 31.6 倍に一致する。
   すなわち **CTM は SVD 律速であり、フェルミオン固有のペナルティを負っていない**
-  (ボゾンの density CTM と同じコスト構造)。D=4 で全体の 4% にすぎない。
+  (ボソンの density CTM と同じコスト構造)。D=4 で全体の 4% にすぎない。
 
 ### やること
 
@@ -61,13 +61,13 @@
 ### やらないこと
 
 - **blob(rank-16 中間テンソル)の撤廃**。サイト毎の `build_reduced_op` を合成して
-  ボゾンの `Contract_two_sites_*_op12_density_CTM` に流せば D¹² は計算からもメモリからも
+  ボソンの `Contract_two_sites_*_op12_density_CTM` に流せば D¹² は計算からもメモリからも
   消えるが、二体演算子に対する符号規約の再導出が必要になる。**Phase 2 として分離する**
   (ユーザー決定、2026-08-22)。§9 に申し送る。
 - CTM の高速化。上記のとおり伸びしろがない。次の一手は RSVD 解禁
   (現在 `src/iTPS/load_toml.cpp:646` で禁止)だが精度の議論を伴うため **Phase 3** とする。
 - `deps/mptensor` の変更。公開 API の範囲内で済ませる(§3.3)。
-- ボゾン経路の挙動変更。
+- ボソン経路の挙動変更。
 
 ## 2. ボトルネックの同定
 
@@ -556,7 +556,7 @@ blob 撤廃の見通しをここに残す。
   `(k₈⊕k₁₃)(b₂⊕b₆) + (k₉⊕k₁₀⊕k₁₂⊕k₁₄)·b₀`。したがって rank-16 への符号ループは
   原理的に完全に消せる(小テンソル 4 組の外積の和になる)。
 - さらに進めて、サイト毎の `build_reduced_op` を合成し、符号ドレスした `op12` を
-  ボゾンの `Contract_two_sites_horizontal_op12_density_CTM`
+  ボソンの `Contract_two_sites_horizontal_op12_density_CTM`
   (`src/iTPS/core/contract_density_ctm/ctm.cpp:199`)に流せば、**D¹²·χ² の環境縮約も
   D¹² のメモリも消える**。既存の blob 実装が参照解になるので検証は容易である。
 - ノルム経路は既に合成方式(`build_reduced_identity_pair`)を使っており、

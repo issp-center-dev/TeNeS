@@ -45,7 +45,7 @@ core::Calc_CTM_Environment_density(..., reduced_Tn, ..., true, true);
 
 と、**符号を折り込んだ reduced density tensor** を作って密度行列経路に渡している。
 `Calc_CTM_Environment_density` は内部で `Make_single_tensor_density` して `core::*_move_single` を
-回すだけで、move 自体はボゾンの有限温度経路と同一コードである。フェルミオン性は reduced tensor の
+回すだけで、move 自体はボソンの有限温度経路と同一コードである。フェルミオン性は reduced tensor の
 構築に閉じており、**move に渡すテンソルさえ reduced にすれば fast full update は成立する**。
 
 位相についても追加の考慮は要らない。`phase_invariant` は `Check_Convergence_CTM_RDM` の中でしか
@@ -78,7 +78,7 @@ core::Calc_CTM_Environment_density(..., reduced_Tn, ..., true, true);
 ## 3. 方針
 
 1. フェルミオン経路に、reduced density tensor を `core::*_move_single` に渡す fast full update を
-   実装し、`Full_Use_FastFullUpdate` の強制 OFF を撤去する。既定値はボゾンと同じ true。
+   実装し、`Full_Use_FastFullUpdate` の強制 OFF を撤去する。既定値はボソンと同じ true。
 2. 非 fast 経路(`fastfullupdate = false`)の `update_CTM()` に warm start を入れ、
    2 回目以降は前回の環境から続きを収束させる。fast が使えない run の受け皿であり、
    D >= 3 の固着に対する保険でもある。
@@ -112,7 +112,7 @@ void iTPS<tensor>::update_CTM_fast_fermion(int source, int target,
   // 引数の並びは 4 つの move すべてで
   //   (C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn_single, i, peps_parameters, lattice)
   // で共通(const 修飾だけが move ごとに違う)。以下の "..." はこの並びの省略。
-  // 方向の対応はボゾン分岐(full_update.cpp:160-186)と同一。
+  // 方向の対応はボソン分岐(full_update.cpp:160-186)と同一。
   if (source_leg == 0) {
     core::Right_move_single(..., source % LX, ...);
     core::Left_move_single (..., target % LX, ...);
@@ -148,15 +148,15 @@ return;
   `s1` / `s2` に入れ替える(`source_leg` が 0 か 1 のとき swap して gate を transpose する)が、
   これは Full_update_bond_fermion の引数規約であって格子上の位置ではない。
   行・列の決定には入れ替え前の値を使う。
-- ボゾン分岐との共通化はしない。ボゾンは rank-5 の `Tn` を `core::*_move` に、フェルミオンは
+- ボソン分岐との共通化はしない。ボソンは rank-5 の `Tn` を `core::*_move` に、フェルミオンは
   rank-4 の単層テンソルを `core::*_move_single` に渡すので、共有できるのは
   `source_leg` から move の組を選ぶ対応表だけであり、そのために型を捻じ曲げる価値はない。
   **ただし対応表は 2 箇所に重複するので、片方を直したらもう片方も直す** という注意をコメントに残す。
 - reduced tensor は毎ボンド全サイト作り直す(§2 の実測)。
 - move が **吸収する行・列と書き換える行・列は 1 セルずれる**(§5 の契約 4 の表)。渡す引数は
-  「吸収させたい行・列」であり、ボゾン分岐と同じ `source % LX` / `source / LX` でよい。
+  「吸収させたい行・列」であり、ボソン分岐と同じ `source % LX` / `source / LX` でよい。
   この非対称性は move 側の既存規約で、本タスクでは触らない。
-- **skew を前提にした実装を入れないこと。** 添字はボゾン fast 分岐と同一の
+- **skew を前提にした実装を入れないこと。** 添字はボソン fast 分岐と同一の
   `source % LX` / `source / LX` を使い、skew の折り返しは move 側が `lattice.index()` /
   `top()` / `bottom()` を通じて処理する。`LY_noskew == LY` を仮定した最適化や、
   `LX_noskew` / `LY_noskew` を `LX` / `LY` に読み替える簡略化を書いてはならない
@@ -168,12 +168,12 @@ return;
   いずれ解禁される見込みの先送りである。解禁時に fast full update 側で追加作業が生じないよう、
   skew に依存しない形で書く。
 
-  構成要素はどちらも skew 対応の実績を持つ。ボゾンの fast full update + skew は
+  構成要素はどちらも skew 対応の実績を持つ。ボソンの fast full update + skew は
   `test/data/Honeycomb_skew.toml`(skew = -1、full update 10 step、`fastfullupdate` 未指定 =
   既定 true)が、`*_move_single` + skew は `test/data/FT_Kitaev.toml`(skew = 1)が、
   それぞれ既存の回帰テストとして通っている。両者の組み合わせだけが未検証。
 - 1 サイトの full ゲート(`up.is_onesite()`)は現状 CTM を更新せずに return する。
-  この挙動は変えない(ボゾンも同じ)。
+  この挙動は変えない(ボソンも同じ)。
 
 ### 4.2 warm start つき `update_CTM()`
 
@@ -205,9 +205,9 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
   古い環境が良い初期値である保証がない。
 - `measure()` の `update_CTM()`: 現状どおり cold。「独立に収束させた環境で測る」という
   現在の契約を変えない。
-- ボゾンの非 fast 経路: 現状どおり cold。同じ恩恵を受けられるはずだが、
+- ボソンの非 fast 経路: 現状どおり cold。同じ恩恵を受けられるはずだが、
   `test/data/output_*/` の golden 値が収束経路の変更でずれるリスクを本タスクでは取らない。
-  **ボゾンへの展開は別タスク**とし、NEWS に「フェルミオンのみ」と明記する。
+  **ボソンへの展開は別タスク**とし、NEWS に「フェルミオンのみ」と明記する。
 
 ### 4.3 フラグ・既定値・ドキュメント
 
@@ -228,7 +228,7 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 1. **完走**: フェルミオン系で `fastfullupdate = true` を指定しても警告が出ず、false に落とされない。
 2. **一致**: D=4 chi=16 の自由フェルミオンで FU 1 sweep を回したとき、
    `fastfullupdate` の true と false でエネルギーが相対 1e-5 以内で一致する。
-3. **ボゾン等価**: parity を全て 0 にした fermion の fast full update が、同じ入力の boson の
+3. **ボソン等価**: parity を全て 0 にした fermion の fast full update が、同じ入力の boson の
    fast full update と一致する(`test/fermion/boson_equivalence_full.py.in` の枠組みを
    `fastfullupdate = true` に拡張)。これは非 fast 経路が完走しない D >= 3 でも成立する検証手段。
 4. **局所性**: 各 `source_leg` について、呼ばれる move の種類と引数が正しいこと。
@@ -257,7 +257,7 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 7. **skew 非依存**: 実装に `skew == 0` / `LY_noskew == LY` を仮定した分岐や簡略化が無いこと。
    フェルミオン系が skew を拒否している以上フェルミオンでの直接のテストは書けないので、
    これはレビューで担保する項目とし、`skew` および `*_noskew` を含む行を実装差分から
-   拾って確認する。ボゾンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が引き続き緑であることも
+   拾って確認する。ボソンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が引き続き緑であることも
    併せて確認する(共有コードに触るため)。
 
 ## 6. タスク分割
@@ -276,13 +276,13 @@ T1 と T3 は独立。T5 は Claude が独立に実施する(Codex の報告を�
 ## 7. 非目標
 
 - reduced density tensor の差分更新キャッシュ(§2 の実測で不要と判断)。
-- ボゾン経路の warm start(§4.2)。
+- ボソン経路の warm start(§4.2)。
 - 1 サイト full ゲートでの CTM 更新(現状の挙動を維持)。
 - D=3 で非 fast 経路の CTMRG が `rdm_dist` の別固定点に入る現象そのものの解決
   (HANDOFF 残課題 4)。fast はこれを回避するが、原因の究明は本タスクの範囲外。
 - MPI 環境での性能・正当性の確認(HPC で別途。HANDOFF minor-3)。
 - `core::*_move_single` 自体の添字規約(吸収する行・列と書き換える行・列が 1 セルずれること)の変更。
-  本タスクはボゾン fast 分岐と同じ move API を同じ規約で呼ぶだけで、規約を直す作業ではない。
+  本タスクはボソン fast 分岐と同じ move API を同じ規約で呼ぶだけで、規約を直す作業ではない。
 - フェルミオン系での skew セルの解禁(`load_toml.cpp:621-623`)。これは測定がフェルミオン数を
   誤る問題であって本タスクの範囲外。ただし **§4.1 のとおり、fast full update 側に skew を前提と
   した実装を残さない**こと。解禁作業が fast full update の書き直しを伴ってはならない。
@@ -290,9 +290,9 @@ T1 と T3 は独立。T5 は Claude が独立に実施する(Codex の報告を�
 ## 8. リスクと未解決
 
 - **fast は CTM の収束判定を通らない。** 環境は「1 move 動かしただけ」であり、収束の保証がない。
-  これはボゾンの fast full update と同じ性質で、fast full update の定義そのものである。
+  これはボソンの fast full update と同じ性質で、fast full update の定義そのものである。
   D=4 の A/B で相対 2.4e-6 の一致が取れているが、より大きな D / chi での劣化は未確認。
-  §5 の契約 3(ボゾン等価)が、非 fast 経路の完走に依存しない検証手段として効く。
+  §5 の契約 3(ボソン等価)が、非 fast 経路の完走に依存しない検証手段として効く。
 - **D=2 の A/B 差が相対 5.8e-4 と大きい。** 10 sweep 分の蓄積であり、かつ D=2 は
   「FU がエネルギーを上げる」病的領域(`parameter_section.rst:68`)。1 sweep 当たりで見れば
   D=4 と整合するが、契約 2 の許容誤差を D=2 に適用してはならない。

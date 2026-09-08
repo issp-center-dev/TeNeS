@@ -21,7 +21,7 @@
 - 対応範囲は**正方格子・最近接ボンドのみ**。それ以外は明示エラーで止める(黙って通さない)
 - 利用者向けのエラー・警告文に `M1` / `M2` を書かない。「現行版では未対応」等にする
 - Python は `black`(line-length 88、`tool/pyproject.toml`)、C++ は `clang-format` を通す
-- 既存の ctest 28件は全タスクを通じて緑を維持する。ボゾン経路と `test/data/output_*/` の
+- 既存の ctest 28件は全タスクを通じて緑を維持する。ボソン経路と `test/data/output_*/` の
   golden ファイルには触らない
 - 2サイト観測量は fermion では常に `elements` 形式で出力する。`ops = [i, j]` は使わない
 - モード順序は `(site1 の spin..., site2 の spin...)`、サイト内は `|up dn> = c†_up c†_dn |0>`
@@ -319,7 +319,7 @@ git commit -m "Add the Jordan-Wigner Fock builder to tenes_simple"
 - Consumes: なし
 - Produces:
   - `Model.is_fermion: bool` — クラス属性、既定 `False`
-  - `Model.parity: List[int]` — インスタンス属性、既定 `[]`(ボゾン模型は空)
+  - `Model.parity: List[int]` — インスタンス属性、既定 `[]`(ボソン模型は空)
   - `Model.twosite_ops_explicit: List[Tuple[str, np.ndarray]]` — インスタンス属性、既定 `[]`。
     各要素は `(name, op)` で `op` は rank-4 `[in1, in2, out1, out2]`
   - `Model.initial_state_vectors(mode: str, num_sublattice: int) -> Optional[np.ndarray]` —

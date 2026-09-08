@@ -38,7 +38,7 @@ CTM を一様ベクトル初期化から収束させ直している。
 - フェルミオン経路の `iTPS::update_CTM()` は `tenes::fermion::build_reduced_density_tensors(Tn, finfo)`
   で符号を折り込んだテンソルを作り、`core::Calc_CTM_Environment_density` に渡している。
   `Calc_CTM_Environment_density` は内部で `core::Make_single_tensor_density` を通してから
-  `core::*_move_single` を回すだけで、move 自体はボゾンの有限温度経路と同一コードである。
+  `core::*_move_single` を回すだけで、move 自体はボソンの有限温度経路と同一コードである。
   **フェルミオン性は reduced tensor の構築に閉じており、move には入っていない。**
   fast 経路が move に渡すテンソルも同じ
   `Make_single_tensor_density(build_reduced_density_tensors(Tn, finfo))` である。
@@ -100,7 +100,7 @@ CTM を一様ベクトル初期化から収束させ直している。
 | 2(右) | `Left_move_single(source の列)` | `Right_move_single(target の列)` |
 | 3(下) | `Top_move_single(source の行)` | `Bottom_move_single(target の行)` |
 
-これはボゾンの fast full update が呼ぶ move と 1 対 1 で同じである(ボゾンは
+これはボソンの fast full update が呼ぶ move と 1 対 1 で同じである(ボソンは
 `core::*_move`、フェルミオンは `core::*_move_single` を呼ぶ点だけが違う)。
 
 **注意**: フェルミオンのボンド更新は内部で 2 サイトを canonical な向きに入れ替えることがある
@@ -119,7 +119,7 @@ warm start を使うのはフェルミオンのボンド更新後の再収束だ
 
 - full update 開始時の 1 回目の環境構築
 - `measure()` の環境構築
-- ボゾン経路のすべての環境構築
+- ボソン経路のすべての環境構築
 
 環境が有効かどうかの状態は、環境テンソルの形が変わりうる操作(テンソルの初期化、
 チェックポイントの読み込み `iTPS::load_tensors()`)で無効に戻ること。
@@ -141,7 +141,7 @@ enum や `update_CTM_warm()` のような別の綴りにしない。テストが
 CTM move とは無関係の先送りである。
 
 `skew != 0` では `LY_noskew` は `LY` より大きくなりうる。move に渡す行・列は
-ボゾンの fast full update と同じ計算(unit cell 内の x 座標・y 座標)でよく、
+ボソンの fast full update と同じ計算(unit cell 内の x 座標・y 座標)でよく、
 skew の折り返しは `SquareLattice` 側が処理する。
 
 ### R5: ドキュメント
@@ -179,7 +179,7 @@ boson の full update に一致する」ことを `fastfullupdate = false` で�
 **同じ検証を `fastfullupdate = true` でも行うこと。**
 
 これは S-1 と違い、非 fast 経路の完走に依存しない。フェルミオン fast 経路
-(reduced tensor + `*_move_single`)とボゾン fast 経路(bare Tn + `*_move`)という
+(reduced tensor + `*_move_single`)とボソン fast 経路(bare Tn + `*_move`)という
 **別実装どうしの比較**である点に価値がある。許容誤差は既存テストが
 `fastfullupdate = false` で使っているものを出発点にし、必要なら実測で調整する。
 
@@ -225,7 +225,7 @@ R3 により `iTPS::update_CTM()` は warm start を要求する引数を取る�
   正常に動くこと(未初期化の環境から CTMRG を始めて壊れないこと)。
   これは warm start の**フォールバックが効いているか**を見るもので、
   「たまたま動いた」で通らないよう、結果が cold start と一致することまで確認する。
-- ボゾン run の結果が warm start の導入で変わらないこと。**既存のボゾン回帰テスト
+- ボソン run の結果が warm start の導入で変わらないこと。**既存のボソン回帰テスト
   (`AntiferroHeisenberg_real` など)がそのまま緑であること**で担保してよい。
 
 ### S-6: forbidden parity ガードに掛からない(S-1 に含めてよい)
@@ -244,13 +244,13 @@ fast 経路で `build_full_update_environment` の forbidden parity 比が閾値
   意味でより強い。
 - **skew はフェルミオンでテストできない**(入力読み込みで拒否される)。R4 は
   レビューで担保する。実装差分から `skew` と `noskew` を含む行を拾って確認すること。
-  ボゾンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が緑のままであることも確認する
+  ボソンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が緑のままであることも確認する
   (どちらも skew を使い、後者は `*_move_single` を通る)。
 - **fast が「非 fast より良い」ことは直接は示せない。** 速度差は測れるが、
   「毎ボンドの cold start が踏む固着を fast は踏まない」ことは、固着する条件を選んで
   はじめて見える性質であり、安定した回帰テストにしにくい。実装後の検証 (T5) で
   Claude が A/B を取る項目とする。
-- **1 サイトの full ゲートは CTM を更新しない**(現状の振る舞い、ボゾンも同じ)。
+- **1 サイトの full ゲートは CTM を更新しない**(現状の振る舞い、ボソンも同じ)。
   この経路は本契約の対象外で、既存のテストも無い。
 
 ## 6. 契約書チェックリスト(作成者が自分で確認する)

@@ -72,7 +72,7 @@ if (std::abs(Old_delta - delta) / std::abs(C_phi) < peps_parameters.Full_Converg
 
 で、**コストの変化**を見ており**反復点の変化**を見ていない。T3-iv の 5 ケースの実測:
 
-| ケース | フェルミオン経路 | ボゾン経路 | 状態のずれ |
+| ケース | フェルミオン経路 | ボソン経路 | 状態のずれ |
 |---|---|---|---|
 | 4100 exact h | conv=1 count=2 | conv=1 count=2 | 5.03e-16 |
 | 4200 exact v | conv=1 count=2 | conv=1 count=2 | 3.33e-16 |
@@ -89,7 +89,7 @@ if (std::abs(Old_delta - delta) / std::abs(C_phi) < peps_parameters.Full_Converg
 
 | # | 場所 | テスト | 現状 |
 |---|---|---|---|
-| 2-a | `test/fermion/full_update_bond.cpp:539` | T3-iv(フェルミオン vs ボゾン) | tol=1e-8、余裕 1.05e6(ローカル)/ 赤(CI) |
+| 2-a | `test/fermion/full_update_bond.cpp:539` | T3-iv(フェルミオン vs ボソン) | tol=1e-8、余裕 1.05e6(ローカル)/ 赤(CI) |
 | 2-b | `test/fermion/boson_equivalence_full.py.in` | BosonEquivalenceFull(同じ 2 経路の E2E) | TOL=1e-6、実測余裕 45 |
 | 2-c | `test/fermion/full_update_realctm.cpp:883` | `CHECK(r_new > r_old)` | 許容誤差なしの裸の不等号 |
 
