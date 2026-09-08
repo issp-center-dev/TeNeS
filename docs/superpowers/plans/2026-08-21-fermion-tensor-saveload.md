@@ -1,8 +1,8 @@
-# フェルミオン模式の tensor_save / tensor_load 対応 実装計画
+# フェルミオン系の tensor_save / tensor_load 対応 実装計画
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** フェルミオン模式で `[parameter.general] tensor_save` / `tensor_load` を使えるようにし、
+**Goal:** フェルミオン系で `[parameter.general] tensor_save` / `tensor_load` を使えるようにし、
 モデルパラメータを変えながらのスキャンでチェックポイント再開ができるようにする。
 
 **Architecture:** 仮想脚の偶奇台帳 `finfo.virt` を `<save_dir>/fermion.dat` に永続化する。
@@ -67,7 +67,7 @@
   `tenes::allreduce_max(std::vector<double>&, comm)`、`tenes::fermion::wrap_Tn` /
   `parity_violation` / `max_abs`、`tenes::load_error`
 - Produces(T2 が使う): `<save_dir>/fermion.dat`(§3.1 の形式)、
-  および fermion 模式で `tensor_save` / `tensor_load` が受理されること
+  および fermion 系で `tensor_save` / `tensor_load` が受理されること
 
 ### 契約書(テスト作成者に渡す散文)
 
@@ -114,7 +114,7 @@
 
   パリティは `0`(偶)/`1`(奇)を空白区切りで脚の次元の個数だけ。サイトは 0 から順、
   各サイトは物理脚 → 仮想脚 0,1,2,3 の 5 行。
-- ボソン模式(`fermion = false`)では `fermion.dat` を**書かない**。
+- ボソン系(`fermion = false`)では `fermion.dat` を**書かない**。
 
 **読み込み側の振る舞い.** `load_tensors()` は次の順で動く:
 1. 前段の検証(下表 V1〜V6b, V8)を行い、通れば `finfo.virt` を `fermion.dat` の内容で置き換える
@@ -123,7 +123,7 @@
 
 | # | 条件 | 例外 |
 |---|---|---|
-| V1 | フェルミオン模式で `fermion.dat` が無い | `tenes::load_error` |
+| V1 | フェルミオン系で `fermion.dat` が無い | `tenes::load_error` |
 | V2 | 先頭の形式バージョンが 1 以外 | 同 |
 | V3 | `N_UNIT` が入力と不一致 | 同 |
 | V4 | 物理脚パリティが入力の `parity` と不一致(長さまたは内容) | 同 |
@@ -131,7 +131,7 @@
 | V6a | 復元後の `validate_neighbor_consistency` が失敗 | 同(型は問わない。`std::runtime_error` 由来でもよい) |
 | V6b | `L_sub` または `skew` が入力と不一致 | `tenes::load_error` |
 | V7 | 読み込んだ `Tn[i]` が復元後の台帳のもとでパリティを破っている | 同 |
-| V8 | ボソン模式(`fermion = false`)なのに `fermion.dat` がある | 同 |
+| V8 | ボソン系(`fermion = false`)なのに `fermion.dat` がある | 同 |
 
 **テストすべきこと.**
 
@@ -163,7 +163,7 @@
 
 層3(ガード): V1〜V8 のそれぞれについて、その条件だけを満たす保存ディレクトリを作り、
 読み込みが例外を投げること。作り方の指針:
-- V1: ボソン模式で保存した(= `fermion.dat` が無い)ディレクトリをフェルミオン模式で読む
+- V1: ボソン系で保存した(= `fermion.dat` が無い)ディレクトリをフェルミオン系で読む
 - V2: 正常に保存してから `fermion.dat` の 1 行目を `2` に書き換える
 - V3: `N_UNIT` の行を書き換える(または `L_sub` の違う入力で読む)
 - V4: 物理脚パリティの行を `1 0` に書き換える
@@ -172,7 +172,7 @@
 - V6b: `L_sub` の行を `3 3` に書き換える
 - V7: 台帳と矛盾する `Tn`(例: 保存後に `T_0.dat` を、パリティを破る値で上書きするか、
   保存側で `finfo.virt` だけを別の分割に差し替えてから `save_tensors()` する)を読む
-- V8: フェルミオンで保存したディレクトリをボソン模式(`fermion = false`)で読む
+- V8: フェルミオンで保存したディレクトリをボソン系(`fermion = false`)で読む
 
 層3b(ガード解除): `test/input.cpp` は変更しない。代わりに `saveload.cpp` の中で
 `validate_fermion_constraints` を `tensor_save` / `tensor_load` 付きの入力に対して呼び、
@@ -513,7 +513,7 @@ D = 2、`meanfield_env = true`(CTM を作らないぶん速い)、`seed = 11`。
   緑になることを確認(Task 1 が入っているので RED にはならない。ここは回帰網)
 - [ ] **Step 2(Codex):** `docs/sphinx/ja/file_specification/parameter_section.rst` の
   フェルミオン非対応一覧から `tensor_save` / `tensor_load` を外し、直後に次の項を足す:
-  「``tensor_save`` / ``tensor_load`` はフェルミオン模式でも使えます。仮想ボンドの
+  「``tensor_save`` / ``tensor_load`` はフェルミオン系でも使えます。仮想ボンドの
   偶奇台帳が保存先の ``fermion.dat`` に書き出され、読み込み時に物理脚のパリティ・
   ``virtual_dim``・``L_sub``・``skew``・テンソル自身のパリティが検証されます。
   ``virtual_dim`` を変えての読み込みは非対応です(偶奇ブロックの構造が保てないため)」。

@@ -1,4 +1,4 @@
-# フェルミオン模式の tensor_save / tensor_load 対応 設計書
+# フェルミオン系の tensor_save / tensor_load 対応 設計書
 
 日付: 2026-08-21
 ブランチ: `fermion`
@@ -15,9 +15,9 @@
 
 ## 1. 目的とスコープ
 
-フェルミオン模式では `[parameter.general] tensor_save` / `tensor_load` が入力読み込み時に
+フェルミオン系では `[parameter.general] tensor_save` / `tensor_load` が入力読み込み時に
 拒否される(`src/iTPS/load_toml.cpp:651-653`)。本設計は **モデルパラメータを変えながらの
-連続計算(スキャン)** のために、フェルミオン模式でチェックポイントの保存・再開を
+連続計算(スキャン)** のために、フェルミオン系でチェックポイントの保存・再開を
 できるようにする。想定する運用は「(t, U, μ₁) で収束させて保存 → (t, U, μ₂) の初期状態として
 読み込む」であり、**仮想ボンド次元 D は保存時と同じ**とする(ユーザー決定、2026-08-21)。
 
@@ -32,7 +32,7 @@
 
 - **D(`virtual_dim`)の変更を伴う再開**。保存時と異なる `virtual_dim` はエラーにする(§3.3)
 - CTM 環境テンソルの再利用(§2.3 のとおり、そもそも保存されていないし再計算される)
-- 有限温度・実時間発展での再開(フェルミオン模式自体が非対応のまま)
+- 有限温度・実時間発展での再開(フェルミオン系自体が非対応のまま)
 - ボソン経路の挙動変更。ボソンの「次元が違えば警告して resize」は現状のまま
 
 ## 2. なぜガードを外すだけでは足りないか
@@ -93,7 +93,7 @@
 ### 2.3 CTM 環境は保存対象ではない(現状の帰結)
 
 `run_groundstate`(`src/iTPS/main.cpp:150-158`)は `optimize()` → `save_tensors()` →
-`measure()` の順に呼ぶ。フェルミオン模式では full update が禁止されているので
+`measure()` の順に呼ぶ。フェルミオン系では full update が禁止されているので
 `optimize()` は simple update のみで CTM に触れず、CTM 環境は `measure()` の中で
 `Calc_CTM_Environment_density(..., initialize = true)`(`src/iTPS/measure.cpp:45-56`)により
 **毎回ゼロから作り直される**。したがって
@@ -118,7 +118,7 @@ CTM のウォームスタートを入れる場合に配管が残っている。
 
 ## 3. ファイル形式
 
-### 3.1 `<save_dir>/fermion.dat`(新規、フェルミオン模式のときだけ書く)
+### 3.1 `<save_dir>/fermion.dat`(新規、フェルミオン系のときだけ書く)
 
 `params.dat` と同じ「値 + `# コメント`」形式。`params.dat` の形式バージョンは **1 のまま**
 (ボソンの保存ディレクトリは一切変わらない)。
@@ -158,7 +158,7 @@ CTM のウォームスタートを入れる場合に配管が残っている。
 ### 3.3 D 変更を許さない
 
 `fermion.dat` の各パリティ行の長さが入力の `virtual_dim` / `physical_dim` と違えばエラー。
-メッセージには「フェルミオン模式の再開は保存時と同じ `virtual_dim` を要求する。
+メッセージには「フェルミオン系の再開は保存時と同じ `virtual_dim` を要求する。
 D を変える場合はテンソルを読み込まずに新規に始めること」を含める。
 
 理由: `load_tensor` の `resize_tensor`(`saveload_tensors.cpp:133`)は各脚の**末尾に
@@ -179,14 +179,14 @@ D を変える場合はテンソルを読み込まずに新規に始めること
 
 | # | 条件 | メッセージの要点 |
 |---|---|---|
-| V1 | フェルミオン模式で `fermion.dat` が無い | この保存はフェルミオン模式のものではない |
+| V1 | フェルミオン系で `fermion.dat` が無い | この保存はフェルミオン系のものではない |
 | V2 | `Fermion_Format_Version != 1` | 未知の形式バージョン |
 | V3 | `N_UNIT` 不一致 | 入力と保存でユニットセルのサイト数が違う |
 | V4 | 物理脚パリティが入力の `parity` と不一致(長さ・内容) | 物理基底が違う |
 | V5 | 仮想脚パリティの長さが入力の `virtual_dim` と不一致 | §3.3 の D 固定。「保存時と同じ `virtual_dim` が必要」と書く |
 | V6a | 復元後 `validate_neighbor_consistency(finfo, lattice)` が失敗 | 隣接ボンドで台帳が食い違う |
 | V6b | `L_sub` / `skew` が入力と不一致 | 格子のトポロジが違うので同じ台帳でも意味が変わる |
-| V8 | **ボソン実行**(`fermion = false`)で `fermion.dat` が存在 | フェルミオン模式の保存なので `fermion = true` が必要 |
+| V8 | **ボソン実行**(`fermion = false`)で `fermion.dat` が存在 | フェルミオン系の保存なので `fermion = true` が必要 |
 
 前段が通ったら `finfo.virt` を復元してからテンソルを読む。
 
@@ -224,7 +224,7 @@ MPI: `fermion.dat` の読み出しは `mpirank == 0` で行い、`std::vector<in
 
 末尾で、`finfo.enabled` なら `save_fermion_parity(save_dir)` を呼ぶ(中で `mpirank == 0` を判定)。
 `finfo.phys[i]`、`finfo.virt[i][leg]`、`lattice.LX` / `lattice.LY` / `lattice.skew` を §3.1 の
-形式で書く。あわせて「環境テンソルは fermion 模式では意味のある値を持たない(§2.3)」旨と、
+形式で書く。あわせて「環境テンソルは fermion 系では意味のある値を持たない(§2.3)」旨と、
 `save_tensors()` が `measure()` の前に呼ばれる前提に依存していることをコメントで残す。
 
 ### 5.3 `load_tensors()` の分割
@@ -272,9 +272,9 @@ rtol 1e-3 で比べているので影響しない。
 ## 6. ドキュメント
 
 - `parameter_section.rst`(ja/en): フェルミオンの非対応一覧から `tensor_save` / `tensor_load` を
-  外し、代わりに「フェルミオン模式では保存時と同じ `virtual_dim` でのみ読み込める。
+  外し、代わりに「フェルミオン系では保存時と同じ `virtual_dim` でのみ読み込める。
   仮想脚の偶奇台帳が `fermion.dat` に保存され、読み込み時に検証される」旨を書く。
-- `NEWS.md`: 「フェルミオン模式で `tensor_save` / `tensor_load` が使えるようになった
+- `NEWS.md`: 「フェルミオン系で `tensor_save` / `tensor_load` が使えるようになった
   (パラメータスキャンの再開用)。仮想ボンドのパリティ台帳が一緒に保存され、
   読み込み時に物理脚パリティ・次元・隣接整合・テンソルのパリティ違反が検証される。
   `virtual_dim` を変えての再開は非対応」。

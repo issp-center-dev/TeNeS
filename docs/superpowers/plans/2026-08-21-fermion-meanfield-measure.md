@@ -1,8 +1,8 @@
-# フェルミオン模式の平均場環境対応 実装計画
+# フェルミオン系の平均場環境対応 実装計画
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** フェルミオン模式で `meanfield_env = true` を使えるようにし、2サイト観測量を
+**Goal:** フェルミオン系で `meanfield_env = true` を使えるようにし、2サイト観測量を
 D¹²d⁴ の blob ではなく D⁶d² の単層 graded 縮約で評価する。
 
 **Architecture:** ket 層の2サイト状態 `ψ_AB = tensordot_f(A_λ, B_λ)` を組み、
@@ -674,7 +674,7 @@ typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair,
 - [ ] **Step 3(Codex):** `docs/sphinx/ja/file_specification/parameter_section.rst` の fermion の
   非対応一覧(63 行目付近)から「平均場環境、」を外し、`meanfield_env` の行(164 行目付近)の
   説明を
-  「CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン模式でも使用でき、
+  「CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、
   2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当」
   にする。英語版(62 行目、160 行目付近)も同内容で:
   "Use mean field environment obtained through simple update instead of CTM. Also available

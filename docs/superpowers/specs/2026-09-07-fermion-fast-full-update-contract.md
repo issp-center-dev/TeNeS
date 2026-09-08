@@ -20,11 +20,11 @@
 
 ## 1. 何が変わるか
 
-フェルミオン模式では現在 `src/iTPS/main.cpp` が `Full_Use_FastFullUpdate` を強制的に false に
+フェルミオン系では現在 `src/iTPS/main.cpp` が `Full_Use_FastFullUpdate` を強制的に false に
 落とし、警告を出す。そのため full update はボンド 1 本ごとに `iTPS::update_CTM()` を呼び、
 CTM を一様ベクトル初期化から収束させ直している。
 
-変更後は、フェルミオン模式でも `fastfullupdate`(既定 true)が効くようになる。fast のとき、
+変更後は、フェルミオン系でも `fastfullupdate`(既定 true)が効くようになる。fast のとき、
 1 ボンドの更新後に行うのは **CTM 全体の再収束ではなく、更新された 2 サイトを含む行または列を
 1 回だけ吸収する部分 move 2 回**である。
 
@@ -73,7 +73,7 @@ CTM を一様ベクトル初期化から収束させ直している。
 
 ### R1: `fastfullupdate = true` がフェルミオンで有効になる
 
-フェルミオン模式かつ `full_update` の step 数が 1 以上のとき、`fastfullupdate = true` を
+フェルミオン系かつ `full_update` の step 数が 1 以上のとき、`fastfullupdate = true` を
 指定しても
 
 - `Full_Use_FastFullUpdate` を false に落とさない
@@ -137,7 +137,7 @@ enum や `update_CTM_warm()` のような別の綴りにしない。テストが
 ### R4: skew を前提にしない
 
 実装に `skew == 0` や `LY_noskew == LY` を仮定した分岐・簡略化を入れないこと。
-フェルミオン模式は現在 skew セルを拒否するが、その理由は測定がフェルミオン数を誤ることであり、
+フェルミオン系は現在 skew セルを拒否するが、その理由は測定がフェルミオン数を誤ることであり、
 CTM move とは無関係の先送りである。
 
 `skew != 0` では `LY_noskew` は `LY` より大きくなりうる。move に渡す行・列は

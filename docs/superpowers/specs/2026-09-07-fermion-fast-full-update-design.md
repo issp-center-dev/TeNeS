@@ -8,7 +8,7 @@
 
 ## 1. 問題
 
-`src/iTPS/main.cpp:250-261` はフェルミオン模式で `Full_Use_FastFullUpdate` を強制的に false にする。
+`src/iTPS/main.cpp:250-261` はフェルミオン系で `Full_Use_FastFullUpdate` を強制的に false にする。
 
 ```
 WARNING: fermion mode disables Full_Use_FastFullUpdate because the fast update
@@ -83,7 +83,7 @@ core::Calc_CTM_Environment_density(..., reduced_Tn, ..., true, true);
    2 回目以降は前回の環境から続きを収束させる。fast が使えない run の受け皿であり、
    D >= 3 の固着に対する保険でもある。
 
-**前提にしてはならないこと**: フェルミオン模式が現在拒否している機能(skew セル、実時間発展、
+**前提にしてはならないこと**: フェルミオン系が現在拒否している機能(skew セル、実時間発展、
 1 幅セル、`Use_RSVD`、相関関数・相関長など)の多くは、以前の試みが失敗して先送りされたもので
 あって恒久的な制約ではない。**それらの不在を前提とした実装・最適化・簡略化を入れない。**
 本タスクで具体的に効くのは skew(§4.1)と実時間発展(§4.2)。
@@ -162,7 +162,7 @@ return;
   `LX_noskew` / `LY_noskew` を `LX` / `LY` に読み替える簡略化を書いてはならない
   (`skew != 0` では `LY_noskew = LY * lcm(LX, skew) / skew > LY`。`SquareLattice.cpp:63-70`)。
 
-  現在フェルミオン模式は skew セルを入力読み込みで拒否するが、その理由は
+  現在フェルミオン系は skew セルを入力読み込みで拒否するが、その理由は
   「skewed unit cells (measured to give wrong fermionic numbers)」(`load_toml.cpp:621-623`)、
   すなわち**測定がフェルミオン数を誤る**という CTM move とは無関係の問題であり、
   いずれ解禁される見込みの先送りである。解禁時に fast full update 側で追加作業が生じないよう、
@@ -212,7 +212,7 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 ### 4.3 フラグ・既定値・ドキュメント
 
 - `src/iTPS/main.cpp:250-261` の強制 OFF と警告を撤去する。
-- `Full_Use_FastFullUpdate` の既定値は true のまま。**フェルミオン模式の既定の挙動が変わる**
+- `Full_Use_FastFullUpdate` の既定値は true のまま。**フェルミオン系の既定の挙動が変わる**
   (非 fast → fast)。非 fast が simple update 未収束の D >= 3 で固着することと、
   速度差(§2)を踏まえれば妥当な既定。
 - `docs/sphinx/{ja,en}/file_specification/parameter_section.rst` の
@@ -225,7 +225,7 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 正式な契約書は別途 `2026-09-07-fermion-fast-full-update-contract.md` に書き、テスト作成者へ渡す。
 要点のみ:
 
-1. **完走**: フェルミオン模式で `fastfullupdate = true` を指定しても警告が出ず、false に落とされない。
+1. **完走**: フェルミオン系で `fastfullupdate = true` を指定しても警告が出ず、false に落とされない。
 2. **一致**: D=4 chi=16 の自由フェルミオンで FU 1 sweep を回したとき、
    `fastfullupdate` の true と false でエネルギーが相対 1e-5 以内で一致する。
 3. **ボゾン等価**: parity を全て 0 にした fermion の fast full update が、同じ入力の boson の
@@ -255,7 +255,7 @@ warm start を有効にするのは **フェルミオンの非 fast 経路だけ
 6. **warm start**: 非 fast 経路で warm start あり・なしの最終結果が CTM の収束許容誤差内で一致する。
    未初期化の環境に対して warm start を要求しても cold start にフォールバックする。
 7. **skew 非依存**: 実装に `skew == 0` / `LY_noskew == LY` を仮定した分岐や簡略化が無いこと。
-   フェルミオン模式が skew を拒否している以上フェルミオンでの直接のテストは書けないので、
+   フェルミオン系が skew を拒否している以上フェルミオンでの直接のテストは書けないので、
    これはレビューで担保する項目とし、`skew` および `*_noskew` を含む行を実装差分から
    拾って確認する。ボゾンの `Honeycomb_skew` と有限温度の `FT_Kitaev` が引き続き緑であることも
    併せて確認する(共有コードに触るため)。
@@ -283,7 +283,7 @@ T1 と T3 は独立。T5 は Claude が独立に実施する(Codex の報告を�
 - MPI 環境での性能・正当性の確認(HPC で別途。HANDOFF minor-3)。
 - `core::*_move_single` 自体の添字規約(吸収する行・列と書き換える行・列が 1 セルずれること)の変更。
   本タスクはボゾン fast 分岐と同じ move API を同じ規約で呼ぶだけで、規約を直す作業ではない。
-- フェルミオン模式での skew セルの解禁(`load_toml.cpp:621-623`)。これは測定がフェルミオン数を
+- フェルミオン系での skew セルの解禁(`load_toml.cpp:621-623`)。これは測定がフェルミオン数を
   誤る問題であって本タスクの範囲外。ただし **§4.1 のとおり、fast full update 側に skew を前提と
   した実装を残さない**こと。解禁作業が fast full update の書き直しを伴ってはならない。
 

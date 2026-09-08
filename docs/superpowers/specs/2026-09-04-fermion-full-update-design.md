@@ -18,7 +18,7 @@
 
 ## 1. 目的とスコープ
 
-フェルミオン模式(`[parameter.general] fermion = true`)で full update
+フェルミオン系(`[parameter.general] fermion = true`)で full update
 (`[parameter.full_update] num_step > 0`)を動かす。主目的は半充填 Hubbard の
 **Mott 崩壊が simple update の局所最適化に起因するのか**を full update で検証すること
 (`tenes-fermion-mott-collapse` メモ)。
@@ -32,7 +32,7 @@
 スコープ外:
 
 - fast full update(`Full_Use_FastFullUpdate`)。素の Tn を使う `Left_move` 系は fold 環境と
-  互換でない。fermion 模式では警告して非高速版に落とす(§5.3)。
+  互換でない。fermion 系では警告して非高速版に落とす(§5.3)。
 - CTM のウォームスタート(`initialize = false`)。bosonic 非高速版と同じく毎回ゼロから収束させる。
   実行コストの支配項になるが、本設計では触らない。
 - `lambda_tensor` の更新。bosonic full update も触らない。
@@ -309,7 +309,7 @@ bosonic 経路は既存 doctest `test/full_update.cpp` と golden(fast 経路も
 
 - `load_toml.cpp:640-642` の `throw_fermion_guard("full update")` を撤去する。
 - `MeanField_Env && num_full_step > 0` は既存 `PEPS_Parameters::check` がそのまま効く。
-- `Full_Use_FastFullUpdate`(既定値 true)は fermion 模式では**警告して非高速版に落とす**。
+- `Full_Use_FastFullUpdate`(既定値 true)は fermion 系では**警告して非高速版に落とす**。
   **地点は `src/iTPS/main.cpp` の `gen_param()` 直後・`peps_parameters.Bcast(comm)`(249 行)直前**。
   `validate_fermion_constraints` は `const PEPS_Parameters &` を取り(`load_toml.hpp:103`)、
   しかも `Bcast` の後(`main.cpp:310`)に呼ばれるので、そこで書き換えても全 rank に伝わらない。

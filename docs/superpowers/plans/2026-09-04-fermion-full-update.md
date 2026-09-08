@@ -4,7 +4,7 @@
 > テストは**テスト作成者サブエージェントが契約書から先に書き終えている**前提で、実装者(Codex)は
 > テストファイルを一切変更しない。ステップはチェックボックス(`- [ ]`)で追跡する。
 
-**Goal:** フェルミオン模式(`fermion = true`)で full update(`num_full_step > 0`)を動かし、
+**Goal:** フェルミオン系(`fermion = true`)で full update(`num_full_step > 0`)を動かし、
 半充填 Hubbard の Mott 崩壊が simple update の局所最適化に起因するかを検証できるようにする。
 
 **Architecture:** 二サイト環境 N を「開放チャネル fold」で構成し(演算子添字を開いたまま
@@ -183,7 +183,7 @@ ctest 出力、演算順序を変えていないことの根拠(移動した行�
 
 **Interfaces:**
 - Consumes: なし(既存 API のみ)
-- Produces: `iTPS<tensor>::update_CTM()` が fermion 模式でも正しい環境を作る。タスク 5 が使う。
+- Produces: `iTPS<tensor>::update_CTM()` が fermion 系でも正しい環境を作る。タスク 5 が使う。
 
 - [ ] **Step 1: 基準は取得済み**
 

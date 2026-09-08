@@ -1,4 +1,4 @@
-# フェルミオン模式の平均場環境(MeanField_Env)対応 設計書
+# フェルミオン系の平均場環境(MeanField_Env)対応 設計書
 
 日付: 2026-08-21
 ブランチ: `fermion`
@@ -14,10 +14,10 @@
 
 ## 1. 目的とスコープ
 
-フェルミオン模式の2サイト観測量は、現行では CTM 環境に載せる「reduced pair blob」
+フェルミオン系の2サイト観測量は、現行では CTM 環境に載せる「reduced pair blob」
 (`src/fermion/reduced.hpp` の `build_reduced_pair`)を経由する。この blob は bra⊗ket の
 外積(rank 16、要素数 D¹²d⁴)なので、D>2 では測定が計算全体を支配し、d=4(Hubbard)の
-D=4 はメモリ的に実行できない。本設計は **フェルミオン模式で `meanfield_env = true` を
+D=4 はメモリ的に実行できない。本設計は **フェルミオン系で `meanfield_env = true` を
 使えるようにし**、2サイト観測量を単層縮約(要素数 D⁶d²)で評価できるようにする。
 
 ### 実測(spinless d=2、2×2 セル、測定ボンド1本、Release ビルド、macOS Apple Silicon)
@@ -310,9 +310,9 @@ D=2、`meanfield_env = true` で、エネルギーが厳密解に対して **緩
 ## 6. ドキュメント・NEWS
 
 - `parameter_section.rst`(ja/en): fermion の非対応一覧から「平均場環境」を外す。
-  `meanfield_env` の説明に「フェルミオン模式でも使える。2サイト観測量は単層縮約で
+  `meanfield_env` の説明に「フェルミオン系でも使える。2サイト観測量は単層縮約で
   評価され CTM 版より大幅に軽いが、精度は simple update 相当」と注記する。
-- `NEWS.md`: 「フェルミオン模式で `meanfield_env = true` が使えるようになった。D>2 の
+- `NEWS.md`: 「フェルミオン系で `meanfield_env = true` が使えるようになった。D>2 の
   2サイト観測量のコストが D¹²d⁴ から D⁶d² になる」旨。
 
 ## 7. タスク分割(実装計画の骨子)

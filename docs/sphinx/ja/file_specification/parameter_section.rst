@@ -63,12 +63,12 @@
   - 現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。``Use_RSVD``、``Simple_Gauge_Fix``、有限温度計算、実時間発展、マルチサイト演算子、``ops`` 形式2サイト観測量、距離2以上の2サイト演算子、skew セル、1幅セル(``LX < 2`` または ``LY < 2``)、相関関数、相関長は非対応で、入力読み込み時にエラーになります(相関長は強制的に無効化されます)
   - full update に関する注意:
 
-    - ``fastfullupdate = true``(既定値)はフェルミオン模式でも利用できます。full update は CTM 環境のみ対応しており、``meanfield_env = true`` との組み合わせはエラーになります
-    - 非高速版(``fastfullupdate = false``)ではボンドごとに CTM を再収束するため、fast full update より遅くなります(自由フェルミオン ``D = 3``、``chi = 12`` で約 9 倍)。フェルミオン模式ではこの再収束を直前の環境を初期値として行います(warm start)。ボゾン模式の非高速版は従来どおり毎回一様ベクトルから収束させます
+    - ``fastfullupdate = true``(既定値)はフェルミオン系でも利用できます。full update は CTM 環境のみ対応しており、``meanfield_env = true`` との組み合わせはエラーになります
+    - 非高速版(``fastfullupdate = false``)ではボンドごとに CTM を再収束するため、fast full update より遅くなります(自由フェルミオン ``D = 3``、``chi = 12`` で約 9 倍)。フェルミオン系ではこの再収束を直前の環境を初期値として行います(warm start)。ボゾン系の非高速版は従来どおり毎回一様ベクトルから収束させます
     - ``fastfullupdate = false`` で CTM が forbidden parity ガード(上記)に掛かって停止する場合は、simple update の step 数を増やすか、fast full update を使ってください。ボンドごとに CTM をゼロから収束させ直すと、simple update が十分に収束していない状態では CTM が別の固定点に落ち着くことがあり、これが停止の主な原因です
     - full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(``1e-8`` と ``[parameter.ctm]`` の ``convergence_epsilon`` の 100 倍の大きい方)を超えるとエラーで停止します。その場合は ``[parameter.ctm]`` の ``iteration_max`` を増やすか ``convergence_epsilon`` を小さくしてください
     - ボンド次元が小さいとき(例: 自由フェルミオンの ``D = 2``)、simple update で収束した状態から full update を始めるとエネルギーが**上がる**ことがあります。これは射影虚時間発展の固定点が表現力不足の状態空間では simple update の固定点より高くなりうるためで、実装の誤りではありません。フェルミオン系では ``D >= 3`` を推奨します
-  - ``tensor_save`` / ``tensor_load`` はフェルミオン模式でも使えます。仮想ボンドの偶奇台帳が保存先の ``fermion.dat`` に書き出され、読み込み時に物理脚のパリティ・``virtual_dim``・``L_sub``・``skew``・テンソル自身のパリティが検証されます。``virtual_dim`` を大きくしての読み込みは可能ですが、小さくしての読み込みは非対応です。拡張された成分はゼロ詰めされるため、広げた空間を使うには読み込み後に simple update を回す必要があり、測定だけでは広がりません
+  - ``tensor_save`` / ``tensor_load`` はフェルミオン系でも使えます。仮想ボンドの偶奇台帳が保存先の ``fermion.dat`` に書き出され、読み込み時に物理脚のパリティ・``virtual_dim``・``L_sub``・``skew``・テンソル自身のパリティが検証されます。``virtual_dim`` を大きくしての読み込みは可能ですが、小さくしての読み込みは非対応です。拡張された成分はゼロ詰めされるため、広げた空間を使うには読み込み後に simple update を回す必要があり、測定だけでは広がりません
 
 - ``iszero_tol``
 
@@ -170,7 +170,7 @@ full update に関するパラメータ
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
-   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン模式でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
+   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
 
 ``use_onesite_rdm_convergence`` が ``true`` の場合、角転送行列の特異値スペクトルに加えて、1サイト縮約密度行列の反復間距離を用いて CTM の収束を判定します。
 距離は全サイト・全行列要素に対する max 要素ノルムを、その密度行列のトレースで割ったものです（密度行列の形の変化とノルムの相対変化の両方が含まれます）。
