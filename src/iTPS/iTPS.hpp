@@ -170,6 +170,14 @@ class iTPS {
   void full_update();
   //! Apply one full-update gate.
   void full_update(EvolutionOperator<tensor> const &up);
+  /*! @brief full_update(up) with the sweep position named on failure.
+   *
+   *  A decomposition or environment guard deep inside cannot say which
+   *  bond or which sweep it was working on; both sweep loops go through
+   *  here so that a tenes::runtime_error picks that up on its way out.
+   */
+  void full_update_in_sweep(EvolutionOperator<tensor> const &up, int step_index,
+                            int nsteps);
   //! Fermionic counterpart of the bosonic fast full-update CTM move.
   void update_CTM_fast_fermion(int source, int target, int source_leg);
 

@@ -41,10 +41,12 @@
 #include <algorithm>
 #include <complex>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "ftensor.hpp"
@@ -549,6 +551,107 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
   return ret;
 }
 
+namespace detail {
+
+//! Finiteness of one tensor element; the complex overload wants both parts.
+template <class T>
+inline bool is_finite_value(const T& v) {
+  return std::isfinite(v);
+}
+
+//! is_finite_value() for complex elements.
+template <class T>
+inline bool is_finite_value(const std::complex<T>& v) {
+  return std::isfinite(v.real()) && std::isfinite(v.imag());
+}
+
+//! "even sector 9x9 info=3 (LAPACK: did not converge)", or "odd sector
+//! empty" for a sector the decomposition never had a block for.
+inline std::string sector_phrase(const char* name, std::size_t rows,
+                                 std::size_t cols, int info) {
+  std::stringstream ss;
+  ss << name << " sector ";
+  if (rows == 0 || cols == 0) {
+    ss << "empty";
+    return ss.str();
+  }
+  ss << rows << "x" << cols << " info=" << info;
+  if (info > 0) {
+    ss << " (LAPACK: did not converge)";
+  } else if (info < 0) {
+    ss << " (LAPACK: illegal argument " << -info << ")";
+  }
+  return ss.str();
+}
+
+}  // namespace detail
+
+/*!
+ * @brief What a graded decomposition saw, for the error message.
+ *
+ * qr() and svd() factorize the even and the odd diagonal block separately
+ * and return the FIRST nonzero LAPACK info of the two, which leaves the
+ * caller unable to say which sector failed - and the odd sector is the
+ * fermion-specific half, the one that goes empty or degenerate in the
+ * known failure modes. Passing one of these to the decomposition records
+ * both infos together with the block shapes; on failure it also records
+ * whether the input was finite at all.
+ */
+struct decomposition_diagnostics {
+  int info_even = 0;           //!< LAPACK info of the even block.
+  int info_odd = 0;            //!< LAPACK info of the odd block.
+  std::size_t row_even = 0;    //!< Rows of even parity.
+  std::size_t col_even = 0;    //!< Columns of even parity.
+  std::size_t row_odd = 0;     //!< Rows of odd parity.
+  std::size_t col_odd = 0;     //!< Columns of odd parity.
+  bool scanned = false;        //!< True once note_failed_input() has run.
+  bool has_nonfinite = false;  //!< NaN or Inf found by that scan.
+  double max_abs = 0.0;        //!< Largest finite |element| found by it.
+
+  //! True iff either block factorization reported a failure.
+  bool failed() const { return info_even != 0 || info_odd != 0; }
+
+  /*! @brief Scan the decomposed matrix, but only after a failure.
+   *
+   * A non-finite input is the usual reason LAPACK gives up, and it says
+   * something the sector shapes cannot: the state had already diverged
+   * before the decomposition was reached. The scan is an extra pass over
+   * the matrix on a path that runs once per bond per full-update step,
+   * so it is skipped while both factorizations succeed. Process-local,
+   * like parity_violation().
+   */
+  template <class tensor>
+  void note_failed_input(const tensor& m) {
+    if (!failed()) {
+      return;
+    }
+    scanned = true;
+    for (std::size_t n = 0; n < m.local_size(); ++n) {
+      const typename tensor::value_type v = m[n];
+      if (!detail::is_finite_value(v)) {
+        has_nonfinite = true;
+        continue;
+      }
+      max_abs = std::max(max_abs, std::abs(v));
+    }
+  }
+
+  //! One line naming each sector, its shape, and its LAPACK info, plus
+  //! what the input scan found once it has run.
+  std::string describe() const {
+    std::stringstream ss;
+    ss << detail::sector_phrase("even", row_even, col_even, info_even) << ", "
+       << detail::sector_phrase("odd", row_odd, col_odd, info_odd);
+    if (scanned) {
+      ss << "; input max|.|=" << max_abs << ", "
+         << (has_nonfinite ? "non-finite elements present"
+                           : "all elements finite")
+         << " (rank-local scan)";
+    }
+    return ss.str();
+  }
+};
+
 /*!
  * @brief Grading-preserving QR decomposition.
  *
@@ -565,12 +668,15 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
  * @param[in] cols Legs forming the columns.
  * @param[out] q Orthogonal factor, legs (rows..., internal).
  * @param[out] r Triangular-block factor, legs (internal, cols...).
+ * @param[out] diag Optional per-sector record; see
+ *        decomposition_diagnostics.
  * @return The LAPACK-style info of the block factorizations (0 on
- *         success).
+ *         success), the even block's first.
  */
 template <class tensor>
 int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
-       const mptensor::Axes& cols, ftensor<tensor>& q, ftensor<tensor>& r) {
+       const mptensor::Axes& cols, ftensor<tensor>& q, ftensor<tensor>& r,
+       decomposition_diagnostics* diag = nullptr) {
   ftensor<tensor> a_ordered = transpose(a, rows + cols);
   mptensor::Shape row_shape = detail::shape_from_axes(a.shape(), rows);
   mptensor::Shape col_shape = detail::shape_from_axes(a.shape(), cols);
@@ -601,12 +707,13 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
 
   tensor q_sorted(comm, mptensor::Shape(drow, size));
   tensor r_sorted(comm, mptensor::Shape(size, dcol));
-  int info = 0;
+  int info_even_block = 0;
+  int info_odd_block = 0;
   if (size_even > 0) {
     tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
                                         mptensor::Index(row_even, col_even));
     tensor qe, re;
-    info =
+    info_even_block =
         mptensor::qr(even_block, mptensor::Axes(0), mptensor::Axes(1), qe, re);
     q_sorted.set_slice(qe, mptensor::Index(0, 0),
                        mptensor::Index(row_even, size_even));
@@ -618,15 +725,25 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
         mptensor::slice(sorted, mptensor::Index(row_even, col_even),
                         mptensor::Index(drow, dcol));
     tensor qo, ro;
-    int info_odd =
+    info_odd_block =
         mptensor::qr(odd_block, mptensor::Axes(0), mptensor::Axes(1), qo, ro);
-    if (info == 0) {
-      info = info_odd;
-    }
     q_sorted.set_slice(qo, mptensor::Index(row_even, size_even),
                        mptensor::Index(drow, size));
     r_sorted.set_slice(ro, mptensor::Index(size_even, col_even),
                        mptensor::Index(size, dcol));
+  }
+  // The even block's failure is reported first, as it always has been.
+  int info = info_even_block != 0 ? info_even_block : info_odd_block;
+  if (diag != nullptr) {
+    // Fully overwritten, so one instance can be reused across calls.
+    *diag = decomposition_diagnostics{};
+    diag->row_even = row_even;
+    diag->col_even = col_even;
+    diag->row_odd = row_odd;
+    diag->col_odd = col_odd;
+    diag->info_even = info_even_block;
+    diag->info_odd = info_odd_block;
+    diag->note_failed_input(sorted);
   }
 
   tensor q_mat =
@@ -676,13 +793,15 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
  * @param[out] u Left singular vectors, legs (rows..., internal).
  * @param[out] s Singular values, even sector then odd sector.
  * @param[out] vt Right singular vectors, legs (internal, cols...).
+ * @param[out] diag Optional per-sector record; see
+ *        decomposition_diagnostics.
  * @return The LAPACK-style info of the block factorizations (0 on
  *         success).
  */
 template <class tensor>
 int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
         const mptensor::Axes& cols, ftensor<tensor>& u, std::vector<double>& s,
-        ftensor<tensor>& vt) {
+        ftensor<tensor>& vt, decomposition_diagnostics* diag = nullptr) {
   ftensor<tensor> a_ordered = transpose(a, rows + cols);
   mptensor::Shape row_shape = detail::shape_from_axes(a.shape(), rows);
   mptensor::Shape col_shape = detail::shape_from_axes(a.shape(), cols);
@@ -714,13 +833,14 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
   tensor u_sorted(comm, mptensor::Shape(drow, size));
   tensor vt_sorted(comm, mptensor::Shape(size, dcol));
   std::vector<double> s_even, s_odd;
-  int info = 0;
+  int info_even_block = 0;
+  int info_odd_block = 0;
   if (size_even > 0) {
     tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
                                         mptensor::Index(row_even, col_even));
     tensor ue, vte;
-    info = mptensor::svd(even_block, mptensor::Axes(0), mptensor::Axes(1), ue,
-                         s_even, vte);
+    info_even_block = mptensor::svd(even_block, mptensor::Axes(0),
+                                    mptensor::Axes(1), ue, s_even, vte);
     u_sorted.set_slice(ue, mptensor::Index(0, 0),
                        mptensor::Index(row_even, size_even));
     vt_sorted.set_slice(vte, mptensor::Index(0, 0),
@@ -731,15 +851,25 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
         mptensor::slice(sorted, mptensor::Index(row_even, col_even),
                         mptensor::Index(drow, dcol));
     tensor uo, vto;
-    int info_odd = mptensor::svd(odd_block, mptensor::Axes(0),
-                                 mptensor::Axes(1), uo, s_odd, vto);
-    if (info == 0) {
-      info = info_odd;
-    }
+    info_odd_block = mptensor::svd(odd_block, mptensor::Axes(0),
+                                   mptensor::Axes(1), uo, s_odd, vto);
     u_sorted.set_slice(uo, mptensor::Index(row_even, size_even),
                        mptensor::Index(drow, size));
     vt_sorted.set_slice(vto, mptensor::Index(size_even, col_even),
                         mptensor::Index(size, dcol));
+  }
+  // The even block's failure is reported first, as it always has been.
+  int info = info_even_block != 0 ? info_even_block : info_odd_block;
+  if (diag != nullptr) {
+    // Fully overwritten, so one instance can be reused across calls.
+    *diag = decomposition_diagnostics{};
+    diag->row_even = row_even;
+    diag->col_even = col_even;
+    diag->row_odd = row_odd;
+    diag->col_odd = col_odd;
+    diag->info_even = info_even_block;
+    diag->info_odd = info_odd_block;
+    diag->note_failed_input(sorted);
   }
 
   tensor u_mat =
@@ -793,15 +923,18 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
  * @param[out] s Kept singular values, even sector then odd sector.
  * @param[out] vt Right singular vectors, legs (internal, cols...).
  * @param[in] dc Maximum number of singular values to keep.
+ * @param[out] diag Optional per-sector record; see
+ *        decomposition_diagnostics.
  * @return The LAPACK-style info of the underlying svd() (0 on success).
  */
 template <class tensor>
 int svd_trunc(const ftensor<tensor>& a, const mptensor::Axes& rows,
               const mptensor::Axes& cols, ftensor<tensor>& u,
-              std::vector<double>& s, ftensor<tensor>& vt, int dc) {
+              std::vector<double>& s, ftensor<tensor>& vt, int dc,
+              decomposition_diagnostics* diag = nullptr) {
   ftensor<tensor> full_u, full_vt;
   std::vector<double> full_s;
-  int info = svd(a, rows, cols, full_u, full_s, full_vt);
+  int info = svd(a, rows, cols, full_u, full_s, full_vt, diag);
   const int nkeep = std::min<int>(dc, full_s.size());
   std::vector<std::size_t> order(full_s.size());
   for (std::size_t i = 0; i < order.size(); ++i) {

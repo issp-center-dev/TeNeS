@@ -3985,6 +3985,7 @@ TEST_CASE("MF layer4 fermion mean-field two-site values match the oracle") {
 #include "fermion/fold_geometry.cpp"
 #include "fermion/full_update_env.cpp"
 #include "fermion/full_update_bond.cpp"
+#include "fermion/decomposition_diagnostics.cpp"
 #include "fermion/full_update_realctm.cpp"
 #include "fermion/ctm_phase.cpp"
 #include "fermion/fermion_guards.cpp"

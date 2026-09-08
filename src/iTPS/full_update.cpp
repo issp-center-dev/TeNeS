@@ -16,6 +16,9 @@
 
 #include "iTPS.hpp"
 
+#include <string>
+
+#include "../exception.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 
@@ -25,6 +28,7 @@
 #include "../fermion/fops.hpp"
 #include "../fermion/reduced_measure.hpp"
 #include "../tensor.hpp"
+#include "full_update_diagnostics.hpp"
 
 namespace tenes::itps {
 
@@ -243,6 +247,24 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
   }
 }
 
+template <class tensor>
+void iTPS<tensor>::full_update_in_sweep(EvolutionOperator<tensor> const &up,
+                                        int step_index, int nsteps) {
+  try {
+    full_update(up);
+  } catch (const tenes::runtime_error &e) {
+    // A one-site gate needs no decomposition, so it has no bond to name.
+    if (up.is_onesite()) {
+      throw;
+    }
+    throw tenes::runtime_error(
+        std::string(e.what()) +
+        full_update_bond_context(
+            up.source_site, lattice.neighbor(up.source_site, up.source_leg),
+            up.source_leg, step_index, nsteps));
+  }
+}
+
 template <class ptensor>
 void iTPS<ptensor>::full_update() {
   const int group = 0;
@@ -260,7 +282,7 @@ void iTPS<ptensor>::full_update() {
       if (up.group != group) {
         continue;
       }
-      full_update(up);
+      full_update_in_sweep(up, int_tau, nsteps);
     }
 
     if (peps_parameters.print_level >= PrintLevel::info) {

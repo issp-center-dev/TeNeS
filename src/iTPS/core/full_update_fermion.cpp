@@ -28,10 +28,12 @@
 #include <string>
 #include <vector>
 
+#include "../../exception.hpp"
 #include "../../fermion/fops.hpp"
 #include "../../fermion/full_update_env.hpp"
 #include "../../tensor.hpp"
 #include "../PEPS_Parameters.hpp"
+#include "../full_update_diagnostics.hpp"
 #include "full_update.hpp"
 
 namespace tenes::itps::core {
@@ -98,10 +100,14 @@ double parity_ratio(const tenes::fermion::ftensor<tensor>& a,
   return forbidden_abs / scale;
 }
 
-void check_decomposition_info(int info, const char* decomposition) {
+//! Turn a nonzero LAPACK info into the actionable error. The diagnostics
+//! carry the one fact the info cannot: which parity sector gave up.
+void check_decomposition_info(
+    int info, const char* decomposition,
+    const tenes::fermion::decomposition_diagnostics& diag) {
   if (info != 0) {
-    throw std::runtime_error(std::string("fermion Full_update_bond: ") +
-                             decomposition + " failed");
+    throw tenes::runtime_error(
+        fermion_full_update_failure_message(decomposition, diag.describe()));
   }
 }
 
@@ -119,9 +125,12 @@ double project_or_throw(tenes::fermion::ftensor<tensor>& a,
   }
   if (throw_on_large && ratio > 1.0e-8) {
     std::stringstream ss;
-    ss << "fermion Full_update_bond parity projection rejected " << label
-       << ": forbidden parity block ratio " << ratio << " exceeds 1e-8";
-    throw std::runtime_error(ss.str());
+    ss << "projecting " << label
+       << " would discard a forbidden parity block of relative size " << ratio
+       << " (limit 1e-8, forbidden max_abs=" << forbidden_abs
+       << ", max_abs=" << scale << ")";
+    throw tenes::runtime_error(
+        fermion_full_update_failure_message("parity projection", ss.str()));
   }
   project_even(a);
   return ratio;
@@ -172,8 +181,10 @@ std::vector<double> normalized_square_root_weights(
   }
   norm = std::sqrt(norm);
   if (norm == 0.0) {
-    throw std::runtime_error(
-        "fermion Full_update_bond: zero singular-value norm");
+    throw tenes::runtime_error(fermion_full_update_failure_message(
+        "weight normalization",
+        "the bond has no weight left: every singular value of the two-site "
+        "state is zero"));
   }
   std::vector<double> weights(s.size());
   for (std::size_t i = 0; i < s.size(); ++i) {
@@ -203,19 +214,22 @@ void Full_update_bond_fermion(
 
   tenes::fermion::ftensor<tensor> QA, RA, QB, RB;
   int info = 0;
+  // Reused across the decompositions below: each call overwrites it whole,
+  // and a failing call throws before the next one runs.
+  tenes::fermion::decomposition_diagnostics diag;
   // QR separates the unchanged environment legs from the open update channel;
   // its axes follow the direction-specific pseudo-site convention in
   // section 3.1.
   if (direction == tenes::fermion::reduced_pair_direction::horizontal) {
-    info = tenes::fermion::qr(Tn1, Axes(0, 1, 3), Axes(2, 4), QA, RA);
-    check_decomposition_info(info, "first QR");
-    info = tenes::fermion::qr(Tn2, Axes(1, 2, 3), Axes(0, 4), QB, RB);
-    check_decomposition_info(info, "second QR");
+    info = tenes::fermion::qr(Tn1, Axes(0, 1, 3), Axes(2, 4), QA, RA, &diag);
+    check_decomposition_info(info, "first QR", diag);
+    info = tenes::fermion::qr(Tn2, Axes(1, 2, 3), Axes(0, 4), QB, RB, &diag);
+    check_decomposition_info(info, "second QR", diag);
   } else {
-    info = tenes::fermion::qr(Tn1, Axes(0, 1, 2), Axes(3, 4), QA, RA);
-    check_decomposition_info(info, "first QR");
-    info = tenes::fermion::qr(Tn2, Axes(0, 2, 3), Axes(1, 4), QB, RB);
-    check_decomposition_info(info, "second QR");
+    info = tenes::fermion::qr(Tn1, Axes(0, 1, 2), Axes(3, 4), QA, RA, &diag);
+    check_decomposition_info(info, "first QR", diag);
+    info = tenes::fermion::qr(Tn2, Axes(0, 2, 3), Axes(1, 4), QB, RB, &diag);
+    check_decomposition_info(info, "second QR", diag);
   }
 
   // Folding QA/QB with open identity channels exposes the CTM metric needed
@@ -288,8 +302,8 @@ void Full_update_bond_fermion(
   const int D_connect =
       static_cast<int>(Tn1.parity[connect_leg_a(direction)].size());
   info = tenes::fermion::svd_trunc(Theta_graded, Axes(0, 2), Axes(1, 3), U, s,
-                                   VT, D_connect);
-  check_decomposition_info(info, "initial truncated SVD");
+                                   VT, D_connect, &diag);
+  check_decomposition_info(info, "initial truncated SVD", diag);
   log_sector_dimensions(U, direction, peps_parameters);
 
   std::vector<double> lambda_c =
@@ -323,17 +337,17 @@ void Full_update_bond_fermion(
   tenes::fermion::ftensor<tensor> q1, r1, q2, r2;
   // Graded QR/SVD balancing redistributes Schmidt weights without allowing
   // LAPACK degeneracies to mix the even and odd bond sectors.
-  info = tenes::fermion::qr(R1, Axes(0, 2), Axes(1), q1, r1);
-  check_decomposition_info(info, "first balancing QR");
-  info = tenes::fermion::qr(R2, Axes(0, 2), Axes(1), q2, r2);
-  check_decomposition_info(info, "second balancing QR");
+  info = tenes::fermion::qr(R1, Axes(0, 2), Axes(1), q1, r1, &diag);
+  check_decomposition_info(info, "first balancing QR", diag);
+  info = tenes::fermion::qr(R2, Axes(0, 2), Axes(1), q2, r2, &diag);
+  check_decomposition_info(info, "second balancing QR", diag);
 
   tenes::fermion::ftensor<tensor> U2, VT2;
   std::vector<double> s2;
-  info = tenes::fermion::svd(
-      tenes::fermion::tensordot(r1, r2, Axes(1), Axes(1)), Axes(0), Axes(1),
-      U2, s2, VT2);
-  check_decomposition_info(info, "balancing SVD");
+  info =
+      tenes::fermion::svd(tenes::fermion::tensordot(r1, r2, Axes(1), Axes(1)),
+                          Axes(0), Axes(1), U2, s2, VT2, &diag);
+  check_decomposition_info(info, "balancing SVD", diag);
 
   std::vector<double> lambda2 = normalized_square_root_weights<tensor>(s2);
   U2.multiply_vector(lambda2, 1);

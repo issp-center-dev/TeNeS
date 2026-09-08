@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "../exception.hpp"
 #include "../mpi.hpp"
 #include "reduced_measure.hpp"
 
@@ -165,7 +166,7 @@ void apply_input_pair_mask(tensor& a, const parity_vector& p0,
  *  @return Phase-normalized graded and plain open-channel environments.
  *  @throw std::runtime_error If the direction is invalid.
  *  @throw std::runtime_error If either QR factor is not rank 4.
- *  @throw std::runtime_error If a forbidden block exceeds @p forbidden_tol or
+ *  @throw tenes::runtime_error If a forbidden block exceeds @p forbidden_tol or
  *         the environment has non-finite elements or an invalid window norm.
  */
 template <class tensor>
@@ -221,9 +222,11 @@ full_update_environment<tensor> build_full_update_environment(
     ss << "build_full_update_environment: forbidden parity block ratio "
        << forbidden_ratio << " exceeds " << forbidden_tol
        << " (forbidden max_abs=" << forbidden_abs << ", max_abs=" << scale
-       << "); the CTM may not have converged (check iteration_max and "
-          "CTM_Convergence_Epsilon)";
-    throw std::runtime_error(ss.str());
+       << "). The CTM environment is not parity clean, which usually means "
+          "it has not converged: raise parameter.ctm.iteration_max, lower "
+          "parameter.ctm.convergence_epsilon, or raise "
+          "parameter.ctm.dimension.";
+    throw tenes::runtime_error(ss.str());
   }
   detail::project_even(Ntilde);
 
@@ -259,8 +262,12 @@ full_update_environment<tensor> build_full_update_environment(
     std::stringstream ss;
     ss << "build_full_update_environment: invalid window norm " << norm
        << " (max_abs=" << N_max_abs << ", nA=" << nA << ", nB=" << nB
-       << ", elements_finite=" << finite_collective[0] << ")";
-    throw std::runtime_error(ss.str());
+       << ", elements_finite=" << finite_collective[0]
+       << "). The two-site window carries no usable weight, which usually "
+          "means the state diverged: lower parameter.full_update.tau, and "
+          "check that the CTM converged (parameter.ctm.iteration_max, "
+          "parameter.ctm.dimension).";
+    throw tenes::runtime_error(ss.str());
   }
   const std::complex<double> phase = norm / norm_abs;
   if (std::abs(phase - std::complex<double>(1.0, 0.0)) > 1.0e-14) {

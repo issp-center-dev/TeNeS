@@ -51,7 +51,7 @@ void iTPS<tensor>::time_evolution() {
         if(su){
           simple_update(up);
         }else{
-          full_update(up);
+          full_update_in_sweep(up, int_tau, nsteps);
         }
       }
       t += dt;
