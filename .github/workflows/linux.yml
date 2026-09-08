@@ -58,21 +58,13 @@ jobs:
         shell: bash
         run: cmake --build ./ -j4
 
+      # -j4 is the runner's vCPU count, which lscpu reports as two physical
+      # cores with two threads each (AMD EPYC 7763).  Running the suite twice
+      # in one job on 2026-09-08 measured -j2 at 218-244 s against -j4's
+      # 214-241 s across all five jobs, so SMT is worth one to three percent
+      # here and the cores are saturated either way: scheduling has nothing
+      # left to give, and a shorter ctest has to come from less work.
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: OMP_NUM_THREADS=1 ctest -j4 -V
-
-      # TEMPORARY measurement, to be removed once it has answered its
-      # question.  A Linux runner advertises four vCPUs, but ctest -j4 only
-      # made the suite 1.63x faster where a three-core macOS runner got 2.55x,
-      # which is what two physical cores plus hyper-threading would look like.
-      # Running the suite twice in one job measures -j2 against -j4 on the same
-      # machine, without the +-30% between-runner variation that made the
-      # comparison across runs unreadable.
-      - name: ctest -j2 (measurement)
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        run: |
-          lscpu | grep -E '^CPU\(s\)|^Thread|^Core|^Socket|^Model name' || true
-          OMP_NUM_THREADS=1 ctest -j2
