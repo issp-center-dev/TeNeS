@@ -30,6 +30,8 @@
 // reused; the tags are prefixed with "dexpand_" so the two files cannot
 // collide in the shared output directory.
 
+#include "../test_fermion_common.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>

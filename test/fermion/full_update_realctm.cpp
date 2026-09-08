@@ -66,6 +66,8 @@
 // mptensor evaluates transposes lazily, so local index n of two tensors of
 // the same shape need not point at the same element.
 
+#include "../test_fermion_common.hpp"
+
 #include <complex>
 
 namespace {

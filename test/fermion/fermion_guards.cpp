@@ -48,6 +48,8 @@
 // Included into the test_fermion_layer TU; it uses that TU's
 // iTPSTestAccessor (Tn, finfo).
 
+#include "../test_fermion_common.hpp"
+
 #include <cstdio>
 #include <filesystem>
 #include <fstream>

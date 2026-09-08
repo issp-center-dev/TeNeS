@@ -12,6 +12,8 @@
 // Operators are loaded with wrap_twosite_gate (input swap only): the direct
 // trace path needs the same convention adapter as the simple-update gate.
 
+#include "../test_fermion_common.hpp"
+
 namespace {
 
 // The open variant of make_r2_tensor: every leg is {even, odd}. Same formula

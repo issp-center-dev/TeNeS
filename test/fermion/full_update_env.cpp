@@ -48,6 +48,8 @@
 //     no code with the fold, and is the only test here with power over the
 //     sign of N (contract section 4).
 
+#include "../test_fermion_common.hpp"
+
 #include "../../src/fermion/full_update_env.hpp"
 #include "../../src/iTPS/core/full_update.hpp"
 

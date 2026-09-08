@@ -33,6 +33,8 @@
 // tenes_std emits dy = +1 bonds exactly that way, in a 2D run that is every
 // vertical bond, i.e. half of them.
 
+#include "../test_fermion_common.hpp"
+
 namespace {
 
 //! Check that a bond gate is invariant under the graded exchange of its two

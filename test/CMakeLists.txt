@@ -28,7 +28,23 @@ foreach(basename IN LISTS tenes_unit_tests)
   endif()
 endforeach()
 
-add_executable(test_fermion_layer test_fermion_layer.cpp)
+# The fermion test cases are one executable but many translation units.  They
+# used to be one: test_fermion_layer.cpp ended with an #include of every file
+# below, which made a single 18,000-line translation unit that took about 100 s
+# to compile on one core while the other cores of a CI runner idled.  Compiled
+# separately they fill those cores instead.  What they share (the project
+# headers, the ft alias and iTPSTestAccessor) is in test_fermion_common.hpp.
+# The *_unit.cpp sources each bundle a group of test/fermion files that share
+# fixtures; the grouping is explained at the top of each one.
+add_executable(
+  test_fermion_layer
+  test_fermion_layer.cpp
+  fermion/bond_orientation.cpp
+  fermion/sign_sweep.cpp
+  fermion/fold_full_update_unit.cpp
+  fermion/guards_fast_full_update_unit.cpp
+  fermion/r2_mf_unit.cpp
+  fermion/saveload_dexpand_unit.cpp)
 target_link_libraries(test_fermion_layer PUBLIC tenes_static)
 target_compile_definitions(
   test_fermion_layer PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")

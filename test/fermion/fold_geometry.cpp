@@ -22,6 +22,8 @@
 //     (tenes::fermion::tensordot / trace / conj / transpose), or
 //   - literals burned in from test/fermion/fock_oracle.py (T5).
 
+#include "../test_fermion_common.hpp"
+
 namespace {
 
 namespace fgf = tenes::fermion;

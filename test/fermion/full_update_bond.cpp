@@ -35,6 +35,8 @@
 // always apply_pair_op(build_pair_state(...)), the primitives fold_geometry
 // already ties to the Fock oracle.
 
+#include "../test_fermion_common.hpp"
+
 #include "../../src/iTPS/core/full_update_fermion.hpp"
 
 namespace {

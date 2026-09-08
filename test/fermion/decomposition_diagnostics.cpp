@@ -29,6 +29,8 @@
 // whose fue_make_case / fub_gate_plain / fub_run_fermion helpers drive the
 // one guard that a test can actually reach end to end.
 
+#include "../test_fermion_common.hpp"
+
 #include <complex>
 #include <cstdint>
 #include <cstring>

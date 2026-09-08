@@ -16,6 +16,8 @@
 // parameters and from exceptions only -- never from the (not yet existing)
 // serialisation helpers.
 
+#include "../test_fermion_common.hpp"
+
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

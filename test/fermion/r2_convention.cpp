@@ -1,3 +1,5 @@
+#include "../test_fermion_common.hpp"
+
 namespace {
 
 static tenes::fermion::leg_parities r2_parities(int lx, int ly, int site) {

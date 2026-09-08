@@ -72,6 +72,8 @@
 // make_free_fermion_gate(). It uses the environment accessors added to
 // iTPSTestAccessor at the top of test_fermion_layer.cpp.
 
+#include "../test_fermion_common.hpp"
+
 #include <array>
 #include <filesystem>
 #include <map>

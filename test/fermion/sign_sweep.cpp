@@ -25,6 +25,8 @@
 // factors in C1-8 are deliberately NOT powers of two, so that a kernel which
 // folds them together before the sweep is detected.
 
+#include "../test_fermion_common.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <complex>
