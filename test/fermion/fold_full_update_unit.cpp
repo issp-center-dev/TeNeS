@@ -20,11 +20,15 @@
 //! fixtures of fold_geometry.cpp (fg_*), full_update_bond.cpp uses both
 //! (fub_*), decomposition_diagnostics.cpp and full_update_realctm.cpp build on
 //! those in turn, and ctm_phase.cpp reaches into all of them.  Separating them
-//! would mean declaring every fixture in a header of its own, which buys
-//! nothing: this unit is already the longest pole of the executable, and the
-//! point of the split is to fill a CI runner's other cores, not to make each
-//! unit minimal.
+//! would mean declaring every fixture in a header of its own, and the two that
+//! would be worth separating (fold_geometry at 5.4 s and ctm_phase at 4.2 s)
+//! would still leave FreeFermionFull as the longest test in a parallel ctest,
+//! so the work would buy nothing.
 
+// Its own executable, so ctest can run it next to the rest of the fermion
+// tests rather than after them: these cases are 12 s of the 18 s the single
+// test_fermion_layer binary used to take, and a ctest test is one process.
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../test_fermion_common.hpp"
 
 #include "fold_geometry.cpp"

@@ -28,33 +28,42 @@ foreach(basename IN LISTS tenes_unit_tests)
   endif()
 endforeach()
 
-# The fermion test cases are one executable but many translation units.  They
-# used to be one: test_fermion_layer.cpp ended with an #include of every file
-# below, which made a single 18,000-line translation unit that took about 100 s
-# to compile on one core while the other cores of a CI runner idled.  Compiled
-# separately they fill those cores instead.  What they share (the project
-# headers, the ft alias and iTPSTestAccessor) is in test_fermion_common.hpp.
-# The *_unit.cpp sources each bundle a group of test/fermion files that share
-# fixtures; the grouping is explained at the top of each one.
+# The fermion tests were one 18,000-line translation unit in one executable:
+# test_fermion_layer.cpp ended with an #include of every file below.  That
+# cost twice.  Compiling it took about 100 s on one core while the other cores
+# of a CI runner idled, and running it took 192 s of a 241 s parallel ctest,
+# because a ctest test is a process and 220 cases in one process run one after
+# another however many ctest -j was given.
+#
+# So: many translation units, grouped by the fixtures they share (each
+# *_unit.cpp says what it bundles and why), in two executables.  The
+# fold/full-update group is 12 s of the 18 s the cases take -- measured with
+# doctest's --source-file filter -- so it gets an executable of its own and
+# the two run side by side.  What every unit needs (the project headers, the
+# ft alias, iTPSTestAccessor) is in test_fermion_common.hpp.
 add_executable(
   test_fermion_layer
   test_fermion_layer.cpp
   fermion/bond_orientation.cpp
   fermion/sign_sweep.cpp
-  fermion/fold_full_update_unit.cpp
   fermion/guards_fast_full_update_unit.cpp
   fermion/r2_mf_unit.cpp
   fermion/saveload_dexpand_unit.cpp)
-target_link_libraries(test_fermion_layer PUBLIC tenes_static)
-target_compile_definitions(
-  test_fermion_layer PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
-if(ENABLE_MPI)
-  add_test(NAME test_fermion_layer
-           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
-                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_layer>)
-else()
-  add_test(NAME test_fermion_layer COMMAND $<TARGET_FILE:test_fermion_layer>)
-endif()
+
+add_executable(test_fermion_fold_full_update fermion/fold_full_update_unit.cpp)
+
+foreach(testname test_fermion_layer test_fermion_fold_full_update)
+  target_link_libraries(${testname} PUBLIC tenes_static)
+  target_compile_definitions(
+    ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+  if(ENABLE_MPI)
+    add_test(NAME ${testname}
+             COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                     ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:${testname}>)
+  else()
+    add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
+  endif()
+endforeach()
 
 # The finiteness predicate of the fermion diagnostics, compiled with
 # -ffast-math on purpose. Under finite-math-only the compiler may assume no
@@ -299,3 +308,25 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/benchmark_smoke.py.in
 add_test(NAME benchmark_smoke
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/benchmark_smoke.py)
+
+# ctest -j starts the costliest tests first and falls back to the registration
+# order for tests without a COST.  That order put FreeFermionDExpand -- 69 s of
+# a 241 s parallel ctest -- at +172 s on a Linux CI job on 2026-09-08, where it
+# ran past everything else and set the end of the run; four tests were running
+# for 183 s of those 241 s, so the tail, not the parallelism, was the problem.
+#
+# The numbers are seconds that job measured with -j4 (FreeFermionFull scaled
+# for its two full-update sweeps).  They only have to put the long tests
+# first, so they do not need to be re-measured when a machine is faster or
+# slower than that one.
+set_tests_properties(test_fermion_fold_full_update PROPERTIES COST 128)
+set_tests_properties(FreeFermion PROPERTIES COST 113)
+set_tests_properties(FreeFermionFull PROPERTIES COST 106)
+set_tests_properties(FreeFermionMF PROPERTIES COST 87)
+set_tests_properties(FreeFermionDExpand PROPERTIES COST 69)
+set_tests_properties(test_fermion_layer PROPERTIES COST 64)
+set_tests_properties(FT_TFI_square PROPERTIES COST 34)
+set_tests_properties(quasi1d_ctm PROPERTIES COST 34)
+set_tests_properties(test_fermion_ctm_warm_start PROPERTIES COST 30)
+set_tests_properties(FreeFermionSaveLoadCTM PROPERTIES COST 25)
+set_tests_properties(FreeFermionComplex PROPERTIES COST 21)
