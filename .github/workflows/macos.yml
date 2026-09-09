@@ -51,7 +51,7 @@ jobs:
       - name: build
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: cmake --build ./ -j4
+        run: cmake --build ./ -j3
 
       - name: ctest
         working-directory: ${{runner.workspace}}/build
