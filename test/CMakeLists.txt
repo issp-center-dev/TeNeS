@@ -6,28 +6,6 @@ endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-set(tenes_unit_tests input simple_update full_update tensor_util util
-    correlation_length saveload arnoldi timer_registry onesite_rdm)
-if(TENES_ARPACK_FOUND)
-  list(APPEND tenes_unit_tests arpack)
-endif()
-foreach(basename IN LISTS tenes_unit_tests)
-  set(testname "test_${basename}")
-  add_executable(${testname} "${basename}.cpp")
-
-  target_link_libraries(${testname} PUBLIC tenes_static)
-  target_compile_definitions(
-    ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
-
-  if(ENABLE_MPI)
-    add_test(NAME ${testname}
-             COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
-                     ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:${testname}>)
-  else()
-    add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
-  endif()
-endforeach()
-
 # The fermion tests were one 18,000-line translation unit in one executable:
 # test_fermion_layer.cpp ended with an #include of every file below.  That
 # cost twice.  Compiling it took about 100 s on one core while the other cores
@@ -51,6 +29,29 @@ add_executable(
   fermion/saveload_dexpand_unit.cpp)
 
 add_executable(test_fermion_fold_full_update fermion/fold_full_update_unit.cpp)
+
+
+set(tenes_unit_tests input simple_update full_update tensor_util util
+    correlation_length saveload arnoldi timer_registry onesite_rdm)
+if(TENES_ARPACK_FOUND)
+  list(APPEND tenes_unit_tests arpack)
+endif()
+foreach(basename IN LISTS tenes_unit_tests)
+  set(testname "test_${basename}")
+  add_executable(${testname} "${basename}.cpp")
+
+  target_link_libraries(${testname} PUBLIC tenes_static)
+  target_compile_definitions(
+    ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+
+  if(ENABLE_MPI)
+    add_test(NAME ${testname}
+             COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                     ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:${testname}>)
+  else()
+    add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
+  endif()
+endforeach()
 
 foreach(testname test_fermion_layer test_fermion_fold_full_update)
   target_link_libraries(${testname} PUBLIC tenes_static)
