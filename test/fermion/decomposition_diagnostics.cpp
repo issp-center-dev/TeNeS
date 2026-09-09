@@ -528,6 +528,11 @@ TEST_CASE(
   CHECK(fdd_contains(msg, "process grid"));
   // The one thing that is known to work, because it was measured.
   CHECK(fdd_contains(msg, "fewer MPI processes"));
+  // Blocks within the budget never reach pdgesvd at all, so a reader who
+  // got here needs to know the budget exists and that this block was over
+  // it - otherwise the only offered escape is spending fewer processes on
+  // the whole run.
+  CHECK(fdd_contains(msg, "TENES_FERMION_LOCAL_DECOMP_MAX"));
   CHECK(fdd_contains(msg, "unlikely to help"));
   // Not the state, and not the library.
   CHECK_FALSE(fdd_contains(msg, "CTM did not converge"));

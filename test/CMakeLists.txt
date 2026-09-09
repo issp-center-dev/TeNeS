@@ -23,6 +23,7 @@ add_executable(
   test_fermion_layer
   test_fermion_layer.cpp
   fermion/bond_orientation.cpp
+  fermion/local_decomposition.cpp
   fermion/sign_sweep.cpp
   fermion/guards_fast_full_update_unit.cpp
   fermion/r2_mf_unit.cpp

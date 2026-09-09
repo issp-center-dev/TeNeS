@@ -871,7 +871,14 @@ ftensor<tensor> tensordot(const ftensor<tensor>& a, const ftensor<tensor>& b,
 }
 
 // verbatim: the singular-value half of tenes::fermion::svd (fops.hpp), with
-// the reference transpose substituted for the production one.
+// the reference transpose substituted for the production one. The block
+// factorization is called through fdetail::block_svd for the same reason it
+// is not rewritten here: the only difference this oracle is allowed to have
+// from the production routine is the transpose. block_svd decides whether a
+// small block goes to LAPACK on one rank or to ScaLAPACK over the grid, and
+// the two do not agree in the last bits, so calling mptensor::svd directly
+// here would make the exact comparison below fail for a reason that has
+// nothing to do with signs.
 template <class tensor>
 int svd_values(const ftensor<tensor>& a, const mptensor::Axes& rows,
                const mptensor::Axes& cols, std::vector<double>& s) {
@@ -911,16 +918,14 @@ int svd_values(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
                                         mptensor::Index(row_even, col_even));
     tensor ue, vte;
-    info = mptensor::svd(even_block, mptensor::Axes(0), mptensor::Axes(1), ue,
-                         s_even, vte);
+    info = fdetail::block_svd(even_block, ue, s_even, vte);
   }
   if (size_odd > 0) {
     tensor odd_block =
         mptensor::slice(sorted, mptensor::Index(row_even, col_even),
                         mptensor::Index(drow, dcol));
     tensor uo, vto;
-    int info_odd = mptensor::svd(odd_block, mptensor::Axes(0),
-                                 mptensor::Axes(1), uo, s_odd, vto);
+    int info_odd = fdetail::block_svd(odd_block, uo, s_odd, vto);
     if (info == 0) {
       info = info_odd;
     }

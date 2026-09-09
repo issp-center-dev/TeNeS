@@ -555,6 +555,133 @@ tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
 
 namespace detail {
 
+/*! @brief Element budget below which a block is factorized on every rank.
+ *
+ * The graded decomposition splits every matrix by parity, so where the
+ * bosonic path factorizes one D x D matrix this one factorizes two of
+ * about half that side: a fermionic full update at D = 3, d = 4 hands
+ * LAPACK a 2x2 and a 1x1. Spreading a matrix that small over a process
+ * grid buys nothing - mptensor's block-cyclic block is 16x16, so it lives
+ * on one process either way - and it costs pdgesvd's cross-rank singular
+ * value check, which is what info_is_grid_heterogeneity() reports.
+ *
+ * So blocks up to this many elements are gathered onto every rank and
+ * factorized there instead. The default, 4096, is where the largest blocks
+ * a D = 8, d = 4 full update produces land: the QR of a site tensor is
+ * D^3 x D*d, giving blocks of about 256 x 16, and the truncated SVD of
+ * Theta is D*d^2 square, giving blocks of about 64 x 64. The replicated
+ * copy is then at most 32 KB real, 64 KB complex.
+ *
+ * TENES_FERMION_LOCAL_DECOMP_MAX overrides it; 0 disables the local path
+ * and sends every block to the grid, which is the way to tell whether this
+ * routing is responsible for something without rebuilding.
+ */
+inline std::size_t local_decomposition_max_elements() {
+  const char* raw = std::getenv("TENES_FERMION_LOCAL_DECOMP_MAX");
+  if (raw == nullptr) {
+    return 4096;
+  }
+  const long value = std::atol(raw);
+  return value > 0 ? static_cast<std::size_t>(value) : 0;
+}
+
+//! True when a rows x cols block is within local_decomposition_max_elements().
+//! Written as a division so a product cannot overflow on the way to the
+//! comparison.
+inline bool fits_local_decomposition(std::size_t rows, std::size_t cols) {
+  const std::size_t budget = local_decomposition_max_elements();
+  if (budget == 0) {
+    return false;
+  }
+  if (rows == 0 || cols == 0) {
+    return true;
+  }
+  return rows <= budget / cols;
+}
+
+//! The non-distributed tensor type over the same scalars as @p tensor.
+template <class tensor>
+using local_tensor_type =
+    mptensor::Tensor<mptensor::lapack::Matrix<typename tensor::value_type>>;
+
+/*!
+ * @brief Copy of a rank-2 tensor held whole by every rank.
+ *
+ * mptensor::Tensor::gather() is meant for this and is what its own eig()
+ * uses, but it hands the distributed communicator to the non-distributed
+ * tensor's constructor, whose comm_type is int - so it does not compile
+ * for a scalapack tensor. This does the same two steps (flatten, which is
+ * an MPI_Allreduce and therefore gives every rank the same vector, then
+ * reshape) without that conversion.
+ *
+ * @param[in,out] a The tensor; flatten() reorders its storage.
+ */
+template <class tensor>
+local_tensor_type<tensor> gather_matrix(tensor& a) {
+  const mptensor::Shape shape = a.shape();
+  const std::vector<typename tensor::value_type> flat = a.flatten();
+  local_tensor_type<tensor> local(shape);
+  mptensor::Index idx;
+  idx.resize(2);
+  for (std::size_t n = 0; n < local.local_size(); ++n) {
+    local.global_index_fast(n, idx);
+    // The layout flatten() promises: row index fastest.
+    local[n] = flat[idx[0] + idx[1] * shape[0]];
+  }
+  return local;
+}
+
+/*!
+ * @brief SVD of one parity block, on one rank when it is small enough.
+ *
+ * gather_matrix() reduces over the ranks, so every rank starts the local
+ * branch from the same matrix, and one routine given one matrix cannot
+ * return different answers on different ranks - which is the failure this
+ * branch exists to remove. The way back is mptensor's "all processes have
+ * the same data" constructor, the one its own eig() uses.
+ *
+ * The local branch hands LAPACK a copy of @p block holding the same values,
+ * so a diagnostic taken from @p block still describes what LAPACK saw.
+ *
+ * In a serial build the two branches call the same LAPACK routine on the
+ * same values, so which one runs is not observable in the result.
+ *
+ * @param[in,out] block The block; gather_matrix() reorders its storage.
+ * @param[out] u,s,vt The factors, in @p block's own tensor type.
+ * @return The info of whichever routine ran.
+ */
+template <class tensor>
+int block_svd(tensor& block, tensor& u, std::vector<double>& s, tensor& vt) {
+  const mptensor::Shape shape = block.shape();
+  if (!fits_local_decomposition(shape[0], shape[1])) {
+    return mptensor::svd(block, mptensor::Axes(0), mptensor::Axes(1), u, s, vt);
+  }
+  local_tensor_type<tensor> local = gather_matrix(block);
+  local_tensor_type<tensor> local_u, local_vt;
+  const int info = mptensor::svd(local, mptensor::Axes(0), mptensor::Axes(1),
+                                 local_u, s, local_vt);
+  u = tensor(block.get_comm(), local_u);
+  vt = tensor(block.get_comm(), local_vt);
+  return info;
+}
+
+//! QR of one parity block, on one rank when it is small enough. See
+//! block_svd() for why.
+template <class tensor>
+int block_qr(tensor& block, tensor& q, tensor& r) {
+  const mptensor::Shape shape = block.shape();
+  if (!fits_local_decomposition(shape[0], shape[1])) {
+    return mptensor::qr(block, mptensor::Axes(0), mptensor::Axes(1), q, r);
+  }
+  local_tensor_type<tensor> local = gather_matrix(block);
+  local_tensor_type<tensor> local_q, local_r;
+  const int info = mptensor::qr(local, mptensor::Axes(0), mptensor::Axes(1),
+                                local_q, local_r);
+  q = tensor(block.get_comm(), local_q);
+  r = tensor(block.get_comm(), local_r);
+  return info;
+}
+
 /*! @brief True for ScaLAPACK's "the ranks disagreed" code.
  *
  * An MPI build decomposes through pdgesvd, not dgesvd, and pdgesvd.f
@@ -840,8 +967,7 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
                                         mptensor::Index(row_even, col_even));
     tensor qe, re;
-    info_even_block =
-        mptensor::qr(even_block, mptensor::Axes(0), mptensor::Axes(1), qe, re);
+    info_even_block = detail::block_qr(even_block, qe, re);
     // Recorded here, where the block LAPACK actually saw is still in scope.
     if (diag != nullptr) {
       diag->info_even = info_even_block;
@@ -859,8 +985,7 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
         mptensor::slice(sorted, mptensor::Index(row_even, col_even),
                         mptensor::Index(drow, dcol));
     tensor qo, ro;
-    info_odd_block =
-        mptensor::qr(odd_block, mptensor::Axes(0), mptensor::Axes(1), qo, ro);
+    info_odd_block = detail::block_qr(odd_block, qo, ro);
     if (diag != nullptr) {
       diag->info_odd = info_odd_block;
       if (info_odd_block != 0) {
@@ -977,8 +1102,7 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
     tensor even_block = mptensor::slice(sorted, mptensor::Index(0, 0),
                                         mptensor::Index(row_even, col_even));
     tensor ue, vte;
-    info_even_block = mptensor::svd(even_block, mptensor::Axes(0),
-                                    mptensor::Axes(1), ue, s_even, vte);
+    info_even_block = detail::block_svd(even_block, ue, s_even, vte);
     // Recorded here, where the block LAPACK actually saw is still in scope.
     if (diag != nullptr) {
       diag->info_even = info_even_block;
@@ -996,8 +1120,7 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
         mptensor::slice(sorted, mptensor::Index(row_even, col_even),
                         mptensor::Index(drow, dcol));
     tensor uo, vto;
-    info_odd_block = mptensor::svd(odd_block, mptensor::Axes(0),
-                                   mptensor::Axes(1), uo, s_odd, vto);
+    info_odd_block = detail::block_svd(odd_block, uo, s_odd, vto);
     if (diag != nullptr) {
       diag->info_odd = info_odd_block;
       if (info_odd_block != 0) {
