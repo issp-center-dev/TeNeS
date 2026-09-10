@@ -24,6 +24,7 @@ add_executable(
   test_fermion_layer.cpp
   fermion/bond_orientation.cpp
   fermion/local_decomposition.cpp
+  fermion/mpi_reduction.cpp
   fermion/sign_sweep.cpp
   fermion/guards_fast_full_update_unit.cpp
   fermion/r2_mf_unit.cpp
@@ -66,6 +67,19 @@ foreach(testname test_fermion_layer test_fermion_fold_full_update)
     add_test(NAME ${testname} COMMAND $<TARGET_FILE:${testname}>)
   endif()
 endforeach()
+
+# One rank is where a per-rank partial sum equals the global sum, so the
+# registration above cannot see a missing reduction. The cases in
+# fermion/mpi_reduction.cpp are written to bite only with more ranks; they
+# get a second registration at two. Only that file: the shared fixtures
+# (make_random_ft fills by local index from one RNG stream) are not yet
+# rank-consistent, so the rest of the suite means nothing at n > 1.
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_layer_mpi2
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_layer>
+                   --source-file=*mpi_reduction.cpp)
+endif()
 
 # The finiteness predicate of the fermion diagnostics, compiled with
 # -ffast-math on purpose. Under finite-math-only the compiler may assume no

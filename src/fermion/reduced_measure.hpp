@@ -196,9 +196,16 @@ typename tensor::value_type contract_pair_MF(const ftensor<tensor>& pair,
 
 namespace detail {
 
-//! Close the four remaining boundary legs pairwise: the sum over locally
-//! stored elements with idx[0] == idx[1] and idx[2] == idx[3] (a double
-//! delta trace).
+//! Close the four remaining boundary legs pairwise: the sum over elements
+//! with idx[0] == idx[1] and idx[2] == idx[3] (a double delta trace).
+//!
+//! Each rank sums the elements it holds and the partial sums are reduced
+//! over the communicator, so every rank returns the global trace. Without
+//! the reduction this returned rank 0's share: correct on one rank, and on
+//! more ranks a two-site energy off by 0.02 while the one-site observables,
+//! which take a different kernel, stayed exact - the signature that found
+//! it. A tensor that fits in one block-cyclic block (D = 2 at chi = 4) lives
+//! on rank 0 whole, which is why the smallest runs never showed it.
 template <class tensor>
 typename tensor::value_type trace_boundary_pairs(const tensor& a) {
   if (a.rank() != 4) {
@@ -213,7 +220,7 @@ typename tensor::value_type trace_boundary_pairs(const tensor& a) {
       value += a[n];
     }
   }
-  return value;
+  return a.get_matrix().allreduce_sum(value);
 }
 
 }  // namespace detail
