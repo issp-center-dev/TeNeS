@@ -230,7 +230,9 @@ The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bo
    ``v``, "Offsite repulsion of a nearest-neighbor bond", Real, 0.0
 
 One-site operators :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S^z`, doublon, and holon are automatically defined.
-In addition, ``hopping``, ``nn``, and ``SzSz`` on nearest-neighbor bonds are automatically defined as two-site operators.
+In addition, ``hopping``, ``nn``, ``SzSz``, ``SxSx``, and ``SySy`` on nearest-neighbor bonds are automatically defined as two-site operators.
+The spin operators are :math:`S^\alpha = \frac{1}{2}\sum_{ss'} c^\dagger_s \sigma^\alpha_{ss'} c_{s'}`.
+Two-site values in ``density.dat`` are per site (the sum over bonds divided by the number of sites), so on the square lattice they are twice the correlation per nearest-neighbor bond.
 
 In the current version, fermionic models support only nearest-neighbor bonds on the square lattice.
 

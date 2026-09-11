@@ -1491,7 +1491,29 @@ class HubbardModel(Model):
             site2 = self.nspin + spin
             hop = hop + fock_cop(True, site1, M) @ fock_cop(False, site2, M)
             hop = hop + fock_cop(True, site2, M) @ fock_cop(False, site1, M)
-        self.twosite_ops_explicit = [("hopping", bond_matrix(hop, self.nspin))]
+
+        # Transverse spin correlations S^x_1 S^x_2 and S^y_1 S^y_2 with
+        # S^+_j = c^dag_{j,up} c_{j,dn}.  S^+ is parity even, so no string
+        # runs across the bond; the operators are still built in the
+        # two-site Fock space like "hopping", so that the local basis
+        # convention stays in bond_matrix.  S^y S^y is real:
+        # (S^+ - S^-)/(2i) twice gives -(S^+ - S^-)(S^+ - S^-)/4.
+        def spin_raise(site: int) -> np.ndarray:
+            up = self.nspin * site
+            return fock_cop(True, up, M) @ fock_cop(False, up + 1, M)
+
+        sp1, sp2 = spin_raise(0), spin_raise(1)
+        sm1, sm2 = sp1.T, sp2.T
+        sxsx = 0.25 * (sp1 + sm1) @ (sp2 + sm2)
+        sysy = -0.25 * (sp1 - sm1) @ (sp2 - sm2)
+
+        # Appended after "hopping" so that the group numbers of the existing
+        # observables do not move.
+        self.twosite_ops_explicit = [
+            ("hopping", bond_matrix(hop, self.nspin)),
+            ("SxSx", bond_matrix(sxsx, self.nspin)),
+            ("SySy", bond_matrix(sysy, self.nspin)),
+        ]
 
         self.read_params(param)
 

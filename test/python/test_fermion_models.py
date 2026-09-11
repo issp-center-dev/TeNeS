@@ -957,3 +957,382 @@ class TestHubbardGateIsExactlyParityEven:
                     if gate[i1, i2, o1, o2] != 0.0:
                         odd.append(((i1, i2, o1, o2), gate[i1, i2, o1, o2]))
             assert odd == [], "parity-odd gate elements survive: %s" % odd[:4]
+
+
+# ---------------------------------------------------------------------------
+# The transverse spin correlations SxSx and SySy of the Hubbard model.
+#
+# An iPEPS breaks SU(2), so SzSz alone is not a third of <S_i . S_j>; to
+# compare the nearest-neighbour spin correlation with the literature
+# (Qin, Shi, Zhang, PRB 96, 075156 (2017)) the Hubbard model also offers
+#
+#     SxSx = S^x_1 S^x_2,   SySy = S^y_1 S^y_2,
+#     S^a_j = (1/2) sum_{s,s'} c^dag_{j s} sigma^a_{s s'} c_{j s'},
+#
+# as explicit rank-4 observables appended AFTER "hopping" (so the group
+# numbers of the existing observables do not move), in the layout of
+# "hopping": op[in1, in2, out1, out2] = <out1 out2| O |in1 in2>.
+#
+# The expected operators are built here from the Pauli matrices alone, not
+# from tenes_simple's Fock helpers. S^a_j is a fermion bilinear of site j,
+# hence parity even, and its Jordan-Wigner strings cancel: in the ordered
+# two-site basis |i1 i2> = (site-1 creators)(site-2 creators)|0> the product
+# S^a_1 S^b_2 is the Kronecker product of the one-site matrices,
+#
+#     <o1 o2| S^a_1 S^b_2 |i1 i2> = S^a[o1, i1] S^b[o2, i2].
+#
+# On one site S^a annihilates |0> and |up dn> and acts on the doublet
+# |up>, |dn> (local indices 1, 2) as sigma^a / 2.
+# TestHubbardSpinReference checks this construction against an explicit
+# Jordan-Wigner one, written in this file as well.
+# ---------------------------------------------------------------------------
+
+HUBBARD_UP = 1
+HUBBARD_DN = 2
+HUBBARD_DOUBLET = (HUBBARD_UP, HUBBARD_DN)
+
+# mat[out, in], both indices in the order (up, dn)
+PAULI = {
+    "x": np.array([[0.0, 1.0], [1.0, 0.0]], dtype=complex),
+    "y": np.array([[0.0, -1.0j], [1.0j, 0.0]]),
+    "z": np.array([[1.0, 0.0], [0.0, -1.0]], dtype=complex),
+}
+
+TRANSVERSE = [("SxSx", "x"), ("SySy", "y")]
+
+
+def hubbard_spin(axis):
+    """S^axis on one Hubbard site as a 4x4 matrix mat[out, in]."""
+    s = np.zeros((4, 4), dtype=complex)
+    for a, out in enumerate(HUBBARD_DOUBLET):
+        for b, inn in enumerate(HUBBARD_DOUBLET):
+            s[out, inn] = 0.5 * PAULI[axis][a, b]
+    return s
+
+
+def product_bond_op(left, right):
+    """op[in1, in2, out1, out2] = left[out1, in1] * right[out2, in2]."""
+    return np.einsum("ai,bj->ijab", left, right)
+
+
+def expected_spin_correlation(axis):
+    """S^axis_1 S^axis_2 in the layout of the "hopping" observable."""
+    op = product_bond_op(hubbard_spin(axis), hubbard_spin(axis))
+    assert np.all(op.imag == 0.0)
+    return op.real
+
+
+def bond_op_as_matrix(op):
+    """op[in1, in2, out1, out2] -> mat[out, in] on the 16-dimensional pair
+    space, pair index 4 * i1 + i2 (the index of np.kron(site1, site2))."""
+    d = op.shape[0]
+    return op.reshape(d * d, d * d).T
+
+
+def parse_elements(elements, shape):
+    """An "indices... re im" elements block -> dense complex array."""
+    op = np.zeros(shape, dtype=complex)
+    n = len(shape)
+    for line in elements.strip().splitlines():
+        words = line.split()
+        assert len(words) == n + 2, line
+        index = tuple(int(w) for w in words[:n])
+        op[index] = float(words[n]) + 1j * float(words[n + 1])
+    return op
+
+
+def bond_lines(bonds):
+    return [line.split() for line in bonds.strip().splitlines()]
+
+
+def twosite_entries(parsed):
+    """observable.twosite entries of a parsed std.toml/input.toml, by name."""
+    entries = {}
+    for entry in parsed["observable"]["twosite"]:
+        assert entry["name"] not in entries, entry["name"]
+        entries[entry["name"]] = entry
+    return entries
+
+
+def hubbard_explicit_twosite(name):
+    model = tenes_simple.make_model(hubbard_param())
+    names = [n for n, _ in model.twosite_ops_explicit]
+    assert name in names, "{} is not an explicit two-site observable: {}".format(
+        name, names
+    )
+    return dict(model.twosite_ops_explicit)[name]
+
+
+def emitted_hubbard_twosite(name, param=None):
+    entries = twosite_entries(std_toml(param or hubbard_param()))
+    assert name in entries, "{} is not emitted; observable.twosite has {}".format(
+        name, sorted(entries)
+    )
+    return entries[name]
+
+
+class TestHubbardSpinReference:
+    """Checks the reference of this section, not tenes_simple."""
+
+    def test_reference_is_the_second_quantized_definition(self):
+        # Modes (site 1 up, site 1 dn, site 2 up, site 2 dn) = bits 0..3 of
+        # the global occupation index g, so g = i1 + 4 * i2 with the local
+        # index i = n_up + 2 n_dn, and
+        #   |n_0 n_1 n_2 n_3> = (c^dag_0)^n_0 ... (c^dag_3)^n_3 |0>,
+        # so c_m carries (-1)^(number of occupied modes below m).
+        nmodes = 4
+        dim = 1 << nmodes
+        c = []
+        for m in range(nmodes):
+            cm = np.zeros((dim, dim))
+            for g in range(dim):
+                if (g >> m) & 1:
+                    below = bin(g & ((1 << m) - 1)).count("1")
+                    cm[g ^ (1 << m), g] = (-1.0) ** below
+            c.append(cm)
+
+        def spin(site, axis):
+            s = np.zeros((dim, dim), dtype=complex)
+            for a in range(2):
+                for b in range(2):
+                    cd = c[2 * site + a].T
+                    s = s + 0.5 * PAULI[axis][a, b] * (cd @ c[2 * site + b])
+            return s
+
+        for axis in ("x", "y", "z"):
+            fock = spin(0, axis) @ spin(1, axis)
+            op = np.zeros((4, 4, 4, 4), dtype=complex)
+            for i1, i2, o1, o2 in np.ndindex(op.shape):
+                op[i1, i2, o1, o2] = fock[o1 + 4 * o2, i1 + 4 * i2]
+            assert np.allclose(op, expected_spin_correlation(axis)), axis
+
+    def test_reference_sz_is_the_model_sz(self):
+        # ties HUBBARD_UP / HUBBARD_DN to the model's local basis
+        model = tenes_simple.make_model(hubbard_param())
+        sz = model.onesite_ops[model.onesite_ops_name.index("Sz")]
+        assert np.allclose(hubbard_spin("z"), sz)
+
+
+class TestHubbardTransverseSpinObservables:
+    def test_hopping_stays_the_first_explicit_observable(self):
+        # The emitted group numbers follow this order, so anything inserted
+        # before "hopping" renumbers it.
+        model = tenes_simple.make_model(hubbard_param())
+        assert model.twosite_ops_explicit[0][0] == "hopping"
+
+    def test_sxsx_and_sysy_follow_hopping(self):
+        model = tenes_simple.make_model(hubbard_param())
+        names = [name for name, _ in model.twosite_ops_explicit]
+        assert names[0] == "hopping"
+        assert sorted(names[1:]) == ["SxSx", "SySy"], names
+
+    @pytest.mark.parametrize("name", ["SxSx", "SySy"])
+    def test_is_a_real_hermitian_parity_even_rank4_operator(self, name):
+        op = hubbard_explicit_twosite(name)
+        assert op.shape == (4, 4, 4, 4)
+        # exactly real: with is_real = true tenes_simple drops an explicit
+        # observable that has any nonzero imaginary part
+        assert np.all(np.isreal(op))
+        m = op.reshape(16, 16)
+        assert np.allclose(m, m.conj().T)
+        parity = [0, 1, 1, 0]
+        for i1, i2, o1, o2 in np.ndindex(op.shape):
+            if (parity[i1] ^ parity[i2]) != (parity[o1] ^ parity[o2]):
+                assert op[i1, i2, o1, o2] == 0.0, (i1, i2, o1, o2)
+
+    def test_sxsx_named_elements(self):
+        up, dn = HUBBARD_UP, HUBBARD_DN
+        op = hubbard_explicit_twosite("SxSx")
+        # op[in1, in2, out1, out2] = <out1 out2| SxSx |in1 in2>
+        assert op[up, dn, dn, up] == pytest.approx(0.25)  # <dn,up|SxSx|up,dn>
+        assert op[up, up, dn, dn] == pytest.approx(0.25)  # <dn,dn|SxSx|up,up>
+        assert op[dn, up, up, dn] == pytest.approx(0.25)  # <up,dn|SxSx|dn,up>
+        # S^x flips the spin on both sites, so nothing is diagonal; with the
+        # two input legs swapped the 1/4 of <up,dn|SxSx|dn,up> lands here.
+        assert op[up, dn, up, dn] == pytest.approx(0.0)  # <up,dn|SxSx|up,dn>
+
+    def test_sysy_named_elements(self):
+        # <dn|S^y|up> = i/2 and <up|S^y|dn> = -i/2, so a double flip of equal
+        # spins gets (+-i/2)^2 = -1/4 and one of opposite spins +1/4.
+        up, dn = HUBBARD_UP, HUBBARD_DN
+        op = hubbard_explicit_twosite("SySy")
+        assert op[up, up, dn, dn] == pytest.approx(-0.25)  # <dn,dn|SySy|up,up>
+        assert op[dn, dn, up, up] == pytest.approx(-0.25)  # <up,up|SySy|dn,dn>
+        assert op[up, dn, dn, up] == pytest.approx(0.25)  # <dn,up|SySy|up,dn>
+        assert op[up, dn, up, dn] == pytest.approx(0.0)  # <up,dn|SySy|up,dn>
+
+    @pytest.mark.parametrize("name", ["SxSx", "SySy"])
+    def test_nothing_acts_on_an_empty_or_doubly_occupied_site(self, name):
+        op = hubbard_explicit_twosite(name)
+        for index in np.ndindex(op.shape):
+            if any(i not in HUBBARD_DOUBLET for i in index):
+                assert op[index] == 0.0, index
+
+    @pytest.mark.parametrize("name, axis", TRANSVERSE)
+    def test_is_the_reference_operator(self, name, axis):
+        op = hubbard_explicit_twosite(name)
+        assert np.allclose(op, expected_spin_correlation(axis), rtol=0.0, atol=1e-14)
+
+
+class TestHubbardHeisenbergBond:
+    """SxSx + SySy + SzSz as emitted (the existing SzSz included) is the
+    spin-1/2 Heisenberg coupling S_1 . S_2 of the two singly occupied sites.
+    The spectrum and the zero pattern do not use the reference above, and the
+    commutator uses only its one-site spin matrices, so these also catch a
+    slip that the reference and the implementation share."""
+
+    SINGLY = [4 * i1 + i2 for i1 in HUBBARD_DOUBLET for i2 in HUBBARD_DOUBLET]
+
+    def heisenberg(self):
+        total = np.zeros((16, 16), dtype=complex)
+        for name in ("SxSx", "SySy", "SzSz"):
+            entry = emitted_hubbard_twosite(name)
+            total += bond_op_as_matrix(parse_elements(entry["elements"], (4,) * 4))
+        return total
+
+    def test_spectrum_on_the_singly_occupied_states(self):
+        h = self.heisenberg()
+        block = h[np.ix_(self.SINGLY, self.SINGLY)]
+        assert np.allclose(block, block.conj().T)
+        assert np.allclose(np.linalg.eigvalsh(block), [-0.75, 0.25, 0.25, 0.25])
+        # the -3/4 state is the singlet (|up,dn> - |dn,up>) / sqrt(2)
+        singlet = np.zeros(16)
+        singlet[4 * HUBBARD_UP + HUBBARD_DN] = 1.0 / np.sqrt(2.0)
+        singlet[4 * HUBBARD_DN + HUBBARD_UP] = -1.0 / np.sqrt(2.0)
+        assert np.allclose(h @ singlet, -0.75 * singlet)
+
+    def test_zero_outside_the_singly_occupied_states(self):
+        h = self.heisenberg()
+        others = [g for g in range(16) if g not in self.SINGLY]
+        assert np.allclose(h[others, :], 0.0)
+        assert np.allclose(h[:, others], 0.0)
+
+    @pytest.mark.parametrize("axis", ["x", "y", "z"])
+    def test_commutes_with_the_total_spin(self, axis):
+        h = self.heisenberg()
+        s = hubbard_spin(axis)
+        total = np.kron(s, np.eye(4)) + np.kron(np.eye(4), s)
+        assert np.allclose(h @ total - total @ h, 0.0)
+
+
+class TestHubbardTransverseSpinEmission:
+    @pytest.mark.parametrize("name, axis", TRANSVERSE)
+    def test_is_emitted_with_explicit_elements(self, name, axis):
+        entry = emitted_hubbard_twosite(name)
+        assert "ops" not in entry
+        assert entry["dim"] == [4, 4]
+        op = parse_elements(entry["elements"], (4,) * 4)
+        assert np.allclose(op, expected_spin_correlation(axis), rtol=0.0, atol=1e-14)
+
+    @pytest.mark.parametrize("name", ["SxSx", "SySy"])
+    def test_is_emitted_on_the_bonds_of_the_other_twosite_observables(self, name):
+        bonds = bond_lines(emitted_hubbard_twosite(name)["bonds"])
+        for other in ("nn", "SzSz", "hopping"):
+            assert bonds == bond_lines(emitted_hubbard_twosite(other)["bonds"])
+
+    def test_existing_twosite_group_numbers_are_unchanged(self):
+        entries = twosite_entries(std_toml(hubbard_param()))
+        groups = {
+            name: entry["group"]
+            for name, entry in entries.items()
+            if name not in ("SxSx", "SySy")
+        }
+        assert groups == {"bond_hamiltonian": 0, "nn": 1, "SzSz": 2, "hopping": 3}
+
+    def test_new_observables_take_the_groups_after_hopping(self):
+        groups = {emitted_hubbard_twosite(n)["group"] for n in ("SxSx", "SySy")}
+        assert groups == {4, 5}
+
+    def test_onesite_observables_and_groups_are_unchanged(self):
+        onesite = std_toml(hubbard_param())["observable"]["onesite"]
+        assert [(o["name"], o["group"]) for o in onesite] == [
+            ("n", 0),
+            ("n_up", 1),
+            ("n_dn", 2),
+            ("Sz", 3),
+            ("doublon", 4),
+            ("holon", 5),
+        ]
+
+    @pytest.mark.parametrize("name, axis", TRANSVERSE)
+    def test_is_emitted_when_is_real_is_set(self, name, axis):
+        # is_real = true drops every observable that is not exactly real
+        param = hubbard_param()
+        param["parameter"]["general"]["is_real"] = True
+        entry = emitted_hubbard_twosite(name, param)
+        op = parse_elements(entry["elements"], (4,) * 4)
+        assert np.allclose(op, expected_spin_correlation(axis), rtol=0.0, atol=1e-14)
+
+    def test_tenes_std_writes_both_into_the_input_toml(self):
+        text, _ = tenes_simple.tenes_simple(hubbard_param())
+        model = tenes_std.Model(toml.loads(text))
+        buf = io.StringIO()
+        model.to_toml(buf)
+        entries = twosite_entries(toml.loads(buf.getvalue()))
+        std_entries = twosite_entries(toml.loads(text))
+        for name, axis in TRANSVERSE:
+            assert name in entries, sorted(entries)
+            entry = entries[name]
+            assert "ops" not in entry
+            assert entry["group"] == std_entries[name]["group"]
+            assert bond_lines(entry["bonds"]) == bond_lines(entries["nn"]["bonds"])
+            op = parse_elements(entry["elements"], (4,) * 4)
+            assert np.allclose(op, expected_spin_correlation(axis), atol=1e-14)
+
+
+class TestOtherModelsKeepTheirObservables:
+    # The SxSx / SySy of the Hubbard model must not leak into the other
+    # models: their observable lists, group numbers and forms are pinned.
+
+    def test_spinless_fermion(self):
+        model = tenes_simple.make_model(spinless_param())
+        assert [name for name, _ in model.twosite_ops_explicit] == ["hopping"]
+        parsed = std_toml(spinless_param())
+        assert [(o["name"], o["group"]) for o in parsed["observable"]["onesite"]] == [
+            ("n", 0)
+        ]
+        assert [
+            (o["name"], o["group"], "ops" in o) for o in parsed["observable"]["twosite"]
+        ] == [("bond_hamiltonian", 0, False), ("nn", 1, False), ("hopping", 2, False)]
+
+    @pytest.mark.parametrize(
+        "model_param, onesite, twosite",
+        [
+            (
+                {"type": "spin", "j": 1.0},
+                ["Sz", "Sx", "Sy"],
+                [
+                    ("bond_hamiltonian", 0, False),
+                    ("SzSz", 1, True),
+                    ("SxSx", 2, True),
+                    ("SySy", 3, True),
+                ],
+            ),
+            (
+                {"type": "boson", "t": 1.0},
+                ["N", "Bdagger", "B"],
+                [
+                    ("bond_hamiltonian", 0, False),
+                    ("NN", 1, True),
+                    ("BdaggerB", 2, True),
+                    ("BBdagger", 3, True),
+                ],
+            ),
+        ],
+        ids=["spin", "boson"],
+    )
+    def test_bosonic_models(self, model_param, onesite, twosite):
+        def param():
+            return {
+                "parameter": {"general": {}},
+                "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+                "model": dict(model_param),
+            }
+
+        model = tenes_simple.make_model(param())
+        assert model.twosite_ops_explicit == []
+        parsed = std_toml(param())
+        assert [o["name"] for o in parsed["observable"]["onesite"]] == onesite
+        assert [
+            (o["name"], o["group"], "ops" in o) for o in parsed["observable"]["twosite"]
+        ] == twosite

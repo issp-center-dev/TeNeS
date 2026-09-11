@@ -237,7 +237,9 @@ Hubbard 模型 hubbard
 
 
 物理量測定に使われる1サイト物理量として、 :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S^z`, doublon, holon が自動的に定義されます。
-また、2サイト物理量として、最近接ボンド上の ``hopping``、 ``nn``、 ``SzSz`` が自動的に定義されます。
+また、2サイト物理量として、最近接ボンド上の ``hopping``、 ``nn``、 ``SzSz``、 ``SxSx``、 ``SySy`` が自動的に定義されます。
+スピン演算子は :math:`S^\alpha = \frac{1}{2}\sum_{ss'} c^\dagger_s \sigma^\alpha_{ss'} c_{s'}` です。
+``density.dat`` の2サイト物理量はサイトあたりの値(ボンドの和をサイト数で割ったもの)なので、正方格子では最近接ボンド1本あたりの相関の2倍になります。
 
 フェルミオン模型は現行版では正方格子の最近接ボンドのみをサポートします。
 
