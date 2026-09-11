@@ -24,6 +24,7 @@ These are arranged in order from the x direction.
    An example for ``L_sub = [2,3]``.
 
 ``skew`` is the shift value in the x direction when moving one unit cell in the y direction.
+It must satisfy ``-Lx < skew < Lx``: ``skew`` and ``skew`` ± ``Lx`` describe the same lattice, so a value outside the range is an input error.
 
 .. figure:: ../../img/tensor_sec_fig2.*
    :width: 400px

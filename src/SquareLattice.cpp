@@ -49,7 +49,7 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
     : LX(X),
       LY(Y),
       N_UNIT(LX * LY),
-      skew(skew % LX),
+      skew(0),
       physical_dims(N_UNIT, -1),
       virtual_dims(N_UNIT, std::array<int, 4>{-1, -1, -1, -1}),
       initial_dirs(N_UNIT, std::vector<double>(1)),
@@ -60,11 +60,21 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
   if (Y <= 0) {
     throw tenes::input_error("Lattice.Y should be positive");
   }
+  // `skew` here is the constructor parameter, which shadows the member.
+  // (skew, LY) and (skew +/- LX, LY) generate the same lattice, so a skew
+  // outside -LX < skew < LX says nothing new and is refused rather than
+  // reduced.
+  if (skew <= -LX || LX <= skew) {
+    throw tenes::input_error(
+        "skew = " + std::to_string(skew) +
+        " is out of range for L_sub[0] = " + std::to_string(LX) +
+        ": use -L_sub[0] < skew < L_sub[0] (skew and "
+        "skew +/- L_sub[0] describe the same lattice)");
+  }
+  this->skew = skew;
   LX_noskew = LX;
-  // `skew` here is the constructor parameter, which shadows the member. A
-  // skew that is a multiple of LX (zero included) leaves the lattice
-  // unskewed, and reducing it first keeps lcm(LX, 0) / 0 from being
-  // evaluated: that trapped on x86-64 and gave LY_noskew = 0 on arm64.
+  // Within the range, skew mod LX is zero only for skew = 0; testing the
+  // reduced value keeps lcm(LX, 0) / 0 from ever being evaluated.
   const int reduced_skew = mod(skew, LX);
   if (reduced_skew == 0) {
     LY_noskew = LY;

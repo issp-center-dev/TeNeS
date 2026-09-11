@@ -89,8 +89,8 @@ std::vector<std::vector<bool>> gen_phys_parity(
  *
  *   - missing or wrong-length tensor.unitcell.parity metadata,
  *   - unit cells in which a site is its own nearest neighbor (LX = 1, or
- *     LY = 1 with a skew that is a multiple of LX); skewed and one-row
- *     cells are otherwise accepted,
+ *     LY = 1 with skew = 0); skewed and one-row cells are otherwise
+ *     accepted,
  *   - any calculation mode other than ground state,
  *     Simple_Gauge_Fix, Use_RSVD, and correlation.r_max > 0
  *     (long-range correlation functions),

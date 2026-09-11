@@ -297,3 +297,47 @@ the fix there is nothing to trap).
   skew 1 (see §1 as corrected).
 - **Stale guard names.** Comments in test/input.cpp that name the removed
   "tensor.L_sub-dimensions guard" should name the self-neighbour guard.
+
+## 9. Range guard: reject |skew| >= LX (2026-09-12)
+
+Decision (user, 2026-09-12): a skew outside `-LX < skew < LX` carries no
+information — `(skew, LY)` and `(skew ± LX, LY)` generate the same lattice — so
+it is rejected as an input error instead of being reduced. This supersedes the
+§8.1 behaviour for such skews (the reduction stays as a defence in depth but can
+no longer be reached from input). Behaviour after the change:
+
+- **Solver.** `SquareLattice(X, Y, skew)` throws `tenes::input_error` when
+  `|skew| >= X`, in every mode (bosonic and fermionic alike). Accepted:
+  `-X < skew < X`; for `X = 1` only `skew = 0`. The existing `X > 0` / `Y > 0`
+  checks come first and keep their messages; `X = 0` must give that error, not a
+  crash (today the member initializer computes `skew % X` before the check,
+  which divides by zero on x86-64). The range message names the skew value, the
+  cell width (`L_sub[0]` / LX) and the accepted range, and says that skew and
+  skew ± LX describe the same lattice. Match it flexibly.
+- **Accepted skews are unchanged:** the member keeps the input value (sign
+  kept), `LY_noskew = Y * lcm(X, r) / r` with `r = skew mod X` for skew != 0,
+  `LY_noskew = Y` for skew = 0, and all neighbour/index maps as before.
+- **tenes_std.** A `[tensor]` table with `|skew| >= L_sub[0]` raises
+  `RuntimeError` when the model is built, for every model (fermion or not).
+  An integer `l_sub = N` means `[N, N]`. The message names the skew value, the
+  width and the range; no "M1"/"M2".
+- **tenes_simple** is unchanged; it only emits skews inside the range (the
+  square lattice with `W = 1` gives skew 1 with `L >= 2`; the other lattices
+  use `W % L`). A net that every lattice type it supports emits an in-range
+  skew for small L and W is welcome.
+- **Fermion self-neighbour guard (§2.1/§2.2):** rule unchanged. With the range
+  guard, the only self-neighbour cells that reach it are `LX = 1` with skew 0
+  and `LY = 1` with skew 0; its message's remedy wording is being simplified
+  accordingly ("... or give a one-row cell a non-zero skew"), so tests must not
+  pin the remedy text.
+- **Tests from §2/§8 that feed out-of-range skews** (e.g. `[2,2]` 7, `[3,1]` 4,
+  `[4,1]` 8, `[2,1]` 2, `[2,1]` -2, `[3,1]` 3, `[3,2]` 6, `[1,1]` 1, `[1,2]` 5)
+  must be converted into range-rejection cases (solver: the throw comes from
+  `gen_lattice` / the `SquareLattice` constructor, before
+  `validate_fermion_constraints`; tenes_std: at model construction) or dropped
+  where redundant. Keep the in-range coverage, negative skews included
+  (e.g. `[3,1]` -1, `[3,2]` -2, `[2,1]` -1 accepted with the sign kept).
+- Mutations the orchestrator will run: `>` instead of `>=` (so skew = ±X is
+  accepted); a one-sided check `skew >= X` (so skew = -X is accepted); the
+  tenes_std check applied to fermion inputs only; the solver check moved into
+  the fermion guard only (bosonic out-of-range skews accepted again).

@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <iostream>
 #include <numeric>
+#include <optional>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -929,143 +930,15 @@ dimension = 4
 // test/fermion/skew_unfold.cpp now pins skewed cells to their unfolded
 // skew-0 equivalents.
 //
-// The lattice keeps the sign of the input skew (skew % LX in C++ semantics),
-// so [2,1] skew -1 holds skew = -1 and must be accepted like skew = 1.
-//
-// An input skew that is a non-zero multiple of LX (e.g. [2,1] skew 2) is the
-// skew-0 lattice (contract section 8.1), so such cells reach the guard like
-// any other and are among the cases below. Before that fix the SquareLattice
-// constructor divided by zero (lcm(LX, 0) / 0) while building them: a SIGFPE
-// on x86-64, a silent LY_noskew = 0 on arm64. The next two test cases pin
-// the constructor itself.
-
-namespace {
-
-//! LY_noskew of an [lx, ly] cell with the given skew, from arithmetic: a
-//! skew r = skew mod lx in [1, lx) repeats after lcm(lx, r) / r rows of
-//! cells, a multiple of lx is no skew at all.
-int expected_ly_noskew(int lx, int ly, int skew) {
-  const int r = ((skew % lx) + lx) % lx;
-  return r == 0 ? ly : ly * (std::lcm(lx, r) / r);
-}
-
-//! The site of an [lx, ly] cell with the given skew at global position
-//! (x, y), from T(x, y) = T(x + skew, y + ly): (x, y + k ly) holds the site
-//! at (x - k skew, y).
-int skew_site_at(int lx, int ly, int skew, int x, int y) {
-  const int k = (y >= 0 ? y : y - ly + 1) / ly;
-  const int xs = (((x - skew * k) % lx) + lx) % lx;
-  const int ys = ((y % ly) + ly) % ly;
-  return xs + lx * ys;
-}
-
-}  // namespace
-
-TEST_CASE("SquareLattice treats a skew that is a multiple of LX as no skew") {
-  using tenes::SquareLattice;
-  // Contract section 8.1. Every one of these used to divide by zero in the
-  // constructor; on arm64 that left LY_noskew = N_UNIT_noskew = 0, which is
-  // what the checks below see on the unfixed code there.
-  const int cells[][3] = {{2, 2, 2},  {2, 1, 2}, {2, 1, -2}, {3, 1, 3},
-                          {3, 2, 6},  {1, 2, 1}, {1, 1, 1},  {1, 2, 5},
-                          {2, 2, -4}, {4, 1, 8}, {3, 3, -3}};
-  for (const auto &c : cells) {
-    const int lx = c[0];
-    const int ly = c[1];
-    const int skew = c[2];
-    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
-    const SquareLattice lattice(lx, ly, skew);
-    const SquareLattice plain(lx, ly, 0);
-    CHECK(lattice.skew == 0);
-    CHECK(lattice.LX == lx);
-    CHECK(lattice.LY == ly);
-    CHECK(lattice.N_UNIT == lx * ly);
-    CHECK(lattice.LX_noskew == lx);
-    CHECK(lattice.LY_noskew == ly);
-    CHECK(lattice.N_UNIT_noskew == lx * ly);
-    int neighbor_mismatch = 0;
-    int other_mismatch = 0;
-    int parity_mismatch = 0;
-    for (int i = 0; i < lattice.N_UNIT; ++i) {
-      for (int leg = 0; leg < 4; ++leg) {
-        neighbor_mismatch += lattice.neighbor(i, leg) != plain.neighbor(i, leg);
-      }
-      for (int dx = -2; dx <= 2; ++dx) {
-        for (int dy = -2; dy <= 2; ++dy) {
-          other_mismatch += lattice.other(i, dx, dy) != plain.other(i, dx, dy);
-        }
-      }
-      parity_mismatch += lattice.parity(i) != plain.parity(i);
-    }
-    int index_mismatch = 0;
-    for (int x = -2 * lx; x < 3 * lx; ++x) {
-      for (int y = -3 * ly; y < 3 * ly; ++y) {
-        index_mismatch += lattice.index(x, y) != plain.index(x, y);
-      }
-    }
-    CHECK(neighbor_mismatch == 0);
-    CHECK(other_mismatch == 0);
-    CHECK(index_mismatch == 0);
-    CHECK(parity_mismatch == 0);
-  }
-
-  // The same through the input path.
-  auto tensor_toml = parse_str(R"(
-[tensor]
-L_sub = [2, 2]
-skew = 2
-[[tensor.unitcell]]
-index = []
-physical_dim = 2
-virtual_dim = 2
-)");
-  const SquareLattice from_input =
-      tenes::itps::gen_lattice(tensor_toml.at("tensor"));
-  CHECK(from_input.skew == 0);
-  CHECK(from_input.LY_noskew == 2);
-  CHECK(from_input.N_UNIT_noskew == 4);
-}
-
-TEST_CASE("SquareLattice keeps every other skew") {
-  using tenes::SquareLattice;
-  // Contract section 8.1: the fix must not touch these. The member keeps
-  // skew % LX with the sign of the input (the guard test below relies on
-  // it), and the neighbour and index maps follow T(x, y) = T(x + skew, y + LY).
-  const int cells[][3] = {{2, 2, 1}, {2, 1, 1},  {2, 1, -1}, {3, 1, 1},
-                          {3, 1, 2}, {3, 1, -1}, {3, 1, 4},  {3, 3, -4},
-                          {4, 1, 2}, {4, 3, 6},  {2, 2, 7},  {4, 2, -2}};
-  const int dx[4] = {-1, 0, 1, 0};
-  const int dy[4] = {0, 1, 0, -1};
-  for (const auto &c : cells) {
-    const int lx = c[0];
-    const int ly = c[1];
-    const int skew = c[2];
-    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
-    const SquareLattice lattice(lx, ly, skew);
-    const int ly_noskew = expected_ly_noskew(lx, ly, skew);
-    CHECK(lattice.skew == skew % lx);
-    CHECK(lattice.LX_noskew == lx);
-    CHECK(lattice.LY_noskew == ly_noskew);
-    CHECK(lattice.N_UNIT_noskew == lx * ly_noskew);
-    int neighbor_mismatch = 0;
-    for (int i = 0; i < lattice.N_UNIT; ++i) {
-      for (int leg = 0; leg < 4; ++leg) {
-        neighbor_mismatch +=
-            lattice.neighbor(i, leg) !=
-            skew_site_at(lx, ly, skew, i % lx + dx[leg], i / lx + dy[leg]);
-      }
-    }
-    int index_mismatch = 0;
-    for (int x = -2 * lx; x < 3 * lx; ++x) {
-      for (int y = -3 * ly_noskew; y < 3 * ly_noskew; ++y) {
-        index_mismatch +=
-            lattice.index(x, y) != skew_site_at(lx, ly, skew, x, y);
-      }
-    }
-    CHECK(neighbor_mismatch == 0);
-    CHECK(index_mismatch == 0);
-  }
-}
+// Section 9 of the contract adds a range check in front of that: a skew
+// outside -LX < skew < LX is an input error in every mode, raised by the
+// SquareLattice constructor (so by gen_lattice, before the fermion guard is
+// reached). (skew, LY) and (skew +- LX, LY) generate the same lattice, so
+// such a skew carries no information. Inside the range the lattice keeps
+// the input value with its sign: [2,1] skew -1 holds skew = -1 and is
+// accepted like skew = 1. With the range check the only self-neighbour
+// cells that reach the fermion guard are LX == 1 with skew 0 and LY == 1
+// with skew 0.
 
 namespace {
 
@@ -1094,7 +967,8 @@ bool contains_icase(std::string const &text, std::string const &pattern) {
 //! True iff `text` contains `word` followed, after characters that are
 //! neither digits nor minus signs, by the given integers in order (each one
 //! ending at a non-digit). "L_sub = [3, 1]", "L_sub=[3,1]" and
-//! "tensor.L_sub (3 x 1)" all name L_sub 3 1; the check is case-insensitive.
+//! "tensor.L_sub (3 x 1)" all name L_sub 3 1; "skew = -2" names skew -2;
+//! the check is case-insensitive.
 bool names_numbers_after(std::string const &text, std::string const &word,
                          std::vector<int> const &numbers) {
   std::string pattern = word;
@@ -1106,7 +980,194 @@ bool names_numbers_after(std::string const &text, std::string const &word,
   return contains_icase(text, pattern);
 }
 
+//! True iff `text` contains `number` as a number of its own, not as part of
+//! a longer one ("L_sub[0] = 3", "-3 < skew < 3" and "width 3" all name 3).
+bool names_number(std::string const &text, int number) {
+  return contains_icase(text,
+                        "(^|[^0-9])" + std::to_string(number) + "([^0-9]|$)");
+}
+
+//! LY_noskew of an [lx, ly] cell with an in-range skew, from arithmetic: a
+//! skew r = skew mod lx in [1, lx) repeats after lcm(lx, r) / r rows of
+//! cells, skew 0 after one.
+int expected_ly_noskew(int lx, int ly, int skew) {
+  const int r = ((skew % lx) + lx) % lx;
+  return r == 0 ? ly : ly * (std::lcm(lx, r) / r);
+}
+
+//! The site of an [lx, ly] cell with the given skew at global position
+//! (x, y), from T(x, y) = T(x + skew, y + ly): (x, y + k ly) holds the site
+//! at (x - k skew, y).
+int skew_site_at(int lx, int ly, int skew, int x, int y) {
+  const int k = (y >= 0 ? y : y - ly + 1) / ly;
+  const int xs = (((x - skew * k) % lx) + lx) % lx;
+  const int ys = ((y % ly) + ly) % ly;
+  return xs + lx * ys;
+}
+
+//! The message of the tenes::input_error SquareLattice(lx, ly, skew)
+//! throws, or std::nullopt if it throws none. Any other exception is a
+//! failed check here, so that it cannot pass for the expected error.
+std::optional<std::string> lattice_input_error(int lx, int ly, int skew) {
+  try {
+    const tenes::SquareLattice lattice(lx, ly, skew);
+  } catch (const tenes::input_error &e) {
+    return std::string(e.what());
+  } catch (const std::exception &e) {
+    FAIL_CHECK("SquareLattice(" << lx << ", " << ly << ", " << skew
+                                << ") threw something other than "
+                                   "tenes::input_error: "
+                                << e.what());
+  }
+  return std::nullopt;
+}
+
 }  // namespace
+
+TEST_CASE("SquareLattice rejects a skew outside -LX < skew < LX") {
+  // Contract section 9. The constructor has no mode, so this is the bosonic
+  // and the fermionic behaviour at once. Rejected: the boundaries skew = +-LX
+  // for LX = 1 to 4 (for LX = 1 every skew but 0), and skews further out,
+  // negative ones included - among them the cells that sections 2 and 8 fed
+  // in before this range check existed.
+  const int cells[][3] = {
+      // skew = +-LX
+      {1, 1, 1},
+      {1, 1, -1},
+      {1, 2, 1},
+      {2, 1, 2},
+      {2, 1, -2},
+      {2, 2, 2},
+      {2, 2, -2},
+      {3, 1, 3},
+      {3, 1, -3},
+      {3, 3, -3},
+      {4, 1, 4},
+      {4, 2, -4},
+      // further out
+      {1, 2, 5},
+      {2, 2, 7},
+      {2, 2, -4},
+      {3, 1, 4},
+      {3, 2, 6},
+      {3, 3, -4},
+      {3, 1, -5},
+      {4, 1, 8},
+      {4, 3, 6},
+  };
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    const std::optional<std::string> message =
+        lattice_input_error(lx, ly, skew);
+    CHECK(message.has_value());
+    if (!message) {
+      continue;
+    }
+    INFO("message: " << *message);
+    // What the contract asks the message to say, matched loosely: the skew
+    // value, the cell width (as a number of its own: "L_sub[0] = 3",
+    // "LX = 3" or the range "-3 < skew < 3" all qualify), and that skew and
+    // skew +- LX describe the same lattice.
+    CHECK(names_numbers_after(*message, "skew", {skew}));
+    CHECK(names_number(*message, lx));
+    CHECK(contains_icase(*message, "same|equivalent|identical"));
+    CHECK(contains_icase(*message, "lattice"));
+  }
+
+  // The same through the input path, which is where a user meets it.
+  auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+skew = 2
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+)");
+  CHECK_THROWS_AS(tenes::itps::gen_lattice(tensor_toml.at("tensor")),
+                  tenes::input_error);
+}
+
+TEST_CASE("SquareLattice accepts -LX < skew < LX and keeps it") {
+  using tenes::SquareLattice;
+  // Contract section 9: inside the range nothing changes. The member keeps
+  // the input value with its sign (the guard test below relies on it),
+  // LY_noskew = LY * lcm(LX, r) / r for r = skew mod LX != 0 and LY for
+  // skew 0, and the neighbour and index maps follow
+  // T(x, y) = T(x + skew, y + LY). The boundaries skew = +-(LX - 1) are
+  // among the cases; for LX = 1 only skew 0 is in range.
+  const int cells[][3] = {
+      {1, 1, 0},  {1, 3, 0},  {2, 1, 1}, {2, 1, -1}, {2, 2, 0},
+      {2, 2, 1},  {2, 2, -1}, {3, 1, 1}, {3, 1, 2},  {3, 1, -1},
+      {3, 1, -2}, {3, 2, -2}, {3, 3, 2}, {4, 1, 2},  {4, 1, 3},
+      {4, 1, -3}, {4, 2, -2}, {4, 3, 3}, {4, 3, -3},
+  };
+  const int dx[4] = {-1, 0, 1, 0};
+  const int dy[4] = {0, 1, 0, -1};
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    REQUIRE_FALSE(lattice_input_error(lx, ly, skew).has_value());
+    const SquareLattice lattice(lx, ly, skew);
+    const int ly_noskew = expected_ly_noskew(lx, ly, skew);
+    CHECK(lattice.skew == skew);
+    CHECK(lattice.LX_noskew == lx);
+    CHECK(lattice.LY_noskew == ly_noskew);
+    CHECK(lattice.N_UNIT_noskew == lx * ly_noskew);
+    int neighbor_mismatch = 0;
+    for (int i = 0; i < lattice.N_UNIT; ++i) {
+      for (int leg = 0; leg < 4; ++leg) {
+        neighbor_mismatch +=
+            lattice.neighbor(i, leg) !=
+            skew_site_at(lx, ly, skew, i % lx + dx[leg], i / lx + dy[leg]);
+      }
+    }
+    int index_mismatch = 0;
+    for (int x = -2 * lx; x < 3 * lx; ++x) {
+      for (int y = -3 * ly_noskew; y < 3 * ly_noskew; ++y) {
+        index_mismatch +=
+            lattice.index(x, y) != skew_site_at(lx, ly, skew, x, y);
+      }
+    }
+    CHECK(neighbor_mismatch == 0);
+    CHECK(index_mismatch == 0);
+  }
+}
+
+TEST_CASE("SquareLattice checks the cell size before the skew") {
+  // Contract section 9: the existing "Lattice.X/Y should be positive"
+  // errors come first and keep their messages. X = 0 used to reach skew % X
+  // in the member initializer before the check (a SIGFPE on x86-64; on
+  // arm64 no trap, which is why these can pass on the unfixed code there).
+  // Negative sizes are left out: the contract pins X = 0 only, and today
+  // they fail earlier still, sizing the member vectors with LX * LY < 0.
+  const int bad_x[][3] = {{0, 1, 0}, {0, 2, 1}, {0, 1, 5}, {0, 0, 3}};
+  for (const auto &c : bad_x) {
+    INFO("L_sub = [" << c[0] << ", " << c[1] << "], skew = " << c[2]);
+    const std::optional<std::string> message =
+        lattice_input_error(c[0], c[1], c[2]);
+    REQUIRE(message.has_value());
+    INFO("message: " << *message);
+    CHECK(contains_icase(*message, "\\bX\\b"));
+    CHECK(contains_icase(*message, "positive"));
+  }
+  const int bad_y[][3] = {{2, 0, 0}, {2, 0, 5}, {1, 0, 3}};
+  for (const auto &c : bad_y) {
+    INFO("L_sub = [" << c[0] << ", " << c[1] << "], skew = " << c[2]);
+    const std::optional<std::string> message =
+        lattice_input_error(c[0], c[1], c[2]);
+    REQUIRE(message.has_value());
+    INFO("message: " << *message);
+    CHECK(contains_icase(*message, "\\bY\\b"));
+    CHECK(contains_icase(*message, "positive"));
+    CHECK_FALSE(contains_icase(*message, "skew"));
+  }
+}
 
 TEST_CASE("fermion mode refuses exactly the cells with a self-neighbour site") {
   using namespace tenes;
@@ -1131,14 +1192,12 @@ fermion = true
     peps_parameters.phys_parity =
         gen_phys_parity(tensor_toml.at("tensor"), lattice);
     // Premises: the cell is what the input says, the lattice holds the skew
-    // with the sign of the input, and the rest of the input is a valid
-    // fermion input (parity metadata on every site), so that the only thing
-    // left for the guard to judge is the shape.
+    // as given (sign included), and the rest of the input is a valid fermion
+    // input (parity metadata on every site), so that the only thing left for
+    // the guard to judge is the shape.
     REQUIRE(lattice.LX == c.lx);
     REQUIRE(lattice.LY == c.ly);
-    REQUIRE(lattice.skew == c.skew % c.lx);
-    // The cell the guard judges is the whole cell (contract section 8.1; on
-    // the unfixed code a skew that is a multiple of LX left LY_noskew = 0).
+    REQUIRE(lattice.skew == c.skew);
     CHECK(lattice.LY_noskew == expected_ly_noskew(c.lx, c.ly, c.skew));
     CHECK(lattice.N_UNIT_noskew ==
           c.lx * expected_ly_noskew(c.lx, c.ly, c.skew));
@@ -1156,27 +1215,22 @@ fermion = true
         // Newly accepted: skewed cells with both sides >= 2,
         {2, 2, 1},
         {3, 2, 1},
+        {3, 2, -2},
         {3, 3, 2},
         {2, 3, 1},
-        // one-row cells whose skew is not a multiple of LX (every bond of
-        // such a row goes to a different site; [2,1] skew 1 is what
-        // tenes_simple builds for a square lattice with W = 1),
+        // and one-row cells with a non-zero skew (every bond of such a row
+        // goes to a different site; [2,1] skew 1 is what tenes_simple
+        // builds for a square lattice with W = 1).
         {2, 1, 1},
         {2, 1, -1},
         {3, 1, 1},
         {3, 1, 2},
         {3, 1, -1},
         {4, 1, 2},
-        // and cells with |skew| >= LX.
-        {2, 2, 7},
-        {3, 1, 4},
+        {4, 1, -3},
         // Accepted before and still accepted.
         {2, 2, 0},
         {3, 3, 0},
-        // A skew that is a multiple of LX on a cell two sites high: the
-        // skew-0 cell (contract section 8.1).
-        {2, 2, 2},
-        {3, 2, 6},
     };
     for (const cell c : accepted) {
       INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
@@ -1190,18 +1244,10 @@ fermion = true
         {1, 1, 0},
         {1, 2, 0},
         {1, 3, 0},
-        // LY == 1 and skew = 0 mod LX: vertical self-neighbour.
+        // LY == 1 and skew 0: vertical self-neighbour.
         {2, 1, 0},
         {3, 1, 0},
         {4, 1, 0},
-        // The same with a skew that is a non-zero multiple of LX, which
-        // reaches the guard since contract section 8.1 (the lattice holds
-        // skew 0, and the message names that).
-        {2, 1, 2},
-        {2, 1, -2},
-        {3, 1, 3},
-        {1, 1, 1},
-        {1, 2, 5},
     };
     for (const cell c : refused) {
       INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
@@ -1216,12 +1262,36 @@ fermion = true
       INFO("message: " << message);
       // Through the existing throw_fermion_guard wrapper.
       CHECK(message.find("fermion mode") != std::string::npos);
-      // The cause: a site would be its own nearest neighbour.
+      // The cause: a site would be its own nearest neighbour. (The remedy
+      // the message suggests is not pinned.)
       CHECK(contains_icase(message, "\\bown\\b"));
       CHECK(contains_icase(message, "neighbou?r"));
-      // The shape: both L_sub values, and the skew the lattice holds.
+      // The shape: both L_sub values, and the skew.
       CHECK(names_numbers_after(message, "L_sub", {c.lx, c.ly}));
-      CHECK(names_numbers_after(message, "skew", {c.skew % c.lx}));
+      CHECK(names_numbers_after(message, "skew", {c.skew}));
+    }
+  }
+
+  SUBCASE("a skew outside the range is refused by gen_lattice already") {
+    // Contract section 9: these never reach validate_fermion_constraints.
+    // Among them the self-neighbour-shaped [2,1] 2, [2,1] -2, [3,1] 3,
+    // [1,1] 1 and [1,2] 5, and [2,2] 7, [3,1] 4, [4,1] 8, [2,2] 2, [3,2] 6,
+    // which sections 2 and 8 once accepted.
+    const cell out_of_range[] = {{2, 1, 2}, {2, 1, -2}, {3, 1, 3}, {1, 1, 1},
+                                 {1, 2, 5}, {2, 2, 7},  {3, 1, 4}, {4, 1, 8},
+                                 {2, 2, 2}, {3, 2, 6}};
+    for (const cell c : out_of_range) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      auto tensor_toml =
+          parse_str(fermion_shaped_cell_toml(c.lx, c.ly, c.skew));
+      try {
+        gen_lattice(tensor_toml.at("tensor"));
+        FAIL_CHECK("gen_lattice accepted a skew outside -LX < skew < LX");
+      } catch (const tenes::input_error &e) {
+        INFO("message: " << e.what());
+        CHECK(names_numbers_after(e.what(), "skew", {c.skew}));
+        CHECK_FALSE(contains_icase(e.what(), "\\bown\\b"));
+      }
     }
   }
 }

@@ -26,6 +26,7 @@ sys.path.insert(
 )
 
 import tenes_simple
+import tenes_std
 
 
 def test_model_is_abstract():
@@ -166,3 +167,37 @@ class TestVacancyInitialStateIndexing:
         pattern = model.initial_states(3)
         for i in range(3):
             assert np.allclose(states[i], pattern[i])
+
+
+# ---------------------------------------------------------------------------
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section 9:
+# the solver and tenes_std reject a skew outside -L_sub[0] < skew < L_sub[0].
+# tenes_simple is unchanged and must only ever emit a skew inside that range,
+# so every std.toml it writes stays a valid input. A net over every lattice
+# type it supports and small L and W (square: L >= 2; triangular: L, W >= 2;
+# honeycomb doubles L and uses W % L as the skew; kagome doubles both).
+# ---------------------------------------------------------------------------
+
+SIMPLE_LATTICE_SIZES = {
+    "square lattice": [(L, W) for L in range(2, 5) for W in range(1, 5)],
+    "honeycomb lattice": [(L, W) for L in range(1, 4) for W in range(1, 6)],
+    "triangular lattice": [(L, W) for L in range(2, 5) for W in range(2, 5)],
+    "kagome lattice": [(L, W) for L in range(1, 4) for W in range(1, 4)],
+}
+
+
+@pytest.mark.parametrize("lattice_type", sorted(SIMPLE_LATTICE_SIZES))
+def test_every_lattice_emits_a_skew_inside_the_range(lattice_type):
+    for L, W in SIMPLE_LATTICE_SIZES[lattice_type]:
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": lattice_type, "L": L, "W": W, "virtual_dim": 2},
+            "model": {"type": "spin", "J": 1.0},
+        }
+        text, lattice = tenes_simple.tenes_simple(param)
+        tensor = toml.loads(text)["tensor"]
+        width = tensor["L_sub"][0]
+        assert -width < tensor["skew"] < width, (lattice_type, L, W, tensor)
+        assert tensor["skew"] == lattice.skew
+        # and tenes_std builds the model from it
+        tenes_std.Model(toml.loads(text))

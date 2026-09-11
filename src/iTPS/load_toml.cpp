@@ -615,8 +615,9 @@ void validate_fermion_constraints(
       static_cast<std::size_t>(lattice.N_UNIT)) {
     throw_fermion_guard("missing tensor.unitcell.parity metadata");
   }
-  // A site that is its own nearest neighbor (LX == 1, or LY == 1 with a
-  // skew that is a multiple of LX) makes the simple update write that site
+  // A site that is its own nearest neighbor (LX == 1, or LY == 1 with
+  // skew == 0; SquareLattice refuses any skew outside -LX < skew < LX)
+  // makes the simple update write that site
   // tensor twice per bond, and its virtual parity ledger can then describe
   // the tensor that was discarded. Any other cell, skewed or one row high,
   // is fine: the fermionic code paths see the geometry through
@@ -630,8 +631,7 @@ void validate_fermion_constraints(
             "(L_sub = [" +
             std::to_string(lattice.LX) + ", " + std::to_string(lattice.LY) +
             "], skew = " + std::to_string(lattice.skew) +
-            "; widen the cell, or give a cell one site high a skew that is "
-            "not a multiple of its width)");
+            "; widen the cell, or give a one-row cell a non-zero skew)");
       }
     }
   }

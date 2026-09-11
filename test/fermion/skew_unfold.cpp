@@ -25,11 +25,12 @@
 // to 4). This is the test that keeps skewed fermion cells correct: it builds
 // the iTPS directly and never goes through validate_fermion_constraints.
 //
-// A cell [LX, LY] with skew s (s not a multiple of LX) tiles the plane
-// exactly like the cell [LX, LY * m] with skew 0, m = lcm(LX, s') / s' with
-// s' = s mod LX in [1, LX). With TeNeS' convention T(x, y) = T(x + s, y + LY)
-// (src/SquareLattice.hpp) the site at (x, y + k LY) holds the tensor of
-// (x - k s, y), so unfolded site (x, y) holds skew-cell site
+// A cell [LX, LY] with skew s, 0 < |s| < LX (the range the input accepts,
+// contract section 9), tiles the plane exactly like the cell [LX, LY * m]
+// with skew 0, m = lcm(LX, s') / s' with s' = s mod LX in [1, LX). With
+// TeNeS' convention T(x, y) = T(x + s, y + LY) (src/SquareLattice.hpp) the
+// site at (x, y + k LY) holds the tensor of (x - k s, y), so unfolded site
+// (x, y) holds skew-cell site
 //
 //     ((x - s' floor(y / LY)) mod LX,  y mod LY).
 //
@@ -280,8 +281,8 @@ sku_unfolding sku_unfold(sku_cell c) {
 //! The cells of this file. [2,1] skew 1 is what tenes_simple builds for a
 //! square lattice with W = 1; [3,1] skew 1 and [3,1] skew -1 are LX = 3 cells
 //! (where the sign of the skew matters; the negative one also exercises the
-//! C++ member keeping the sign of the input, here -1 % 3 = -1); [2,2] skew 1
-//! has both sides >= 2.
+//! C++ member keeping the input value with its sign); [2,2] skew 1 has both
+//! sides >= 2.
 const std::vector<sku_cell>& sku_cells() {
   static const std::vector<sku_cell> cells{
       {2, 1, 1}, {3, 1, 1}, {3, 1, -1}, {2, 2, 1}};

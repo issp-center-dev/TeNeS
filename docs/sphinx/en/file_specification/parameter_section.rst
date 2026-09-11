@@ -71,7 +71,7 @@ General parameters for ``tenes``.
 
     - For instance, the expectation value of a single creation or annihilation operator cannot be computed.
 
-  - In the current version fermion mode supports the ground-state calculation with the simple update (CTM or mean-field environment) and the full update (CTM environment only). ``Use_RSVD``, ``Simple_Gauge_Fix``, finite temperature, time evolution, multi-site observables, ``ops``-form two-site observables, two-site observables at distances larger than 1, unit cells in which a site is its own nearest neighbor (``LX = 1``, or ``LY = 1`` with ``skew`` a multiple of ``LX``), correlation functions, and correlation length are not available and are rejected (or forcibly disabled, for the correlation length) when the input is read
+  - In the current version fermion mode supports the ground-state calculation with the simple update (CTM or mean-field environment) and the full update (CTM environment only). ``Use_RSVD``, ``Simple_Gauge_Fix``, finite temperature, time evolution, multi-site observables, ``ops``-form two-site observables, two-site observables at distances larger than 1, unit cells in which a site is its own nearest neighbor (``LX = 1``, or ``LY = 1`` with ``skew = 0``), correlation functions, and correlation length are not available and are rejected (or forcibly disabled, for the correlation length) when the input is read
 
 - ``iszero_tol``
 

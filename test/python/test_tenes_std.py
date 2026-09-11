@@ -580,7 +580,11 @@ class TestFermionErrorMessageQuality:
 #
 # Where the parsed values live: Model.unitcell.L and Model.unitcell.skew
 # (Unitcell.load_dict reads tensor.l_sub and tensor.skew, skew defaulting to
-# 0). The skew is the raw input value, possibly negative or >= L_sub[0].
+# 0). The skew is the raw input value, possibly negative. A skew outside
+# -L_sub[0] < skew < L_sub[0] is an input error for every model (contract
+# section 9; TestSkewRangeGuard below), so the only self-neighbour cells
+# that reach the fermion guard are L_sub[0] == 1 and L_sub[1] == 1 with
+# skew 0.
 # ---------------------------------------------------------------------------
 
 
@@ -609,30 +613,27 @@ def names_numbers_after(message, word, numbers):
     return re.search(pattern, message, re.I) is not None
 
 
-# (L_sub, skew) cells with a self-neighbour site. LX == 1: [1, 1] and [1, 2]
-# with any skew, [1, 3] with 0. LY == 1 with skew = 0 mod LX, including
-# non-zero multiples of LX and a negative one.
+# (L_sub, skew) cells with a self-neighbour site, all with skew 0: LX == 1
+# (horizontal) and LY == 1 (vertical). Every other skew of such a cell is
+# outside the range and refused earlier (OUT_OF_RANGE_CELLS below).
 SELF_NEIGHBOUR_CELLS = [
     ([1, 1], 0),
-    ([1, 1], 1),
     ([1, 2], 0),
-    ([1, 2], 5),
     ([1, 3], 0),
     ([2, 1], 0),
     ([3, 1], 0),
-    ([2, 1], 2),
-    ([3, 1], 3),
-    ([2, 1], -2),
-    ([4, 1], 8),
+    ([4, 1], 0),
 ]
 
 # (L_sub, skew) cells without one, refused before this change: skewed cells
-# (skew != 0) and one-row cells whose skew is not a multiple of LX. [2, 1]
-# skew 1 is what tenes_simple builds for W = 1; [2, 2] skew 7 and [3, 1]
-# skew 4 have |skew| >= LX; [2, 1] skew -1 and [3, 1] skew -1 are negative.
+# (skew != 0) and one-row cells with a non-zero skew. [2, 1] skew 1 is what
+# tenes_simple builds for W = 1; [2, 1] -1, [3, 1] -1, [3, 2] -2 and
+# [4, 1] -3 are negative and keep their sign; [4, 1] 3 and -3 sit at the
+# edge of the range.
 NEWLY_ACCEPTED_CELLS = [
     ([2, 2], 1),
     ([3, 2], 1),
+    ([3, 2], -2),
     ([3, 3], 2),
     ([2, 3], 1),
     ([2, 1], 1),
@@ -641,8 +642,8 @@ NEWLY_ACCEPTED_CELLS = [
     ([3, 1], 2),
     ([3, 1], -1),
     ([4, 1], 2),
-    ([2, 2], 7),
-    ([3, 1], 4),
+    ([4, 1], 3),
+    ([4, 1], -3),
 ]
 
 
@@ -739,3 +740,152 @@ class TestFermionSelfNeighbourCellGuard:
             model = tenes_std.Model(param)  # must not raise
             assert model.unitcell.L == l_sub
             assert model.unitcell.skew == skew
+
+
+# ---------------------------------------------------------------------------
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section 9:
+# a [tensor] skew outside -L_sub[0] < skew < L_sub[0] raises RuntimeError
+# when the model is built, for every model, fermionic or not. (skew, L_sub[1])
+# and (skew +- L_sub[0], L_sub[1]) generate the same lattice, so such a skew
+# carries no information. An integer l_sub = N means [N, N]. The message
+# names the skew value, the width and the range; no "M1"/"M2".
+# ---------------------------------------------------------------------------
+
+# (L_sub, skew) cells with |skew| >= L_sub[0]: the boundaries skew = +-L_sub[0]
+# and skews further out, negative ones included. Among them every cell the
+# tests above fed in before the range check existed ([2, 2] 7, [3, 1] 4,
+# [4, 1] 8, [2, 1] 2, [2, 1] -2, [3, 1] 3, [1, 1] 1, [1, 2] 5).
+OUT_OF_RANGE_CELLS = [
+    ([1, 1], 1),
+    ([1, 1], -1),
+    ([1, 2], 5),
+    ([2, 1], 2),
+    ([2, 1], -2),
+    ([2, 2], 2),
+    ([2, 2], -2),
+    ([2, 2], 7),
+    ([3, 1], 3),
+    ([3, 1], -3),
+    ([3, 1], 4),
+    ([3, 2], 6),
+    ([3, 3], -4),
+    ([4, 1], 4),
+    ([4, 1], 8),
+]
+
+# (L_sub, skew) cells at the inner edge of the range, skew = +-(L_sub[0] - 1),
+# two rows high so that no fermion self-neighbour site interferes.
+EDGE_OF_RANGE_CELLS = [
+    ([2, 2], 1),
+    ([2, 2], -1),
+    ([3, 2], 2),
+    ([3, 2], -2),
+    ([4, 2], 3),
+    ([4, 2], -3),
+]
+
+
+def bosonic_cell_input(l_sub, skew):
+    """minimal_std_input() (no fermion key) on the given cell, with one
+    horizontal bond."""
+    param = minimal_std_input()
+    param["tensor"]["l_sub"] = l_sub
+    param["tensor"]["skew"] = skew
+    param["hamiltonian"][0]["bonds"] = "0 1 0\n"
+    return param
+
+
+def fermion_input_with_l_sub(l_sub, skew):
+    """fermion_cell_input() with l_sub as given, an integer included."""
+    param = fermion_cell_input([2, 2], skew)
+    param["tensor"]["l_sub"] = l_sub
+    return param
+
+
+def assert_range_message(message, skew, width):
+    """The range error, matched loosely: the skew value after the word
+    "skew"; the width as a number of its own ("L_sub[0] = 3", "LX = 3" and
+    "-3 < skew < 3" all qualify); the range, as "-3" or "-2" (an open or a
+    closed bound), "|skew|", "range" or "interval"; no milestone label; and
+    not the fermion self-neighbour message."""
+    assert names_numbers_after(message, "skew", [skew]), message
+    assert re.search(r"(?<![0-9])%d(?![0-9])" % width, message), message
+    assert re.search(
+        r"-\s*(%d|%d)(?![0-9])|\|\s*skew\s*\||\brange\b|\binterval\b"
+        % (width, width - 1),
+        message,
+        re.I,
+    ), message
+    assert "M1" not in message
+    assert "M2" not in message
+    assert not re.search(r"\bown\b", message, re.I), message
+
+
+class TestSkewRangeGuard:
+    @pytest.mark.parametrize(
+        "l_sub, skew",
+        OUT_OF_RANGE_CELLS,
+        ids=[cell_id(c) for c in OUT_OF_RANGE_CELLS],
+    )
+    def test_out_of_range_skew_is_rejected_for_a_fermionic_model(self, l_sub, skew):
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(fermion_cell_input(l_sub, skew))
+        assert_range_message(str(excinfo.value), skew, l_sub[0])
+
+    @pytest.mark.parametrize(
+        "l_sub, skew",
+        OUT_OF_RANGE_CELLS,
+        ids=[cell_id(c) for c in OUT_OF_RANGE_CELLS],
+    )
+    def test_out_of_range_skew_is_rejected_for_a_bosonic_model(self, l_sub, skew):
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(bosonic_cell_input(l_sub, skew))
+        assert_range_message(str(excinfo.value), skew, l_sub[0])
+
+    @pytest.mark.parametrize("width, skew", [(2, 2), (2, -2), (3, 3), (3, -7)])
+    def test_integer_l_sub_is_a_square_cell_for_the_range(self, width, skew):
+        # l_sub = N means [N, N]; the range is set by N.
+        for param in (
+            bosonic_cell_input(width, skew),
+            fermion_input_with_l_sub(width, skew),
+        ):
+            with pytest.raises(RuntimeError) as excinfo:
+                tenes_std.Model(param)
+            assert_range_message(str(excinfo.value), skew, width)
+
+    @pytest.mark.parametrize("width, skew", [(2, 1), (3, 2), (3, -2)])
+    def test_integer_l_sub_with_a_skew_in_range_is_accepted(self, width, skew):
+        for param in (
+            bosonic_cell_input(width, skew),
+            fermion_input_with_l_sub(width, skew),
+        ):
+            model = tenes_std.Model(param)
+            assert model.unitcell.L == [width, width]
+            assert model.unitcell.skew == skew
+
+    @pytest.mark.parametrize(
+        "l_sub, skew",
+        EDGE_OF_RANGE_CELLS,
+        ids=[cell_id(c) for c in EDGE_OF_RANGE_CELLS],
+    )
+    def test_skew_at_the_edge_of_the_range_is_accepted_and_kept(self, l_sub, skew):
+        for param in (
+            bosonic_cell_input(l_sub, skew),
+            fermion_cell_input(l_sub, skew),
+        ):
+            model = tenes_std.Model(param)
+            assert model.unitcell.skew == skew
+            buf = io.StringIO()
+            model.to_toml(buf)
+            assert toml.loads(buf.getvalue())["tensor"]["skew"] == skew
+
+    def test_a_one_wide_cell_accepts_skew_zero_only(self):
+        # L_sub[0] = 1: the range -1 < skew < 1 holds skew 0 alone. Bosonic,
+        # since a one-wide fermion cell is refused for its self-neighbour
+        # site whatever the skew.
+        model = tenes_std.Model(bosonic_cell_input([1, 2], 0))
+        assert model.unitcell.skew == 0
+        for skew in (1, -1):
+            with pytest.raises(RuntimeError) as excinfo:
+                tenes_std.Model(bosonic_cell_input([1, 2], skew))
+            assert_range_message(str(excinfo.value), skew, 1)

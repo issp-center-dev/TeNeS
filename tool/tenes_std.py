@@ -417,6 +417,16 @@ class Unitcell:
             self.L = L
 
         self.skew = lat_dict.get("skew", 0)
+        # (skew, Ly) and (skew +/- Lx, Ly) generate the same lattice, so a
+        # skew outside -Lx < skew < Lx says nothing new; refuse it, as tenes
+        # does.
+        if not -self.L[0] < self.skew < self.L[0]:
+            msg = (
+                "skew = {} is out of range for L_sub = {}: use "
+                "-L_sub[0] < skew < L_sub[0] (skew and skew +/- L_sub[0] "
+                "describe the same lattice)."
+            ).format(self.skew, self.L)
+            raise RuntimeError(msg)
 
         N = self.L[0] * self.L[1]
         self.sites = cast(List[LocalTensor], [None] * N)
@@ -1520,8 +1530,8 @@ class Model:
 
     def _validate_fermion_mode_input(self) -> None:
         # A site that is its own nearest neighbour (a one-wide cell, or a
-        # one-high cell whose skew is a multiple of its width) cannot be
-        # updated consistently; every other cell, skewed or not, is fine.
+        # one-row cell with skew 0) cannot be updated consistently; every
+        # other cell, skewed or not, is fine.
         unitcell = self.unitcell
         for site_index in range(unitcell.numsites()):
             x, y = unitcell.index2coord(site_index)
@@ -1533,8 +1543,8 @@ class Model:
                 msg = (
                     "Fermion mode requires a tensor unit cell in which no "
                     "site is its own nearest neighbour; got L_sub = {}, "
-                    "skew = {}. Widen the cell, or give a cell that is one "
-                    "site high a skew that is not a multiple of its width."
+                    "skew = {}. Widen the cell, or give a one-row cell a "
+                    "non-zero skew."
                 ).format(unitcell.L, unitcell.skew)
                 raise RuntimeError(msg)
 
