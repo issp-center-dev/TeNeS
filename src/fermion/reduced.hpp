@@ -298,18 +298,9 @@ template <class tensor>
 tensor doubled_pipeline_traced(const ftensor<tensor>& bra_Tn,
                                const ftensor<tensor>& ket_Tn) {
 #ifndef NDEBUG
-  const double bra_violation = parity_violation(bra_Tn);
-  const double bra_threshold = 1.0e-10 * std::max(1.0, max_abs(bra_Tn));
-  if (bra_violation > bra_threshold) {
-    throw std::runtime_error(
-        "doubled_pipeline_traced: bra layer is not parity even");
-  }
-  const double ket_violation = parity_violation(ket_Tn);
-  const double ket_threshold = 1.0e-10 * std::max(1.0, max_abs(ket_Tn));
-  if (ket_violation > ket_threshold) {
-    throw std::runtime_error(
-        "doubled_pipeline_traced: ket layer is not parity even");
-  }
+  // Collective, so that every rank throws or none does.
+  require_even_parity(bra_Tn, "doubled_pipeline_traced: bra layer");
+  require_even_parity(ket_Tn, "doubled_pipeline_traced: ket layer");
 #endif
   const auto forms = joint_swap_forms({0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 2, 3});
   ftensor<tensor> bra = conj(bra_Tn);

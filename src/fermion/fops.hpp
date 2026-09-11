@@ -50,6 +50,7 @@
 #include <string>
 #include <vector>
 
+#include "../mpi.hpp"
 #include "finite_check.hpp"
 #include "ftensor.hpp"
 #include "sign_sweep.hpp"
@@ -210,8 +211,9 @@ inline std::size_t count_even(const parity_vector& parity) {
  * even-first sort the (even row, odd col) and (odd row, even col) blocks
  * must vanish. qr()/svd() decompose the two diagonal blocks and never look
  * at the others, which would silently discard them if the input were not
- * even. Checked in debug builds only; like parity_violation() this
- * inspects the process-local slice.
+ * even. Checked in debug builds only. Collective: the off-diagonal maximum
+ * and the scale are reduced over the ranks before the comparison, so that
+ * every rank throws or none does.
  *
  * @param[in] sorted Even-first sorted matricization.
  * @param[in] row_even Number of even rows.
@@ -236,6 +238,10 @@ void validate_block_diagonal(const tensor& sorted, std::size_t row_even,
       off = std::max(off, a);
     }
   }
+  std::vector<double> reduced{off, scale};
+  tenes::allreduce_max(reduced, sorted.get_comm());
+  off = reduced[0];
+  scale = reduced[1];
   const double threshold = 1.0e-10 * std::max(1.0, scale);
   if (off > threshold) {
     std::stringstream ss;
@@ -530,6 +536,59 @@ ftensor<tensor> reshape(const ftensor<tensor>& a, const mptensor::Shape& sh) {
 template <class tensor>
 double max_abs(const ftensor<tensor>& a) {
   return mptensor::max_abs(a.t);
+}
+
+/*!
+ * @brief Collective check that a graded tensor is parity even.
+ *
+ * Every rank reduces the largest parity-odd magnitude (parity_violation(),
+ * which is process-local) and the largest magnitude of @p a over all ranks,
+ * so every rank throws or none does. A check that threw on the owning rank
+ * only would leave the other ranks waiting in their next collective call.
+ *
+ * @param[in] a Tensor to check. Collective over its communicator.
+ * @param[in] context Prefix of the error message.
+ * @throw std::runtime_error On every rank, if the parity-odd sector carries
+ *        weight above 1e-10 relative to max(1, largest element).
+ */
+template <class tensor>
+void require_even_parity(const ftensor<tensor>& a, const char* context) {
+  std::vector<double> v{parity_violation(a)};
+  tenes::allreduce_max(v, a.t.get_comm());
+  const double threshold = 1.0e-10 * std::max(1.0, max_abs(a));
+  if (v[0] > threshold) {
+    std::stringstream ss;
+    ss << context
+       << " is not parity even; odd-parity elements up to max_abs=" << v[0]
+       << " (threshold " << threshold << ")";
+    throw std::runtime_error(ss.str());
+  }
+}
+
+/*!
+ * @brief Guard of the simple update: refuse weight in the parity-odd
+ *        sector, and clip the round-off that is left there.
+ *
+ * The graded update must keep the state parity even; an odd-sector element
+ * above 1e-10 relative to the largest element indicates a sign-bookkeeping
+ * bug upstream. Below that threshold the odd-sector elements are numerical
+ * residue and are set to zero. Collective (see require_even_parity()).
+ *
+ * @param[in,out] a Updated site tensor.
+ * @throw std::runtime_error On every rank, if the odd sector carries weight
+ *        above the threshold.
+ */
+template <class tensor>
+void enforce_even_parity(ftensor<tensor>& a) {
+  require_even_parity(a, "fermion Simple_update_bond: the updated tensor");
+  mptensor::Index index;
+  index.resize(a.t.shape().size());
+  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
+    a.t.global_index_fast(n, index);
+    if (count_odd(a.parity, index) % 2 == 1) {
+      a.t[n] = typename tensor::value_type{};
+    }
+  }
 }
 
 //! Singular values only, of the plain matricization (no parity blocking;

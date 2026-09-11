@@ -48,7 +48,10 @@ using mptensor::Shape;
 namespace {
 // The plain-tensor overloads of enforce_even_parity / log_theta_blocks are
 // no-ops so the shared kernel below compiles for both the bosonic path
-// (plain tensors) and the fermionic one (ftensor).
+// (plain tensors) and the fermionic one (ftensor). For an ftensor, the
+// kernel's unqualified call finds tenes::fermion::enforce_even_parity
+// (fops.hpp) by argument-dependent lookup, and partial ordering prefers it
+// over the no-op template here.
 template <class tensor>
 void enforce_even_parity(tensor &) {}
 
@@ -110,28 +113,6 @@ void log_theta_blocks(const tenes::fermion::ftensor<tensor> &theta,
   ++theta_log_count;
 }
 
-// Guard: the graded update must keep the state parity even; elements in the
-// odd sector above the tolerance indicate a sign-bookkeeping bug upstream.
-template <class tensor>
-void enforce_even_parity(tenes::fermion::ftensor<tensor> &a) {
-  const double v = tenes::fermion::parity_violation(a);
-  const double scale = std::max(1.0, tenes::fermion::max_abs(a));
-  const double threshold = 1.0e-10 * scale;
-  if (v > threshold) {
-    std::stringstream ss;
-    ss << "fermion Simple_update_bond produced odd-parity elements: max_abs="
-       << v << " threshold=" << threshold;
-    throw std::runtime_error(ss.str());
-  }
-  mptensor::Index index;
-  index.resize(a.t.shape().size());
-  for (std::size_t n = 0; n < a.t.local_size(); ++n) {
-    a.t.global_index_fast(n, index);
-    if (tenes::fermion::count_odd(a.parity, index) % 2 == 1) {
-      a.t[n] = typename tensor::value_type{};
-    }
-  }
-}
 }  // namespace
 
 // environment
