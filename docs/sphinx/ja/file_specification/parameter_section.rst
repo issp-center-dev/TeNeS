@@ -164,7 +164,7 @@ full update に関するパラメータ
 
   - full update は CTM 環境のみ対応しており、``meanfield_env = true`` との組み合わせはエラーになります
   - 非高速版(``fastfullupdate = false``)ではボンドごとに CTM を再収束するため、fast full update より遅くなります(自由フェルミオン ``D = 3``、``chi = 12`` で約 9 倍)。フェルミオン系ではこの再収束を直前の環境を初期値として行います(warm start)。ボソン系の非高速版は従来どおり毎回一様ベクトルから収束させます
-  - ``fastfullupdate = false`` で CTM が forbidden parity ガードに掛かって停止する場合は、simple update の step 数を増やすか、fast full update を使ってください。ボンドごとに CTM をゼロから収束させ直すと、simple update が十分に収束していない状態では CTM が別の固定点に落ち着くことがあり、これが停止の主な原因です
+  - full update が forbidden parity ガードで停止するのは CTM が収束していないためで、多くの場合は状態に対して ``dimension`` (chi) が小さすぎます(CTM が落ち着かずに周期的に振れ続けます)。まず ``[parameter.ctm]`` の ``dimension`` を上げ、次に ``iteration_max`` を増やしてください。状態そのものが収束していなければ simple update も長くしてください
   - full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(``1e-8`` と ``[parameter.ctm]`` の ``convergence_epsilon`` の 100 倍の大きい方)を超えるとエラーで停止します。その場合は ``[parameter.ctm]`` の ``iteration_max`` を増やすか ``convergence_epsilon`` を小さくしてください
   - ボンド次元が小さいとき(例: 自由フェルミオンの ``D = 2``)、simple update で収束した状態から full update を始めるとエネルギーが **上がる** ことがあります。これは射影虚時間発展の固定点が、表現力不足の状態空間では simple update の固定点より高くなりうるためです。
 

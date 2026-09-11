@@ -13,5 +13,6 @@
 - notes
     - the current fermion support in `tenes_simple` / `tenes_std` is limited to
       nearest-neighbor bonds on the square lattice
-    - correlation functions, correlation lengths, and finite temperature
-      calculations are not supported in fermion mode
+    - correlation functions and finite temperature calculations are not
+      supported in fermion mode, and the correlation length is disabled with
+      a warning
