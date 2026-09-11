@@ -61,11 +61,15 @@ SquareLattice::SquareLattice(int X, int Y, int skew)
     throw tenes::input_error("Lattice.Y should be positive");
   }
   LX_noskew = LX;
-  if (skew == 0) {
+  // `skew` here is the constructor parameter, which shadows the member. A
+  // skew that is a multiple of LX (zero included) leaves the lattice
+  // unskewed, and reducing it first keeps lcm(LX, 0) / 0 from being
+  // evaluated: that trapped on x86-64 and gave LY_noskew = 0 on arm64.
+  const int reduced_skew = mod(skew, LX);
+  if (reduced_skew == 0) {
     LY_noskew = LY;
   } else {
-    skew = mod(skew, LX);
-    LY_noskew = LY * (::lcm(LX, skew) / skew);
+    LY_noskew = LY * (::lcm(LX, reduced_skew) / reduced_skew);
   }
   N_UNIT_noskew = LX_noskew * LY_noskew;
   calc_neighbors();

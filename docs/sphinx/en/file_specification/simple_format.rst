@@ -233,7 +233,6 @@ One-site operators :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S
 In addition, ``hopping``, ``nn``, and ``SzSz`` on nearest-neighbor bonds are automatically defined as two-site operators.
 
 In the current version, fermionic models support only nearest-neighbor bonds on the square lattice.
-Skewed unit cells, including the one automatically selected for a square lattice with ``W = 1``, are not supported.
 
 
 ``lattice`` section
@@ -278,7 +277,6 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
   - The amount of fluctuation in the elements of the initial tensor
 
 In fermionic models, only nearest-neighbor bonds on the square lattice are supported.
-Skewed unit cells, including the one automatically selected for a square lattice with ``W = 1``, are not supported in the current version.
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

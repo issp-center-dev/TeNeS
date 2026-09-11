@@ -1519,27 +1519,24 @@ class Model:
                     self.full_updates.append(evo)
 
     def _validate_fermion_mode_input(self) -> None:
-        narrow_dimensions = [
-            "{}={}".format(name, size)
-            for name, size in zip(("L_sub[0]", "L_sub[1]"), self.unitcell.L)
-            if size < 2
-        ]
-        if narrow_dimensions:
-            msg = (
-                "Fermion mode requires both tensor L_sub dimensions to be at "
-                "least 2; got L_sub = {} ({})."
-            ).format(self.unitcell.L, ", ".join(narrow_dimensions))
-            raise RuntimeError(msg)
-
-        if self.unitcell.skew != 0:
-            msg = (
-                "Fermion mode with a skewed tensor unit cell is a known "
-                "limitation of the current fermion implementation: "
-                "measurements show wrong numbers for skew = {}. Use an "
-                "unskewed tensor cell, such as skew = 0; tenes_simple square "
-                "lattices can use W >= 2."
-            ).format(self.unitcell.skew)
-            raise RuntimeError(msg)
+        # A site that is its own nearest neighbour (a one-wide cell, or a
+        # one-high cell whose skew is a multiple of its width) cannot be
+        # updated consistently; every other cell, skewed or not, is fine.
+        unitcell = self.unitcell
+        for site_index in range(unitcell.numsites()):
+            x, y = unitcell.index2coord(site_index)
+            neighbours = [
+                unitcell.coord2index(x + dx, y + dy)
+                for dx, dy in ((-1, 0), (0, 1), (1, 0), (0, -1))
+            ]
+            if site_index in neighbours:
+                msg = (
+                    "Fermion mode requires a tensor unit cell in which no "
+                    "site is its own nearest neighbour; got L_sub = {}, "
+                    "skew = {}. Widen the cell, or give a cell that is one "
+                    "site high a skew that is not a multiple of its width."
+                ).format(unitcell.L, unitcell.skew)
+                raise RuntimeError(msg)
 
         for site_index, site in enumerate(self.unitcell.sites):
             if site.parity is None:

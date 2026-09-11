@@ -88,9 +88,10 @@ std::vector<std::vector<bool>> gen_phys_parity(
  * instead of re-checking them. Rejected are, in this version:
  *
  *   - missing or wrong-length tensor.unitcell.parity metadata,
- *   - unit cells smaller than 2x2 or with skew != 0 (skewed cells were
- *     measured to give wrong fermionic numbers),
- *   - any calculation mode other than ground state, the full update,
+ *   - unit cells in which a site is its own nearest neighbor (LX = 1, or
+ *     LY = 1 with a skew that is a multiple of LX); skewed and one-row
+ *     cells are otherwise accepted,
+ *   - any calculation mode other than ground state,
  *     Simple_Gauge_Fix, Use_RSVD, and correlation.r_max > 0
  *     (long-range correlation functions),
  *   - multi-site operators, two-site operators in the ops form or acting

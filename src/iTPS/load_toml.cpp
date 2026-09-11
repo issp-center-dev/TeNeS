@@ -615,12 +615,25 @@ void validate_fermion_constraints(
       static_cast<std::size_t>(lattice.N_UNIT)) {
     throw_fermion_guard("missing tensor.unitcell.parity metadata");
   }
-  if (lattice.LX < 2 || lattice.LY < 2) {
-    throw_fermion_guard("tensor.L_sub dimensions smaller than 2");
-  }
-  if (lattice.skew != 0) {
-    throw_fermion_guard(
-        "skewed unit cells (measured to give wrong fermionic numbers)");
+  // A site that is its own nearest neighbor (LX == 1, or LY == 1 with a
+  // skew that is a multiple of LX) makes the simple update write that site
+  // tensor twice per bond, and its virtual parity ledger can then describe
+  // the tensor that was discarded. Any other cell, skewed or one row high,
+  // is fine: the fermionic code paths see the geometry through
+  // SquareLattice's neighbor and index maps, as the bosonic ones do, and a
+  // skewed cell reproduces its unfolded skew-0 cell exactly.
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    for (int leg = 0; leg < 4; ++leg) {
+      if (lattice.neighbor(site, leg) == site) {
+        throw_fermion_guard(
+            "unit cells in which a site is its own nearest neighbor "
+            "(L_sub = [" +
+            std::to_string(lattice.LX) + ", " + std::to_string(lattice.LY) +
+            "], skew = " + std::to_string(lattice.skew) +
+            "; widen the cell, or give a cell one site high a skew that is "
+            "not a multiple of its width)");
+      }
+    }
   }
   for (int site = 0; site < lattice.N_UNIT; ++site) {
     if (peps_parameters.phys_parity[site].empty()) {

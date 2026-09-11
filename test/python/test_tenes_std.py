@@ -163,13 +163,14 @@ class TestUnitcell:
 def minimal_fermion_std_input():
     """A minimal valid fermion-mode standard-mode input.
 
-    A 2x2 unit cell -- the smallest shape fermion mode allows under C2
-    (task-11-contract.md: both L_sub entries must be >= 2) -- with one
-    shared site definition broadcast to all four positions via
-    index = [], and a single nearest-neighbour bond term (dx, dy) = (1, 0),
-    which has make_path length 1 on this lattice (unchanged from the
-    former 1x1 fixture: the taxicab hop count between two lattice sites
-    does not depend on the unit-cell tiling).
+    A 2x2 unit cell -- no site is its own nearest neighbour, so the
+    unit-cell guard (section 2.2 of
+    docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md) lets
+    it through -- with one shared site definition broadcast to all four
+    positions via index = [], and a single nearest-neighbour bond term
+    (dx, dy) = (1, 0), which has make_path length 1 on this lattice
+    (unchanged from the former 1x1 fixture: the taxicab hop count between
+    two lattice sites does not depend on the unit-cell tiling).
     """
     return {
         "parameter": {"general": {"fermion": True}},
@@ -195,15 +196,15 @@ def minimal_fermion_std_input():
 
 
 def two_site_fermion_input(parities):
-    """A four-site (2x2, the minimum fermion-valid shape per C2) fermion-mode
+    """A four-site (2x2, free of self-neighbour sites) fermion-mode
     input, with only a one-site Hamiltonian term (no bonds), so it isolates
     the "every unitcell needs parity" check (C3a) from the bond-distance
     check (C3c).
 
     `parities` maps a subset of {0, 1} to a parity list for sites 0 and 1;
     a site not present in the mapping is emitted without a `parity` key at
-    all, exactly as before. Sites 2 and 3 exist only to satisfy the
-    L_sub >= [2, 2] requirement and always carry a valid parity, so they
+    all, exactly as before. Sites 2 and 3 exist only to keep the cell free
+    of self-neighbour sites and always carry a valid parity, so they
     never trigger this check themselves.
     """
     unitcell = []
@@ -230,9 +231,9 @@ def two_site_fermion_input(parities):
 
 def fermion_input_with_missing_parity(missing_index, num_sites=4):
     """A fermion-mode input with `num_sites` unitcell sites (L_sub =
-    [2, num_sites // 2], the smallest fermion-valid (>= 2 in both entries,
-    per C2) shape that holds `num_sites` sites), all carrying
-    `parity = [0, 1]` except `missing_index`, which has none. Only a
+    [2, num_sites // 2], a cell with at least two sites in each direction,
+    so no site is its own neighbour, that holds `num_sites` sites), all
+    carrying `parity = [0, 1]` except `missing_index`, which has none. Only a
     one-site Hamiltonian term is used, so this isolates the "every unitcell
     needs parity" check (C3a).
 
@@ -553,177 +554,188 @@ class TestFermionErrorMessageQuality:
 
 
 # ---------------------------------------------------------------------------
-# C2 (task-11-contract.md): fermion mode requires BOTH tensor unit-cell
-# dimensions to be >= 2.
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section
+# 2.2: fermion mode refuses a [tensor] cell if and only if some site is its
+# own nearest neighbour through the periodic + skew boundary. With T(x, y) =
+# T(x + skew, y + L_sub[1]) that is exactly L_sub[0] == 1 (horizontal
+# self-neighbour, whatever the skew), or L_sub[1] == 1 with skew = 0 mod
+# L_sub[0] (vertical self-neighbour).
 #
-# L_sub = [2, 1] (or [1, 2]) has one entry equal to 1, so with skew = 0 a
-# site becomes its own neighbour along that direction; the C++ constructor
-# computes skew % LX = 0 in that case, so the pre-existing skew guard can
-# never fire. LatticeGraph happily builds a shortest-path graph for this
-# geometry -- no crash, no warning -- so it must be rejected up front here.
+# This replaces two guards whose premise is gone:
+#   * "skew != 0 is refused": based on a 2026-08-20 measurement that is
+#     RETRACTED. It predated the CTM folding fix 3bef24a4, compared a
+#     one-row cell with a 2x2 cell, and read an ansatz restriction as a sign
+#     error: [2, 1] skew 1 is exactly the [2, 2] skew-0 calculation
+#     restricted to T0 = T3, T1 = T2, and the simple update stays in that
+#     symmetric subspace. The note
+#     docs/superpowers/notes/2026-09-11-fermion-skew-revisit.md has the
+#     details, and shows a skewed cell and its unfolded skew-0 equivalent
+#     agree bit for bit in the simple update and to finite-chi precision in
+#     the CTM measurement; test/fermion/skew_unfold.cpp keeps it that way.
+#   * "both L_sub entries >= 2": right about the hazard (a one-wide cell can
+#     make a site its own neighbour, and the simple update then writes that
+#     site twice per bond), but broader than it. L_sub = [2, 1] with skew = 1
+#     - what tenes_simple builds for a square lattice with W = 1 - has no
+#     self-neighbour: every bond of site 0 goes to site 1.
+#
+# Where the parsed values live: Model.unitcell.L and Model.unitcell.skew
+# (Unitcell.load_dict reads tensor.l_sub and tensor.skew, skew defaulting to
+# 0). The skew is the raw input value, possibly negative or >= L_sub[0].
 # ---------------------------------------------------------------------------
 
 
-class TestFermionUnitCellDimensionGuard:
-    def test_l_sub_2_1_is_rejected(self):
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["l_sub"] = [2, 1]
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
-        message = str(excinfo.value)
-        # Identifying content: name the unit-cell dimensions, not just
-        # "raises something".
-        assert re.search(r"\bL_sub\b", message, re.I) or re.search(
-            r"\bdimension", message, re.I
-        )
-        assert re.search(r"\b2\b", message)
-        assert re.search(r"\b1\b", message)
+def fermion_cell_input(l_sub, skew=None):
+    """minimal_fermion_std_input() on the given cell, with one horizontal and
+    one vertical nearest-neighbour bond from site 0 (the vertical one wraps
+    through the skewed boundary on a one-row cell). `skew` None leaves the
+    key out."""
+    param = copy.deepcopy(minimal_fermion_std_input())
+    param["tensor"]["l_sub"] = list(l_sub)
+    if skew is not None:
+        param["tensor"]["skew"] = skew
+    param["hamiltonian"][0]["bonds"] = "0 1 0\n0 0 1\n"
+    return param
 
-    def test_l_sub_1_2_is_rejected(self):
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["l_sub"] = [1, 2]
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
-        message = str(excinfo.value)
-        assert re.search(r"\bL_sub\b", message, re.I) or re.search(
-            r"\bdimension", message, re.I
-        )
-        assert re.search(r"\b1\b", message)
-        assert re.search(r"\b2\b", message)
 
-    def test_l_sub_2_1_message_does_not_mention_the_internal_milestone(self):
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["l_sub"] = [2, 1]
+def names_numbers_after(message, word, numbers):
+    """True iff `message` contains `word` followed, after characters that are
+    neither digits nor minus signs, by `numbers` in order, each ending at a
+    non-digit (case-insensitive). "L_sub = [3, 1]", "L_sub=[3,1]" and
+    "l_sub (3 x 1)" all name L_sub 3 1; "skew = -2" names skew -2."""
+    pattern = re.escape(word)
+    for i, n in enumerate(numbers):
+        pattern += ("[^0-9-]*" if i == 0 else "[^0-9-]+") + re.escape(str(n))
+    pattern += "(?![0-9])"
+    return re.search(pattern, message, re.I) is not None
+
+
+# (L_sub, skew) cells with a self-neighbour site. LX == 1: [1, 1] and [1, 2]
+# with any skew, [1, 3] with 0. LY == 1 with skew = 0 mod LX, including
+# non-zero multiples of LX and a negative one.
+SELF_NEIGHBOUR_CELLS = [
+    ([1, 1], 0),
+    ([1, 1], 1),
+    ([1, 2], 0),
+    ([1, 2], 5),
+    ([1, 3], 0),
+    ([2, 1], 0),
+    ([3, 1], 0),
+    ([2, 1], 2),
+    ([3, 1], 3),
+    ([2, 1], -2),
+    ([4, 1], 8),
+]
+
+# (L_sub, skew) cells without one, refused before this change: skewed cells
+# (skew != 0) and one-row cells whose skew is not a multiple of LX. [2, 1]
+# skew 1 is what tenes_simple builds for W = 1; [2, 2] skew 7 and [3, 1]
+# skew 4 have |skew| >= LX; [2, 1] skew -1 and [3, 1] skew -1 are negative.
+NEWLY_ACCEPTED_CELLS = [
+    ([2, 2], 1),
+    ([3, 2], 1),
+    ([3, 3], 2),
+    ([2, 3], 1),
+    ([2, 1], 1),
+    ([2, 1], -1),
+    ([3, 1], 1),
+    ([3, 1], 2),
+    ([3, 1], -1),
+    ([4, 1], 2),
+    ([2, 2], 7),
+    ([3, 1], 4),
+]
+
+
+def cell_id(cell):
+    l_sub, skew = cell
+    return "{}x{}-skew{}".format(l_sub[0], l_sub[1], skew)
+
+
+class TestFermionSelfNeighbourCellGuard:
+    @pytest.mark.parametrize(
+        "l_sub, skew",
+        SELF_NEIGHBOUR_CELLS,
+        ids=[cell_id(c) for c in SELF_NEIGHBOUR_CELLS],
+    )
+    def test_cell_with_a_self_neighbour_site_is_rejected(self, l_sub, skew):
         with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
+            tenes_std.Model(fermion_cell_input(l_sub, skew))
         message = str(excinfo.value)
+        # The cell as given: both L_sub values and the skew, each after its
+        # own name, so a message that hard-codes another cell fails.
+        assert names_numbers_after(message, "L_sub", l_sub), message
+        assert names_numbers_after(message, "skew", [skew]), message
+        # The cause: a site would be its own nearest neighbour.
+        assert re.search(r"\bown\b", message, re.I), message
+        assert re.search(r"neighbou?r", message, re.I), message
         assert "M1" not in message
         assert "M2" not in message
 
-    def test_l_sub_2_2_is_accepted(self):
-        # Regression net (i): the exact same fermionic configuration
-        # (parity everywhere, a single nearest-neighbour bond) as the
-        # rejected cases above, but with both dimensions >= 2, must not
-        # raise -- this is minimal_fermion_std_input() itself.
+    def test_rejection_without_a_skew_key_names_the_default_skew(self):
+        # skew is optional and defaults to 0; the message names that value.
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(fermion_cell_input([3, 1]))
+        message = str(excinfo.value)
+        assert names_numbers_after(message, "L_sub", [3, 1]), message
+        assert names_numbers_after(message, "skew", [0]), message
+        assert re.search(r"\bown\b", message, re.I), message
+
+    @pytest.mark.parametrize(
+        "l_sub, skew",
+        NEWLY_ACCEPTED_CELLS,
+        ids=[cell_id(c) for c in NEWLY_ACCEPTED_CELLS],
+    )
+    def test_cell_without_a_self_neighbour_site_is_accepted(self, l_sub, skew):
+        model = tenes_std.Model(fermion_cell_input(l_sub, skew))
+        assert model.unitcell.L == l_sub
+        assert model.unitcell.skew == skew
+        # The emitted input.toml carries the cell and the skew unchanged,
+        # and the fermion metadata the solver needs.
+        buf = io.StringIO()
+        model.to_toml(buf)
+        emitted = toml.loads(buf.getvalue())
+        assert emitted["tensor"]["L_sub"] == l_sub
+        assert emitted["tensor"]["skew"] == skew
+        assert emitted["parameter"]["general"]["fermion"] is True
+        assert emitted["tensor"]["unitcell"]
+        for ucell in emitted["tensor"]["unitcell"]:
+            assert ucell["parity"] == [0, 1]
+        # Both bonds, the vertical one included, became evolution gates.
+        assert len(model.simple_updates) == 2
+
+    def test_unskewed_2x2_cell_is_still_accepted(self):
+        # Regression net: minimal_fermion_std_input() itself, no skew key.
         model = tenes_std.Model(minimal_fermion_std_input())
         assert model.unitcell.L == [2, 2]
-
-    def test_bosonic_l_sub_2_1_still_constructs(self):
-        # Regression net (ii): the bug -- and this new guard -- is
-        # fermion-specific. A bosonic (no `fermion` key) 2x1 cell, the
-        # shape the benchmark harness uses, must be entirely unaffected.
-        param = {
-            "tensor": {
-                "l_sub": [2, 1],
-                "unitcell": [
-                    {"index": [], "physical_dim": 2, "virtual_dim": 2},
-                ],
-            },
-            "hamiltonian": [
-                {
-                    "dim": [2, 2],
-                    "bonds": "0 1 0\n",
-                    "elements": "0 0 0 0 1.0 0.0\n1 1 1 1 -1.0 0.0",
-                }
-            ],
-        }
-        model = tenes_std.Model(param)  # must not raise
-        assert model.unitcell.L == [2, 1]
-
-
-# ---------------------------------------------------------------------------
-# C2/C3 (task-4b-contract.md): fermion = true with [tensor] skew != 0 must
-# be rejected.
-#
-# work/skew-validation/FINDINGS.md measured this at the tenes_simple layer
-# (a 20.6% energy shift, density drifted off half filling for the standard
-# skew = 1 two-site cell); tenes_std must refuse the same combination when
-# `skew` arrives as an explicit std.toml field, before evolution operators
-# are built. Where the parsed value lives: `Model.unitcell.skew`
-# (`Unitcell.load_dict` sets it from `tensor.skew`, defaulting to 0) --
-# tests read it from there rather than re-parsing the raw dict.
-# ---------------------------------------------------------------------------
-
-
-class TestFermionSkewGuard:
-    def test_fermion_mode_with_nonzero_skew_is_rejected(self):
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["skew"] = 1
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
-        message = str(excinfo.value)
-        assert re.search(r"\bskew\b", message, re.I)
-        assert re.search(r"\b1\b", message)
-
-    def test_fermion_mode_with_nonzero_skew_message_is_fermion_specific(self):
-        # C2 requirements mirror C1: the message must read as a measured
-        # correctness bug (wrong numbers), not as a generic missing-scope
-        # complaint -- which in this file's own established phrasing reads
-        # "Fermion mode does not support ...". The skew guard must not
-        # reuse that exact framing.
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["skew"] = 1
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
-        message = str(excinfo.value)
-        assert re.search(r"\bfermion", message, re.I)
-        assert re.search(r"measured|wrong|incorrect|known limitation", message, re.I)
-        assert "does not support" not in message
-
-    def test_skew_guard_message_does_not_mention_the_internal_milestone(self):
-        param = copy.deepcopy(minimal_fermion_std_input())
-        param["tensor"]["skew"] = 1
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_std.Model(param)
-        message = str(excinfo.value)
-        assert "M1" not in message
-        assert "M2" not in message
-
-    def test_skew_guard_message_names_the_offending_skew_value(self):
-        # Identifying content, not merely "the two messages differ" (a
-        # content-free string differing only by e.g. id(self) would still
-        # pass a bare inequality check): each message must contain its OWN
-        # offending skew value. 7 and 9 are used so neither digit can
-        # coincide with any digit already in the fixed boilerplate.
-        param_a = copy.deepcopy(minimal_fermion_std_input())
-        param_a["tensor"]["skew"] = 7
-        param_b = copy.deepcopy(minimal_fermion_std_input())
-        param_b["tensor"]["skew"] = 9
-
-        with pytest.raises(RuntimeError) as ea:
-            tenes_std.Model(param_a)
-        with pytest.raises(RuntimeError) as eb:
-            tenes_std.Model(param_b)
-
-        msg_a, msg_b = str(ea.value), str(eb.value)
-        assert re.search(r"\b7\b", msg_a), msg_a
-        assert re.search(r"\b9\b", msg_b), msg_b
-        # Discrimination: a message that hard-codes one skew value cannot
-        # simultaneously name the other.
-        assert not re.search(r"\b9\b", msg_a), msg_a
-        assert not re.search(r"\b7\b", msg_b), msg_b
-        assert msg_a != msg_b
-
-    def test_fermion_mode_with_default_skew_is_still_accepted(self):
-        # Regression net (i): fermion = true with no explicit `skew` key
-        # (skew defaults to 0 in Unitcell.load_dict) must keep working
-        # exactly as today -- this is minimal_fermion_std_input() itself.
-        model = tenes_std.Model(minimal_fermion_std_input())
         assert model.unitcell.skew == 0
 
-    def test_fermion_mode_with_explicit_zero_skew_is_accepted(self):
-        # Regression net (i), the explicit form: skew = 0 written out
-        # must not be mistaken for "skew present" by the guard.
+    def test_explicit_zero_skew_on_a_2x2_cell_is_accepted(self):
         param = copy.deepcopy(minimal_fermion_std_input())
         param["tensor"]["skew"] = 0
         model = tenes_std.Model(param)
         assert model.unitcell.skew == 0
 
-    def test_bosonic_input_with_nonzero_skew_is_still_accepted(self):
-        # Regression net (ii): the bug is fermion-specific. A bosonic
-        # input (no `fermion` key at all) with skew != 0 must be entirely
-        # untouched by this guard.
-        param = minimal_std_input()
-        param["tensor"]["skew"] = 1
-        model = tenes_std.Model(param)
-        assert model.unitcell.skew == 1
+    def test_other_fermion_guards_still_run_on_a_skewed_cell(self):
+        # Lifting the cell-shape refusal must not take the other fermion
+        # checks with it: a missing parity on an accepted skewed cell is
+        # still refused, for that reason.
+        param = fermion_cell_input([2, 1], 1)
+        param["tensor"]["unitcell"] = [
+            {"index": [0], "physical_dim": 2, "virtual_dim": 2, "parity": [0, 1]},
+            {"index": [1], "physical_dim": 2, "virtual_dim": 2},
+        ]
+        with pytest.raises(RuntimeError, match="parity"):
+            tenes_std.Model(param)
+
+    def test_bosonic_one_row_cells_are_untouched(self):
+        # Regression net: the guard is fermion-specific. Bosonic (no
+        # `fermion` key) cells, self-neighbour ones included ([2, 1] skew 0
+        # is the shape the benchmark harness uses), construct as before.
+        for l_sub, skew in [([2, 1], 0), ([2, 1], 1), ([2, 2], 1)]:
+            param = minimal_std_input()
+            param["tensor"]["l_sub"] = l_sub
+            param["tensor"]["skew"] = skew
+            param["hamiltonian"][0]["bonds"] = "0 1 0\n"
+            model = tenes_std.Model(param)  # must not raise
+            assert model.unitcell.L == l_sub
+            assert model.unitcell.skew == skew

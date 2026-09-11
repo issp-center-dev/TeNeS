@@ -32,6 +32,14 @@ add_executable(
 
 add_executable(test_fermion_fold_full_update fermion/fold_full_update_unit.cpp)
 
+# Section 4 of
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md: a skewed
+# fermion cell against its unfolded skew-0 equivalent (simple update, CTM and
+# mean-field measurement, one full-update bond). About 9 s in a Debug build
+# on one thread, over half of it four CTM pairs; its own process so that
+# ctest -j runs it beside test_fermion_layer instead of after it.
+add_executable(test_fermion_skew_unfold fermion/skew_unfold.cpp)
+
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
     correlation_length saveload arnoldi timer_registry onesite_rdm)
@@ -55,7 +63,8 @@ foreach(basename IN LISTS tenes_unit_tests)
   endif()
 endforeach()
 
-foreach(testname test_fermion_layer test_fermion_fold_full_update)
+foreach(testname test_fermion_layer test_fermion_fold_full_update
+        test_fermion_skew_unfold)
   target_link_libraries(${testname} PUBLIC tenes_static)
   target_compile_definitions(
     ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")

@@ -22,6 +22,8 @@
 #include <fstream>
 #include <cstdio>
 #include <iostream>
+#include <numeric>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -379,8 +381,9 @@ noise = 0.01
     INFO("fermion initialization masks odd-total Tn entries");
     // L_sub = [2, 1] is left as-is: this subcase constructs iTPS<ptensor>
     // directly and never calls validate_fermion_constraints (only
-    // itps_main does, in main.cpp), so the new C2 tensor.L_sub-dimensions
-    // guard is never on this subcase's path and does not need a 2x2 cell.
+    // itps_main does, in main.cpp), so the self-neighbour guard (a site of
+    // this skew-0 one-row cell is its own vertical neighbour) is never on
+    // this subcase's path.
     auto toml = parse_str(R"(
 [tensor]
 L_sub = [2, 1]
@@ -489,9 +492,9 @@ eigensolver = "lapack"
     INFO("fermion parity input loads");
     // L_sub = [1, 1] is left as-is: this subcase only exercises
     // gen_param/gen_lattice/gen_phys_parity (the raw TOML parsing) and
-    // never calls validate_fermion_constraints, so the new C2
-    // tensor.L_sub-dimensions guard never runs here and the 1x1 cell still
-    // loads cleanly.
+    // never calls validate_fermion_constraints, so the self-neighbour guard
+    // (which refuses a 1x1 cell) never runs here and the cell still loads
+    // cleanly.
     auto param_toml = parse_str(R"(
 [parameter]
 [parameter.general]
@@ -524,13 +527,14 @@ fermion = true
 [parameter.ctm]
 meanfield_env = true
 )");
-    // L_sub = [2, 2]: with a 1-wide cell the tensor.L_sub-dimensions guard
-    // (C2, task-11-contract.md) would throw before MeanField_Env is even
-    // looked at, so the subcase could not tell that the mean-field
-    // environment itself is accepted. A 2x2 cell with a single site
-    // definition broadcast via index = [] clears that guard; with the
-    // fermionic mean-field measurement in place, MeanField_Env=true is a
-    // supported combination and nothing else in this input is guarded.
+    // L_sub = [2, 2]: with a 1x1 cell the self-neighbour guard
+    // (docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md
+    // section 2.1) would throw before MeanField_Env is even looked at, so
+    // the subcase could not tell that the mean-field environment itself is
+    // accepted. A 2x2 cell with a single site definition broadcast via
+    // index = [] clears that guard; with the fermionic mean-field
+    // measurement in place, MeanField_Env=true is a supported combination
+    // and nothing else in this input is guarded.
     auto tensor_toml = parse_str(R"(
 [tensor]
 L_sub = [2, 2]
@@ -559,9 +563,9 @@ parity = [0, 1]
 fermion = true
 )");
     // L_sub = [2, 2]: same reasoning as "fermion accepts mean-field
-    // environment" above -- a 1-wide cell would trip the new
-    // tensor.L_sub-dimensions guard before the parity-odd one-site
-    // operator check this subcase is named for.
+    // environment" above -- a 1x1 cell would trip the self-neighbour guard
+    // before the parity-odd one-site operator check this subcase is named
+    // for.
     auto tensor_toml = parse_str(R"(
 [tensor]
 L_sub = [2, 2]
@@ -603,11 +607,11 @@ elements = """
         "output_test_input_fermion_odd_operator_main_path";
     {
       std::ofstream ofs(input_filename);
-      // L_sub = [2, 2]: a 1-wide cell now trips the new
-      // tensor.L_sub-dimensions guard (C2, task-11-contract.md) before
-      // reaching the parity-odd one-site operator check this subcase
-      // exercises; a single site definition broadcast via index = []
-      // keeps this a minimal fixture while clearing that guard.
+      // L_sub = [2, 2]: a 1x1 cell trips the self-neighbour guard
+      // (docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md
+      // section 2.1) before reaching the parity-odd one-site operator check
+      // this subcase exercises; a single site definition broadcast via
+      // index = [] keeps this a minimal fixture while clearing that guard.
       ofs << R"(
 [parameter]
 [parameter.general]
@@ -910,4 +914,314 @@ dimension = 4
   REQUIRE(meanfield.MeanField_Env == true);
   REQUIRE(meanfield.num_full_step[0] == 1);
   CHECK_THROWS_AS(build(meanfield), tenes::input_error);
+}
+
+// ===== Fermion mode and the shape of the unit cell =========================
+//
+// docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section
+// 2.1 (evidence: docs/superpowers/notes/2026-09-11-fermion-skew-revisit.md).
+// validate_fermion_constraints refuses a fermion-mode cell if and only if
+// some site is its own nearest neighbour through the periodic + skew
+// boundary. With T(x, y) = T(x + skew, y + LY) that is exactly LX == 1
+// (horizontal), or LY == 1 with skew = 0 mod LX (vertical). Skewed cells as
+// such are accepted: the "skew breaks the fermionic signs" measurement
+// behind the old refusal was retracted (see the note), and
+// test/fermion/skew_unfold.cpp now pins skewed cells to their unfolded
+// skew-0 equivalents.
+//
+// The lattice keeps the sign of the input skew (skew % LX in C++ semantics),
+// so [2,1] skew -1 holds skew = -1 and must be accepted like skew = 1.
+//
+// An input skew that is a non-zero multiple of LX (e.g. [2,1] skew 2) is the
+// skew-0 lattice (contract section 8.1), so such cells reach the guard like
+// any other and are among the cases below. Before that fix the SquareLattice
+// constructor divided by zero (lcm(LX, 0) / 0) while building them: a SIGFPE
+// on x86-64, a silent LY_noskew = 0 on arm64. The next two test cases pin
+// the constructor itself.
+
+namespace {
+
+//! LY_noskew of an [lx, ly] cell with the given skew, from arithmetic: a
+//! skew r = skew mod lx in [1, lx) repeats after lcm(lx, r) / r rows of
+//! cells, a multiple of lx is no skew at all.
+int expected_ly_noskew(int lx, int ly, int skew) {
+  const int r = ((skew % lx) + lx) % lx;
+  return r == 0 ? ly : ly * (std::lcm(lx, r) / r);
+}
+
+//! The site of an [lx, ly] cell with the given skew at global position
+//! (x, y), from T(x, y) = T(x + skew, y + ly): (x, y + k ly) holds the site
+//! at (x - k skew, y).
+int skew_site_at(int lx, int ly, int skew, int x, int y) {
+  const int k = (y >= 0 ? y : y - ly + 1) / ly;
+  const int xs = (((x - skew * k) % lx) + lx) % lx;
+  const int ys = ((y % ly) + ly) % ly;
+  return xs + lx * ys;
+}
+
+}  // namespace
+
+TEST_CASE("SquareLattice treats a skew that is a multiple of LX as no skew") {
+  using tenes::SquareLattice;
+  // Contract section 8.1. Every one of these used to divide by zero in the
+  // constructor; on arm64 that left LY_noskew = N_UNIT_noskew = 0, which is
+  // what the checks below see on the unfixed code there.
+  const int cells[][3] = {{2, 2, 2},  {2, 1, 2}, {2, 1, -2}, {3, 1, 3},
+                          {3, 2, 6},  {1, 2, 1}, {1, 1, 1},  {1, 2, 5},
+                          {2, 2, -4}, {4, 1, 8}, {3, 3, -3}};
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    const SquareLattice lattice(lx, ly, skew);
+    const SquareLattice plain(lx, ly, 0);
+    CHECK(lattice.skew == 0);
+    CHECK(lattice.LX == lx);
+    CHECK(lattice.LY == ly);
+    CHECK(lattice.N_UNIT == lx * ly);
+    CHECK(lattice.LX_noskew == lx);
+    CHECK(lattice.LY_noskew == ly);
+    CHECK(lattice.N_UNIT_noskew == lx * ly);
+    int neighbor_mismatch = 0;
+    int other_mismatch = 0;
+    int parity_mismatch = 0;
+    for (int i = 0; i < lattice.N_UNIT; ++i) {
+      for (int leg = 0; leg < 4; ++leg) {
+        neighbor_mismatch += lattice.neighbor(i, leg) != plain.neighbor(i, leg);
+      }
+      for (int dx = -2; dx <= 2; ++dx) {
+        for (int dy = -2; dy <= 2; ++dy) {
+          other_mismatch += lattice.other(i, dx, dy) != plain.other(i, dx, dy);
+        }
+      }
+      parity_mismatch += lattice.parity(i) != plain.parity(i);
+    }
+    int index_mismatch = 0;
+    for (int x = -2 * lx; x < 3 * lx; ++x) {
+      for (int y = -3 * ly; y < 3 * ly; ++y) {
+        index_mismatch += lattice.index(x, y) != plain.index(x, y);
+      }
+    }
+    CHECK(neighbor_mismatch == 0);
+    CHECK(other_mismatch == 0);
+    CHECK(index_mismatch == 0);
+    CHECK(parity_mismatch == 0);
+  }
+
+  // The same through the input path.
+  auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+skew = 2
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+)");
+  const SquareLattice from_input =
+      tenes::itps::gen_lattice(tensor_toml.at("tensor"));
+  CHECK(from_input.skew == 0);
+  CHECK(from_input.LY_noskew == 2);
+  CHECK(from_input.N_UNIT_noskew == 4);
+}
+
+TEST_CASE("SquareLattice keeps every other skew") {
+  using tenes::SquareLattice;
+  // Contract section 8.1: the fix must not touch these. The member keeps
+  // skew % LX with the sign of the input (the guard test below relies on
+  // it), and the neighbour and index maps follow T(x, y) = T(x + skew, y + LY).
+  const int cells[][3] = {{2, 2, 1}, {2, 1, 1},  {2, 1, -1}, {3, 1, 1},
+                          {3, 1, 2}, {3, 1, -1}, {3, 1, 4},  {3, 3, -4},
+                          {4, 1, 2}, {4, 3, 6},  {2, 2, 7},  {4, 2, -2}};
+  const int dx[4] = {-1, 0, 1, 0};
+  const int dy[4] = {0, 1, 0, -1};
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    const SquareLattice lattice(lx, ly, skew);
+    const int ly_noskew = expected_ly_noskew(lx, ly, skew);
+    CHECK(lattice.skew == skew % lx);
+    CHECK(lattice.LX_noskew == lx);
+    CHECK(lattice.LY_noskew == ly_noskew);
+    CHECK(lattice.N_UNIT_noskew == lx * ly_noskew);
+    int neighbor_mismatch = 0;
+    for (int i = 0; i < lattice.N_UNIT; ++i) {
+      for (int leg = 0; leg < 4; ++leg) {
+        neighbor_mismatch +=
+            lattice.neighbor(i, leg) !=
+            skew_site_at(lx, ly, skew, i % lx + dx[leg], i / lx + dy[leg]);
+      }
+    }
+    int index_mismatch = 0;
+    for (int x = -2 * lx; x < 3 * lx; ++x) {
+      for (int y = -3 * ly_noskew; y < 3 * ly_noskew; ++y) {
+        index_mismatch +=
+            lattice.index(x, y) != skew_site_at(lx, ly, skew, x, y);
+      }
+    }
+    CHECK(neighbor_mismatch == 0);
+    CHECK(index_mismatch == 0);
+  }
+}
+
+namespace {
+
+std::string fermion_shaped_cell_toml(int lx, int ly, int skew) {
+  std::ostringstream os;
+  os << "[tensor]\n"
+     << "L_sub = [" << lx << ", " << ly << "]\n"
+     << "skew = " << skew << "\n"
+     << R"([[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+)";
+  return os.str();
+}
+
+//! True iff `text` contains a match of the ECMAScript regular expression
+//! `pattern`, ignoring case.
+bool contains_icase(std::string const &text, std::string const &pattern) {
+  return std::regex_search(
+      text, std::regex(pattern, std::regex::ECMAScript | std::regex::icase));
+}
+
+//! True iff `text` contains `word` followed, after characters that are
+//! neither digits nor minus signs, by the given integers in order (each one
+//! ending at a non-digit). "L_sub = [3, 1]", "L_sub=[3,1]" and
+//! "tensor.L_sub (3 x 1)" all name L_sub 3 1; the check is case-insensitive.
+bool names_numbers_after(std::string const &text, std::string const &word,
+                         std::vector<int> const &numbers) {
+  std::string pattern = word;
+  for (std::size_t i = 0; i < numbers.size(); ++i) {
+    pattern += (i == 0 ? "[^0-9-]*" : "[^0-9-]+");
+    pattern += std::to_string(numbers[i]);
+  }
+  pattern += "(?![0-9])";
+  return contains_icase(text, pattern);
+}
+
+}  // namespace
+
+TEST_CASE("fermion mode refuses exactly the cells with a self-neighbour site") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+
+  struct cell {
+    int lx;
+    int ly;
+    int skew;
+  };
+
+  auto validate = [](cell c) {
+    auto tensor_toml = parse_str(fermion_shaped_cell_toml(c.lx, c.ly, c.skew));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    // Premises: the cell is what the input says, the lattice holds the skew
+    // with the sign of the input, and the rest of the input is a valid
+    // fermion input (parity metadata on every site), so that the only thing
+    // left for the guard to judge is the shape.
+    REQUIRE(lattice.LX == c.lx);
+    REQUIRE(lattice.LY == c.ly);
+    REQUIRE(lattice.skew == c.skew % c.lx);
+    // The cell the guard judges is the whole cell (contract section 8.1; on
+    // the unfixed code a skew that is a multiple of LX left LY_noskew = 0).
+    CHECK(lattice.LY_noskew == expected_ly_noskew(c.lx, c.ly, c.skew));
+    CHECK(lattice.N_UNIT_noskew ==
+          c.lx * expected_ly_noskew(c.lx, c.ly, c.skew));
+    REQUIRE(peps_parameters.fermion == true);
+    REQUIRE(peps_parameters.phys_parity.size() ==
+            static_cast<std::size_t>(c.lx * c.ly));
+    validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{});
+  };
+
+  SUBCASE("cells in which no site is its own neighbour are accepted") {
+    const cell accepted[] = {
+        // Newly accepted: skewed cells with both sides >= 2,
+        {2, 2, 1},
+        {3, 2, 1},
+        {3, 3, 2},
+        {2, 3, 1},
+        // one-row cells whose skew is not a multiple of LX (every bond of
+        // such a row goes to a different site; [2,1] skew 1 is what
+        // tenes_simple builds for a square lattice with W = 1),
+        {2, 1, 1},
+        {2, 1, -1},
+        {3, 1, 1},
+        {3, 1, 2},
+        {3, 1, -1},
+        {4, 1, 2},
+        // and cells with |skew| >= LX.
+        {2, 2, 7},
+        {3, 1, 4},
+        // Accepted before and still accepted.
+        {2, 2, 0},
+        {3, 3, 0},
+        // A skew that is a multiple of LX on a cell two sites high: the
+        // skew-0 cell (contract section 8.1).
+        {2, 2, 2},
+        {3, 2, 6},
+    };
+    for (const cell c : accepted) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      CHECK_NOTHROW(validate(c));
+    }
+  }
+
+  SUBCASE("cells with a self-neighbour site are refused, naming the cause") {
+    const cell refused[] = {
+        // LX == 1: horizontal self-neighbour.
+        {1, 1, 0},
+        {1, 2, 0},
+        {1, 3, 0},
+        // LY == 1 and skew = 0 mod LX: vertical self-neighbour.
+        {2, 1, 0},
+        {3, 1, 0},
+        {4, 1, 0},
+        // The same with a skew that is a non-zero multiple of LX, which
+        // reaches the guard since contract section 8.1 (the lattice holds
+        // skew 0, and the message names that).
+        {2, 1, 2},
+        {2, 1, -2},
+        {3, 1, 3},
+        {1, 1, 1},
+        {1, 2, 5},
+    };
+    for (const cell c : refused) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      std::string message;
+      try {
+        validate(c);
+        FAIL_CHECK("a cell with a self-neighbour site was accepted");
+        continue;
+      } catch (const tenes::input_error &e) {
+        message = e.what();
+      }
+      INFO("message: " << message);
+      // Through the existing throw_fermion_guard wrapper.
+      CHECK(message.find("fermion mode") != std::string::npos);
+      // The cause: a site would be its own nearest neighbour.
+      CHECK(contains_icase(message, "\\bown\\b"));
+      CHECK(contains_icase(message, "neighbou?r"));
+      // The shape: both L_sub values, and the skew the lattice holds.
+      CHECK(names_numbers_after(message, "L_sub", {c.lx, c.ly}));
+      CHECK(names_numbers_after(message, "skew", {c.skew % c.lx}));
+    }
+  }
 }

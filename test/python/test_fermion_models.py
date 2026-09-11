@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see http://www.gnu.org/licenses
 
+import io
 import os
 import re
 import sys
@@ -212,74 +213,109 @@ class TestFermionScopeGuards:
 
 
 # ---------------------------------------------------------------------------
-# C1 (task-4b-contract.md): a fermionic model on a skewed cell must be
-# rejected.
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section
+# 2.3: fermionic models on the square lattice with W = 1 are accepted.
 #
-# work/skew-validation/FINDINGS.md measured this, it is not a precaution:
-# free spinless fermions on the standard two-site cell L_sub = [2, 1] (which
-# SquareLattice realises as skew = 1 when W == 1) give a 20.6% energy shift
-# and a density drifted off half filling relative to the flat, skew = 0
-# control -- with no error, no warning, a plausible-looking wrong number.
-# Until the C++ sign bug is fixed, tenes_simple must refuse to emit a
-# std.toml for this combination.
+# SquareLattice realises W = 1 as L_sub = [L, 1] with skew = 1. That cell
+# used to be refused on the strength of a 2026-08-20 measurement ("a 20.6%
+# energy shift" against a skew = 0 control). That measurement is RETRACTED:
+# it predated the CTM folding fix 3bef24a4, compared a one-row cell with a
+# 2x2 cell, and read an ansatz restriction as a sign error: the [2, 1]
+# skew 1 cell is exactly the [2, 2] skew-0 calculation restricted to
+# T0 = T3, T1 = T2, and the simple update stays in that symmetric subspace
+# (the bosonic XY ferromagnet does the same; details in
+# docs/superpowers/notes/2026-09-11-fermion-skew-revisit.md). The same note
+# shows the [2, 1] skew 1 cell and its unfolded [2, 2] skew 0 equivalent
+# agree bit for bit in the simple update, to 1e-13 in the CTM measurement
+# and to 4e-15 in the full update; test/fermion/skew_unfold.cpp keeps it
+# that way. The cell has no site that is its own neighbour (every bond of
+# site 0 goes to site 1), so it also passes the unit-cell guard of tenes_std
+# and of the solver.
+#
+# tenes_simple cannot produce a self-neighbour fermion cell at all (the
+# square lattice asserts L > 1, and W = 1 always gets skew = 1), so it has no
+# cell-shape refusal left. Unchanged: non-square lattices are refused for
+# fermionic models (TestFermionScopeGuards), W >= 2 gives skew = 0, and
+# bosonic models are untouched.
 # ---------------------------------------------------------------------------
 
 
-class TestFermionSkewGuard:
-    def test_fermionic_model_with_skewed_cell_is_rejected(self):
-        # W = 1 is the standard two-site cell; SquareLattice sets skew = 1
-        # for it. This must raise before any std.toml text is produced.
-        param = spinless_param(lattice_extra={"W": 1})
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_simple.tenes_simple(param)
-        message = str(excinfo.value)
-        # Identifying content, not just "raises something": name the
-        # offending cell (W = 1) or the skew value it produces (both are
-        # literally 1 here), and steer the user to a wider cell (W >= 2).
-        assert re.search(r"\bskew\b", message, re.I) or re.search(
-            r"\bW\s*=\s*1\b", message
+def assert_one_row_skew_1_std(text, lattice, L):
+    """The std.toml of a W = 1 square lattice: L_sub = [L, 1], skew = 1,
+    both in the returned lattice, in the text, and in the parsed tensor
+    section."""
+    assert lattice.skew == 1
+    assert lattice.W == 1
+    assert re.search(r"^skew = 1$", text, re.M), text
+    tensor = toml.loads(text)["tensor"]
+    assert tensor["L_sub"] == [L, 1]
+    assert tensor["skew"] == 1
+
+
+def assert_tenes_std_accepts(text, L, parity):
+    """Feed a std.toml to tenes_std: it must build the model and emit an
+    input.toml in fermion mode that keeps the cell, the skew and the parity
+    metadata of every unitcell."""
+    model = tenes_std.Model(toml.loads(text))
+    assert model.parameter["general"]["fermion"] is True
+    assert model.unitcell.L == [L, 1]
+    assert model.unitcell.skew == 1
+    assert all(site.parity == parity for site in model.unitcell.sites)
+    # One gate per nearest-neighbour bond of the cell: L horizontal and L
+    # vertical ones, the vertical ones wrapping through the skewed boundary.
+    assert len(model.simple_updates) == 2 * L
+    buf = io.StringIO()
+    model.to_toml(buf)
+    emitted = toml.loads(buf.getvalue())
+    assert emitted["parameter"]["general"]["fermion"] is True
+    assert emitted["tensor"]["L_sub"] == [L, 1]
+    assert emitted["tensor"]["skew"] == 1
+    assert emitted["tensor"]["unitcell"]
+    for ucell in emitted["tensor"]["unitcell"]:
+        assert ucell["parity"] == parity
+
+
+class TestFermionOneRowSkewedCell:
+    @pytest.mark.parametrize("L", [2, 3])
+    def test_w1_gives_a_one_row_skew_1_cell(self, L):
+        text, lattice = tenes_simple.tenes_simple(
+            spinless_param(lattice_extra={"L": L, "W": 1})
         )
-        assert re.search(r"\b2\b", message)
+        assert_one_row_skew_1_std(text, lattice, L)
 
-    def test_fermionic_model_with_skewed_cell_message_is_fermion_specific(self):
-        # C1 requires the message to say this is a MEASURED limitation of
-        # the fermion implementation (wrong numbers), not a generic
-        # "unsupported configuration" the way e.g. the non-square-lattice
-        # guard reads. Pin that framing without pinning exact prose.
-        param = spinless_param(lattice_extra={"W": 1})
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_simple.tenes_simple(param)
-        message = str(excinfo.value)
-        assert re.search(r"\bfermion", message, re.I)
-        assert re.search(r"measured|wrong|incorrect|known limitation", message, re.I)
-        # The existing missing-feature guards in this same function say
-        # exactly this; the skew bug must not be described the same way,
-        # since it is a correctness bug, not missing scope.
-        assert "is not available for fermionic models" not in message
+    @pytest.mark.parametrize("L", [2, 3])
+    def test_w1_std_toml_is_accepted_by_tenes_std(self, L):
+        text, _ = tenes_simple.tenes_simple(
+            spinless_param(lattice_extra={"L": L, "W": 1})
+        )
+        assert_tenes_std_accepts(text, L, [0, 1])
 
-    def test_skew_guard_message_does_not_mention_the_internal_milestone(self):
-        param = spinless_param(lattice_extra={"W": 1})
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_simple.tenes_simple(param)
-        message = str(excinfo.value)
-        assert "M1" not in message
-        assert "M2" not in message
+    def test_no_square_lattice_cell_is_refused_for_its_shape(self):
+        # No cell-shape refusal is left in tenes_simple: every L >= 2 and W
+        # it can be given produces a std.toml, with skew = 1 exactly for
+        # W = 1.
+        for L in (2, 3, 4):
+            for W in (1, 2, 3):
+                text, lattice = tenes_simple.tenes_simple(
+                    spinless_param(lattice_extra={"L": L, "W": W})
+                )
+                assert lattice.skew == (1 if W == 1 else 0), (L, W)
+                assert toml.loads(text)["tensor"]["L_sub"] == [L, W]
 
     def test_fermionic_model_with_square_cell_no_skew_is_accepted(self):
-        # Regression net (i): fermionic + skew = 0 (the default 2x2 cell)
-        # must keep working exactly as today.
+        # Regression net: fermionic + skew = 0 (the default 2x2 cell).
         text, lattice = tenes_simple.tenes_simple(spinless_param())
         assert lattice.skew == 0
 
     def test_fermionic_model_with_wide_cell_no_skew_is_accepted(self):
-        # Regression net (i), a second shape: any W != 1 keeps skew = 0.
+        # Regression net, a second shape: any W != 1 keeps skew = 0.
         param = spinless_param(lattice_extra={"L": 3, "W": 3})
         text, lattice = tenes_simple.tenes_simple(param)
         assert lattice.skew == 0
 
     def test_bosonic_model_with_skewed_cell_is_still_accepted(self):
-        # Regression net (ii): the bug is fermion-specific. W = 1 is
-        # standard practice for spins/bosons and must be untouched.
+        # Regression net: W = 1 is standard practice for spins/bosons and
+        # stays untouched.
         param = {
             "parameter": {"general": {}},
             "lattice": {"type": "square lattice", "L": 2, "W": 1, "virtual_dim": 2},
@@ -287,6 +323,8 @@ class TestFermionSkewGuard:
         }
         text, lattice = tenes_simple.tenes_simple(param)
         assert lattice.skew == 1
+        assert "parity" not in text
+        assert "fermion" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -695,16 +733,14 @@ class TestHubbardScopeGuards:
         assert "M1" not in message and "M2" not in message
 
 
-class TestHubbardSkewGuard:
-    def test_skewed_cell_is_rejected(self):
-        param = hubbard_param(lattice_extra={"W": 1})
-        with pytest.raises(RuntimeError) as excinfo:
-            tenes_simple.tenes_simple(param)
-        message = str(excinfo.value)
-        assert re.search(r"\bskew\b", message, re.I) or re.search(
-            r"\bW\s*=\s*1\b", message
-        )
-        assert "M1" not in message and "M2" not in message
+class TestHubbardOneRowSkewedCell:
+    # Section 2.3 of the contract cited above TestFermionOneRowSkewedCell,
+    # for the second fermionic model: W = 1 is accepted (it used to be
+    # refused on the retracted 2026-08-20 measurement; see that comment).
+    def test_w1_cell_is_accepted_with_skew_1(self):
+        text, lattice = tenes_simple.tenes_simple(hubbard_param(lattice_extra={"W": 1}))
+        assert_one_row_skew_1_std(text, lattice, 2)
+        assert_tenes_std_accepts(text, 2, [0, 1, 1, 0])
 
     def test_square_cell_no_skew_is_accepted(self):
         text, lattice = tenes_simple.tenes_simple(hubbard_param())

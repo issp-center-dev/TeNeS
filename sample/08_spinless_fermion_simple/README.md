@@ -15,7 +15,5 @@
 - notes
     - the current fermion support in `tenes_simple` / `tenes_std` is limited to
       nearest-neighbor bonds on the square lattice
-    - skewed unit cells, including the one automatically selected for square
-      lattices with W = 1, are not supported
-    - correlation functions, correlation lengths, full update, and finite
-      temperature calculations are not supported in fermion mode
+    - correlation functions, correlation lengths, and finite temperature
+      calculations are not supported in fermion mode
