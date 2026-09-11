@@ -8,7 +8,7 @@
     - spinless free fermions on the square lattice (fermion mode, experimental)
     - H = -t sum_<ij> (c_i^dag c_j + h.c.) - mu sum_i n_i with t = 1, mu = 0 (half filling)
 - expected results
-    - D = 2 and chi = 8 give E ≈ -0.7328 and n = 0.5
+    - D = 2 and chi = 8 give E ≈ -0.72345 and n = 0.5
     - the exact reference energy is -0.81056
 - notes
     - the current fermion support in `tenes_simple` / `tenes_std` is limited to
