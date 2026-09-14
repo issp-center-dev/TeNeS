@@ -896,8 +896,9 @@ int svd_values(const ftensor<tensor>& a, const mptensor::Axes& rows,
       tenes::fermion::parity_sort_perm(row_parity);
   std::vector<std::size_t> col_perm =
       tenes::fermion::parity_sort_perm(col_parity);
-  tensor prow = tenes::fermion::make_perm_matrix<tensor>(row_perm);
-  tensor pcol = tenes::fermion::make_perm_matrix<tensor>(col_perm);
+  const typename tensor::comm_type comm = a.t.get_comm();
+  tensor prow = tenes::fermion::make_perm_matrix<tensor>(comm, row_perm);
+  tensor pcol = tenes::fermion::make_perm_matrix<tensor>(comm, col_perm);
   tensor sorted =
       mptensor::tensordot(prow, mat, mptensor::Axes(1), mptensor::Axes(0));
   sorted =

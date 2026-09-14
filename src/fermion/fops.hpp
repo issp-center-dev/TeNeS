@@ -598,11 +598,18 @@ int svd(const ftensor<tensor>& a, std::vector<double>& s) {
   return mptensor::svd(a.t, s);
 }
 
-//! Permutation matrix P with P[i][j] = 1 iff perm[i] == j, used to apply
-//! the even-first sort to a matricization.
+/*! @brief Permutation matrix P with P[i][j] = 1 iff perm[i] == j, used to
+ *  apply the even-first sort to a matricization.
+ *
+ *  @p comm has to be passed in: it is contracted with the matrix it sorts,
+ *  and mptensor's shape-only constructor would put it on MPI_COMM_WORLD,
+ *  which is not the communicator a library caller may have handed to
+ *  tenes_itps_main().
+ */
 template <class tensor>
-tensor make_perm_matrix(const std::vector<std::size_t>& perm) {
-  tensor ret(mptensor::Shape(perm.size(), perm.size()));
+tensor make_perm_matrix(const typename tensor::comm_type& comm,
+                        const std::vector<std::size_t>& perm) {
+  tensor ret(comm, mptensor::Shape(perm.size(), perm.size()));
   mptensor::Index idx;
   idx.resize(2);
   for (std::size_t n = 0; n < ret.local_size(); ++n) {
@@ -694,10 +701,22 @@ local_tensor_type<tensor> gather_matrix(tensor& a) {
  * @brief SVD of one parity block, on one rank when it is small enough.
  *
  * gather_matrix() reduces over the ranks, so every rank starts the local
- * branch from the same matrix, and one routine given one matrix cannot
- * return different answers on different ranks - which is the failure this
- * branch exists to remove. The way back is mptensor's "all processes have
- * the same data" constructor, the one its own eig() uses.
+ * branch from bit-identical input, not merely from close input: flatten()
+ * has each rank fill only the elements it owns and allreduces the result,
+ * and the other ranks contribute exactly 0.0 to each of them, so the sum
+ * is exact whatever order it is taken in.
+ *
+ * What is left is the assumption that one routine given one bit pattern
+ * returns one answer on every rank. That holds on a homogeneous machine.
+ * It is not guaranteed on a heterogeneous one, where an optimized BLAS may
+ * dispatch a different kernel per CPU - which is the very situation
+ * ScaLAPACK's own heterogeneity check exists for. Factorizing on one rank
+ * and broadcasting the factors would be immune to that; it was not done
+ * because it adds a broadcast per block to the allreduce this branch
+ * already pays, and the blocks are small and numerous.
+ *
+ * The way back is mptensor's "all processes have the same data"
+ * constructor, the one its own eig() uses.
  *
  * The local branch hands LAPACK a copy of @p block holding the same values,
  * so a diagnostic taken from @p block still describes what LAPACK saw.
@@ -994,8 +1013,8 @@ int qr(const ftensor<tensor>& a, const mptensor::Axes& rows,
   parity_vector col_parity = detail::fuse_axes(a.parity, cols);
   std::vector<std::size_t> row_perm = parity_sort_perm(row_parity);
   std::vector<std::size_t> col_perm = parity_sort_perm(col_parity);
-  tensor prow = make_perm_matrix<tensor>(row_perm);
-  tensor pcol = make_perm_matrix<tensor>(col_perm);
+  tensor prow = make_perm_matrix<tensor>(comm, row_perm);
+  tensor pcol = make_perm_matrix<tensor>(comm, col_perm);
   tensor sorted =
       mptensor::tensordot(prow, mat, mptensor::Axes(1), mptensor::Axes(0));
   sorted =
@@ -1127,8 +1146,8 @@ int svd(const ftensor<tensor>& a, const mptensor::Axes& rows,
   parity_vector col_parity = detail::fuse_axes(a.parity, cols);
   std::vector<std::size_t> row_perm = parity_sort_perm(row_parity);
   std::vector<std::size_t> col_perm = parity_sort_perm(col_parity);
-  tensor prow = make_perm_matrix<tensor>(row_perm);
-  tensor pcol = make_perm_matrix<tensor>(col_perm);
+  tensor prow = make_perm_matrix<tensor>(comm, row_perm);
+  tensor pcol = make_perm_matrix<tensor>(comm, col_perm);
   tensor sorted =
       mptensor::tensordot(prow, mat, mptensor::Axes(1), mptensor::Axes(0));
   sorted =

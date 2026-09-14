@@ -163,6 +163,14 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     if (!savedir.empty()) {
       if (!util::isdir(savedir)) {
         is_ok = is_ok && util::mkdir(savedir);
+      } else if (peps_parameters_.print_level >= PrintLevel::info) {
+        // Checkpoint files already in there will be overwritten, and ones
+        // this run does not write will be removed. Anything else is left
+        // alone, but saying so before the run starts is still worth a line.
+        std::cout << "INFO: tensor_save directory " << savedir
+                  << " already exists; the checkpoint files in it will be "
+                     "replaced by this run's"
+                  << std::endl;
       }
     }
   }

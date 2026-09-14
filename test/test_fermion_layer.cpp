@@ -324,7 +324,8 @@ TEST_CASE("max_abs and multiply_vector forward to the dense tensor") {
 TEST_CASE("make_perm_matrix uses new-position to old-position convention") {
   std::vector<std::size_t> perm{1, 3, 0, 2};
   tenes::real_tensor pmat =
-      tenes::fermion::make_perm_matrix<tenes::real_tensor>(perm);
+      tenes::fermion::make_perm_matrix<tenes::real_tensor>(MPI_COMM_WORLD,
+                                                           perm);
   for (std::size_t i = 0; i < 4; ++i) {
     for (std::size_t j = 0; j < 4; ++j) {
       double v;

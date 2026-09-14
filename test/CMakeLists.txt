@@ -90,6 +90,33 @@ if(ENABLE_MPI)
                    --source-file=*mpi_reduction.cpp)
 endif()
 
+# The graded decompositions and the full-update environment must be collective
+# over the communicator their tensors live on and no wider, so that a library
+# caller can run the solver on a subset of the processes (tenes_itps_main takes
+# the communicator). At one rank every communicator is congruent to every
+# other, so the cases can only tell the two apart from two ranks upwards: the
+# one-rank registration is a build and fixture check, the two-rank one is the
+# contract. Its own executable rather than another file in test_fermion_layer,
+# because it is the only test that splits MPI_COMM_WORLD; a hang there must not
+# take the rest of the fermion suite with it, and the TIMEOUT below is what
+# turns a deadlock into a failed test instead of a stuck ctest.
+add_executable(test_fermion_subcomm fermion/subcomm_decomposition.cpp)
+target_link_libraries(test_fermion_subcomm PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_subcomm PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_subcomm
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_subcomm>)
+  add_test(NAME test_fermion_subcomm_mpi2
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_subcomm>)
+  set_tests_properties(test_fermion_subcomm_mpi2 PROPERTIES TIMEOUT 300)
+else()
+  add_test(NAME test_fermion_subcomm COMMAND $<TARGET_FILE:test_fermion_subcomm>)
+endif()
+set_tests_properties(test_fermion_subcomm PROPERTIES TIMEOUT 300)
+
 # The finiteness predicate of the fermion diagnostics, compiled with
 # -ffast-math on purpose. Under finite-math-only the compiler may assume no
 # operand is Inf or NaN, and a std::isfinite-based check folds to a constant
@@ -167,6 +194,31 @@ add_test(NAME restart COMMAND ${TENES_PYTHON_EXECUTABLE}
                               ${CMAKE_CURRENT_BINARY_DIR}/restart.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/restart.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/restart.py @ONLY)
+
+# The checkpoint DIRECTORY: what a save must leave behind in it, and how a
+# load must refuse a checkpoint it cannot read. The numerical round trip is
+# FreeFermionSaveLoad's business; this one is about the files.
+#
+# The second registration is not a duplicate. Half of what the cases pin only
+# exists with more than one process -- a refusal that only one process reports
+# leaves the others waiting in a collective, and mptensor writes one fragment
+# file per process, so a directory written by two and then by one keeps the
+# second one's half. The script itself falls back to doing nothing when the
+# build has no MPI launcher, and every tenes invocation inside it has a
+# timeout, so a deadlock is reported as a failure rather than hanging ctest
+# until the TIMEOUT below.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/checkpoint_dir.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/checkpoint_dir.py @ONLY)
+add_test(NAME CheckpointDir
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/checkpoint_dir.py)
+set_tests_properties(CheckpointDir PROPERTIES TIMEOUT 1800)
+if(ENABLE_MPI)
+  add_test(NAME CheckpointDirMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/checkpoint_dir.py --nproc 2)
+  set_tests_properties(CheckpointDirMPI2 PROPERTIES TIMEOUT 1800)
+endif()
 
 foreach(
   name

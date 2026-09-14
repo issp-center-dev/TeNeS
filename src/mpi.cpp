@@ -58,15 +58,18 @@ int bcast(std::string& val, int root, MPI_Comm comm) {
 #ifndef _NO_MPI
   int mpirank;
   MPI_Comm_rank(comm, &mpirank);
-  int sz = val.size() + 1;
+  // Raw bytes, not a C string: the payload may hold a NUL (a damaged file
+  // slurped whole and broadcast for every rank to parse, say), and stopping
+  // at it would give the ranks different data to work from.
+  int sz = static_cast<int>(val.size());
   bcast(sz, root, comm);
-  std::vector<char> buf(sz);
+  std::vector<char> buf(static_cast<std::size_t>(sz) + 1, '\0');
   if (mpirank == root) {
-    std::strncpy(buf.data(), val.c_str(), sz);
+    std::memcpy(buf.data(), val.data(), val.size());
   }
   ret = MPI_Bcast(buf.data(), sz, MPI_CHAR, root, comm);
   if (mpirank != root) {
-    val = buf.data();
+    val.assign(buf.data(), static_cast<std::size_t>(sz));
   }
 #endif
   return ret;

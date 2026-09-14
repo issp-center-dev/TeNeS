@@ -38,13 +38,22 @@ ATOL = 1.0e-4
 # measurements taken under the broken folding convention (kDoubledJointMask
 # missing two pairs, fixed 2026-08-28); its D = 4 energy -0.8034 (0.7% off
 # exact) was an artifact of the broken fold, not the state's energy. With
-# the fixed folding the measured D = 4 relative errors are 7.8% (mu = 0)
-# and 6.3% (mu = -1), and an exact window contraction of the saved D = 4
-# state confirms the CTM value matches the state's true energy to ~0.5% --
-# the measurement is accurate; the 6-8% gap is the quality of the D = 4
-# simple-update state itself (tau = 0.01, 1000/4500 steps). The threshold
-# is therefore a provisional 10%, matched to that state quality.
-EXACT_RTOL = 1.0e-1 if FULL else 2.0e-1
+# the fixed folding the measured D = 4 scaled errors (see scaled_err) are
+# 7.8% (mu = 0) and 6.3% (mu = -1), and an exact window contraction of the
+# saved D = 4 state confirms the CTM value matches the state's true energy to
+# ~0.5% -- the measurement is accurate; the gap is the quality of the D = 4
+# simple-update state itself (tau = 0.01, 1000/4500 steps). The threshold is
+# therefore a provisional 0.1, matched to that state quality.
+#
+# What that threshold means in relative terms varies, because every reference
+# here is smaller than 1 in absolute value, so scaled_err divides by 1 rather
+# than by the reference and is the plain absolute error. At D = 4 the true
+# relative errors are 9.6% (energy, mu = 0), 15.2% (energy, mu = -1) and 5.0%
+# (density, mu = -1), against scaled errors of 7.8%, 6.3% and 1.6%. The 0.1
+# admits a true relative error of 12.3% on the mu = 0 energy, 23.9% on the
+# mu = -1 energy, 20% on the mu = 0 density and 32.5% on the mu = -1 density.
+# Tightening it would mean regenerating the golden file, out of scope here.
+EXACT_ERR_TOL = 1.0e-1 if FULL else 2.0e-1
 
 
 def num_steps(mu):
@@ -65,7 +74,14 @@ def exact_free_fermion(t, mu, nk=512):
     return e, n
 
 
-def relerr(value, reference):
+def scaled_err(value, reference):
+    """Absolute error divided by max(1, |reference|).
+
+    NOT a relative error. Every reference in this test is smaller than 1 in
+    absolute value, so the denominator is always 1 and this is the plain
+    absolute error; see the comment on EXACT_ERR_TOL for what the threshold
+    then admits in relative terms.
+    """
     return abs(value - reference) / max(1.0, abs(reference))
 
 
@@ -223,12 +239,12 @@ def read_density(outdir):
 
 def write_summary(path, rows):
     with open(path, "w") as f:
-        f.write("# mu D energy n exact_energy exact_n relerr_energy relerr_n\n")
+        f.write("# mu D energy n exact_energy exact_n err_energy err_n\n")
         for row in rows:
             f.write(
                 "{mu:.1f} {D:d} {energy:.17e} {density:.17e} "
                 "{exact_energy:.17e} {exact_density:.17e} "
-                "{energy_relerr:.17e} {density_relerr:.17e}\n".format(**row)
+                "{energy_err:.17e} {density_err:.17e}\n".format(**row)
             )
 
 
@@ -248,8 +264,8 @@ def read_summary(path):
                     "density": float(density),
                     "exact_energy": float(exact_energy),
                     "exact_density": float(exact_density),
-                    "energy_relerr": float(er),
-                    "density_relerr": float(nr),
+                    "energy_err": float(er),
+                    "density_err": float(nr),
                 }
             )
     return rows
@@ -316,22 +332,22 @@ def main():
                 "density": n,
                 "exact_energy": exact_energy,
                 "exact_density": exact_density,
-                "energy_relerr": relerr(energy, exact_energy),
-                "density_relerr": relerr(n, exact_density),
+                "energy_err": scaled_err(energy, exact_energy),
+                "density_err": scaled_err(n, exact_density),
             }
             rows.append(row)
             print(
                 "FreeFermion mu={:.1f} D={} energy={:.12e} n={:.12e} "
-                "exact_energy={:.12e} exact_n={:.12e} relerr_energy={:.6e} "
-                "relerr_n={:.6e}".format(
+                "exact_energy={:.12e} exact_n={:.12e} err_energy={:.6e} "
+                "err_n={:.6e}".format(
                     mu,
                     D,
                     energy,
                     n,
                     exact_energy,
                     exact_density,
-                    row["energy_relerr"],
-                    row["density_relerr"],
+                    row["energy_err"],
+                    row["density_err"],
                 )
             )
 
@@ -346,14 +362,15 @@ def main():
             # parity-even simple update converges to a period-2 state whose
             # site-averaged density deviates from the exact value much more
             # strongly than the energy does.
-            checks = ["energy_relerr"]
+            checks = ["energy_err"]
             if row["mu"] == 0.0:
-                checks.append("density_relerr")
+                checks.append("density_err")
             for key in checks:
-                if row[key] > EXACT_RTOL:
+                if row[key] > EXACT_ERR_TOL:
                     print(
                         "max-D free-fermion result is outside the provisional "
-                        f"{EXACT_RTOL:g} relative-error threshold ({key}): "
+                        f"{EXACT_ERR_TOL:g} scaled-error threshold "
+                        f"(|value - exact| / max(1, |exact|); {key}): "
                         f"{row}"
                     )
                     return 1

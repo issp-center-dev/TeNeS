@@ -270,6 +270,19 @@ def read_data_rows(path):
     return rows
 
 
+# Data lines before the "Shape of Tn[i]" rows, by params.dat format version.
+#
+#   version 1:  Format_Version / N_UNIT / CHI
+#   version 2:  Format_Version / Fermion / N_UNIT / CHI
+#
+# Version 2 inserted the run kind after the version, which moved the shape
+# rows down by one. This table is why the reader below asks the file what
+# version it is instead of counting from a fixed offset: with the offset
+# hard-coded, the check silently compared CHI against a shape row and said
+# "the shape of Tn[0] is 8".
+PARAMS_HEADER_ROWS = {1: 3, 2: 4}
+
+
 def check_params_shape(path, n_unit, dim, pdim=2):
     """S-3: the 'Shape of Tn[i]' rows of params.dat name the bond dimension
     the run really used, not the one the input asked for."""
@@ -277,12 +290,39 @@ def check_params_shape(path, n_unit, dim, pdim=2):
     if not os.path.exists(path):
         return [f"{path} was not written"]
     rows = read_data_rows(path)
-    # 0: format version, 1: N_UNIT, 2: CHI, then one shape row per site.
-    if len(rows) < 3 + n_unit:
-        return [f"{path} has only {len(rows)} data lines"]
+    if not rows:
+        return [f"{path} is empty"]
+    try:
+        version = int(rows[0][0])
+    except (ValueError, IndexError):
+        return [f"{path}: the first line is not a format version: {rows[0]}"]
+    header = PARAMS_HEADER_ROWS.get(version)
+    if header is None:
+        return [
+            f"{path}: format version {version} is not one this test knows how "
+            f"to read (it knows {sorted(PARAMS_HEADER_ROWS)}); if the format "
+            "grew another header line, add it to PARAMS_HEADER_ROWS"
+        ]
+    if len(rows) < header + n_unit:
+        return [
+            f"{path} has {len(rows)} data lines, too few for a version-"
+            f"{version} header ({header} lines) plus {n_unit} shape rows"
+        ]
+    # Anchor the offset on something the file itself says. N_UNIT is always
+    # the line two above the shapes, whatever the version, so if this does
+    # not match then the rows below are not the shapes and the check would
+    # otherwise compare the wrong thing without noticing -- which is exactly
+    # how this reader broke when version 2 arrived.
+    n_unit_row = rows[header - 2]
+    if n_unit_row[:1] != [str(n_unit)]:
+        return [
+            f"{path}: expected N_UNIT = {n_unit} on data line {header - 1} of "
+            f"a version-{version} file, found {' '.join(n_unit_row)}; the "
+            "shape rows are not where this test thinks they are"
+        ]
     expected = [str(dim)] * 4 + [str(pdim)]
     for site in range(n_unit):
-        row = rows[3 + site]
+        row = rows[header + site]
         if row != expected:
             failures.append(
                 f"{path}: the shape of Tn[{site}] is {' '.join(row)}, "

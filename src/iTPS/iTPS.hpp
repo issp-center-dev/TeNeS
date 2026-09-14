@@ -320,7 +320,13 @@ class iTPS {
       std::string filename_prefix = "");
 
   //! save optimized tensors into files
-  void save_tensors() const;
+  /*! @brief Write a checkpoint of the tensors to tensor_save_dir.
+   *  @return false if a checkpoint was asked for and could not be
+   *          written. A failure is reported rather than thrown, because
+   *          this runs before measure(); the caller turns it into a
+   *          non-zero exit status so that a chain of runs notices.
+   */
+  bool save_tensors() const;
 
   //! load tensors from files
   void load_tensors();
@@ -343,9 +349,11 @@ class iTPS {
     return convert_complex<tensor_type>(v);
   }
 
-  //! Read tensors in the current save format, whose params.dat records
-  //! the format version, unit cell, and per-site shapes.
-  void load_tensors_v1();
+  //! Read tensors in a versioned save format, whose params.dat records the
+  //! format version, the run kind (version 2 and later), the unit cell, and
+  //! the per-site shapes.
+  //! @param[in] expected_version the version load_tensors() dispatched on.
+  void load_tensors_versioned(int expected_version);
   //! Read tensors in the legacy save format (bare tensor files, no
   //! params.dat metadata).
   void load_tensors_v0();
@@ -358,7 +366,9 @@ class iTPS {
    * measured energy. The file records a format version, the unit-cell
    * geometry, and the physical and virtual parity vectors of every site.
    */
-  void save_fermion_parity(std::string const &save_dir) const;
+  //! @return false if the ledger could not be written (rank 0 only; other
+  //!         ranks return true, having nothing to write).
+  bool save_fermion_parity(std::string const &save_dir) const;
   /*!
    * @brief Load and validate fermion.dat before reading the tensors.
    *
@@ -367,9 +377,13 @@ class iTPS {
    * (fermion.dat present but fermion = false, or vice versa), or when the
    * file does not match the current geometry.
    */
+  //! @param[in] recorded_kind whether the checkpoint records that it came
+  //!            from a fermionic run; empty for formats that do not record
+  //!            it, where the presence of fermion.dat decides instead.
   void load_fermion_ledger(std::string const &load_dir,
                            std::vector<std::vector<int>> const &saved_shape,
-                           bool validate_saved_shape);
+                           bool validate_saved_shape,
+                           std::optional<bool> recorded_kind);
   //! check the loaded tensors against the restored ledger (after reading them)
   void validate_loaded_fermion_tensors() const;
 

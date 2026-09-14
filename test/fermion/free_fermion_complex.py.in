@@ -71,7 +71,7 @@ SEED = 11
 RTOL = 1.0e-3
 ATOL = 1.0e-4
 # free_fermion.py.in's quick-mode (D = 2) distance from the exact energy.
-EXACT_RTOL = 2.0e-1
+EXACT_ERR_TOL = 2.0e-1
 # Contract T8-iii: |Im E| <= 1e-10.
 IMAG_TOL = 1.0e-10
 # What Calc_CTM_Environment_density prints on standard output when it hits
@@ -98,7 +98,14 @@ def exact_free_fermion(t, mu, nk=512):
     return e, n
 
 
-def relerr(value, reference):
+def scaled_err(value, reference):
+    """Absolute error divided by max(1, |reference|).
+
+    NOT a relative error: every reference here is smaller than 1 in absolute
+    value, so the denominator is always 1 and this is the plain absolute
+    error. A threshold of t therefore admits a true relative error of
+    t / |reference|.
+    """
     return abs(value - reference) / max(1.0, abs(reference))
 
 
@@ -391,10 +398,11 @@ def main():
                 f"golden {golden[key]['density']} (rtol {RTOL:g}, atol {ATOL:g})"
             )
         # --- and the energy is a free-fermion energy at all -----------------
-        if relerr(energy.real, exact_energy) > EXACT_RTOL:
+        if scaled_err(energy.real, exact_energy) > EXACT_ERR_TOL:
             failures.append(
                 f"mu={mu}: energy {energy.real} is outside the provisional "
-                f"{EXACT_RTOL:g} relative-error band around the exact "
+                f"{EXACT_ERR_TOL:g} scaled-error band (|value - exact| / "
+                f"max(1, |exact|)) around the exact "
                 f"{exact_energy}"
             )
 

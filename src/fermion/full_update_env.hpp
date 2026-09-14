@@ -76,13 +76,19 @@ ftensor<tensor> insert_even_dummy_leg(const ftensor<tensor>& Q, int slot) {
 }
 
 /*! @brief Build the left open-channel identity factor.
+ *  @param[in] comm Communicator of the tensors this factor is contracted
+ *         with. It has to be passed in: mptensor's shape-only constructor
+ *         would put the factor on MPI_COMM_WORLD, which is not the
+ *         communicator a library caller may have handed to
+ *         tenes_itps_main().
  *  @param[in] p Parity ledger of the open QR channel.
  *  @return Rank-3 factor (in,out,[in' out']) with fused final ledger.
  */
 template <class tensor>
-ftensor<tensor> make_left_identity_factor(const parity_vector& p) {
+ftensor<tensor> make_left_identity_factor(
+    const typename tensor::comm_type& comm, const parity_vector& p) {
   const std::size_t n = p.size();
-  ftensor<tensor> I{tensor(mptensor::Shape(n, n, n, n)), {p, p, p, p}};
+  ftensor<tensor> I{tensor(comm, mptensor::Shape(n, n, n, n)), {p, p, p, p}};
   for (std::size_t in = 0; in < n; ++in) {
     for (std::size_t out = 0; out < n; ++out) {
       I.t.set_value(mptensor::Index(in, out, in, out),
@@ -93,13 +99,16 @@ ftensor<tensor> make_left_identity_factor(const parity_vector& p) {
 }
 
 /*! @brief Build the right open-channel identity factor.
+ *  @param[in] comm Communicator of the tensors this factor is contracted
+ *         with; see make_left_identity_factor().
  *  @param[in] p Parity ledger of the open QR channel.
  *  @return Rank-3 factor ([in' out'],in,out) with fused first ledger.
  */
 template <class tensor>
-ftensor<tensor> make_right_identity_factor(const parity_vector& p) {
+ftensor<tensor> make_right_identity_factor(
+    const typename tensor::comm_type& comm, const parity_vector& p) {
   const std::size_t n = p.size();
-  ftensor<tensor> I{tensor(mptensor::Shape(n, n, n, n)), {p, p, p, p}};
+  ftensor<tensor> I{tensor(comm, mptensor::Shape(n, n, n, n)), {p, p, p, p}};
   for (std::size_t in = 0; in < n; ++in) {
     for (std::size_t out = 0; out < n; ++out) {
       I.t.set_value(mptensor::Index(in, out, in, out),
@@ -199,8 +208,10 @@ full_update_environment<tensor> build_full_update_environment(
   const parity_vector& pB = QB.parity[3];
   const std::size_t nA = pA.size();
   const std::size_t nB = pB.size();
-  const ftensor<tensor> u = detail::make_left_identity_factor<tensor>(pA);
-  const ftensor<tensor> vt = detail::make_right_identity_factor<tensor>(pB);
+  const typename tensor::comm_type comm = QA.t.get_comm();
+  const ftensor<tensor> u = detail::make_left_identity_factor<tensor>(comm, pA);
+  const ftensor<tensor> vt =
+      detail::make_right_identity_factor<tensor>(comm, pB);
 
   const reduced_pair_halves<tensor> halves =
       build_reduced_pair_halves_from_factors(QAp, QBp, u, vt, direction);
@@ -233,7 +244,10 @@ full_update_environment<tensor> build_full_update_environment(
   full_update_environment<tensor> result;
   result.N = transpose(Ntilde, mptensor::Axes(0, 2, 1, 3));
 
-  tensor identity(mptensor::Shape(nA, nB, nA, nB));
+  // On comm, not on the shape-only constructor's MPI_COMM_WORLD: it is
+  // traced against result.N below, and the two have to be distributed the
+  // same way. See make_left_identity_factor().
+  tensor identity(comm, mptensor::Shape(nA, nB, nA, nB));
   for (std::size_t a = 0; a < nA; ++a) {
     for (std::size_t b = 0; b < nB; ++b) {
       identity.set_value(mptensor::Index(a, b, a, b),

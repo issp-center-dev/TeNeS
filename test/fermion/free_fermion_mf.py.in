@@ -45,7 +45,7 @@ ATOL = 1.0e-4
 # Physical-sanity thresholds (a-priori estimates, see the contract).
 MF_VS_CTM_RTOL = 0.2
 DENSITY_TOL = 0.02
-MF_EXACT_RTOL = 0.1
+MF_EXACT_ERR_TOL = 0.1
 ENVIRONMENT_TIME_MAX = 1.0e-6
 
 
@@ -59,7 +59,14 @@ def exact_free_fermion(t, mu, nk=512):
     return e, n
 
 
-def relerr(value, reference):
+def scaled_err(value, reference):
+    """Absolute error divided by max(1, |reference|).
+
+    NOT a relative error: every reference here is smaller than 1 in absolute
+    value, so the denominator is always 1 and this is the plain absolute
+    error. A threshold of t therefore admits a true relative error of
+    t / |reference|.
+    """
     return abs(value - reference) / max(1.0, abs(reference))
 
 
@@ -318,11 +325,11 @@ def sanity_checks(rows):
             )
 
     mf4 = by_key[(4, "mf")]
-    mf4_relerr = relerr(mf4["energy"], mf4["exact_energy"])
-    if not mf4_relerr < MF_EXACT_RTOL:
+    mf4_err = scaled_err(mf4["energy"], mf4["exact_energy"])
+    if not mf4_err < MF_EXACT_ERR_TOL:
         failures.append(
-            f"D=4 mean-field energy relerr vs exact {mf4_relerr:.6e} "
-            f"(threshold {MF_EXACT_RTOL:g})"
+            f"D=4 mean-field energy scaled error vs exact {mf4_err:.6e} "
+            f"(threshold {MF_EXACT_ERR_TOL:g})"
         )
     return failures
 
@@ -383,8 +390,8 @@ def main():
         rows.append(row)
         print(
             "FreeFermionMF mu={:.1f} D={} env={} energy={:.12e} n={:.12e} "
-            "exact_energy={:.12e} relerr_energy={:.6e}".format(
-                MU, D, env, energy, n, exact_energy, relerr(energy, exact_energy)
+            "exact_energy={:.12e} err_energy={:.6e}".format(
+                MU, D, env, energy, n, exact_energy, scaled_err(energy, exact_energy)
             )
         )
 

@@ -20,7 +20,9 @@
 #include <complex>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <random>
+#include <set>
 #include <sstream>
 #include <string>
 #include <cstdlib>
@@ -34,6 +36,7 @@
 #include "../fermion/fermion_info.hpp"
 #include "../fermion/fops.hpp"
 #include "../printlevel.hpp"
+#include "../util/datetime.hpp"
 #include "../util/file.hpp"
 #include "../util/string.hpp"
 
@@ -41,19 +44,252 @@ using std::size_t;
 
 namespace tenes::itps {
 
+namespace {
+
+/*! @brief Integer-per-line reader over a metadata file held whole in a string.
+ *
+ * The point is that every rank parses the same bytes. Parsing on rank 0 and
+ * broadcasting the outcome piece by piece is what let a short or malformed
+ * file abort rank 0 inside a collective, leaving the others waiting in the
+ * next broadcast, and it is what let a shape loop run past the end of a
+ * checkpoint that holds fewer sites than the input asks for.
+ */
+class metadata_reader {
+ public:
+  metadata_reader(std::string const &content, std::string const &filename)
+      : iss_(content), filename_(filename) {}
+
+  //! Next line with its comment dropped; throws at end of file.
+  std::string next_line() {
+    if (!std::getline(iss_, line_)) {
+      throw tenes::load_error("ERROR: " + filename_ + " ends unexpectedly");
+    }
+    return util::drop_comment(line_);
+  }
+
+  //! The integers on the next line; throws if any word is not an integer.
+  std::vector<int> next_ints() {
+    last_ = next_line();
+    const auto words = util::split(last_);
+    std::vector<int> ret;
+    ret.reserve(words.size());
+    for (const auto &w : words) {
+      try {
+        ret.push_back(std::stoi(w));
+      } catch (const std::exception &) {
+        throw tenes::load_error("ERROR: cannot parse " + filename_ +
+                                " line as integers: \"" + last_ + "\"");
+      }
+    }
+    return ret;
+  }
+
+  //! The first integer on the next line; throws if the line has none.
+  int next_scalar() {
+    const auto values = next_ints();
+    if (values.empty()) {
+      throw tenes::load_error("ERROR: expected an integer in " + filename_ +
+                              " line: \"" + last_ + "\"");
+    }
+    return values[0];
+  }
+
+ private:
+  std::istringstream iss_;
+  std::string line_;
+  std::string last_;
+  std::string filename_;
+};
+
+/*! @brief Whether @p name is one of the files a checkpoint is made of.
+ *
+ * Used to decide what a save may delete from its destination: files of this
+ * shape that the save did not write are leftovers of an earlier run, anything
+ * else belongs to the user and is left alone.
+ */
+bool is_checkpoint_name(const std::string &name) {
+  if (name == "params.dat" || name == "fermion.dat") {
+    return true;
+  }
+  auto all_digits = [](const std::string &s) {
+    return !s.empty() && s.find_first_not_of("0123456789") == std::string::npos;
+  };
+  std::string stem = name;
+  // mptensor writes one <base>.<rank>.bin and <base>.<rank>.idx per process.
+  for (const std::string suffix : {std::string(".bin"), std::string(".idx")}) {
+    if (stem.size() > suffix.size() &&
+        stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) == 0) {
+      const std::size_t dot = stem.rfind('.', stem.size() - suffix.size() - 1);
+      if (dot == std::string::npos) {
+        return false;
+      }
+      if (!all_digits(
+              stem.substr(dot + 1, stem.size() - suffix.size() - dot - 1))) {
+        return false;
+      }
+      stem = stem.substr(0, dot);
+      break;
+    }
+  }
+  if (stem.size() < 5 || stem.compare(stem.size() - 4, 4, ".dat") != 0) {
+    return false;
+  }
+  stem = stem.substr(0, stem.size() - 4);
+  const std::size_t underscore = stem.rfind('_');
+  if (underscore == std::string::npos ||
+      !all_digits(stem.substr(underscore + 1))) {
+    return false;
+  }
+  const std::string prefix = stem.substr(0, underscore);
+  for (const char *known :
+       {"T", "El", "Et", "Er", "Eb", "C1", "C2", "C3", "C4", "lambda"}) {
+    if (prefix == known) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//! Working directory a save builds its checkpoint in, inside the destination.
+//! TeNeS-specific because a save removes it unconditionally: the earlier name,
+//! ".tmp", took a directory the user kept in the destination.
+constexpr const char *save_work_dir_name = ".tenes-save-tmp";
+//! Marker a save leaves while it moves files into place; see save_tensors().
+//! TeNeS-specific for the same reason as save_work_dir_name.
+constexpr const char *save_marker_name = ".tenes-save-incomplete";
+//! How much of a marker's body a refused load reads, broadcasts and shows.
+constexpr std::size_t marker_body_limit = 64 * 1024;
+
+/*! @brief Move every entry of @p work_dir into @p dest, then confirm it is
+ *         empty.
+ *
+ * Used both to finish a move an interrupted save left behind and to put a new
+ * checkpoint in place. Stops at the first rename that fails and does not put
+ * back what already moved: a rollback that fails halfway leaves a worse mess
+ * than the marker describes.
+ *
+ * Success also requires @p work_dir to be empty afterwards. A listing that
+ * came back short -- which entries_with_prefix() reports as a shorter list,
+ * not as an error -- would otherwise pass for "everything moved", and the
+ * caller would go on to sweep the destination and remove the files it missed.
+ *
+ * @param[out] moved_names names moved into @p dest
+ * @param[out] failed what could not be moved, for a warning
+ * @return true if everything moved and @p work_dir is empty
+ */
+bool move_all_into(const std::string &work_dir, const std::string &dest,
+                   std::set<std::string> &moved_names, std::string &failed) {
+  for (const auto &path : util::entries_with_prefix(work_dir, "")) {
+    const std::string name = util::basename(path);
+    if (!util::rename(path, dest + "/" + name)) {
+      failed = name;
+      return false;
+    }
+    moved_names.insert(name);
+  }
+  if (!util::is_empty_directory(work_dir)) {
+    failed = "the files a listing of " + work_dir + " did not return";
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
+
 template <class ptensor>
-void iTPS<ptensor>::save_tensors() const {
+bool iTPS<ptensor>::save_tensors() const {
   std::string const &save_dir = peps_parameters.tensor_save_dir;
   if (save_dir.empty()) {
-    return;
+    return true;
   }
-  {
+
+  /* A checkpoint is built inside the destination, in a working directory
+   * named by save_work_dir_name, and moved into place one file at a time when
+   * it is complete.
+   *
+   * Crash safety: a run killed while writing -- a job hitting its wall clock,
+   * say -- leaves the destination holding the previous checkpoint, because
+   * nothing has been moved yet. The window in which the destination can hold a
+   * mixture is the move, which is metadata only.
+   *
+   * The destination directory itself is never renamed or removed. An earlier
+   * design swapped it wholesale, which is how "tensor_save = ." came to empty
+   * the working directory and how a symlinked destination came to be replaced
+   * by a real one. Here a destination that is a symbolic link is followed like
+   * any other path, whatever else the user keeps in the destination survives,
+   * and only the destination needs to be writable -- not its parent.
+   */
+  const std::string work_dir = save_dir + "/" + save_work_dir_name;
+  const std::string marker = save_dir + "/" + save_marker_name;
+
+  // 0: go ahead; 1: an interrupted move could not be finished;
+  // 2: the working directory could not be created.
+  int prepared = 0;
+  std::string repair_failed;
+  if (mpirank == 0) {
+    bool repaired = true;
+    if (util::path_exists(marker)) {
+      /* A save before this one died partway through moving its files. Do
+       * what the marker tells a person to do -- move the rest in, then delete
+       * the marker -- before anything else. Clearing the working directory as
+       * a mere leftover would destroy the files that repair needs and leave
+       * the marker pointing at nothing, and a failure later in this save
+       * would make that permanent.
+       */
+      std::set<std::string> moved_in;
+      repaired = !util::path_exists(work_dir) ||
+                 move_all_into(work_dir, save_dir, moved_in, repair_failed);
+      if (repaired) {
+        util::remove_all(marker);
+      }
+    }
+    if (!repaired) {
+      prepared = 1;
+    } else {
+      // With no marker, a working directory was left by a save that died
+      // before it moved anything: the destination is whole, so it can go.
+      util::remove_all(work_dir);
+      prepared = util::mkdir(work_dir) ? 0 : 2;
+    }
+  }
+  // Doubles as the barrier that keeps the other ranks from writing into a
+  // directory rank 0 has not made yet.
+  bcast(prepared, 0, comm);
+  if (prepared != 0) {
+    // Not an exception: save_tensors() runs before measure(), so throwing here
+    // would throw away a finished optimization over a directory permission.
+    if (mpirank == 0) {
+      if (prepared == 1) {
+        std::cerr << "WARNING: " << marker
+                  << " shows that an earlier save was interrupted while moving "
+                     "its files, and finishing that move failed at "
+                  << repair_failed << ". No checkpoint was saved, and "
+                  << marker << " still says how to finish the move by hand."
+                  << std::endl;
+      } else {
+        std::cerr << "WARNING: cannot create the working directory " << work_dir
+                  << " (" << save_dir
+                  << " has to be writable), so no checkpoint was saved."
+                  << std::endl;
+      }
+    }
+    return false;
+  }
+
+  double wrote = 1.0;
+  // Rank 0 alone. Every rank used to open params.dat and write the same
+  // bytes into it at the same time.
+  if (mpirank == 0) {
     // metadata
-    std::string filename = save_dir + "/params.dat";
+    std::string filename = work_dir + "/params.dat";
     std::ofstream ofs(filename.c_str());
 
-    constexpr int tensor_format_version = 1;
+    // Version 2 records whether the run was fermionic. Before it, the loader
+    // inferred that from the presence of fermion.dat, which made a leftover
+    // ledger change how a checkpoint was read.
+    constexpr int tensor_format_version = 2;
     ofs << tensor_format_version << " # Format_Version\n";
+    ofs << (finfo.enabled ? 1 : 0) << " # Fermion\n";
     ofs << N_UNIT << " # N_UNIT\n";
     ofs << CHI << " # CHI\n";
     for (int i = 0; i < N_UNIT; ++i) {
@@ -61,6 +297,10 @@ void iTPS<ptensor>::save_tensors() const {
         ofs << lattice.virtual_dims[i][j] << " ";
       }
       ofs << lattice.physical_dims[i] << " # Shape of Tn[" << i << "]\n";
+    }
+    ofs.flush();
+    if (!ofs) {
+      wrote = 0.0;
     }
   }
   // The CTM environment a fermionic run holds cannot be written out as it
@@ -86,7 +326,7 @@ void iTPS<ptensor>::save_tensors() const {
     t.save(path.c_str());
   };
   for (int i = 0; i < N_UNIT; ++i) {
-    std::string filename = save_dir + "/";
+    std::string filename = work_dir + "/";
     std::string suffix = "_" + std::to_string(i) + ".dat";
     Tn[i].save((filename + "T" + suffix).c_str());
     if (finfo.enabled) {
@@ -115,7 +355,7 @@ void iTPS<ptensor>::save_tensors() const {
   }
   if (mpirank == 0) {
     for (int i = 0; i < N_UNIT; ++i) {
-      std::ofstream ofs(save_dir + "/lambda_" + std::to_string(i) + ".dat");
+      std::ofstream ofs(work_dir + "/lambda_" + std::to_string(i) + ".dat");
       // max_digits10 round-trips a double exactly; the default 6 significant
       // digits silently truncated the Schmidt weights on every checkpoint.
       ofs << std::scientific
@@ -124,6 +364,10 @@ void iTPS<ptensor>::save_tensors() const {
         for (int k = 0; k < lattice.virtual_dims[i][j]; ++k) {
           ofs << lambda_tensor[i][j][k] << std::endl;
         }
+      }
+      ofs.flush();
+      if (!ofs) {
+        wrote = 0.0;
       }
     }
   }
@@ -134,17 +378,115 @@ void iTPS<ptensor>::save_tensors() const {
     // error message.
     //
     // The CTM environment saved above is a placeholder, see the comment there.
-    save_fermion_parity(save_dir);
+    if (!save_fermion_parity(work_dir)) {
+      wrote = 0.0;
+    }
   }
-  if (peps_parameters.print_level >= PrintLevel::info) {
+
+  // Only the files TeNeS itself opens are covered: mptensor's save() reports
+  // nothing, so a failure to write a tensor fragment is not seen here.
+  std::vector<double> wrote_everywhere{wrote};
+  allreduce_min(wrote_everywhere, comm);
+  if (wrote_everywhere[0] == 0.0) {
+    if (mpirank == 0) {
+      util::remove_all(work_dir);
+      std::cerr << "WARNING: failed to write the checkpoint files for "
+                << save_dir << ", so no new checkpoint was saved." << std::endl;
+    }
+    return false;
+  }
+
+  /* Move the finished checkpoint into place, rank 0 alone: rename touches
+   * metadata, so there is nothing for the other ranks to do and no race to
+   * arrange. The marker goes in first and comes out after the sweep, so while
+   * it exists the working directory does exist too -- which is what makes its
+   * one repair instruction correct at every point the move can stop.
+   */
+  int moved = 0;
+  std::string failed_name;
+  if (mpirank == 0) {
+    bool marker_written = false;
+    {
+      std::ofstream ofs(marker.c_str());
+      ofs << "# TeNeS: while this file is here, the checkpoint in this "
+             "directory\n"
+             "# cannot be loaded. A save was interrupted before it finished "
+             "moving\n"
+             "# its files into place, so the directory may hold a mixture of "
+             "two runs.\n"
+             "#\n"
+             "# To repair: move the contents of the working directory below "
+             "into this\n"
+             "# directory, then delete this file.\n"
+             "#\n";
+      // Absolute: the marker sits inside the destination, so a relative
+      // spelling would read as relative to the destination itself.
+      ofs << "work_dir = " << util::absolute_path(work_dir) << "\n";
+      ofs << "started  = " << util::datetime() << "\n";
+      ofs.flush();
+      marker_written = static_cast<bool>(ofs);
+    }
+
+    std::set<std::string> written_names;
+    if (!marker_written) {
+      // Moving without the marker would leave nothing to say the destination
+      // is half moved if this run died now. Nothing has moved yet, so stop
+      // while the destination is still whole.
+      util::remove_all(marker);
+      util::remove_all(work_dir);
+      moved = 2;
+    } else if (move_all_into(work_dir, save_dir, written_names, failed_name)) {
+      // Files of this run's own shape that it did not write are leftovers of
+      // an earlier, differently shaped run. Everything else is the user's.
+      for (const auto &path : util::entries_with_prefix(save_dir, "")) {
+        const std::string name = util::basename(path);
+        if (name == save_work_dir_name || name == save_marker_name ||
+            written_names.count(name) != 0) {
+          continue;
+        }
+        if (is_checkpoint_name(name)) {
+          util::remove_all(path);
+        }
+      }
+      util::remove_all(marker);
+      util::remove_all(work_dir);
+      moved = 1;
+    }
+  }
+  bcast(moved, 0, comm);
+  bcast(failed_name, 0, comm);
+
+  if (moved != 1) {
+    if (mpirank == 0) {
+      if (moved == 2) {
+        std::cerr << "WARNING: could not write " << marker
+                  << ", so nothing was moved into " << save_dir
+                  << " and no new checkpoint was saved." << std::endl;
+      } else {
+        std::cerr << "WARNING: could not move " << failed_name << " into "
+                  << save_dir
+                  << ", so that directory now holds a mixture of this run and "
+                     "the previous one.\n"
+                  << "  " << marker
+                  << " has been left behind and says how to finish the move "
+                     "by hand. Until it is gone, this checkpoint cannot be "
+                     "loaded."
+                  << std::endl;
+      }
+    }
+    return false;
+  }
+
+  if (mpirank == 0 && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Tensors saved in " << save_dir << std::endl;
   }
+  return true;
 }
 
 template <class ptensor>
-void iTPS<ptensor>::save_fermion_parity(std::string const &save_dir) const {
+bool iTPS<ptensor>::save_fermion_parity(std::string const &save_dir) const {
   if (mpirank != 0) {
-    return;
+    return true;
   }
   std::string filename = save_dir + "/fermion.dat";
   std::ofstream ofs(filename.c_str());
@@ -166,6 +508,8 @@ void iTPS<ptensor>::save_fermion_parity(std::string const &save_dir) const {
       ofs << "# parity of the virtual leg " << leg << " of Tn[" << i << "]\n";
     }
   }
+  ofs.flush();
+  return static_cast<bool>(ofs);
 }
 
 template <class ptensor>
@@ -173,21 +517,89 @@ void iTPS<ptensor>::load_tensors() {
   std::string const &load_dir = peps_parameters.tensor_load_dir;
 
   if (!util::isdir(load_dir)) {
-    std::string msg = load_dir + " does not exists.";
+    // "or cannot be read": the existence tests report false rather than
+    // throwing, so that they cannot abort one rank inside a collective,
+    // and a directory without search permission is then indistinguishable
+    // from a missing one.
+    std::string msg =
+        load_dir + " does not exist, or is not a readable directory.";
     throw tenes::load_error(msg);
   }
 
-  int tensor_format_version = 0;
+  /* A save that stopped partway through moving its files leaves this behind.
+   * The directory may hold a mixture of two runs, which would load without
+   * complaint and give wrong physics, so refuse until a person has dealt with
+   * it. The marker carries its own repair instructions; pass them on rather
+   * than rebuilding them here.
+   */
+  const std::string marker = load_dir + "/" + save_marker_name;
+  int interrupted = 0;
+  std::string marker_body;
   if (mpirank == 0) {
-    std::string filename = load_dir + "/params.dat";
-    std::string line;
-    if (util::path_exists(filename)) {
-      std::ifstream ifs(filename.c_str());
-      std::getline(ifs, line);
-      tensor_format_version = std::stoi(util::drop_comment(line));
+    if (util::path_exists(marker)) {
+      interrupted = 1;
+      // The head only: the body is for a person to read, and it goes to every
+      // rank through bcast(std::string&), whose length is an int.
+      std::ifstream ifs(marker.c_str());
+      marker_body.resize(marker_body_limit);
+      ifs.read(&marker_body[0],
+               static_cast<std::streamsize>(marker_body_limit));
+      marker_body.resize(static_cast<std::size_t>(ifs.gcount()));
+      if (ifs.good() && ifs.peek() != std::char_traits<char>::eof()) {
+        marker_body += "\n[... the rest of this file is not shown ...]\n";
+      }
+    }
+  }
+  bcast(interrupted, 0, comm);
+  bcast(marker_body, 0, comm);
+  if (interrupted != 0) {
+    std::stringstream ss;
+    ss << "ERROR: " << marker
+       << " exists: a save into this directory was interrupted before it "
+          "finished moving its files into place, so the checkpoint here may "
+          "be a mixture of two runs.\n";
+    if (!marker_body.empty()) {
+      ss << marker_body;
+    } else {
+      ss << "HINT: move the contents of " << load_dir << "/"
+         << save_work_dir_name << " into " << load_dir << ", then delete "
+         << marker << ".";
+    }
+    throw tenes::load_error(ss.str());
+  }
+
+  // No params.dat at all is how the pre-versioning format announces itself;
+  // one that is there but whose first line is not a number is a damaged
+  // checkpoint, and saying so beats std::stoi's bare "stoi". The status
+  // travels with the version so that every rank decides the same way: a
+  // throw on rank 0 alone would leave the others in the broadcast below.
+  const std::string params_file = load_dir + "/params.dat";
+  int tensor_format_version = 0;
+  int version_readable = 1;
+  if (mpirank == 0) {
+    if (util::path_exists(params_file)) {
+      std::ifstream ifs(params_file.c_str());
+      std::string line;
+      version_readable = 0;
+      if (std::getline(ifs, line)) {
+        try {
+          tensor_format_version = std::stoi(util::drop_comment(line));
+          version_readable = 1;
+        } catch (const std::exception &) {
+          version_readable = 0;
+        }
+      }
     }
   }
   bcast(tensor_format_version, 0, comm);
+  bcast(version_readable, 0, comm);
+  if (version_readable == 0) {
+    throw tenes::load_error(
+        "ERROR: cannot read the format version from " + params_file +
+        ".\n"
+        "HINT: the file is empty or damaged; its first line has to be the "
+        "saved tensor format version.");
+  }
 
   if (tensor_format_version == 0) {
     std::vector<std::vector<int>> current_shape(N_UNIT,
@@ -198,14 +610,14 @@ void iTPS<ptensor>::load_tensors() {
       }
       current_shape[i][nleg] = lattice.physical_dims[i];
     }
-    load_fermion_ledger(load_dir, current_shape, false);
+    load_fermion_ledger(load_dir, current_shape, false, std::nullopt);
     load_tensors_v0();
-  } else if (tensor_format_version == 1) {
-    load_tensors_v1();
+  } else if (tensor_format_version == 1 || tensor_format_version == 2) {
+    load_tensors_versioned(tensor_format_version);
   } else {
     std::stringstream ss;
-    ss << "ERROR: Unknown saved tensor format version: "
-       << tensor_format_version;
+    ss << "ERROR: " << params_file << " has an unknown saved tensor format "
+       << "version: " << tensor_format_version;
     throw tenes::load_error(ss.str());
   }
 
@@ -216,9 +628,33 @@ void iTPS<ptensor>::load_tensors() {
 template <class ptensor>
 void iTPS<ptensor>::load_fermion_ledger(
     std::string const &load_dir,
-    std::vector<std::vector<int>> const &saved_shape,
-    bool validate_saved_shape) {
+    std::vector<std::vector<int>> const &saved_shape, bool validate_saved_shape,
+    std::optional<bool> recorded_kind) {
   const std::string filename = load_dir + "/fermion.dat";
+
+  if (recorded_kind.has_value()) {
+    // The checkpoint says what it is, so the ledger file's presence decides
+    // nothing: a stale one beside a non-fermionic checkpoint is just litter.
+    if (*recorded_kind != finfo.enabled) {
+      const std::string params_file = load_dir + "/params.dat";
+      throw tenes::load_error("ERROR: " + params_file +
+                              " records that the saved tensors come "
+                              "from a " +
+                              (*recorded_kind ? "fermionic" : "non-fermionic") +
+                              " run, but parameter.general.fermion is " +
+                              (finfo.enabled ? "true" : "false") +
+                              ".\n"
+                              "HINT: set fermion = " +
+                              (*recorded_kind ? "true" : "false") +
+                              ", or load a checkpoint saved by a " +
+                              (finfo.enabled ? "fermionic" : "non-fermionic") +
+                              " run.");
+    }
+    if (!finfo.enabled) {
+      return;
+    }
+  }
+
   int exists = 0;
   if (mpirank == 0) {
     exists = util::path_exists(filename) ? 1 : 0;
@@ -237,13 +673,20 @@ void iTPS<ptensor>::load_fermion_ledger(
     return;
   }
   if (exists == 0) {
+    // "or cannot be read": path_exists() answers false rather than throwing
+    // when the filesystem cannot say, so an unreadable directory arrives here
+    // looking exactly like a missing file. Naming a cause outright -- the
+    // earlier wording asserted the tensors came from a non-fermionic run --
+    // then misdiagnoses a permission problem.
     throw tenes::load_error(
-        "ERROR: cannot find " + filename +
+        "ERROR: cannot read " + filename +
         ".\n"
-        "The saved tensors do not carry the fermionic parity ledger of the "
-        "virtual bonds, which fermion mode needs in order to interpret them.\n"
-        "HINT: they were saved by a non-fermionic run, or by a version of "
-        "TeNeS that could not save fermionic tensors.");
+        "Fermion mode needs the fermionic parity ledger of the virtual bonds "
+        "in order to interpret the saved tensors.\n"
+        "HINT: the file is missing, because the tensors were saved by a "
+        "non-fermionic run or by a version of TeNeS that could not save "
+        "fermionic tensors; or it is there but cannot be read, because its "
+        "directory cannot be searched.");
   }
 
   std::string content;
@@ -255,40 +698,9 @@ void iTPS<ptensor>::load_fermion_ledger(
   }
   bcast(content, 0, comm);
 
-  std::istringstream iss(content);
-  std::string line;
-  auto next_line = [&iss, &line, &filename]() -> std::string {
-    if (!std::getline(iss, line)) {
-      throw tenes::load_error("ERROR: " + filename + " ends unexpectedly");
-    }
-    return util::drop_comment(line);
-  };
-  std::string last_int_line;
-  auto next_ints = [&next_line, &filename,
-                    &last_int_line]() -> std::vector<int> {
-    last_int_line = next_line();
-    const auto words = util::split(last_int_line);
-    std::vector<int> ret;
-    ret.reserve(words.size());
-    for (const auto &w : words) {
-      try {
-        ret.push_back(std::stoi(w));
-      } catch (const std::exception &) {
-        throw tenes::load_error("ERROR: cannot parse " + filename +
-                                " line as integers: \"" + last_int_line + "\"");
-      }
-    }
-    return ret;
-  };
-  auto next_scalar = [&next_ints, &filename, &last_int_line]() -> int {
-    const auto values = next_ints();
-    try {
-      return values.at(0);
-    } catch (const std::exception &) {
-      throw tenes::load_error("ERROR: expected an integer in " + filename +
-                              " line: \"" + last_int_line + "\"");
-    }
-  };
+  metadata_reader reader(content, filename);
+  auto next_ints = [&reader]() { return reader.next_ints(); };
+  auto next_scalar = [&reader]() { return reader.next_scalar(); };
 
   const int version = next_scalar();
   if (version != 1) {
@@ -425,9 +837,15 @@ void load_tensor(ptensor &A, std::string const &name,
   std::string filename =
       directory + "/" + name + "_" + std::to_string(iunit) + ".dat";
   if (!util::path_exists(filename)) {
-    throw tenes::load_error("ERROR: cannot find a tensor file: " + filename);
+    throw tenes::load_error("ERROR: cannot read a tensor file: " + filename +
+                            " (it is missing, or its directory cannot be "
+                            "searched)");
   }
-  ptensor temp;
+  // On A's communicator: the default constructor would put temp on
+  // MPI_COMM_WORLD, and load() does not change it, so a library caller
+  // running the solver on a subset of the processes would get every loaded
+  // tensor distributed over all of them.
+  ptensor temp(A.get_comm());
   temp.load(filename.c_str());
   if (A.rank() != temp.rank()) {
     std::stringstream ss;
@@ -443,80 +861,96 @@ void load_tensor(ptensor &A, std::string const &name,
 }
 
 template <class ptensor>
-void iTPS<ptensor>::load_tensors_v1() {
+void iTPS<ptensor>::load_tensors_versioned(int expected_version) {
   std::string const &load_dir = peps_parameters.tensor_load_dir;
+  const std::string params_file = load_dir + "/params.dat";
 
-  int loaded_CHI = 1;
-  int format_version = 0;
-  int loaded_N_UNIT = 0;
-  std::vector<std::vector<int>> loaded_shape(N_UNIT,
-                                             std::vector<int>(nleg + 1));
+  std::string content;
   if (mpirank == 0) {
-    std::string filename = load_dir + "/params.dat";
-    std::string line;
-    std::ifstream ifs(filename.c_str());
-
-    std::getline(ifs, line);
-    format_version = std::stoi(util::drop_comment(line));
-    std::getline(ifs, line);
-    loaded_N_UNIT = std::stoi(util::drop_comment(line));
-    std::getline(ifs, line);
-    loaded_CHI = std::stoi(util::drop_comment(line));
-    if (CHI != static_cast<std::size_t>(loaded_CHI)) {
-      if (peps_parameters.print_level >= PrintLevel::info) {
-        std::cout << "WARNING: parameters.ctm.dimension is " << CHI
-                  << " but loaded tensors have CHI = " << loaded_CHI
-                  << std::endl;
-      }
-    }
-
-    for (int i = 0; i < N_UNIT; ++i) {
-      std::getline(ifs, line);
-      const auto shape = util::split(util::drop_comment(line));
-      for (int j = 0; j < nleg; ++j) {
-        loaded_shape[i][j] = std::stoi(shape[j]);
-        const int vd_param = lattice.virtual_dims[i][j];
-        if (vd_param != loaded_shape[i][j]) {
-          if (peps_parameters.print_level >= PrintLevel::info) {
-            std::cout << "WARNING: virtual dimension of the leg " << j
-                      << " of the tensor " << i << " is " << vd_param
-                      << " but loaded tensor has " << loaded_shape[i][j]
-                      << std::endl;
-          }
-        }
-      }
-      loaded_shape[i][nleg] = std::stoi(shape[nleg]);
-    }
-  }
-  bcast(format_version, 0, comm);
-  if (format_version != 1) {
+    std::ifstream ifs(params_file.c_str());
     std::stringstream ss;
-    ss << "ERROR: " << load_dir << "/params.dat has format version "
-       << format_version << " but load_tensors_v1 supports only version 1";
+    ss << ifs.rdbuf();
+    content = ss.str();
+  }
+  bcast(content, 0, comm);
+  metadata_reader reader(content, params_file);
+
+  const int format_version = reader.next_scalar();
+  if (format_version != expected_version) {
+    std::stringstream ss;
+    ss << "ERROR: " << params_file << " has format version " << format_version
+       << " but was dispatched as version " << expected_version;
     throw tenes::load_error(ss.str());
   }
-  bcast(loaded_N_UNIT, 0, comm);
+
+  // Version 2 records the kind of run. Before it, the loader had to infer that
+  // from the presence of fermion.dat.
+  std::optional<bool> recorded_kind;
+  if (format_version >= 2) {
+    const int kind = reader.next_scalar();
+    if (kind != 0 && kind != 1) {
+      std::stringstream ss;
+      ss << "ERROR: " << params_file << " records the run kind as " << kind
+         << "; it has to be 0 (not fermionic) or 1 (fermionic)";
+      throw tenes::load_error(ss.str());
+    }
+    recorded_kind = (kind != 0);
+  }
+
+  // Before the shapes, not after: there is one shape line per saved site, so
+  // reading N_UNIT of them out of a checkpoint that holds fewer is a read
+  // past the end of the file.
+  const int loaded_N_UNIT = reader.next_scalar();
   if (N_UNIT != loaded_N_UNIT) {
     std::stringstream ss;
-    ss << "ERROR: N_UNIT is " << N_UNIT << " but loaded N_UNIT has "
-       << loaded_N_UNIT << std::endl;
+    ss << "ERROR: N_UNIT is " << N_UNIT << " but " << params_file
+       << " was saved with N_UNIT = " << loaded_N_UNIT;
     throw tenes::load_error(ss.str());
   }
-  for (int i = 0; i < N_UNIT; ++i) {
-    bcast(loaded_shape[i], 0, comm);
+
+  const int loaded_CHI = reader.next_scalar();
+  if (CHI != static_cast<std::size_t>(loaded_CHI)) {
+    if (mpirank == 0 && peps_parameters.print_level >= PrintLevel::info) {
+      std::cout << "WARNING: parameters.ctm.dimension is " << CHI
+                << " but loaded tensors have CHI = " << loaded_CHI << std::endl;
+    }
   }
+
+  std::vector<std::vector<int>> loaded_shape(N_UNIT,
+                                             std::vector<int>(nleg + 1));
   for (int i = 0; i < N_UNIT; ++i) {
+    const auto shape = reader.next_ints();
+    if (shape.size() < static_cast<std::size_t>(nleg) + 1) {
+      std::stringstream ss;
+      ss << "ERROR: " << params_file << " gives " << shape.size()
+         << " dimensions for the tensor " << i << ", but " << (nleg + 1)
+         << " are needed";
+      throw tenes::load_error(ss.str());
+    }
+    for (int j = 0; j < nleg; ++j) {
+      loaded_shape[i][j] = shape[j];
+      const int vd_param = lattice.virtual_dims[i][j];
+      if (vd_param != loaded_shape[i][j]) {
+        if (mpirank == 0 && peps_parameters.print_level >= PrintLevel::info) {
+          std::cout << "WARNING: virtual dimension of the leg " << j
+                    << " of the tensor " << i << " is " << vd_param
+                    << " but loaded tensor has " << loaded_shape[i][j]
+                    << std::endl;
+        }
+      }
+    }
+    loaded_shape[i][nleg] = shape[nleg];
     const int pdim = lattice.physical_dims[i];
     if (pdim != loaded_shape[i][nleg]) {
       std::stringstream ss;
       ss << "ERROR: dimension of the physical bond of the tensor " << i
-         << " is " << pdim << " but loaded tensor has " << loaded_shape[i][nleg]
-         << std::endl;
+         << " is " << pdim << " but " << params_file << " has "
+         << loaded_shape[i][nleg];
       throw tenes::load_error(ss.str());
     }
   }
 
-  load_fermion_ledger(load_dir, loaded_shape, true);
+  load_fermion_ledger(load_dir, loaded_shape, true, recorded_kind);
 
   // #define LOAD_TENSOR_(A, name)                      \
   //   do {                                             \
@@ -551,22 +985,33 @@ void iTPS<ptensor>::load_tensors_v1() {
   // #undef LOAD_TENSOR_
 
   std::vector<double> ls;
+  std::string lambda_error;
+  // Rank 0 reads and the others take the result, so a read failure has to
+  // travel to them as data. Throwing here on rank 0 alone would leave every
+  // other rank in the broadcast below.
   if (mpirank == 0) {
-    for (int i = 0; i < N_UNIT; ++i) {
-      std::string lambda_filename =
-          load_dir + "/lambda_" + std::to_string(i) + ".dat";
-      std::ifstream ifs(lambda_filename.c_str());
-      for (int j = 0; j < nleg; ++j) {
-        for (int k = 0; k < loaded_shape[i][j]; ++k) {
-          double temp = 0.0;
-          if (!(ifs >> temp)) {
-            throw tenes::load_error(
-                "ERROR: failed to read lambda values from " + lambda_filename);
+    lambda_error = [&]() -> std::string {
+      for (int i = 0; i < N_UNIT; ++i) {
+        std::string lambda_filename =
+            load_dir + "/lambda_" + std::to_string(i) + ".dat";
+        std::ifstream ifs(lambda_filename.c_str());
+        for (int j = 0; j < nleg; ++j) {
+          for (int k = 0; k < loaded_shape[i][j]; ++k) {
+            double temp = 0.0;
+            if (!(ifs >> temp)) {
+              return "ERROR: failed to read lambda values from " +
+                     lambda_filename;
+            }
+            ls.push_back(temp);
           }
-          ls.push_back(temp);
         }
       }
-    }
+      return std::string();
+    }();
+  }
+  bcast(lambda_error, 0, comm);
+  if (!lambda_error.empty()) {
+    throw tenes::load_error(lambda_error);
   }
   bcast(ls, 0, comm);
   int index = 0;
@@ -590,7 +1035,12 @@ void iTPS<ptensor>::load_tensors_v0() {
 
   // load from the checkpoint
   if (!util::isdir(load_dir)) {
-    std::string msg = load_dir + " does not exists.";
+    // "or cannot be read": the existence tests report false rather than
+    // throwing, so that they cannot abort one rank inside a collective,
+    // and a directory without search permission is then indistinguishable
+    // from a missing one.
+    std::string msg =
+        load_dir + " does not exist, or is not a readable directory.";
     throw tenes::load_error(msg);
   }
   for (int i = 0; i < N_UNIT; ++i) {
@@ -599,7 +1049,9 @@ void iTPS<ptensor>::load_tensors_v0() {
     auto load = [&filename, &suffix](ptensor &A, const char *name) {
       std::string path = filename + name + suffix;
       if (!util::path_exists(path)) {
-        throw tenes::load_error("ERROR: cannot find a tensor file: " + path);
+        throw tenes::load_error(
+            "ERROR: cannot read a tensor file: " + path +
+            " (it is missing, or its directory cannot be searched)");
       }
       A.load(path.c_str());
     };
@@ -614,23 +1066,34 @@ void iTPS<ptensor>::load_tensors_v0() {
     load(C4[i], "C4");
   }
   std::vector<double> ls;
+  std::string lambda_error;
+  // Rank 0 reads and the others take the result, so a read failure has to
+  // travel to them as data. Throwing here on rank 0 alone would leave every
+  // other rank in the broadcast below.
   if (mpirank == 0) {
-    for (int i = 0; i < N_UNIT; ++i) {
-      const auto vdim = lattice.virtual_dims[i];
-      std::string lambda_filename =
-          load_dir + "/lambda_" + std::to_string(i) + ".dat";
-      std::ifstream ifs(lambda_filename.c_str());
-      for (int j = 0; j < nleg; ++j) {
-        for (int k = 0; k < vdim[j]; ++k) {
-          double temp = 0.0;
-          if (!(ifs >> temp)) {
-            throw tenes::load_error(
-                "ERROR: failed to read lambda values from " + lambda_filename);
+    lambda_error = [&]() -> std::string {
+      for (int i = 0; i < N_UNIT; ++i) {
+        const auto vdim = lattice.virtual_dims[i];
+        std::string lambda_filename =
+            load_dir + "/lambda_" + std::to_string(i) + ".dat";
+        std::ifstream ifs(lambda_filename.c_str());
+        for (int j = 0; j < nleg; ++j) {
+          for (int k = 0; k < vdim[j]; ++k) {
+            double temp = 0.0;
+            if (!(ifs >> temp)) {
+              return "ERROR: failed to read lambda values from " +
+                     lambda_filename;
+            }
+            ls.push_back(temp);
           }
-          ls.push_back(temp);
         }
       }
-    }
+      return std::string();
+    }();
+  }
+  bcast(lambda_error, 0, comm);
+  if (!lambda_error.empty()) {
+    throw tenes::load_error(lambda_error);
   }
   bcast(ls, 0, comm);
   int index = 0;

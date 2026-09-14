@@ -152,12 +152,16 @@ int run_groundstate(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.optimize();
-  tns.save_tensors();
+  // Measure and summarize even when the checkpoint could not be written -- the
+  // computation is done and its results are worth keeping -- but report the
+  // failure in the exit status, or a chain of runs that reloads this
+  // checkpoint would silently start from a stale one.
+  const bool saved = tns.save_tensors();
   if (peps_parameters.to_measure) {
     tns.measure();
   }
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 template <class tensor>
@@ -174,9 +178,9 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.time_evolution();
-  tns.save_tensors();
+  const bool saved = tns.save_tensors();
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 template <class tensor>
@@ -193,9 +197,9 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.finite_temperature();
-  tns.save_tensors();
+  const bool saved = tns.save_tensors();
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 int itps_main(const char *input_filename, MPI_Comm comm,
@@ -213,8 +217,12 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   MPI_Comm_size(comm, &mpisize);
 
   if (!util::path_exists(input_filename)) {
+    // path_exists() answers false rather than throwing when the filesystem
+    // cannot say, so a file that is there but unreadable arrives here looking
+    // exactly like a missing one; the message has to allow for both.
     std::stringstream ss;
-    ss << "ERROR: cannot find the input file: " << input_filename << std::endl;
+    ss << "ERROR: cannot read the input file: " << input_filename
+       << " (it is missing, or its directory cannot be searched)" << std::endl;
     throw tenes::input_error(ss.str());
   }
 

@@ -71,7 +71,7 @@ General parameters for ``tenes``.
 
     - For instance, the expectation value of a single creation or annihilation operator cannot be computed.
 
-  - In the current version fermion mode supports the ground-state calculation with the simple update (CTM or mean-field environment) and the full update (CTM environment only). ``Use_RSVD``, ``Simple_Gauge_Fix``, finite temperature, time evolution, multi-site observables, ``ops``-form two-site observables, two-site observables at distances larger than 1, unit cells in which a site is its own nearest neighbor (``LX = 1``, or ``LY = 1`` with ``skew = 0``), correlation functions, and correlation length are not available and are rejected (or forcibly disabled, for the correlation length) when the input is read
+  - In the current version fermion mode supports the ground-state calculation with the simple update (CTM or mean-field environment) and the full update (CTM environment only). ``Use_RSVD``, ``Simple_Gauge_Fix``, finite temperature, time evolution, multi-site observables, ``ops``-form two-site observables, two-site observables at distances larger than 1, unit cells in which a site is its own nearest neighbor (``LX = 1``, or ``LY = 1`` with ``skew = 0``), and correlation functions are not available and are rejected when the input is read. The correlation length is likewise unavailable: ``tenes_simple`` rejects a ``[correlation_length]`` table for a fermionic model, and the solver disables the measurement with a warning at the point of measurement
 
 - ``iszero_tol``
 
@@ -96,6 +96,12 @@ General parameters for ``tenes``.
 
   - Save optimized tensors to files in this directory
   - If empty no tensors will be saved
+  - A checkpoint is built in a working directory ``<destination>/.tenes-save-tmp/`` and moved into place one file at a time once it is complete. A run killed while writing therefore leaves the previous checkpoint in the destination, intact. The working directory is removed when the save finishes, and one left by a run that died is removed by the next save
+  - The working directory and the checkpoint exist side by side just before the move, so the disk usage during a save peaks at twice the size of a checkpoint
+  - Checkpoint files that the save does not write are removed from the destination, so saving over a checkpoint of a calculation with more sites or more MPI processes leaves none of the earlier run's files behind. **Files that are not part of a checkpoint are left alone**
+  - If the move is interrupted, ``<destination>/.tenes-save-incomplete`` is left behind and the checkpoint cannot be loaded until it is dealt with. That file says how to finish the move by hand: move the contents of the working directory into the destination, then delete the file. A later save into the same destination finishes the interrupted move itself before writing anything; if it cannot, it leaves the destination as it is and exits with a non-zero status
+  - Do not point two concurrent runs at the same ``tensor_save`` directory: each would overwrite the other's working directory
+  - **If the checkpoint cannot be written, ``tenes`` exits with a non-zero status**, after writing its measurement files as usual. Discarding a finished computation over a failed save would be worse, but an exit status of 0 would let a chain such as ``tenes A && tenes B``, where B reloads A's checkpoint, silently restart from a stale one
 
 - ``tensor_load``
 
