@@ -96,17 +96,36 @@ General parameters for ``tenes``.
 
   - Save optimized tensors to files in this directory
   - If empty no tensors will be saved
-  - A checkpoint is built in a working directory ``<destination>/.tenes-save-tmp/`` and moved into place one file at a time once it is complete. A run killed while writing therefore leaves the previous checkpoint in the destination, intact. The working directory is removed when the save finishes, and one left by a run that died is removed by the next save
-  - The working directory and the checkpoint exist side by side just before the move, so the disk usage during a save peaks at twice the size of a checkpoint
-  - Checkpoint files that the save does not write are removed from the destination, so saving over a checkpoint of a calculation with more sites or more MPI processes leaves none of the earlier run's files behind. **Files that are not part of a checkpoint are left alone**
-  - If the move is interrupted, ``<destination>/.tenes-save-incomplete`` is left behind and the checkpoint cannot be loaded until it is dealt with. That file says how to finish the move by hand: move the contents of the working directory into the destination, then delete the file. A later save into the same destination finishes the interrupted move itself before writing anything; if it cannot, it leaves the destination as it is and exits with a non-zero status
-  - Do not point two concurrent runs at the same ``tensor_save`` directory: each would overwrite the other's working directory
-  - **If the checkpoint cannot be written, ``tenes`` exits with a non-zero status**, after writing its measurement files as usual. Discarding a finished computation over a failed save would be worse, but an exit status of 0 would let a chain such as ``tenes A && tenes B``, where B reloads A's checkpoint, silently restart from a stale one
+  - See *Checkpoint files* below for how a checkpoint is saved and what to do when a save was interrupted
 
 - ``tensor_load``
 
   - Read initial tensors from files in this directory
   - If empty no tensors will be loaded
+  - It may be the same directory as ``tensor_save``. See *Checkpoint files* below
+
+.. rubric:: Checkpoint files (``tensor_save`` and ``tensor_load``)
+
+A run saves its tensors into the ``tensor_save`` directory as a checkpoint, and a later run reads it back from ``tensor_load``. Both may name the same directory, so that each run continues from the previous run's checkpoint and replaces it.
+
+- **Saving**
+
+  - A checkpoint is built in a working directory ``<destination>/.tenes-save-tmp/`` and moved into place one file at a time once it is complete. A run killed while writing therefore leaves the previous checkpoint in the destination, intact. The working directory is removed when the save finishes, and one left by a run that died is removed by the next save
+  - The working directory and the checkpoint exist side by side just before the move, so the disk usage during a save peaks at twice the size of a checkpoint
+  - Checkpoint files that the save does not write are removed from the destination, so saving over a checkpoint of a calculation with more sites or more MPI processes leaves none of the earlier run's files behind. **Files that are not part of a checkpoint are left alone**
+  - Do not point two concurrent runs at the same ``tensor_save`` directory: each would overwrite the other's working directory
+  - **If the checkpoint cannot be written, ``tenes`` exits with a non-zero status**, after writing its measurement files as usual. Every file of the checkpoint is checked once it is written, including the tensor data each MPI process writes, so a file cut short by a full disk or a quota counts as a failure. Discarding a finished computation over a failed save would be worse, but an exit status of 0 would let a chain such as ``tenes A && tenes B``, where B reloads A's checkpoint, silently restart from a stale one. An error the file system reports only later, or damage done to the files after the save, is not detected
+
+- **When a save was interrupted while moving its files**
+
+  - If a run dies, or a file cannot be moved, while the checkpoint is being moved into place, ``<destination>/.tenes-save-incomplete`` is left behind. The destination may then hold a mixture of the new checkpoint and the previous one, so ``tensor_load`` refuses it and shows what that file says
+  - To repair it by hand, move everything that is left in ``<destination>/.tenes-save-tmp/`` into the destination, then delete ``.tenes-save-incomplete``. That file gives the same instructions together with the full path of the working directory
+  - A later save into the same destination does that repair itself before writing anything. If a file cannot be moved then either, it stops at that file, saves nothing, and exits with a non-zero status. The files not moved yet are still in the working directory and ``.tenes-save-incomplete`` is still there, so the repair by hand above still applies
+  - If only ``.tenes-save-incomplete`` itself cannot be deleted, at the end of a save or after that repair, ``tenes`` says so and exits with a non-zero status. Every file is in place then, and deleting that file by hand is all that is left
+
+- **Loading**
+
+  - A checkpoint is refused, on every MPI process, when its number of sites differs from the input, or when one of the checkpoint and the input is fermionic and the other is not
   - The bond dimension may be changed from that of the saved tensors. Enlarging pads the new components with zeros and shrinking simply truncates. In a fermionic system, however, shrinking is not available in the current version, because the parity ledger of the virtual bonds has to be truncated consistently.
   - When the bond dimension is enlarged, the added components are zero, so a simple update or a full update has to be run after loading before the enlarged space is actually used. Measurement alone will not populate it.
 

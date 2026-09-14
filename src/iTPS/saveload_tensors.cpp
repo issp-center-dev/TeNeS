@@ -18,7 +18,10 @@
 #include <algorithm>
 #include <array>
 #include <complex>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <random>
@@ -116,7 +119,7 @@ bool is_checkpoint_name(const std::string &name) {
   };
   std::string stem = name;
   // mptensor writes one <base>.<rank>.bin and <base>.<rank>.idx per process.
-  for (const std::string suffix : {std::string(".bin"), std::string(".idx")}) {
+  for (const std::string &suffix : {std::string(".bin"), std::string(".idx")}) {
     if (stem.size() > suffix.size() &&
         stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) == 0) {
       const std::size_t dot = stem.rfind('.', stem.size() - suffix.size() - 1);
@@ -194,6 +197,98 @@ bool move_all_into(const std::string &work_dir, const std::string &dest,
   return true;
 }
 
+//! The whole of the file at @p path into @p content; false if it cannot be
+//! read.
+bool read_whole_file(const std::string &path, std::string &content) {
+  std::ifstream ifs(path, std::ios::binary);
+  if (!ifs) {
+    return false;
+  }
+  content.assign(std::istreambuf_iterator<char>(ifs),
+                 std::istreambuf_iterator<char>());
+  return !ifs.bad();
+}
+
+/*! @brief Whether the files mptensor's save() wrote for @p t on this rank are
+ *         there to their last byte.
+ *
+ * mptensor writes them without looking at its streams, so a write that failed
+ * -- a full disk, a quota, a file-size limit -- used to leave a checkpoint
+ * that said it was saved and loaded another state. A write that keeps failing
+ * until the file is closed loses only the end of the file. One whose error
+ * clears before the close -- space freed on a shared file system, say -- can
+ * instead leave part of its buffer written twice, because an ofstream writes
+ * what it still holds once more when it is closed. The checks below tell both
+ * apart from a whole file:
+ *
+ * - @c <base>.<rank>.bin holds exactly local_size() elements.
+ * - @c <base>.<rank>.idx gives local_size, the local rows r and the local
+ *   columns c on its first three lines, then a header line and the global
+ *   index of each row, and the same for the columns. save_index() breaks the
+ *   line after every B indices and after each list, so the file holds exactly
+ *   7 + r / B + c / B newlines, and a cut of any length leaves fewer. That
+ *   includes a cut of the final empty line alone, which on a rank holding no
+ *   elements is everything that follows the last header. It also holds
+ *   exactly 8 + r + c words -- the six header words and values, the two list
+ *   headers and the indices -- which a buffer written twice changes even when
+ *   the newlines happen to match: a sweep over every failure point of such
+ *   files found no file that kept both counts.
+ * - @c <base>, which rank 0 alone writes, is exactly 8 lines.
+ *
+ * The counts follow mptensor's file format. Should a new version change it,
+ * every save reports a failure, which ctest shows at once, instead of a cut
+ * file passing for a whole one.
+ */
+template <class tensor>
+bool saved_completely(const tensor &t, const std::string &base) {
+  const int rank = t.get_comm_rank();
+  const auto count_newlines = [](const std::string &s) {
+    return static_cast<std::size_t>(std::count(s.begin(), s.end(), '\n'));
+  };
+
+  std::error_code ec;
+  const auto data_size = std::filesystem::file_size(
+      mptensor::io_helper::binary_filename(base, rank), ec);
+  if (ec || data_size != sizeof(typename tensor::value_type) * t.local_size()) {
+    return false;
+  }
+
+  std::string index;
+  if (!read_whole_file(mptensor::io_helper::index_filename(base, rank),
+                       index)) {
+    return false;
+  }
+  std::istringstream header(index);
+  std::string key_size, key_rows, key_cols;
+  std::size_t local_size = 0, rows = 0, cols = 0;
+  if (!(header >> key_size >> local_size >> key_rows >> rows >> key_cols >>
+        cols) ||
+      key_size != "local_size=" || key_rows != "local_n_row=" ||
+      key_cols != "local_n_col=" || local_size != t.local_size()) {
+    return false;
+  }
+  using matrix = std::decay_t<decltype(t.get_matrix())>;
+  const std::size_t per_line =
+      matrix::matrix_type_tag == MATRIX_TYPE_TAG_SCALAPACK ? 16 : 10;
+  std::istringstream all_words(index);
+  std::size_t words = 0;
+  for (std::string word; all_words >> word;) {
+    ++words;
+  }
+  if (count_newlines(index) != 7 + rows / per_line + cols / per_line ||
+      words != 8 + rows + cols) {
+    return false;
+  }
+
+  if (rank == 0) {
+    std::string base_file;
+    if (!read_whole_file(base, base_file) || count_newlines(base_file) != 8) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 template <class ptensor>
@@ -239,8 +334,11 @@ bool iTPS<ptensor>::save_tensors() const {
       std::set<std::string> moved_in;
       repaired = !util::path_exists(work_dir) ||
                  move_all_into(work_dir, save_dir, moved_in, repair_failed);
-      if (repaired) {
-        util::remove_all(marker);
+      if (repaired && !util::remove_all(marker)) {
+        // Going on would write a checkpoint that the marker refuses, and
+        // remove the working directory the marker points at.
+        repaired = false;
+        repair_failed = "the deletion of " + marker;
       }
     }
     if (!repaired) {
@@ -263,9 +361,10 @@ bool iTPS<ptensor>::save_tensors() const {
         std::cerr << "WARNING: " << marker
                   << " shows that an earlier save was interrupted while moving "
                      "its files, and finishing that move failed at "
-                  << repair_failed << ". No checkpoint was saved, and "
-                  << marker << " still says how to finish the move by hand."
-                  << std::endl;
+                  << repair_failed << ", so no checkpoint was saved.\n"
+                  << "  To finish the move by hand, move everything left in "
+                  << work_dir << " into " << save_dir << ", then delete "
+                  << marker << "." << std::endl;
       } else {
         std::cerr << "WARNING: cannot create the working directory " << work_dir
                   << " (" << save_dir
@@ -317,18 +416,25 @@ bool iTPS<ptensor>::save_tensors() const {
   // whichever mode we are in. Zero rather than whatever the allocator left
   // behind, so that the checkpoint of a given state is the same file every
   // time.
-  const auto save_placeholder = [this](const mptensor::Shape &shape,
-                                       const std::string &path) {
+  const auto save_tensor = [&wrote](const ptensor &t, const std::string &path) {
+    t.save(path);
+    if (!saved_completely(t, path)) {
+      wrote = 0.0;
+    }
+  };
+  const auto save_placeholder = [this, &save_tensor](
+                                    const mptensor::Shape &shape,
+                                    const std::string &path) {
     ptensor t(comm, shape);
     for (size_t n = 0; n < t.local_size(); ++n) {
       t.set_value(t.global_index(n), typename ptensor::value_type(0.0));
     }
-    t.save(path.c_str());
+    save_tensor(t, path);
   };
   for (int i = 0; i < N_UNIT; ++i) {
     std::string filename = work_dir + "/";
     std::string suffix = "_" + std::to_string(i) + ".dat";
-    Tn[i].save((filename + "T" + suffix).c_str());
+    save_tensor(Tn[i], filename + "T" + suffix);
     if (finfo.enabled) {
       const auto vdim = lattice.virtual_dims[i];
       save_placeholder(mptensor::Shape(CHI, CHI, vdim[1], vdim[1]),
@@ -343,14 +449,14 @@ bool iTPS<ptensor>::save_tensors() const {
         save_placeholder(mptensor::Shape(CHI, CHI), filename + name + suffix);
       }
     } else {
-      eTt[i].save((filename + "Et" + suffix).c_str());
-      eTr[i].save((filename + "Er" + suffix).c_str());
-      eTb[i].save((filename + "Eb" + suffix).c_str());
-      eTl[i].save((filename + "El" + suffix).c_str());
-      C1[i].save((filename + "C1" + suffix).c_str());
-      C2[i].save((filename + "C2" + suffix).c_str());
-      C3[i].save((filename + "C3" + suffix).c_str());
-      C4[i].save((filename + "C4" + suffix).c_str());
+      save_tensor(eTt[i], filename + "Et" + suffix);
+      save_tensor(eTr[i], filename + "Er" + suffix);
+      save_tensor(eTb[i], filename + "Eb" + suffix);
+      save_tensor(eTl[i], filename + "El" + suffix);
+      save_tensor(C1[i], filename + "C1" + suffix);
+      save_tensor(C2[i], filename + "C2" + suffix);
+      save_tensor(C3[i], filename + "C3" + suffix);
+      save_tensor(C4[i], filename + "C4" + suffix);
     }
   }
   if (mpirank == 0) {
@@ -383,8 +489,8 @@ bool iTPS<ptensor>::save_tensors() const {
     }
   }
 
-  // Only the files TeNeS itself opens are covered: mptensor's save() reports
-  // nothing, so a failure to write a tensor fragment is not seen here.
+  // Every file above is covered: the ones TeNeS writes by their streams, the
+  // tensor files by saved_completely().
   std::vector<double> wrote_everywhere{wrote};
   allreduce_min(wrote_everywhere, comm);
   if (wrote_everywhere[0] == 0.0) {
@@ -448,9 +554,15 @@ bool iTPS<ptensor>::save_tensors() const {
           util::remove_all(path);
         }
       }
-      util::remove_all(marker);
-      util::remove_all(work_dir);
-      moved = 1;
+      if (util::remove_all(marker)) {
+        util::remove_all(work_dir);
+        moved = 1;
+      } else {
+        // Everything is in place, but the marker refuses the load. The
+        // working directory, empty now, stays with it, so that the marker
+        // never points at nothing.
+        moved = 3;
+      }
     }
   }
   bcast(moved, 0, comm);
@@ -462,16 +574,23 @@ bool iTPS<ptensor>::save_tensors() const {
         std::cerr << "WARNING: could not write " << marker
                   << ", so nothing was moved into " << save_dir
                   << " and no new checkpoint was saved." << std::endl;
+      } else if (moved == 3) {
+        std::cerr << "WARNING: moved the checkpoint into " << save_dir
+                  << ", but could not delete " << marker
+                  << ". The checkpoint is complete, but it cannot be loaded "
+                     "until that file is deleted."
+                  << std::endl;
       } else {
         std::cerr << "WARNING: could not move " << failed_name << " into "
                   << save_dir
-                  << ", so that directory now holds a mixture of this run and "
-                     "the previous one.\n"
-                  << "  " << marker
-                  << " has been left behind and says how to finish the move "
-                     "by hand. Until it is gone, this checkpoint cannot be "
-                     "loaded."
-                  << std::endl;
+                  << ", so that directory may now hold a mixture of this run "
+                     "and the previous one, and its checkpoint cannot be "
+                     "loaded while "
+                  << marker << " is there.\n"
+                  << "  To finish the move by hand, move everything left in "
+                  << work_dir << " into " << save_dir << ", then delete "
+                  << marker << ". A later save into " << save_dir
+                  << " does the same before it writes anything." << std::endl;
       }
     }
     return false;

@@ -106,6 +106,60 @@
 # limits are set in the tenes processes only, through a small wrapper,
 # because Open MPI's launcher does not start under them.
 #
+# A final review found one more way for a save to call itself a success: the
+# tensor files, which mptensor writes and TeNeS does not open itself, can be
+# cut short by a failed write without anyone noticing
+# (test-contract-shard.md). mptensor writes three files per tensor: a base
+# file <name> (process 0 only), and per process a data file
+# <name>.<process>.bin and an index file <name>.<process>.idx. The S.* cases
+# cut ONE kind of them with a file-size limit and check that the save then
+# fails the way A.5 means it: a non-zero exit, a warning naming the
+# destination, the measurement written as usual, no "Tensors saved", and a
+# destination exactly as it was, without the working directory or the marker.
+#
+# Each limit is calibrated on the same save made without one: one byte below
+# the largest file of the kind under test, and above everything else the
+# limited processes write. Two things make sure the file really is what the
+# limit cuts. The same save under a limit the file exactly fits has to
+# succeed, so the one byte between the two runs matters to files of exactly
+# that size and to nothing else. And a save under test that exits 0 anyway
+# has to show the file in the destination at the size of the limit; if it
+# does not, the case fails as "the situation was not made", not as the defect.
+#
+#   S.1 A data file that could not be written in full fails the save: once for
+#       the site tensors, once for the CTM environment.
+#   S.2 The same for an index file. An index file can only be cut alone on a
+#       process other than 0, whose data files can be empty, so this case is
+#       multi-process only; it is also S.4 for an index file.
+#   S.3 A base file cannot be cut alone, and has no case: process 0 writes
+#       it, and also writes measurement files larger than any base file,
+#       which have to come out whole.
+#   S.4 A process other than 0 that alone cannot write its data file: every
+#       process ends, and the save fails. The limit is set in that process
+#       only, found by the rank the launcher puts in its environment.
+#   S.5 S.1 for a fermionic run, which writes the CTM environment another way.
+#   S.6 A limit larger than every file changes nothing: the save succeeds and
+#       reads back.
+#
+# The limits themselves then turned out to leave something behind
+# (test-contract-shard-kmp.md). The LLVM OpenMP runtime, which tenes loads
+# through its BLAS on macOS, registers every process in
+# /tmp/__KMP_REGISTERED_LIB_<pid>: it creates the file, grows it to 1024
+# bytes and maps it. Under a file-size limit the growing fails and the empty
+# file outlives the process; a later, unrelated process that gets the same
+# pid maps it and dies of SIGBUS before main(). So the wrapper that sets a
+# limit no longer becomes the program it runs: it runs it as a child,
+# removes that child's registration file if it is empty, and then ends the
+# way the child ended. A run whose time is up is stopped with everything it
+# started, first with SIGTERM, so the wrapper cleans up on the way down too.
+#
+#   K.3 The wrapper passes on how its program ended -- exit code, signal,
+#       output -- and a run whose time is up leaves no process running.
+#   K.5 tenes run under a limit leaves no empty registration file of its own
+#       processes, and the one of a process that cannot exist is not touched.
+#       Where the runtime makes no such file (GNU libgomp does not), the case
+#       says so and is skipped.
+#
 # Run at one process by default; `--nproc N` runs the same cases at N, and
 # adds the one case that needs two process counts (a 2-process save followed
 # by a 1-process save into the same directory).  A.3 and A.5 need the
@@ -115,9 +169,11 @@
 import os
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
+import time
 from os.path import join
 
 import numpy as np
@@ -222,15 +278,19 @@ def input_toml(
     fermion=True,
     save_dir=None,
     load_dir=None,
+    chi=None,
 ):
     """A spinless-fermion (or the same model without the grading) input.
 
     The lattice is lx by ly, so N_UNIT is lx * ly; that is the knob the
     site-count cases turn.  num_step = 0 measures the initial (or loaded)
     state without evolving it, which is what the reload comparisons need.
+    `chi` is 2 * dim * dim unless given; the S.* cases set it to make the
+    site tensors or the CTM environment the largest files of a checkpoint.
     """
     n_unit = lx * ly
-    chi = 2 * dim * dim
+    if chi is None:
+        chi = 2 * dim * dim
     h = two_site_hamiltonian(T, mu)
     gate = imaginary_time_gate(h, TAU)
     h_elements = tensor_elements(h)
@@ -336,26 +396,115 @@ class Run:
         return [m for m in CRASH_MARKERS if m in self.output]
 
 
-#! A program that sets one limit on its own process and then becomes the rest
-#! of its command line: `python -c LIMIT_WRAPPER <kind> <value> <program...>`.
-#! Limits survive exec, and so does an ignored signal.
+#! A program that sets one limit on its own process and then runs the rest of
+#! its command line under it: `python -c LIMIT_WRAPPER <kind> <value>
+#! <program...>`. The limit, the umask and an ignored signal are inherited by
+#! the program and survive its exec, exactly as when the wrapper used to
+#! become the program; the program gets the same file descriptors and
+#! environment too.
 #!
 #! The limit has to reach the tenes processes and ONLY them. Set in the
 #! launcher (preexec_fn of mpiexec), a file-size limit of 0 stops Open MPI
 #! before any process starts ("The PMIx server's listener thread failed to
 #! start", exit code 213), which would fail every such run for a reason that
 #! has nothing to do with the save.
+#!
+#! `fsize_on_rank` takes "<rank>:<bytes>" and sets the file-size limit only in
+#! the process of that rank, which it reads from the environment the launcher
+#! gives every process (Open MPI, PMIx, MPICH); the other processes run
+#! without a limit. With no rank there it stops, rather than guess.
+#!
+#! The wrapper does not become the program (test-contract-shard-kmp.md; the
+#! K.* paragraph at the top). It starts it as a child, passes on the signals
+#! a launcher or a timeout sends, waits until the child has ended but keeps
+#! it unreaped -- so that no other process can have its pid yet -- removes
+#! the child's OpenMP registration file if it is empty and this user's, and
+#! then ends the way the child ended: with its exit code, or killed by its
+#! signal. Where the child cannot be kept unreaped (os.waitid, or kqueue on a
+#! Python without it), the file is removed just after reaping.
 LIMIT_WRAPPER = (
-    "import os, resource, signal, sys\n"
-    "kind, value = sys.argv[1], int(sys.argv[2], 0)\n"
+    "import os, resource, select, signal, stat, sys\n"
+    "kind, value = sys.argv[1], sys.argv[2]\n"
+    "if kind == 'fsize_on_rank':\n"
+    "    rank, value = value.split(':')\n"
+    "    here = [os.environ[name] for name in\n"
+    "            ('OMPI_COMM_WORLD_RANK', 'PMIX_RANK', 'PMI_RANK')\n"
+    "            if name in os.environ]\n"
+    "    if not here:\n"
+    "        sys.exit('fsize_on_rank: the launcher gave this process no rank')\n"
+    "    kind = 'fsize' if int(here[0]) == int(rank) else 'none'\n"
     "if kind == 'fsize':\n"
+    "    value = int(value, 0)\n"
     "    resource.setrlimit(resource.RLIMIT_FSIZE, (value, value))\n"
     "    signal.signal(signal.SIGXFSZ, signal.SIG_IGN)\n"
     "elif kind == 'umask':\n"
-    "    os.umask(value)\n"
-    "else:\n"
+    "    os.umask(int(value, 0))\n"
+    "elif kind != 'none':\n"
     "    sys.exit('unknown limit: ' + kind)\n"
-    "os.execv(sys.argv[3], sys.argv[3:])\n"
+    "PASSED_ON = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT,\n"
+    "             signal.SIGUSR1, signal.SIGUSR2)\n"
+    "mask = signal.pthread_sigmask(signal.SIG_BLOCK, PASSED_ON)\n"
+    "child = os.fork()\n"
+    "if child == 0:\n"
+    "    try:\n"
+    "        signal.pthread_sigmask(signal.SIG_SETMASK, mask)\n"
+    "        os.execv(sys.argv[3], sys.argv[3:])\n"
+    "    except BaseException as err:\n"
+    "        os.write(2, ('cannot run %s: %s\\n' % (sys.argv[3], err)).encode())\n"
+    "    os._exit(127)\n"
+    "def pass_on(signum, _frame):\n"
+    "    try:\n"
+    "        os.kill(child, signum)\n"
+    "    except OSError:\n"
+    "        pass\n"
+    "for signum in PASSED_ON:\n"
+    "    signal.signal(signum, pass_on)\n"
+    "signal.pthread_sigmask(signal.SIG_SETMASK, mask)\n"
+    "def ended_unreaped():\n"
+    "    if hasattr(os, 'waitid') and hasattr(os, 'WNOWAIT'):\n"
+    "        os.waitid(os.P_PID, child, os.WEXITED | os.WNOWAIT)\n"
+    "        return True\n"
+    "    if not hasattr(select, 'kqueue'):\n"
+    "        return False\n"
+    "    queue = select.kqueue()\n"
+    "    try:\n"
+    "        queue.control([select.kevent(\n"
+    "            child, select.KQ_FILTER_PROC,\n"
+    "            select.KQ_EV_ADD | select.KQ_EV_ONESHOT, select.KQ_NOTE_EXIT)], 0)\n"
+    "    except OSError:\n"
+    "        return True\n"
+    "    queue.control(None, 1)\n"
+    "    return True\n"
+    "def forget_registration():\n"
+    "    uid = os.getuid()\n"
+    "    for name in ('__KMP_REGISTERED_LIB_%d' % child,\n"
+    "                 '__KMP_REGISTERED_LIB_%d_%d' % (child, uid)):\n"
+    "        path = os.path.join('/tmp', name)\n"
+    "        try:\n"
+    "            info = os.lstat(path)\n"
+    "            if (stat.S_ISREG(info.st_mode) and info.st_size == 0\n"
+    "                    and info.st_uid == uid):\n"
+    "                os.unlink(path)\n"
+    "        except OSError:\n"
+    "            pass\n"
+    "unreaped = ended_unreaped()\n"
+    "if unreaped:\n"
+    "    forget_registration()\n"
+    "status = os.waitpid(child, 0)[1]\n"
+    "if not unreaped:\n"
+    "    forget_registration()\n"
+    "if os.WIFSIGNALED(status):\n"
+    "    signum = os.WTERMSIG(status)\n"
+    "    core = resource.getrlimit(resource.RLIMIT_CORE)[1]\n"
+    "    resource.setrlimit(resource.RLIMIT_CORE, (0, core))\n"
+    "    try:\n"
+    "        signal.signal(signum, signal.SIG_DFL)\n"
+    "    except (OSError, ValueError):\n"
+    "        pass\n"
+    "    signal.pthread_sigmask(signal.SIG_UNBLOCK, [signum])\n"
+    "    os.kill(os.getpid(), signum)\n"
+    "    os._exit(128 + signum)\n"
+    "os._exit(os.WEXITSTATUS(status))\n"
 )
 #! No file can grow past 0 bytes: every write fails with EFBIG, while reading
 #! and rename() are unaffected.
@@ -374,6 +523,89 @@ def limited(limit):
     return [sys.executable, "-c", LIMIT_WRAPPER, kind, str(value)]
 
 
+def launcher(nproc):
+    """The start of a command line that runs `nproc` processes."""
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append(str(nproc))
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    elif nproc != 1:
+        raise RuntimeError("this build has no MPI launcher; --nproc must be 1")
+    return cmd
+
+
+#! How long a command whose time is up has to end after SIGTERM before it is
+#! sent SIGKILL. SIGTERM comes first so that LIMIT_WRAPPER can still clean up
+#! after its program.
+STOP_GRACE = 10
+
+
+def stop_session(proc, grace=STOP_GRACE):
+    """End `proc` and every process in its session's process group: SIGTERM,
+    and SIGKILL if they are not gone within `grace` seconds (at once when
+    `grace` is 0).
+
+    The group reaches the limit wrapper's child, which a signal to `proc`
+    alone would leave running. Open MPI puts each process it starts in a
+    group of its own, so those are not reached this way; the launcher ends
+    them itself on SIGTERM, and they end on their own when it is killed.
+    """
+    signals = (signal.SIGTERM, signal.SIGKILL) if grace else (signal.SIGKILL,)
+    for signum in signals:
+        try:
+            os.killpg(proc.pid, signum)
+        except (ProcessLookupError, PermissionError):
+            pass
+        try:
+            proc.communicate(timeout=grace if signum == signal.SIGTERM else None)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def run_command(cmd, cwd=None, timeout=RUN_TIMEOUT):
+    """subprocess.run(cmd, capture_output=True, text=True, timeout=timeout),
+    except that a command whose time is up is stopped with every process it
+    started (stop_session) before TimeoutExpired is raised."""
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=cwd,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        stop_session(proc)
+        raise
+    except BaseException:
+        stop_session(proc, grace=0)
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+
+
+def run_program(cmd, cwd=None):
+    """run_command() as a Run, in which running out of time is an outcome."""
+    try:
+        return Run(run_command(cmd, cwd=cwd), False, cmd)
+    except subprocess.TimeoutExpired:
+        return Run(None, True, cmd)
+
+
+def tenes_command(inputfile, nproc=1, quiet=False, limit=None, through=()):
+    """The command line run_tenes() runs. `through` is a program put between
+    the limit and tenes, which has to become tenes (exec) in the end."""
+    cmd = launcher(nproc)
+    cmd.extend(limited(limit))
+    cmd.extend(through)
+    cmd.append(TENES)
+    if quiet:
+        cmd.append("-q")
+    cmd.append(inputfile)
+    return cmd
+
+
 def run_tenes(inputfile, nproc=1, quiet=False, cwd=None, limit=None):
     """Run tenes on `inputfile`.
 
@@ -385,28 +617,7 @@ def run_tenes(inputfile, nproc=1, quiet=False, cwd=None, limit=None):
 
     `limit` runs every tenes process under one of the limits above.
     """
-    cmd = []
-    if MPIEXEC:
-        cmd.append(MPIEXEC)
-        cmd.extend("@MPIEXEC_PREFLAGS@".split())
-        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
-        cmd.append(str(nproc))
-        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
-    elif nproc != 1:
-        raise RuntimeError("this build has no MPI launcher; --nproc must be 1")
-    cmd.extend(limited(limit))
-    cmd.append(TENES)
-    if quiet:
-        cmd.append("-q")
-    cmd.append(inputfile)
-    try:
-        proc = subprocess.run(
-            cmd, check=False, text=True, capture_output=True, timeout=RUN_TIMEOUT,
-            cwd=cwd,
-        )
-    except subprocess.TimeoutExpired:
-        return Run(None, True, cmd)
-    return Run(proc, False, cmd)
+    return run_program(tenes_command(inputfile, nproc, quiet, limit), cwd=cwd)
 
 
 def write_input(name, **kwargs):
@@ -600,9 +811,7 @@ def limit_skip_reason(limit):
         sys.executable, "-c", LIMIT_PROBES[kind], probe, str(value)
     ]
     try:
-        proc = subprocess.run(
-            cmd, check=False, text=True, capture_output=True, timeout=RUN_TIMEOUT
-        )
+        proc = run_command(cmd)
     finally:
         unlock_tree(probe)
         force_rmtree(probe)
@@ -638,8 +847,10 @@ def report(failures, run, tag):
     if getattr(run, "reported", False):
         return
     run.reported = True
-    # The limit wrapper is a whole program; its name says enough.
-    shown = ["<LIMIT_WRAPPER>" if part == LIMIT_WRAPPER else part for part in run.cmd]
+    # The limit wrapper and the pid shim are whole programs; their names say
+    # enough.
+    names = {LIMIT_WRAPPER: "<LIMIT_WRAPPER>", PID_SHIM: "<PID_SHIM>"}
+    shown = [names.get(part, part) for part in run.cmd]
     failures.append(f"    command: {' '.join(shown)}")
     lines = [
         line
@@ -3316,6 +3527,809 @@ def case_huge_marker(nproc):
     return failures
 
 
+# ============================================================================
+# The final review (test-contract-shard.md): tensor files that could not be
+# written in full. How the limits are chosen is in the S.* paragraph at the
+# top; cut_tensor_file() is that paragraph as code.
+# ============================================================================
+
+
+#! A file mptensor writes for each process next to a tensor's base file:
+#! <base>.<process number, at least 4 digits>.bin holds the elements, .idx
+#! their layout.
+PER_PROCESS_FILE = re.compile(r"^(?P<base>.+)\.(?P<rank>\d{4,})\.(?P<ext>bin|idx)$")
+#! Tensors by the names of their base files: the site tensors, the CTM
+#! environment (the corners and the edges), and any tensor at all.
+SITE_TENSOR = re.compile(r"^T_\d+\.dat$")
+ENVIRONMENT = re.compile(r"^(C[1-4]|E[tlrb])_\d+\.dat$")
+ANY_TENSOR = re.compile(r"^.+$")
+#! How far below the limit the files that are not tensor files have to stay.
+#! Their sizes are not fixed by the input -- timers.json carries timings, the
+#! marker a date -- so the calibration run measures them only roughly. A
+#! tensor file's size is fixed by its shape and its process, so it only has to
+#! be smaller than the limit.
+UNFIXED_SIZE_MARGIN = 256
+#! Simple-update steps of the checkpoint that is there before an S.* save,
+#! and of the save itself: different, so that the save changes the files, and
+#! few, because the runs with bond dimension 5 are slow in a Debug build.
+STEPS_BEFORE_CUT = 2
+STEPS_OF_CUT = 6
+#! The output directory's files, among the names of a checkpoint's: a prefix
+#! no file of a checkpoint can have.
+OUTPUT_PREFIX = "<output>/"
+#! What the output directory's copy of the input file is called in
+#! output_names(): the copy is named after the input file, which is another
+#! one for every run.
+INPUT_COPY = "<the input file>"
+
+
+def file_sizes(directory):
+    """{path relative to `directory`: size in bytes} for every file under it."""
+    return {
+        name: os.path.getsize(join(directory, name)) for name in dir_entries(directory)
+    }
+
+
+def output_names(outdir):
+    return sorted(
+        INPUT_COPY if name.endswith(".toml") else name for name in dir_entries(outdir)
+    )
+
+
+def checkpoint_file_kind(name, bases):
+    """(kind, rank) of a file of a checkpoint: ("data", rank) or ("index",
+    rank) for a per-process file, ("base", 0) for a tensor's base file, and
+    ("tenes", 0) for the files TeNeS writes itself. `bases` is the set of the
+    base names the checkpoint's per-process files carry."""
+    match = PER_PROCESS_FILE.match(name)
+    if match:
+        kind = "data" if match.group("ext") == "bin" else "index"
+        return kind, int(match.group("rank"))
+    if name in bases:
+        return "base", 0
+    return "tenes", 0
+
+
+def fsize_limit(size, rank):
+    """A file-size limit of `size` bytes on every process (`rank` None), or on
+    the process of that rank alone."""
+    if rank is None:
+        return ("fsize", size)
+    return ("fsize_on_rank", f"{rank}:{size}")
+
+
+#! What rank_limit_skip_reason() runs in every process: it says whether it
+#! could write a file past a limit of 0.
+RANK_PROBE = (
+    "import os, sys\n"
+    "try:\n"
+    "    with open(os.path.join(sys.argv[1], str(os.getpid())), 'wb') as f:\n"
+    "        f.write(b'x' * 4096)\n"
+    "except OSError:\n"
+    "    print('limited')\n"
+    "else:\n"
+    "    print('free')\n"
+)
+
+
+def rank_limit_skip_reason(nproc, rank):
+    """Why a limit on the process of `rank` alone cannot be relied on here, or
+    None when it can.
+
+    Tried on `nproc` throw-away Python processes started by the same launcher
+    under the same wrapper: exactly one of them has to find itself limited.
+    A launcher that tells its processes no rank shows up here as a skip, not
+    as a failure blamed on the save.
+    """
+    probe = join(ROOT, "limit_probe_rank")
+    if os.path.exists(probe):
+        force_rmtree(probe)
+    os.makedirs(probe)
+    cmd = (
+        launcher(nproc)
+        + limited(fsize_limit(0, rank))
+        + [sys.executable, "-c", RANK_PROBE, probe]
+    )
+    try:
+        proc = run_command(cmd)
+    except subprocess.TimeoutExpired:
+        return f"the probe of a limit on rank {rank} did not finish"
+    finally:
+        force_rmtree(probe)
+    words = proc.stdout.split()
+    if (
+        proc.returncode == 0
+        and words.count("limited") == 1
+        and words.count("free") == nproc - 1
+    ):
+        return None
+    return (
+        f"a limit on rank {rank} does not reach exactly one of {nproc} processes "
+        f"here (exit code {proc.returncode}, stdout {proc.stdout.strip()!r}, "
+        f"stderr {proc.stderr.strip()[-200:]!r})"
+    )
+
+
+def cut_tensor_file(nproc, label, name, kind, tensor, fermion, dim, chi, rank=None):
+    """Cut the largest `kind` file ("data" or "index") of the tensors whose
+    base names match `tensor`, among the files that `rank` writes -- every
+    process when `rank` is None -- and check that the save fails.
+
+    The bond dimension and chi decide which files are largest, and so which
+    one a limit can cut alone; the calibration below says so when they do
+    not, rather than letting the case pass.
+    """
+    failures = []
+    skips = []
+    reason = limit_skip_reason(("fsize", 4096))
+    if reason is None and rank is not None:
+        reason = rank_limit_skip_reason(nproc, rank)
+    if reason is not None:
+        skips.append(f"{label}: {reason}")
+        return failures, skips
+
+    base = join(ROOT, name)
+    if os.path.exists(base):
+        force_rmtree(base)
+    os.makedirs(base)
+    where = "every process" if rank is None else f"process {rank} alone"
+    not_made = f"{label}: the situation under test could not be made"
+
+    def save(tag, steps, save_dir, limit=None):
+        inputfile = write_input(
+            f"{name}_{tag}", lx=2, ly=2, dim=dim, chi=chi, fermion=fermion,
+            num_step=steps, save_dir=save_dir,
+        )
+        return run_tenes(inputfile, nproc, limit=limit), join(ROOT, f"out_{name}_{tag}")
+
+    # (a) The checkpoint that is in the destination before, and the save
+    #     under test made without a limit: what it writes, how big, and a
+    #     premise -- it changes the destination's files if it gets that far.
+    earlier = join(base, "earlier")
+    run, _ = save("earlier", STEPS_BEFORE_CUT, earlier)
+    if not expect_success(failures, run, f"{label}: the earlier save"):
+        return failures, skips
+    before = file_contents(earlier)
+    control = join(base, "control")
+    shutil.copytree(earlier, control)
+    control_run, control_out = save("control", STEPS_OF_CUT, control)
+    if not expect_success(
+        failures, control_run, f"{label}: control, the save under test without a limit"
+    ):
+        return failures, skips
+    if not changed_entries(before, file_contents(control)):
+        failures.append(
+            f"{label}: the save under test writes the very bytes that are "
+            "already there, so an unchanged destination would prove nothing"
+        )
+        return failures, skips
+    written = file_sizes(control)
+
+    # (b) What the limited processes write. A process other than 0 writes its
+    #     own data and index files and nothing else (contract section 2.4);
+    #     (c) is what confirms that.
+    bases = {m.group("base") for m in map(PER_PROCESS_FILE.match, written) if m}
+    sizes = {}  # name -> (size, how far below the limit it has to stay)
+    targets = {}
+    for fname, size in written.items():
+        fkind, frank = checkpoint_file_kind(fname, bases)
+        if rank is not None and (frank != rank or fkind not in ("data", "index")):
+            continue
+        sizes[fname] = (size, UNFIXED_SIZE_MARGIN if fkind == "tenes" else 1)
+        if fkind == kind and tensor.match(PER_PROCESS_FILE.match(fname).group("base")):
+            targets[fname] = size
+    if rank is None:
+        for fname, size in file_sizes(control_out).items():
+            sizes[OUTPUT_PREFIX + fname] = (size, UNFIXED_SIZE_MARGIN)
+    if not targets or max(targets.values()) == 0:
+        failures.append(
+            f"{not_made}: {where} writes no non-empty {kind} file of a tensor "
+            f"matching /{tensor.pattern}/; it writes {abbreviate(sorted(sizes), 6)}"
+        )
+        return failures, skips
+    full = max(targets.values())
+    cut = sorted(fname for fname, size in targets.items() if size == full)
+    limit = full - 1
+    too_big = sorted(
+        (fname, size, margin)
+        for fname, (size, margin) in sizes.items()
+        if fname not in cut and size + margin > limit
+    )
+    if too_big:
+        fname, size, margin = too_big[0]
+        failures.append(
+            f"{not_made}: the {kind} files to cut ({abbreviate(cut, 3)}) are "
+            f"{full} bytes, and {where} also writes {fname} of {size} bytes, "
+            f"not {margin} or more below the {limit}-byte limit that would cut "
+            f"them ({len(too_big)} such file(s))"
+        )
+        return failures, skips
+
+    # (c) The same save under a limit those files exactly fit. It has to
+    #     succeed and write what the save without a limit writes; then the
+    #     one byte less in (d) matters only to files of exactly `full` bytes.
+    dest = join(base, "destination")
+    shutil.copytree(earlier, dest)
+    fits_run, _ = save("fits", STEPS_OF_CUT, dest, limit=fsize_limit(full, rank))
+    if not expect_success(
+        failures,
+        fits_run,
+        f"{label}: control, the same save under a {full}-byte limit on {where}, "
+        f"which {cut[0]} exactly fits",
+    ):
+        return failures, skips
+    fitted = file_sizes(dest)
+    if fitted != written:
+        failures.append(
+            f"{not_made}: under a {full}-byte limit the save wrote other files "
+            "or sizes than without one, so the calibration does not describe it: "
+            f"{describe_changes(written, fitted)}"
+        )
+        return failures, skips
+    force_rmtree(dest)
+    shutil.copytree(earlier, dest)
+
+    # (d) The save under test.
+    tag = (
+        f"{label}: a save under a {limit}-byte file-size limit on {where}, one "
+        f"byte short of {abbreviate(cut, 3)}"
+    )
+    run, out = save("cut", STEPS_OF_CUT, dest, limit=fsize_limit(limit, rank))
+    if run.timed_out:
+        report(
+            failures,
+            run,
+            f"{tag}: did not finish within {RUN_TIMEOUT} s -- some processes "
+            "were left waiting",
+        )
+        return failures, skips
+    if run.returncode == 0:
+        # A save that claims success moved its files in, so the cut is there
+        # to be seen. If it is not, the limit did not do what (b) and (c)
+        # say, and this case has not tested anything.
+        landed = file_sizes(dest)
+        uncut = [fname for fname in cut if landed.get(fname) != limit]
+        if uncut:
+            report(
+                failures,
+                run,
+                f"{not_made}: the save exited 0, but in {dest} "
+                f"{abbreviate(uncut, 3)} are not {limit} bytes "
+                f"({[landed.get(fname) for fname in uncut[:3]]})",
+            )
+            return failures, skips
+        report(
+            failures,
+            run,
+            f"{tag}: exit code 0, although {len(cut)} {kind} file(s) -- "
+            f"{cut[0]} among them -- were cut to {limit} of their {full} bytes "
+            f"(they are in {dest} at that size)",
+        )
+    markers = run.crashed()
+    if markers or (run.returncode is not None and run.returncode < 0):
+        report(
+            failures,
+            run,
+            f"{tag}: the process died rather than reporting (exit code "
+            f"{run.returncode}, saw {markers!r})",
+        )
+    # The warning has to be one the save makes. Some of these inputs make a
+    # WARNING of their own (chi < D*D), and a save that succeeds names its
+    # destination ("Tensors saved in ..."), so both have to be something the
+    # runs that did save did not print: the warning something the control did
+    # not print, the destination a line the save into the same destination
+    # under (c) did not print.
+    control_lines = set(control_run.output.splitlines())
+    fits_lines = set(fits_run.output.splitlines())
+    new_warnings = [
+        line
+        for line in run.output.splitlines()
+        if "WARNING" in line and line not in control_lines
+    ]
+    new_mentions = [
+        line
+        for line in run.output.splitlines()
+        if dest in line and line not in fits_lines
+    ]
+    if not new_warnings or not new_mentions:
+        report(
+            failures,
+            run,
+            f"{tag}: no warning naming {dest} was printed (new WARNING lines: "
+            f"{len(new_warnings)}; new lines naming it: {len(new_mentions)})",
+        )
+    if "Tensors saved" in run.output:
+        report(failures, run, f"{tag}: the run said \"Tensors saved\"")
+
+    # The measurement is written as usual.
+    missing = sorted(set(output_names(control_out)) - set(output_names(out)))
+    if missing:
+        failures.append(
+            f"{tag}: the measurement was not written as usual: {out} lacks "
+            f"{missing}"
+        )
+    else:
+        try:
+            compare_density(
+                failures,
+                f"{tag}: the measurement differs from the same run without a limit",
+                read_density(out),
+                read_density(control_out),
+            )
+        except (OSError, ValueError, IndexError) as err:
+            failures.append(f"{tag}: {join(out, 'density.dat')} cannot be read: {err}")
+
+    # The destination is as it was.
+    after = file_contents(dest)
+    if changed_entries(before, after):
+        failures.append(
+            f"{tag}: {dest} is not as it was before the save: "
+            f"{describe_changes(before, after)}"
+        )
+    left_behind = [
+        fname
+        for fname in (WORK_DIR_NAME, INCOMPLETE_NAME)
+        if os.path.lexists(join(dest, fname))
+    ]
+    if left_behind:
+        failures.append(f"{tag}: the save left {left_behind} in {dest}")
+    return failures, skips
+
+
+def case_cut_site_tensor_data(nproc):
+    """A save that cannot write all of a site tensor's data file fails.
+
+    Contract section 2.1. With bond dimension 5 and chi = 2 the site tensors'
+    data files are the largest files the save writes, larger also than the
+    measurement files and the copy of the input file in the output directory.
+    """
+    return cut_tensor_file(
+        nproc, "cut site tensor data", "cut_site_boson", "data", SITE_TENSOR,
+        fermion=False, dim=5, chi=2,
+    )
+
+
+def case_cut_environment_data(nproc):
+    """A save that cannot write all of a CTM environment tensor's data file
+    fails.
+
+    Contract section 2.1. With bond dimension 2 and chi = 24 the edge
+    tensors' data files are the largest files the save writes.
+    """
+    return cut_tensor_file(
+        nproc, "cut environment data", "cut_env_boson", "data", ENVIRONMENT,
+        fermion=False, dim=2, chi=24,
+    )
+
+
+def case_cut_site_tensor_data_fermion(nproc):
+    """Contract section 2.5: section 2.1 for a fermionic run, site tensors."""
+    return cut_tensor_file(
+        nproc, "fermion: cut site tensor data", "cut_site_fermion", "data",
+        SITE_TENSOR, fermion=True, dim=5, chi=2,
+    )
+
+
+def case_cut_environment_data_fermion(nproc):
+    """Contract section 2.5: section 2.1 for a fermionic run, whose CTM
+    environment is written another way than a bosonic run's."""
+    return cut_tensor_file(
+        nproc, "fermion: cut environment data", "cut_env_fermion", "data",
+        ENVIRONMENT, fermion=True, dim=2, chi=24,
+    )
+
+
+def case_cut_index_on_one_process(nproc):
+    """A save in which process 1 alone cannot write all of an index file
+    fails, and every process ends.
+
+    Contract sections 2.2 and 2.4. Process 0 writes the measurement files,
+    which are larger than any index file, so an index file can be cut alone
+    only on another process. With bond dimension 1 and two processes,
+    process 1 holds no element of any tensor: its data files are empty, and
+    its index files are the largest files it writes.
+    """
+    return cut_tensor_file(
+        nproc, "cut index on process 1", "cut_index_p1", "index", ANY_TENSOR,
+        fermion=False, dim=1, chi=None, rank=1,
+    )
+
+
+def case_cut_data_on_one_process(nproc):
+    """A save in which process 1 alone cannot write all of a data file fails,
+    and every process ends.
+
+    Contract section 2.4. Process 1 writes nothing but its data and index
+    files; with bond dimension 2 its largest data files are far larger than
+    its index files.
+    """
+    return cut_tensor_file(
+        nproc, "cut data on process 1", "cut_data_p1", "data", ANY_TENSOR,
+        fermion=False, dim=2, chi=None, rank=1,
+    )
+
+
+def case_generous_limit_changes_nothing(nproc):
+    """A file-size limit above every file a save writes changes nothing.
+
+    Contract section 2.6. The same save without a limit and under one: both
+    succeed, the two checkpoints have the same files at the same sizes, and
+    the one saved under the limit reads back as the state its run saved. (A
+    save without a limit reading back is "save and read back".)
+    """
+    failures = []
+    skips = []
+    for kind, fermion in (("boson", False), ("fermion", True)):
+        label = f"limit above every file ({kind})"
+        free = join(ROOT, f"generous_free_{kind}")
+        capped = join(ROOT, f"generous_capped_{kind}")
+        run = run_tenes(
+            write_input(f"generous_free_{kind}", lx=2, ly=2, fermion=fermion,
+                        num_step=20, save_dir=free),
+            nproc,
+        )
+        if not expect_success(failures, run, f"{label}: the save without a limit"):
+            continue
+        want = file_sizes(free)
+        largest = max(
+            list(want.values())
+            + list(file_sizes(join(ROOT, f"out_generous_free_{kind}")).values())
+        )
+        # Room for the marker as well, which no finished save leaves behind
+        # to be measured: a few hundred bytes and the working directory's path.
+        limit = largest + 1024 + len(os.path.abspath(join(capped, WORK_DIR_NAME)))
+        reason = limit_skip_reason(("fsize", limit))
+        if reason is not None:
+            skips.append(f"{label}: {reason}")
+            continue
+        run = run_tenes(
+            write_input(f"generous_capped_{kind}", lx=2, ly=2, fermion=fermion,
+                        num_step=20, save_dir=capped),
+            nproc,
+            limit=("fsize", limit),
+        )
+        if not expect_success(
+            failures, run, f"{label}: the same save under a {limit}-byte limit"
+        ):
+            continue
+        got = file_sizes(capped)
+        if got != want:
+            failures.append(
+                f"{label}: the checkpoint saved under a {limit}-byte limit is not "
+                f"the one saved without it: {describe_changes(want, got)}"
+            )
+            continue
+        run = run_tenes(
+            write_input(f"generous_reload_{kind}", lx=2, ly=2, fermion=fermion,
+                        load_dir=capped),
+            nproc,
+        )
+        if expect_success(
+            failures, run, f"{label}: reading back the checkpoint saved under the limit"
+        ):
+            compare_density(
+                failures,
+                f"{label}: the checkpoint saved under the limit reads back as "
+                "another state",
+                read_density(join(ROOT, f"out_generous_reload_{kind}")),
+                read_density(join(ROOT, f"out_generous_capped_{kind}")),
+            )
+    return failures, skips
+
+
+# ============================================================================
+# What a run under a limit leaves in /tmp (test-contract-shard-kmp.md). The
+# K.* paragraph at the top says why; LIMIT_WRAPPER is the fix.
+# ============================================================================
+
+
+#! Where the LLVM OpenMP runtime registers a process: /tmp, not the
+#! temporary directory of the environment. macOS's /tmp is a symbolic link to
+#! /private/tmp, which the paths below go through.
+REGISTRATION_DIR = "/tmp"
+
+
+def registration_paths(pid):
+    """The names the runtime gives the registration file of `pid`: the pid
+    alone (macOS), or the pid and the user id."""
+    return [
+        join(REGISTRATION_DIR, f"__KMP_REGISTERED_LIB_{pid}"),
+        join(REGISTRATION_DIR, f"__KMP_REGISTERED_LIB_{pid}_{os.getuid()}"),
+    ]
+
+
+def empty_registrations(pids):
+    """The registration files of the processes `pids` that are there, empty,
+    and this user's. A file that is not empty may belong to a process that
+    runs now, and is never listed."""
+    found = []
+    for pid in pids:
+        for path in registration_paths(pid):
+            try:
+                info = os.lstat(path)
+            except OSError:
+                continue
+            if (
+                stat.S_ISREG(info.st_mode)
+                and info.st_size == 0
+                and info.st_uid == os.getuid()
+            ):
+                found.append(path)
+    return found
+
+
+def remove_files(paths):
+    for path in paths:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+#! Says "pid <its process id>" on stdout and then becomes the rest of its
+#! command line, so that the process that runs tenes is known by number. A
+#! first argument other than -1 is a file-size limit it sets itself, with
+#! nothing around it: the way every limited run was started before
+#! LIMIT_WRAPPER cleaned up after its program.
+PID_SHIM = (
+    "import os, resource, signal, sys\n"
+    "limit = int(sys.argv[1])\n"
+    "if limit >= 0:\n"
+    "    resource.setrlimit(resource.RLIMIT_FSIZE, (limit, limit))\n"
+    "    signal.signal(signal.SIGXFSZ, signal.SIG_IGN)\n"
+    "print('pid', os.getpid(), flush=True)\n"
+    "os.execv(sys.argv[2], sys.argv[2:])\n"
+)
+PID_LINE = re.compile(r"^pid (\d+)$", re.M)
+#! No process has an id this large: Linux keeps them below 2**22, macOS below
+#! 100000. Adding this suite's own pid keeps two suites run at once apart.
+IMPOSSIBLE_PID_BASE = 90000000
+
+
+def case_no_empty_registration_left(nproc):
+    """tenes run under a file-size limit leaves no empty registration file of
+    its own processes, and does not touch one that is not theirs.
+
+    Contract clauses 1, 2 and 5. The same run is made twice. First with the
+    limit set by a shim that then becomes tenes, with nothing around it: the
+    witness that the runtime here leaves such a file at all, whose files the
+    case removes itself. Then the way the suite runs tenes under a limit,
+    through LIMIT_WRAPPER, which has to leave none. An empty registration
+    file of a pid no process can have is there during the second run; the
+    wrapper must not take it.
+    """
+    failures = []
+    skips = []
+    label = "registration files"
+    not_made = f"{label}: the situation under test could not be made"
+    reason = limit_skip_reason(NO_WRITES)
+    if reason is not None:
+        skips.append(f"{label}: {reason}")
+        return failures, skips
+
+    def run(tag, limit, shim_limit):
+        inputfile = write_input(f"kmp_{tag}", lx=2, ly=2, fermion=True)
+        cmd = tenes_command(
+            inputfile, nproc, limit=limit,
+            through=[sys.executable, "-c", PID_SHIM, str(shim_limit)],
+        )
+        done = run_program(cmd)
+        pids = [int(pid) for pid in PID_LINE.findall(done.stdout)]
+        # Removed before anything is checked, so that no way out of this case
+        # leaves them behind. Both runs are this suite's own processes.
+        left = empty_registrations(pids)
+        remove_files(left)
+        return done, pids, left, join(ROOT, f"out_kmp_{tag}")
+
+    # (a) The witness.
+    witness, pids, left, _ = run("witness", None, 0)
+    if not expect_success(
+        failures, witness,
+        f"{label}: tenes under a file-size limit of 0 that it sets itself",
+    ):
+        return failures, skips
+    if len(pids) != nproc:
+        report(
+            failures, witness,
+            f"{not_made}: {nproc} process(es) ran tenes, {len(pids)} said their pid",
+        )
+        return failures, skips
+    if not left:
+        skips.append(
+            f"{label}: tenes under a file-size limit of 0 left no empty "
+            f"{REGISTRATION_DIR}/__KMP_REGISTERED_LIB_<pid> for its processes "
+            f"{pids}, so the OpenMP runtime here makes no such file (GNU libgomp "
+            "does not) and there is nothing to leave behind"
+        )
+        return failures, skips
+
+    # (b) The way the suite runs tenes under a limit.
+    decoy = registration_paths(IMPOSSIBLE_PID_BASE + os.getpid())[0]
+    open(decoy, "w").close()
+    try:
+        limited_run, pids, left, outdir = run("limited", NO_WRITES, -1)
+        decoy_kept = os.path.isfile(decoy)
+    finally:
+        remove_files([decoy])
+    tag = f"{label}: tenes under a file-size limit of 0 set by LIMIT_WRAPPER"
+    if not expect_success(failures, limited_run, tag):
+        return failures, skips
+    if len(pids) != nproc:
+        report(
+            failures, limited_run,
+            f"{not_made}: {nproc} process(es) ran tenes, {len(pids)} said their pid",
+        )
+        return failures, skips
+    # The limit reached tenes: every file it wrote is empty.
+    written = file_sizes(outdir)
+    if not written or any(written.values()):
+        failures.append(
+            f"{not_made}: the limit did not reach tenes, whose output files in "
+            f"{outdir} are {written}"
+        )
+        return failures, skips
+    if left:
+        report(
+            failures, limited_run,
+            f"{tag}: its processes {pids} left {left} empty (removed now); a later "
+            "process that gets one of these pids dies of SIGBUS before main()",
+        )
+    if not decoy_kept:
+        failures.append(
+            f"{tag}: {decoy} was removed, although no process this suite started "
+            "can have made it"
+        )
+    return failures, skips
+
+
+#! How the programs case_wrapper_passes_on_the_ending() runs end.
+ENDINGS = {
+    "exits with 0": (
+        "import sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+    ),
+    "exits with 3": (
+        "import sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+        "sys.exit(3)\n"
+    ),
+    "is killed by SIGTERM": (
+        "import os, signal, sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+        "os.kill(os.getpid(), signal.SIGTERM)\n"
+    ),
+}
+#! Leaves an empty file named "<its pid>-<its parent's pid>" in the directory
+#! it is given, and sleeps far longer than any timeout here.
+SLEEPER = (
+    "import os, sys, time\n"
+    "name = '%d-%d' % (os.getpid(), os.getppid())\n"
+    "open(os.path.join(sys.argv[1], name), 'w').close()\n"
+    "time.sleep(3600)\n"
+)
+#! The timeouts the sleeper is run with, shortest first: a longer one is
+#! tried only when the processes had not all started within the shorter.
+SLEEPER_TIMEOUTS = (5, 30)
+
+
+def case_wrapper_passes_on_the_ending(nproc):
+    """A program run through LIMIT_WRAPPER ends as it ends without it, and a
+    run whose time is up leaves no process of it running.
+
+    Contract clause 3. The wrapper runs its program as a child now, so the
+    exit code and the signal have to be handed on, and the output has to
+    reach the same place. Under more than one process the launcher ends the
+    others as soon as one fails, so their output is compared only for the
+    program that exits with 0.
+    """
+    failures = []
+    label = "limit wrapper"
+
+    def own(text):
+        return sorted(line for line in text.splitlines() if line.startswith("OWN-"))
+
+    for ending, program in ENDINGS.items():
+        python = [sys.executable, "-c", program]
+        plain = run_program(launcher(nproc) + python)
+        wrapped = run_program(launcher(nproc) + limited(NO_WRITES) + python)
+        tag = f"{label}: a program that {ending}"
+        if plain.timed_out or wrapped.timed_out:
+            for run in (plain, wrapped):
+                if run.timed_out:
+                    report(failures, run, f"{tag}: did not end within {RUN_TIMEOUT} s")
+            continue
+        if wrapped.returncode != plain.returncode:
+            report(
+                failures, wrapped,
+                f"{tag}: exit code {wrapped.returncode} through the wrapper, "
+                f"{plain.returncode} without it",
+            )
+        if bool(wrapped.crashed()) != bool(plain.crashed()):
+            report(
+                failures, wrapped,
+                f"{tag}: the launcher reports a death through the wrapper "
+                f"({wrapped.crashed()!r}) and without it ({plain.crashed()!r}) "
+                "differently",
+            )
+        if ending == "exits with 0" and (
+            own(wrapped.stdout) != own(plain.stdout)
+            or own(wrapped.stderr) != own(plain.stderr)
+            or len(own(plain.stdout)) != nproc
+        ):
+            report(
+                failures, wrapped,
+                f"{tag}: its output through the wrapper (stdout "
+                f"{own(wrapped.stdout)}, stderr {own(wrapped.stderr)}) is not "
+                f"its output without it (stdout {own(plain.stdout)}, stderr "
+                f"{own(plain.stderr)})",
+            )
+
+    for timeout in SLEEPER_TIMEOUTS:
+        started = join(ROOT, "sleepers")
+        if os.path.exists(started):
+            force_rmtree(started)
+        os.makedirs(started)
+        cmd = (
+            launcher(nproc)
+            + limited(NO_WRITES)
+            + [sys.executable, "-c", SLEEPER, started]
+        )
+        try:
+            run_command(cmd, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+        else:
+            failures.append(
+                f"{label}: a program that sleeps for an hour ended within {timeout} s"
+            )
+            return failures
+        # A wrapper that becomes its program makes this suite the sleeper's
+        # parent, which is not a process to wait for, let alone to kill.
+        pids = sorted(
+            {int(pid) for name in os.listdir(started) for pid in name.split("-")}
+            - {os.getpid()}
+        )
+        if len(os.listdir(started)) == nproc:
+            break
+    else:
+        failures.append(
+            f"{label}: the situation under test could not be made: {nproc} "
+            f"sleeper(s) did not all start within {SLEEPER_TIMEOUTS[-1]} s"
+        )
+        return failures
+    # The sleepers and the wrappers around them. Whatever is left is ended
+    # here, so that a failure does not leave it running either.
+    deadline = time.monotonic() + STOP_GRACE
+    running = pids
+    while running and time.monotonic() < deadline:
+        time.sleep(0.1)
+        running = [pid for pid in pids if process_exists(pid)]
+    if running:
+        for pid in running:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        failures.append(
+            f"{label}: a run whose time was up left the processes {running} of "
+            f"{pids} running"
+        )
+    return failures
+
+
+def process_exists(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 # ----------------------------------------------------------------- the suite
 
 
@@ -3432,10 +4446,31 @@ CASES = [
      case_unlisted_leftovers_are_not_success),
     ("F.6 a 1 MiB marker is refused with only its head",
      case_huge_marker),
+    # --- the final review: tensor files that could not be written ---------
+    ("S.1 a save that cuts a data file of the site tensors fails",
+     case_cut_site_tensor_data),
+    ("S.1 a save that cuts a data file of the CTM environment fails",
+     case_cut_environment_data),
+    # S.3 has no case: see the comment at the top.
+    ("S.5 a fermionic save that cuts a data file of the site tensors fails",
+     case_cut_site_tensor_data_fermion),
+    ("S.5 a fermionic save that cuts a data file of the CTM environment fails",
+     case_cut_environment_data_fermion),
+    ("S.6 a file-size limit above every file changes nothing",
+     case_generous_limit_changes_nothing),
+    # --- what a run under a limit leaves in /tmp --------------------------
+    ("K.3 the limit wrapper passes on how its program ended",
+     case_wrapper_passes_on_the_ending),
+    ("K.5 a run under a limit leaves no empty registration file in /tmp",
+     case_no_empty_registration_left),
 ]
 
 MULTI_PROCESS_CASES = [
     ("1.2 fewer processes into the same directory", case_fewer_processes),
+    ("S.2 a save that cuts an index file of process 1 alone fails",
+     case_cut_index_on_one_process),
+    ("S.4 a save that cuts a data file of process 1 alone fails",
+     case_cut_data_on_one_process),
 ]
 
 

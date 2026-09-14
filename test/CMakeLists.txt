@@ -393,10 +393,16 @@ add_test(NAME benchmark_smoke
 # for 183 s of those 241 s, so the tail, not the parallelism, was the problem.
 #
 # The numbers are seconds that job measured with -j4 (FreeFermionFull scaled
-# for its two full-update sweeps).  They only have to put the long tests
+# for its two full-update sweeps), except the two CheckpointDir tests, which
+# came later and are from the same kind of job (ubuntu-22.04, g++-12) on
+# 2026-09-14, where they finished last.  They only have to put the long tests
 # first, so they do not need to be re-measured when a machine is faster or
 # slower than that one.
 set_tests_properties(test_fermion_fold_full_update PROPERTIES COST 128)
+set_tests_properties(CheckpointDir PROPERTIES COST 101)
+if(ENABLE_MPI)
+  set_tests_properties(CheckpointDirMPI2 PROPERTIES COST 91)
+endif()
 set_tests_properties(FreeFermion PROPERTIES COST 113)
 set_tests_properties(FreeFermionFull PROPERTIES COST 106)
 set_tests_properties(FreeFermionMF PROPERTIES COST 87)
