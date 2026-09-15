@@ -51,6 +51,7 @@
 - ``fermion``
 
   - **実験的機能です。** ``true`` にすると、サイトテンソルをフェルミオン(Z2 グレーディング付き)テンソルとして扱い、ボンド更新・測定時のフェルミオン交換符号を自動的に生成します
+  - 実装は、フェルミオン系のテンソルネットワークの Z2 グレード付き(超ベクトル空間)の定式化に基づきます。各脚がパリティを持ち、転置・縮約・分解のたびに交換符号を生成します。定式化については Q. Mortier *et al.*, `SciPost Phys. 18, 012 (2025) <https://doi.org/10.21468/SciPostPhys.18.1.012>`__; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, `Phys. Rev. B 95, 075108 (2017) <https://doi.org/10.1103/PhysRevB.95.075108>`__; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, `J. Phys. A: Math. Theor. 51, 025202 (2018) <https://doi.org/10.1088/1751-8121/aa99cc>`__ を参照してください。測定で bra と ket の層が交差する箇所の符号は、等価な定式化である swap gate ( P. Corboz, R. Orús, B. Bauer, and G. Vidal, `Phys. Rev. B 81, 165104 (2010) <https://doi.org/10.1103/PhysRevB.81.165104>`__ ) にあたります
   - 各サイトの物理基底のパリティを ``tensor.unitcell`` セクションの ``parity`` キーで指定する必要があります。パリティはサイト内の生成演算子順序を固定した上で定義します(``tensor.unitcell`` セクション参照)
   - **演算子・ゲートの行列要素**: 2サイト演算子の ``elements`` (``i1 i2 o1 o2``) は、順序付き2サイト Fock 基底
 
