@@ -889,3 +889,223 @@ class TestSkewRangeGuard:
             with pytest.raises(RuntimeError) as excinfo:
                 tenes_std.Model(bosonic_cell_input([1, 2], skew))
             assert_range_message(str(excinfo.value), skew, 1)
+
+
+# ---------------------------------------------------------------------------
+# work/fermion/copilot-review/test-contract.md section 2: fermion mode has no
+# multisite measurement. The solver refuses one -- validate_fermion_constraints
+# in src/iTPS/load_toml.cpp -- but tenes_std is where input is validated, so a
+# multisite observable in a `fermion = true` std.toml has to be caught there,
+# not two stages later by `tenes`.
+#
+# The guard has to discriminate: bosonic inputs keep their multisite
+# observables (they are the only way to measure a cluster larger than a bond),
+# and a fermionic input without one keeps working.
+# ---------------------------------------------------------------------------
+
+
+def multisite_observable(name, group):
+    """An `observable.multisite` entry: a three-site cluster measured as a
+    product of one-site operators, which is the only form the section takes.
+
+    The cluster is the source site plus (dx, dy) = (1, 0) and (1, 1); its
+    three sites all exist in the 2x2 cell of minimal_fermion_std_input() and
+    of minimal_std_input().
+    """
+    return {
+        "name": name,
+        "group": group,
+        "multisites": "0 1 0 1 1\n",
+        "ops": [0, 0, 0],
+    }
+
+
+def fermion_input_with_multisite(entries):
+    """minimal_fermion_std_input() plus the given observable.multisite
+    entries, and nothing else changed."""
+    param = copy.deepcopy(minimal_fermion_std_input())
+    param["observable"] = {"multisite": list(entries)}
+    return param
+
+
+def bosonic_input_with_multisite(entries):
+    """The same observable.multisite entries on minimal_std_input(), which
+    carries no `fermion` key and no `parity`."""
+    param = minimal_std_input()
+    param["observable"] = {"multisite": list(entries)}
+    return param
+
+
+def elements_form_twosite_observable(name, group):
+    """A two-site observable in the explicit-`elements` form, the one fermion
+    mode accepts (the `ops` form is refused by an older clause)."""
+    return {
+        "name": name,
+        "group": group,
+        "bonds": "0 1 0\n",
+        "dim": [2, 2],
+        "elements": "0 0 0 0 1.0 0.0\n1 1 1 1 -1.0 0.0",
+    }
+
+
+def rejection_message(param):
+    """The RuntimeError text Model(param) raises; fails if it raises none."""
+    with pytest.raises(RuntimeError) as excinfo:
+        tenes_std.Model(param)
+    return str(excinfo.value)
+
+
+class TestFermionMultisiteObservableGuard:
+    """Contract 2-a: a multisite observable under `fermion = true` stops
+    tenes_std."""
+
+    def test_a_multisite_observable_is_rejected(self):
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(
+                fermion_input_with_multisite(
+                    [multisite_observable("three_site_marker", 41)]
+                )
+            )
+
+    def test_several_multisite_observables_are_rejected(self):
+        # "one or more": two entries must not slip through a guard written
+        # for exactly one.
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(
+                fermion_input_with_multisite(
+                    [
+                        multisite_observable("first_marker", 41),
+                        multisite_observable("second_marker", 57),
+                    ]
+                )
+            )
+
+    def test_a_multisite_observable_beside_accepted_ones_is_rejected(self):
+        # The offending entry is still caught when the same input carries
+        # observables fermion mode does accept, so the guard cannot be one
+        # that only looks at an otherwise empty [observable] section.
+        param = fermion_input_with_multisite(
+            [multisite_observable("three_site_marker", 41)]
+        )
+        param["observable"]["twosite"] = [
+            elements_form_twosite_observable("hopping", 1)
+        ]
+        with pytest.raises(RuntimeError):
+            tenes_std.Model(param)
+
+    def test_rejection_message_says_what_is_not_supported(self):
+        # Contract 2-a, first half: the message has to convey that a
+        # multisite observable is what fermion mode cannot do, so that the
+        # reader knows which line of the input to delete.
+        message = rejection_message(
+            fermion_input_with_multisite(
+                [multisite_observable("three_site_marker", 41)]
+            )
+        )
+        assert re.search(r"multi[-_ ]?site", message, re.I), message
+        assert re.search(r"fermion", message, re.I), message
+
+    def test_rejection_message_names_the_offending_observable(self):
+        # Contract 2-a, second half: which observable. The contract allows
+        # either the name or the group as the identifier, so each message
+        # must carry its own name or its own group -- and neither of the
+        # other one's, which is what rules out a canned string with one
+        # example hard-coded into it.
+        #
+        # Groups 41 and 57 are two digits on purpose: nothing the
+        # boilerplate could mention (cluster size 3, site indices 0..3,
+        # dx/dy 0 and 1, physical and virtual dim 2, L_sub 2) can produce
+        # either number by coincidence.
+        msg_a = rejection_message(
+            fermion_input_with_multisite(
+                [multisite_observable("alpha_multisite_marker", 41)]
+            )
+        )
+        msg_b = rejection_message(
+            fermion_input_with_multisite(
+                [multisite_observable("beta_multisite_marker", 57)]
+            )
+        )
+        assert "alpha_multisite_marker" in msg_a or re.search(
+            r"\b41\b", msg_a
+        ), msg_a
+        assert "beta_multisite_marker" in msg_b or re.search(
+            r"\b57\b", msg_b
+        ), msg_b
+        assert "beta_multisite_marker" not in msg_a, msg_a
+        assert not re.search(r"\b57\b", msg_a), msg_a
+        assert "alpha_multisite_marker" not in msg_b, msg_b
+        assert not re.search(r"\b41\b", msg_b), msg_b
+
+
+class TestFermionInputsWithoutMultisiteStillPass:
+    """Contract 2-c: fermion mode without a multisite observable is
+    unchanged."""
+
+    def test_fermion_input_without_any_observable_section_is_accepted(self):
+        model = tenes_std.Model(copy.deepcopy(minimal_fermion_std_input()))
+        assert model.multibodies == []
+
+    def test_fermion_input_with_onesite_and_twosite_observables_is_accepted(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["observable"] = {
+            "onesite": [
+                {
+                    "name": "density",
+                    "group": 0,
+                    "sites": [],
+                    "dim": 2,
+                    "elements": "1 1 1.0 0.0",
+                }
+            ],
+            "twosite": [elements_form_twosite_observable("hopping", 1)],
+        }
+        model = tenes_std.Model(param)  # must not raise
+        assert model.multibodies == []
+
+    def test_an_empty_multisite_list_is_accepted(self):
+        # "one or more": a section that is present but empty defines no
+        # multisite observable, so it must not be refused. A guard written
+        # as `if "multisite" in observable` would go red here.
+        model = tenes_std.Model(fermion_input_with_multisite([]))
+        assert model.multibodies == []
+
+
+class TestBosonicMultisiteObservableUnaffected:
+    """Contract 2-b: with `fermion` absent (the default), multisite
+    observables go through to input.toml as before."""
+
+    def test_multisite_observable_is_accepted_without_the_fermion_flag(self):
+        model = tenes_std.Model(
+            bosonic_input_with_multisite(
+                [multisite_observable("three_site_marker", 41)]
+            )
+        )
+        assert len(model.multibodies) == 1
+        assert model.multibodies[0].name == "three_site_marker"
+        assert model.multibodies[0].group == 41
+
+    def test_multisite_observable_reaches_input_toml(self):
+        model = tenes_std.Model(
+            bosonic_input_with_multisite(
+                [multisite_observable("three_site_marker", 41)]
+            )
+        )
+        buf = io.StringIO()
+        model.to_toml(buf)
+        emitted = toml.loads(buf.getvalue())["observable"]["multisite"]
+        assert len(emitted) == 1
+        assert emitted[0]["name"] == "three_site_marker"
+        assert emitted[0]["group"] == 41
+        assert emitted[0]["ops"] == [0, 0, 0]
+        assert emitted[0]["multisites"].split() == ["0", "1", "0", "1", "1"]
+
+    def test_multisite_observable_is_accepted_with_fermion_set_to_false(self):
+        # The guard must key on the value of parameter.general.fermion, not
+        # on the key being present.
+        param = fermion_input_with_multisite(
+            [multisite_observable("three_site_marker", 41)]
+        )
+        param["parameter"]["general"]["fermion"] = False
+        model = tenes_std.Model(param)  # must not raise
+        assert len(model.multibodies) == 1

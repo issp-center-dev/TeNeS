@@ -47,7 +47,13 @@ bool mkdir(const std::string& path) {
 bool remove_all(const std::string& path) {
   std::error_code ec;
   fs::remove_all(path, ec);
-  return !path_exists(path);
+  // Both halves are needed. The error code alone would pass a removal that
+  // reported no error and left the path behind; path_exists() alone takes
+  // "the filesystem cannot say" for "it is gone", because that is what this
+  // file's rule of never throwing costs. The callers in saveload_tensors.cpp
+  // decide on this answer whether the interruption marker may go, so an
+  // unconfirmed removal has to read as a failure.
+  return !ec && !path_exists(path);
 }
 
 bool rename(const std::string& from, const std::string& to) {

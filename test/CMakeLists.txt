@@ -42,7 +42,7 @@ add_executable(test_fermion_skew_unfold fermion/skew_unfold.cpp)
 
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
-    correlation_length saveload arnoldi timer_registry onesite_rdm)
+    util_file correlation_length saveload arnoldi timer_registry onesite_rdm)
 if(TENES_ARPACK_FOUND)
   list(APPEND tenes_unit_tests arpack)
 endif()

@@ -77,6 +77,12 @@ template <class tensor>
 void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
+    // The gate changes Tn, so the CTM environment no longer belongs to this
+    // state. Both users of it below -- the fast path, which moves the
+    // environment it already has, and the plain fermionic path, which warm
+    // starts from it -- would otherwise carry the pre-gate environment into
+    // the next two-site update of the same sweep.
+    ctm_valid_ = false;
     if (finfo.enabled) {
       apply_onesite_gate_fermion(up);
       return;
@@ -123,9 +129,12 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
       tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
       tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
       tenes::fermion::validate_neighbor_consistency(finfo, lattice);
-      if (peps_parameters.Full_Use_FastFullUpdate) {
+      if (peps_parameters.Full_Use_FastFullUpdate && ctm_valid_) {
         update_CTM_fast_fermion(source, target, source_leg);
       } else {
+        // A stale environment has nothing sound to move, so rebuild it:
+        // update_CTM() ignores the warm start unless ctm_valid_ says the
+        // environment still matches Tn.
         update_CTM(true);
       }
       return;
@@ -207,7 +216,10 @@ void iTPS<tensor>::full_update(EvolutionOperator<tensor> const &up) {
     Tn[source] = Tn1_work;
     Tn[target] = Tn2_work;
 
-    if (peps_parameters.Full_Use_FastFullUpdate) {
+    // ctm_valid_: see the one-site branch above -- the moves below assume the
+    // environment matches Tn, and rebuilding is the only way back when it does
+    // not.
+    if (peps_parameters.Full_Use_FastFullUpdate && ctm_valid_) {
       // Charged to time_environment like every other environment update, so
       // that the fast and the plain path stay comparable in time.dat.
       Timer<> timer;

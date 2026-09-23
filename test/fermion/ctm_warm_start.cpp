@@ -120,6 +120,14 @@ struct iTPSTestAccessor {
   static SquareLattice& lattice(iTPS<tensor>& state) {
     return state.lattice;
   }
+  //! The flag update_CTM() consults before honouring a warm start. The
+  //! invalidation case at the end of this file is about this flag, so it
+  //! reads it directly as well as observing what update_CTM() does with it:
+  //! the direct read says which of the two halves broke.
+  template <class tensor>
+  static bool& ctm_valid(iTPS<tensor>& state) {
+    return state.ctm_valid_;
+  }
 };
 }  // namespace tenes::itps
 
@@ -173,6 +181,17 @@ cws_tensor cws_gate(double tau) {
   return g;
 }
 
+//! A one-site gate, exp(-tau n) for the spinless occupation n: parity-even
+//! (so the fermionic wrap accepts it), not the identity (so it moves the
+//! state), and diagonal, which is the form tenes_std emits for a chemical
+//! potential.
+cws_tensor cws_onesite_gate(double tau) {
+  cws_tensor g(mptensor::Shape(2, 2));
+  g.set_value(mptensor::Index(0, 0), 1.0);
+  g.set_value(mptensor::Index(1, 1), std::exp(-tau));
+  return g;
+}
+
 tenes::SquareLattice cws_make_lattice() {
   tenes::SquareLattice lattice(cws_LX, cws_LY);
   for (int site = 0; site < lattice.N_UNIT; ++site) {
@@ -184,11 +203,18 @@ tenes::SquareLattice cws_make_lattice() {
   return lattice;
 }
 
+//! `fermion` defaults to true, which is the fixture every case above uses;
+//! the invalidation case at the end of this file has to hold in both modes,
+//! so it passes false for its bosonic half. A defaulted parameter rather
+//! than a second function, so that the calls above are unchanged.
 tenes::itps::PEPS_Parameters cws_make_params(
-    const tenes::SquareLattice& lattice, const std::string& outdir) {
+    const tenes::SquareLattice& lattice, const std::string& outdir,
+    bool fermion = true) {
   tenes::itps::PEPS_Parameters params;
-  params.fermion = true;
-  params.phys_parity.assign(lattice.N_UNIT, std::vector<bool>{false, true});
+  params.fermion = fermion;
+  if (fermion) {
+    params.phys_parity.assign(lattice.N_UNIT, std::vector<bool>{false, true});
+  }
   params.print_level = tenes::PrintLevel::warn;
   params.outdir = outdir;
   params.CHI = cws_CHI;
@@ -212,18 +238,19 @@ std::vector<tenes::EvolutionOperator<cws_tensor>> cws_updates(
   return updates;
 }
 
-//! A fermionic state after `steps` simple-update sweeps. Deterministic: two
-//! calls with the same arguments give bit-identical states, which is what
-//! lets the cold and the warm run below be two separate objects with the
-//! same history.
-std::unique_ptr<cws_state> cws_build(const std::string& outdir, int steps) {
+//! A state (fermionic unless `fermion` says otherwise) after `steps`
+//! simple-update sweeps. Deterministic: two calls with the same arguments
+//! give bit-identical states, which is what lets the cold and the warm run
+//! below be two separate objects with the same history.
+std::unique_ptr<cws_state> cws_build(const std::string& outdir, int steps,
+                                     bool fermion = true) {
   const tenes::SquareLattice lattice = cws_make_lattice();
   const auto updates = cws_updates(lattice);
   auto state = std::make_unique<cws_state>(
-      MPI_COMM_WORLD, cws_make_params(lattice, outdir), lattice, updates,
-      tenes::EvolutionOperators<cws_tensor>{}, tenes::Operators<cws_tensor>{},
+      MPI_COMM_WORLD, cws_make_params(lattice, outdir, fermion), lattice,
+      updates, tenes::EvolutionOperators<cws_tensor>{},
       tenes::Operators<cws_tensor>{}, tenes::Operators<cws_tensor>{},
-      tenes::itps::CorrelationParameter{},
+      tenes::Operators<cws_tensor>{}, tenes::itps::CorrelationParameter{},
       tenes::itps::TransferMatrix_Parameters{});
   for (int step = 0; step < steps; ++step) {
     for (const auto& up : updates) {
@@ -518,4 +545,177 @@ TEST_CASE(
     cws_cleanup("output_test_fermion_warm_start_reinit_cold");
     cws_cleanup("output_test_fermion_warm_start_reinit_warm");
   }
+}
+
+// ===== clause 3-a: a one-site full-update gate invalidates the CTM =========
+//
+// Contract: work/fermion/copilot-review/test-contract.md section 3.
+//
+//   After a one-site full-update gate has been given to iTPS::full_update(),
+//   the CTM environment is in the "invalid" state -- a following
+//   update_CTM(true) rebuilds it instead of warm starting -- in fermion mode
+//   and in boson mode alike.
+//
+// Why it matters: the gate rewrites Tn, so the environment is no longer this
+// state's. A two-site update later in the same sweep would otherwise move, or
+// warm start from, the pre-gate environment.
+//
+// The discriminator is the one case 2 above uses: a budget of zero CTM
+// sweeps. Then a cold rebuild lands on the uniform-vector environment and a
+// warm start keeps whatever it was handed, so the two are far apart and
+// "which one happened" is readable from the one-site RDMs.
+//
+// Three states with identical histories, and one difference each:
+//
+//   cold  full_update(one-site gate), then update_CTM(FALSE).  The rebuild,
+//         by definition.
+//   warm  full_update(one-site gate), then update_CTM(TRUE).   Must equal
+//         `cold`: that is the clause.
+//   kept  simple_update(the same gate),  then update_CTM(TRUE). The control.
+//
+// `kept` is what keeps the case from being hollow. simple_update() applies
+// the identical one-site gate -- the two branches are the same two lines of
+// src/iTPS/simple_update.cpp and src/iTPS/full_update.cpp -- and is not the
+// operation the clause is about, so its environment stays valid and its warm
+// start really warm starts. If `kept` did NOT separate from `cold`, the
+// equality asked of `warm` would be satisfied by a build in which
+// update_CTM(true) never warm starts at all, which would say nothing about
+// the gate. So `cold` vs `kept` is a REQUIRE, and `cold` vs `warm` the CHECK.
+//
+// Taking the invalidation back out of full_update() therefore turns this case
+// red twice over: `warm` would keep the converged environment like `kept`,
+// failing the CHECK below by the 1e-1-scale distance case 2 measured, and the
+// direct read of the flag would fail as well.
+TEST_CASE("a one-site full-update gate invalidates the CTM environment") {
+  // The two runs that must agree do the same thing on the same state, with
+  // no CTM iteration in between, so they agree bit for bit; the bound is a
+  // machine-precision one, not a physical tolerance. Measured on this
+  // fixture: exactly 0 in both modes.
+  const double same_tol = 1.0e-12;
+  // How far a zero-budget warm start has to sit from a zero-budget cold
+  // rebuild for the comparison above to mean anything. Measured on this
+  // fixture: 1.07 in fermion mode, 3.8e-2 in boson mode -- the bosonic state
+  // is nearly a product state, so its RDMs care less about the environment.
+  // The bound is a decade and a half below the smaller of the two.
+  const double kept_min = 1.0e-3;
+  const double tau = 0.3;
+
+  bool fermion = true;
+  std::string tag;
+  SUBCASE("fermion mode") {
+    fermion = true;
+    tag = "fermion";
+  }
+  SUBCASE("boson mode") {
+    fermion = false;
+    tag = "boson";
+  }
+
+  const std::string prefix = "output_test_onesite_gate_ctm_" + tag + "_";
+  auto cold = cws_build(prefix + "cold", cws_simple_steps, fermion);
+  auto warm = cws_build(prefix + "warm", cws_simple_steps, fermion);
+  auto kept = cws_build(prefix + "kept", cws_simple_steps, fermion);
+  // Premise: the mode under test is the mode that got built.
+  REQUIRE(A::finfo(*cold).enabled == fermion);
+  REQUIRE(A::finfo(*warm).enabled == fermion);
+  REQUIRE(A::finfo(*kept).enabled == fermion);
+
+  std::string warnings;
+  {
+    cws_capture out(std::cout);
+    cws_capture err(std::cerr);
+    cold->update_CTM(false);
+    warm->update_CTM(false);
+    kept->update_CTM(false);
+    warnings = out.str() + err.str();
+  }
+  // Premise: the environment the three start from is converged. A stopped-early
+  // environment would still be "kept" by a warm start, but the distances below
+  // would then be about the CTMRG's transient, not about the clause.
+  INFO("while building the common environment: " << warnings);
+  REQUIRE(warnings.find(cws_ctm_warning) == std::string::npos);
+  REQUIRE(A::ctm_valid(*cold));
+  REQUIRE(A::ctm_valid(*warm));
+  REQUIRE(A::ctm_valid(*kept));
+
+  const std::vector<cws_tensor> before_gate = A::Tn(*cold);
+
+  const auto up = tenes::make_onesite_EvolutionOperator<cws_tensor>(
+      0, 0, cws_onesite_gate(tau));
+  cold->full_update(up);
+  warm->full_update(up);
+  kept->simple_update(up);
+
+  // Premise: one Tn change, three identical copies of it. Any difference
+  // further down can then only come from what happened to the environment.
+  {
+    const auto& a = A::Tn(*cold);
+    const auto& b = A::Tn(*warm);
+    const auto& c = A::Tn(*kept);
+    REQUIRE(a.size() == b.size());
+    REQUIRE(a.size() == c.size());
+    double worst_warm = 0.0;
+    double worst_kept = 0.0;
+    for (std::size_t site = 0; site < a.size(); ++site) {
+      worst_warm = std::max(worst_warm, mptensor::max_abs(a[site] - b[site]));
+      worst_kept = std::max(worst_kept, mptensor::max_abs(a[site] - c[site]));
+    }
+    INFO("after the gate the three states differ by " << worst_warm << " and "
+                                                      << worst_kept);
+    REQUIRE(worst_warm == 0.0);
+    REQUIRE(worst_kept == 0.0);
+  }
+  // Premise: the gate moved the state at all. A gate that left Tn alone would
+  // make every comparison below vacuous.
+  {
+    const auto& after = A::Tn(*cold);
+    REQUIRE(before_gate.size() == after.size());
+    double moved = 0.0;
+    for (std::size_t site = 0; site < after.size(); ++site) {
+      moved =
+          std::max(moved, mptensor::max_abs(before_gate[site] - after[site]));
+    }
+    INFO("the one-site gate moved Tn by " << moved);
+    REQUIRE(moved > 0.0);
+  }
+
+  // The clause, read off the flag update_CTM() consults. The behavioural half
+  // follows; this one says which of the two broke when they disagree.
+  CHECK_FALSE(A::ctm_valid(*warm));
+  // Premise of the control: simple_update() did not invalidate anything, so
+  // `kept` is a state whose warm start is genuinely warm.
+  REQUIRE(A::ctm_valid(*kept));
+
+  A::params(*cold).Max_CTM_Iteration = 0;
+  A::params(*warm).Max_CTM_Iteration = 0;
+  A::params(*kept).Max_CTM_Iteration = 0;
+  {
+    // All three print the CTM warning at a budget of zero, which is why this
+    // block does not ask for silence.
+    cws_capture out(std::cout);
+    cws_capture err(std::cerr);
+    cold->update_CTM(false);
+    warm->update_CTM(true);
+    kept->update_CTM(true);
+  }
+
+  const auto cold_rdm = cws_rdms(*cold);
+  const auto warm_rdm = cws_rdms(*warm);
+  const auto kept_rdm = cws_rdms(*kept);
+  const double rebuilt = cws_rdm_distance(cold_rdm, warm_rdm);
+  const double separation = cws_rdm_distance(cold_rdm, kept_rdm);
+  INFO("with a budget of zero sweeps ("
+       << tag << "): "
+       << "|rho_cold - rho_warm| = " << rebuilt << " (must stay below "
+       << same_tol << "; a larger value means update_CTM(true) warm started "
+       << "from the pre-gate environment), |rho_cold - rho_kept| = "
+       << separation << " (must exceed " << kept_min
+       << "; without that separation the equality on the left proves "
+       << "nothing)");
+  REQUIRE(separation > kept_min);
+  CHECK(rebuilt <= same_tol);
+
+  cws_cleanup(prefix + "cold");
+  cws_cleanup(prefix + "warm");
+  cws_cleanup(prefix + "kept");
 }

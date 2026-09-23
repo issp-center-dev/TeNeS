@@ -1570,6 +1570,15 @@ class Model:
                 ).format(obs.name, obs.group, bonds)
                 raise RuntimeError(msg)
 
+        for obs in self.multibodies:
+            msg = (
+                "Fermion mode does not support observable.multisite '{}' "
+                "(group {}). Multi-site observables are unavailable in "
+                "fermion mode; tenes rejects them when it reads input.toml, "
+                "so remove the entry or turn fermion off."
+            ).format(obs.name, obs.group)
+            raise RuntimeError(msg)
+
         for ham in self.hamiltonians:
             if not isinstance(ham, NNOperator):
                 continue
