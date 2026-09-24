@@ -58,7 +58,13 @@ jobs:
         shell: bash
         run: cmake --build ./ -j4
 
+      # -j4 is the runner's vCPU count, which lscpu reports as two physical
+      # cores with two threads each (AMD EPYC 7763).  Running the suite twice
+      # in one job on 2026-09-08 measured -j2 at 218-244 s against -j4's
+      # 214-241 s across all five jobs, so SMT is worth one to three percent
+      # here and the cores are saturated either way: scheduling has nothing
+      # left to give, and a shorter ctest has to come from less work.
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: OMP_NUM_THREADS=1 ctest -V
+        run: OMP_NUM_THREADS=1 ctest -j4 -V

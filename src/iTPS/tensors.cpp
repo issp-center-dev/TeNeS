@@ -34,6 +34,21 @@ using std::size_t;
 
 namespace tenes::itps {
 
+namespace {
+// Ledgers of one site's Tn in wrapped leg order (l, t, r, b, s).
+tenes::fermion::leg_parities make_Tn_parity(
+    tenes::fermion::FermionInfo const &finfo, int site) {
+  return tenes::fermion::Tn_parity(finfo, site);
+}
+
+// True iff the element belongs to the parity-even sector, the only sector a
+// physical fermionic state may populate.
+bool is_even_parity_element(tenes::fermion::leg_parities const &parity,
+                            mptensor::Index const &index) {
+  return tenes::fermion::count_odd(parity, index) % 2 == 0;
+}
+}  // namespace
+
 template <class ptensor>
 void iTPS<ptensor>::initialize_tensors() {
   using mptensor::Shape;
@@ -48,10 +63,32 @@ void iTPS<ptensor>::initialize_tensors() {
   C3.clear();
   C4.clear();
   lambda_tensor.clear();
+  phys_parity = peps_parameters.phys_parity;
+  finfo = tenes::fermion::FermionInfo{};
+  if (peps_parameters.fermion) {
+    finfo.enabled = true;
+    finfo.phys.reserve(phys_parity.size());
+    for (const auto &site_parity : phys_parity) {
+      finfo.phys.push_back(site_parity);
+    }
+    finfo.virt.reserve(N_UNIT);
+  }
 
   for (int i = 0; i < N_UNIT; ++i) {
     const auto pdim = lattice.physical_dims[i];
     const auto vdim = lattice.virtual_dims[i];
+
+    if (peps_parameters.fermion) {
+      // Fresh virtual-bond ledgers start even-first (ceil(D/2) even values);
+      // the simple update rewrites them through the graded svd_trunc, and
+      // load_fermion_ledger() overwrites them when tensors are reloaded.
+      std::array<tenes::fermion::parity_vector, 4> virt;
+      for (int leg = 0; leg < nleg; ++leg) {
+        virt[leg] =
+            tenes::fermion::even_first_parity(static_cast<size_t>(vdim[leg]));
+      }
+      finfo.virt.push_back(virt);
+    }
 
     Tn.push_back(
         ptensor(comm, Shape(vdim[0], vdim[1], vdim[2], vdim[3], pdim)));
@@ -90,6 +127,9 @@ void iTPS<ptensor>::initialize_tensors() {
     for (int i = 0; i < lattice.N_UNIT; ++i) {
       const auto pdim = lattice.physical_dims[i];
       const auto vdim = lattice.virtual_dims[i];
+      const auto parity = peps_parameters.fermion
+                              ? make_Tn_parity(finfo, i)
+                              : tenes::fermion::leg_parities{};
 
       const size_t ndim = vdim[0] * vdim[1] * vdim[2] * vdim[3] * pdim;
       std::vector<double> ran_re(ndim);
@@ -113,6 +153,13 @@ void iTPS<ptensor>::initialize_tensors() {
 
       for (size_t n = 0; n < Tn[i].local_size(); ++n) {
         index = Tn[i].global_index(n);
+        // The random initial state is projected onto the parity-even sector:
+        // odd elements would make the state's fermion parity indefinite, which
+        // the graded decompositions reject (see validate_block_diagonal).
+        if (peps_parameters.fermion && !is_even_parity_element(parity, index)) {
+          Tn[i].set_value(index, to_tensor_type(0.0));
+          continue;
+        }
         if (index[0] == 0 && index[1] == 0 && index[2] == 0 && index[3] == 0) {
           auto v = std::complex<double>(dir[index[4]], dir_im[index[4]]);
           Tn[i].set_value(index, to_tensor_type(v));
@@ -133,6 +180,7 @@ void iTPS<ptensor>::initialize_tensors() {
                 << std::endl;
     }
   }  // end of else part of if(load_dir.empty())
+  ctm_valid_ = false;
 }
 
 template <class ptensor>
@@ -208,6 +256,7 @@ void iTPS<ptensor>::initialize_tensors_density() {
                 << std::endl;
     }
   }  // end of else part of if(load_dir.empty())
+  ctm_valid_ = false;
 }
 
 // template specialization

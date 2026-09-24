@@ -16,6 +16,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
+#include "test_workdir.hpp"
 
 #include <cstdio>
 #include <fstream>

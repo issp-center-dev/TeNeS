@@ -16,21 +16,47 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "test_workdir.hpp"
 
+#include <filesystem>
 #include <fstream>
+#include <cstdio>
+#include <iostream>
+#include <numeric>
+#include <optional>
+#include <regex>
+#include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "../src/tensor.hpp"
 #include "../src/mpi.hpp"
+#include "../src/fermion/fermion_info.hpp"
+#include "../src/fermion/fops.hpp"
 #include "../src/util/string.hpp"
 #include "../src/arpack_solver.hpp"
 #include "../src/iTPS/load_toml.hpp"
 #include "../src/iTPS/iTPS.hpp"
+#include "../src/iTPS/main.hpp"
 #include "../src/iTPS/transfer_matrix.hpp"
 
 toml::value parse_str(std::string const &str) { return toml::parse_str(str); }
+
+namespace tenes::itps {
+struct iTPSTestAccessor {
+  template <class tensor>
+  static std::vector<tensor> const &Tn(iTPS<tensor> const &state) {
+    return state.Tn;
+  }
+
+  template <class tensor>
+  static tenes::fermion::FermionInfo const &finfo(iTPS<tensor> const &state) {
+    return state.finfo;
+  }
+};
+}  // namespace tenes::itps
 
 TEST_CASE("input") {
   using namespace tenes;
@@ -352,6 +378,44 @@ noise = 0.01
         TransferMatrix_Parameters{}));
   }
 
+  SUBCASE("fermion initialization masks odd-total Tn entries") {
+    INFO("fermion initialization masks odd-total Tn entries");
+    // L_sub = [2, 1] is left as-is: this subcase constructs iTPS<ptensor>
+    // directly and never calls validate_fermion_constraints (only
+    // itps_main does, in main.cpp), so the self-neighbour guard (a site of
+    // this skew-0 one-row cell is its own vertical neighbour) is never on
+    // this subcase's path.
+    auto toml = parse_str(R"(
+[tensor]
+L_sub = [2, 1]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+    )");
+    PEPS_Parameters peps_parameters;
+    peps_parameters.fermion = true;
+    peps_parameters.print_level = PrintLevel::none;
+    SquareLattice lattice = gen_lattice(toml.at("tensor"));
+    peps_parameters.phys_parity = gen_phys_parity(toml.at("tensor"), lattice);
+
+    iTPS<ptensor> state(MPI_COMM_WORLD, peps_parameters, lattice,
+                        EvolutionOperators<ptensor>{},
+                        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+                        Operators<ptensor>{}, Operators<ptensor>{},
+                        CorrelationParameter{}, TransferMatrix_Parameters{});
+    const auto &fi = iTPSTestAccessor::finfo(state);
+    REQUIRE(fi.enabled);
+    const auto &tensors = iTPSTestAccessor::Tn(state);
+    REQUIRE(tensors.size() == static_cast<std::size_t>(lattice.N_UNIT));
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      auto ft = tenes::fermion::wrap_Tn(tensors[site], fi, site);
+      CHECK(tenes::fermion::parity_violation(ft) == doctest::Approx(0.0));
+    }
+  }
+
   SUBCASE("correlation") {}
 
   SUBCASE("correlation_length eigensolver") {
@@ -423,5 +487,811 @@ eigensolver = "lapack"
     CHECK(effective_arnoldi_restartdim(0, 24, 31) == 25);
     // explicit values are used as-is
     CHECK(effective_arnoldi_restartdim(20, 4, 50) == 20);
+  }
+
+  SUBCASE("fermion parity input loads") {
+    INFO("fermion parity input loads");
+    // L_sub = [1, 1] is left as-is: this subcase only exercises
+    // gen_param/gen_lattice/gen_phys_parity (the raw TOML parsing) and
+    // never calls validate_fermion_constraints, so the self-neighbour guard
+    // (which refuses a 1x1 cell) never runs here and the cell still loads
+    // cleanly.
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [1, 1]
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    CHECK(peps_parameters.fermion == true);
+    REQUIRE(peps_parameters.phys_parity.size() == 1);
+    CHECK(peps_parameters.phys_parity[0] == std::vector<bool>{false, true});
+  }
+
+  SUBCASE("fermion accepts mean-field environment") {
+    INFO("fermion accepts mean-field environment");
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.ctm]
+meanfield_env = true
+)");
+    // L_sub = [2, 2]: with a 1x1 cell the self-neighbour guard
+    // (docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md
+    // section 2.1) would throw before MeanField_Env is even looked at, so
+    // the subcase could not tell that the mean-field environment itself is
+    // accepted. A 2x2 cell with a single site definition broadcast via
+    // index = [] clears that guard; with the fermionic mean-field
+    // measurement in place, MeanField_Env=true is a supported combination
+    // and nothing else in this input is guarded.
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    CHECK(peps_parameters.MeanField_Env == true);
+    CHECK_NOTHROW(validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}));
+  }
+
+  SUBCASE("fermion rejects odd one-site operator") {
+    INFO("fermion rejects odd one-site operator");
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    // L_sub = [2, 2]: same reasoning as "fermion accepts mean-field
+    // environment" above -- a 1x1 cell would trip the self-neighbour guard
+    // before the parity-odd one-site operator check this subcase is named
+    // for.
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+)");
+    auto observable_toml = parse_str(R"(
+[observable]
+[[observable.onesite]]
+group = 0
+sites = [0]
+dim = 2
+elements = """
+0 1 1.0 0.0
+"""
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    auto onesite = load_operators<ptensor>(observable_toml, MPI_COMM_WORLD, 4,
+                                           1, 0.0, "observable.onesite");
+    CHECK_THROWS_AS(
+        validate_fermion_constraints(
+            peps_parameters, lattice, EvolutionOperators<ptensor>{},
+            EvolutionOperators<ptensor>{}, onesite, Operators<ptensor>{},
+            Operators<ptensor>{}, CorrelationParameter{}),
+        tenes::input_error);
+  }
+
+  SUBCASE("fermion odd operator is rejected through itps_main load path") {
+    INFO("fermion odd operator is rejected through itps_main load path");
+    const std::string input_filename =
+        "test_input_fermion_odd_operator_main_path.toml";
+    const std::string outdir =
+        "output_test_input_fermion_odd_operator_main_path";
+    {
+      std::ofstream ofs(input_filename);
+      // L_sub = [2, 2]: a 1x1 cell trips the self-neighbour guard
+      // (docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md
+      // section 2.1) before reaching the parity-odd one-site operator check
+      // this subcase exercises; a single site definition broadcast via
+      // index = [] keeps this a minimal fixture while clearing that guard.
+      ofs << R"(
+[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = ")"
+          << outdir << R"("
+
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+
+[observable]
+[[observable.onesite]]
+name = "odd"
+group = 0
+sites = [0]
+dim = 2
+elements = """
+0 1 1.0 0.0
+"""
+
+[evolution]
+)";
+    }
+
+    try {
+      tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, PrintLevel::none);
+      FAIL("fermion odd operator was accepted through itps_main");
+    } catch (const tenes::input_error &e) {
+      CHECK(std::string(e.what()).find("parity-odd one-site operators") !=
+            std::string::npos);
+    }
+    std::remove(input_filename.c_str());
+  }
+}
+
+TEST_CASE("identity gates complete the bonds no Hamiltonian term gates") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  auto make_lattice = [&](std::string const &vdim) {
+    auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = )" + vdim + R"(
+)");
+    return gen_lattice(tensor_toml.at("tensor"));
+  };
+
+  auto horizontal_gate = [&](int site, int group) {
+    ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        op.set_value(mptensor::Index(i, j, i, j), 0.5);
+      }
+    }
+    return make_twosite_EvolutionOperator<ptensor>(site, 2, group, op);
+  };
+
+  auto count_leg = [](EvolutionOperators<ptensor> const &ops, int leg) {
+    int n = 0;
+    for (auto const &op : ops) {
+      if (op.is_twosite() && op.source_leg == leg) ++n;
+    }
+    return n;
+  };
+
+  SUBCASE("ungated vertical bonds with D > 1 receive identity gates") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+
+    CHECK(completed.size() == 8);
+    CHECK(count_leg(completed, 2) == 4);
+    CHECK(count_leg(completed, 1) == 4);
+    for (auto const &op : completed) {
+      if (op.source_leg != 1) continue;
+      CHECK(op.group == 0);
+      for (int i1 = 0; i1 < 2; ++i1) {
+        for (int i2 = 0; i2 < 2; ++i2) {
+          for (int o1 = 0; o1 < 2; ++o1) {
+            for (int o2 = 0; o2 < 2; ++o2) {
+              typename ptensor::value_type v;
+              op.op.get_value(mptensor::Index(i1, i2, o1, o2), v);
+              const double expected = (i1 == o1 && i2 == o2) ? 1.0 : 0.0;
+              CHECK(std::abs(v - expected) < 1e-15);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  SUBCASE("a D = 1 ungated leg needs nothing") {
+    auto lattice = make_lattice("[2, 1, 2, 1]");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+    CHECK(completed.size() == 4);
+  }
+
+  SUBCASE("a fully gated cell is returned unchanged") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+      op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+      ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 1, 0, op));
+    }
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+    CHECK(completed.size() == 8);
+  }
+
+  SUBCASE("a bond gated from the other end counts as gated") {
+    // the vertical bond of site 0 (leg 1, up) is the same bond as the
+    // bottom leg (3) of its upper neighbour
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+      op.set_value(mptensor::Index(0, 0, 0, 0), 1.0);
+      ops.push_back(make_twosite_EvolutionOperator<ptensor>(s, 3, 0, op));
+    }
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+    CHECK(completed.size() == 8);
+  }
+
+  SUBCASE("a cell with only one-site gates is completed on the given comm") {
+    // groups is empty here, so the generated gates fall back to group 0.
+    // The communicator cannot be read off the (absent) two-site operators
+    // either: it has to come from the caller.
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) {
+      ptensor op(comm, mptensor::Shape(2, 2));
+      op.set_value(mptensor::Index(0, 0), 1.0);
+      op.set_value(mptensor::Index(1, 1), 1.0);
+      ops.push_back(make_onesite_EvolutionOperator<ptensor>(s, 0, op));
+    }
+
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+
+    // every one of the 8 bonds of the 2x2 cell is ungated
+    CHECK(completed.size() == 12);
+    CHECK(count_leg(completed, 1) == 4);
+    CHECK(count_leg(completed, 2) == 4);
+    for (auto const &op : completed) {
+      if (!op.is_twosite()) continue;
+      CHECK(op.group == 0);
+      CHECK(op.op.get_comm() == comm);
+    }
+  }
+
+  SUBCASE("identity gates follow every group that is present") {
+    auto lattice = make_lattice("2");
+    EvolutionOperators<ptensor> ops;
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 0));
+    for (int s = 0; s < 4; ++s) ops.push_back(horizontal_gate(s, 1));
+    auto completed = complete_ungated_bonds<ptensor>(ops, lattice, comm);
+    CHECK(completed.size() == 16);
+    int g0 = 0, g1 = 0;
+    for (auto const &op : completed) {
+      if (op.source_leg == 1) (op.group == 0 ? g0 : g1)++;
+    }
+    CHECK(g0 == 4);
+    CHECK(g1 == 4);
+  }
+}
+
+namespace {
+
+std::string fermion_cell_toml() {
+  return R"(
+[tensor]
+L_sub = [2, 2]
+skew = 0
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+)";
+}
+
+}  // namespace
+
+TEST_CASE("fermion mode accepts the full update") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  auto tensor_toml = parse_str(fermion_cell_toml());
+  SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+
+  auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+)");
+  PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+  peps_parameters.phys_parity = gen_phys_parity(tensor_toml.at("tensor"), lattice);
+
+  // Preconditions: the guard this subcase is about has to be reachable at
+  // all. Without these the CHECK_NOTHROW below would also pass for an input
+  // that simply has no full update in it.
+  REQUIRE(peps_parameters.fermion == true);
+  REQUIRE(peps_parameters.num_full_step.size() == 1);
+  REQUIRE(peps_parameters.num_full_step[0] == 1);
+
+  SUBCASE("a positive full-update step count is no longer refused") {
+    INFO("a positive full-update step count is no longer refused");
+    CHECK_NOTHROW(validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}));
+  }
+
+  SUBCASE("a parity-odd full-update gate is still refused") {
+    INFO("a parity-odd full-update gate is still refused");
+    // Lifting the "full update" guard must not take the parity check on the
+    // full-update gates with it. (0, 0, 0, 1) has one odd leg, so with the
+    // physical ledger [0, 1] the gate is parity odd.
+    ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
+    op.set_value(mptensor::Index(0, 0, 0, 1), 1.0);
+    EvolutionOperators<ptensor> full_updates{
+        make_twosite_EvolutionOperator<ptensor>(0, 2, 0, op)};
+    CHECK_THROWS_AS(
+        validate_fermion_constraints(
+            peps_parameters, lattice, EvolutionOperators<ptensor>{},
+            full_updates, Operators<ptensor>{}, Operators<ptensor>{},
+            Operators<ptensor>{}, CorrelationParameter{}),
+        tenes::input_error);
+  }
+}
+
+TEST_CASE("fermion mode refuses the mean-field environment with a full update") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+
+  auto tensor_toml = parse_str(fermion_cell_toml());
+  SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+
+  auto make_parameters = [&](bool meanfield) {
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+[parameter.full_update]
+tau = 0.01
+num_step = 1
+[parameter.ctm]
+dimension = 4
+)");
+    PEPS_Parameters p = gen_param(param_toml.at("parameter"));
+    p.phys_parity = gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    p.print_level = PrintLevel::none;
+    p.outdir = "output_test_input_fermion_full_meanfield";
+    p.MeanField_Env = meanfield;
+    return p;
+  };
+
+  auto build = [&](PEPS_Parameters const &p) {
+    return iTPS<ptensor>(MPI_COMM_WORLD, p, lattice,
+                         EvolutionOperators<ptensor>{},
+                         EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+                         Operators<ptensor>{}, Operators<ptensor>{},
+                         CorrelationParameter{}, TransferMatrix_Parameters{});
+  };
+
+  // Precondition / control: the very same configuration without the
+  // mean-field environment must be accepted, otherwise the CHECK_THROWS
+  // below would be passing because of the full update rather than because
+  // of meanfield_env.
+  auto plain = make_parameters(false);
+  REQUIRE(plain.num_full_step[0] == 1);
+  REQUIRE(plain.MeanField_Env == false);
+  CHECK_NOTHROW(build(plain));
+
+  auto meanfield = make_parameters(true);
+  REQUIRE(meanfield.MeanField_Env == true);
+  REQUIRE(meanfield.num_full_step[0] == 1);
+  CHECK_THROWS_AS(build(meanfield), tenes::input_error);
+}
+
+// ===== Fermion mode and the shape of the unit cell =========================
+//
+// docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section
+// 2.1 (evidence: docs/superpowers/notes/2026-09-11-fermion-skew-revisit.md).
+// validate_fermion_constraints refuses a fermion-mode cell if and only if
+// some site is its own nearest neighbour through the periodic + skew
+// boundary. With T(x, y) = T(x + skew, y + LY) that is exactly LX == 1
+// (horizontal), or LY == 1 with skew = 0 mod LX (vertical). Skewed cells as
+// such are accepted: the "skew breaks the fermionic signs" measurement
+// behind the old refusal was retracted (see the note), and
+// test/fermion/skew_unfold.cpp now pins skewed cells to their unfolded
+// skew-0 equivalents.
+//
+// Section 9 of the contract adds a range check in front of that: a skew
+// outside -LX < skew < LX is an input error in every mode, raised by the
+// SquareLattice constructor (so by gen_lattice, before the fermion guard is
+// reached). (skew, LY) and (skew +- LX, LY) generate the same lattice, so
+// such a skew carries no information. Inside the range the lattice keeps
+// the input value with its sign: [2,1] skew -1 holds skew = -1 and is
+// accepted like skew = 1. With the range check the only self-neighbour
+// cells that reach the fermion guard are LX == 1 with skew 0 and LY == 1
+// with skew 0.
+
+namespace {
+
+std::string fermion_shaped_cell_toml(int lx, int ly, int skew) {
+  std::ostringstream os;
+  os << "[tensor]\n"
+     << "L_sub = [" << lx << ", " << ly << "]\n"
+     << "skew = " << skew << "\n"
+     << R"([[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+noise = 0.01
+)";
+  return os.str();
+}
+
+//! True iff `text` contains a match of the ECMAScript regular expression
+//! `pattern`, ignoring case.
+bool contains_icase(std::string const &text, std::string const &pattern) {
+  return std::regex_search(
+      text, std::regex(pattern, std::regex::ECMAScript | std::regex::icase));
+}
+
+//! True iff `text` contains `word` followed, after characters that are
+//! neither digits nor minus signs, by the given integers in order (each one
+//! ending at a non-digit). "L_sub = [3, 1]", "L_sub=[3,1]" and
+//! "tensor.L_sub (3 x 1)" all name L_sub 3 1; "skew = -2" names skew -2;
+//! the check is case-insensitive.
+bool names_numbers_after(std::string const &text, std::string const &word,
+                         std::vector<int> const &numbers) {
+  std::string pattern = word;
+  for (std::size_t i = 0; i < numbers.size(); ++i) {
+    pattern += (i == 0 ? "[^0-9-]*" : "[^0-9-]+");
+    pattern += std::to_string(numbers[i]);
+  }
+  pattern += "(?![0-9])";
+  return contains_icase(text, pattern);
+}
+
+//! True iff `text` contains `number` as a number of its own, not as part of
+//! a longer one ("L_sub[0] = 3", "-3 < skew < 3" and "width 3" all name 3).
+bool names_number(std::string const &text, int number) {
+  return contains_icase(text,
+                        "(^|[^0-9])" + std::to_string(number) + "([^0-9]|$)");
+}
+
+//! LY_noskew of an [lx, ly] cell with an in-range skew, from arithmetic: a
+//! skew r = skew mod lx in [1, lx) repeats after lcm(lx, r) / r rows of
+//! cells, skew 0 after one.
+int expected_ly_noskew(int lx, int ly, int skew) {
+  const int r = ((skew % lx) + lx) % lx;
+  return r == 0 ? ly : ly * (std::lcm(lx, r) / r);
+}
+
+//! The site of an [lx, ly] cell with the given skew at global position
+//! (x, y), from T(x, y) = T(x + skew, y + ly): (x, y + k ly) holds the site
+//! at (x - k skew, y).
+int skew_site_at(int lx, int ly, int skew, int x, int y) {
+  const int k = (y >= 0 ? y : y - ly + 1) / ly;
+  const int xs = (((x - skew * k) % lx) + lx) % lx;
+  const int ys = ((y % ly) + ly) % ly;
+  return xs + lx * ys;
+}
+
+//! The message of the tenes::input_error SquareLattice(lx, ly, skew)
+//! throws, or std::nullopt if it throws none. Any other exception is a
+//! failed check here, so that it cannot pass for the expected error.
+std::optional<std::string> lattice_input_error(int lx, int ly, int skew) {
+  try {
+    const tenes::SquareLattice lattice(lx, ly, skew);
+  } catch (const tenes::input_error &e) {
+    return std::string(e.what());
+  } catch (const std::exception &e) {
+    FAIL_CHECK("SquareLattice(" << lx << ", " << ly << ", " << skew
+                                << ") threw something other than "
+                                   "tenes::input_error: "
+                                << e.what());
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
+TEST_CASE("SquareLattice rejects a skew outside -LX < skew < LX") {
+  // Contract section 9. The constructor has no mode, so this is the bosonic
+  // and the fermionic behaviour at once. Rejected: the boundaries skew = +-LX
+  // for LX = 1 to 4 (for LX = 1 every skew but 0), and skews further out,
+  // negative ones included - among them the cells that sections 2 and 8 fed
+  // in before this range check existed.
+  const int cells[][3] = {
+      // skew = +-LX
+      {1, 1, 1},
+      {1, 1, -1},
+      {1, 2, 1},
+      {2, 1, 2},
+      {2, 1, -2},
+      {2, 2, 2},
+      {2, 2, -2},
+      {3, 1, 3},
+      {3, 1, -3},
+      {3, 3, -3},
+      {4, 1, 4},
+      {4, 2, -4},
+      // further out
+      {1, 2, 5},
+      {2, 2, 7},
+      {2, 2, -4},
+      {3, 1, 4},
+      {3, 2, 6},
+      {3, 3, -4},
+      {3, 1, -5},
+      {4, 1, 8},
+      {4, 3, 6},
+  };
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    const std::optional<std::string> message =
+        lattice_input_error(lx, ly, skew);
+    CHECK(message.has_value());
+    if (!message) {
+      continue;
+    }
+    INFO("message: " << *message);
+    // What the contract asks the message to say, matched loosely: the skew
+    // value, the cell width (as a number of its own: "L_sub[0] = 3",
+    // "LX = 3" or the range "-3 < skew < 3" all qualify), and that skew and
+    // skew +- LX describe the same lattice.
+    CHECK(names_numbers_after(*message, "skew", {skew}));
+    CHECK(names_number(*message, lx));
+    CHECK(contains_icase(*message, "same|equivalent|identical"));
+    CHECK(contains_icase(*message, "lattice"));
+  }
+
+  // The same through the input path, which is where a user meets it.
+  auto tensor_toml = parse_str(R"(
+[tensor]
+L_sub = [2, 2]
+skew = 2
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+)");
+  CHECK_THROWS_AS(tenes::itps::gen_lattice(tensor_toml.at("tensor")),
+                  tenes::input_error);
+}
+
+TEST_CASE("SquareLattice accepts -LX < skew < LX and keeps it") {
+  using tenes::SquareLattice;
+  // Contract section 9: inside the range nothing changes. The member keeps
+  // the input value with its sign (the guard test below relies on it),
+  // LY_noskew = LY * lcm(LX, r) / r for r = skew mod LX != 0 and LY for
+  // skew 0, and the neighbour and index maps follow
+  // T(x, y) = T(x + skew, y + LY). The boundaries skew = +-(LX - 1) are
+  // among the cases; for LX = 1 only skew 0 is in range.
+  const int cells[][3] = {
+      {1, 1, 0},  {1, 3, 0},  {2, 1, 1}, {2, 1, -1}, {2, 2, 0},
+      {2, 2, 1},  {2, 2, -1}, {3, 1, 1}, {3, 1, 2},  {3, 1, -1},
+      {3, 1, -2}, {3, 2, -2}, {3, 3, 2}, {4, 1, 2},  {4, 1, 3},
+      {4, 1, -3}, {4, 2, -2}, {4, 3, 3}, {4, 3, -3},
+  };
+  const int dx[4] = {-1, 0, 1, 0};
+  const int dy[4] = {0, 1, 0, -1};
+  for (const auto &c : cells) {
+    const int lx = c[0];
+    const int ly = c[1];
+    const int skew = c[2];
+    INFO("L_sub = [" << lx << ", " << ly << "], skew = " << skew);
+    REQUIRE_FALSE(lattice_input_error(lx, ly, skew).has_value());
+    const SquareLattice lattice(lx, ly, skew);
+    const int ly_noskew = expected_ly_noskew(lx, ly, skew);
+    CHECK(lattice.skew == skew);
+    CHECK(lattice.LX_noskew == lx);
+    CHECK(lattice.LY_noskew == ly_noskew);
+    CHECK(lattice.N_UNIT_noskew == lx * ly_noskew);
+    int neighbor_mismatch = 0;
+    for (int i = 0; i < lattice.N_UNIT; ++i) {
+      for (int leg = 0; leg < 4; ++leg) {
+        neighbor_mismatch +=
+            lattice.neighbor(i, leg) !=
+            skew_site_at(lx, ly, skew, i % lx + dx[leg], i / lx + dy[leg]);
+      }
+    }
+    int index_mismatch = 0;
+    for (int x = -2 * lx; x < 3 * lx; ++x) {
+      for (int y = -3 * ly_noskew; y < 3 * ly_noskew; ++y) {
+        index_mismatch +=
+            lattice.index(x, y) != skew_site_at(lx, ly, skew, x, y);
+      }
+    }
+    CHECK(neighbor_mismatch == 0);
+    CHECK(index_mismatch == 0);
+  }
+}
+
+TEST_CASE("SquareLattice checks the cell size before the skew") {
+  // Contract section 9: the existing "Lattice.X/Y should be positive"
+  // errors come first and keep their messages. X = 0 used to reach skew % X
+  // in the member initializer before the check (a SIGFPE on x86-64; on
+  // arm64 no trap, which is why these can pass on the unfixed code there).
+  // Negative sizes are left out: the contract pins X = 0 only, and today
+  // they fail earlier still, sizing the member vectors with LX * LY < 0.
+  const int bad_x[][3] = {{0, 1, 0}, {0, 2, 1}, {0, 1, 5}, {0, 0, 3}};
+  for (const auto &c : bad_x) {
+    INFO("L_sub = [" << c[0] << ", " << c[1] << "], skew = " << c[2]);
+    const std::optional<std::string> message =
+        lattice_input_error(c[0], c[1], c[2]);
+    REQUIRE(message.has_value());
+    INFO("message: " << *message);
+    CHECK(contains_icase(*message, "\\bX\\b"));
+    CHECK(contains_icase(*message, "positive"));
+  }
+  const int bad_y[][3] = {{2, 0, 0}, {2, 0, 5}, {1, 0, 3}};
+  for (const auto &c : bad_y) {
+    INFO("L_sub = [" << c[0] << ", " << c[1] << "], skew = " << c[2]);
+    const std::optional<std::string> message =
+        lattice_input_error(c[0], c[1], c[2]);
+    REQUIRE(message.has_value());
+    INFO("message: " << *message);
+    CHECK(contains_icase(*message, "\\bY\\b"));
+    CHECK(contains_icase(*message, "positive"));
+    CHECK_FALSE(contains_icase(*message, "skew"));
+  }
+}
+
+TEST_CASE("fermion mode refuses exactly the cells with a self-neighbour site") {
+  using namespace tenes;
+  using namespace tenes::itps;
+  using ptensor = complex_tensor;
+
+  struct cell {
+    int lx;
+    int ly;
+    int skew;
+  };
+
+  auto validate = [](cell c) {
+    auto tensor_toml = parse_str(fermion_shaped_cell_toml(c.lx, c.ly, c.skew));
+    SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
+    auto param_toml = parse_str(R"(
+[parameter]
+[parameter.general]
+fermion = true
+)");
+    PEPS_Parameters peps_parameters = gen_param(param_toml.at("parameter"));
+    peps_parameters.phys_parity =
+        gen_phys_parity(tensor_toml.at("tensor"), lattice);
+    // Premises: the cell is what the input says, the lattice holds the skew
+    // as given (sign included), and the rest of the input is a valid fermion
+    // input (parity metadata on every site), so that the only thing left for
+    // the guard to judge is the shape.
+    REQUIRE(lattice.LX == c.lx);
+    REQUIRE(lattice.LY == c.ly);
+    REQUIRE(lattice.skew == c.skew);
+    CHECK(lattice.LY_noskew == expected_ly_noskew(c.lx, c.ly, c.skew));
+    CHECK(lattice.N_UNIT_noskew ==
+          c.lx * expected_ly_noskew(c.lx, c.ly, c.skew));
+    REQUIRE(peps_parameters.fermion == true);
+    REQUIRE(peps_parameters.phys_parity.size() ==
+            static_cast<std::size_t>(c.lx * c.ly));
+    validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, Operators<ptensor>{},
+        Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{});
+  };
+
+  SUBCASE("cells in which no site is its own neighbour are accepted") {
+    const cell accepted[] = {
+        // Newly accepted: skewed cells with both sides >= 2,
+        {2, 2, 1},
+        {3, 2, 1},
+        {3, 2, -2},
+        {3, 3, 2},
+        {2, 3, 1},
+        // and one-row cells with a non-zero skew (every bond of such a row
+        // goes to a different site; [2,1] skew 1 is what tenes_simple
+        // builds for a square lattice with W = 1).
+        {2, 1, 1},
+        {2, 1, -1},
+        {3, 1, 1},
+        {3, 1, 2},
+        {3, 1, -1},
+        {4, 1, 2},
+        {4, 1, -3},
+        // Accepted before and still accepted.
+        {2, 2, 0},
+        {3, 3, 0},
+    };
+    for (const cell c : accepted) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      CHECK_NOTHROW(validate(c));
+    }
+  }
+
+  SUBCASE("cells with a self-neighbour site are refused, naming the cause") {
+    const cell refused[] = {
+        // LX == 1: horizontal self-neighbour.
+        {1, 1, 0},
+        {1, 2, 0},
+        {1, 3, 0},
+        // LY == 1 and skew 0: vertical self-neighbour.
+        {2, 1, 0},
+        {3, 1, 0},
+        {4, 1, 0},
+    };
+    for (const cell c : refused) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      std::string message;
+      try {
+        validate(c);
+        FAIL_CHECK("a cell with a self-neighbour site was accepted");
+        continue;
+      } catch (const tenes::input_error &e) {
+        message = e.what();
+      }
+      INFO("message: " << message);
+      // Through the existing throw_fermion_guard wrapper.
+      CHECK(message.find("fermion mode") != std::string::npos);
+      // The cause: a site would be its own nearest neighbour. (The remedy
+      // the message suggests is not pinned.)
+      CHECK(contains_icase(message, "\\bown\\b"));
+      CHECK(contains_icase(message, "neighbou?r"));
+      // The shape: both L_sub values, and the skew.
+      CHECK(names_numbers_after(message, "L_sub", {c.lx, c.ly}));
+      CHECK(names_numbers_after(message, "skew", {c.skew}));
+    }
+  }
+
+  SUBCASE("a skew outside the range is refused by gen_lattice already") {
+    // Contract section 9: these never reach validate_fermion_constraints.
+    // Among them the self-neighbour-shaped [2,1] 2, [2,1] -2, [3,1] 3,
+    // [1,1] 1 and [1,2] 5, and [2,2] 7, [3,1] 4, [4,1] 8, [2,2] 2, [3,2] 6,
+    // which sections 2 and 8 once accepted.
+    const cell out_of_range[] = {{2, 1, 2}, {2, 1, -2}, {3, 1, 3}, {1, 1, 1},
+                                 {1, 2, 5}, {2, 2, 7},  {3, 1, 4}, {4, 1, 8},
+                                 {2, 2, 2}, {3, 2, 6}};
+    for (const cell c : out_of_range) {
+      INFO("L_sub = [" << c.lx << ", " << c.ly << "], skew = " << c.skew);
+      auto tensor_toml =
+          parse_str(fermion_shaped_cell_toml(c.lx, c.ly, c.skew));
+      try {
+        gen_lattice(tensor_toml.at("tensor"));
+        FAIL_CHECK("gen_lattice accepted a skew outside -LX < skew < LX");
+      } catch (const tenes::input_error &e) {
+        INFO("message: " << e.what());
+        CHECK(names_numbers_after(e.what(), "skew", {c.skew}));
+        CHECK_FALSE(contains_icase(e.what(), "\\bown\\b"));
+      }
+    }
   }
 }

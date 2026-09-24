@@ -26,6 +26,7 @@
 
 #include <string>
 
+#include "../../../fermion/fops.hpp"
 #include "../../../tensor.hpp"
 #include "../../../timer.hpp"
 

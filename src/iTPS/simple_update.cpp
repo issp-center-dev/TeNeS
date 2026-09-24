@@ -16,15 +16,71 @@
 
 #include "iTPS.hpp"
 
+#include <cstdlib>
+#include <iostream>
+
+#include "../fermion/fops.hpp"
 #include "core/simple_update.hpp"
 #include "core/local_gauge.hpp"
 
 namespace tenes::itps {
 
+namespace {
+// Diagnostic knob: setting TENES_FERMION_SECTOR_LOG (any value) dumps the
+// even/odd dimension split of every virtual-bond ledger to stderr after
+// each simple-update step, to watch how the truncation distributes the
+// bond dimension over the two parity sectors.
+bool fermion_sector_log_enabled() {
+  return std::getenv("TENES_FERMION_SECTOR_LOG") != nullptr;
+}
+
+void log_fermion_sector_dimensions(const tenes::fermion::FermionInfo& finfo,
+                                   const SquareLattice& lattice, int n_unit,
+                                   int mpirank, int step) {
+  if (!fermion_sector_log_enabled() || !finfo.enabled || mpirank != 0) {
+    return;
+  }
+  for (int source = 0; source < n_unit; ++source) {
+    for (int leg : {2, 1}) {
+      const int target = lattice.neighbor(source, leg);
+      const auto& parity = finfo.virt[source][leg];
+      int even = 0;
+      int odd = 0;
+      for (bool p : parity) {
+        if (p) {
+          ++odd;
+        } else {
+          ++even;
+        }
+      }
+      std::cerr << "TENES_FERMION_SECTOR step=" << step << " source=" << source
+                << " leg=" << leg << " target=" << target << " Deven=" << even
+                << " Dodd=" << odd << "\n";
+    }
+  }
+}
+}  // namespace
+
 template <class tensor>
-void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
+void iTPS<tensor>::apply_onesite_gate_fermion(
+    EvolutionOperator<tensor> const& up) {
+  const int source = up.source_site;
+  auto fTn = tenes::fermion::wrap_Tn(Tn[source], finfo, source);
+  tenes::fermion::ftensor<tensor> fop{
+      up.op, {finfo.phys[source], finfo.phys[source]}};
+  auto updated = tenes::fermion::tensordot(fTn, fop, mptensor::Axes(4),
+                                           mptensor::Axes(0));
+  tenes::fermion::unwrap_Tn(updated, Tn[source], finfo, source);
+}
+
+template <class tensor>
+void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
+    if (finfo.enabled) {
+      apply_onesite_gate_fermion(up);
+      return;
+    }
     Tn[source] =
         tensordot(Tn[source], up.op, mptensor::Axes(4), mptensor::Axes(0));
   } else {
@@ -34,6 +90,47 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const &up) {
     const int source_leg = up.source_leg;
     const int target = lattice.neighbor(source, source_leg);
     const int target_leg = (source_leg + 2) % 4;
+    if (finfo.enabled) {
+      // Canonical fermionic bond orientation is raster order (left-to-right,
+      // top-to-bottom): the source of the graded gate must be the JW-earlier
+      // site, i.e. the left site of a horizontal bond (source_leg == 2) or
+      // the upper site of a vertical bond (source_leg == 3). Updates given
+      // in the opposite orientation are normalized by swapping the site
+      // roles; feeding the gate from the JW-later side applies wrong Koszul
+      // masks (verified by the vertical-chain lambda trajectory diagnostic).
+      int s1 = source;
+      int s2 = target;
+      int s1_leg = source_leg;
+      int s2_leg = target_leg;
+      auto fop = tenes::fermion::wrap_twosite_gate(up.op, finfo.phys[source],
+                                                   finfo.phys[target]);
+      if (source_leg == 0 || source_leg == 1) {
+        std::swap(s1, s2);
+        std::swap(s1_leg, s2_leg);
+        // Graded transpose: exchanging the two sites of a two-site operator
+        // conjugates it by S(|a> x |b>) = (-1)^{|a||b|} |b> x |a>, so it
+        // carries the Fock reordering sign on both leg pairs, exactly as the
+        // measurement path does (twosite_obs.cpp). A plain transpose drops
+        // (-1)^{p(j1)p(j2) + p(k1)p(k2)}, which is -1 on the
+        // (odd,odd) <-> (even,even) channels: empty for a
+        // particle-number-conserving spinless model, but the doublon-holon
+        // channel of an electron model at first order in the hopping.
+        fop = tenes::fermion::transpose(fop, mptensor::Axes(1, 0, 3, 2));
+      }
+      auto fTn1 = tenes::fermion::wrap_Tn(Tn[s1], finfo, s1);
+      auto fTn2 = tenes::fermion::wrap_Tn(Tn[s2], finfo, s2);
+      tenes::fermion::ftensor<tensor> fTn1_work, fTn2_work;
+      core::Simple_update_bond(fTn1, fTn2, lambda_tensor[s1], lambda_tensor[s2],
+                               fop, s1_leg, peps_parameters, fTn1_work,
+                               fTn2_work, lambda_work);
+      lambda_tensor[s1][s1_leg] = lambda_work;
+      lambda_tensor[s2][s2_leg] = lambda_work;
+      finfo.virt[s1][s1_leg] = fTn1_work.parity[s1_leg];
+      finfo.virt[s2][s2_leg] = fTn2_work.parity[s2_leg];
+      tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
+      tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
+      return;
+    }
     core::Simple_update_bond(Tn[source], Tn[target], lambda_tensor[source],
                              lambda_tensor[target], up.op, source_leg,
                              peps_parameters, Tn1_work, Tn2_work, lambda_work);
@@ -109,6 +206,7 @@ void iTPS<tensor>::simple_update() {
   const int nsteps = peps_parameters.num_simple_step[group];
   double next_report = 10.0;
 
+  log_fermion_sector_dimensions(finfo, lattice, N_UNIT, mpirank, 0);
   for (int int_tau = 0; int_tau < nsteps; ++int_tau) {
     for (auto up : simple_updates) {
       if (up.group != group) {
@@ -132,12 +230,16 @@ void iTPS<tensor>::simple_update() {
                   << nsteps << "] done" << std::endl;
       }
     }
+    const int step = int_tau + 1;
+    if (step == 10 || step == 50 || step == 100 || step == 300) {
+      log_fermion_sector_dimensions(finfo, lattice, N_UNIT, mpirank, step);
+    }
   }  // end of for (int_tau)
   time_simple_update += timer.elapsed();
 }
 
 template <class tensor>
-void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
+void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     Tn[source] =
@@ -161,8 +263,8 @@ void iTPS<tensor>::simple_update_density(EvolutionOperator<tensor> const &up) {
                                 Tn[target].shape()[2], Tn[target].shape()[3],
                                 Tn[target].shape()[4] * Tn[target].shape()[5])),
         lambda_tensor[source], lambda_tensor[target],
-        mptensor::kron(up.op, conj(up.op)),
-        source_leg, peps_parameters, Tn1_work, Tn2_work, lambda_work);
+        mptensor::kron(up.op, conj(up.op)), source_leg, peps_parameters,
+        Tn1_work, Tn2_work, lambda_work);
     lambda_tensor[source][source_leg] = lambda_work;
     lambda_tensor[target][target_leg] = lambda_work;
     Tn[source] = reshape(
@@ -289,7 +391,7 @@ void iTPS<tensor>::simple_update_density() {
 
 template <class tensor>
 void iTPS<tensor>::simple_update_density_purification(
-    EvolutionOperator<tensor> const &up) {
+    EvolutionOperator<tensor> const& up) {
   if (up.is_onesite()) {
     const int source = up.source_site;
     Tn[source] =

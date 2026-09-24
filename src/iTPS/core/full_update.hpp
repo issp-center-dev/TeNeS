@@ -30,6 +30,25 @@ class PEPS_Parameters;
 namespace core {
 
 template <class tensor>
+void prepare_environment(const tensor &Environment_in, const tensor &Theta_in,
+                         const PEPS_Parameters &peps_parameters,
+                         tensor &Environment_out, tensor &Theta_out,
+                         tensor &LR1_inv, tensor &LR2_inv);
+
+template <class tensor>
+void als_iterate(const tensor &Environment, const tensor &Theta,
+                 const PEPS_Parameters &peps_parameters, tensor &R1,
+                 tensor &R2);
+
+template <class tensor>
+tensor Create_Environment_two_sites(const tensor &C1, const tensor &C2,
+                                    const tensor &C3, const tensor &C4,
+                                    const tensor &eT1, const tensor &eT2,
+                                    const tensor &eT3, const tensor &eT4,
+                                    const tensor &eT5, const tensor &eT6,
+                                    const tensor &Q1, const tensor &Q2);
+
+template <class tensor>
 void Full_update_bond_horizontal(
     const tensor &C1, const tensor &C2, const tensor &C3, const tensor &C4,
     const tensor &eT1, const tensor &eT2, const tensor &eT3, const tensor &eT4,

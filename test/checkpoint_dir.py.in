@@ -1,0 +1,4526 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# End-to-end tests of the checkpoint directory itself: what a run must do to
+# the directory it saves into, and how it must refuse a checkpoint it cannot
+# read.  Everything here is about the DIRECTORY, not about the numbers in it;
+# the numerical round trip of a fermionic checkpoint is FreeFermionSaveLoad.
+#
+#   1. A checkpoint records how many sites it was made with.  Reading it into
+#      a run with a different number of sites has to stop with an explained
+#      error that names both counts -- in particular when the checkpoint has
+#      FEWER sites than the input, which is where the reader used to run off
+#      the end of params.dat.  The same for a header that cannot be parsed.
+#      Under more than one process every process has to end, not just the one
+#      that noticed.
+#   2. When a run saves into a directory that already holds a checkpoint, the
+#      directory afterwards has to hold that run's checkpoint and nothing
+#      else: no fermion.dat left by a fermionic predecessor, no tensor files
+#      of sites this run does not have, no per-process fragments of a run that
+#      had more processes.  And the run says so when the directory was
+#      already there.
+#   3. The save goes through a working directory beside the destination, so
+#      that a death in the middle cannot leave a half-written checkpoint.
+#      Interrupting a run is not portable, so what is checked is the trace it
+#      leaves: no working directory survives a successful save, and one left
+#      by an earlier crash is cleaned up by the next.
+#   4. None of that may break the ordinary round trip, and in particular not
+#      the restart that gives tensor_save and tensor_load the SAME path.
+#
+# A second round of review added the A.* cases at the end:
+#
+#   A.1 A NUL byte inside a metadata comment does not change what is read --
+#       the file is broadcast as bytes, not as a C string.
+#   A.2 A lambda file that cannot be read ends every process with a message
+#       naming it, in the current format and in the legacy one.
+#   A.3 A checkpoint directory that cannot be searched ends every process,
+#       with a message that does not claim to know whether the checkpoint is
+#       missing or merely unreadable.
+#   A.4 A symbolic link as the destination is still a symbolic link after the
+#       save, and the checkpoint is in what it points at.
+#   A.5 A checkpoint that could not be written is reported in the exit
+#       status, while the measurement is still written.
+#
+# The save was then redesigned, and the R.* cases at the end replace the
+# parts of the above that the redesign changes:
+#
+#   R.1 The destination directory is never replaced.  Whatever else is in it
+#       survives -- including, when the destination is ".", the input file
+#       and the run's own results.  Nothing outside the destination changes,
+#       and its parent need not even be writable.
+#   R.2 The working directory is inside the destination (WORK_DIR_NAME).  It
+#       does not survive a save, a stale one is cleaned up by the next save,
+#       and its presence alone does not stop a load.
+#   R.3 A marker inside the destination (INCOMPLETE_NAME) marks a save that
+#       was interrupted.  A checkpoint carrying it is refused, the refusal
+#       carries the marker's own text, the documented repair works, and a new
+#       save clears it.
+#   R.4 params.dat is version 2 and records whether the run was fermionic.
+#       The run kind is decided there, not by whether fermion.dat happens to
+#       be lying about; version 1 and pre-version checkpoints still load.
+#
+# The case that checked the old refusal of a dangerous destination is gone:
+# there is nothing to refuse now.  Its scenarios live on in R.1, where what
+# is checked is that the neighbours survive.  R.1 and F.2 are the only cases
+# that run tenes outside this suite's own working directory, because one of
+# the destinations under test IS a working directory.
+#
+# A fourth round of review renamed the working directory and the marker --
+# WORK_DIR_NAME and INCOMPLETE_NAME are the one place either name is spelled
+# -- and pinned down what happens around an interrupted save.  The F.* cases
+# are numbered after the sections of that contract:
+#
+#   F.2   A user's own .tmp/ and .incomplete in the destination, the names the
+#         working directory and the marker used to have, survive a save, also
+#         with tensor_save = "."; and a user's .incomplete does not stop a
+#         load.
+#   F.3.1 A save into an interrupted destination first does what the marker
+#         says.  Seen through a save that then cannot write a single file:
+#         the marker and the working directory are gone afterwards, and the
+#         interrupted save's checkpoint loads.
+#   F.3.2 When that repair fails, the save stops there: the marker and the
+#         working directory stay, no file of the interrupted save is lost or
+#         rewritten, and the save adds nothing of its own.
+#   F.4   A save that cannot write its marker moves nothing.
+#   F.5   A save that cannot confirm that every file it wrote was moved in
+#         does not call itself a success.
+#   F.6   A 1 MiB marker is refused with an error that carries only its head.
+#
+# None of these can interrupt a process, so each fails one on purpose with
+# something POSIX guarantees: rename() onto a non-empty directory
+# (ENOTEMPTY), a file-size limit (EFBIG), and a umask that takes the owner's
+# read bit away (a directory that can be written into but not listed).  The
+# limits are set in the tenes processes only, through a small wrapper,
+# because Open MPI's launcher does not start under them.
+#
+# A final review found one more way for a save to call itself a success: the
+# tensor files, which mptensor writes and TeNeS does not open itself, can be
+# cut short by a failed write without anyone noticing
+# (test-contract-shard.md). mptensor writes three files per tensor: a base
+# file <name> (process 0 only), and per process a data file
+# <name>.<process>.bin and an index file <name>.<process>.idx. The S.* cases
+# cut ONE kind of them with a file-size limit and check that the save then
+# fails the way A.5 means it: a non-zero exit, a warning naming the
+# destination, the measurement written as usual, no "Tensors saved", and a
+# destination exactly as it was, without the working directory or the marker.
+#
+# Each limit is calibrated on the same save made without one: one byte below
+# the largest file of the kind under test, and above everything else the
+# limited processes write. Two things make sure the file really is what the
+# limit cuts. The same save under a limit the file exactly fits has to
+# succeed, so the one byte between the two runs matters to files of exactly
+# that size and to nothing else. And a save under test that exits 0 anyway
+# has to show the file in the destination at the size of the limit; if it
+# does not, the case fails as "the situation was not made", not as the defect.
+#
+#   S.1 A data file that could not be written in full fails the save: once for
+#       the site tensors, once for the CTM environment.
+#   S.2 The same for an index file. An index file can only be cut alone on a
+#       process other than 0, whose data files can be empty, so this case is
+#       multi-process only; it is also S.4 for an index file.
+#   S.3 A base file cannot be cut alone, and has no case: process 0 writes
+#       it, and also writes measurement files larger than any base file,
+#       which have to come out whole.
+#   S.4 A process other than 0 that alone cannot write its data file: every
+#       process ends, and the save fails. The limit is set in that process
+#       only, found by the rank the launcher puts in its environment.
+#   S.5 S.1 for a fermionic run, which writes the CTM environment another way.
+#   S.6 A limit larger than every file changes nothing: the save succeeds and
+#       reads back.
+#
+# The limits themselves then turned out to leave something behind
+# (test-contract-shard-kmp.md). The LLVM OpenMP runtime, which tenes loads
+# through its BLAS on macOS, registers every process in
+# /tmp/__KMP_REGISTERED_LIB_<pid>: it creates the file, grows it to 1024
+# bytes and maps it. Under a file-size limit the growing fails and the empty
+# file outlives the process; a later, unrelated process that gets the same
+# pid maps it and dies of SIGBUS before main(). So the wrapper that sets a
+# limit no longer becomes the program it runs: it runs it as a child,
+# removes that child's registration file if it is empty, and then ends the
+# way the child ended. A run whose time is up is stopped with everything it
+# started, first with SIGTERM, so the wrapper cleans up on the way down too.
+#
+#   K.3 The wrapper passes on how its program ended -- exit code, signal,
+#       output -- and a run whose time is up leaves no process running.
+#   K.5 tenes run under a limit leaves no empty registration file of its own
+#       processes, and the one of a process that cannot exist is not touched.
+#       Where the runtime makes no such file (GNU libgomp does not), the case
+#       says so and is skipped.
+#
+# Run at one process by default; `--nproc N` runs the same cases at N, and
+# adds the one case that needs two process counts (a 2-process save followed
+# by a 1-process save into the same directory).  A.3 and A.5 need the
+# filesystem to enforce permission bits, and report themselves as skipped
+# when it does not (running as root, say).
+
+import os
+import re
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import time
+from os.path import join
+
+import numpy as np
+
+T = 1.0
+TAU = 0.01
+SEED = 11
+D = 2
+# A reload without evolution describes the very same state as the run that
+# saved it, so the two must agree far beyond the regression tolerance.
+RELOAD_RTOL = 1.0e-10
+RELOAD_ATOL = 1.0e-12
+# Every tenes invocation here is a handful of seconds.  The timeout is what
+# turns "some processes are still waiting in a collective" into a reported
+# failure instead of a ctest that never returns; it is the check for the
+# contract's "every process ends", so it must not be so long that ctest's own
+# TIMEOUT fires first.
+RUN_TIMEOUT = 120
+
+# Markers of a process that died rather than exited: an explained error must
+# not look like any of these.
+CRASH_MARKERS = (
+    "*** Process received signal ***",
+    "exited on signal",
+    "Signal: ",
+    "Segmentation fault",
+    "Abort trap",
+    "Assertion failed",
+    "Assertion '",
+    "terminate called",
+    "*** stack smashing",
+    "free(): ",
+)
+
+
+# ---------------------------------------------------------------- input file
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  {value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block(n_unit):
+    lines = [f"{site} 1 0" for site in range(n_unit)]
+    lines += [f"{site} 0 1" for site in range(n_unit)]
+    return "\n".join(lines)
+
+
+def evolution_blocks(gate, n_unit):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(n_unit):
+            blocks.append(
+                f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+            )
+    return "\n".join(blocks)
+
+
+def input_toml(
+    outdir,
+    lx=2,
+    ly=2,
+    dim=D,
+    num_step=0,
+    mu=0.0,
+    fermion=True,
+    save_dir=None,
+    load_dir=None,
+    chi=None,
+):
+    """A spinless-fermion (or the same model without the grading) input.
+
+    The lattice is lx by ly, so N_UNIT is lx * ly; that is the knob the
+    site-count cases turn.  num_step = 0 measures the initial (or loaded)
+    state without evolving it, which is what the reload comparisons need.
+    `chi` is 2 * dim * dim unless given; the S.* cases set it to make the
+    site tensors or the CTM environment the largest files of a checkpoint.
+    """
+    n_unit = lx * ly
+    if chi is None:
+        chi = 2 * dim * dim
+    h = two_site_hamiltonian(T, mu)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    bonds = bonds_block(n_unit)
+    fermion_flag = "true" if fermion else "false"
+    general_extra = ""
+    if save_dir is not None:
+        general_extra += f'tensor_save = "{save_dir}"\n'
+    if load_dir is not None:
+        general_extra += f'tensor_load = "{load_dir}"\n'
+    # The parity of the physical basis only exists in fermion mode.
+    parity_line = "parity = [0, 1]\n" if fermion else ""
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = {fermion_flag}
+output = "{outdir}"
+{general_extra}
+[parameter.simple_update]
+tau = {TAU}
+num_step = {num_step}
+
+[parameter.ctm]
+dimension = {chi}
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+meanfield_env = true
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [{lx}, {ly}]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{dim}, {dim}, {dim}, {dim}]
+{parity_line}initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = false
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{evolution_blocks(gate, n_unit)}
+"""
+
+
+# ------------------------------------------------------------------- running
+
+MPIEXEC = "@MPIEXEC@"
+TENES = join("@CMAKE_BINARY_DIR@", "src", "tenes")
+ROOT = None  # set in main()
+
+
+class Run:
+    """The outcome of one tenes invocation.
+
+    `timed_out` is its own outcome rather than an exception, because "some
+    processes never returned" is exactly one of the failures under test.
+    """
+
+    def __init__(self, proc, timed_out, cmd):
+        self.cmd = cmd
+        self.timed_out = timed_out
+        self.returncode = None if timed_out else proc.returncode
+        self.stdout = "" if timed_out else proc.stdout
+        self.stderr = "" if timed_out else proc.stderr
+
+    @property
+    def output(self):
+        return self.stdout + self.stderr
+
+    def crashed(self):
+        return [m for m in CRASH_MARKERS if m in self.output]
+
+
+#! A program that sets one limit on its own process and then runs the rest of
+#! its command line under it: `python -c LIMIT_WRAPPER <kind> <value>
+#! <program...>`. The limit, the umask and an ignored signal are inherited by
+#! the program and survive its exec, exactly as when the wrapper used to
+#! become the program; the program gets the same file descriptors and
+#! environment too.
+#!
+#! The limit has to reach the tenes processes and ONLY them. Set in the
+#! launcher (preexec_fn of mpiexec), a file-size limit of 0 stops Open MPI
+#! before any process starts ("The PMIx server's listener thread failed to
+#! start", exit code 213), which would fail every such run for a reason that
+#! has nothing to do with the save.
+#!
+#! `fsize_on_rank` takes "<rank>:<bytes>" and sets the file-size limit only in
+#! the process of that rank, which it reads from the environment the launcher
+#! gives every process (Open MPI, PMIx, MPICH); the other processes run
+#! without a limit. With no rank there it stops, rather than guess.
+#!
+#! The wrapper does not become the program (test-contract-shard-kmp.md; the
+#! K.* paragraph at the top). It starts it as a child, passes on the signals
+#! a launcher or a timeout sends, waits until the child has ended but keeps
+#! it unreaped -- so that no other process can have its pid yet -- removes
+#! the child's OpenMP registration file if it is empty and this user's, and
+#! then ends the way the child ended: with its exit code, or killed by its
+#! signal. Where the child cannot be kept unreaped (os.waitid, or kqueue on a
+#! Python without it), the file is removed just after reaping.
+LIMIT_WRAPPER = (
+    "import os, resource, select, signal, stat, sys\n"
+    "kind, value = sys.argv[1], sys.argv[2]\n"
+    "if kind == 'fsize_on_rank':\n"
+    "    rank, value = value.split(':')\n"
+    "    here = [os.environ[name] for name in\n"
+    "            ('OMPI_COMM_WORLD_RANK', 'PMIX_RANK', 'PMI_RANK')\n"
+    "            if name in os.environ]\n"
+    "    if not here:\n"
+    "        sys.exit('fsize_on_rank: the launcher gave this process no rank')\n"
+    "    kind = 'fsize' if int(here[0]) == int(rank) else 'none'\n"
+    "if kind == 'fsize':\n"
+    "    value = int(value, 0)\n"
+    "    resource.setrlimit(resource.RLIMIT_FSIZE, (value, value))\n"
+    "    signal.signal(signal.SIGXFSZ, signal.SIG_IGN)\n"
+    "elif kind == 'umask':\n"
+    "    os.umask(int(value, 0))\n"
+    "elif kind != 'none':\n"
+    "    sys.exit('unknown limit: ' + kind)\n"
+    "PASSED_ON = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT,\n"
+    "             signal.SIGUSR1, signal.SIGUSR2)\n"
+    "mask = signal.pthread_sigmask(signal.SIG_BLOCK, PASSED_ON)\n"
+    "child = os.fork()\n"
+    "if child == 0:\n"
+    "    try:\n"
+    "        signal.pthread_sigmask(signal.SIG_SETMASK, mask)\n"
+    "        os.execv(sys.argv[3], sys.argv[3:])\n"
+    "    except BaseException as err:\n"
+    "        os.write(2, ('cannot run %s: %s\\n' % (sys.argv[3], err)).encode())\n"
+    "    os._exit(127)\n"
+    "def pass_on(signum, _frame):\n"
+    "    try:\n"
+    "        os.kill(child, signum)\n"
+    "    except OSError:\n"
+    "        pass\n"
+    "for signum in PASSED_ON:\n"
+    "    signal.signal(signum, pass_on)\n"
+    "signal.pthread_sigmask(signal.SIG_SETMASK, mask)\n"
+    "def ended_unreaped():\n"
+    "    if hasattr(os, 'waitid') and hasattr(os, 'WNOWAIT'):\n"
+    "        os.waitid(os.P_PID, child, os.WEXITED | os.WNOWAIT)\n"
+    "        return True\n"
+    "    if not hasattr(select, 'kqueue'):\n"
+    "        return False\n"
+    "    queue = select.kqueue()\n"
+    "    try:\n"
+    "        queue.control([select.kevent(\n"
+    "            child, select.KQ_FILTER_PROC,\n"
+    "            select.KQ_EV_ADD | select.KQ_EV_ONESHOT, select.KQ_NOTE_EXIT)], 0)\n"
+    "    except OSError:\n"
+    "        return True\n"
+    "    queue.control(None, 1)\n"
+    "    return True\n"
+    "def forget_registration():\n"
+    "    uid = os.getuid()\n"
+    "    for name in ('__KMP_REGISTERED_LIB_%d' % child,\n"
+    "                 '__KMP_REGISTERED_LIB_%d_%d' % (child, uid)):\n"
+    "        path = os.path.join('/tmp', name)\n"
+    "        try:\n"
+    "            info = os.lstat(path)\n"
+    "            if (stat.S_ISREG(info.st_mode) and info.st_size == 0\n"
+    "                    and info.st_uid == uid):\n"
+    "                os.unlink(path)\n"
+    "        except OSError:\n"
+    "            pass\n"
+    "unreaped = ended_unreaped()\n"
+    "if unreaped:\n"
+    "    forget_registration()\n"
+    "status = os.waitpid(child, 0)[1]\n"
+    "if not unreaped:\n"
+    "    forget_registration()\n"
+    "if os.WIFSIGNALED(status):\n"
+    "    signum = os.WTERMSIG(status)\n"
+    "    core = resource.getrlimit(resource.RLIMIT_CORE)[1]\n"
+    "    resource.setrlimit(resource.RLIMIT_CORE, (0, core))\n"
+    "    try:\n"
+    "        signal.signal(signum, signal.SIG_DFL)\n"
+    "    except (OSError, ValueError):\n"
+    "        pass\n"
+    "    signal.pthread_sigmask(signal.SIG_UNBLOCK, [signum])\n"
+    "    os.kill(os.getpid(), signum)\n"
+    "    os._exit(128 + signum)\n"
+    "os._exit(os.WEXITSTATUS(status))\n"
+)
+#! No file can grow past 0 bytes: every write fails with EFBIG, while reading
+#! and rename() are unaffected.
+NO_WRITES = ("fsize", 0)
+#! Directories created by the process lose the owner's read bit: files can be
+#! written into them and renamed out of them by name, but they cannot be
+#! listed.
+UNLISTABLE_DIRECTORIES = ("umask", 0o400)
+
+
+def limited(limit):
+    """The wrapper command line for `limit`, a (kind, value) pair."""
+    if limit is None:
+        return []
+    kind, value = limit
+    return [sys.executable, "-c", LIMIT_WRAPPER, kind, str(value)]
+
+
+def launcher(nproc):
+    """The start of a command line that runs `nproc` processes."""
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append(str(nproc))
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    elif nproc != 1:
+        raise RuntimeError("this build has no MPI launcher; --nproc must be 1")
+    return cmd
+
+
+#! How long a command whose time is up has to end after SIGTERM before it is
+#! sent SIGKILL. SIGTERM comes first so that LIMIT_WRAPPER can still clean up
+#! after its program.
+STOP_GRACE = 10
+
+
+def stop_session(proc, grace=STOP_GRACE):
+    """End `proc` and every process in its session's process group: SIGTERM,
+    and SIGKILL if they are not gone within `grace` seconds (at once when
+    `grace` is 0).
+
+    The group reaches the limit wrapper's child, which a signal to `proc`
+    alone would leave running. Open MPI puts each process it starts in a
+    group of its own, so those are not reached this way; the launcher ends
+    them itself on SIGTERM, and they end on their own when it is killed.
+    """
+    signals = (signal.SIGTERM, signal.SIGKILL) if grace else (signal.SIGKILL,)
+    for signum in signals:
+        try:
+            os.killpg(proc.pid, signum)
+        except (ProcessLookupError, PermissionError):
+            pass
+        try:
+            proc.communicate(timeout=grace if signum == signal.SIGTERM else None)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def run_command(cmd, cwd=None, timeout=RUN_TIMEOUT):
+    """subprocess.run(cmd, capture_output=True, text=True, timeout=timeout),
+    except that a command whose time is up is stopped with every process it
+    started (stop_session) before TimeoutExpired is raised."""
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=cwd,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        stop_session(proc)
+        raise
+    except BaseException:
+        stop_session(proc, grace=0)
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+
+
+def run_program(cmd, cwd=None):
+    """run_command() as a Run, in which running out of time is an outcome."""
+    try:
+        return Run(run_command(cmd, cwd=cwd), False, cmd)
+    except subprocess.TimeoutExpired:
+        return Run(None, True, cmd)
+
+
+def tenes_command(inputfile, nproc=1, quiet=False, limit=None, through=()):
+    """The command line run_tenes() runs. `through` is a program put between
+    the limit and tenes, which has to become tenes (exec) in the end."""
+    cmd = launcher(nproc)
+    cmd.extend(limited(limit))
+    cmd.extend(through)
+    cmd.append(TENES)
+    if quiet:
+        cmd.append("-q")
+    cmd.append(inputfile)
+    return cmd
+
+
+def run_tenes(inputfile, nproc=1, quiet=False, cwd=None, limit=None):
+    """Run tenes on `inputfile`.
+
+    `cwd` runs it in another directory. Only the cases whose destination is
+    "." need that, and they need it badly: a destination of "." means the
+    working directory, and the whole point of those cases is what happens to
+    that directory's contents. It must never be the one this suite itself is
+    run from.
+
+    `limit` runs every tenes process under one of the limits above.
+    """
+    return run_program(tenes_command(inputfile, nproc, quiet, limit), cwd=cwd)
+
+
+def write_input(name, **kwargs):
+    path = join(ROOT, name + ".toml")
+    with open(path, "w") as f:
+        f.write(input_toml(join(ROOT, "out_" + name), **kwargs))
+    return path
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[name.strip()] = float(raw.split()[0])
+    return values
+
+
+def dir_entries(path):
+    """Every file under `path`, as paths relative to it."""
+    found = []
+    for dirpath, _dirnames, filenames in os.walk(path):
+        for name in filenames:
+            found.append(os.path.relpath(join(dirpath, name), path))
+    return sorted(found)
+
+
+def force_rmtree(path):
+    """rmtree that survives the directories the permission cases lock."""
+
+    def unlock(func, target, _exc):
+        try:
+            os.chmod(os.path.dirname(target), 0o755)
+            os.chmod(target, 0o755)
+        except OSError:
+            pass
+        func(target)
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=unlock)
+    else:
+        shutil.rmtree(path, onerror=unlock)
+
+
+def unlock_tree(path):
+    """Give the owner back read, write and search on everything under `path`.
+
+    For what a run under UNLISTABLE_DIRECTORIES leaves: a directory has to be
+    unlocked before it can be listed, so this goes top-down by hand rather
+    than through os.walk, which skips what it cannot list.
+    """
+    if os.path.islink(path) or not os.path.exists(path):
+        return
+    mode = os.stat(path).st_mode
+    if stat.S_ISDIR(mode):
+        os.chmod(path, (mode & 0o7777) | 0o700)
+        for name in os.listdir(path):
+            unlock_tree(join(path, name))
+    else:
+        os.chmod(path, (mode & 0o7777) | 0o600)
+
+
+def file_contents(directory, leave_out=()):
+    """{path relative to `directory`: bytes} for every file under it, except
+    under the top-level entries named in `leave_out`."""
+    found = {}
+    for dirpath, dirnames, filenames in os.walk(directory):
+        if dirpath == directory:
+            dirnames[:] = [name for name in dirnames if name not in leave_out]
+            filenames = [name for name in filenames if name not in leave_out]
+        for name in filenames:
+            path = join(dirpath, name)
+            with open(path, "rb") as f:
+                found[os.path.relpath(path, directory)] = f.read()
+    return found
+
+
+def changed_entries(before, after):
+    """The paths whose contents differ between two file_contents() results,
+    including those present in only one of them."""
+    return sorted(
+        name for name in set(before) | set(after) if before.get(name) != after.get(name)
+    )
+
+
+def describe_changes(before, after):
+    """What differs between two file_contents() results, what is gone first:
+    that part is the data lost."""
+    gone = sorted(set(before) - set(after))
+    rewritten = sorted(
+        name for name in set(before) & set(after) if before[name] != after[name]
+    )
+    added = sorted(set(after) - set(before))
+    return "; ".join(
+        f"{word} {abbreviate(names, 6)}"
+        for word, names in (("gone", gone), ("rewritten", rewritten), ("added", added))
+        if names
+    )
+
+
+class locked_mode:
+    """Set a path's permission bits for the body and put them back after.
+
+    The permission cases have to leave the tree deletable however they end,
+    including when a check raises.
+    """
+
+    def __init__(self, path, mode):
+        self.path = path
+        self.mode = mode
+        self.previous = None
+
+    def __enter__(self):
+        self.previous = os.stat(self.path).st_mode & 0o7777
+        os.chmod(self.path, self.mode)
+        return self
+
+    def __exit__(self, *_exc):
+        os.chmod(self.path, self.previous)
+        return False
+
+
+def permission_skip_reason(directory):
+    """Why the permission cases cannot run here, or None when they can.
+
+    Running as root, or on a filesystem that does not enforce the mode bits,
+    makes "this cannot be read" impossible to arrange; the cases then prove
+    nothing and say so rather than passing quietly.
+    """
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        return "running as root: permission bits are not enforced"
+    probe = join(directory, "permission_probe")
+    os.makedirs(probe, exist_ok=True)
+    with open(join(probe, "inside.txt"), "w") as f:
+        f.write("x\n")
+    try:
+        with locked_mode(probe, 0):
+            try:
+                with open(join(probe, "inside.txt")) as f:
+                    f.read()
+            except OSError:
+                return None
+        return "this filesystem does not enforce directory permissions"
+    finally:
+        force_rmtree(probe)
+
+
+#! What limit_skip_reason() runs under each limit. It exits 0 when the limit
+#! bit, and 1 when the operation the limit is meant to stop went through.
+LIMIT_PROBES = {
+    "fsize": (
+        "import sys\n"
+        "try:\n"
+        "    with open(sys.argv[1] + '/written', 'wb') as f:\n"
+        "        f.write(b'x' * (int(sys.argv[2]) + 4096))\n"
+        "except OSError:\n"
+        "    sys.exit(0)\n"
+        "sys.exit(1)\n"
+    ),
+    "umask": (
+        "import os, sys\n"
+        "inner = sys.argv[1] + '/made_here'\n"
+        "os.mkdir(inner)\n"
+        "open(inner + '/inside', 'w').close()\n"
+        "try:\n"
+        "    os.listdir(inner)\n"
+        "except OSError:\n"
+        "    sys.exit(0)\n"
+        "sys.exit(1)\n"
+    ),
+}
+
+
+def limit_skip_reason(limit):
+    """Why `limit` cannot be relied on here, or None when it can.
+
+    Tried on a throw-away Python process under the very wrapper tenes runs
+    under, so that a platform which does not enforce the limit (or a run as
+    root, which reads any directory) shows up as a skip, not as a failure
+    blamed on the save.
+    """
+    kind, value = limit
+    probe = join(ROOT, f"limit_probe_{kind}")
+    if os.path.exists(probe):
+        unlock_tree(probe)
+        force_rmtree(probe)
+    os.makedirs(probe)
+    cmd = limited(limit) + [
+        sys.executable, "-c", LIMIT_PROBES[kind], probe, str(value)
+    ]
+    try:
+        proc = run_command(cmd)
+    finally:
+        unlock_tree(probe)
+        force_rmtree(probe)
+    if proc.returncode == 0:
+        return None
+    return (
+        f"the limit {kind} = {value} is not enforced here (the probe exited "
+        f"with {proc.returncode}: {proc.stderr.strip()[-200:]!r})"
+    )
+
+
+# ------------------------------------------------------------- check helpers
+
+
+NOISE = (
+    # The numbered frames of an MPI backtrace, and the rules around the
+    # launcher's own complaint: pages of them bury the message that matters.
+    re.compile(r"^\[[^\]]+\] \[\s*\d+\]"),
+    re.compile(r"^-{10,}$"),
+)
+
+
+def abbreviate(names, limit=10):
+    if len(names) <= limit:
+        return str(names)
+    return f"{names[:limit]} ... ({len(names)} entries)"
+
+
+def report(failures, run, tag):
+    """Record a failure.  The command and its output are appended once per
+    invocation, however many checks of that one run fail."""
+    failures.append(tag)
+    if getattr(run, "reported", False):
+        return
+    run.reported = True
+    # The limit wrapper and the pid shim are whole programs; their names say
+    # enough.
+    names = {LIMIT_WRAPPER: "<LIMIT_WRAPPER>", PID_SHIM: "<PID_SHIM>"}
+    shown = [names.get(part, part) for part in run.cmd]
+    failures.append(f"    command: {' '.join(shown)}")
+    lines = [
+        line
+        for line in run.output.strip().splitlines()
+        if line.strip() and not any(p.match(line) for p in NOISE)
+    ]
+    for line in lines[-15:]:
+        failures.append(f"      | {line}")
+
+
+def expect_success(failures, run, tag):
+    if run.timed_out:
+        report(failures, run, f"{tag}: did not finish within {RUN_TIMEOUT} s")
+        return False
+    if run.returncode != 0:
+        report(failures, run, f"{tag}: exit code {run.returncode}, expected 0")
+        return False
+    return True
+
+
+MARKER_LINE = re.compile(r"^\[[A-Z][A-Z ]*\]$")
+
+
+def error_block(run):
+    """The part of stderr that belongs to the error report.
+
+    main2() prints the marker line ("[TENSOR LOAD ERROR]", "[ERROR]", ...) and
+    then the message, both on stderr; anything before the first marker is a
+    warning from the run proper.  Narrowing to the block keeps the numeric
+    checks below from matching a chi or a bond dimension printed elsewhere.
+    """
+    lines = run.stderr.splitlines()
+    for i, line in enumerate(lines):
+        if MARKER_LINE.match(line):
+            return "\n".join(lines[i:])
+    return ""
+
+
+def expect_explained_error(failures, run, tag, must_mention):
+    """A refusal the user can act on: a controlled non-zero exit whose error
+    block mentions everything in `must_mention`.
+
+    `must_mention` entries are either plain strings (substring) or compiled
+    regular expressions.
+    """
+    if run.timed_out:
+        report(
+            failures,
+            run,
+            f"{tag}: did not finish within {RUN_TIMEOUT} s -- some processes "
+            "were left waiting in a collective",
+        )
+        return False
+    ok = True
+    if run.returncode == 0:
+        report(failures, run, f"{tag}: exit code 0, expected a refusal")
+        return False
+    markers = run.crashed()
+    if markers:
+        report(
+            failures,
+            run,
+            f"{tag}: the process died instead of reporting an error "
+            f"(saw {markers!r})",
+        )
+        ok = False
+    if run.returncode is not None and run.returncode < 0:
+        report(
+            failures, run, f"{tag}: killed by signal {-run.returncode}"
+        )
+        ok = False
+    block = error_block(run)
+    if "ERROR" not in block:
+        report(failures, run, f"{tag}: stderr carries no ERROR report")
+        ok = False
+    for needle in must_mention:
+        if hasattr(needle, "search"):
+            found = needle.search(block) is not None
+            what = f"/{needle.pattern}/"
+        else:
+            found = needle in block
+            what = repr(needle)
+        if not found:
+            report(failures, run, f"{tag}: the error report does not mention {what}")
+            ok = False
+    return ok
+
+
+def number_re(value):
+    """`value` as a standalone number, so 4 does not match 14 or 0.4."""
+    return re.compile(r"(?<![0-9.])" + str(value) + r"(?![0-9.])")
+
+
+def compare_density(failures, tag, values, ref_values):
+    if set(values) != set(ref_values):
+        failures.append(
+            f"{tag}: density.dat has different observables than the reference\n"
+            f"      result:    {sorted(values)}\n"
+            f"      reference: {sorted(ref_values)}"
+        )
+        return False
+    ok = True
+    for key in sorted(ref_values):
+        if not np.isclose(
+            values[key], ref_values[key], rtol=RELOAD_RTOL, atol=RELOAD_ATOL
+        ):
+            failures.append(
+                f"{tag}: {key} = {values[key]!r}, reference {ref_values[key]!r}"
+            )
+            ok = False
+    return ok
+
+
+# --------------------------------------------------- 1. the site-count guard
+
+
+def case_site_count(nproc):
+    """A checkpoint made with a different number of sites is refused, with
+    both counts in the message, whatever the number of processes."""
+    failures = []
+    # No digit in either name: the error report quotes the checkpoint path,
+    # and a directory called sc_save4 would satisfy the search for a "4" all
+    # by itself, whatever the message actually said about the site counts.
+    small = join(ROOT, "sc_save_small")
+    large = join(ROOT, "sc_save_large")
+
+    run = run_tenes(
+        write_input("sc_make_small", lx=2, ly=2, fermion=False, save_dir=small), nproc
+    )
+    if not expect_success(failures, run, "site count: saving the small checkpoint"):
+        return failures
+    run = run_tenes(
+        write_input("sc_make_large", lx=4, ly=2, fermion=False, save_dir=large), nproc
+    )
+    if not expect_success(failures, run, "site count: saving the large checkpoint"):
+        return failures
+
+    # The checkpoint has MORE sites than the input asks for.
+    run = run_tenes(
+        write_input("sc_load_more", lx=2, ly=2, fermion=False, load_dir=large), nproc
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "site count: an 8-site checkpoint read by a 4-site run",
+        [number_re(4), number_re(8)],
+    )
+
+    # The checkpoint has FEWER sites.  This is the path that used to read
+    # past the end of params.dat instead of comparing the two counts.
+    run = run_tenes(
+        write_input("sc_load_fewer", lx=4, ly=2, fermion=False, load_dir=small), nproc
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "site count: a 4-site checkpoint read by an 8-site run",
+        [number_re(4), number_re(8)],
+    )
+    return failures
+
+
+def case_broken_header(nproc):
+    """A header that cannot be read is refused with an explanation, not with
+    undefined behaviour."""
+    failures = []
+    good = join(ROOT, "bh_save")
+    run = run_tenes(
+        write_input("bh_make", lx=2, ly=2, fermion=False, save_dir=good), nproc
+    )
+    if not expect_success(failures, run, "broken header: saving the checkpoint"):
+        return failures
+
+    def damaged(name, transform):
+        target = join(ROOT, name)
+        if os.path.exists(target):
+            shutil.rmtree(target)
+        shutil.copytree(good, target)
+        params = join(target, "params.dat")
+        with open(params) as f:
+            lines = f.readlines()
+        with open(params, "w") as f:
+            f.writelines(transform(lines))
+        return target
+
+    # The version line is not a number.
+    unreadable = damaged(
+        "bh_unreadable", lambda lines: ["banana # Format_Version\n"] + lines[1:]
+    )
+    run = run_tenes(
+        write_input("bh_load_unreadable", lx=2, ly=2, fermion=False, load_dir=unreadable),
+        nproc,
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "broken header: a version line that is not a number",
+        ["params.dat"],
+    )
+
+    # The header stops after the version line.
+    truncated = damaged("bh_truncated", lambda lines: lines[:1])
+    run = run_tenes(
+        write_input("bh_load_truncated", lx=2, ly=2, fermion=False, load_dir=truncated),
+        nproc,
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "broken header: a header that ends after the version line",
+        ["params.dat"],
+    )
+
+    # An empty header file.
+    empty = damaged("bh_empty", lambda lines: [])
+    run = run_tenes(
+        write_input("bh_load_empty", lx=2, ly=2, fermion=False, load_dir=empty), nproc
+    )
+    expect_explained_error(
+        failures, run, "broken header: an empty params.dat", ["params.dat"]
+    )
+    return failures
+
+
+# ------------------------------------------------- 2. re-using the directory
+
+
+def case_reuse_fermion_then_boson(nproc):
+    """A bosonic save into a directory that held a fermionic checkpoint has
+    to leave a directory a bosonic run can read.
+
+    fermion.dat is one of the checkpoint's own file names, and a bosonic save
+    does not write it, so the deletion rule (answers section 2) removes it.
+    That is the save side. The load side -- a version-2 bosonic checkpoint is
+    read as bosonic even when a ledger is lying beside it, because the kind
+    comes from params.dat -- is a different statement and has a case of its
+    own, which puts the ledger there by hand.
+    """
+    failures = []
+    shared = join(ROOT, "reuse_fb")
+    run = run_tenes(
+        write_input("rfb_fermion", lx=2, ly=2, fermion=True, save_dir=shared), nproc
+    )
+    if not expect_success(failures, run, "reuse: the fermionic save"):
+        return failures
+    if not os.path.exists(join(shared, "fermion.dat")):
+        failures.append(
+            "reuse: the fermionic save wrote no fermion.dat, so the case that "
+            "follows would prove nothing"
+        )
+        return failures
+
+    run = run_tenes(
+        write_input("rfb_boson", lx=2, ly=2, fermion=False, save_dir=shared), nproc
+    )
+    if not expect_success(failures, run, "reuse: the bosonic save over it"):
+        return failures
+    if os.path.exists(join(shared, "fermion.dat")):
+        failures.append(
+            "reuse: fermion.dat of the previous fermionic run survived the "
+            "bosonic save, but a bosonic save does not write it, so the "
+            "deletion rule says it goes"
+        )
+
+    run = run_tenes(
+        write_input("rfb_reload", lx=2, ly=2, fermion=False, load_dir=shared), nproc
+    )
+    expect_success(failures, run, "reuse: the bosonic restart from the re-used dir")
+    return failures
+
+
+def case_reuse_fewer_sites(nproc):
+    """A save of N sites into a directory that held M > N leaves no tensor
+    file of the sites this run does not have."""
+    failures = []
+    shared = join(ROOT, "reuse_sites")
+    run = run_tenes(
+        write_input("rs_eight", lx=4, ly=2, fermion=False, save_dir=shared), nproc
+    )
+    if not expect_success(failures, run, "reuse: the 8-site save"):
+        return failures
+    run = run_tenes(
+        write_input("rs_four", lx=2, ly=2, fermion=False, save_dir=shared), nproc
+    )
+    if not expect_success(failures, run, "reuse: the 4-site save over it"):
+        return failures
+
+    stale = [
+        name
+        for name in dir_entries(shared)
+        if re.match(r"^[A-Za-z0-9]+_[4-7](\.dat|\.dat\.)", name)
+    ]
+    if stale:
+        failures.append(
+            "reuse: tensor files of sites 4..7 survived a save of a 4-site "
+            f"run: {abbreviate(stale)}"
+        )
+
+    run = run_tenes(
+        write_input("rs_reload", lx=2, ly=2, fermion=False, load_dir=shared), nproc
+    )
+    expect_success(failures, run, "reuse: the 4-site restart from the re-used dir")
+    return failures
+
+
+def case_destination_not_replaced(nproc):
+    """The destination directory is never replaced, so whatever else is in it
+    survives.
+
+    Redesign section 1. The save used to swap the whole directory into place,
+    which is what made a badly chosen destination destroy data. It now writes
+    inside the destination and moves the files in one at a time, so anything
+    else there stays.
+    """
+    failures = []
+    fresh = join(ROOT, "keep_fresh")
+    dirty = join(ROOT, "keep_dirty")
+
+    # The reference: the same save into a directory that did not exist, so
+    # that "the checkpoint is complete" can be judged by comparison.
+    run = run_tenes(
+        write_input("keep_fresh", lx=2, ly=2, fermion=False, save_dir=fresh), nproc
+    )
+    if not expect_success(failures, run, "keeps its contents: the reference save"):
+        return failures
+    want = set(dir_entries(fresh))
+
+    # The destination under test: a checkpoint of another shape and another
+    # mode, plus files no run would ever write, including one in a
+    # subdirectory of its own.
+    run = run_tenes(
+        write_input("keep_before", lx=4, ly=2, fermion=True, save_dir=dirty), nproc
+    )
+    if not expect_success(failures, run, "keeps its contents: the earlier save"):
+        return failures
+    # Files that do NOT match the checkpoint's naming, so the deletion rule
+    # (answers section 2) must leave them alone. Two of them are near misses
+    # on purpose: an over-eager sweep would take them.
+    bystanders = {
+        "a_note_from_the_user.txt": "not written by any tenes run\n",
+        join("notes", "deeper.txt"): "in a subdirectory of the destination\n",
+        "T_99.dat.backup": "a copy someone made by hand\n",
+        "my_lambda_0.dat": "not lambda_0.dat\n",
+    }
+    os.makedirs(join(dirty, "notes"), exist_ok=True)
+    for name, text in bystanders.items():
+        with open(join(dirty, name), "w") as f:
+            f.write(text)
+    # Files that DO match the naming and that this run does not write, so the
+    # same rule says they go. Without these the case would pass for an
+    # implementation that never removes anything.
+    decoys = ["T_99.dat", "lambda_77.dat", "C1_42.dat.0003.bin"]
+    for name in decoys:
+        with open(join(dirty, name), "w") as f:
+            f.write("stale checkpoint file of a run that is gone\n")
+
+    run = run_tenes(
+        write_input("keep_after", lx=2, ly=2, fermion=False, save_dir=dirty), nproc
+    )
+    if not expect_success(failures, run, "keeps its contents: the save under test"):
+        return failures
+
+    got = set(dir_entries(dirty))
+    # (a) The bystanders are still there, with their contents.
+    for name, text in bystanders.items():
+        path = join(dirty, name)
+        if not os.path.exists(path):
+            failures.append(
+                f"keeps its contents: the save destroyed the unrelated {path}"
+            )
+        else:
+            with open(path) as f:
+                if f.read() != text:
+                    failures.append(
+                        f"keeps its contents: the save rewrote the unrelated {path}"
+                    )
+    # (a2) The stale checkpoint files this run does not write are gone.
+    survivors = [name for name in decoys if os.path.exists(join(dirty, name))]
+    if survivors:
+        failures.append(
+            "keeps its contents: stale checkpoint files this run does not "
+            f"write survived: {survivors}"
+        )
+    # (b) The checkpoint this run wrote is complete.
+    missing = sorted(want - got)
+    if missing:
+        failures.append(
+            "keeps its contents: the checkpoint this run wrote is incomplete; "
+            f"missing {abbreviate(missing)}"
+        )
+    # (c) The checkpoint is readable, which is what "complete" has to mean.
+    run = run_tenes(
+        write_input("keep_reload", lx=2, ly=2, fermion=False, load_dir=dirty), nproc
+    )
+    expect_success(failures, run, "keeps its contents: reading the checkpoint back")
+    return failures
+
+
+def save_dir_lines(run, save_dir):
+    """Everything the run said on stdout about `save_dir`.
+
+    Matched on the basename rather than the whole path, so that a notice
+    which names the directory the way the user wrote it -- or only its last
+    component -- still counts.  The basenames below are unique in this
+    suite, so nothing else can match by accident.
+    """
+    name = os.path.basename(save_dir)
+    return [line for line in run.stdout.splitlines() if name in line]
+
+
+def case_existing_dir_notice(nproc):
+    """Saving into a directory that is already there is said out loud, in
+    both modes, and only when information-level output is on.
+
+    The criterion does not depend on how the notice is worded: the same
+    input is run twice into the same destination, so everything the two runs
+    print about that destination is the same except what the second one has
+    to say about finding it already there.
+    """
+    failures = []
+    for fermion in (False, True):
+        label = "fermion" if fermion else "boson"
+        save = join(ROOT, f"ckptnotice{label}")
+        path = write_input(
+            f"notice_{label}", lx=2, ly=2, fermion=fermion, save_dir=save
+        )
+
+        first = run_tenes(path, nproc)
+        if not expect_success(failures, first, f"notice ({label}): the first run"):
+            continue
+        second = run_tenes(path, nproc)
+        if not expect_success(failures, second, f"notice ({label}): the second run"):
+            continue
+        quiet = run_tenes(path, nproc, quiet=True)
+        if not expect_success(failures, quiet, f"notice ({label}): the quiet run"):
+            continue
+
+        new_lines = [
+            line
+            for line in save_dir_lines(second, save)
+            if line not in save_dir_lines(first, save)
+        ]
+        if not new_lines:
+            failures.append(
+                f"notice ({label}): the second run into {save} printed nothing "
+                "the first run did not, i.e. it did not say the directory was "
+                "already there\n"
+                f"      first run said:  {save_dir_lines(first, save)}\n"
+                f"      second run said: {save_dir_lines(second, save)}"
+            )
+        quiet_lines = save_dir_lines(quiet, save)
+        if quiet_lines:
+            failures.append(
+                f"notice ({label}): --quiet still printed about {save}: "
+                f"{quiet_lines}"
+            )
+    return failures
+
+
+# ------------------------------ 3. the working directory, and the marker
+
+
+#! Where the save builds the checkpoint before moving it in: inside the
+#! destination, not beside it. Redesign section 2; renamed by review 4,
+#! section 1, because the old name was one users give their own directories.
+#! This is the only place the name is spelled.
+WORK_DIR_NAME = ".tenes-save-tmp"
+#! Present only while a save is moving files in. Redesign section 3; renamed
+#! by review 4, section 1. This is the only place the name is spelled.
+INCOMPLETE_NAME = ".tenes-save-incomplete"
+
+
+def check_marker_has_its_work_dir(failures, destination, tag):
+    """Review 4, section 3: however a save ends, it does not leave the marker
+    without the working directory the marker sends the user to."""
+    marker = join(destination, INCOMPLETE_NAME)
+    work = join(destination, WORK_DIR_NAME)
+    if os.path.lexists(marker) and not os.path.isdir(work):
+        failures.append(
+            f"{tag}: {marker} is there but {work} is not, so the marker tells "
+            "whoever follows it to move in files that no longer exist"
+        )
+        return False
+    return True
+
+
+def case_parent_untouched(nproc):
+    """A save changes nothing outside the destination, and leaves no working
+    directory inside it.
+
+    Redesign sections 1 and 2. The working directory used to be a sibling of
+    the destination; it is now inside it (WORK_DIR_NAME), so the parent has
+    no business changing at all.
+    """
+    failures = []
+    parent = join(ROOT, "untouched_parent")
+    os.makedirs(parent, exist_ok=True)
+    save = join(parent, "checkpoint")
+    marker = "a_file_that_was_here_before.txt"
+    with open(join(parent, marker), "w") as f:
+        f.write("untouched\n")
+    before = sorted(os.listdir(parent))
+
+    run = run_tenes(
+        write_input("untouched_first", lx=2, ly=2, fermion=True, save_dir=save), nproc
+    )
+    if not expect_success(failures, run, "parent untouched: the first save"):
+        return failures
+    # A second save, so the working directory is exercised on a destination
+    # that already holds a checkpoint as well as on a new one.
+    run = run_tenes(
+        write_input("untouched_second", lx=2, ly=2, fermion=True, save_dir=save), nproc
+    )
+    if not expect_success(failures, run, "parent untouched: the second save"):
+        return failures
+
+    after = sorted(os.listdir(parent))
+    added = sorted(set(after) - set(before))
+    if added != ["checkpoint"]:
+        failures.append(
+            "parent untouched: the save changed the parent directory beyond "
+            f"the destination itself; added {added}, expected ['checkpoint']"
+        )
+    removed = sorted(set(before) - set(after))
+    if removed:
+        failures.append(
+            f"parent untouched: the save removed {removed} from the parent"
+        )
+    work = join(save, WORK_DIR_NAME)
+    if os.path.exists(work):
+        failures.append(
+            f"parent untouched: the working directory {work} survived the save"
+        )
+    incomplete = join(save, INCOMPLETE_NAME)
+    if os.path.exists(incomplete):
+        failures.append(
+            f"parent untouched: {incomplete} survived a save that succeeded"
+        )
+    return failures
+
+
+def case_readonly_parent_is_fine(nproc):
+    """The parent of the destination need not be writable.
+
+    Redesign section 1. Writing beside the destination needed the parent
+    writable, which was a regression against saving in place; writing inside
+    it does not.
+    """
+    failures = []
+    skips = []
+    reason = permission_skip_reason(ROOT)
+    if reason is not None:
+        skips.append(f"read-only parent: {reason}")
+        return failures, skips
+
+    parent = join(ROOT, "ro_parent")
+    save = join(parent, "checkpoint")
+    if os.path.exists(parent):
+        force_rmtree(parent)
+    os.makedirs(save)
+    inputfile = write_input(
+        "ro_parent", lx=2, ly=2, fermion=True, num_step=10, save_dir=save
+    )
+
+    with locked_mode(parent, 0o555):
+        run = run_tenes(inputfile, nproc)
+    if not expect_success(
+        failures, run, "read-only parent: saving with a parent that cannot be written"
+    ):
+        return failures, skips
+    written = dir_entries(save)
+    if not written:
+        failures.append(
+            f"read-only parent: nothing was written into {save}"
+        )
+    run = run_tenes(
+        write_input("ro_parent_reload", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    expect_success(failures, run, "read-only parent: reading the checkpoint back")
+    return failures, skips
+
+
+def case_stale_working_dir_removed(nproc):
+    """A working directory left inside the destination by an interrupted save
+    is cleaned up by the next one -- and nothing else in there is.
+
+    Redesign section 2.
+    """
+    failures = []
+    save = join(ROOT, "stale_dest")
+
+    run = run_tenes(
+        write_input("stale_first", lx=2, ly=2, fermion=True, save_dir=save), nproc
+    )
+    if not expect_success(failures, run, "stale: the first save"):
+        return failures
+
+    work = join(save, WORK_DIR_NAME)
+    os.makedirs(work, exist_ok=True)
+    with open(join(work, "half_written.dat"), "w") as f:
+        f.write("half\n")
+    # Neighbours inside the destination that are NOT the working directory.
+    # A cleanup that took these would be taking the user's data, so they are
+    # the mutation guard of this case. The directory is a near miss on the
+    # name, whatever the name is.
+    keep_dir = join(save, WORK_DIR_NAME + "data")
+    os.makedirs(keep_dir, exist_ok=True)
+    with open(join(keep_dir, "mine.dat"), "w") as f:
+        f.write("mine\n")
+    keep_file = join(save, "notes.txt")
+    with open(keep_file, "w") as f:
+        f.write("not a working directory\n")
+
+    run = run_tenes(
+        write_input("stale_second", lx=2, ly=2, fermion=True, save_dir=save), nproc
+    )
+    if not expect_success(failures, run, "stale: the save that must clean up"):
+        return failures
+
+    if os.path.exists(work):
+        failures.append(
+            f"stale: the working directory {work} left by an earlier run was "
+            "not removed"
+        )
+    if not os.path.exists(join(keep_dir, "mine.dat")):
+        failures.append(f"stale: the cleanup removed the unrelated {keep_dir}")
+    if not os.path.exists(keep_file):
+        failures.append(f"stale: the cleanup removed the unrelated {keep_file}")
+
+    run = run_tenes(
+        write_input("stale_reload", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    expect_success(failures, run, "stale: the checkpoint is still readable")
+    return failures
+
+
+def case_working_dir_does_not_block_load(nproc):
+    """A working directory alone does not make a checkpoint unreadable.
+
+    Redesign section 2: only the marker (INCOMPLETE_NAME) does that.
+    """
+    failures = []
+    save = join(ROOT, "tmp_only")
+    run = run_tenes(
+        write_input("tmponly_save", lx=2, ly=2, fermion=True, num_step=20,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_success(failures, run, "working dir alone: the save"):
+        return failures
+    reference = read_density(join(ROOT, "out_tmponly_save"))
+
+    work = join(save, WORK_DIR_NAME)
+    os.makedirs(work, exist_ok=True)
+    with open(join(work, "T_0.dat"), "w") as f:
+        f.write("left over from an interrupted save\n")
+
+    run = run_tenes(
+        write_input("tmponly_load", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    if not expect_success(
+        failures,
+        run,
+        f"working dir alone: reading a checkpoint that has a {WORK_DIR_NAME}",
+    ):
+        return failures
+    compare_density(
+        failures,
+        f"working dir alone: the checkpoint read differently with a "
+        f"{WORK_DIR_NAME} beside it",
+        read_density(join(ROOT, "out_tmponly_load")),
+        reference,
+    )
+    return failures
+
+
+#! A token planted in the marker's body. The loader has to carry the body
+#! into its error, so finding this in the error says the body travelled --
+#! without the test having to guess how the implementation words it.
+INCOMPLETE_TOKEN = "RECOVERY-INSTRUCTIONS-a4f1c2"
+
+
+def write_incomplete(save_dir, when="2026-09-12T15:04:05"):
+    """Put a checkpoint into the state an interrupted save leaves behind.
+
+    Killing a save in the middle is not portable, so the state is built by
+    hand, as the contract says to: a complete checkpoint, plus a working
+    directory holding some of the files, plus the marker.
+
+    The files are COPIED into the working directory, not moved out of the
+    destination. That matters. A save is interrupted part way through moving
+    files in, so the destination still holds a whole checkpoint -- the
+    previous one, mixed with however much of the new one has arrived. It
+    would load, and load something wrong, which is exactly why the marker
+    exists. Copying leaves the marker as the only thing that can make the
+    load fail, so a loader that ignores it is caught by the refusal check
+    rather than tripping over files the fixture took away.
+    """
+    work = join(save_dir, WORK_DIR_NAME)
+    os.makedirs(work, exist_ok=True)
+    moved = []
+    for name in sorted(os.listdir(save_dir)):
+        if name.startswith("T_") and os.path.isfile(join(save_dir, name)):
+            shutil.copy2(join(save_dir, name), join(work, name))
+            moved.append(name)
+    with open(join(save_dir, INCOMPLETE_NAME), "w") as f:
+        f.write(
+            f"{INCOMPLETE_TOKEN}\n"
+            "TeNeS was interrupted while moving a checkpoint into place.\n"
+            f"work directory: {work}\n"
+            f"started: {when}\n"
+            "To recover by hand: move everything in the work directory into "
+            f"{save_dir}, then delete this file.\n"
+        )
+    return work, moved
+
+
+def case_incomplete_marker(nproc):
+    """A checkpoint marked incomplete is refused, with the marker's own text,
+    and the documented repair makes it readable again.
+
+    Redesign section 3.
+    """
+    failures = []
+    save = join(ROOT, "incomplete_dest")
+    run = run_tenes(
+        write_input("inc_save", lx=2, ly=2, fermion=True, num_step=20,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_success(failures, run, "incomplete: the save"):
+        return failures
+    reference = read_density(join(ROOT, "out_inc_save"))
+
+    work, moved = write_incomplete(save)
+    if not moved:
+        failures.append(
+            "incomplete: no site tensors were found to move into the working "
+            "directory, so the interrupted state is not the one under test"
+        )
+        return failures
+
+    # Control: the same tree without the marker loads. Without this, "the
+    # load was refused" could be about the working directory, or about the
+    # fixture having disturbed the checkpoint, rather than about the marker.
+    os.rename(join(save, INCOMPLETE_NAME), join(save, INCOMPLETE_NAME + ".parked"))
+    run = run_tenes(
+        write_input("inc_control", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    if not expect_success(
+        failures,
+        run,
+        "incomplete: control, the same tree without the marker",
+    ):
+        return failures
+    os.rename(join(save, INCOMPLETE_NAME + ".parked"), join(save, INCOMPLETE_NAME))
+
+    # (a) The load is refused, on every process, with the marker's text.
+    run = run_tenes(
+        write_input("inc_load", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    expect_explained_error(
+        failures,
+        run,
+        f"incomplete: reading a checkpoint that carries {INCOMPLETE_NAME}",
+        [INCOMPLETE_NAME, work, INCOMPLETE_TOKEN],
+    )
+
+    # (b) Doing what the marker says makes it readable again: move what is in
+    #     the working directory into the destination, then delete the marker.
+    for name in sorted(os.listdir(work)):
+        shutil.move(join(work, name), join(save, name))
+    os.rmdir(work)
+    os.remove(join(save, INCOMPLETE_NAME))
+    run = run_tenes(
+        write_input("inc_repaired", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    if not expect_success(
+        failures, run, "incomplete: reading the checkpoint after the documented repair"
+    ):
+        return failures
+    compare_density(
+        failures,
+        "incomplete: the repaired checkpoint holds a different state",
+        read_density(join(ROOT, "out_inc_repaired")),
+        reference,
+    )
+
+    # (c) Saving is not blocked by the marker, and finishing a save clears it.
+    write_incomplete(save)
+    run = run_tenes(
+        write_input("inc_resave", lx=2, ly=2, fermion=True, num_step=20,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_success(
+        failures, run, "incomplete: saving over a checkpoint marked incomplete"
+    ):
+        return failures
+    if os.path.exists(join(save, INCOMPLETE_NAME)):
+        failures.append(
+            f"incomplete: {join(save, INCOMPLETE_NAME)} survived a save that "
+            "finished"
+        )
+    run = run_tenes(
+        write_input("inc_after_resave", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    expect_success(
+        failures, run, "incomplete: reading the checkpoint the new save wrote"
+    )
+    return failures
+
+
+#! A time of day, however it is spelled: an ISO date, or a clock time.
+LOOKS_LIKE_A_TIME = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}:\d{2}:\d{2}")
+SAYS_MOVE = re.compile(r"\bmo(ve|ving)\b|\bmv\b", re.I)
+SAYS_DELETE = re.compile(r"\b(delete|remove|deleting|removing)\b|\brm\b", re.I)
+
+
+def case_move_failure_leaves_the_marker(nproc):
+    """A save that cannot move one of its files stops there and leaves the
+    marker and the working directory behind.
+
+    Answers section 1. Interrupting a save is not portable, but failing one
+    is: POSIX rename() returns ENOTEMPTY when the destination is a non-empty
+    directory, so putting a directory where a checkpoint file has to go stops
+    the move phase on demand. That is what makes the marker observable at
+    all, and with it the two things its body has to carry -- the working
+    directory and when the save began -- and the recovery text, which until
+    now the test could only supply itself.
+    """
+    failures = []
+    save = join(ROOT, "movefail")
+    inputfile = write_input(
+        "movefail", lx=2, ly=2, fermion=True, num_step=20, save_dir=save
+    )
+
+    # A complete checkpoint first, so the state the repair has to recover is
+    # a known one.
+    run = run_tenes(inputfile, nproc)
+    if not expect_success(failures, run, "move failure: the save that works"):
+        return failures
+    reference = read_density(join(ROOT, "out_movefail"))
+
+    # Now block one file: replace it with a non-empty directory of the same
+    # name. rename() onto that cannot succeed on any POSIX filesystem.
+    blocked = join(save, "T_0.dat")
+    if not os.path.exists(blocked):
+        failures.append(
+            f"move failure: {blocked} is not there, so the block would not be "
+            "on a file the save has to move"
+        )
+        return failures
+    os.remove(blocked)
+    os.makedirs(blocked)
+    with open(join(blocked, "in_the_way"), "w") as f:
+        f.write("makes rename() fail with ENOTEMPTY\n")
+
+    run = run_tenes(inputfile, nproc)
+    if run.timed_out:
+        report(failures, run, f"move failure: did not finish within {RUN_TIMEOUT} s")
+        return failures
+    if run.returncode == 0:
+        report(
+            failures,
+            run,
+            "move failure: exit code 0 although a checkpoint file could not be "
+            "moved into place",
+        )
+    markers = run.crashed()
+    if markers:
+        report(
+            failures,
+            run,
+            f"move failure: the process died rather than reporting (saw {markers!r})",
+        )
+    if "WARNING" not in run.output:
+        report(failures, run, "move failure: no warning was printed")
+
+    work = join(save, WORK_DIR_NAME)
+    incomplete = join(save, INCOMPLETE_NAME)
+    check_marker_has_its_work_dir(failures, save, "move failure")
+    if not os.path.exists(incomplete):
+        failures.append(
+            f"move failure: {incomplete} was not left behind, so nothing tells "
+            "the next run -- or the user -- that this checkpoint is half moved"
+        )
+        return failures
+    if not os.path.isdir(work) or not os.listdir(work):
+        failures.append(
+            f"move failure: {work} is gone or empty, so the files that had not "
+            "been moved yet are not there to recover"
+        )
+        return failures
+
+    # The body, written by the implementation this time rather than by the
+    # test: the working directory, when the save started, and how to finish
+    # the job by hand.
+    with open(incomplete) as f:
+        body = f.read()
+    # The path has to be ABSOLUTE, and the check has to say so. The marker
+    # lives inside the destination it describes, so a relative spelling reads
+    # as relative to that destination: "ckpt/<work>" written into ckpt/ names
+    # ckpt/ckpt/<work> to anyone who follows it from there. Matching the
+    # relative form would not notice, either -- it is a substring of the
+    # absolute one, so it passes whichever the implementation writes and
+    # pins nothing.
+    absolute_work = os.path.abspath(work)
+    checks = [
+        (absolute_work, f"the working directory as an absolute path "
+                        f"({absolute_work})"),
+        (LOOKS_LIKE_A_TIME, "a date or a time"),
+        (SAYS_MOVE, "how to move the files in"),
+        (SAYS_DELETE, "that this file is to be deleted afterwards"),
+    ]
+    for needle, what in checks:
+        found = (
+            needle.search(body) is not None
+            if hasattr(needle, "search")
+            else needle in body
+        )
+        if not found:
+            failures.append(
+                f"move failure: {incomplete} does not mention {what}\n"
+                f"      it reads: {body.strip()!r}"
+            )
+
+    # The load is refused while the marker is there, and the refusal carries
+    # the body the implementation wrote.
+    run = run_tenes(
+        write_input("movefail_load", lx=2, ly=2, fermion=True, load_dir=save), nproc
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "move failure: reading the half-moved checkpoint",
+        [INCOMPLETE_NAME, work],
+    )
+
+    # And the repair works: clear what blocked the move, finish it by hand,
+    # drop the marker.
+    force_rmtree(blocked)
+    for name in sorted(os.listdir(work)):
+        shutil.move(join(work, name), join(save, name))
+    os.rmdir(work)
+    os.remove(incomplete)
+    run = run_tenes(
+        write_input("movefail_repaired", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    if not expect_success(
+        failures, run, "move failure: reading the checkpoint after the repair"
+    ):
+        return failures
+    compare_density(
+        failures,
+        "move failure: the repaired checkpoint holds a different state",
+        read_density(join(ROOT, "out_movefail_repaired")),
+        reference,
+    )
+    return failures
+
+
+# ------------------------------------------------------ 4. the round trip
+
+
+def case_round_trip(nproc):
+    """Saving and reading back describes the same state."""
+    failures = []
+    save = join(ROOT, "trip_save")
+    make = write_input(
+        "trip_make", lx=2, ly=2, fermion=True, num_step=50, save_dir=save
+    )
+    run = run_tenes(make, nproc)
+    if not expect_success(failures, run, "round trip: the run that saves"):
+        return failures
+    reference = read_density(join(ROOT, "out_trip_make"))
+
+    back = write_input("trip_back", lx=2, ly=2, fermion=True, load_dir=save)
+    run = run_tenes(back, nproc)
+    if not expect_success(failures, run, "round trip: the run that loads"):
+        return failures
+    compare_density(
+        failures, "round trip", read_density(join(ROOT, "out_trip_back")), reference
+    )
+    return failures
+
+
+def case_save_equals_load(nproc):
+    """tensor_save and tensor_load pointing at the SAME directory.
+
+    This is the case a save that replaces its destination can break outright:
+    if the replacement removes the old directory before the load has read it,
+    the restart loses its own input.
+    """
+    failures = []
+    same = join(ROOT, "same_dir")
+    seed = write_input(
+        "same_seed", lx=2, ly=2, fermion=True, num_step=50, save_dir=same
+    )
+    run = run_tenes(seed, nproc)
+    if not expect_success(failures, run, "save==load: the seeding run"):
+        return failures
+    reference = read_density(join(ROOT, "out_same_seed"))
+
+    restart = write_input(
+        "same_restart", lx=2, ly=2, fermion=True, save_dir=same, load_dir=same
+    )
+    run = run_tenes(restart, nproc)
+    if not expect_success(
+        failures, run, "save==load: the restart with tensor_save == tensor_load"
+    ):
+        return failures
+    compare_density(
+        failures,
+        "save==load: the restart measured a different state",
+        read_density(join(ROOT, "out_same_restart")),
+        reference,
+    )
+
+    # And the directory is still a checkpoint afterwards.
+    after = write_input("same_after", lx=2, ly=2, fermion=True, load_dir=same)
+    run = run_tenes(after, nproc)
+    if not expect_success(
+        failures, run, "save==load: the checkpoint after the in-place restart"
+    ):
+        return failures
+    compare_density(
+        failures,
+        "save==load: the checkpoint after the in-place restart holds another "
+        "state",
+        read_density(join(ROOT, "out_same_after")),
+        reference,
+    )
+    return failures
+
+
+# ------------------------------------------- the case that needs two counts
+
+
+def case_fewer_processes(nproc):
+    """A save at fewer processes than the previous one leaves no per-process
+    fragment of the wider run.
+
+    mptensor writes one `.NNNN.bin` and one `.NNNN.idx` per process next to
+    every tensor, so a directory written by two processes and then by one
+    keeps the second process's half unless the save replaces the directory.
+    """
+    failures = []
+    shared = join(ROOT, "procs_shared")
+    fresh = join(ROOT, "procs_fresh")
+
+    run = run_tenes(
+        write_input("pr_wide", lx=2, ly=2, fermion=True, save_dir=shared), nproc
+    )
+    if not expect_success(failures, run, f"fewer processes: the {nproc}-process save"):
+        return failures
+    run = run_tenes(
+        write_input("pr_narrow", lx=2, ly=2, fermion=True, save_dir=shared), 1
+    )
+    if not expect_success(failures, run, "fewer processes: the 1-process save"):
+        return failures
+    run = run_tenes(
+        write_input("pr_fresh", lx=2, ly=2, fermion=True, save_dir=fresh), 1
+    )
+    if not expect_success(failures, run, "fewer processes: the reference save"):
+        return failures
+
+    want = dir_entries(fresh)
+    got = dir_entries(shared)
+    extra = sorted(set(got) - set(want))
+    missing = sorted(set(want) - set(got))
+    if extra:
+        failures.append(
+            f"fewer processes: fragments of the {nproc}-process run survived a "
+            f"1-process save: {abbreviate(extra)}"
+        )
+    if missing:
+        failures.append(
+            "fewer processes: the 1-process save wrote less than the same save "
+            f"into an empty directory: {abbreviate(missing)}"
+        )
+    run = run_tenes(
+        write_input("pr_reload", lx=2, ly=2, fermion=True, load_dir=shared), 1
+    )
+    expect_success(failures, run, "fewer processes: the 1-process restart")
+    return failures
+
+
+# ============================================================================
+# The cases below come from the second round of review (the addendum to the
+# behaviour contract). Every one of them is a defect that happened and that
+# the cases above could not see.
+#
+# The thread running through most of them: the load path has rank 0 read a
+# file and hand the result to the others. A failure that only rank 0 notices,
+# or data that only rank 0 receives whole, leaves the other ranks in the next
+# collective and the run never ends. So each of these is exercised at the
+# process count the suite was given, and every invocation has a timeout.
+# ============================================================================
+
+
+def copy_checkpoint(source, name):
+    target = join(ROOT, name)
+    if os.path.exists(target):
+        force_rmtree(target)
+    shutil.copytree(source, target)
+    return target
+
+
+def insert_nul(path, after):
+    """Put a NUL byte just after the first occurrence of `after`.
+
+    Returns a description of what was done, or None if `after` is not in the
+    file -- the caller turns that into a failure rather than a silent pass.
+    """
+    with open(path, "rb") as f:
+        data = f.read()
+    at = data.find(after.encode())
+    if at < 0:
+        return None
+    cut = at + len(after)
+    with open(path, "wb") as f:
+        f.write(data[:cut] + b"\x00" + data[cut:])
+    return f"{path}: NUL inserted at byte {cut}, just after {after!r}"
+
+
+def nul_is_in_a_comment(path):
+    """Whether every NUL in the file sits after a '#' on its own line."""
+    with open(path, "rb") as f:
+        data = f.read()
+    if b"\x00" not in data:
+        return False
+    for line in data.split(b"\n"):
+        if b"\x00" not in line:
+            continue
+        hash_at = line.find(b"#")
+        if hash_at < 0 or hash_at > line.find(b"\x00"):
+            return False
+    return True
+
+
+def case_nul_in_metadata(nproc):
+    """A NUL byte in a metadata comment does not change what is read.
+
+    Addendum 1. Rank 0 slurps params.dat and fermion.dat and broadcasts the
+    bytes for every rank to parse. Sent as a C string the payload stops at
+    the first NUL, so rank 0 parses the whole file and the others parse a
+    prefix; they then fail where rank 0 succeeds, and with more than one
+    process the run hangs instead of ending.
+    """
+    failures = []
+    source = join(ROOT, "nul_source")
+    run = run_tenes(
+        write_input(
+            "nul_make", lx=2, ly=2, fermion=True, num_step=30, save_dir=source
+        ),
+        nproc,
+    )
+    if not expect_success(failures, run, "NUL: the run that saves"):
+        return failures
+
+    # The same checkpoint read back undamaged: the reference the damaged one
+    # has to reproduce, so the case cannot pass by both sides being wrong.
+    run = run_tenes(
+        write_input("nul_ref", lx=2, ly=2, fermion=True, load_dir=source), nproc
+    )
+    if not expect_success(failures, run, "NUL: the undamaged reload"):
+        return failures
+    reference = read_density(join(ROOT, "out_nul_ref"))
+
+    damaged = copy_checkpoint(source, "nul_damaged")
+    notes = [
+        insert_nul(join(damaged, "params.dat"), "# Format"),
+        insert_nul(join(damaged, "fermion.dat"), "# Fermion"),
+    ]
+    for note, what in zip(notes, ("params.dat", "fermion.dat")):
+        if note is None:
+            failures.append(
+                f"NUL: could not find a comment to damage in {what}; the case "
+                "would prove nothing"
+            )
+    if failures:
+        return failures
+    # Premise: the bytes really are there, and really are inside a comment,
+    # so "the load succeeds" is about the broadcast and not about a NUL that
+    # the parser never had to survive.
+    for what in ("params.dat", "fermion.dat"):
+        path = join(damaged, what)
+        with open(path, "rb") as f:
+            if b"\x00" not in f.read():
+                failures.append(f"NUL: no NUL byte ended up in {path}")
+        if not nul_is_in_a_comment(path):
+            failures.append(f"NUL: the NUL in {path} is not inside a comment")
+    if failures:
+        return failures
+
+    run = run_tenes(
+        write_input("nul_load", lx=2, ly=2, fermion=True, load_dir=damaged), nproc
+    )
+    if not expect_success(
+        failures,
+        run,
+        "NUL: reading a checkpoint whose metadata comments contain a NUL",
+    ):
+        return failures
+    compare_density(
+        failures,
+        "NUL: the damaged checkpoint was read as a different state",
+        read_density(join(ROOT, "out_nul_load")),
+        reference,
+    )
+    return failures
+
+
+def case_lambda_unreadable(nproc):
+    """A lambda file that cannot be read ends every process, with a message.
+
+    Addendum 2. Rank 0 reads the Schmidt weights and broadcasts them. A read
+    failure has to reach the other ranks as data; throwing on rank 0 alone
+    leaves them in the broadcast.
+    """
+    failures = []
+    source = join(ROOT, "lam_source")
+    run = run_tenes(
+        write_input(
+            "lam_make", lx=2, ly=2, fermion=True, num_step=30, save_dir=source
+        ),
+        nproc,
+    )
+    if not expect_success(failures, run, "lambda: the run that saves"):
+        return failures
+
+    def empty(path):
+        open(path, "w").close()
+
+    def truncate(path):
+        with open(path, "w") as f:
+            f.write("1.0\n")
+
+    # The legacy format announces itself by having no params.dat at all, and
+    # reads its lambda files through a second copy of the same loop.
+    def drop_params(directory):
+        os.remove(join(directory, "params.dat"))
+
+    variants = [
+        ("an empty lambda file", "lam_empty", empty, None),
+        ("a truncated lambda file", "lam_short", truncate, None),
+        (
+            "an empty lambda file in the legacy format",
+            "lam_legacy",
+            empty,
+            drop_params,
+        ),
+    ]
+    for label, name, damage, extra in variants:
+        directory = copy_checkpoint(source, name)
+        if extra is not None:
+            extra(directory)
+        damage(join(directory, "lambda_1.dat"))
+        run = run_tenes(
+            write_input(
+                "load_" + name, lx=2, ly=2, fermion=True, load_dir=directory
+            ),
+            nproc,
+        )
+        expect_explained_error(
+            failures, run, f"lambda: {label}", ["lambda_1.dat"]
+        )
+
+    # Control: the legacy format is not refused for some other reason, so the
+    # legacy variant above really is about the lambda file.
+    intact = copy_checkpoint(source, "lam_legacy_ok")
+    drop_params(intact)
+    run = run_tenes(
+        write_input("load_lam_legacy_ok", lx=2, ly=2, fermion=True, load_dir=intact),
+        nproc,
+    )
+    expect_success(
+        failures, run, "lambda: control, an intact legacy checkpoint still loads"
+    )
+    return failures
+
+
+def case_unreadable_directory(nproc):
+    """A checkpoint directory that cannot be searched ends every process.
+
+    Addendum 3. The existence tests answer "no" rather than throwing, so that
+    they cannot abort one rank inside a collective -- which is also why the
+    message cannot tell a missing file from an unreadable one and has to say
+    so.
+    """
+    failures = []
+    skips = []
+    reason = permission_skip_reason(ROOT)
+    if reason is not None:
+        skips.append(f"unreadable directory: {reason}")
+        return failures, skips
+
+    # Both modes: a fermionic checkpoint is looked at through its parity
+    # ledger first and a bosonic one through its tensor files, so the two go
+    # down different paths to the same requirement.
+    for mode, fermion in (("boson", False), ("fermion", True)):
+        source = join(ROOT, f"perm_source_{mode}")
+        run = run_tenes(
+            write_input(
+                f"perm_make_{mode}", lx=2, ly=2, fermion=fermion, save_dir=source
+            ),
+            nproc,
+        )
+        if not expect_success(
+            failures, run, f"unreadable directory ({mode}): the run that saves"
+        ):
+            return failures, skips
+
+        # (a) the checkpoint directory itself cannot be searched.
+        with locked_mode(source, 0):
+            run = run_tenes(
+                write_input(
+                    f"perm_load_{mode}", lx=2, ly=2, fermion=fermion, load_dir=source
+                ),
+                nproc,
+            )
+        expect_explained_error(
+            failures,
+            run,
+            f"unreadable directory ({mode}): the checkpoint directory cannot "
+            "be searched",
+            [MISSING_OR_UNREADABLE],
+        )
+
+        # (b) the directory above it cannot be searched, so the checkpoint
+        # cannot even be seen.
+        parent = join(ROOT, f"perm_parent_{mode}")
+        inner = join(parent, "checkpoint")
+        if os.path.exists(parent):
+            force_rmtree(parent)
+        os.makedirs(parent)
+        shutil.copytree(source, inner)
+        with locked_mode(parent, 0):
+            run = run_tenes(
+                write_input(
+                    f"perm_parent_load_{mode}",
+                    lx=2,
+                    ly=2,
+                    fermion=fermion,
+                    load_dir=inner,
+                ),
+                nproc,
+            )
+        expect_explained_error(
+            failures,
+            run,
+            f"unreadable directory ({mode}): the directory above the "
+            "checkpoint cannot be searched",
+            [MISSING_OR_UNREADABLE],
+        )
+    return failures, skips
+
+
+def case_symlinked_destination(nproc):
+    """Saving into a symbolic link leaves the link a link.
+
+    Addendum 4. The save writes beside the destination and renames into
+    place. Renaming onto the *name* of a symlinked destination replaces the
+    link with a directory and orphans what it pointed at -- and pointing a
+    checkpoint at fast storage through a link from home is routine.
+    """
+    failures = []
+    real = join(ROOT, "sym_real")
+    link = join(ROOT, "sym_link")
+    plain = join(ROOT, "sym_plain")
+    if os.path.exists(real):
+        force_rmtree(real)
+    if os.path.islink(link) or os.path.exists(link):
+        os.remove(link) if os.path.islink(link) else force_rmtree(link)
+    os.makedirs(real)
+    os.symlink(os.path.basename(real), link)
+    if not os.path.islink(link):
+        failures.append(f"symlink: {link} is not a symbolic link to begin with")
+        return failures
+
+    # The reference: the same run saving into an ordinary directory.
+    run = run_tenes(
+        write_input("sym_plain", lx=2, ly=2, fermion=True, save_dir=plain), nproc
+    )
+    if not expect_success(failures, run, "symlink: the reference save"):
+        return failures
+    want = dir_entries(plain)
+
+    # Twice: the second save is the one that has to move a previous
+    # checkpoint out of the way before renaming the new one into place.
+    for round_no in (1, 2):
+        run = run_tenes(
+            write_input(
+                f"sym_save{round_no}", lx=2, ly=2, fermion=True, save_dir=link
+            ),
+            nproc,
+        )
+        if not expect_success(failures, run, f"symlink: save {round_no}"):
+            return failures
+        if not os.path.islink(link):
+            failures.append(
+                f"symlink: after save {round_no}, {link} is no longer a "
+                "symbolic link"
+            )
+            return failures
+        if os.readlink(link) != os.path.basename(real):
+            failures.append(
+                f"symlink: after save {round_no}, {link} points at "
+                f"{os.readlink(link)!r}, not {os.path.basename(real)!r}"
+            )
+        got = dir_entries(real)
+        if got != want:
+            failures.append(
+                f"symlink: after save {round_no} the real directory does not "
+                "hold the checkpoint\n"
+                f"      missing:   {abbreviate(sorted(set(want) - set(got)))}\n"
+                f"      left over: {abbreviate(sorted(set(got) - set(want)))}"
+            )
+        siblings = [
+            name
+            for name in os.listdir(ROOT)
+            if name.startswith(os.path.basename(real) + ".")
+        ]
+        if siblings:
+            failures.append(
+                f"symlink: after save {round_no} the save left "
+                f"{siblings} beside the real directory"
+            )
+        work = join(real, WORK_DIR_NAME)
+        if os.path.exists(work):
+            failures.append(
+                f"symlink: after save {round_no} the working directory {work} "
+                "was left behind"
+            )
+
+    run = run_tenes(
+        write_input("sym_reload", lx=2, ly=2, fermion=True, load_dir=link), nproc
+    )
+    expect_success(failures, run, "symlink: reading the checkpoint back")
+    return failures
+
+
+def case_save_failure_exit_code(nproc):
+    """A checkpoint that could not be written is reported in the exit status.
+
+    Addendum 5. The measurement still has to be written -- the computation is
+    done -- but an exit status of 0 makes `tenes A && tenes B` start B from a
+    stale checkpoint and call it a success.
+    """
+    failures = []
+    skips = []
+    reason = permission_skip_reason(ROOT)
+    if reason is not None:
+        skips.append(f"save failure exit code: {reason}")
+        return failures, skips
+
+    parent = join(ROOT, "nosave_parent")
+    destination = join(parent, "checkpoint")
+    if os.path.exists(parent):
+        force_rmtree(parent)
+    # The destination has to exist already: otherwise the run stops while
+    # setting up, long before it has any results to keep, and the case would
+    # be about the wrong thing.
+    #
+    # Since the redesign it is the DESTINATION that has to be unwritable, not
+    # its parent: the save builds the checkpoint inside the destination, so a
+    # read-only parent no longer stops it (and the case for that is
+    # "read-only parent").
+    os.makedirs(destination)
+
+    inputfile = write_input(
+        "nosave", lx=2, ly=2, fermion=True, num_step=10, save_dir=destination
+    )
+    outdir = join(ROOT, "out_nosave")
+
+    # Control first: with the parent writable the very same run exits 0.
+    run = run_tenes(inputfile, nproc)
+    if not expect_success(
+        failures, run, "save failure: control, the same run with a writable parent"
+    ):
+        return failures, skips
+
+    with locked_mode(destination, 0o555):
+        run = run_tenes(inputfile, nproc)
+
+    if run.timed_out:
+        report(
+            failures, run, f"save failure: did not finish within {RUN_TIMEOUT} s"
+        )
+        return failures, skips
+    if run.returncode == 0:
+        report(
+            failures,
+            run,
+            "save failure: exit code 0 although no checkpoint could be written",
+        )
+    markers = run.crashed()
+    if markers:
+        report(
+            failures,
+            run,
+            f"save failure: the process died rather than reporting (saw {markers!r})",
+        )
+    if "WARNING" not in run.output or destination not in run.output:
+        report(
+            failures,
+            run,
+            "save failure: no warning naming the destination was printed",
+        )
+    # The results of the run that did happen are still on disk.
+    density_file = join(outdir, "density.dat")
+    if not os.path.exists(density_file):
+        failures.append(
+            f"save failure: {density_file} was not written, so the finished "
+            "computation was thrown away with the checkpoint"
+        )
+    else:
+        values = read_density(outdir)
+        if "Energy" not in values or not np.isfinite(values["Energy"]):
+            failures.append(
+                f"save failure: {density_file} holds no finite energy: {values}"
+            )
+    # And the checkpoint the control run left is still there to be read: a
+    # save that cannot start must not damage what was already saved.
+    run = run_tenes(
+        write_input(
+            "nosave_reload", lx=2, ly=2, fermion=True, load_dir=destination
+        ),
+        nproc,
+    )
+    expect_success(
+        failures,
+        run,
+        "save failure: the checkpoint that was already there is still readable",
+    )
+    return failures, skips
+
+
+# ============================================================================
+# A third round of review found a data-loss defect: tensor_save = "." made the
+# save replace the working directory, taking the input file and the run's own
+# log with it, with exit status 0 and no warning. The guard is in now; B.1
+# pins it.
+#
+# These cases are the only ones in the suite that run tenes somewhere other
+# than the suite's own working directory, and they have to: the destination
+# under test IS the working directory. Each scenario gets a throw-away tree of
+# its own, three levels deep, so that a guard that stops working destroys only
+# that tree and the case still reports it.
+# ============================================================================
+
+
+class danger_tree:
+    """A throw-away tree with a marker file at every level.
+
+        <base>/<tag>/outer_keep.txt
+        <base>/<tag>/parent/parent_keep.txt
+        <base>/<tag>/parent/cwd/cwd_keep.txt   <- tenes runs here
+        <base>/<tag>/parent/cwd/sub/           <- for the "sub/.." spelling
+        <base>/<tag>/parent/cwd/link_here      -> .
+
+    `missing()` reports which markers are gone. A destination that was
+    wrongly accepted takes one of them with it, which is the check that
+    "refused" is not just a message.
+
+    With `input_elsewhere`, the input file goes into
+
+        <base>/<tag>/inputs_holder/inputs/input.toml
+        <base>/<tag>/inputs_holder/inputs/input_keep.txt
+
+    and tenes is given a relative path to it. That directory is neither the
+    working directory nor the output directory nor an ancestor of either, so
+    it is reachable only by the rule about where the input file lives.
+    """
+
+    def __init__(self, base, tag, input_elsewhere=False):
+        self.root = join(base, tag)
+        if os.path.exists(self.root):
+            force_rmtree(self.root)
+        self.parent = join(self.root, "parent")
+        self.cwd = join(self.parent, "cwd")
+        os.makedirs(join(self.cwd, "sub"))
+        self.markers = {
+            "outer": join(self.root, "outer_keep.txt"),
+            "parent": join(self.parent, "parent_keep.txt"),
+            "cwd": join(self.cwd, "cwd_keep.txt"),
+        }
+        if input_elsewhere:
+            self.input_dir = join(self.root, "inputs_holder", "inputs")
+            os.makedirs(self.input_dir)
+            self.markers["beside the input file"] = join(
+                self.input_dir, "input_keep.txt"
+            )
+        else:
+            self.input_dir = self.cwd
+        self.input_arg = os.path.relpath(
+            join(self.input_dir, "input.toml"), self.cwd
+        )
+        for path in self.markers.values():
+            with open(path, "w") as f:
+                f.write("this file must survive the run\n")
+        os.symlink(".", join(self.cwd, "link_here"))
+
+    #! The path of `other`, spelled the way the input file has to spell it:
+    #! relative to the directory tenes runs in.
+    def from_cwd(self, other):
+        return os.path.relpath(other, self.cwd)
+
+    def write_input(self, outdir, save_dir, num_step=0, load_dir=None):
+        path = join(self.input_dir, "input.toml")
+        with open(path, "w") as f:
+            f.write(
+                input_toml(
+                    outdir,
+                    lx=2,
+                    ly=2,
+                    fermion=True,
+                    num_step=num_step,
+                    save_dir=save_dir,
+                    load_dir=load_dir,
+                )
+            )
+        return path
+
+    def missing(self):
+        gone = [name for name, path in self.markers.items()
+                if not os.path.exists(path)]
+        if not os.path.exists(join(self.input_dir, "input.toml")):
+            gone.append("input.toml")
+        return gone
+
+
+def case_destination_keeps_its_neighbours(nproc):
+    """A destination that holds other things -- the working directory, the
+    directory above it, the one the input file is in, the output directory --
+    keeps them.
+
+    Redesign section 1. These are the four spellings that used to destroy
+    data, and then were refused outright. They are ordinary destinations now:
+    the save writes its files into them and touches nothing else. What the
+    contract asks for is no longer a refusal but a survival, so this case
+    replaces the one that checked the refusal.
+    """
+    failures = []
+    base = join(ROOT, "neighbours")
+    os.makedirs(base, exist_ok=True)
+
+    # (tag, output, how to spell tensor_save, where the input file lives)
+    scenarios = [
+        ("dot", "out", lambda t: ".", False),
+        ("dot_slash", "out", lambda t: "./", False),
+        ("dot_dot_via_sub", "out", lambda t: "sub/..", False),
+        ("absolute", "out", lambda t: os.path.abspath(t.cwd), False),
+        ("through_link", "out", lambda t: "link_here", False),
+        ("parent", "out", lambda t: "..", False),
+        ("the_output_dir", "out", lambda t: "out", False),
+        ("the_input_dir", "out", lambda t: t.from_cwd(t.input_dir), True),
+    ]
+
+    for tag, outdir, spell, input_elsewhere in scenarios:
+        tree = danger_tree(base, tag, input_elsewhere=input_elsewhere)
+        save_dir = spell(tree)
+        # num_step > 0 so the run really computes and writes results; for the
+        # "out" scenario those results are themselves the bystanders.
+        tree.write_input(outdir, save_dir, num_step=10)
+        run = run_tenes(tree.input_arg, nproc, cwd=tree.cwd)
+
+        label = f"neighbours ({tag}, tensor_save = {save_dir!r})"
+        if not expect_success(failures, run, label):
+            continue
+
+        # (a) Everything that was there is still there.
+        gone = tree.missing()
+        if gone:
+            failures.append(f"{label}: the save destroyed {gone}")
+        # (b) The results of this very run are still there.
+        density = join(tree.cwd, outdir, "density.dat")
+        if not os.path.exists(density):
+            failures.append(
+                f"{label}: {density} is gone, so the run's own results were "
+                "lost to the save"
+            )
+        # (c) A checkpoint really was written, and can be read back.
+        target = join(tree.cwd, save_dir) if not os.path.isabs(save_dir) else save_dir
+        if not os.path.exists(join(target, "params.dat")):
+            failures.append(f"{label}: no checkpoint was written into {save_dir}")
+            continue
+        work = join(target, WORK_DIR_NAME)
+        if os.path.exists(work):
+            failures.append(f"{label}: the working directory {work} was left behind")
+        tree.write_input(outdir + "_back", save_dir, num_step=0)
+        with open(join(tree.input_dir, "input.toml")) as f:
+            text = f.read()
+        with open(join(tree.input_dir, "input.toml"), "w") as f:
+            f.write(text.replace(
+                f'tensor_save = "{save_dir}"', f'tensor_load = "{save_dir}"'
+            ))
+        run = run_tenes(tree.input_arg, nproc, cwd=tree.cwd)
+        expect_success(failures, run, f"{label}: reading the checkpoint back")
+    return failures
+
+
+# ============================================================================
+# params.dat format version 2 (redesign section 4).
+#
+# Version 2 records whether the run was fermionic. Before it, the loader
+# guessed from the presence of fermion.dat, which is what gave a leftover
+# file the power to change how a checkpoint was read.
+# ============================================================================
+
+
+def params_ints(path, count=2):
+    """The first `count` integer fields of params.dat, one per line.
+
+    Version 2 fixes the layout (answers section 3):
+
+        2 # Format_Version
+        1 # Fermion          <- 1 fermionic, 0 bosonic
+        4 # N_UNIT
+        8 # CHI
+        2 2 2 2 2 # Shape of Tn[0]
+        ...
+
+    so the version and the run kind can be read straight off instead of
+    being inferred. Missing or unparsable fields come back as None.
+    """
+    values = []
+    try:
+        with open(path) as f:
+            for _ in range(count):
+                line = f.readline()
+                if not line:
+                    values.append(None)
+                    continue
+                field = line.split("#", 1)[0].strip()
+                try:
+                    values.append(int(field.split()[0]))
+                except (ValueError, IndexError):
+                    values.append(None)
+    except OSError:
+        return [None] * count
+    return values
+
+
+def params_first_line(path):
+    """The format version at the head of params.dat, or None."""
+    return params_ints(path, 1)[0]
+
+
+def write_v1_params(path, n_unit=4, chi=8, virtual=2, physical=2):
+    """The version-1 params.dat for the lattice the suite uses.
+
+    Built from what the test knows rather than by editing the version-2 file,
+    so it does not depend on where version 2 puts the run kind.
+    """
+    with open(path, "w") as f:
+        f.write("1 # Format_Version\n")
+        f.write(f"{n_unit} # N_UNIT\n")
+        f.write(f"{chi} # CHI\n")
+        for i in range(n_unit):
+            dims = " ".join([str(virtual)] * 4)
+            f.write(f"{dims} {physical} # Shape of Tn[{i}]\n")
+
+
+def case_params_version_two(nproc):
+    """params.dat is version 2 and records the run kind there.
+
+    Redesign section 4.
+    """
+    failures = []
+    fermionic = join(ROOT, "v2_fermion")
+    bosonic = join(ROOT, "v2_boson")
+    for tag, save, fermion in (
+        ("v2_make_fermion", fermionic, True),
+        ("v2_make_boson", bosonic, False),
+    ):
+        run = run_tenes(
+            write_input(tag, lx=2, ly=2, fermion=fermion, save_dir=save), nproc
+        )
+        if not expect_success(failures, run, f"version 2: the save ({tag})"):
+            return failures
+
+    # The layout is fixed (answers section 3): line 1 the version, line 2 the
+    # run kind, 1 for fermionic and 0 for bosonic.
+    for save, kind, want_kind in (
+        (fermionic, "fermionic", 1),
+        (bosonic, "bosonic", 0),
+    ):
+        path = join(save, "params.dat")
+        version, recorded = params_ints(path, 2)
+        if version != 2:
+            failures.append(
+                f"version 2: {path} says format version {version}, expected 2"
+            )
+        if recorded != want_kind:
+            with open(path) as f:
+                head = "".join(f.readlines()[:2]).strip()
+            failures.append(
+                f"version 2: {path} was written by a {kind} run, so its second "
+                f"line should be {want_kind}; it reads {recorded}\n"
+                f"      first two lines: {head!r}"
+            )
+    if failures:
+        return failures
+
+    # And the two files really do differ, which is the same statement seen
+    # from the other side: under version 1 they were byte for byte identical,
+    # because being fermionic was the only difference between the two runs.
+    with open(join(fermionic, "params.dat")) as f:
+        fermion_text = f.read()
+    with open(join(bosonic, "params.dat")) as f:
+        boson_text = f.read()
+    if fermion_text == boson_text:
+        failures.append(
+            "version 2: the params.dat of a fermionic run and of a bosonic "
+            "run are byte for byte identical, so the run kind is not recorded "
+            "in it"
+        )
+    return failures
+
+
+def case_version_two_kind_decides(nproc):
+    """With version 2 the run kind comes from params.dat, not from whether
+    fermion.dat happens to be there.
+
+    Redesign section 4.
+    """
+    failures = []
+    fermionic = join(ROOT, "kind_fermion")
+    bosonic = join(ROOT, "kind_boson")
+    for tag, save, fermion in (
+        ("kind_make_fermion", fermionic, True),
+        ("kind_make_boson", bosonic, False),
+    ):
+        run = run_tenes(
+            write_input(tag, lx=2, ly=2, fermion=fermion, save_dir=save), nproc
+        )
+        if not expect_success(failures, run, f"run kind: the save ({tag})"):
+            return failures
+    if not os.path.exists(join(fermionic, "fermion.dat")):
+        failures.append(
+            "run kind: the fermionic save wrote no fermion.dat, so the cases "
+            "below would prove nothing"
+        )
+        return failures
+
+    # (a) Reading a checkpoint with the wrong kind names BOTH kinds, and is
+    #     not the old "the parity ledger is missing" story.
+    run = run_tenes(
+        write_input("kind_f_as_b", lx=2, ly=2, fermion=False, load_dir=fermionic),
+        nproc,
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "run kind: a fermionic checkpoint read by a bosonic run",
+        [SAYS_PARAMS_DAT, NAMES_BOTH_KINDS, NOT_ABOUT_THE_LEDGER_FILE],
+    )
+    run = run_tenes(
+        write_input("kind_b_as_f", lx=2, ly=2, fermion=True, load_dir=bosonic),
+        nproc,
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "run kind: a bosonic checkpoint read by a fermionic run",
+        [SAYS_PARAMS_DAT, NAMES_BOTH_KINDS, NOT_ABOUT_THE_LEDGER_FILE],
+    )
+
+    # (b) A leftover fermion.dat beside a bosonic version-2 checkpoint is
+    #     inert dust: the load succeeds.
+    shutil.copyfile(
+        join(fermionic, "fermion.dat"), join(bosonic, "fermion.dat")
+    )
+    run = run_tenes(
+        write_input("kind_b_with_ledger", lx=2, ly=2, fermion=False,
+                    load_dir=bosonic),
+        nproc,
+    )
+    expect_success(
+        failures,
+        run,
+        "run kind: a bosonic checkpoint with a leftover fermion.dat beside it",
+    )
+
+    # (c) A fermionic version-2 checkpoint whose ledger is gone is an error.
+    stripped = copy_checkpoint(fermionic, "kind_fermion_no_ledger")
+    os.remove(join(stripped, "fermion.dat"))
+    run = run_tenes(
+        write_input("kind_f_no_ledger", lx=2, ly=2, fermion=True,
+                    load_dir=stripped),
+        nproc,
+    )
+    expect_explained_error(
+        failures,
+        run,
+        "run kind: a fermionic checkpoint whose fermion.dat is gone",
+        ["fermion.dat"],
+    )
+    return failures
+
+
+def case_older_formats_still_load(nproc):
+    """Version-1 and pre-version checkpoints still load, both kinds.
+
+    Redesign section 4, backward compatibility. The new TeNeS only writes
+    version 2, so the older shapes are built by hand: save, then replace
+    params.dat with the version-1 form, or remove it altogether.
+    """
+    failures = []
+    for kind, fermion in (("fermion", True), ("boson", False)):
+        source = join(ROOT, f"old_{kind}")
+        run = run_tenes(
+            write_input(f"old_make_{kind}", lx=2, ly=2, fermion=fermion,
+                        num_step=20, save_dir=source),
+            nproc,
+        )
+        if not expect_success(failures, run, f"older formats ({kind}): the save"):
+            continue
+        reference = read_density(join(ROOT, f"out_old_make_{kind}"))
+
+        # Version 1: params.dat without the run-kind line.
+        as_v1 = copy_checkpoint(source, f"old_v1_{kind}")
+        write_v1_params(join(as_v1, "params.dat"))
+        if params_first_line(join(as_v1, "params.dat")) != 1:
+            failures.append(
+                f"older formats ({kind}): the hand-made version-1 params.dat "
+                "does not say version 1"
+            )
+            continue
+        run = run_tenes(
+            write_input(f"old_load_v1_{kind}", lx=2, ly=2, fermion=fermion,
+                        load_dir=as_v1),
+            nproc,
+        )
+        if expect_success(
+            failures, run, f"older formats ({kind}): reading a version-1 checkpoint"
+        ):
+            compare_density(
+                failures,
+                f"older formats ({kind}): the version-1 checkpoint read as "
+                "another state",
+                read_density(join(ROOT, f"out_old_load_v1_{kind}")),
+                reference,
+            )
+
+        # The pre-versioning shape: no params.dat at all.
+        as_v0 = copy_checkpoint(source, f"old_v0_{kind}")
+        os.remove(join(as_v0, "params.dat"))
+        run = run_tenes(
+            write_input(f"old_load_v0_{kind}", lx=2, ly=2, fermion=fermion,
+                        load_dir=as_v0),
+            nproc,
+        )
+        if expect_success(
+            failures,
+            run,
+            f"older formats ({kind}): reading a checkpoint with no params.dat",
+        ):
+            compare_density(
+                failures,
+                f"older formats ({kind}): the pre-version checkpoint read as "
+                "another state",
+                read_density(join(ROOT, f"out_old_load_v0_{kind}")),
+                reference,
+            )
+    return failures
+
+
+# ============================================================================
+# The fourth round of review (test-contract-review4.md). Its section 1, the
+# renaming, is WORK_DIR_NAME and INCOMPLETE_NAME, which every case uses; its
+# sections 2 to 6 are the F.* cases below.
+#
+# An interrupted save cannot be produced portably, but its trace can. A save
+# whose move is blocked -- a non-empty directory where one of its files has
+# to go, so rename() fails with ENOTEMPTY -- stops and leaves the marker and
+# the working directory behind. Taking the block away afterwards leaves what
+# a save that died in the middle of its moves leaves: the marker, a working
+# directory holding the files not yet moved, and a destination holding the
+# rest mixed with the checkpoint before.
+# ============================================================================
+
+
+#! Names a user may well give things of their own, and the very names the
+#! working directory and the marker had before review 4 renamed them. A save
+#! used to take both, with exit status 0 and no warning (major-1).
+USERS_TMP_NAME = ".tmp"
+USERS_INCOMPLETE_NAME = ".incomplete"
+
+
+def plant_users_own(directory):
+    """Put a user's own `.tmp/` (with a file in it) and `.incomplete` (with
+    text in it) into `directory`. Returns {path: text} for lost_or_changed().
+    """
+    planted = {
+        join(directory, USERS_TMP_NAME, "project", "notes.txt"):
+            "the user's notes, kept in the user's own directory\n",
+        join(directory, USERS_INCOMPLETE_NAME):
+            "the user's own list of things still to do\n",
+    }
+    for path, text in planted.items():
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write(text)
+    return planted
+
+
+def lost_or_changed(planted):
+    damaged = []
+    for path, text in planted.items():
+        if not os.path.isfile(path):
+            damaged.append(f"{path} (gone)")
+            continue
+        with open(path) as f:
+            if f.read() != text:
+                damaged.append(f"{path} (rewritten)")
+    return damaged
+
+
+def case_users_tmp_and_incomplete_survive(nproc):
+    """A user's own `.tmp/` and `.incomplete` in the destination survive a
+    save, contents and all, and the `.incomplete` does not stop a load.
+
+    Review 4, section 2: the regression test of major-1.
+    """
+    failures = []
+
+    # (a) An ordinary destination. The user's things are there before the
+    #     first save, and have to outlast a second save over that checkpoint
+    #     too, which is the one that sweeps old checkpoint files.
+    save = join(ROOT, "users_names")
+    if os.path.exists(save):
+        force_rmtree(save)
+    os.makedirs(save)
+    planted = plant_users_own(save)
+    for round_no, steps in ((1, 10), (2, 30)):
+        label = f"user's own names: save {round_no} into {save}"
+        run = run_tenes(
+            write_input(f"users_names_save{round_no}", lx=2, ly=2, fermion=True,
+                        num_step=steps, save_dir=save),
+            nproc,
+        )
+        if not expect_success(failures, run, label):
+            return failures
+        damaged = lost_or_changed(planted)
+        if damaged:
+            failures.append(f"{label}: the save destroyed the user's {damaged}")
+            return failures
+
+    # (b) The user's .incomplete is not the marker, so the load goes ahead.
+    run = run_tenes(
+        write_input("users_names_load", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    expect_success(
+        failures,
+        run,
+        f"user's own names: loading {save}, which holds the user's "
+        f"{USERS_INCOMPLETE_NAME}",
+    )
+
+    # (c) tensor_save = ".", the shape the defect was found in: the user's
+    #     things sit in the directory tenes runs in.
+    tree = danger_tree(join(ROOT, "users_names_dot"), "dot")
+    planted = plant_users_own(tree.cwd)
+    tree.write_input("out", ".", num_step=10)
+    run = run_tenes(tree.input_arg, nproc, cwd=tree.cwd)
+    label = "user's own names (tensor_save = '.')"
+    if not expect_success(failures, run, label):
+        return failures
+    damaged = lost_or_changed(planted) + tree.missing()
+    if damaged:
+        failures.append(f"{label}: the save destroyed {damaged}")
+        return failures
+    tree.write_input("out_back", None, num_step=0, load_dir=".")
+    run = run_tenes(tree.input_arg, nproc, cwd=tree.cwd)
+    expect_success(
+        failures,
+        run,
+        f"{label}: loading '.', which holds the user's {USERS_INCOMPLETE_NAME}",
+    )
+    return failures
+
+
+#! The file the interrupted-state cases block. Every save in this suite writes
+#! it, so every save has to move it in.
+BLOCKED_NAME = "T_0.dat"
+
+
+def block(path):
+    """Replace the file at `path` by a non-empty directory of the same name,
+    which rename() onto cannot replace (ENOTEMPTY)."""
+    os.remove(path)
+    os.makedirs(path)
+    with open(join(path, "in_the_way"), "w") as f:
+        f.write("makes rename() fail with ENOTEMPTY\n")
+
+
+def interrupted_destination(failures, name, nproc):
+    """Leave <ROOT>/<name> the way a save that died while moving files in
+    leaves its destination (review 4, section 3), with the block still in
+    place.
+
+    Returns (destination, block, density of the interrupted save), or None
+    after recording why the state could not be made. The interrupted save
+    evolves further than the complete one before it, so that a load can tell
+    which of the two it read.
+    """
+    save = join(ROOT, name)
+    if os.path.exists(save):
+        force_rmtree(save)
+    run = run_tenes(
+        write_input(f"{name}_earlier", lx=2, ly=2, fermion=True, num_step=10,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_success(failures, run, f"{name}: the earlier, complete save"):
+        return None
+    earlier = read_density(join(ROOT, f"out_{name}_earlier"))
+
+    blocked = join(save, BLOCKED_NAME)
+    if not os.path.isfile(blocked):
+        failures.append(
+            f"{name}: {blocked} is not there, so blocking it would not stop a "
+            "save's move"
+        )
+        return None
+    block(blocked)
+    run = run_tenes(
+        write_input(f"{name}_interrupted", lx=2, ly=2, fermion=True, num_step=40,
+                    save_dir=save),
+        nproc,
+    )
+    if run.timed_out:
+        report(failures, run, f"{name}: the blocked save did not finish within "
+                              f"{RUN_TIMEOUT} s")
+        return None
+    marker = join(save, INCOMPLETE_NAME)
+    unmoved = join(save, WORK_DIR_NAME, BLOCKED_NAME)
+    if run.returncode == 0 or not os.path.exists(marker) or not os.path.isfile(unmoved):
+        report(
+            failures,
+            run,
+            f"{name}: the save whose move was blocked did not leave the "
+            "interrupted state these cases start from (exit code "
+            f"{run.returncode}; {marker} "
+            f"{'present' if os.path.exists(marker) else 'absent'}; {unmoved} "
+            f"{'present' if os.path.isfile(unmoved) else 'absent'})",
+        )
+        return None
+    interrupted = read_density(join(ROOT, f"out_{name}_interrupted"))
+    if all(
+        np.isclose(interrupted.get(key, np.nan), value, rtol=RELOAD_RTOL,
+                   atol=RELOAD_ATOL)
+        for key, value in earlier.items()
+    ):
+        failures.append(
+            f"{name}: the earlier save and the interrupted one measured the same "
+            "state, so a load could not tell which checkpoint it read"
+        )
+        return None
+    return save, blocked, interrupted
+
+
+def expect_orderly_failure(failures, run, tag, although):
+    """A run that has to fail, and fail in order: a non-zero exit and no crash.
+    Returns False when it did not even finish."""
+    if run.timed_out:
+        report(failures, run, f"{tag}: did not finish within {RUN_TIMEOUT} s")
+        return False
+    if run.returncode == 0:
+        report(failures, run, f"{tag}: exit code 0, although {although}")
+    markers = run.crashed()
+    if markers or (run.returncode is not None and run.returncode < 0):
+        report(
+            failures,
+            run,
+            f"{tag}: the process died rather than reporting (exit code "
+            f"{run.returncode}, saw {markers!r})",
+        )
+    return True
+
+
+def case_next_save_finishes_the_interrupted_move(nproc):
+    """A save into an interrupted destination first does what the marker
+    says: moves the working directory's files in and deletes the marker.
+
+    Review 4, section 3.1 (minor-1). That is only visible when the save then
+    fails to write, so it runs with a file-size limit of 0. Before the fix
+    such a save removed the working directory and left the marker pointing
+    at it.
+    """
+    failures = []
+    skips = []
+    reason = limit_skip_reason(NO_WRITES)
+    if reason is not None:
+        skips.append(f"finish first: {reason}")
+        return failures, skips
+
+    state = interrupted_destination(failures, "finish_first", nproc)
+    if state is None:
+        return failures, skips
+    save, blocked, interrupted = state
+    # Nothing is in the way any more, and nothing has finished the job: the
+    # trace of a save that died in the middle of its moves.
+    force_rmtree(blocked)
+
+    # Control: tenes runs to the end under the limit when it has nothing to
+    # save, so a non-zero exit below is the save's and not the limit's.
+    run = run_tenes(
+        write_input("finish_first_control", lx=2, ly=2, fermion=True),
+        nproc,
+        limit=NO_WRITES,
+    )
+    if not expect_success(
+        failures, run, "finish first: control, a run that saves nothing, under "
+        "the file-size limit"
+    ):
+        return failures, skips
+
+    tag = "finish first: the next save, which cannot write a single file"
+    run = run_tenes(
+        write_input("finish_first_next", lx=2, ly=2, fermion=True, num_step=5,
+                    save_dir=save),
+        nproc,
+        limit=NO_WRITES,
+    )
+    if not expect_orderly_failure(
+        failures, run, tag, "it could not write its checkpoint"
+    ):
+        return failures, skips
+    marker = join(save, INCOMPLETE_NAME)
+    work = join(save, WORK_DIR_NAME)
+    if os.path.lexists(marker):
+        failures.append(
+            f"{tag}: {marker} is still there; the save had to do what it says "
+            "-- move the files in and delete it -- before starting on its own "
+            "files"
+        )
+    if os.path.exists(work):
+        failures.append(f"{tag}: {work} is still there after the move it holds "
+                        "should have been finished")
+    check_marker_has_its_work_dir(failures, save, tag)
+
+    run = run_tenes(
+        write_input("finish_first_load", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    if expect_success(
+        failures, run, "finish first: loading the destination afterwards"
+    ):
+        compare_density(
+            failures,
+            "finish first: the destination does not hold the interrupted save's "
+            "checkpoint",
+            read_density(join(ROOT, "out_finish_first_load")),
+            interrupted,
+        )
+    return failures, skips
+
+
+def case_unfinishable_repair_changes_nothing(nproc):
+    """When the save cannot finish the interrupted move either, it stops
+    there, and the marker's instructions stay good.
+
+    Review 4, section 3.2, as corrected: the repair's move stops at the file
+    that fails and does not put back what it already moved. So the check is
+    that every file of the interrupted save is still in the working directory
+    or in the destination -- where it is depends on the order the files are
+    listed in, which no filesystem promises -- that those still in the working
+    directory are unchanged, and that the save wrote nothing of its own.
+    """
+    failures = []
+    state = interrupted_destination(failures, "cannot_finish", nproc)
+    if state is None:
+        return failures
+    save, blocked, interrupted = state
+    work = join(save, WORK_DIR_NAME)
+    marker = join(save, INCOMPLETE_NAME)
+    work_before = file_contents(work)
+    dest_before = set(os.listdir(save))
+
+    # The next save has twice the sites, so any file of its own it wrote has
+    # a name the interrupted save does not have (T_4.dat and on).
+    tag = "cannot finish: the next save, with the block still in place"
+    run = run_tenes(
+        write_input("cannot_finish_next", lx=4, ly=2, fermion=True, num_step=5,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_orderly_failure(
+        failures, run, tag, "the interrupted move could not be finished"
+    ):
+        return failures
+    if "WARNING" not in run.output:
+        report(failures, run, f"{tag}: no warning was printed")
+    if not os.path.lexists(marker):
+        failures.append(
+            f"{tag}: {marker} is gone, although the move it describes was not "
+            "finished"
+        )
+    check_marker_has_its_work_dir(failures, save, tag)
+    if not os.path.isdir(work):
+        failures.append(
+            f"{tag}: {work} is gone, and with it the files the interrupted save "
+            "had not moved in yet"
+        )
+        return failures
+
+    work_after = set(os.listdir(work))
+    dest_after = set(os.listdir(save))
+    lost = sorted(
+        name for name in work_before
+        if name not in work_after and name not in dest_after
+    )
+    if lost:
+        failures.append(
+            f"{tag}: files of the interrupted save are in neither {work} nor "
+            f"{save}: {abbreviate(lost)}"
+        )
+    rewritten = []
+    for name in sorted(work_after & set(work_before)):
+        with open(join(work, name), "rb") as f:
+            if f.read() != work_before[name]:
+                rewritten.append(name)
+    if rewritten:
+        failures.append(
+            f"{tag}: files still in {work} no longer hold what the interrupted "
+            f"save wrote: {abbreviate(rewritten)}"
+        )
+    new_in_work = sorted(work_after - set(work_before))
+    if new_in_work:
+        failures.append(
+            f"{tag}: {work} gained names the interrupted save did not have: "
+            f"{abbreviate(new_in_work)}"
+        )
+    new_in_dest = sorted(dest_after - dest_before - set(work_before))
+    if new_in_dest:
+        failures.append(
+            f"{tag}: {save} gained names the interrupted save did not have: "
+            f"{abbreviate(new_in_dest)}"
+        )
+    if failures or not os.path.lexists(marker):
+        return failures
+
+    # What the marker says still works: clear the block, move everything in,
+    # delete the marker. The result is the interrupted save's checkpoint.
+    force_rmtree(blocked)
+    for name in sorted(os.listdir(work)):
+        shutil.move(join(work, name), join(save, name))
+    os.rmdir(work)
+    os.remove(marker)
+    run = run_tenes(
+        write_input("cannot_finish_repaired", lx=2, ly=2, fermion=True,
+                    load_dir=save),
+        nproc,
+    )
+    if expect_success(
+        failures, run, "cannot finish: loading after the repair the marker describes"
+    ):
+        compare_density(
+            failures,
+            "cannot finish: the repaired destination does not hold the "
+            "interrupted save's checkpoint",
+            read_density(join(ROOT, "out_cannot_finish_repaired")),
+            interrupted,
+        )
+    return failures
+
+
+#! Stays well under the smallest PATH_MAX of the platforms TeNeS runs on
+#! (1024 on macOS) with room for the file names inside the working directory.
+LONGEST_WORK_DIR_PATH = 900
+
+
+def long_destination(parent, at_least):
+    """A destination under `parent` whose working directory has an absolute
+    path at least `at_least` characters long."""
+    path = parent
+    while len(os.path.abspath(join(path, "checkpoint", WORK_DIR_NAME))) < at_least:
+        path = join(path, "d" * 100)
+    return join(path, "checkpoint")
+
+
+def case_unwritable_marker_moves_nothing(nproc):
+    """A save that cannot write its marker moves no file in.
+
+    Review 4, section 4 (minor-2). The marker has to carry the absolute path
+    of the working directory (redesign section 3; pinned by "move failure"),
+    so it is at least as long as that path. The files of a 2x2 bosonic
+    checkpoint with bond dimension 1 are a few hundred bytes at most. With
+    the destination buried deep enough that the path is longer than any of
+    them, a file-size limit in between lets every checkpoint file be written
+    and stops the marker (EFBIG).
+    """
+    failures = []
+    skips = []
+    base = join(ROOT, "marker_unwritable")
+    if os.path.exists(base):
+        force_rmtree(base)
+    os.makedirs(base)
+
+    def small_input(tag, steps, save_dir):
+        return write_input(tag, lx=2, ly=2, dim=1, fermion=False, num_step=steps,
+                           save_dir=save_dir)
+
+    # (a) The checkpoint before, and the same save made without any limit:
+    #     how big a file the save writes, and a premise -- the save under test
+    #     changes the destination's files if it gets as far as moving them.
+    reference = join(base, "reference")
+    run = run_tenes(small_input("mu_reference", 10, reference), nproc)
+    if not expect_success(failures, run, "unwritable marker: the earlier save"):
+        return failures, skips
+    earlier = read_density(join(ROOT, "out_mu_reference"))
+    control = join(base, "control")
+    shutil.copytree(reference, control)
+    run = run_tenes(small_input("mu_control", 30, control), nproc)
+    if not expect_success(
+        failures, run, "unwritable marker: control, the same save without a limit"
+    ):
+        return failures, skips
+    before = file_contents(reference)
+    written = file_contents(control)
+    if not changed_entries(before, written):
+        failures.append(
+            "unwritable marker: the save under test writes the very bytes that "
+            "are already there, so an unchanged destination would prove nothing"
+        )
+        return failures, skips
+    limit = max(len(data) for data in written.values()) + 256
+
+    reason = limit_skip_reason(("fsize", limit))
+    if reason is not None:
+        skips.append(f"unwritable marker: {reason}")
+        return failures, skips
+    save = long_destination(join(base, "deep"), limit + 128)
+    work = join(save, WORK_DIR_NAME)
+    if len(os.path.abspath(work)) > LONGEST_WORK_DIR_PATH:
+        skips.append(
+            f"unwritable marker: the path this needs ({len(os.path.abspath(work))} "
+            "characters) is too long to be safe here"
+        )
+        return failures, skips
+    shutil.copytree(reference, save)
+
+    # (b) The save under test.
+    tag = (f"unwritable marker: a save whose marker (at least "
+           f"{len(os.path.abspath(work))} bytes) does not fit under a "
+           f"{limit}-byte file-size limit")
+    run = run_tenes(small_input("mu_limited", 30, save), nproc,
+                    limit=("fsize", limit))
+    if not expect_orderly_failure(
+        failures, run, tag, "it could not write its marker"
+    ):
+        return failures, skips
+    if "WARNING" not in run.output:
+        report(failures, run, f"{tag}: no warning was printed")
+    after = file_contents(save, leave_out=(WORK_DIR_NAME, INCOMPLETE_NAME))
+    if changed_entries(before, after):
+        failures.append(
+            f"{tag}: the checkpoint in the destination changed, although no "
+            f"marker was written: {describe_changes(before, after)}"
+        )
+    check_marker_has_its_work_dir(failures, save, tag)
+    # Section 4 as amended: nothing moved, so there is nothing to recover, and
+    # neither the half-written marker nor the working directory may stay.
+    left_behind = [
+        name
+        for name in (INCOMPLETE_NAME, WORK_DIR_NAME)
+        if os.path.lexists(join(save, name))
+    ]
+    if left_behind:
+        failures.append(
+            f"{tag}: the save left {left_behind} in {save}, although it moved "
+            "nothing and so has nothing to recover"
+        )
+    if failures or os.path.lexists(join(save, INCOMPLETE_NAME)):
+        return failures, skips
+
+    run = run_tenes(
+        write_input("mu_reload", lx=2, ly=2, dim=1, fermion=False, load_dir=save),
+        nproc,
+    )
+    if expect_success(
+        failures, run, "unwritable marker: loading the checkpoint that was there"
+    ):
+        compare_density(
+            failures,
+            "unwritable marker: the destination no longer holds the earlier "
+            "checkpoint",
+            read_density(join(ROOT, "out_mu_reload")),
+            earlier,
+        )
+    return failures, skips
+
+
+def case_unlisted_leftovers_are_not_success(nproc):
+    """A save that cannot confirm that it moved in everything it wrote does
+    not end as a success.
+
+    Review 4, section 5 (minor-3). Under a umask that takes away the owner's
+    read bit, the working directory the save creates can be written into and
+    renamed out of by name, but not listed. Before the fix the empty listing
+    counted as "all moved", the sweep then removed the previous checkpoint,
+    and the run exited 0 with every new file still in the working directory.
+
+    Two outcomes keep the data safe, and either is accepted: the save stops
+    before touching the destination (no marker, the checkpoint there
+    unchanged), or it treats the leftovers as a failed move and leaves the
+    marker with its working directory.
+    """
+    failures = []
+    skips = []
+    reason = limit_skip_reason(UNLISTABLE_DIRECTORIES)
+    if reason is not None:
+        skips.append(f"unlisted leftovers: {reason}")
+        return failures, skips
+
+    save = join(ROOT, "unlisted")
+    if os.path.exists(save):
+        force_rmtree(save)
+    run = run_tenes(
+        write_input("unlisted_earlier", lx=2, ly=2, fermion=True, num_step=10,
+                    save_dir=save),
+        nproc,
+    )
+    if not expect_success(failures, run, "unlisted leftovers: the earlier save"):
+        return failures, skips
+    earlier = read_density(join(ROOT, "out_unlisted_earlier"))
+    before = file_contents(save)
+
+    tag = ("unlisted leftovers: a save that cannot list its own working "
+           "directory")
+    run = run_tenes(
+        write_input("unlisted_next", lx=2, ly=2, fermion=True, num_step=30,
+                    save_dir=save),
+        nproc,
+        limit=UNLISTABLE_DIRECTORIES,
+    )
+    unlock_tree(save)
+    unlock_tree(join(ROOT, "out_unlisted_next"))
+    if not expect_orderly_failure(
+        failures, run, tag,
+        "it could not confirm that every file it wrote was moved in"
+    ):
+        return failures, skips
+    if "WARNING" not in run.output:
+        report(failures, run, f"{tag}: no warning was printed")
+    check_marker_has_its_work_dir(failures, save, tag)
+    marker = join(save, INCOMPLETE_NAME)
+    work = join(save, WORK_DIR_NAME)
+
+    if not os.path.lexists(marker):
+        after = file_contents(save, leave_out=(WORK_DIR_NAME,))
+        if changed_entries(before, after):
+            failures.append(
+                f"{tag}: the checkpoint in {save} changed and no marker says so: "
+                f"{describe_changes(before, after)}"
+            )
+            return failures, skips
+        run = run_tenes(
+            write_input("unlisted_reload", lx=2, ly=2, fermion=True, load_dir=save),
+            nproc,
+        )
+        if expect_success(
+            failures, run, "unlisted leftovers: loading the checkpoint that was there"
+        ):
+            compare_density(
+                failures,
+                "unlisted leftovers: the destination no longer holds the earlier "
+                "checkpoint",
+                read_density(join(ROOT, "out_unlisted_reload")),
+                earlier,
+            )
+        return failures, skips
+
+    # The marker was left: what it says has to give a checkpoint that loads.
+    if failures:
+        return failures, skips
+    for name in sorted(os.listdir(work)):
+        shutil.move(join(work, name), join(save, name))
+    os.rmdir(work)
+    os.remove(marker)
+    run = run_tenes(
+        write_input("unlisted_repaired", lx=2, ly=2, fermion=True, load_dir=save),
+        nproc,
+    )
+    expect_success(
+        failures, run, "unlisted leftovers: loading after the repair the marker "
+        "describes"
+    )
+    return failures, skips
+
+
+#! A marker of exactly this size. The error may carry its first 64 KiB and
+#! nothing more, so the whole output stays below this size.
+HUGE_MARKER_SIZE = 1024 * 1024
+#! The first line, which the error has to carry like any marker's body.
+HUGE_MARKER_HEAD = "MARKER-HEAD-5b0e"
+#! A line 256 KiB in, and the last line: both well past the first 64 KiB.
+HUGE_MARKER_DEEP = "MARKER-DEEP-c93d"
+HUGE_MARKER_TAIL = "MARKER-TAIL-7f21"
+
+
+def huge_marker_text():
+    filler = "x" * 99 + "\n"
+    head = HUGE_MARKER_HEAD + "\n"
+    deep = HUGE_MARKER_DEEP + "\n"
+    tail = HUGE_MARKER_TAIL + "\n"
+    text = head + filler * ((256 * 1024 - len(head)) // len(filler)) + deep
+    text += filler * ((HUGE_MARKER_SIZE - len(text) - len(tail)) // len(filler))
+    pad = HUGE_MARKER_SIZE - len(text) - len(tail)
+    if pad > 0:
+        text += "y" * (pad - 1) + "\n"
+    return text + tail
+
+
+def case_huge_marker(nproc):
+    """A 1 MiB marker stops the load with an explained error that carries only
+    the head of its body.
+
+    Review 4, section 6. The body is broadcast to every process to be put in
+    the error; without a cap a huge file costs every process its size.
+    """
+    failures = []
+    source = join(ROOT, "huge_source")
+    run = run_tenes(
+        write_input("huge_make", lx=2, ly=2, fermion=True, save_dir=source), nproc
+    )
+    if not expect_success(failures, run, "huge marker: the save"):
+        return failures
+    marked = copy_checkpoint(source, "huge_marked")
+    marker = join(marked, INCOMPLETE_NAME)
+    with open(marker, "w") as f:
+        f.write(huge_marker_text())
+    if os.path.getsize(marker) != HUGE_MARKER_SIZE:
+        failures.append(
+            f"huge marker: {marker} is {os.path.getsize(marker)} bytes, not "
+            f"{HUGE_MARKER_SIZE}"
+        )
+        return failures
+
+    tag = f"huge marker: reading a checkpoint whose marker is {HUGE_MARKER_SIZE} bytes"
+    run = run_tenes(
+        write_input("huge_load", lx=2, ly=2, fermion=True, load_dir=marked), nproc
+    )
+    expect_explained_error(failures, run, tag, [INCOMPLETE_NAME, HUGE_MARKER_HEAD])
+    if run.timed_out:
+        return failures
+    size = len(run.stdout.encode()) + len(run.stderr.encode())
+    if size >= HUGE_MARKER_SIZE:
+        report(
+            failures,
+            run,
+            f"{tag}: the run printed {size} bytes, no less than the marker itself, "
+            "so its body was not cut at 64 KiB",
+        )
+    for token, where in (
+        (HUGE_MARKER_DEEP, "256 KiB into the marker"),
+        (HUGE_MARKER_TAIL, "at the end of the marker"),
+    ):
+        if token in run.output:
+            report(
+                failures,
+                run,
+                f"{tag}: the output carries the line {where}, past the first "
+                "64 KiB",
+            )
+    return failures
+
+
+# ============================================================================
+# The final review (test-contract-shard.md): tensor files that could not be
+# written in full. How the limits are chosen is in the S.* paragraph at the
+# top; cut_tensor_file() is that paragraph as code.
+# ============================================================================
+
+
+#! A file mptensor writes for each process next to a tensor's base file:
+#! <base>.<process number, at least 4 digits>.bin holds the elements, .idx
+#! their layout.
+PER_PROCESS_FILE = re.compile(r"^(?P<base>.+)\.(?P<rank>\d{4,})\.(?P<ext>bin|idx)$")
+#! Tensors by the names of their base files: the site tensors, the CTM
+#! environment (the corners and the edges), and any tensor at all.
+SITE_TENSOR = re.compile(r"^T_\d+\.dat$")
+ENVIRONMENT = re.compile(r"^(C[1-4]|E[tlrb])_\d+\.dat$")
+ANY_TENSOR = re.compile(r"^.+$")
+#! How far below the limit the files that are not tensor files have to stay.
+#! Their sizes are not fixed by the input -- timers.json carries timings, the
+#! marker a date -- so the calibration run measures them only roughly. A
+#! tensor file's size is fixed by its shape and its process, so it only has to
+#! be smaller than the limit.
+UNFIXED_SIZE_MARGIN = 256
+#! Simple-update steps of the checkpoint that is there before an S.* save,
+#! and of the save itself: different, so that the save changes the files, and
+#! few, because the runs with bond dimension 5 are slow in a Debug build.
+STEPS_BEFORE_CUT = 2
+STEPS_OF_CUT = 6
+#! The output directory's files, among the names of a checkpoint's: a prefix
+#! no file of a checkpoint can have.
+OUTPUT_PREFIX = "<output>/"
+#! What the output directory's copy of the input file is called in
+#! output_names(): the copy is named after the input file, which is another
+#! one for every run.
+INPUT_COPY = "<the input file>"
+
+
+def file_sizes(directory):
+    """{path relative to `directory`: size in bytes} for every file under it."""
+    return {
+        name: os.path.getsize(join(directory, name)) for name in dir_entries(directory)
+    }
+
+
+def output_names(outdir):
+    return sorted(
+        INPUT_COPY if name.endswith(".toml") else name for name in dir_entries(outdir)
+    )
+
+
+def checkpoint_file_kind(name, bases):
+    """(kind, rank) of a file of a checkpoint: ("data", rank) or ("index",
+    rank) for a per-process file, ("base", 0) for a tensor's base file, and
+    ("tenes", 0) for the files TeNeS writes itself. `bases` is the set of the
+    base names the checkpoint's per-process files carry."""
+    match = PER_PROCESS_FILE.match(name)
+    if match:
+        kind = "data" if match.group("ext") == "bin" else "index"
+        return kind, int(match.group("rank"))
+    if name in bases:
+        return "base", 0
+    return "tenes", 0
+
+
+def fsize_limit(size, rank):
+    """A file-size limit of `size` bytes on every process (`rank` None), or on
+    the process of that rank alone."""
+    if rank is None:
+        return ("fsize", size)
+    return ("fsize_on_rank", f"{rank}:{size}")
+
+
+#! What rank_limit_skip_reason() runs in every process: it says whether it
+#! could write a file past a limit of 0.
+RANK_PROBE = (
+    "import os, sys\n"
+    "try:\n"
+    "    with open(os.path.join(sys.argv[1], str(os.getpid())), 'wb') as f:\n"
+    "        f.write(b'x' * 4096)\n"
+    "except OSError:\n"
+    "    print('limited')\n"
+    "else:\n"
+    "    print('free')\n"
+)
+
+
+def rank_limit_skip_reason(nproc, rank):
+    """Why a limit on the process of `rank` alone cannot be relied on here, or
+    None when it can.
+
+    Tried on `nproc` throw-away Python processes started by the same launcher
+    under the same wrapper: exactly one of them has to find itself limited.
+    A launcher that tells its processes no rank shows up here as a skip, not
+    as a failure blamed on the save.
+    """
+    probe = join(ROOT, "limit_probe_rank")
+    if os.path.exists(probe):
+        force_rmtree(probe)
+    os.makedirs(probe)
+    cmd = (
+        launcher(nproc)
+        + limited(fsize_limit(0, rank))
+        + [sys.executable, "-c", RANK_PROBE, probe]
+    )
+    try:
+        proc = run_command(cmd)
+    except subprocess.TimeoutExpired:
+        return f"the probe of a limit on rank {rank} did not finish"
+    finally:
+        force_rmtree(probe)
+    words = proc.stdout.split()
+    if (
+        proc.returncode == 0
+        and words.count("limited") == 1
+        and words.count("free") == nproc - 1
+    ):
+        return None
+    return (
+        f"a limit on rank {rank} does not reach exactly one of {nproc} processes "
+        f"here (exit code {proc.returncode}, stdout {proc.stdout.strip()!r}, "
+        f"stderr {proc.stderr.strip()[-200:]!r})"
+    )
+
+
+def cut_tensor_file(nproc, label, name, kind, tensor, fermion, dim, chi, rank=None):
+    """Cut the largest `kind` file ("data" or "index") of the tensors whose
+    base names match `tensor`, among the files that `rank` writes -- every
+    process when `rank` is None -- and check that the save fails.
+
+    The bond dimension and chi decide which files are largest, and so which
+    one a limit can cut alone; the calibration below says so when they do
+    not, rather than letting the case pass.
+    """
+    failures = []
+    skips = []
+    reason = limit_skip_reason(("fsize", 4096))
+    if reason is None and rank is not None:
+        reason = rank_limit_skip_reason(nproc, rank)
+    if reason is not None:
+        skips.append(f"{label}: {reason}")
+        return failures, skips
+
+    base = join(ROOT, name)
+    if os.path.exists(base):
+        force_rmtree(base)
+    os.makedirs(base)
+    where = "every process" if rank is None else f"process {rank} alone"
+    not_made = f"{label}: the situation under test could not be made"
+
+    def save(tag, steps, save_dir, limit=None):
+        inputfile = write_input(
+            f"{name}_{tag}", lx=2, ly=2, dim=dim, chi=chi, fermion=fermion,
+            num_step=steps, save_dir=save_dir,
+        )
+        return run_tenes(inputfile, nproc, limit=limit), join(ROOT, f"out_{name}_{tag}")
+
+    # (a) The checkpoint that is in the destination before, and the save
+    #     under test made without a limit: what it writes, how big, and a
+    #     premise -- it changes the destination's files if it gets that far.
+    earlier = join(base, "earlier")
+    run, _ = save("earlier", STEPS_BEFORE_CUT, earlier)
+    if not expect_success(failures, run, f"{label}: the earlier save"):
+        return failures, skips
+    before = file_contents(earlier)
+    control = join(base, "control")
+    shutil.copytree(earlier, control)
+    control_run, control_out = save("control", STEPS_OF_CUT, control)
+    if not expect_success(
+        failures, control_run, f"{label}: control, the save under test without a limit"
+    ):
+        return failures, skips
+    if not changed_entries(before, file_contents(control)):
+        failures.append(
+            f"{label}: the save under test writes the very bytes that are "
+            "already there, so an unchanged destination would prove nothing"
+        )
+        return failures, skips
+    written = file_sizes(control)
+
+    # (b) What the limited processes write. A process other than 0 writes its
+    #     own data and index files and nothing else (contract section 2.4);
+    #     (c) is what confirms that.
+    bases = {m.group("base") for m in map(PER_PROCESS_FILE.match, written) if m}
+    sizes = {}  # name -> (size, how far below the limit it has to stay)
+    targets = {}
+    for fname, size in written.items():
+        fkind, frank = checkpoint_file_kind(fname, bases)
+        if rank is not None and (frank != rank or fkind not in ("data", "index")):
+            continue
+        sizes[fname] = (size, UNFIXED_SIZE_MARGIN if fkind == "tenes" else 1)
+        if fkind == kind and tensor.match(PER_PROCESS_FILE.match(fname).group("base")):
+            targets[fname] = size
+    if rank is None:
+        for fname, size in file_sizes(control_out).items():
+            sizes[OUTPUT_PREFIX + fname] = (size, UNFIXED_SIZE_MARGIN)
+    if not targets or max(targets.values()) == 0:
+        failures.append(
+            f"{not_made}: {where} writes no non-empty {kind} file of a tensor "
+            f"matching /{tensor.pattern}/; it writes {abbreviate(sorted(sizes), 6)}"
+        )
+        return failures, skips
+    full = max(targets.values())
+    cut = sorted(fname for fname, size in targets.items() if size == full)
+    limit = full - 1
+    too_big = sorted(
+        (fname, size, margin)
+        for fname, (size, margin) in sizes.items()
+        if fname not in cut and size + margin > limit
+    )
+    if too_big:
+        fname, size, margin = too_big[0]
+        failures.append(
+            f"{not_made}: the {kind} files to cut ({abbreviate(cut, 3)}) are "
+            f"{full} bytes, and {where} also writes {fname} of {size} bytes, "
+            f"not {margin} or more below the {limit}-byte limit that would cut "
+            f"them ({len(too_big)} such file(s))"
+        )
+        return failures, skips
+
+    # (c) The same save under a limit those files exactly fit. It has to
+    #     succeed and write what the save without a limit writes; then the
+    #     one byte less in (d) matters only to files of exactly `full` bytes.
+    dest = join(base, "destination")
+    shutil.copytree(earlier, dest)
+    fits_run, _ = save("fits", STEPS_OF_CUT, dest, limit=fsize_limit(full, rank))
+    if not expect_success(
+        failures,
+        fits_run,
+        f"{label}: control, the same save under a {full}-byte limit on {where}, "
+        f"which {cut[0]} exactly fits",
+    ):
+        return failures, skips
+    fitted = file_sizes(dest)
+    if fitted != written:
+        failures.append(
+            f"{not_made}: under a {full}-byte limit the save wrote other files "
+            "or sizes than without one, so the calibration does not describe it: "
+            f"{describe_changes(written, fitted)}"
+        )
+        return failures, skips
+    force_rmtree(dest)
+    shutil.copytree(earlier, dest)
+
+    # (d) The save under test.
+    tag = (
+        f"{label}: a save under a {limit}-byte file-size limit on {where}, one "
+        f"byte short of {abbreviate(cut, 3)}"
+    )
+    run, out = save("cut", STEPS_OF_CUT, dest, limit=fsize_limit(limit, rank))
+    if run.timed_out:
+        report(
+            failures,
+            run,
+            f"{tag}: did not finish within {RUN_TIMEOUT} s -- some processes "
+            "were left waiting",
+        )
+        return failures, skips
+    if run.returncode == 0:
+        # A save that claims success moved its files in, so the cut is there
+        # to be seen. If it is not, the limit did not do what (b) and (c)
+        # say, and this case has not tested anything.
+        landed = file_sizes(dest)
+        uncut = [fname for fname in cut if landed.get(fname) != limit]
+        if uncut:
+            report(
+                failures,
+                run,
+                f"{not_made}: the save exited 0, but in {dest} "
+                f"{abbreviate(uncut, 3)} are not {limit} bytes "
+                f"({[landed.get(fname) for fname in uncut[:3]]})",
+            )
+            return failures, skips
+        report(
+            failures,
+            run,
+            f"{tag}: exit code 0, although {len(cut)} {kind} file(s) -- "
+            f"{cut[0]} among them -- were cut to {limit} of their {full} bytes "
+            f"(they are in {dest} at that size)",
+        )
+    markers = run.crashed()
+    if markers or (run.returncode is not None and run.returncode < 0):
+        report(
+            failures,
+            run,
+            f"{tag}: the process died rather than reporting (exit code "
+            f"{run.returncode}, saw {markers!r})",
+        )
+    # The warning has to be one the save makes. Some of these inputs make a
+    # WARNING of their own (chi < D*D), and a save that succeeds names its
+    # destination ("Tensors saved in ..."), so both have to be something the
+    # runs that did save did not print: the warning something the control did
+    # not print, the destination a line the save into the same destination
+    # under (c) did not print.
+    control_lines = set(control_run.output.splitlines())
+    fits_lines = set(fits_run.output.splitlines())
+    new_warnings = [
+        line
+        for line in run.output.splitlines()
+        if "WARNING" in line and line not in control_lines
+    ]
+    new_mentions = [
+        line
+        for line in run.output.splitlines()
+        if dest in line and line not in fits_lines
+    ]
+    if not new_warnings or not new_mentions:
+        report(
+            failures,
+            run,
+            f"{tag}: no warning naming {dest} was printed (new WARNING lines: "
+            f"{len(new_warnings)}; new lines naming it: {len(new_mentions)})",
+        )
+    if "Tensors saved" in run.output:
+        report(failures, run, f"{tag}: the run said \"Tensors saved\"")
+
+    # The measurement is written as usual.
+    missing = sorted(set(output_names(control_out)) - set(output_names(out)))
+    if missing:
+        failures.append(
+            f"{tag}: the measurement was not written as usual: {out} lacks "
+            f"{missing}"
+        )
+    else:
+        try:
+            compare_density(
+                failures,
+                f"{tag}: the measurement differs from the same run without a limit",
+                read_density(out),
+                read_density(control_out),
+            )
+        except (OSError, ValueError, IndexError) as err:
+            failures.append(f"{tag}: {join(out, 'density.dat')} cannot be read: {err}")
+
+    # The destination is as it was.
+    after = file_contents(dest)
+    if changed_entries(before, after):
+        failures.append(
+            f"{tag}: {dest} is not as it was before the save: "
+            f"{describe_changes(before, after)}"
+        )
+    left_behind = [
+        fname
+        for fname in (WORK_DIR_NAME, INCOMPLETE_NAME)
+        if os.path.lexists(join(dest, fname))
+    ]
+    if left_behind:
+        failures.append(f"{tag}: the save left {left_behind} in {dest}")
+    return failures, skips
+
+
+def case_cut_site_tensor_data(nproc):
+    """A save that cannot write all of a site tensor's data file fails.
+
+    Contract section 2.1. With bond dimension 5 and chi = 2 the site tensors'
+    data files are the largest files the save writes, larger also than the
+    measurement files and the copy of the input file in the output directory.
+    """
+    return cut_tensor_file(
+        nproc, "cut site tensor data", "cut_site_boson", "data", SITE_TENSOR,
+        fermion=False, dim=5, chi=2,
+    )
+
+
+def case_cut_environment_data(nproc):
+    """A save that cannot write all of a CTM environment tensor's data file
+    fails.
+
+    Contract section 2.1. With bond dimension 2 and chi = 24 the edge
+    tensors' data files are the largest files the save writes.
+    """
+    return cut_tensor_file(
+        nproc, "cut environment data", "cut_env_boson", "data", ENVIRONMENT,
+        fermion=False, dim=2, chi=24,
+    )
+
+
+def case_cut_site_tensor_data_fermion(nproc):
+    """Contract section 2.5: section 2.1 for a fermionic run, site tensors."""
+    return cut_tensor_file(
+        nproc, "fermion: cut site tensor data", "cut_site_fermion", "data",
+        SITE_TENSOR, fermion=True, dim=5, chi=2,
+    )
+
+
+def case_cut_environment_data_fermion(nproc):
+    """Contract section 2.5: section 2.1 for a fermionic run, whose CTM
+    environment is written another way than a bosonic run's."""
+    return cut_tensor_file(
+        nproc, "fermion: cut environment data", "cut_env_fermion", "data",
+        ENVIRONMENT, fermion=True, dim=2, chi=24,
+    )
+
+
+def case_cut_index_on_one_process(nproc):
+    """A save in which process 1 alone cannot write all of an index file
+    fails, and every process ends.
+
+    Contract sections 2.2 and 2.4. Process 0 writes the measurement files,
+    which are larger than any index file, so an index file can be cut alone
+    only on another process. With bond dimension 1 and two processes,
+    process 1 holds no element of any tensor: its data files are empty, and
+    its index files are the largest files it writes.
+    """
+    return cut_tensor_file(
+        nproc, "cut index on process 1", "cut_index_p1", "index", ANY_TENSOR,
+        fermion=False, dim=1, chi=None, rank=1,
+    )
+
+
+def case_cut_data_on_one_process(nproc):
+    """A save in which process 1 alone cannot write all of a data file fails,
+    and every process ends.
+
+    Contract section 2.4. Process 1 writes nothing but its data and index
+    files; with bond dimension 2 its largest data files are far larger than
+    its index files.
+    """
+    return cut_tensor_file(
+        nproc, "cut data on process 1", "cut_data_p1", "data", ANY_TENSOR,
+        fermion=False, dim=2, chi=None, rank=1,
+    )
+
+
+def case_generous_limit_changes_nothing(nproc):
+    """A file-size limit above every file a save writes changes nothing.
+
+    Contract section 2.6. The same save without a limit and under one: both
+    succeed, the two checkpoints have the same files at the same sizes, and
+    the one saved under the limit reads back as the state its run saved. (A
+    save without a limit reading back is "save and read back".)
+    """
+    failures = []
+    skips = []
+    for kind, fermion in (("boson", False), ("fermion", True)):
+        label = f"limit above every file ({kind})"
+        free = join(ROOT, f"generous_free_{kind}")
+        capped = join(ROOT, f"generous_capped_{kind}")
+        run = run_tenes(
+            write_input(f"generous_free_{kind}", lx=2, ly=2, fermion=fermion,
+                        num_step=20, save_dir=free),
+            nproc,
+        )
+        if not expect_success(failures, run, f"{label}: the save without a limit"):
+            continue
+        want = file_sizes(free)
+        largest = max(
+            list(want.values())
+            + list(file_sizes(join(ROOT, f"out_generous_free_{kind}")).values())
+        )
+        # Room for the marker as well, which no finished save leaves behind
+        # to be measured: a few hundred bytes and the working directory's path.
+        limit = largest + 1024 + len(os.path.abspath(join(capped, WORK_DIR_NAME)))
+        reason = limit_skip_reason(("fsize", limit))
+        if reason is not None:
+            skips.append(f"{label}: {reason}")
+            continue
+        run = run_tenes(
+            write_input(f"generous_capped_{kind}", lx=2, ly=2, fermion=fermion,
+                        num_step=20, save_dir=capped),
+            nproc,
+            limit=("fsize", limit),
+        )
+        if not expect_success(
+            failures, run, f"{label}: the same save under a {limit}-byte limit"
+        ):
+            continue
+        got = file_sizes(capped)
+        if got != want:
+            failures.append(
+                f"{label}: the checkpoint saved under a {limit}-byte limit is not "
+                f"the one saved without it: {describe_changes(want, got)}"
+            )
+            continue
+        run = run_tenes(
+            write_input(f"generous_reload_{kind}", lx=2, ly=2, fermion=fermion,
+                        load_dir=capped),
+            nproc,
+        )
+        if expect_success(
+            failures, run, f"{label}: reading back the checkpoint saved under the limit"
+        ):
+            compare_density(
+                failures,
+                f"{label}: the checkpoint saved under the limit reads back as "
+                "another state",
+                read_density(join(ROOT, f"out_generous_reload_{kind}")),
+                read_density(join(ROOT, f"out_generous_capped_{kind}")),
+            )
+    return failures, skips
+
+
+# ============================================================================
+# What a run under a limit leaves in /tmp (test-contract-shard-kmp.md). The
+# K.* paragraph at the top says why; LIMIT_WRAPPER is the fix.
+# ============================================================================
+
+
+#! Where the LLVM OpenMP runtime registers a process: /tmp, not the
+#! temporary directory of the environment. macOS's /tmp is a symbolic link to
+#! /private/tmp, which the paths below go through.
+REGISTRATION_DIR = "/tmp"
+
+
+def registration_paths(pid):
+    """The names the runtime gives the registration file of `pid`: the pid
+    alone (macOS), or the pid and the user id."""
+    return [
+        join(REGISTRATION_DIR, f"__KMP_REGISTERED_LIB_{pid}"),
+        join(REGISTRATION_DIR, f"__KMP_REGISTERED_LIB_{pid}_{os.getuid()}"),
+    ]
+
+
+def empty_registrations(pids):
+    """The registration files of the processes `pids` that are there, empty,
+    and this user's. A file that is not empty may belong to a process that
+    runs now, and is never listed."""
+    found = []
+    for pid in pids:
+        for path in registration_paths(pid):
+            try:
+                info = os.lstat(path)
+            except OSError:
+                continue
+            if (
+                stat.S_ISREG(info.st_mode)
+                and info.st_size == 0
+                and info.st_uid == os.getuid()
+            ):
+                found.append(path)
+    return found
+
+
+def remove_files(paths):
+    for path in paths:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+#! Says "pid <its process id>" on stdout and then becomes the rest of its
+#! command line, so that the process that runs tenes is known by number. A
+#! first argument other than -1 is a file-size limit it sets itself, with
+#! nothing around it: the way every limited run was started before
+#! LIMIT_WRAPPER cleaned up after its program.
+PID_SHIM = (
+    "import os, resource, signal, sys\n"
+    "limit = int(sys.argv[1])\n"
+    "if limit >= 0:\n"
+    "    resource.setrlimit(resource.RLIMIT_FSIZE, (limit, limit))\n"
+    "    signal.signal(signal.SIGXFSZ, signal.SIG_IGN)\n"
+    "print('pid', os.getpid(), flush=True)\n"
+    "os.execv(sys.argv[2], sys.argv[2:])\n"
+)
+PID_LINE = re.compile(r"^pid (\d+)$", re.M)
+#! No process has an id this large: Linux keeps them below 2**22, macOS below
+#! 100000. Adding this suite's own pid keeps two suites run at once apart.
+IMPOSSIBLE_PID_BASE = 90000000
+
+
+def case_no_empty_registration_left(nproc):
+    """tenes run under a file-size limit leaves no empty registration file of
+    its own processes, and does not touch one that is not theirs.
+
+    Contract clauses 1, 2 and 5. The same run is made twice. First with the
+    limit set by a shim that then becomes tenes, with nothing around it: the
+    witness that the runtime here leaves such a file at all, whose files the
+    case removes itself. Then the way the suite runs tenes under a limit,
+    through LIMIT_WRAPPER, which has to leave none. An empty registration
+    file of a pid no process can have is there during the second run; the
+    wrapper must not take it.
+    """
+    failures = []
+    skips = []
+    label = "registration files"
+    not_made = f"{label}: the situation under test could not be made"
+    reason = limit_skip_reason(NO_WRITES)
+    if reason is not None:
+        skips.append(f"{label}: {reason}")
+        return failures, skips
+
+    def run(tag, limit, shim_limit):
+        inputfile = write_input(f"kmp_{tag}", lx=2, ly=2, fermion=True)
+        cmd = tenes_command(
+            inputfile, nproc, limit=limit,
+            through=[sys.executable, "-c", PID_SHIM, str(shim_limit)],
+        )
+        done = run_program(cmd)
+        pids = [int(pid) for pid in PID_LINE.findall(done.stdout)]
+        # Removed before anything is checked, so that no way out of this case
+        # leaves them behind. Both runs are this suite's own processes.
+        left = empty_registrations(pids)
+        remove_files(left)
+        return done, pids, left, join(ROOT, f"out_kmp_{tag}")
+
+    # (a) The witness.
+    witness, pids, left, _ = run("witness", None, 0)
+    if not expect_success(
+        failures, witness,
+        f"{label}: tenes under a file-size limit of 0 that it sets itself",
+    ):
+        return failures, skips
+    if len(pids) != nproc:
+        report(
+            failures, witness,
+            f"{not_made}: {nproc} process(es) ran tenes, {len(pids)} said their pid",
+        )
+        return failures, skips
+    if not left:
+        skips.append(
+            f"{label}: tenes under a file-size limit of 0 left no empty "
+            f"{REGISTRATION_DIR}/__KMP_REGISTERED_LIB_<pid> for its processes "
+            f"{pids}, so the OpenMP runtime here makes no such file (GNU libgomp "
+            "does not) and there is nothing to leave behind"
+        )
+        return failures, skips
+
+    # (b) The way the suite runs tenes under a limit.
+    decoy = registration_paths(IMPOSSIBLE_PID_BASE + os.getpid())[0]
+    open(decoy, "w").close()
+    try:
+        limited_run, pids, left, outdir = run("limited", NO_WRITES, -1)
+        decoy_kept = os.path.isfile(decoy)
+    finally:
+        remove_files([decoy])
+    tag = f"{label}: tenes under a file-size limit of 0 set by LIMIT_WRAPPER"
+    if not expect_success(failures, limited_run, tag):
+        return failures, skips
+    if len(pids) != nproc:
+        report(
+            failures, limited_run,
+            f"{not_made}: {nproc} process(es) ran tenes, {len(pids)} said their pid",
+        )
+        return failures, skips
+    # The limit reached tenes: every file it wrote is empty.
+    written = file_sizes(outdir)
+    if not written or any(written.values()):
+        failures.append(
+            f"{not_made}: the limit did not reach tenes, whose output files in "
+            f"{outdir} are {written}"
+        )
+        return failures, skips
+    if left:
+        report(
+            failures, limited_run,
+            f"{tag}: its processes {pids} left {left} empty (removed now); a later "
+            "process that gets one of these pids dies of SIGBUS before main()",
+        )
+    if not decoy_kept:
+        failures.append(
+            f"{tag}: {decoy} was removed, although no process this suite started "
+            "can have made it"
+        )
+    return failures, skips
+
+
+#! How the programs case_wrapper_passes_on_the_ending() runs end.
+ENDINGS = {
+    "exits with 0": (
+        "import sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+    ),
+    "exits with 3": (
+        "import sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+        "sys.exit(3)\n"
+    ),
+    "is killed by SIGTERM": (
+        "import os, signal, sys\n"
+        "print('OWN-OUT', flush=True)\n"
+        "print('OWN-ERR', file=sys.stderr, flush=True)\n"
+        "os.kill(os.getpid(), signal.SIGTERM)\n"
+    ),
+}
+#! Leaves an empty file named "<its pid>-<its parent's pid>" in the directory
+#! it is given, and sleeps far longer than any timeout here.
+SLEEPER = (
+    "import os, sys, time\n"
+    "name = '%d-%d' % (os.getpid(), os.getppid())\n"
+    "open(os.path.join(sys.argv[1], name), 'w').close()\n"
+    "time.sleep(3600)\n"
+)
+#! The timeouts the sleeper is run with, shortest first: a longer one is
+#! tried only when the processes had not all started within the shorter.
+SLEEPER_TIMEOUTS = (5, 30)
+
+
+def case_wrapper_passes_on_the_ending(nproc):
+    """A program run through LIMIT_WRAPPER ends as it ends without it, and a
+    run whose time is up leaves no process of it running.
+
+    Contract clause 3. The wrapper runs its program as a child now, so the
+    exit code and the signal have to be handed on, and the output has to
+    reach the same place. Under more than one process the launcher ends the
+    others as soon as one fails, so their output is compared only for the
+    program that exits with 0.
+    """
+    failures = []
+    label = "limit wrapper"
+
+    def own(text):
+        return sorted(line for line in text.splitlines() if line.startswith("OWN-"))
+
+    for ending, program in ENDINGS.items():
+        python = [sys.executable, "-c", program]
+        plain = run_program(launcher(nproc) + python)
+        wrapped = run_program(launcher(nproc) + limited(NO_WRITES) + python)
+        tag = f"{label}: a program that {ending}"
+        if plain.timed_out or wrapped.timed_out:
+            for run in (plain, wrapped):
+                if run.timed_out:
+                    report(failures, run, f"{tag}: did not end within {RUN_TIMEOUT} s")
+            continue
+        if wrapped.returncode != plain.returncode:
+            report(
+                failures, wrapped,
+                f"{tag}: exit code {wrapped.returncode} through the wrapper, "
+                f"{plain.returncode} without it",
+            )
+        if bool(wrapped.crashed()) != bool(plain.crashed()):
+            report(
+                failures, wrapped,
+                f"{tag}: the launcher reports a death through the wrapper "
+                f"({wrapped.crashed()!r}) and without it ({plain.crashed()!r}) "
+                "differently",
+            )
+        if ending == "exits with 0" and (
+            own(wrapped.stdout) != own(plain.stdout)
+            or own(wrapped.stderr) != own(plain.stderr)
+            or len(own(plain.stdout)) != nproc
+        ):
+            report(
+                failures, wrapped,
+                f"{tag}: its output through the wrapper (stdout "
+                f"{own(wrapped.stdout)}, stderr {own(wrapped.stderr)}) is not "
+                f"its output without it (stdout {own(plain.stdout)}, stderr "
+                f"{own(plain.stderr)})",
+            )
+
+    for timeout in SLEEPER_TIMEOUTS:
+        started = join(ROOT, "sleepers")
+        if os.path.exists(started):
+            force_rmtree(started)
+        os.makedirs(started)
+        cmd = (
+            launcher(nproc)
+            + limited(NO_WRITES)
+            + [sys.executable, "-c", SLEEPER, started]
+        )
+        try:
+            run_command(cmd, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+        else:
+            failures.append(
+                f"{label}: a program that sleeps for an hour ended within {timeout} s"
+            )
+            return failures
+        # A wrapper that becomes its program makes this suite the sleeper's
+        # parent, which is not a process to wait for, let alone to kill.
+        pids = sorted(
+            {int(pid) for name in os.listdir(started) for pid in name.split("-")}
+            - {os.getpid()}
+        )
+        if len(os.listdir(started)) == nproc:
+            break
+    else:
+        failures.append(
+            f"{label}: the situation under test could not be made: {nproc} "
+            f"sleeper(s) did not all start within {SLEEPER_TIMEOUTS[-1]} s"
+        )
+        return failures
+    # The sleepers and the wrappers around them. Whatever is left is ended
+    # here, so that a failure does not leave it running either.
+    deadline = time.monotonic() + STOP_GRACE
+    running = pids
+    while running and time.monotonic() < deadline:
+        time.sleep(0.1)
+        running = [pid for pid in pids if process_exists(pid)]
+    if running:
+        for pid in running:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        failures.append(
+            f"{label}: a run whose time was up left the processes {running} of "
+            f"{pids} running"
+        )
+    return failures
+
+
+def process_exists(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+# ----------------------------------------------------------------- the suite
+
+
+# What the message for an unreadable checkpoint has to convey: the existence
+# tests cannot tell "not there" from "cannot be read", so the message must
+# not claim either one. Matched case-insensitively on the two ideas rather
+# than on a fixed sentence.
+class _NamesBothKinds:
+    """The message has to say what the checkpoint was saved as AND what the
+    input asks for. Matched on the two ideas rather than on a sentence:
+    "fermion" has to appear, and so has a way of saying "not fermionic".
+    """
+
+    pattern = "both the saved kind and the input kind"
+
+    def search(self, text):
+        low = text.lower()
+        fermionic = "fermion" in low
+        bosonic = any(
+            w in low
+            for w in ("boson", "non-fermion", "not fermion", "fermion = false",
+                      "fermion=false", "nonfermion")
+        )
+        return True if (fermionic and bosonic) else None
+
+
+class _NotAboutTheLedgerFile:
+    """The version-2 refusal must not be dressed up as a missing ledger.
+
+    Before version 2 the loader inferred the kind from whether fermion.dat
+    was there, so a kind mismatch was reported as "cannot read
+    <dir>/fermion.dat". The contract says that explanation is wrong now, and
+    naming that file is how it shows.
+    """
+
+    pattern = "no mention of fermion.dat"
+
+    def search(self, text):
+        return None if "fermion.dat" in text else True
+
+
+NAMES_BOTH_KINDS = _NamesBothKinds()
+NOT_ABOUT_THE_LEDGER_FILE = _NotAboutTheLedgerFile()
+
+#! Where the kind came from. Answers section 4 replaces "names both kinds"
+#! with this, because the old message satisfied "names both kinds" by
+#! accident: its HINT happens to say "a non-fermionic run". Naming params.dat
+#! is something only a loader that really reads the kind from there can do.
+SAYS_PARAMS_DAT = "params.dat"
+
+
+class _MissingOrUnreadable:
+    pattern = "both 'missing/does not exist' and 'cannot be read/searched'"
+
+    def search(self, text):
+        # None rather than False: expect_explained_error() tests the result
+        # of search() against None, the way re.Pattern.search() reports.
+        low = text.lower()
+        missing = any(w in low for w in ("missing", "does not exist", "cannot find"))
+        unreadable = any(
+            w in low for w in ("readable", "cannot be read", "cannot be searched")
+        )
+        return True if (missing and unreadable) else None
+
+
+MISSING_OR_UNREADABLE = _MissingOrUnreadable()
+
+
+CASES = [
+    ("1.1 site-count mismatch", case_site_count),
+    ("1.1 unreadable header", case_broken_header),
+    ("1.2 fermionic then bosonic save", case_reuse_fermion_then_boson),
+    ("1.2 fewer sites into the same directory", case_reuse_fewer_sites),
+    ("1.2 notice for an existing destination", case_existing_dir_notice),
+    ("1.6 save and read back", case_round_trip),
+    ("1.6 tensor_save == tensor_load", case_save_equals_load),
+    ("A.1 a NUL byte in a metadata comment", case_nul_in_metadata),
+    ("A.2 a lambda file that cannot be read", case_lambda_unreadable),
+    ("A.3 a checkpoint directory that cannot be searched",
+     case_unreadable_directory),
+    ("A.4 a symbolic link as the destination", case_symlinked_destination),
+    ("A.5 the exit status of a save that failed", case_save_failure_exit_code),
+    # --- the redesign ----------------------------------------------------
+    ("R.1 the destination keeps whatever else is in it",
+     case_destination_not_replaced),
+    ("R.1 a destination that holds the run's own surroundings",
+     case_destination_keeps_its_neighbours),
+    ("R.1 the parent of the destination is untouched", case_parent_untouched),
+    ("R.1 the parent of the destination need not be writable",
+     case_readonly_parent_is_fine),
+    ("R.2 a stale working directory inside the destination is removed",
+     case_stale_working_dir_removed),
+    ("R.2 a working directory alone does not block a load",
+     case_working_dir_does_not_block_load),
+    ("R.3 the marker of an interrupted save", case_incomplete_marker),
+    ("R.3 a save whose move fails leaves the marker",
+     case_move_failure_leaves_the_marker),
+    ("R.4 params.dat is version 2 and records the run kind",
+     case_params_version_two),
+    ("R.4 the run kind comes from params.dat, not from fermion.dat",
+     case_version_two_kind_decides),
+    ("R.4 version-1 and pre-version checkpoints still load",
+     case_older_formats_still_load),
+    # --- review 4 ---------------------------------------------------------
+    (f"F.2 a user's own {USERS_TMP_NAME}/ and {USERS_INCOMPLETE_NAME} survive",
+     case_users_tmp_and_incomplete_survive),
+    ("F.3.1 a save into an interrupted destination finishes the move first",
+     case_next_save_finishes_the_interrupted_move),
+    ("F.3.2 a repair that fails leaves the interrupted save as it was",
+     case_unfinishable_repair_changes_nothing),
+    ("F.4 a save that cannot write its marker moves nothing",
+     case_unwritable_marker_moves_nothing),
+    ("F.5 a save that cannot list what it left behind is not a success",
+     case_unlisted_leftovers_are_not_success),
+    ("F.6 a 1 MiB marker is refused with only its head",
+     case_huge_marker),
+    # --- the final review: tensor files that could not be written ---------
+    ("S.1 a save that cuts a data file of the site tensors fails",
+     case_cut_site_tensor_data),
+    ("S.1 a save that cuts a data file of the CTM environment fails",
+     case_cut_environment_data),
+    # S.3 has no case: see the comment at the top.
+    ("S.5 a fermionic save that cuts a data file of the site tensors fails",
+     case_cut_site_tensor_data_fermion),
+    ("S.5 a fermionic save that cuts a data file of the CTM environment fails",
+     case_cut_environment_data_fermion),
+    ("S.6 a file-size limit above every file changes nothing",
+     case_generous_limit_changes_nothing),
+    # --- what a run under a limit leaves in /tmp --------------------------
+    ("K.3 the limit wrapper passes on how its program ended",
+     case_wrapper_passes_on_the_ending),
+    ("K.5 a run under a limit leaves no empty registration file in /tmp",
+     case_no_empty_registration_left),
+]
+
+MULTI_PROCESS_CASES = [
+    ("1.2 fewer processes into the same directory", case_fewer_processes),
+    ("S.2 a save that cuts an index file of process 1 alone fails",
+     case_cut_index_on_one_process),
+    ("S.4 a save that cuts a data file of process 1 alone fails",
+     case_cut_data_on_one_process),
+]
+
+
+def main(argv):
+    global ROOT
+    nproc = 1
+    if len(argv) > 1:
+        if argv[1] != "--nproc" or len(argv) < 3:
+            print(f"usage: {argv[0]} [--nproc N]")
+            return 2
+        nproc = int(argv[2])
+    if nproc != 1 and not MPIEXEC:
+        print("this build has no MPI launcher; nothing to do at --nproc > 1")
+        return 0
+
+    ROOT = f"output_CheckpointDir_np{nproc}"
+    if os.path.exists(ROOT):
+        force_rmtree(ROOT)
+    os.makedirs(ROOT)
+
+    cases = list(CASES)
+    if nproc > 1:
+        cases += MULTI_PROCESS_CASES
+
+    failed = 0
+    skipped = 0
+    for name, case in cases:
+        result = case(nproc)
+        # A case that cannot run here (no permission enforcement, say) says so
+        # instead of passing quietly; it returns (failures, skips).
+        failures, skips = result if isinstance(result, tuple) else (result, [])
+        if failures:
+            failed += 1
+            print(f"FAIL  [{nproc} proc] {name}")
+            for line in failures:
+                print(f"    {line}")
+        elif skips:
+            skipped += 1
+            print(f"SKIP  [{nproc} proc] {name}")
+            for line in skips:
+                print(f"    {line}")
+        else:
+            print(f"ok    [{nproc} proc] {name}")
+    passed = len(cases) - failed - skipped
+    print(
+        f"{passed} of {len(cases)} cases passed at {nproc} process(es)"
+        + (f", {skipped} skipped" if skipped else "")
+    )
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -24,6 +24,7 @@ These are arranged in order from the x direction.
    An example for ``L_sub = [2,3]``.
 
 ``skew`` is the shift value in the x direction when moving one unit cell in the y direction.
+It must satisfy ``-Lx < skew < Lx``: ``skew`` and ``skew`` ± ``Lx`` describe the same lattice, so a value outside the range is an input error.
 
 .. figure:: ../../img/tensor_sec_fig2.*
    :width: 400px
@@ -48,6 +49,7 @@ and :math:`n` indicates the site number.
    ``virtual_dim``,   "Dimension of virtual bonds :math:`D` for a site tensor", Integer or a list of integer
    ``initial_state``, "Initial tensor",                                         a list of real
    ``noise``,         "Noise for initial tensor",                               Real
+   ``parity``,        "Fermion parity of each physical basis state (fermion mode only)", a list of integer
 
 
 Multiple sites can be specified at once by setting a list to ``index``.
@@ -55,6 +57,35 @@ An empty list ``[]`` means all sites.
 
 By setting a list to ``virtual_dim``, individual bond dimensions in four directions can be specified.
 The order is left (-x), top (+y), right (+x), and bottom (-y).
+
+``parity`` is required when ``parameter.general.fermion = true`` and must have
+``physical_dim`` entries, each 0 (even) or 1 (odd):
+``parity[i]`` is the parity of the number of fermions in the ``i``-th physical
+basis state.
+For example, a spinless fermion site with the basis :math:`\{|0\rangle, |1\rangle\}`
+has ``parity = [0, 1]``.
+
+When a site hosts more than one fermionic mode (e.g. spinful electrons,
+``physical_dim = 4``), **fix an ordering of the creation operators within the
+site once and use it consistently everywhere**: each basis state is *defined*
+as the product of creation operators applied to the vacuum in that fixed
+internal order. For example, with the internal order :math:`(\uparrow, \downarrow)`,
+
+.. math::
+   |0\rangle,\quad
+   |{\uparrow}\rangle = c^\dagger_\uparrow |0\rangle,\quad
+   |{\downarrow}\rangle = c^\dagger_\downarrow |0\rangle,\quad
+   |{\uparrow\downarrow}\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle
+
+gives ``parity = [0, 1, 1, 0]``.
+The chosen ordering does not appear in the ``parity`` list itself, but it
+determines the signs of the operator matrix elements (see the ``fermion``
+entry of the ``parameter.general`` section).
+All operators, gates, and initial states have to be written in the same
+convention for the calculation to be correct.
+
+The initial product state must be parity even on every site; parity-odd
+``initial_state`` vectors are rejected.
 
 An initial state of a system :math:`|\Psi\rangle` is represented as
 the direct product state of the initial states at each site :math:`i`, :math:`|\Psi_i\rangle`:

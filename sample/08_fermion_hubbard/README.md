@@ -1,0 +1,21 @@
+- how to run
+    - set the environment variable PATH so that tenes_simple, tenes_std, and tenes can be called directly
+    - `sh ./run.sh`
+- model
+    - Fermion Hubbard model with U=4 and mu=2 (half filling) on the square lattice
+    - unit cell: `L = 2, W = 1`, which `tenes_simple` turns into `L_sub = [2, 1], skew = 1` (the two-sublattice checkerboard cell)
+- Parameter
+    - chi = D^2 for the CTM environment
+    - D=2
+        - 3000 steps of simple update from random tensor
+    - D>2
+        - 3000 steps of simple update from tensors obtained by D-1 calculation
+- Observables (written in result.dat)
+    - Energy [-0.8603(2)]
+    - number of electrons [1.0]
+    - doublon [0.1262(2)]
+    - spin-spin correlation <S_i . S_j> on a nearest-neighbor bond [-0.1782(7)]
+        - `(SxSx + SySy + SzSz) / 2`: `density.dat` gives two-site values per site, i.e. summed over the two bonds of a site
+    - Values in square brackets are obtained from AFQMC calculation
+        - Energy, nelec, doublon: Qin, Shi, Zhang, PRB 94, 085103 (2016)
+        - spin-spin: Qin, Shi, Zhang, PRB 96, 075156 (2017)

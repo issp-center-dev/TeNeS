@@ -1,0 +1,31 @@
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+tau = 0.01
+
+[parameter.full_update]
+tau = 0.01
+
+[parameter.ctm]
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+meanfield_env = false
+# dimension = 4
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 1
+initial = "random"
+noise = 1.0
+# virtual_dim = 2
+
+[model]
+type = "hubbard"
+t = 1.0
+mu = 2.0
+U = 4.0

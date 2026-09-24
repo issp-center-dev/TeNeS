@@ -1,0 +1,28 @@
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 1000
+
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 2
+initial = "random"
+noise = 1.0
+
+[model]
+type = "spinless fermion"
+t = 1.0
+mu = 0.0

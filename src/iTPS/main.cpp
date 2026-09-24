@@ -152,12 +152,16 @@ int run_groundstate(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.optimize();
-  tns.save_tensors();
+  // Measure and summarize even when the checkpoint could not be written -- the
+  // computation is done and its results are worth keeping -- but report the
+  // failure in the exit status, or a chain of runs that reloads this
+  // checkpoint would silently start from a stale one.
+  const bool saved = tns.save_tensors();
   if (peps_parameters.to_measure) {
     tns.measure();
   }
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 template <class tensor>
@@ -174,9 +178,9 @@ int run_timeevolution(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.time_evolution();
-  tns.save_tensors();
+  const bool saved = tns.save_tensors();
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 template <class tensor>
@@ -193,9 +197,9 @@ int run_finitetemperature(MPI_Comm comm, PEPS_Parameters peps_parameters,
                    onesite_operators, twosite_operators, multisite_operators,
                    corparam, clength_param);
   tns.finite_temperature();
-  tns.save_tensors();
+  const bool saved = tns.save_tensors();
   tns.summary();
-  return 0;
+  return saved ? 0 : 1;
 }
 
 int itps_main(const char *input_filename, MPI_Comm comm,
@@ -213,8 +217,12 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   MPI_Comm_size(comm, &mpisize);
 
   if (!util::path_exists(input_filename)) {
+    // path_exists() answers false rather than throwing when the filesystem
+    // cannot say, so a file that is there but unreadable arrives here looking
+    // exactly like a missing one; the message has to allow for both.
     std::stringstream ss;
-    ss << "ERROR: cannot find the input file: " << input_filename << std::endl;
+    ss << "ERROR: cannot read the input file: " << input_filename
+       << " (it is missing, or its directory cannot be searched)" << std::endl;
     throw tenes::input_error(ss.str());
   }
 
@@ -254,6 +262,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
   SquareLattice lattice = gen_lattice(*toml_lattice);
   lattice.Bcast(comm);
+  peps_parameters.phys_parity = gen_phys_parity(*toml_lattice, lattice);
 
   // time evolution
   const toml::value *toml_evolution = section("evolution");
@@ -262,8 +271,21 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   }
 
   const double tol = peps_parameters.iszero_tol;
-  const auto simple_updates =
+  const auto loaded_simple_updates =
       load_simple_updates<tensor_complex>(input_toml, comm);
+  // A bond no gate acts on is never canonicalised by the simple update and
+  // the CTM then fails to converge on it; identity gates make the update
+  // touch (truncate and normalise) every bond with virtual dimension > 1.
+  const auto simple_updates =
+      complete_ungated_bonds(loaded_simple_updates, lattice, comm);
+  if (simple_updates.size() > loaded_simple_updates.size() && mpirank == 0 &&
+      print_level >= PrintLevel::info) {
+    std::cout << "INFO: added "
+              << simple_updates.size() - loaded_simple_updates.size()
+              << " identity simple-update gate(s) on bonds that no "
+                 "evolution operator acts on, so that they are canonicalised"
+              << std::endl;
+  }
   const auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
 
   // observable
@@ -292,6 +314,10 @@ int itps_main(std::string input_filename, MPI_Comm comm,
       (toml_clength != nullptr
            ? gen_transfer_matrix_parameter(*toml_clength, "correlation_length")
            : TransferMatrix_Parameters());
+
+  validate_fermion_constraints(peps_parameters, lattice, simple_updates,
+                               full_updates, onesite_obs, twosite_obs,
+                               multisite_obs, corparam);
 
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);

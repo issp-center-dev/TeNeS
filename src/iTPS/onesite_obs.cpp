@@ -27,9 +27,13 @@
 
 #include "iTPS.hpp"
 
+#include "../fermion/fops.hpp"
+#include "../fermion/reduced.hpp"
+#include "../fermion/reduced_measure.hpp"
 #include "../tensor.hpp"
 
 #include "core/contract.hpp"
+#include "core/ctm.hpp"
 
 namespace tenes::itps {
 
@@ -58,6 +62,7 @@ template <class tensor>
 auto iTPS<tensor>::measure_onesite()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/onesite");
   const bool is_meanfield = peps_parameters.MeanField_Env;
   const bool is_density = peps_parameters.calcmode ==
                           PEPS_Parameters::CalculationMode::finite_temperature;
@@ -104,6 +109,23 @@ auto iTPS<tensor>::measure_onesite()
             op.op);
         local_obs[op.group][i] = op.coeff * val / norm[i];
       }
+    } else if (finfo.enabled) {
+      for (int i = 0; i < N_UNIT; ++i) {
+        const tensor reduced = tenes::fermion::build_reduced_op(
+            tenes::fermion::wrap_Tn(Tn[i], finfo, i));
+        norm[i] = core::Contract_one_site_density_CTM(
+            C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], reduced,
+            op_identity[i]);
+      }
+      for (auto const &op : onesite_operators) {
+        const int i = op.source_site;
+        const tensor reduced = tenes::fermion::build_reduced_op(
+            tenes::fermion::wrap_Tn(Tn[i], finfo, i));
+        const auto val = core::Contract_one_site_density_CTM(
+            C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], reduced,
+            op.op);
+        local_obs[op.group][i] = op.coeff * val / norm[i];
+      }
     } else {
       for (int i = 0; i < N_UNIT; ++i) {
         norm[i] = core::Contract_one_site_iTPS_CTM(
@@ -122,9 +144,20 @@ auto iTPS<tensor>::measure_onesite()
   double norm_real_min = 1e100;
   double norm_imag_abs_max = 0.0;
   for (int i = 0; i < N_UNIT; ++i) {
-    norm_real_min = std::min(std::real(norm[i]), norm_real_min);
+    tensor_type diagnostic_norm = norm[i];
+    if (finfo.enabled && !is_meanfield) {
+      if (std::isfinite(std::real(norm[i])) &&
+          std::isfinite(std::imag(norm[i])) && std::abs(norm[i]) > 0.0) {
+        diagnostic_norm = tensor_type(std::abs(norm[i]));
+      } else {
+        norm_real_min = -std::numeric_limits<double>::infinity();
+        norm_imag_abs_max = std::numeric_limits<double>::infinity();
+        continue;
+      }
+    }
+    norm_real_min = std::min(std::real(diagnostic_norm), norm_real_min);
     norm_imag_abs_max =
-        std::max(std::abs(std::imag(norm[i])), norm_imag_abs_max);
+        std::max(std::abs(std::imag(diagnostic_norm)), norm_imag_abs_max);
   }
   if (mpirank == 0) {
     if (norm_real_min <= 0.0) {
@@ -150,6 +183,11 @@ auto iTPS<tensor>::measure_onesite_rdm()
   const bool is_meanfield = peps_parameters.MeanField_Env;
   const bool is_density = peps_parameters.calcmode ==
                           PEPS_Parameters::CalculationMode::finite_temperature;
+  // measure() builds the CTM environment of a fermionic run from the reduced
+  // (already doubled) tensors, so the RDM has to be contracted with the
+  // density kernel here as well -- the iTPS kernel would double the bare Tn a
+  // second time and no longer match that environment.
+  const bool is_fermion_ctm = finfo.enabled && !is_meanfield && !is_density;
 
   std::vector<small_tensor<tensor_type>> rdm_all;
   rdm_all.reserve(N_UNIT);
@@ -170,13 +208,20 @@ auto iTPS<tensor>::measure_onesite_rdm()
   }
 
   for (int i = 0; i < N_UNIT; ++i) {
-    tensor rdm = is_meanfield ? core::Contract_one_site_RDM_iTPS_MF(Tn_mf[i])
-                 : is_density ? core::Contract_one_site_RDM_density_CTM(
-                                    C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                    eTb[i], eTl[i], Tn[i])
-                              : core::Contract_one_site_RDM_iTPS_CTM(
-                                    C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i],
-                                    eTb[i], eTl[i], Tn[i]);
+    tensor rdm =
+        is_meanfield ? core::Contract_one_site_RDM_iTPS_MF(Tn_mf[i])
+        : is_fermion_ctm
+            ? core::Contract_one_site_RDM_density_CTM(
+                  C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i],
+                  tenes::fermion::build_reduced_op(
+                      tenes::fermion::wrap_Tn(Tn[i], finfo, i)))
+        : is_density
+            ? core::Contract_one_site_RDM_density_CTM(C1[i], C2[i], C3[i],
+                                                      C4[i], eTt[i], eTr[i],
+                                                      eTb[i], eTl[i], Tn[i])
+            : core::Contract_one_site_RDM_iTPS_CTM(C1[i], C2[i], C3[i], C4[i],
+                                                   eTt[i], eTr[i], eTb[i],
+                                                   eTl[i], Tn[i]);
     const size_t d0 = rdm.shape()[0];
     const size_t d1 = rdm.shape()[1];
     assert(d0 == d1);
@@ -185,11 +230,16 @@ auto iTPS<tensor>::measure_onesite_rdm()
 
     for (size_t row = 0; row < d0; ++row) {
       for (size_t col = 0; col < d1; ++col) {
-        const tensor_type v = (is_meanfield || is_density)
+        // The density kernel returns the RDM in the transposed index order
+        // of the iTPS one (see the trace() identities on the declarations).
+        const tensor_type v = (is_meanfield || is_density || is_fermion_ctm)
                                   ? buf[col * d1 + row]
                                   : buf[row * d1 + col];
         rdm_local.set_value({row, col}, v);
       }
+    }
+    if (is_fermion_ctm) {
+      core::normalize_rdm_phase(rdm_local);
     }
     rdm_all.push_back(rdm_local);
   }
@@ -338,6 +388,7 @@ template <class tensor>
 auto iTPS<tensor>::measure_onesite_density()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
   Timer<> timer;
+  ScopedTimer scoped_timer("measure/onesite");
   const int nlops = num_onesite_operators;
   std::vector<std::vector<tensor_type>> local_obs(
       nlops, std::vector<tensor_type>(

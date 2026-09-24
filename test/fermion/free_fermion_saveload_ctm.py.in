@@ -1,0 +1,694 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+#
+# S-1 and S-2 of
+# docs/superpowers/specs/2026-09-06-fermion-saveload-ctm-contract.md:
+# a fermionic checkpoint written by a run that used the CTM environment and
+# the full update has to be reloadable.
+#
+# test/fermion/free_fermion_saveload.py.in covers the fermionic save/load
+# round trip only with [parameter.ctm] meanfield_env = true.  With the
+# mean-field environment the CTM edge tensors are never built, so they are
+# saved in the rank-4 shape initialize_tensors() allocated and reload just
+# fine.  With the CTM environment plus a full update, iTPS::update_CTM()
+# folds them to the single-layer rank-3 shape (CHI, CHI, D^2) and the
+# checkpoint can no longer be read back:
+#
+#   ERROR: rank mismatch in load_tensor: El[0] has 4 legs, but
+#   loaded one has 3 legs.
+#
+# This file is the missing case.  It is deliberately NOT weakened into
+# something that passes today: meanfield_env is pinned to false and
+# [parameter.full_update] num_step is >= 1, which is what makes run1 walk
+# through update_CTM() at all.
+#
+# The two runs are
+#
+#   run1: simple update + full update, [parameter.general] tensor_save
+#   run2: no evolution at all, [parameter.general] tensor_load of run1's
+#         checkpoint, measure only
+#
+# so that run2's numbers can only come from the files run1 wrote.  Because
+# Calc_CTM_Environment_density is called with initialize = true in both
+# runs, the environment stored in the checkpoint is discarded and rebuilt
+# from the loaded Tn; the two runs therefore perform the *same* CTM
+# iteration on bit-identical center tensors rather than two independent
+# convergences.  See RELOAD_RTOL below for what that means for the
+# tolerance.
+
+import glob
+import os
+import shutil
+import subprocess
+import sys
+from os.path import basename, join
+
+import numpy as np
+
+T = 1.0
+MU = 0.0
+D = 2
+CHI = 12
+TAU = 0.01
+SEED = 11
+LX = 2
+LY = 2
+N_UNIT = LX * LY
+
+# Enough simple-update steps for the full update to start from a sane state,
+# but this test is about the checkpoint, not about the energy, so the long
+# 1000-step schedule of free_fermion_full.py.in is not needed here.
+NUM_SIMPLE_STEP = 200
+# The whole point of the test.  A zero here would turn optimize() into a
+# simple update only, update_CTM() would never run, and the checkpoint would
+# be reloadable even without the fix.  assert_precondition() refuses that.
+NUM_FULL_STEP = 1
+
+# Every convergence knob that the two runs share is pinned explicitly so that
+# nothing here depends on a default.  D = 2, chi = 12 converges the fermionic
+# CTM without the "CTM did not converge" warning in both runs (measured).
+CTM_CONVERGENCE_EPSILON = 1.0e-8
+MAX_CTM_ITERATION = 400
+FULL_CONVERGENCE_EPSILON = 1.0e-12
+FULL_INVERSE_PRECISION = 1.0e-14
+FULL_MAX_ITERATION = 1000
+
+# Tolerance of the run1 vs run2 comparison.
+#
+# The rule of docs/superpowers/specs/2026-09-05-fermion-test-tolerance-contract.md
+# (規約 2) is that the tolerance must not be of the same size as the
+# convergence criteria of the two runs being compared.  Here it is four
+# orders of magnitude BELOW the loosest of them (CTM_CONVERGENCE_EPSILON =
+# 1e-8), and that is the correct direction rather than a mistake: run2 does
+# not re-converge anything.  It reads Tn back bit-for-bit from the binary
+# checkpoint and the Schmidt weights from a text file written with
+# max_digits10, then runs the identical CTM iteration run1 ran in measure().
+# The reachable difference is round-off in the file round trip, not the
+# convergence threshold.  Measured on a checkpoint patched by hand into the
+# post-fix shape (work/fermion/saveload-ctm/testdesign/calib.py): every
+# observable of density.dat, onesite_obs.dat and twosite_obs.dat agreed to
+# the last printed digit, worst relative error 0.0.  1e-12 leaves several
+# hundred ulp of room for a platform that is not quite bit-exact while
+# staying 1e4 away from the CTM criterion.
+RELOAD_RTOL = 1.0e-12
+RELOAD_ATOL = 1.0e-14
+
+# The warning Calc_CTM_Environment(_density) prints when it hits
+# iteration_max.  Neither run may print it.
+CTM_WARNING = "CTM did not converge"
+
+# (source_site, source_leg) of the full-update gates, covering the eight
+# bonds of the 2x2 cell exactly once each and using every source_leg, as in
+# free_fermion_full.py.in.  check_bond_cover() asserts it instead of assuming
+# it.
+FULL_UPDATE_BONDS = [
+    (0, 2),
+    (2, 2),
+    (0, 0),
+    (2, 0),
+    (0, 1),
+    (2, 1),
+    (1, 3),
+    (3, 3),
+]
+
+# R1 of the contract: what save_tensors() has to write for the environment,
+# namely the shapes initialize_tensors() allocates (src/iTPS/tensors.cpp).
+# eTt gets virtual leg 1, eTr leg 2, eTb leg 3 and eTl leg 0 of the site.
+VDIM = [D, D, D, D]
+EXPECTED_ENV_SHAPES = {
+    "Et": [CHI, CHI, VDIM[1], VDIM[1]],
+    "Er": [CHI, CHI, VDIM[2], VDIM[2]],
+    "Eb": [CHI, CHI, VDIM[3], VDIM[3]],
+    "El": [CHI, CHI, VDIM[0], VDIM[0]],
+    "C1": [CHI, CHI],
+    "C2": [CHI, CHI],
+    "C3": [CHI, CHI],
+    "C4": [CHI, CHI],
+}
+
+
+def bond_key(site, leg):
+    # Canonical name of the lattice bond a (source_site, source_leg) pair
+    # refers to, following src/SquareLattice.cpp:
+    #   leg 0 -> (x - 1, y), leg 1 -> (x, y + 1),
+    #   leg 2 -> (x + 1, y), leg 3 -> (x, y - 1),
+    # with site = x + LX * y.  A horizontal bond is named by its left end
+    # and a vertical one by its lower end.
+    x = site % LX
+    y = site // LX
+    if leg == 2:
+        return ("h", x, y)
+    if leg == 0:
+        return ("h", (x - 1) % LX, y)
+    if leg == 1:
+        return ("v", x, y)
+    if leg == 3:
+        return ("v", x, (y - 1) % LY)
+    raise ValueError(f"source_leg must be 0..3, got {leg}")
+
+
+def check_bond_cover(bonds):
+    failures = []
+    keys = [bond_key(site, leg) for site, leg in bonds]
+    if len(set(keys)) != len(keys):
+        failures.append(f"the full-update gates repeat a bond: {keys}")
+    expected = {("h", x, y) for x in range(LX) for y in range(LY)}
+    expected |= {("v", x, y) for x in range(LX) for y in range(LY)}
+    if set(keys) != expected:
+        failures.append(
+            "the full-update gates do not cover every bond of the unit cell "
+            f"exactly once: {sorted(set(keys))} versus {sorted(expected)}"
+        )
+    return failures
+
+
+def two_site_hamiltonian(t, mu):
+    h = np.zeros((4, 4), dtype=float)
+    # Basis: |00>, |01>, |10>, |11>. The chemical-potential term is split
+    # over the four nearest-neighbor bonds incident on each site.
+    h[1, 1] = -0.25 * mu
+    h[2, 2] = -0.25 * mu
+    h[3, 3] = -0.5 * mu
+    h[1, 2] = -t
+    h[2, 1] = -t
+    return h
+
+
+def imaginary_time_gate(h, tau):
+    eigvals, eigvecs = np.linalg.eigh(h)
+    return (eigvecs * np.exp(-tau * eigvals)) @ eigvecs.T
+
+
+def tensor_elements(matrix):
+    lines = []
+    for in1 in range(2):
+        for in2 in range(2):
+            in_flat = in1 * 2 + in2
+            for out1 in range(2):
+                for out2 in range(2):
+                    out_flat = out1 * 2 + out2
+                    value = matrix[in_flat, out_flat]
+                    if abs(value) > 1.0e-14:
+                        lines.append(f"{in1} {in2} {out1} {out2}  " f"{value:.17e} 0.0")
+    return "\n".join(lines)
+
+
+def bonds_block():
+    lines = [f"{site} 1 0" for site in range(N_UNIT)]
+    lines += [f"{site} 0 1" for site in range(N_UNIT)]
+    return "\n".join(lines)
+
+
+def simple_evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for source_leg in (2, 1):
+        for site in range(N_UNIT):
+            blocks.append(
+                f"""[[evolution.simple]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+            )
+    return "\n".join(blocks)
+
+
+def full_evolution_blocks(gate):
+    elems = tensor_elements(gate)
+    blocks = []
+    for site, source_leg in FULL_UPDATE_BONDS:
+        blocks.append(
+            f"""[[evolution.full]]
+group = 0
+source_site = {site}
+source_leg = {source_leg}
+dimensions = [2, 2, 2, 2]
+elements = \"\"\"
+{elems}
+\"\"\"
+"""
+        )
+    return "\n".join(blocks)
+
+
+def input_toml(outdir, num_simple_step, num_full_step, save_dir=None, load_dir=None):
+    h = two_site_hamiltonian(T, MU)
+    gate = imaginary_time_gate(h, TAU)
+    h_elements = tensor_elements(h)
+    n_elements = "1 1  1.0 0.0"
+    if save_dir is not None:
+        checkpoint_line = f'tensor_save = "{save_dir}"'
+    else:
+        checkpoint_line = f'tensor_load = "{load_dir}"'
+    return f"""[parameter]
+[parameter.general]
+is_real = true
+fermion = true
+output = "{outdir}"
+{checkpoint_line}
+
+[parameter.simple_update]
+tau = {TAU}
+num_step = {num_simple_step}
+
+[parameter.full_update]
+tau = {TAU}
+num_step = {num_full_step}
+fastfullupdate = false
+convergence_epsilon = {FULL_CONVERGENCE_EPSILON}
+inverse_precision = {FULL_INVERSE_PRECISION}
+iteration_max = {FULL_MAX_ITERATION}
+
+[parameter.ctm]
+dimension = {CHI}
+convergence_epsilon = {CTM_CONVERGENCE_EPSILON}
+iteration_max = {MAX_CTM_ITERATION}
+meanfield_env = false
+
+[parameter.random]
+seed = {SEED}
+
+[tensor]
+L_sub = [{LX}, {LY}]
+skew = 0
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [{D}, {D}, {D}, {D}]
+parity = [0, 1]
+initial_state = [0.0]
+noise = 1.0
+
+[correlation]
+r_max = 0
+operators = []
+
+[correlation_length]
+measure = false
+
+[observable]
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 2
+elements = \"\"\"
+{n_elements}
+\"\"\"
+
+[[observable.twosite]]
+name = "bond_hamiltonian"
+group = 0
+bonds = \"\"\"
+{bonds_block()}
+\"\"\"
+dim = [2, 2]
+elements = \"\"\"
+{h_elements}
+\"\"\"
+
+[evolution]
+{simple_evolution_blocks(gate)}
+{full_evolution_blocks(gate)}
+"""
+
+
+def run_tenes(inputfile):
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append(inputfile)
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+
+
+def read_density(outdir):
+    values = {}
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[name.strip()] = float(raw.split()[0])
+    return values
+
+
+def read_obs(path):
+    # onesite_obs.dat / twosite_obs.dat: comment lines, then one row per
+    # (op_group, site[, dx, dy]) whose last two columns are real and imag.
+    values = {}
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            words = line.split()
+            key = tuple(words[:-2])
+            values[key] = (float(words[-2]), float(words[-1]))
+    return values
+
+
+def read_time(outdir):
+    # time.dat lines look like "time full update   = 1.234" (note the
+    # irregular spacing before "="), so split on "=" and normalize the name.
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            values[" ".join(name.split())] = float(raw.split()[0])
+    return values
+
+
+def read_tensor_header(path):
+    # An mptensor checkpoint file is an ASCII header ("ndim= 4",
+    # "shape= 12 12 2 2", ...) followed by one <name>.<rank>.bin per MPI rank
+    # holding the raw values.
+    header = {}
+    with open(path) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            header[name.strip()] = raw.split()
+    return header
+
+
+def check_saved_environment(save_dir):
+    # S-2 / R1: the environment in the checkpoint must have the shape
+    # initialize_tensors() allocates, and (R1's determinism clause) be zero.
+    failures = []
+    for prefix, expected_shape in sorted(EXPECTED_ENV_SHAPES.items()):
+        for site in range(N_UNIT):
+            path = join(save_dir, f"{prefix}_{site}.dat")
+            if not os.path.exists(path):
+                failures.append(f"{path} was not written")
+                continue
+            header = read_tensor_header(path)
+            ndim = header.get("ndim")
+            shape = header.get("shape")
+            if ndim != [str(len(expected_shape))]:
+                failures.append(
+                    f"{basename(path)}: ndim= {' '.join(ndim or ['(missing)'])}, "
+                    f"expected {len(expected_shape)}; the saved environment is "
+                    "not in the shape initialize_tensors() allocates, so the "
+                    "checkpoint cannot be loaded back"
+                )
+                continue
+            if shape != [str(n) for n in expected_shape]:
+                failures.append(
+                    f"{basename(path)}: shape= {' '.join(shape or ['(missing)'])}, "
+                    f"expected {' '.join(str(n) for n in expected_shape)}"
+                )
+                continue
+            if header.get("value_type") != ["0", "(double)"]:
+                failures.append(
+                    f"{basename(path)}: value_type= "
+                    f"{' '.join(header.get('value_type', ['(missing)']))}, "
+                    "expected 0 (double); this test pins is_real = true"
+                )
+                continue
+            chunks = sorted(glob.glob(path + ".*.bin"))
+            if not chunks:
+                failures.append(f"{path}.*.bin was not written")
+                continue
+            worst = 0.0
+            for chunk in chunks:
+                data = np.fromfile(chunk, dtype=np.float64)
+                if data.size:
+                    worst = max(worst, float(np.abs(data).max()))
+            if worst != 0.0:
+                failures.append(
+                    f"{basename(path)}: the saved environment is not zero "
+                    f"(largest |element| = {worst:.6e}); R1 asks for the "
+                    "initialized, all-zero environment so that a checkpoint "
+                    "does not depend on the live CTM"
+                )
+    return failures
+
+
+def assert_precondition(text1, text2):
+    # Preconditions of the whole test, asserted instead of assumed: if any of
+    # these silently changed, run1 would stop walking through update_CTM()
+    # and this file would go green without checking anything.
+    failures = []
+    failures += check_bond_cover(FULL_UPDATE_BONDS)
+    if NUM_FULL_STEP < 1:
+        failures.append(
+            f"NUM_FULL_STEP = {NUM_FULL_STEP}; with no full-update sweep "
+            "optimize() never calls update_CTM() and the checkpoint this "
+            "test is about is never produced"
+        )
+    for label, text in (("run1", text1), ("run2", text2)):
+        if "meanfield_env = false" not in text:
+            failures.append(
+                f"{label}: the input does not pin meanfield_env = false; with "
+                "the mean-field environment the CTM edge tensors are never "
+                "built and the bug under test cannot appear"
+            )
+        if "fastfullupdate = false" not in text:
+            failures.append(
+                f"{label}: the input does not pin fastfullupdate = false, "
+                "which the fermionic full update requires"
+            )
+        if "fermion = true" not in text:
+            failures.append(f"{label}: the input is not a fermionic run")
+    if f"num_step = {NUM_FULL_STEP}" not in text1:
+        failures.append(
+            "run1: the input does not ask for "
+            f"num_step = {NUM_FULL_STEP} full-update sweeps"
+        )
+
+    # The two inputs must differ only where they are meant to: the output
+    # directory, the checkpoint direction, and the two step counts.  Anything
+    # else (chi, D, the convergence knobs, meanfield_env) differing would
+    # make the comparison below meaningless.
+    lines1 = text1.splitlines()
+    lines2 = text2.splitlines()
+    diff = [(a, b) for a, b in zip(lines1, lines2) if a != b]
+    expected_diff = [
+        ('output = "%s"' % OUT1, 'output = "%s"' % OUT2),
+        ('tensor_save = "%s"' % SAVE_DIR, 'tensor_load = "%s"' % SAVE_DIR),
+        (f"num_step = {NUM_SIMPLE_STEP}", "num_step = 0"),
+        (f"num_step = {NUM_FULL_STEP}", "num_step = 0"),
+    ]
+    if len(lines1) != len(lines2) or diff != expected_diff:
+        failures.append(
+            "the two inputs must differ only in the output directory, the "
+            f"checkpoint direction and the two step counts; they differ in {diff}"
+        )
+    return failures
+
+
+def compare(name, values, ref_values, label):
+    ok = True
+    if set(values) != set(ref_values):
+        print(f"{label}: {name} has different rows than run1")
+        print("  result:   ", sorted(values))
+        print("  reference:", sorted(ref_values))
+        return False, 0.0
+    worst = 0.0
+    for key in sorted(ref_values):
+        got = np.atleast_1d(np.asarray(values[key], dtype=float))
+        ref = np.atleast_1d(np.asarray(ref_values[key], dtype=float))
+        worst = max(
+            worst,
+            float(np.max(np.abs(got - ref) / np.maximum(1.0, np.abs(ref)))),
+        )
+        if not np.allclose(got, ref, rtol=RELOAD_RTOL, atol=RELOAD_ATOL):
+            print(f"{label}: {name} row {key} differs from run1")
+            print("  result:   ", values[key])
+            print("  reference:", ref_values[key])
+            ok = False
+    return ok, worst
+
+
+def report(proc, name):
+    print(f"--- {name} output ---")
+    print(proc.stdout + proc.stderr)
+
+
+OUTPUT_ROOT = "output_FreeFermionSaveLoadCTM"
+SAVE_DIR = join(OUTPUT_ROOT, "save_ctm_fu")
+OUT1 = join(OUTPUT_ROOT, "run1")
+OUT2 = join(OUTPUT_ROOT, "run2")
+
+
+def main():
+    if os.path.exists(OUTPUT_ROOT):
+        shutil.rmtree(OUTPUT_ROOT)
+    os.makedirs(OUTPUT_ROOT)
+
+    text1 = input_toml(OUT1, NUM_SIMPLE_STEP, NUM_FULL_STEP, save_dir=SAVE_DIR)
+    # run2 evolves nothing: everything it measures has to come out of the
+    # checkpoint, so the comparison is about the files and not about two
+    # independent optimizations landing in the same place.
+    text2 = input_toml(OUT2, 0, 0, load_dir=SAVE_DIR)
+
+    failures = assert_precondition(text1, text2)
+    if failures:
+        for message in failures:
+            print("FreeFermionSaveLoadCTM precondition failed: " + message)
+        return 1
+
+    input1 = join(OUTPUT_ROOT, "input_run1.toml")
+    with open(input1, "w") as f:
+        f.write(text1)
+    proc1 = run_tenes(input1)
+    if proc1.returncode != 0:
+        report(proc1, "run1")
+        print(f"run1 (tensor_save) failed: exit code {proc1.returncode}")
+        return 1
+    combined1 = proc1.stdout + proc1.stderr
+    density1 = read_density(OUT1)
+    onesite1 = read_obs(join(OUT1, "onesite_obs.dat"))
+    twosite1 = read_obs(join(OUT1, "twosite_obs.dat"))
+    times1 = read_time(OUT1)
+    print(
+        "FreeFermionSaveLoadCTM run1 (save) Energy={:.17e} n={:.17e}".format(
+            density1["Energy"], density1["n"]
+        )
+    )
+
+    failures = []
+
+    # --- anti-hollowing: run1 really went through the full update ----------
+    #
+    # iTPS::full_update() calls update_CTM() before it starts its timer
+    # (src/iTPS/full_update.cpp), so a nonzero "time full update" is a
+    # mechanical proof that update_CTM() ran and that the environment the
+    # checkpoint carries was written after the fold.  The ndim of the saved
+    # El_0.dat cannot serve this purpose: R1 makes it 4 in every run, so
+    # after the fix it no longer tells full-update runs apart from
+    # simple-update-only ones.
+    if "Start full update" not in combined1:
+        failures.append(
+            "run1 never printed 'Start full update'; optimize() skipped the "
+            "full update, so update_CTM() was never called and this test is "
+            "checking nothing"
+        )
+    if not times1.get("time full update", 0.0) > 0.0:
+        failures.append(
+            "run1 reports 'time full update' = "
+            f"{times1.get('time full update')}; the full update never ran, so "
+            "the checkpoint is a simple-update one and would reload even "
+            "without the fix"
+        )
+    if "Full_Use_FastFullUpdate" in combined1:
+        failures.append(
+            "run1: tenes warned about Full_Use_FastFullUpdate even though the "
+            "input sets fastfullupdate = false"
+        )
+    if CTM_WARNING in combined1:
+        failures.append(
+            f"run1: tenes printed '{CTM_WARNING}' "
+            f"{combined1.count(CTM_WARNING)} time(s); every CTM of the run has "
+            f"to converge within iteration_max = {MAX_CTM_ITERATION}"
+        )
+    if failures:
+        for message in failures:
+            print("FreeFermionSaveLoadCTM failed: " + message)
+        return 1
+
+    # --- S-2: the saved environment has the shape R1 asks for -------------
+    #
+    # These are collected rather than returned on, so that a run with the bug
+    # still goes on to attempt the reload below and the failure output shows
+    # both halves of the story: the rank-3 files and the load error they cause.
+    env_failures = check_saved_environment(SAVE_DIR)
+    for message in env_failures:
+        print("FreeFermionSaveLoadCTM saved-environment check failed: " + message)
+    failures += env_failures
+    if not env_failures:
+        print(
+            "FreeFermionSaveLoadCTM saved environment: "
+            f"{len(EXPECTED_ENV_SHAPES) * N_UNIT} tensors in the initialized shape"
+        )
+
+    # --- S-1: the checkpoint reloads and reproduces the observables --------
+    input2 = join(OUTPUT_ROOT, "input_run2.toml")
+    with open(input2, "w") as f:
+        f.write(text2)
+    proc2 = run_tenes(input2)
+    if proc2.returncode != 0:
+        report(proc2, "run2")
+        failures.append(
+            f"run2 (tensor_load) failed: exit code {proc2.returncode}; the "
+            "checkpoint run1 wrote cannot be read back"
+        )
+        for message in failures:
+            print("FreeFermionSaveLoadCTM failed: " + message)
+        return 1
+    combined2 = proc2.stdout + proc2.stderr
+    density2 = read_density(OUT2)
+    onesite2 = read_obs(join(OUT2, "onesite_obs.dat"))
+    twosite2 = read_obs(join(OUT2, "twosite_obs.dat"))
+    times2 = read_time(OUT2)
+    print(
+        "FreeFermionSaveLoadCTM run2 (load) Energy={:.17e} n={:.17e}".format(
+            density2["Energy"], density2["n"]
+        )
+    )
+
+    if times2.get("time full update", -1.0) != 0.0:
+        failures.append(
+            "run2 reports 'time full update' = "
+            f"{times2.get('time full update')}; it was supposed to reload and "
+            "measure only, so an agreement with run1 would not be evidence "
+            "about the checkpoint"
+        )
+    if CTM_WARNING in combined2:
+        failures.append(
+            f"run2: tenes printed '{CTM_WARNING}' "
+            f"{combined2.count(CTM_WARNING)} time(s)"
+        )
+
+    worst = 0.0
+    for name, values, ref_values in (
+        ("density.dat", density2, density1),
+        ("onesite_obs.dat", onesite2, onesite1),
+        ("twosite_obs.dat", twosite2, twosite1),
+    ):
+        ok, w = compare(name, values, ref_values, "run2")
+        worst = max(worst, w)
+        if not ok:
+            failures.append(f"run2: {name} does not reproduce run1")
+    print(
+        "FreeFermionSaveLoadCTM worst relative difference run1 vs run2 = "
+        f"{worst:.6e} (tolerance rtol={RELOAD_RTOL:g}, atol={RELOAD_ATOL:g})"
+    )
+
+    if failures:
+        for message in failures:
+            print("FreeFermionSaveLoadCTM failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

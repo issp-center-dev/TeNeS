@@ -17,13 +17,16 @@
 import os
 import sys
 
+import numpy as np
 import pytest
+import toml
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tool")
 )
 
 import tenes_simple
+import tenes_std
 
 
 def test_model_is_abstract():
@@ -69,3 +72,132 @@ class TestBoseHubbardModel:
         ham = model.sitehamiltonian()
         assert ham[1, 1].real == pytest.approx(-2.0)
         assert ham[2, 2].real == pytest.approx(-4.0)
+
+
+class TestModelExtensionPoints:
+    def test_bosonic_models_are_not_fermionic(self):
+        assert tenes_simple.SpinModel({"type": "spin"}).is_fermion is False
+        assert tenes_simple.BoseHubbardModel({"type": "boson"}).is_fermion is False
+
+    def test_bosonic_models_have_no_parity_and_no_explicit_twosite_ops(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        assert model.parity == []
+        assert model.twosite_ops_explicit == []
+
+    def test_random_mode_returns_none(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        assert model.initial_state_vectors("random", 2) is None
+
+    def test_ferro_mode_repeats_the_first_sublattice(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        st = model.initial_states(2)
+        v = model.initial_state_vectors("ferro", 2)
+        assert np.allclose(v[0], st[0])
+        assert np.allclose(v[1], st[0])
+
+    def test_other_modes_pass_the_pattern_through(self):
+        model = tenes_simple.SpinModel({"type": "spin"})
+        v = model.initial_state_vectors("antiferro", 2)
+        assert np.allclose(v, model.initial_states(2))
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            tenes_simple.SpinModel({"type": "spin"}),
+            tenes_simple.BoseHubbardModel({"type": "boson"}),
+        ],
+    )
+    def test_vacuum_mode_is_rejected_by_default_models(self, model):
+        with pytest.raises(RuntimeError) as excinfo:
+            model.initial_state_vectors("vacuum", 1)
+        msg = str(excinfo.value)
+        assert "vacuum" in msg
+        assert "not available" in msg
+        assert '"random"' in msg
+        assert '"ferro"' in msg
+        assert '"antiferro"' in msg
+
+    def test_boson_vacuum_initial_state_is_rejected_by_tenes_simple(self):
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {
+                "type": "square lattice",
+                "L": 2,
+                "W": 2,
+                "virtual_dim": 2,
+                "initial": "vacuum",
+            },
+            "model": {"type": "boson"},
+        }
+        with pytest.raises(RuntimeError, match="vacuum"):
+            tenes_simple.tenes_simple(param)
+
+
+def _unitcell_initial_states(std_toml_text):
+    parsed = toml.loads(std_toml_text)
+    return [u["initial_state"] for u in parsed["tensor"]["unitcell"]]
+
+
+class TestVacancyInitialStateIndexing:
+    """The kagome lattice has a vacancy sublattice; the non-vacancy sublattices
+    must keep reading the pattern by their own running index."""
+
+    def _param(self):
+        return {
+            "parameter": {"general": {}},
+            "lattice": {
+                "type": "kagome lattice",
+                "L": 2,
+                "W": 2,
+                "virtual_dim": 2,
+                "initial": "antiferro",
+            },
+            "model": {"type": "spin"},
+        }
+
+    def test_vacancy_gets_the_scalar_state(self):
+        text, _ = tenes_simple.tenes_simple(self._param())
+        states = _unitcell_initial_states(text)
+        assert states[3] == [1.0]
+
+    def test_nonvacancy_sublattices_follow_the_pattern(self):
+        text, lattice = tenes_simple.tenes_simple(self._param())
+        states = _unitcell_initial_states(text)
+        model = tenes_simple.make_model(self._param())
+        pattern = model.initial_states(3)
+        for i in range(3):
+            assert np.allclose(states[i], pattern[i])
+
+
+# ---------------------------------------------------------------------------
+# docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md section 9:
+# the solver and tenes_std reject a skew outside -L_sub[0] < skew < L_sub[0].
+# tenes_simple is unchanged and must only ever emit a skew inside that range,
+# so every std.toml it writes stays a valid input. A net over every lattice
+# type it supports and small L and W (square: L >= 2; triangular: L, W >= 2;
+# honeycomb doubles L and uses W % L as the skew; kagome doubles both).
+# ---------------------------------------------------------------------------
+
+SIMPLE_LATTICE_SIZES = {
+    "square lattice": [(L, W) for L in range(2, 5) for W in range(1, 5)],
+    "honeycomb lattice": [(L, W) for L in range(1, 4) for W in range(1, 6)],
+    "triangular lattice": [(L, W) for L in range(2, 5) for W in range(2, 5)],
+    "kagome lattice": [(L, W) for L in range(1, 4) for W in range(1, 4)],
+}
+
+
+@pytest.mark.parametrize("lattice_type", sorted(SIMPLE_LATTICE_SIZES))
+def test_every_lattice_emits_a_skew_inside_the_range(lattice_type):
+    for L, W in SIMPLE_LATTICE_SIZES[lattice_type]:
+        param = {
+            "parameter": {"general": {}},
+            "lattice": {"type": lattice_type, "L": L, "W": W, "virtual_dim": 2},
+            "model": {"type": "spin", "J": 1.0},
+        }
+        text, lattice = tenes_simple.tenes_simple(param)
+        tensor = toml.loads(text)["tensor"]
+        width = tensor["L_sub"][0]
+        assert -width < tensor["skew"] < width, (lattice_type, L, W, tensor)
+        assert tensor["skew"] == lattice.skew
+        # and tenes_std builds the model from it
+        tenes_std.Model(toml.loads(text))

@@ -322,6 +322,7 @@ class LocalTensor:
 
     phys_dim: int
     virtual_dim: List[int]
+    parity: Optional[List[int]]
 
     def __init__(self, tensor_dict: dict = None):
         """Load from a tensor.unitcell entry when one is given."""
@@ -344,6 +345,7 @@ class LocalTensor:
             self.virtual_dim = [virtual_dim] * 4
         else:
             self.virtual_dim = virtual_dim
+        self.parity = tensor_dict.get("parity", None)
         self.check()
 
     def check(self):
@@ -366,6 +368,21 @@ class LocalTensor:
         ):
             msg = "virtual_dim must be a positive integer or a list with 4 positive integers"
             raise RuntimeError(msg)
+
+        if self.parity is not None:
+            if not isinstance(self.parity, list) or len(self.parity) != self.phys_dim:
+                msg = (
+                    "parity must be a list with one 0/1 entry per physical state; "
+                    "physical_dim is {} but parity is {}".format(
+                        self.phys_dim, self.parity
+                    )
+                )
+                raise RuntimeError(msg)
+            if any(p not in (0, 1) for p in self.parity):
+                msg = "parity entries must be 0 or 1, but parity is {}".format(
+                    self.parity
+                )
+                raise RuntimeError(msg)
 
 
 class Unitcell:
@@ -400,6 +417,16 @@ class Unitcell:
             self.L = L
 
         self.skew = lat_dict.get("skew", 0)
+        # (skew, Ly) and (skew +/- Lx, Ly) generate the same lattice, so a
+        # skew outside -Lx < skew < Lx says nothing new; refuse it, as tenes
+        # does.
+        if not -self.L[0] < self.skew < self.L[0]:
+            msg = (
+                "skew = {} is out of range for L_sub = {}: use "
+                "-L_sub[0] < skew < L_sub[0] (skew and skew +/- L_sub[0] "
+                "describe the same lattice)."
+            ).format(self.skew, self.L)
+            raise RuntimeError(msg)
 
         N = self.L[0] * self.L[1]
         self.sites = cast(List[LocalTensor], [None] * N)
@@ -1097,6 +1124,19 @@ class MultisiteObservable:
         return ret
 
 
+def _drop_tiny(evo: np.ndarray, cutoff: float) -> np.ndarray:
+    """Zero entries below ``cutoff`` in magnitude.
+
+    eigh-based reconstruction of expm(-tau h) leaves O(eps) residue where the
+    exact result is zero; for a parity-even h those residues sit in the
+    parity-odd blocks, and the solver's fermion guard treats any nonzero
+    entry there as a genuine odd operator.
+    """
+    evo = np.array(evo)
+    evo[np.abs(evo) < cutoff] = 0.0
+    return evo
+
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
@@ -1107,6 +1147,7 @@ def make_evolution_onesite(
     """Exponentiate a one-site Hamiltonian term into exp(-tau H)."""
     D, V = np.linalg.eigh(hamiltonian.elements)
     evo = np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate())
+    evo = _drop_tiny(evo, result_cutoff)
 
     return [SiteOperator(hamiltonian.site, evo, group=group)]
 
@@ -1142,6 +1183,7 @@ def make_evolution_twosite(
         np.einsum("il, l, jl -> ij", V, np.exp(-tau * D), V.conjugate()),
         hamiltonian.elements.shape,
     )
+    evo = _drop_tiny(evo, result_cutoff)
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
 
@@ -1467,6 +1509,9 @@ class Model:
             )
             self.multibodies.append(obs)
 
+        if self.parameter.get("general", {}).get("fermion", False):
+            self._validate_fermion_mode_input()
+
         self.simple_updates = []
         self.full_updates = []
 
@@ -1482,6 +1527,72 @@ class Model:
             for ham in self.hamiltonians:
                 for evo in make_evolution(ham, self.graph, tau, group=g):
                     self.full_updates.append(evo)
+
+    def _validate_fermion_mode_input(self) -> None:
+        # A site that is its own nearest neighbour (a one-wide cell, or a
+        # one-row cell with skew 0) cannot be updated consistently; every
+        # other cell, skewed or not, is fine.
+        unitcell = self.unitcell
+        for site_index in range(unitcell.numsites()):
+            x, y = unitcell.index2coord(site_index)
+            neighbours = [
+                unitcell.coord2index(x + dx, y + dy)
+                for dx, dy in ((-1, 0), (0, 1), (1, 0), (0, -1))
+            ]
+            if site_index in neighbours:
+                msg = (
+                    "Fermion mode requires a tensor unit cell in which no "
+                    "site is its own nearest neighbour; got L_sub = {}, "
+                    "skew = {}. Widen the cell, or give a one-row cell a "
+                    "non-zero skew."
+                ).format(unitcell.L, unitcell.skew)
+                raise RuntimeError(msg)
+
+        for site_index, site in enumerate(self.unitcell.sites):
+            if site.parity is None:
+                msg = (
+                    "Fermion mode requires tensor.unitcell site {} to define "
+                    "parity metadata. Add parity = [...] with one 0/1 entry per "
+                    "physical state."
+                ).format(site_index)
+                raise RuntimeError(msg)
+
+        for obs in self.twobodies:
+            if obs.ops is not None:
+                bonds = [
+                    "{} {} {}".format(bond.source_site, bond.dx, bond.dy)
+                    for bond in obs.bonds
+                ]
+                msg = (
+                    "Fermion mode does not support ops-form observable.twosite "
+                    "'{}' (group {}, bonds {}). Provide explicit elements for "
+                    "this two-site observable."
+                ).format(obs.name, obs.group, bonds)
+                raise RuntimeError(msg)
+
+        for obs in self.multibodies:
+            msg = (
+                "Fermion mode does not support observable.multisite '{}' "
+                "(group {}). Multi-site observables are unavailable in "
+                "fermion mode; tenes rejects them when it reads input.toml, "
+                "so remove the entry or turn fermion off."
+            ).format(obs.name, obs.group)
+            raise RuntimeError(msg)
+
+        for ham in self.hamiltonians:
+            if not isinstance(ham, NNOperator):
+                continue
+            bonds = self.graph.make_path(ham.bond)
+            nhops = len(bonds)
+            if nhops != 1:
+                bond = ham.bond
+                msg = (
+                    "Fermion mode does not support Hamiltonian bond source_site "
+                    "{} with displacement (dx, dy) = ({}, {}): it requires {} "
+                    "nearest-neighbour hops. Use only nearest-neighbour "
+                    "Hamiltonian bonds."
+                ).format(bond.source_site, bond.dx, bond.dy, nhops)
+                raise RuntimeError(msg)
 
     def to_toml(self, f: TextIO):
         """Write the input.toml content for the tenes executable."""
@@ -1503,6 +1614,8 @@ class Model:
             f.write("index = {}\n".format(ucell["index"]))
             f.write("physical_dim = {}\n".format(ucell["physical_dim"]))
             f.write("virtual_dim = {}\n".format(ucell["virtual_dim"]))
+            if "parity" in ucell:
+                f.write("parity = {}\n".format(ucell["parity"]))
             if "initial_state" in ucell:
                 f.write("initial_state = {}\n".format(ucell["initial_state"]))
             if "noise" in ucell:

@@ -36,6 +36,7 @@
 #include "../mpi.hpp"
 #include "../tensor.hpp"
 
+#include "../fermion/fermion_info.hpp"
 #include "../util/type_traits.hpp"
 
 #include "../timer.hpp"
@@ -49,6 +50,8 @@
 // IWYU pragma end_exports
 
 namespace tenes::itps {
+
+struct iTPSTestAccessor;
 
 //! A pair of sites identified by the source site and the displacement to
 //! the other one; the key type of the two-site measurement results.
@@ -93,6 +96,8 @@ inline bool operator<(const Multisites &a, const Multisites &b) {
  */
 template <class tensor>
 class iTPS {
+  friend struct iTPSTestAccessor;
+
  public:
   //! Scalar type of the tensor elements (double or complex).
   using tensor_type = typename tensor::value_type;
@@ -136,7 +141,7 @@ class iTPS {
   std::vector<tensor> make_single_tensor_density();
 
   //! Converge the corner transfer matrices for the current state.
-  void update_CTM();
+  void update_CTM(bool warm_start = false);
   //! Finite-temperature variant of update_CTM().
   void update_CTM_density();
 
@@ -165,6 +170,16 @@ class iTPS {
   void full_update();
   //! Apply one full-update gate.
   void full_update(EvolutionOperator<tensor> const &up);
+  /*! @brief full_update(up) with the sweep position named on failure.
+   *
+   *  A decomposition or environment guard deep inside cannot say which
+   *  bond or which sweep it was working on; both sweep loops go through
+   *  here so that a tenes::runtime_error picks that up on its way out.
+   */
+  void full_update_in_sweep(EvolutionOperator<tensor> const &up, int step_index,
+                            int nsteps);
+  //! Fermionic counterpart of the bosonic fast full-update CTM move.
+  void update_CTM_fast_fermion(int source, int target, int source_leg);
 
   //! Optimize the state in ground-state mode: simple updates, then full
   //! updates.
@@ -305,12 +320,23 @@ class iTPS {
       std::string filename_prefix = "");
 
   //! save optimized tensors into files
-  void save_tensors() const;
+  /*! @brief Write a checkpoint of the tensors to tensor_save_dir.
+   *  @return false if a checkpoint was asked for and could not be
+   *          written. A failure is reported rather than thrown, because
+   *          this runs before measure(); the caller turns it into a
+   *          non-zero exit status so that a chain of runs notices.
+   */
+  bool save_tensors() const;
 
   //! load tensors from files
   void load_tensors();
 
  private:
+  //! Reject measurement requests unsupported by the fermionic CTM path.
+  void validate_fermion_ctm_measurement() const;
+  //! Apply a one-site gate through the fermionic wrapper.
+  void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);
+
   //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {
     return site_ops_indices[site][group];
@@ -323,12 +349,43 @@ class iTPS {
     return convert_complex<tensor_type>(v);
   }
 
-  //! Read tensors in the current save format, whose params.dat records
-  //! the format version, unit cell, and per-site shapes.
-  void load_tensors_v1();
+  //! Read tensors in a versioned save format, whose params.dat records the
+  //! format version, the run kind (version 2 and later), the unit cell, and
+  //! the per-site shapes.
+  //! @param[in] expected_version the version load_tensors() dispatched on.
+  void load_tensors_versioned(int expected_version);
   //! Read tensors in the legacy save format (bare tensor files, no
   //! params.dat metadata).
   void load_tensors_v0();
+  /*!
+   * @brief Save the fermionic parity ledger to fermion.dat (rank 0 only).
+   *
+   * The virtual-bond ledger is mutable state (the simple update rewrites
+   * it through the graded svd_trunc), so it must travel with the saved
+   * tensors: reloading them under a stale ledger silently changes the
+   * measured energy. The file records a format version, the unit-cell
+   * geometry, and the physical and virtual parity vectors of every site.
+   */
+  //! @return false if the ledger could not be written (rank 0 only; other
+  //!         ranks return true, having nothing to write).
+  bool save_fermion_parity(std::string const &save_dir) const;
+  /*!
+   * @brief Load and validate fermion.dat before reading the tensors.
+   *
+   * Restores finfo from the saved ledger. Throws tenes::load_error when
+   * the saved run and the current one disagree about fermion mode
+   * (fermion.dat present but fermion = false, or vice versa), or when the
+   * file does not match the current geometry.
+   */
+  //! @param[in] recorded_kind whether the checkpoint records that it came
+  //!            from a fermionic run; empty for formats that do not record
+  //!            it, where the presence of fermion.dat decides instead.
+  void load_fermion_ledger(std::string const &load_dir,
+                           std::vector<std::vector<int>> const &saved_shape,
+                           bool validate_saved_shape,
+                           std::optional<bool> recorded_kind);
+  //! check the loaded tensors against the restored ledger (after reading them)
+  void validate_loaded_fermion_tensors() const;
 
   //! measure_correlation() with the CTM environment.
   std::vector<Correlation> measure_correlation_ctm();
@@ -343,6 +400,9 @@ class iTPS {
 
   PEPS_Parameters peps_parameters;  //!< runtime parameters
   SquareLattice lattice;            //!< unit-cell geometry
+  //! Physical-leg parities copied from PEPS_Parameters::phys_parity at
+  //! initialize_tensors(); the immutable half of what seeds finfo.
+  std::vector<std::vector<bool>> phys_parity;
 
   //! Simple-update gates, all groups interleaved.
   EvolutionOperators<tensor> simple_updates;
@@ -414,7 +474,14 @@ class iTPS {
   std::vector<tensor> C2;   //!< Right-top CTM for each center
   std::vector<tensor> C3;   //!< Right-bottom CTM for each center
   std::vector<tensor> C4;   //!< Left-bottom CTM for each center
+  //! True after the CTM environment has been built for the current shapes.
+  bool ctm_valid_ = false;
   //!@}
+  //! Parity ledgers of every site tensor (fermion mode). Mutable state:
+  //! the simple update rewrites the virtual-bond ledgers through the
+  //! graded svd_trunc, so it is saved to and loaded from fermion.dat
+  //! alongside the tensors. Disabled (enabled = false) in bosonic runs.
+  tenes::fermion::FermionInfo finfo;
   std::vector<std::vector<std::vector<double>>>
       lambda_tensor;  //!< Meanfield environments
 

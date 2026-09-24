@@ -34,6 +34,7 @@ int omp_get_max_threads() { return 1; }
 #include "../tensor.hpp"
 
 #include "../operator.hpp"
+#include "../fermion/reduced_measure.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
 #include "../util/file.hpp"
@@ -162,6 +163,14 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
     if (!savedir.empty()) {
       if (!util::isdir(savedir)) {
         is_ok = is_ok && util::mkdir(savedir);
+      } else if (peps_parameters_.print_level >= PrintLevel::info) {
+        // Checkpoint files already in there will be overwritten, and ones
+        // this run does not write will be removed. Anything else is left
+        // alone, but saying so before the run starts is still worth a line.
+        std::cout << "INFO: tensor_save directory " << savedir
+                  << " already exists; the checkpoint files in it will be "
+                     "replaced by this run's"
+                  << std::endl;
       }
     }
   }
@@ -443,10 +452,25 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
 }
 
 template <class ptensor>
-void iTPS<ptensor>::update_CTM() {
+void iTPS<ptensor>::update_CTM(bool warm_start) {
   Timer<> timer;
-  core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
-                             peps_parameters, lattice);
+  const bool initialize = !(warm_start && ctm_valid_);
+  if (finfo.enabled) {
+    // Bare Tn: the kernel writes sqrt-Schmidt weights into both ends of every
+    // bond, so the state is the direct contraction of Tn (same convention the
+    // bosonic CTM relies on). Dressing with the full lambda here would
+    // double-count the environment weights the CTM itself provides (that is
+    // the MeanField-path convention, not the CTM one).
+    const std::vector<ptensor> reduced_Tn =
+        tenes::fermion::build_reduced_density_tensors(Tn, finfo);
+    core::Calc_CTM_Environment_density(C1, C2, C3, C4, eTt, eTr, eTb, eTl,
+                                       reduced_Tn, peps_parameters, lattice,
+                                       initialize, true);
+  } else {
+    core::Calc_CTM_Environment(C1, C2, C3, C4, eTt, eTr, eTb, eTl, Tn,
+                               peps_parameters, lattice, initialize);
+  }
+  ctm_valid_ = true;
   time_environment += timer.elapsed();
 }
 
