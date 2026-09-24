@@ -75,41 +75,46 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <td><p>Boolean</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fermion</span></code></p></td>
+<td><p>Whether the model is fermionic (experimental)</p></td>
+<td><p>Boolean</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
 <td><p>Absolute cutoff value for reading operators</p></td>
 <td><p>Real</p></td>
 <td><p>0.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
 <td><p>Whether to calculate and save observables</p></td>
 <td><p>Boolean</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
 <td><p>Interval of measurement in finite temperature calculation and time evolution process</p></td>
 <td><p>Integer or list of integers</p></td>
 <td><p>10</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>Directory for saving result such as physical quantities</p></td>
 <td><p>String</p></td>
 <td><p>&quot;output&quot;</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
 <td><p>Directory for saving optimized tensors</p></td>
 <td><p>String</p></td>
 <td><p>&quot;&quot;</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
 <td><p>Directory for loading initial tensors</p></td>
 <td><p>String</p></td>
 <td><p>&quot;&quot;</p></td>
 </tr>
 </tbody>
 </table>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
+<ul class="simple">
 <li><p>Specify the calculation mode</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
 <ul>
@@ -132,44 +137,103 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>When set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, the type of elements of the tensor becomes real.</p></li>
 <li><p>If one complex operator is defined at least,  calculation will end in errors before starting.</p></li>
 </ul>
 </li>
-<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<li><p><code class="docutils literal notranslate"><span class="pre">fermion</span></code></p>
 <ul>
+<li><p><strong>Experimental.</strong> When set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, site tensors are treated as fermionic (Z2-graded) tensors and all bond updates and measurements generate the fermionic exchange signs automatically</p></li>
+<li><p>The implementation follows the Z2-graded (super vector space) formulation of fermionic tensor networks: every leg carries a parity, and transpositions, contractions and decompositions generate the exchange signs. For the formulation, see Q. Mortier <em>et al.</em>, <a class="reference external" href="https://doi.org/10.21468/SciPostPhys.18.1.012">SciPost Phys. 18, 012 (2025)</a>; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, <a class="reference external" href="https://doi.org/10.1103/PhysRevB.95.075108">Phys. Rev. B 95, 075108 (2017)</a>; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, <a class="reference external" href="https://doi.org/10.1088/1751-8121/aa99cc">J. Phys. A: Math. Theor. 51, 025202 (2018)</a>. Where the bra and ket layers cross in a measurement, the signs are the swap gates of the equivalent formulation by P. Corboz, R. Orús, B. Bauer, and G. Vidal, <a class="reference external" href="https://doi.org/10.1103/PhysRevB.81.165104">Phys. Rev. B 81, 165104 (2010)</a></p></li>
+<li><p>Each site must declare the parity of its physical basis states by the <code class="docutils literal notranslate"><span class="pre">parity</span></code> key of the <code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> section, defined with respect to a fixed internal ordering of the creation operators on the site (see the <code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> section)</p></li>
+<li><p><strong>Operator and gate matrix elements</strong>: the elements of a two-site operator (<code class="docutils literal notranslate"><span class="pre">elements</span></code> with indices <code class="docutils literal notranslate"><span class="pre">i1</span> <span class="pre">i2</span> <span class="pre">o1</span> <span class="pre">o2</span></code>) are the matrix elements <span class="math notranslate nohighlight">\(\langle o_1 o_2 | O | i_1 i_2 \rangle\)</span> in the ordered two-site Fock basis</p>
+<div class="math notranslate nohighlight">
+\[|i_1 i_2\rangle = A^\dagger_1(i_1)\, A^\dagger_2(i_2)\, |0\rangle\]</div>
+<p>where <span class="math notranslate nohighlight">\(A^\dagger(i)\)</span> is the creation-operator string of the local basis state <span class="math notranslate nohighlight">\(i\)</span> in the fixed internal order, and site 1 is <code class="docutils literal notranslate"><span class="pre">source_site</span></code>. These matrix elements must be evaluated <strong>with the fermionic anticommutation relations</strong>.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Example: for spinful electrons, <span class="math notranslate nohighlight">\(\langle \uparrow\downarrow, 0 |\, c^\dagger_{1\uparrow} c_{2\uparrow} \,| \downarrow, \uparrow \rangle = -1\)</span>. Rather than writing the signs by hand, build the two-site Fock space of the modes involved numerically (Jordan-Wigner) and read the matrix elements off</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\langle \uparrow\downarrow, 0 |\, c^\dagger_{1\uparrow} c_{2\uparrow} \,| \downarrow, \uparrow \rangle
+= \langle 0 |\, c_{1\downarrow} c_{1\uparrow} c^\dagger_{1\uparrow} c_{2\uparrow} c^\dagger_{1\downarrow} c^\dagger_{2\uparrow} \,| 0 \rangle
+= \langle 0 |\, c_{1\downarrow} c_{1\uparrow} c^\dagger_{1\uparrow} \left(- c^\dagger_{1\downarrow} c_{2\uparrow}\right) c^\dagger_{2\uparrow} \,| 0 \rangle
+= -1\]</div>
+</div></blockquote>
+</li>
+<li><p>All exchange signs <em>between</em> sites (including those from the two-dimensional geometry) are generated by TeNeS; the user supplies only the correctly signed local matrices above</p></li>
+<li><p>Operators and evolution gates must conserve fermion parity; parity-odd operators are rejected when the input is read</p>
+<ul class="simple">
+<li><p>For instance, the expectation value of a single creation or annihilation operator cannot be computed.</p></li>
+</ul>
+</li>
+<li><p>In the current version fermion mode supports the ground-state calculation with the simple update (CTM or mean-field environment) and the full update (CTM environment only). <code class="docutils literal notranslate"><span class="pre">Use_RSVD</span></code>, <code class="docutils literal notranslate"><span class="pre">Simple_Gauge_Fix</span></code>, finite temperature, time evolution, multi-site observables, <code class="docutils literal notranslate"><span class="pre">ops</span></code>-form two-site observables, two-site observables at distances larger than 1, unit cells in which a site is its own nearest neighbor (<code class="docutils literal notranslate"><span class="pre">LX</span> <span class="pre">=</span> <span class="pre">1</span></code>, or <code class="docutils literal notranslate"><span class="pre">LY</span> <span class="pre">=</span> <span class="pre">1</span></code> with <code class="docutils literal notranslate"><span class="pre">skew</span> <span class="pre">=</span> <span class="pre">0</span></code>), and correlation functions are not available and are rejected when the input is read. The correlation length is likewise unavailable: <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> rejects a <code class="docutils literal notranslate"><span class="pre">[correlation_length]</span></code> table for a fermionic model, and the solver disables the measurement with a warning at the point of measurement</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<ul class="simple">
 <li><p>When the absolute value of operator elements loaded is less than <code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code>, it is regarded as zero</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">meaure</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>When set to <code class="docutils literal notranslate"><span class="pre">false</span></code>, the stages for measuring and saving observables will be skipped</p></li>
 <li><p>Elapsed time <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> is always saved</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>Specify the interval of measurement in time evolution process and finite temperature Calculation</p></li>
 <li><p>Physical quantitites are calculated and saved each after <code class="docutils literal notranslate"><span class="pre">measure_interval</span></code> updates</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>Save numerical results such as physical quantities to files in this directory</p></li>
 <li><p>Empty means <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span></code> (current directory)</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>Save optimized tensors to files in this directory</p></li>
 <li><p>If empty no tensors will be saved</p></li>
+<li><p>See <em>Checkpoint files</em> below for how a checkpoint is saved and what to do when a save was interrupted</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>Read initial tensors from files in this directory</p></li>
 <li><p>If empty no tensors will be loaded</p></li>
+<li><p>It may be the same directory as <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code>. See <em>Checkpoint files</em> below</p></li>
+</ul>
+</li>
+</ul>
+<p class="rubric">Checkpoint files (<code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> and <code class="docutils literal notranslate"><span class="pre">tensor_load</span></code>)</p>
+<p>A run saves its tensors into the <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> directory as a checkpoint, and a later run reads it back from <code class="docutils literal notranslate"><span class="pre">tensor_load</span></code>. Both may name the same directory, so that each run continues from the previous run’s checkpoint and replaces it.</p>
+<ul class="simple">
+<li><p><strong>Saving</strong></p>
+<ul>
+<li><p>A checkpoint is built in a working directory <code class="docutils literal notranslate"><span class="pre">&lt;destination&gt;/.tenes-save-tmp/</span></code> and moved into place one file at a time once it is complete. A run killed while writing therefore leaves the previous checkpoint in the destination, intact. The working directory is removed when the save finishes, and one left by a run that died is removed by the next save</p></li>
+<li><p>The working directory and the checkpoint exist side by side just before the move, so the disk usage during a save peaks at twice the size of a checkpoint</p></li>
+<li><p>Checkpoint files that the save does not write are removed from the destination, so saving over a checkpoint of a calculation with more sites or more MPI processes leaves none of the earlier run’s files behind. <strong>Files that are not part of a checkpoint are left alone</strong></p></li>
+<li><p>Do not point two concurrent runs at the same <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> directory: each would overwrite the other’s working directory</p></li>
+<li><p><strong>If the checkpoint cannot be written, ``tenes`` exits with a non-zero status</strong>, after writing its measurement files as usual. Every file of the checkpoint is checked once it is written, including the tensor data each MPI process writes, so a file cut short by a full disk or a quota counts as a failure. Discarding a finished computation over a failed save would be worse, but an exit status of 0 would let a chain such as <code class="docutils literal notranslate"><span class="pre">tenes</span> <span class="pre">A</span> <span class="pre">&amp;&amp;</span> <span class="pre">tenes</span> <span class="pre">B</span></code>, where B reloads A’s checkpoint, silently restart from a stale one. An error the file system reports only later, or damage done to the files after the save, is not detected</p></li>
+</ul>
+</li>
+<li><p><strong>When a save was interrupted while moving its files</strong></p>
+<ul>
+<li><p>If a run dies, or a file cannot be moved, while the checkpoint is being moved into place, <code class="docutils literal notranslate"><span class="pre">&lt;destination&gt;/.tenes-save-incomplete</span></code> is left behind. The destination may then hold a mixture of the new checkpoint and the previous one, so <code class="docutils literal notranslate"><span class="pre">tensor_load</span></code> refuses it and shows what that file says</p></li>
+<li><p>To repair it by hand, move everything that is left in <code class="docutils literal notranslate"><span class="pre">&lt;destination&gt;/.tenes-save-tmp/</span></code> into the destination, then delete <code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code>. That file gives the same instructions together with the full path of the working directory</p></li>
+<li><p>A later save into the same destination does that repair itself before writing anything. If a file cannot be moved then either, it stops at that file, saves nothing, and exits with a non-zero status. The files not moved yet are still in the working directory and <code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code> is still there, so the repair by hand above still applies</p></li>
+<li><p>If only <code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code> itself cannot be deleted, at the end of a save or after that repair, <code class="docutils literal notranslate"><span class="pre">tenes</span></code> says so and exits with a non-zero status. Every file is in place then, and deleting that file by hand is all that is left</p></li>
+</ul>
+</li>
+<li><p><strong>Loading</strong></p>
+<ul>
+<li><p>A checkpoint is refused, on every MPI process, when its number of sites differs from the input, or when one of the checkpoint and the input is fermionic and the other is not</p></li>
+<li><p>The bond dimension may be changed from that of the saved tensors. Enlarging pads the new components with zeros and shrinking simply truncates. In a fermionic system, however, shrinking is not available in the current version, because the parity ledger of the virtual bonds has to be truncated consistently.</p></li>
+<li><p>When the bond dimension is enlarged, the added components are zero, so a simple update or a full update has to be run after loading before the enlarged space is actually used. Measurement alone will not populate it.</p></li>
 </ul>
 </li>
 </ul>
@@ -308,6 +372,17 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 </tr>
 </tbody>
 </table>
+<ul class="simple">
+<li><p>Notes</p>
+<ul>
+<li><p>The full update supports only the CTM environment, and combining it with <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> is an error</p></li>
+<li><p>The plain path (<code class="docutils literal notranslate"><span class="pre">fastfullupdate</span> <span class="pre">=</span> <span class="pre">false</span></code>) reconverges the CTM after every bond and is slower than the fast full update (about 9 times for free fermions at <code class="docutils literal notranslate"><span class="pre">D</span> <span class="pre">=</span> <span class="pre">3</span></code>, <code class="docutils literal notranslate"><span class="pre">chi</span> <span class="pre">=</span> <span class="pre">12</span></code>). In a fermionic system this reconvergence starts from the environment of the previous bond (a warm start); the bosonic plain path still converges from uniform vectors every time</p></li>
+<li><p>If a full update stops at the forbidden-parity guard, the CTM has not converged, typically because <code class="docutils literal notranslate"><span class="pre">dimension</span></code> (chi) is too small for the state (the CTM then keeps cycling instead of settling). Increase <code class="docutils literal notranslate"><span class="pre">dimension</span></code> of <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code> first, then <code class="docutils literal notranslate"><span class="pre">iteration_max</span></code>, and run the simple update longer if the state itself is far from converged</p></li>
+<li><p>The two-site environment of the full update has to conserve fermion parity. If the violation (typically caused by an unconverged CTM) exceeds the threshold, which is the larger of <code class="docutils literal notranslate"><span class="pre">1e-8</span></code> and 100 times <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> of <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code>, the run stops with an error; increase <code class="docutils literal notranslate"><span class="pre">iteration_max</span></code> or decrease <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> in <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code> in that case</p></li>
+<li><p>For small bond dimensions (e.g. <code class="docutils literal notranslate"><span class="pre">D</span> <span class="pre">=</span> <span class="pre">2</span></code> for free fermions) the full update started from a converged simple-update state can <em>raise</em> the energy. This is because the fixed point of the projected imaginary-time evolution can lie above the simple-update fixed point when the variational space is too small.</p></li>
+</ul>
+</li>
+</ul>
 </section>
 <section id="parameter-ctm">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Link to this heading">¶</a></h3>
@@ -368,7 +443,7 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <td><p>2.0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
-<td><p>Use mean field environment obtained through simple update instead of CTM</p></td>
+<td><p>Use mean field environment obtained through simple update instead of CTM. Also available in fermion mode, where two-site observables are evaluated by a single-layer contraction (much cheaper than the CTM path, with simple-update-level accuracy)</p></td>
 <td><p>Boolean</p></td>
 <td><p>false</p></td>
 </tr>
@@ -377,7 +452,7 @@ This section has five subsections: <code class="docutils literal notranslate"><s
 <p>When <code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code>, CTM convergence is checked by using the singular-value spectrum of the corner transfer matrices and the distance between one-site reduced density matrices in successive iterations.
 The distance is the maximum elementwise norm over all sites and matrix elements, divided by the trace of the density matrix, so that it contains both the change of the shape of the density matrix and the relative change of its norm.
 This avoids false convergence detected only from the corner spectrum on a network that virtual bonds of dimension one decompose into independent pieces, for example a quasi-one-dimensional calculation where the horizontal virtual bond dimension is set to one (see also the description of the algorithm).
-This is not a recommendation to run such a quasi-one-dimensional calculation; TeNeS targets two-dimensional lattices.
+(Note that this is not a recommendation to run such a quasi-one-dimensional calculation; TeNeS targets two-dimensional lattices.)
 When it is <code class="docutils literal notranslate"><span class="pre">false</span></code>, TeNeS uses the previous criterion based only on the corner spectrum.
 The residual error of observables at convergence is typically on the scale of <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code>; decrease <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> when higher accuracy is required.</p>
 <p>For Tensor renomalization group approach using random SVD, please see the following reference, S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> .</p>
@@ -471,7 +546,8 @@ These are arranged in order from the x direction.</p>
 <p><span class="caption-number">Fig. 5.8 </span><span class="caption-text">An example for <code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code>.</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
-<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> is the shift value in the x direction when moving one unit cell in the y direction.</p>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> is the shift value in the x direction when moving one unit cell in the y direction.
+It must satisfy <code class="docutils literal notranslate"><span class="pre">-Lx</span> <span class="pre">&lt;</span> <span class="pre">skew</span> <span class="pre">&lt;</span> <span class="pre">Lx</span></code>: <code class="docutils literal notranslate"><span class="pre">skew</span></code> and <code class="docutils literal notranslate"><span class="pre">skew</span></code> ± <code class="docutils literal notranslate"><span class="pre">Lx</span></code> describe the same lattice, so a value outside the range is an input error.</p>
 <figure class="align-default" id="id5">
 <a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" />
 </a>
@@ -518,12 +594,40 @@ and <span class="math notranslate nohighlight">\(n\)</span> indicates the site n
 <td><p>Noise for initial tensor</p></td>
 <td><p>Real</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">parity</span></code></p></td>
+<td><p>Fermion parity of each physical basis state (fermion mode only)</p></td>
+<td><p>a list of integer</p></td>
+</tr>
 </tbody>
 </table>
 <p>Multiple sites can be specified at once by setting a list to <code class="docutils literal notranslate"><span class="pre">index</span></code>.
 An empty list <code class="docutils literal notranslate"><span class="pre">[]</span></code> means all sites.</p>
 <p>By setting a list to <code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code>, individual bond dimensions in four directions can be specified.
 The order is left (-x), top (+y), right (+x), and bottom (-y).</p>
+<p><code class="docutils literal notranslate"><span class="pre">parity</span></code> is required when <code class="docutils literal notranslate"><span class="pre">parameter.general.fermion</span> <span class="pre">=</span> <span class="pre">true</span></code> and must have
+<code class="docutils literal notranslate"><span class="pre">physical_dim</span></code> entries, each 0 (even) or 1 (odd):
+<code class="docutils literal notranslate"><span class="pre">parity[i]</span></code> is the parity of the number of fermions in the <code class="docutils literal notranslate"><span class="pre">i</span></code>-th physical
+basis state.
+For example, a spinless fermion site with the basis <span class="math notranslate nohighlight">\(\{|0\rangle, |1\rangle\}\)</span>
+has <code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1]</span></code>.</p>
+<p>When a site hosts more than one fermionic mode (e.g. spinful electrons,
+<code class="docutils literal notranslate"><span class="pre">physical_dim</span> <span class="pre">=</span> <span class="pre">4</span></code>), <strong>fix an ordering of the creation operators within the
+site once and use it consistently everywhere</strong>: each basis state is <em>defined</em>
+as the product of creation operators applied to the vacuum in that fixed
+internal order. For example, with the internal order <span class="math notranslate nohighlight">\((\uparrow, \downarrow)\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[|0\rangle,\quad
+|{\uparrow}\rangle = c^\dagger_\uparrow |0\rangle,\quad
+|{\downarrow}\rangle = c^\dagger_\downarrow |0\rangle,\quad
+|{\uparrow\downarrow}\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle\]</div>
+<p>gives <code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code>.
+The chosen ordering does not appear in the <code class="docutils literal notranslate"><span class="pre">parity</span></code> list itself, but it
+determines the signs of the operator matrix elements (see the <code class="docutils literal notranslate"><span class="pre">fermion</span></code>
+entry of the <code class="docutils literal notranslate"><span class="pre">parameter.general</span></code> section).
+All operators, gates, and initial states have to be written in the same
+convention for the calculation to be correct.</p>
+<p>The initial product state must be parity even on every site; parity-odd
+<code class="docutils literal notranslate"><span class="pre">initial_state</span></code> vectors are rejected.</p>
 <p>An initial state of a system <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> is represented as
 the direct product state of the initial states at each site <span class="math notranslate nohighlight">\(i\)</span>, <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span>:</p>
 <div class="math notranslate nohighlight">

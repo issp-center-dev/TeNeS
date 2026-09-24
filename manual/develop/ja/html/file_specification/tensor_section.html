@@ -74,7 +74,8 @@
 <p><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> としたときの例</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
-<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。</p>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。
+<code class="docutils literal notranslate"><span class="pre">-Lx</span> <span class="pre">&lt;</span> <span class="pre">skew</span> <span class="pre">&lt;</span> <span class="pre">Lx</span></code> の範囲で指定します。 <code class="docutils literal notranslate"><span class="pre">skew</span></code> と <code class="docutils literal notranslate"><span class="pre">skew</span></code> ± <code class="docutils literal notranslate"><span class="pre">Lx</span></code> は同じ格子を表すので、範囲外の値はエラーになります。</p>
 <figure class="align-default" id="id2">
 <a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" />
 </a>
@@ -119,12 +120,37 @@
 <td><p>初期テンソルのゆらぎの大きさ</p></td>
 <td><p>実数</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">parity</span></code></p></td>
+<td><p>物理基底のフェルミオンパリティ(fermion モード時のみ)</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">index</span></code> にリストを渡すことによって、複数のサイトを同時に指定できます。
 空のサイト <code class="docutils literal notranslate"><span class="pre">[]</span></code> は全サイトを意味します。</p>
 <p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code> にリストを渡すことで、4方向のボンド次元を個別に指定できます。
 順番は、左(-x)、上(+y)、右(+x)、下(-y) の順番です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">parity</span></code> は <code class="docutils literal notranslate"><span class="pre">parameter.general.fermion</span> <span class="pre">=</span> <span class="pre">true</span></code> のとき必須で、
+<code class="docutils literal notranslate"><span class="pre">physical_dim</span></code> 個の 0(偶)または 1(奇)を並べます。
+<code class="docutils literal notranslate"><span class="pre">parity[i]</span></code> は物理基底の第 <code class="docutils literal notranslate"><span class="pre">i</span></code> 状態に含まれるフェルミオン数の偶奇です。
+たとえばスピンレスフェルミオンの基底 <span class="math notranslate nohighlight">\(\{|0\rangle, |1\rangle\}\)</span> は
+<code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1]</span></code> です。</p>
+<p>1サイトに複数のフェルミオンモードがある場合(例: スピンあり電子、 <code class="docutils literal notranslate"><span class="pre">physical_dim</span> <span class="pre">=</span> <span class="pre">4</span></code>)は、
+<strong>サイト内の生成演算子の順序を1つ固定し、 以後すべてで同じ順序を使ってください</strong> 。
+各基底状態は、固定した内部順序で生成演算子を真空に作用させたものとして定義します。
+たとえば内部順序を <span class="math notranslate nohighlight">\((\uparrow, \downarrow)\)</span> とすると</p>
+<div class="math notranslate nohighlight">
+\[|0\rangle,\quad
+|{\uparrow}\rangle = c^\dagger_\uparrow |0\rangle,\quad
+|{\downarrow}\rangle = c^\dagger_\downarrow |0\rangle,\quad
+|{\uparrow\downarrow}\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle\]</div>
+<p>であり、 <code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code> となります。
+選んだ生成演算子順序は <code class="docutils literal notranslate"><span class="pre">parity</span></code> のリスト自体には現れませんが、
+演算子・ゲートの行列要素の符号を決めます
+(<code class="docutils literal notranslate"><span class="pre">parameter.general</span></code> セクションの <code class="docutils literal notranslate"><span class="pre">fermion</span></code> の項を参照)。
+正しく計算するためには、すべての演算子・ゲート・初期状態を同一の規約で書く必要があります。</p>
+<p>初期プロダクト状態は各サイトでパリティ偶である必要があり、
+パリティ奇の <code class="docutils literal notranslate"><span class="pre">initial_state</span></code> はエラーになります。</p>
 <p>系全体の初期状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> は、各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span> の直積で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[|\Psi\rangle = \otimes_i |\Psi_i\rangle\]</div>

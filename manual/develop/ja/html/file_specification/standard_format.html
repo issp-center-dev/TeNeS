@@ -80,41 +80,46 @@
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fermion</span></code></p></td>
+<td><p>フェルミオン系として扱うかどうか(実験的機能)</p></td>
+<td><p>真偽値</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p></td>
 <td><p>演算子テンソルの読み込みにおいてゼロとみなす絶対値カットオフ</p></td>
 <td><p>実数</p></td>
 <td><p>0.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p></td>
 <td><p>基底状態計算において、物理量測定をするかどうか</p></td>
 <td><p>真偽値</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p></td>
 <td><p>実時間発展・有限温度計算において物理量を測定する頻度</p></td>
 <td><p>整数 or 整数のリスト</p></td>
 <td><p>10</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>物理量などを書き込むディレクトリ</p></td>
 <td><p>文字列</p></td>
 <td><p>&quot;output&quot;</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p></td>
 <td><p>最適化後のテンソルを書き込むディレクトリ</p></td>
 <td><p>文字列</p></td>
 <td><p>&quot;&quot;</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p></td>
 <td><p>初期テンソルを読み込むディレクトリ</p></td>
 <td><p>文字列</p></td>
 <td><p>&quot;&quot;</p></td>
 </tr>
 </tbody>
 </table>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code></p>
+<ul class="simple">
 <li><p>計算モードを指定します</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;ground</span> <span class="pre">state&quot;</span></code></p>
 <ul>
@@ -137,44 +142,103 @@
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is_real</span></code></p>
-<ul>
+<ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">true</span></code> にするとテンソルの要素を実数に制限して計算を行います</p></li>
 <li><p>一つでも複素演算子があるとエラー終了します</p></li>
 </ul>
 </li>
-<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<li><p><code class="docutils literal notranslate"><span class="pre">fermion</span></code></p>
 <ul>
+<li><p><strong>実験的機能です。</strong> <code class="docutils literal notranslate"><span class="pre">true</span></code> にすると、サイトテンソルをフェルミオン(Z2 グレーディング付き)テンソルとして扱い、ボンド更新・測定時のフェルミオン交換符号を自動的に生成します</p></li>
+<li><p>実装は、フェルミオン系のテンソルネットワークの Z2 グレード付き(超ベクトル空間)の定式化に基づきます。各脚がパリティを持ち、転置・縮約・分解のたびに交換符号を生成します。定式化については Q. Mortier <em>et al.</em>, <a class="reference external" href="https://doi.org/10.21468/SciPostPhys.18.1.012">SciPost Phys. 18, 012 (2025)</a>; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, <a class="reference external" href="https://doi.org/10.1103/PhysRevB.95.075108">Phys. Rev. B 95, 075108 (2017)</a>; N. Bultinck, D. J. Williamson, J. Haegeman, and F. Verstraete, <a class="reference external" href="https://doi.org/10.1088/1751-8121/aa99cc">J. Phys. A: Math. Theor. 51, 025202 (2018)</a> を参照してください。測定で bra と ket の層が交差する箇所の符号は、等価な定式化である swap gate ( P. Corboz, R. Orús, B. Bauer, and G. Vidal, <a class="reference external" href="https://doi.org/10.1103/PhysRevB.81.165104">Phys. Rev. B 81, 165104 (2010)</a> ) にあたります</p></li>
+<li><p>各サイトの物理基底のパリティを <code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> セクションの <code class="docutils literal notranslate"><span class="pre">parity</span></code> キーで指定する必要があります。パリティはサイト内の生成演算子順序を固定した上で定義します(<code class="docutils literal notranslate"><span class="pre">tensor.unitcell</span></code> セクション参照)</p></li>
+<li><p><strong>演算子・ゲートの行列要素</strong>: 2サイト演算子の <code class="docutils literal notranslate"><span class="pre">elements</span></code> (<code class="docutils literal notranslate"><span class="pre">i1</span> <span class="pre">i2</span> <span class="pre">o1</span> <span class="pre">o2</span></code>) は、順序付き2サイト Fock 基底</p>
+<div class="math notranslate nohighlight">
+\[|i_1 i_2\rangle = A^\dagger_1(i_1)\, A^\dagger_2(i_2)\, |0\rangle\]</div>
+<p>(<span class="math notranslate nohighlight">\(A^\dagger(i)\)</span> は固定した内部順序による局所基底 <span class="math notranslate nohighlight">\(i\)</span> の生成演算子列、サイト1 = <code class="docutils literal notranslate"><span class="pre">source_site</span></code>)における行列要素 <span class="math notranslate nohighlight">\(\langle o_1 o_2 | O | i_1 i_2 \rangle\)</span> です。この行列要素は <strong>フェルミオンの反交換関係込みで</strong> 評価してください。</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>例: スピンあり電子では <span class="math notranslate nohighlight">\(\langle \uparrow\downarrow, 0 |\, c^\dagger_{1\uparrow} c_{2\uparrow} \,| \downarrow, \uparrow \rangle = -1\)</span> となります。符号を手で書くのではなく、関与するモードの2サイト Fock 空間を数値的に構成(Jordan-Wigner)して行列要素を読み出すことを推奨します</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\langle \uparrow\downarrow, 0 |\, c^\dagger_{1\uparrow} c_{2\uparrow} \,| \downarrow, \uparrow \rangle
+= \langle 0 |\, c_{1\downarrow} c_{1\uparrow} c^\dagger_{1\uparrow} c_{2\uparrow} c^\dagger_{1\downarrow} c^\dagger_{2\uparrow} \,| 0 \rangle
+= \langle 0 |\, c_{1\downarrow} c_{1\uparrow} c^\dagger_{1\uparrow} \left(- c^\dagger_{1\downarrow} c_{2\uparrow}\right) c^\dagger_{2\uparrow} \,| 0 \rangle
+= -1\]</div>
+</div></blockquote>
+</li>
+<li><p>サイト <strong>間</strong> の交換符号(2次元幾何由来のものを含む)はすべて TeNeS が生成します。ユーザーが与えるのは上記の符号込み局所行列のみです</p></li>
+<li><p>演算子・時間発展ゲートはフェルミオンパリティを保存する必要があり、パリティ奇の演算子は入力読み込み時にエラーになります</p>
+<ul class="simple">
+<li><p>例えば1粒子生成消滅演算子の期待値計算はできません。</p></li>
+</ul>
+</li>
+<li><p>現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。 <code class="docutils literal notranslate"><span class="pre">Use_RSVD</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Simple_Gauge_Fix</span></code> 、有限温度計算、実時間発展、マルチサイト演算子、 <code class="docutils literal notranslate"><span class="pre">ops</span></code> 形式2サイト観測量、距離2以上の2サイト演算子、サイトが自分自身と最近接になるユニットセル(<code class="docutils literal notranslate"><span class="pre">LX</span> <span class="pre">=</span> <span class="pre">1</span></code> 、または <code class="docutils literal notranslate"><span class="pre">LY</span> <span class="pre">=</span> <span class="pre">1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">skew</span> <span class="pre">=</span> <span class="pre">0</span></code>)、相関関数は非対応で、入力読み込み時にエラーになります。相関長も非対応で、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> はフェルミオン模型に対する <code class="docutils literal notranslate"><span class="pre">[correlation_length]</span></code> をエラーとし、ソルバーは測定時に警告を出して測定を無効化します</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
+<ul class="simple">
 <li><p>各種演算子テンソル要素の実部・虚部の読み込みにおいて、絶対値が <code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code> 以下はゼロとみなします</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">measure</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>基底状態計算において、 <code class="docutils literal notranslate"><span class="pre">false</span></code> にすると物理量計算・保存をスキップします</p></li>
 <li><p>実行時間 <code class="docutils literal notranslate"><span class="pre">time.dat</span></code> は常に保存されます</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>実時間発展計算および有限温度計算において、 物理量を測定する頻度を指定します</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">measure_interval</span></code> ステップ計算した後に物理量を測定します</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>物理量などの計算結果をこのディレクトリ以下に保存します</p></li>
 <li><p>空文字列の場合はカレントディレクトリに保存します</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>最適化後のテンソルをこのディレクトリ以下に保存します</p></li>
 <li><p>空文字列の場合は保存しません</p></li>
+<li><p>保存の仕組みと、保存が中断されたときの対処は、下の「チェックポイントのファイル」を参照してください</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tensor_load</span></code></p>
-<ul>
+<ul class="simple">
 <li><p>初期テンソルをこのディレクトリ以下から読み込みます</p></li>
 <li><p>空文字列の場合は読み込みません</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> と同じディレクトリを指定できます。下の「チェックポイントのファイル」を参照してください</p></li>
+</ul>
+</li>
+</ul>
+<p class="rubric">チェックポイントのファイル(<code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> と <code class="docutils literal notranslate"><span class="pre">tensor_load</span></code>)</p>
+<p>計算はテンソルをチェックポイントとして <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> のディレクトリへ保存し、後の計算が <code class="docutils literal notranslate"><span class="pre">tensor_load</span></code> から読み込みます。両方に同じディレクトリを指定すると、各計算が前の計算のチェックポイントから続きを行い、それを置き換えます。</p>
+<ul class="simple">
+<li><p><strong>保存</strong></p>
+<ul>
+<li><p>保存は、<code class="docutils literal notranslate"><span class="pre">&lt;保存先&gt;/.tenes-save-tmp/</span></code> という作業用ディレクトリへ書き込み、完成してから1ファイルずつ保存先へ移す形で行われます。書き込み中にジョブが強制終了しても、保存先には直前のチェックポイントがそのまま残ります。作業用ディレクトリは保存の完了時に削除され、異常終了した run が残したものは次回の保存で削除されます</p></li>
+<li><p>移動の直前は作業用ディレクトリとチェックポイントが同時に存在するため、ディスク使用量が一時的にチェックポイント 2 個分になります</p></li>
+<li><p>その保存が書かなかったチェックポイントのファイルは保存先から削除されます。サイト数や並列数を減らした計算で同じディレクトリへ保存しても、以前の計算のファイルは残りません。<strong>チェックポイント以外のファイルには手を触れません</strong></p></li>
+<li><p>複数の計算を同時に走らせる場合、同じ <code class="docutils literal notranslate"><span class="pre">tensor_save</span></code> を指定しないでください。互いの作業用ディレクトリを上書きします</p></li>
+<li><p><strong>保存できなかった場合、``tenes`` は非ゼロの終了コードで終わります。</strong> 測定量のファイルはそれまでどおり書き出されます。チェックポイントのファイルは、各 MPI プロセスが書くテンソルのデータも含めて書き終えた後にすべて確かめるので、ディスク満杯やクォータで途中までしか書けなかったファイルも失敗として扱います。保存の失敗で計算を捨てるのは惜しいものの、終了コードが 0 のままだと、前段の保存を後段が読む形の連鎖(<code class="docutils literal notranslate"><span class="pre">tenes</span> <span class="pre">A</span> <span class="pre">&amp;&amp;</span> <span class="pre">tenes</span> <span class="pre">B</span></code>)で、後段が古いチェックポイントから黙ってやり直してしまうためです。ファイルシステムが後になって報告するエラーや、保存後にファイルが壊れたことは検出できません</p></li>
+</ul>
+</li>
+<li><p><strong>ファイルの移動中に保存が中断された場合</strong></p>
+<ul>
+<li><p>チェックポイントを保存先へ移している途中で計算が終了したり、ファイルを移せなかったりすると、<code class="docutils literal notranslate"><span class="pre">&lt;保存先&gt;/.tenes-save-incomplete</span></code> が残ります。このとき保存先には新しいチェックポイントと直前のチェックポイントが混ざっている可能性があるため、<code class="docutils literal notranslate"><span class="pre">tensor_load</span></code> はそのチェックポイントの読み込みを拒否し、このファイルの内容を表示します</p></li>
+<li><p>手で直すには、<code class="docutils literal notranslate"><span class="pre">&lt;保存先&gt;/.tenes-save-tmp/</span></code> に残っているファイルをすべて保存先へ移し、<code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code> を削除してください。このファイルにも同じ手順が、作業用ディレクトリの絶対パスとともに書かれています</p></li>
+<li><p>同じ保存先へ次に保存するときは、書き込みを始める前にこの修復を自動で行います。そこでもファイルを移せなかった場合は、そのファイルで止まり、何も保存せずに非ゼロの終了コードで終わります。まだ移していないファイルは作業用ディレクトリに、<code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code> も保存先に残っているので、上の手順で手で直せます</p></li>
+<li><p>保存の最後、またはこの自動修復の後で <code class="docutils literal notranslate"><span class="pre">.tenes-save-incomplete</span></code> だけを削除できなかった場合も、その旨を表示して非ゼロの終了コードで終わります。このときファイルはすべて移し終えているので、このファイルを手で削除すれば読み込めます</p></li>
+</ul>
+</li>
+<li><p><strong>読み込み</strong></p>
+<ul>
+<li><p>チェックポイントのサイト数が入力と異なる場合や、チェックポイントと入力の一方だけがフェルミオン系である場合は、すべての MPI プロセスで読み込みを拒否します</p></li>
+<li><p>元のテンソルからボンド次元を変更することが可能です。大きくする場合にはゼロ埋めされ、小さくする場合には単純に切り捨てられます。ただしフェルミオン系では、仮想ボンドのパリティ台帳を矛盾無く切り捨てる必要があるため、現在のバージョンでは小さくすることができません。</p></li>
+<li><p>ボンド次元を大きくした場合、拡張された成分はゼロなので、広げた空間を実際に使うには読み込み後に simple update あるいは full update を回す必要があります。測定するだけでは広がりません。</p></li>
 </ul>
 </li>
 </ul>
@@ -314,6 +378,17 @@
 </tr>
 </tbody>
 </table>
+<ul class="simple">
+<li><p>諸注意</p>
+<ul>
+<li><p>full update は CTM 環境のみ対応しており、<code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> との組み合わせはエラーになります</p></li>
+<li><p>非高速版(<code class="docutils literal notranslate"><span class="pre">fastfullupdate</span> <span class="pre">=</span> <span class="pre">false</span></code>)ではボンドごとに CTM を再収束するため、fast full update より遅くなります(自由フェルミオン <code class="docutils literal notranslate"><span class="pre">D</span> <span class="pre">=</span> <span class="pre">3</span></code>、<code class="docutils literal notranslate"><span class="pre">chi</span> <span class="pre">=</span> <span class="pre">12</span></code> で約 9 倍)。フェルミオン系ではこの再収束を直前の環境を初期値として行います(warm start)。ボソン系の非高速版は従来どおり毎回一様ベクトルから収束させます</p></li>
+<li><p>full update が forbidden parity ガードで停止するのは CTM が収束していないためで、多くの場合は状態に対して <code class="docutils literal notranslate"><span class="pre">dimension</span></code> (chi) が小さすぎます(CTM が落ち着かずに周期的に振れ続けます)。まず <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code> の <code class="docutils literal notranslate"><span class="pre">dimension</span></code> を上げ、次に <code class="docutils literal notranslate"><span class="pre">iteration_max</span></code> を増やしてください。状態そのものが収束していなければ simple update も長くしてください</p></li>
+<li><p>full update の環境(2サイト環境テンソル)はフェルミオンパリティを保存する必要があり、CTM の収束不足などで破れが閾値(<code class="docutils literal notranslate"><span class="pre">1e-8</span></code> と <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code> の <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> の 100 倍の大きい方)を超えるとエラーで停止します。その場合は <code class="docutils literal notranslate"><span class="pre">[parameter.ctm]</span></code> の <code class="docutils literal notranslate"><span class="pre">iteration_max</span></code> を増やすか <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> を小さくしてください</p></li>
+<li><p>ボンド次元が小さいとき(例: 自由フェルミオンの <code class="docutils literal notranslate"><span class="pre">D</span> <span class="pre">=</span> <span class="pre">2</span></code>)、simple update で収束した状態から full update を始めるとエネルギーが <strong>上がる</strong> ことがあります。これは射影虚時間発展の固定点が、表現力不足の状態空間では simple update の固定点より高くなりうるためです。</p></li>
+</ul>
+</li>
+</ul>
 </section>
 <section id="parameter-ctm">
 <h3><code class="docutils literal notranslate"><span class="pre">parameter.ctm</span></code><a class="headerlink" href="#parameter-ctm" title="Link to this heading">¶</a></h3>
@@ -374,7 +449,7 @@
 <td><p>2.0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
-<td><p>CTM ではなく simple update で得られる平均場環境を用いる</p></td>
+<td><p>CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当</p></td>
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
@@ -383,7 +458,7 @@
 <p><code class="docutils literal notranslate"><span class="pre">use_onesite_rdm_convergence</span></code> が <code class="docutils literal notranslate"><span class="pre">true</span></code> の場合、角転送行列の特異値スペクトルに加えて、1サイト縮約密度行列の反復間距離を用いて CTM の収束を判定します。
 距離は全サイト・全行列要素に対する max 要素ノルムを、その密度行列のトレースで割ったものです（密度行列の形の変化とノルムの相対変化の両方が含まれます）。
 次元1の仮想ボンドによってテンソルネットワークが独立な部分に分解する構成、例えば横方向の仮想ボンド次元を1とした擬一次元的な計算では、角スペクトルだけでは収束を誤検知することがあるため、その対策として使われます（アルゴリズムの説明も参照してください）。
-なお、そのような擬一次元的な計算を推奨しているわけではありません。TeNeS が対象としているのは2次元格子です。
+（なお、そのような擬一次元的な計算を推奨しているわけではないことに注意してください。TeNeS が対象としているのは2次元格子です。）
 <code class="docutils literal notranslate"><span class="pre">false</span></code> にすると、従来の角スペクトルのみの収束判定に戻ります。
 収束時の観測量の残差はおおむね <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> 程度のスケールになるため、より高精度が必要な場合は <code class="docutils literal notranslate"><span class="pre">convergence_epsilon</span></code> を小さくしてください。</p>
 <p>乱拓SVDを用いたテンソル繰り込み群の手法については、 S. Morita, R. Igarashi, H.-H. Zhao, and N. Kawashima, <a class="reference external" href="https://journals.aps.org/pre/abstract/10.1103/PhysRevE.97.033310">Phys. Rev. E 97, 033310 (2018)</a> を参照してください。</p>
@@ -476,7 +551,8 @@ dimension = 9 # CHI
 <p><span class="caption-number">図 5.5 </span><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">L_sub</span> <span class="pre">=</span> <span class="pre">[2,3]</span></code> としたときの例</span><a class="headerlink" href="#id5" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
-<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。</p>
+<p><code class="docutils literal notranslate"><span class="pre">skew</span></code> は y 方向にユニットセル1つ分動いたときのx 方向のズレです。
+<code class="docutils literal notranslate"><span class="pre">-Lx</span> <span class="pre">&lt;</span> <span class="pre">skew</span> <span class="pre">&lt;</span> <span class="pre">Lx</span></code> の範囲で指定します。 <code class="docutils literal notranslate"><span class="pre">skew</span></code> と <code class="docutils literal notranslate"><span class="pre">skew</span></code> ± <code class="docutils literal notranslate"><span class="pre">Lx</span></code> は同じ格子を表すので、範囲外の値はエラーになります。</p>
 <figure class="align-default" id="id6">
 <a class="reference internal image-reference" href="../_images/tensor_sec_fig2.png"><img alt="../_images/tensor_sec_fig2.png" src="../_images/tensor_sec_fig2.png" style="width: 400px;" />
 </a>
@@ -521,12 +597,37 @@ dimension = 9 # CHI
 <td><p>初期テンソルのゆらぎの大きさ</p></td>
 <td><p>実数</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">parity</span></code></p></td>
+<td><p>物理基底のフェルミオンパリティ(fermion モード時のみ)</p></td>
+<td><p>整数のリスト</p></td>
+</tr>
 </tbody>
 </table>
 <p><code class="docutils literal notranslate"><span class="pre">index</span></code> にリストを渡すことによって、複数のサイトを同時に指定できます。
 空のサイト <code class="docutils literal notranslate"><span class="pre">[]</span></code> は全サイトを意味します。</p>
 <p><code class="docutils literal notranslate"><span class="pre">virtual_dim</span></code> にリストを渡すことで、4方向のボンド次元を個別に指定できます。
 順番は、左(-x)、上(+y)、右(+x)、下(-y) の順番です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">parity</span></code> は <code class="docutils literal notranslate"><span class="pre">parameter.general.fermion</span> <span class="pre">=</span> <span class="pre">true</span></code> のとき必須で、
+<code class="docutils literal notranslate"><span class="pre">physical_dim</span></code> 個の 0(偶)または 1(奇)を並べます。
+<code class="docutils literal notranslate"><span class="pre">parity[i]</span></code> は物理基底の第 <code class="docutils literal notranslate"><span class="pre">i</span></code> 状態に含まれるフェルミオン数の偶奇です。
+たとえばスピンレスフェルミオンの基底 <span class="math notranslate nohighlight">\(\{|0\rangle, |1\rangle\}\)</span> は
+<code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1]</span></code> です。</p>
+<p>1サイトに複数のフェルミオンモードがある場合(例: スピンあり電子、 <code class="docutils literal notranslate"><span class="pre">physical_dim</span> <span class="pre">=</span> <span class="pre">4</span></code>)は、
+<strong>サイト内の生成演算子の順序を1つ固定し、 以後すべてで同じ順序を使ってください</strong> 。
+各基底状態は、固定した内部順序で生成演算子を真空に作用させたものとして定義します。
+たとえば内部順序を <span class="math notranslate nohighlight">\((\uparrow, \downarrow)\)</span> とすると</p>
+<div class="math notranslate nohighlight">
+\[|0\rangle,\quad
+|{\uparrow}\rangle = c^\dagger_\uparrow |0\rangle,\quad
+|{\downarrow}\rangle = c^\dagger_\downarrow |0\rangle,\quad
+|{\uparrow\downarrow}\rangle = c^\dagger_\uparrow c^\dagger_\downarrow |0\rangle\]</div>
+<p>であり、 <code class="docutils literal notranslate"><span class="pre">parity</span> <span class="pre">=</span> <span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code> となります。
+選んだ生成演算子順序は <code class="docutils literal notranslate"><span class="pre">parity</span></code> のリスト自体には現れませんが、
+演算子・ゲートの行列要素の符号を決めます
+(<code class="docutils literal notranslate"><span class="pre">parameter.general</span></code> セクションの <code class="docutils literal notranslate"><span class="pre">fermion</span></code> の項を参照)。
+正しく計算するためには、すべての演算子・ゲート・初期状態を同一の規約で書く必要があります。</p>
+<p>初期プロダクト状態は各サイトでパリティ偶である必要があり、
+パリティ奇の <code class="docutils literal notranslate"><span class="pre">initial_state</span></code> はエラーになります。</p>
 <p>系全体の初期状態 <span class="math notranslate nohighlight">\(|\Psi\rangle\)</span> は、各サイト <span class="math notranslate nohighlight">\(i\)</span> の初期状態 <span class="math notranslate nohighlight">\(|\Psi_i\rangle\)</span> の直積で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[|\Psi\rangle = \otimes_i |\Psi_i\rangle\]</div>
