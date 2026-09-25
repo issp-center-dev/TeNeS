@@ -317,6 +317,28 @@ tensor product_twosite_op(const tensor& A, const tensor& B,
 5. **r = 1 の一致**: r = 1 の値は既存の最近接経路の値にも一致する(4 から従う。明示的に 1 件確かめる)。
 6. **Review Focus 1**: 2×2 単位胞で r_max = 5(単位胞を 2 周以上する)にして、r = 2, 3 が 4 と同じく窓測定に一致すること。
 7. **相関長**: fermion では従来どおり無効化され、警告が出る。
+9. **積演算子の因子**(2026-09-25 追加): 次の 2 関数を `src/fermion/relay.hpp` に置く。
+
+   ```cpp
+   //! Source factor of the product A_s B_t for relay: u(in, out, kappa),
+   //! kappa of dimension 1 whose parity is the argument `odd`, built from A
+   //! alone.
+   template <class tensor>
+   ftensor<tensor> relay_product_source(const tensor& A,
+                                        const parity_vector& phys_s, bool odd);
+   //! Target factor of the same product: vt(kappa, in, out), built from B
+   //! alone.
+   template <class tensor>
+   ftensor<tensor> relay_product_target(const tensor& B,
+                                        const parity_vector& phys_t, bool odd);
+   ```
+
+   パリティ p の等しい任意の A, B について、`relay_channel{relay_product_source(A, phys_s, p), relay_product_target(B, phys_t, p)}` の 1 チャネルを
+   κ で graded 縮約したものが `wrap_twosite_gate(product_twosite_op(A, B, phys_s, phys_t, p))` に一致すること(相対誤差 1e-12、T1-2 と同じ再構成の検査)。
+   また、開いたパッチの relay 値が `relay_channels` を使った値と一致すること。d = 2 と d = 4、実数と複素数、p が偶と奇の両方。
+10. **計算量**(レビューで確認する。テストでは見ない): 左端の演算子ごとに紐の鎖は 1 本で、r ごとに作り直さない。途中サイトの紐付きテンソルは、サイトと κ のパリティごとに 1 回だけ作る。
+11. **部分定義のグループ**: `correlation.operators` のグループが一部のサイトにしか定義されていない場合、ボソンと同じく、定義のないサイトの行を出さずに読み飛ばす(拒否しない)。
+    拒否するのは、負の添字と、一サイト演算子のグループ数以上の添字だけ。
 8. **MPI**: この実行ファイルの相関関数のケースを MPI n = 2 でも登録し、n = 1 と同じ値(相対誤差 1e-12)になることを確かめる。ランクごとに固定の乱数で状態を作れないフィクスチャなら、決定的テンソルを使う。
 
 #### 手順(T3)
