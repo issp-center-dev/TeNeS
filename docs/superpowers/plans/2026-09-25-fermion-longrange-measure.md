@@ -25,6 +25,7 @@ MF は χ = 1 の合成環境で同じ経路に乗せる。
 - 一サイト演算子は偶か奇のどちらかに確定していること。混在は拒否。奇の一サイト演算子の一サイト測定値は厳密に 0。
 - A_s B_t の内部配列: `op4[i_s, i_t, o_s, o_t] = (-1)^{p_B · p(i_s)} · A[i_s, o_s] · B[i_t, o_t]`(設計書 §4.2)。
 - 交差符号は経路の辺ごとに正確に 1 回、上流側の出口融合脚に `(-1)^{p_bond(b)·p_k}`(設計書 §3.3)。
+- κ が右→左・下→上に流れる辺(上流側の出口脚が l か t)では、上流側のサイトにスカラー `(-1)^{p_k}`(ボンドの向きの符号、設計書 §3.3)。
 - 既存の bundled-k(`build_reduced_pair_halves*`)と最近接の測定経路は変更しない。
 - 整形: C++ は `git add` のあと `git clang-format`(変更行のみ)。ファイル全体に `clang-format -i` を当てない。Python は `black`(line-length 88)。整形は Claude がコミット直前に行う。Codex には実行させない。
 - ビルドとテスト: 非 MPI は `cmake --preset gcc && cmake --build --preset gcc && ctest --preset gcc`。MPI は `out-gcc-mpi/build`。

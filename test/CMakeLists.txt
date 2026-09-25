@@ -40,6 +40,10 @@ add_executable(test_fermion_fold_full_update fermion/fold_full_update_unit.cpp)
 # ctest -j runs it beside test_fermion_layer instead of after it.
 add_executable(test_fermion_skew_unfold fermion/skew_unfold.cpp)
 
+# Task T1 of docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md:
+# the string relay of src/fermion/relay.hpp against the single-layer graded
+# truth, the Fock oracle and the bundled-k nearest-neighbour construction.
+add_executable(test_fermion_relay fermion/relay_window.cpp)
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
     util_file correlation_length saveload arnoldi timer_registry onesite_rdm)
@@ -64,7 +68,7 @@ foreach(basename IN LISTS tenes_unit_tests)
 endforeach()
 
 foreach(testname test_fermion_layer test_fermion_fold_full_update
-        test_fermion_skew_unfold)
+        test_fermion_skew_unfold test_fermion_relay)
   target_link_libraries(${testname} PUBLIC tenes_static)
   target_compile_definitions(
     ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
