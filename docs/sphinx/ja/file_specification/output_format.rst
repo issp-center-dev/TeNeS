@@ -170,6 +170,7 @@ onesite 演算子の期待値 :math:`\langle\hat{A}^\alpha_i\rangle = \langle\Ps
 ~~~~~~~~~~~~~~~~~~~~~~
 
 twosite 演算子の期待値が出力されます。
+フェルミオン系で CTM 環境を使う場合、2サイト物理量は 4 x 4 の窓を扱え、 ``ops = [A, B]`` 形式からも構成できます。出力値は source サイトと target サイトに置いた演算子の期待値です。 ``meanfield_env = true`` での長距離2サイト物理量はまだ未対応です。
 各行6列からなります。
 
 1. twosite 演算子の識別番号
@@ -226,6 +227,7 @@ multisite 演算子の期待値が出力されます。
 ~~~~~~~~~~~~~~~~~~~~~
 
 相関関数 :math:`C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle` が出力されます。
+フェルミオン系では :math:`\langle A_s B_t\rangle` を出力します。水平方向では左のサイト、垂直方向では下のサイトにある演算子を :math:`A` とします。フェルミオンパリティが異なる1サイト演算子の組は 0 として出力されます。フェルミオンの相関関数は CTM 環境で利用でき、 ``meanfield_env = true`` はまだ未対応です。
 各行7列から構成されます。
 
 1. 左演算子の識別番号 :math:`\alpha`

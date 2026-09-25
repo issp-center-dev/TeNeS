@@ -320,20 +320,106 @@ class TestFermionModeValidation:
         with pytest.raises(RuntimeError):
             tenes_std.Model(param)
 
-    def test_ops_form_twosite_observable_is_rejected(self):
-        # C3b: fermion mode requires explicit `elements`, not `ops = [i, j]`.
+    # C3b used to refuse `ops = [i, j]` in fermion mode.  T4 contract item 2
+    # (docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md, design
+    # section 5.3) lifts that: the solver now measures A_s B_t with the
+    # fermionic sign itself, so tenes_std passes the ops form through, at any
+    # distance (tenes_std does not check the distance of an observable).
+    @pytest.mark.parametrize(
+        "bonds",
+        ["0 1 0\n", "0 2 0\n", "0 1 1\n", "1 -3 2\n"],
+        ids=["nearest", "second", "diagonal", "far"],
+    )
+    def test_ops_form_twosite_observable_is_accepted(self, bonds):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["observable"] = {
+            "onesite": [
+                {
+                    "name": "cdag",
+                    "group": 0,
+                    "sites": [],
+                    "dim": 2,
+                    "elements": "0 1 1.0 0.0",
+                },
+                {
+                    "name": "c",
+                    "group": 1,
+                    "sites": [],
+                    "dim": 2,
+                    "elements": "1 0 1.0 0.0",
+                },
+            ],
+            "twosite": [
+                {
+                    "name": "cdag_c",
+                    "group": 1,
+                    "bonds": bonds,
+                    "ops": [0, 1],
+                }
+            ],
+        }
+        model = tenes_std.Model(param)  # must not raise
+        named = [t for t in model.twobodies if t.name == "cdag_c"]
+        assert len(named) == 1
+        assert named[0].ops == [0, 1]
+        assert named[0].elements is None
+        buf = io.StringIO()
+        model.to_toml(buf)
+        emitted = toml.loads(buf.getvalue())
+        entries = [t for t in emitted["observable"]["twosite"] if t["name"] == "cdag_c"]
+        assert len(entries) == 1
+        assert entries[0]["ops"] == [0, 1]
+        assert "elements" not in entries[0]
+        assert emitted["parameter"]["general"]["fermion"] is True
+
+    def test_ops_form_is_accepted_next_to_explicit_elements(self):
         param = copy.deepcopy(minimal_fermion_std_input())
         param["observable"] = {
             "twosite": [
+                {"name": "a_ops", "group": 1, "bonds": "0 2 0\n", "ops": [0, 0]},
                 {
-                    "name": "hopping",
-                    "group": 1,
-                    "bonds": "0 1 0\n",
-                    "ops": [0, 1],
-                }
+                    "name": "b_elements",
+                    "group": 2,
+                    "bonds": "0 2 0\n",
+                    "dim": [2, 2],
+                    "elements": "0 1 1 0 1.0 0.0\n1 0 0 1 1.0 0.0",
+                },
             ]
         }
-        with pytest.raises(RuntimeError):
+        model = tenes_std.Model(param)
+        names = {t.name: t for t in model.twobodies}
+        assert names["a_ops"].ops == [0, 0]
+        assert names["b_elements"].ops is None
+
+    def test_multisite_is_still_rejected_next_to_ops_form(self):
+        # lifting the ops-form refusal must not lift the multisite one
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["observable"] = {
+            "twosite": [
+                {"name": "a_ops", "group": 1, "bonds": "0 1 0\n", "ops": [0, 0]}
+            ],
+            "multisite": [
+                {
+                    "name": "three",
+                    "group": 0,
+                    "multisites": "0 1 0 1 1\n",
+                    "ops": [0, 0, 0],
+                }
+            ],
+        }
+        with pytest.raises(RuntimeError, match="multisite"):
+            tenes_std.Model(param)
+
+    def test_multihop_hamiltonian_is_still_rejected_next_to_ops_form(self):
+        # ... nor the refusal of Hamiltonian bonds beyond nearest neighbours
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["hamiltonian"][0]["bonds"] = "0 2 0\n"
+        param["observable"] = {
+            "twosite": [
+                {"name": "a_ops", "group": 1, "bonds": "0 1 0\n", "ops": [0, 0]}
+            ]
+        }
+        with pytest.raises(RuntimeError, match="nearest-neighbour"):
             tenes_std.Model(param)
 
     def test_multihop_bond_is_rejected(self):
@@ -429,14 +515,10 @@ class TestFermionErrorMessageQuality:
     """
 
     def _violations(self):
+        # The ops-form two-site observable used to be one of the violations;
+        # T4 contract item 2 makes it valid input (see
+        # TestFermionModeValidation.test_ops_form_twosite_observable_is_accepted).
         missing_parity = two_site_fermion_input({0: [0, 1]})  # site 1 has none
-
-        ops_form = copy.deepcopy(minimal_fermion_std_input())
-        ops_form["observable"] = {
-            "twosite": [
-                {"name": "hopping", "group": 1, "bonds": "0 1 0\n", "ops": [0, 1]}
-            ]
-        }
 
         multihop = copy.deepcopy(minimal_fermion_std_input())
         multihop["hamiltonian"][0]["bonds"] = "0 2 0\n"
@@ -444,7 +526,7 @@ class TestFermionErrorMessageQuality:
         bad_parity_length = copy.deepcopy(minimal_fermion_std_input())
         bad_parity_length["tensor"]["unitcell"][0]["parity"] = [0, 1, 0]
 
-        return [missing_parity, ops_form, multihop, bad_parity_length]
+        return [missing_parity, multihop, bad_parity_length]
 
     def test_no_milestone_labels_in_rejection_messages(self):
         for param in self._violations():
@@ -508,49 +590,33 @@ class TestFermionErrorMessageQuality:
         assert not re.search(r"\b5\b", msg6), msg6
         assert msg5 != msg6
 
-    def test_ops_form_observable_message_differs_by_offending_observable(self):
-        # Strengthened per code review: pin the observable's own name in
-        # its own message. The names are long and distinctive on purpose,
-        # so an accidental substring collision with unrelated message text
-        # is not a realistic concern, and a message that hard-codes one
-        # observable's name is guaranteed to fail for the other.
-        param_a = copy.deepcopy(minimal_fermion_std_input())
-        param_a["observable"] = {
+    # test_ops_form_observable_message_differs_by_offending_observable was
+    # removed with T4 contract item 2: the ops form is no longer refused, so
+    # there is no message left to pin.  In its place: two ops-form
+    # observables that used to produce two different refusals are both
+    # accepted and keep their own names and operator indices.
+    def test_ops_form_observables_are_accepted_with_their_own_names(self):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["observable"] = {
             "twosite": [
                 {
                     "name": "alpha_observable_marker",
                     "group": 1,
                     "bonds": "0 1 0\n",
                     "ops": [0, 1],
-                }
-            ]
-        }
-
-        param_b = copy.deepcopy(minimal_fermion_std_input())
-        param_b["observable"] = {
-            "twosite": [
+                },
                 {
                     "name": "beta_observable_marker",
                     "group": 2,
                     "bonds": "0 1 0\n",
                     "ops": [1, 0],
-                }
+                },
             ]
         }
-
-        with pytest.raises(RuntimeError) as ea:
-            tenes_std.Model(param_a)
-        with pytest.raises(RuntimeError) as eb:
-            tenes_std.Model(param_b)
-
-        msg_a, msg_b = str(ea.value), str(eb.value)
-        assert "alpha_observable_marker" in msg_a
-        assert "beta_observable_marker" in msg_b
-        # Discrimination: a message that hard-codes one observable's name
-        # cannot simultaneously name the other.
-        assert "beta_observable_marker" not in msg_a
-        assert "alpha_observable_marker" not in msg_b
-        assert msg_a != msg_b
+        model = tenes_std.Model(param)
+        ops = {t.name: t.ops for t in model.twobodies}
+        assert ops["alpha_observable_marker"] == [0, 1]
+        assert ops["beta_observable_marker"] == [1, 0]
 
 
 # ---------------------------------------------------------------------------

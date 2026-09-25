@@ -19,3 +19,12 @@
     - Values in square brackets are obtained from AFQMC calculation
         - Energy, nelec, doublon: Qin, Shi, Zhang, PRB 94, 085103 (2016)
         - spin-spin: Qin, Shi, Zhang, PRB 96, 075156 (2017)
+- Correlations
+    - add `[correlation]` to a `simple-*.toml` file to measure CTM
+      correlations; omitting `operators` measures the default Hubbard pairs
+      `nn`, `n_up n_up`, `n_dn n_dn`, `SzSz`, doublon-doublon,
+      holon-holon, `<cdag_up(0) c_up(r)>`, and
+      `<cdag_dn(0) c_dn(r)>`
+    - longer-distance two-site observables can be measured by adding
+      `[[observable.twosite]]` entries to the generated `std-*.toml` before
+      running `tenes_std`

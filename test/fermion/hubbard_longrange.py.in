@@ -1,0 +1,418 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Item 5 of the T4 contract of
+# docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md
+# (design: docs/superpowers/specs/2026-09-25-fermion-longrange-measure-design.md):
+# the Hubbard model through the standard pipeline
+#
+#   simple.toml -> tenes_simple -> std.toml -> tenes_std -> input.toml -> tenes
+#
+# with [correlation] and the default operator list of tenes_simple.  With a
+# spin-symmetric Hamiltonian (h = 0) and a spin-symmetric initial state the
+# state is invariant under exchanging up and down, so
+#
+#   <c^dag_{up,0} c_{up,r}> = <c^dag_{dn,0} c_{dn,r}>
+#
+# for every r, per site.  c_dn carries the sign of the c_up it has to pass in
+# the intra-site order |up dn> = c^dag_up c^dag_dn |0>, and c_up does not, so
+# the two sides go through different signs; a missing or doubled sign on one
+# spin breaks the equality by the size of the value itself (a copy of
+# tenes_simple with the sign of c_dn dropped gives 0.15 against 1e-15;
+# 2026-09-25, see work/fermion-longrange/t4/test-author-report.md).  The
+# even operator Sz Sz is measured by the same correlation run and has to be
+# finite and, at r = 1, antiferromagnetic.
+#
+# Why these parameters:
+#
+# * initial = "cdw" with noise = 0: the checkerboard |0> / |up dn> product
+#   state is spin symmetric, and without noise nothing random enters, so the
+#   symmetry is exact at the start.  A random start is not symmetric.  The
+#   vacuum and the fully occupied state are eigenstates of the (particle-
+#   number conserving) Hamiltonian and would not evolve.
+# * mu = U / 2: half filling, where the cdw start sits.
+# * D = 3: the symmetry survives the simple update only if no truncation
+#   cuts through a pair of degenerate (up, down) singular values.  Measured
+#   on 2026-09-25 with this input: D = 3 keeps it to 1.4e-15 (and gives
+#   SzSz = SxSx = SySy on the nearest-neighbour bonds), D = 2 breaks it
+#   completely (0.33) and D = 4 to 4.5e-6.  That is a property of the
+#   truncation, not of the measurement, so D = 3.
+# * tau = 0.05, 200 steps, chi = 9, r_max = 3: small and fast (about 5 s in a
+#   Release build, most of it the 8 default correlation pairs).
+#
+# Golden files: test/data/output_HubbardLongRange/{density,onesite_obs,
+# twosite_obs,correlation}.dat in the SOURCE tree.  They do not exist until
+# the implementation is in place, and the test fails while they are missing.
+# To (re)generate them, on purpose only:
+#
+#   TENES_UPDATE_FERMION_LONGRANGE_GOLDEN=1 ctest -R HubbardLongRange
+#
+# in the build tree.  The update mode still runs every other check and
+# refuses to write anything if one of them fails.
+
+import math
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+import toml
+
+TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
+TENES_STD = join("@CMAKE_BINARY_DIR@", "tool", "tenes_std")
+TENES = join("@CMAKE_BINARY_DIR@", "src", "tenes")
+
+NAME = "HubbardLongRange"
+GOLDEN_DIR = join("@CMAKE_CURRENT_SOURCE_DIR@", "data", "output_" + NAME)
+GOLDEN_FILES = ("density.dat", "onesite_obs.dat", "twosite_obs.dat", "correlation.dat")
+UPDATE_GOLDEN_ENV = "TENES_UPDATE_FERMION_LONGRANGE_GOLDEN"
+
+# test/fulltest.py.in
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+
+R_MAX = 3
+NSITES = 4
+U = 4.0
+
+SIMPLE_TOML = f"""
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.05
+num_step = 200
+
+[parameter.ctm]
+dimension = 9
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 3
+initial = "cdw"
+noise = 0.0
+
+[model]
+type = "hubbard"
+t = 1.0
+U = {U}
+mu = {U / 2}
+
+[correlation]
+r_max = {R_MAX}
+"""
+
+# contract item 1
+ONESITE = [
+    ("n", 0),
+    ("n_up", 1),
+    ("n_dn", 2),
+    ("Sz", 3),
+    ("doublon", 4),
+    ("holon", 5),
+    ("cdag_up", 6),
+    ("c_up", 7),
+    ("cdag_dn", 8),
+    ("c_dn", 9),
+]
+DEFAULT_CORRELATION = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 7], [8, 9]]
+UP_PAIR = (6, 7)
+DN_PAIR = (8, 9)
+SZ = 3
+ODD = (6, 7, 8, 9)
+
+# SPIN_TOL: absolute.  The two sides are equal by symmetry and the
+# computation keeps the symmetry to rounding: measured worst |up - dn| is
+# 1.4e-15 against the largest |<c^dag_{up,0} c_{up,r}>| = 0.153 (2026-09-25,
+# Release, g++-16, macOS).  1e-9 is 1e6 above the measurement and 1.5e8
+# below that scale; a sign error on one spin moves the value by its own size
+# (0.157 measured with the sign of c_dn dropped).
+SPIN_TOL = 1.0e-9
+# The comparison has content only if the hopping correlations are not small:
+# the largest |<c^dag_{up,0} c_{up,r}>| has to reach this (measured 0.153).
+MIN_HOPPING_SCALE = 0.05
+# Sz Sz at r = 1 has to be at least this large in magnitude and negative
+# (antiferromagnetic).  Measured -0.020 to -0.024 on the eight
+# nearest-neighbour rows; the half-filled Hubbard model at U = 4 has
+# <S^z_0 S^z_(1,0)> of about -0.06 (quantum Monte Carlo), a product state 0.
+MIN_SZSZ_NN = 1.0e-3
+
+
+def run(cmd, cwd):
+    print("run:", " ".join(cmd), flush=True)
+    return subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+
+
+def run_tool(cmd, cwd):
+    proc = run(cmd, cwd)
+    if proc.returncode != 0:
+        print(proc.stdout + proc.stderr)
+        print(f"{NAME} failed: {os.path.basename(cmd[0])} exited with {proc.returncode}")
+        return False
+    return True
+
+
+def launcher():
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    return cmd
+
+
+def read_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_density(path):
+    values = []
+    with open(path) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values.append((name.strip(), complex(float(words[0]), float(words[1]))))
+    return values
+
+
+def check_schema(std_param, input_param):
+    failures = []
+    onesite = [(o["name"], o["group"]) for o in std_param["observable"]["onesite"]]
+    if onesite != ONESITE:
+        failures.append(
+            f"std.toml: the one-site operators of the Hubbard model must be "
+            f"{ONESITE}; got {onesite}"
+        )
+    if input_param["parameter"]["general"].get("fermion") is not True:
+        failures.append("input.toml: parameter.general.fermion is not true")
+    correlation = input_param.get("correlation")
+    if correlation is None:
+        failures.append("input.toml has no [correlation] section")
+    else:
+        if correlation.get("r_max") != R_MAX:
+            failures.append(f"input.toml: r_max = {correlation.get('r_max')}")
+        if correlation.get("operators") != DEFAULT_CORRELATION:
+            failures.append(
+                "input.toml: the default [correlation] operators of the Hubbard "
+                f"model must be {DEFAULT_CORRELATION}; got "
+                f"{correlation.get('operators')}"
+            )
+    return failures
+
+
+def check_warnings(output):
+    failures = []
+    for pattern in ("CTM did not converge", "Norm is negative", "Norm is not real"):
+        hits = [line.strip() for line in output.splitlines() if pattern in line]
+        if hits:
+            failures.append(f"tenes printed {hits[0]!r}")
+    return failures
+
+
+def check_odd_onesite_is_zero(outdir):
+    failures = []
+    density = dict(read_density(join(outdir, "density.dat")))
+    for name, group in ONESITE:
+        if group in ODD:
+            if name not in density:
+                failures.append(f"density.dat has no {name} row")
+            elif density[name] != 0.0:
+                failures.append(
+                    f"density.dat: {name} = {density[name]}, must be exactly 0"
+                )
+    seen = set()
+    for group, site, re, im in read_rows(join(outdir, "onesite_obs.dat")):
+        if int(group) in ODD:
+            seen.add((int(group), int(site)))
+            if re != 0.0 or im != 0.0:
+                failures.append(
+                    f"onesite_obs.dat: group {int(group)} site {int(site)} is "
+                    f"{re} + {im}i; an odd one-site operator must give exactly 0"
+                )
+    if len(seen) != len(ODD) * NSITES:
+        failures.append(f"onesite_obs.dat: odd rows for {sorted(seen)} only")
+    return failures
+
+
+def correlation_table(outdir):
+    table = {}
+    for lop, lsite, rop, dx, dy, re, im in read_rows(join(outdir, "correlation.dat")):
+        table[(int(lop), int(rop), int(lsite), int(dx), int(dy))] = complex(re, im)
+    return table
+
+
+def expected_keys():
+    keys = []
+    for site in range(NSITES):
+        for r in range(1, R_MAX + 1):
+            for dx, dy in ((r, 0), (0, r)):
+                keys.append((site, dx, dy))
+    return keys
+
+
+def check_correlations(outdir):
+    failures = []
+    table = correlation_table(outdir)
+    for lop, rop in DEFAULT_CORRELATION:
+        missing = [k for k in expected_keys() if (lop, rop) + k not in table]
+        if missing:
+            failures.append(
+                f"correlation.dat: ({lop}, {rop}) has no rows for {missing[:4]}..."
+            )
+    if failures:
+        return failures
+
+    worst = (0.0, None)
+    scale = 0.0
+    for key in expected_keys():
+        up = table[UP_PAIR + key]
+        dn = table[DN_PAIR + key]
+        scale = max(scale, abs(up), abs(dn))
+        err = abs(up - dn)
+        if err > worst[0]:
+            worst = (err, key)
+        if not err <= SPIN_TOL:
+            failures.append(
+                f"<cdag_up c_up> = {up} but <cdag_dn c_dn> = {dn} at "
+                f"(site, dx, dy) = {key} (|diff| {err:.3e} > {SPIN_TOL:g})"
+            )
+    print(
+        f"{NAME} worst |<cdag_up c_up> - <cdag_dn c_dn>| {worst[0]:.3e} at "
+        f"{worst[1]}, largest |value| {scale:.6f}"
+    )
+    if not scale >= MIN_HOPPING_SCALE:
+        failures.append(
+            f"the largest |<c^dag_s c_(s+r)>| is {scale}; the spin comparison "
+            "would have no content"
+        )
+
+    for key in expected_keys():
+        value = table[(SZ, SZ) + key]
+        if not (math.isfinite(value.real) and math.isfinite(value.imag)):
+            failures.append(f"Sz Sz correlation at {key} is not finite: {value}")
+    for site in range(NSITES):
+        for dx, dy in ((1, 0), (0, 1)):
+            value = table[(SZ, SZ, site, dx, dy)].real
+            if not value <= -MIN_SZSZ_NN:
+                failures.append(
+                    f"Sz Sz correlation at site {site} ({dx}, {dy}) is {value}; "
+                    f"expected an antiferromagnetic value <= {-MIN_SZSZ_NN}"
+                )
+    return failures
+
+
+def compare_golden(outdir):
+    failures = []
+    for filename in GOLDEN_FILES:
+        path_ref = join(GOLDEN_DIR, filename)
+        if not os.path.exists(path_ref):
+            failures.append(f"reference file is missing: {path_ref}")
+            continue
+        path_res = join(outdir, filename)
+        if filename == "density.dat":
+            res = [[v.real, v.imag] for _, v in read_density(path_res)]
+            ref = [[v.real, v.imag] for _, v in read_density(path_ref)]
+        else:
+            res = read_rows(path_res)
+            ref = read_rows(path_ref)
+        if len(res) != len(ref):
+            failures.append(f"{filename}: {len(res)} rows, the reference has {len(ref)}")
+            continue
+        for index, (rrow, frow) in enumerate(zip(res, ref)):
+            if len(rrow) != len(frow) or not np.all(
+                np.isclose(rrow, frow, rtol=RTOL, atol=ATOL)
+            ):
+                failures.append(
+                    f"{filename} row {index} differs from the golden file: "
+                    f"{rrow} vs {frow}"
+                )
+    return failures
+
+
+def main():
+    work_dir = join("@CMAKE_CURRENT_BINARY_DIR@", "output_" + NAME)
+    if os.path.isdir(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+    update_golden = os.environ.get(UPDATE_GOLDEN_ENV) == "1"
+    with open(join(work_dir, "simple.toml"), "w") as f:
+        f.write(SIMPLE_TOML)
+
+    if not run_tool([TENES_SIMPLE, "simple.toml", "-o", "std.toml"], work_dir):
+        return 1
+    if not run_tool([TENES_STD, "std.toml", "-o", "input.toml"], work_dir):
+        return 1
+
+    failures = check_schema(
+        toml.load(join(work_dir, "std.toml")), toml.load(join(work_dir, "input.toml"))
+    )
+
+    proc = run(launcher() + [TENES, "input.toml"], work_dir)
+    output = proc.stdout + proc.stderr
+    with open(join(work_dir, "tenes.log"), "w") as f:
+        f.write(output)
+    if proc.returncode != 0:
+        print(output)
+        print(f"{NAME} failed: tenes exited with {proc.returncode}")
+        return 1
+    outdir = join(work_dir, "output")
+
+    failures += check_warnings(output)
+    failures += check_odd_onesite_is_zero(outdir)
+    failures += check_correlations(outdir)
+
+    if failures:
+        for message in failures:
+            print(NAME + " failed: " + message)
+        return 1
+
+    if update_golden:
+        os.makedirs(GOLDEN_DIR, exist_ok=True)
+        for filename in GOLDEN_FILES:
+            shutil.copyfile(join(outdir, filename), join(GOLDEN_DIR, filename))
+        print(f"{NAME}: golden files written to {GOLDEN_DIR}")
+        return 0
+
+    failures = compare_golden(outdir)
+    if failures:
+        for message in failures:
+            print(NAME + " failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

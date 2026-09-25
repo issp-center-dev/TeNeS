@@ -1557,19 +1557,6 @@ class Model:
                 ).format(site_index)
                 raise RuntimeError(msg)
 
-        for obs in self.twobodies:
-            if obs.ops is not None:
-                bonds = [
-                    "{} {} {}".format(bond.source_site, bond.dx, bond.dy)
-                    for bond in obs.bonds
-                ]
-                msg = (
-                    "Fermion mode does not support ops-form observable.twosite "
-                    "'{}' (group {}, bonds {}). Provide explicit elements for "
-                    "this two-site observable."
-                ).format(obs.name, obs.group, bonds)
-                raise RuntimeError(msg)
-
         for obs in self.multibodies:
             msg = (
                 "Fermion mode does not support observable.multisite '{}' "

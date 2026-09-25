@@ -85,10 +85,19 @@ class TestSpinlessFermionModel:
         h = model.bondhamiltonian(0, 0, z=4)
         assert h[1, 1, 1, 1] == pytest.approx(3.0)
 
-    def test_onesite_observable_is_the_density(self):
+    def test_onesite_observables(self):
+        # T4 contract item 1 (docs/superpowers/plans/
+        # 2026-09-25-fermion-longrange-measure.md): 0: n, 1: cdag, 2: c,
+        # the new ones appended after the density so that its number does
+        # not move.  One-site operators are op[in, out] = <out|O|in>:
+        #   c^dag |0> = |1>  ->  cdag[0, 1] = 1
+        #   c     |1> = |0>  ->  c[1, 0]    = 1
         model = tenes_simple.make_model(spinless_param())
-        assert model.onesite_ops_name == ["n"]
-        assert np.allclose(model.onesite_ops[0], np.diag([0.0, 1.0]))
+        assert model.onesite_ops_name == ["n", "cdag", "c"]
+        ops = dict(zip(model.onesite_ops_name, model.onesite_ops))
+        assert np.allclose(ops["n"], np.diag([0.0, 1.0]))
+        assert np.array_equal(ops["cdag"], np.array([[0.0, 1.0], [0.0, 0.0]]))
+        assert np.array_equal(ops["c"], np.array([[0.0, 0.0], [1.0, 0.0]]))
 
     def test_hopping_is_an_explicit_rank4_observable(self):
         model = tenes_simple.make_model(spinless_param())
@@ -184,16 +193,32 @@ class TestFermionScopeGuards:
         with pytest.raises(RuntimeError, match="defined twice"):
             tenes_simple.tenes_simple(param)
 
-    def test_correlation_is_rejected(self):
+    # T4 contract item 1: [correlation] is accepted for fermionic models (it
+    # used to be refused here); TestFermionCorrelation below has the rest.
+    def test_correlation_is_accepted(self):
         param = spinless_param()
         param["correlation"] = {"r_max": 5, "operators": [[0, 0]]}
-        with pytest.raises(RuntimeError, match="correlation"):
-            tenes_simple.tenes_simple(param)
+        tenes_simple.tenes_simple(param)
 
     def test_correlation_length_is_rejected(self):
         param = spinless_param()
         param["correlation_length"] = {"measure": True}
         with pytest.raises(RuntimeError, match="correlation_length"):
+            tenes_simple.tenes_simple(param)
+
+    def test_correlation_length_is_rejected_next_to_correlation(self):
+        # accepting [correlation] must not let [correlation_length] through
+        param = spinless_param()
+        param["correlation"] = {"r_max": 5}
+        param["correlation_length"] = {"measure": True}
+        with pytest.raises(RuntimeError, match="correlation_length"):
+            tenes_simple.tenes_simple(param)
+
+    @pytest.mark.parametrize("key", ["t'", "v''"])
+    def test_far_neighbour_terms_are_rejected_next_to_correlation(self, key):
+        param = spinless_param({key: 0.5})
+        param["correlation"] = {"r_max": 5}
+        with pytest.raises(RuntimeError, match="nearest"):
             tenes_simple.tenes_simple(param)
 
     def test_bosonic_models_are_untouched_by_the_guards(self):
@@ -505,6 +530,8 @@ class TestHubbardModel:
         assert np.allclose(m, m.conj().T)
 
     def test_onesite_observables(self):
+        # T4 contract item 1: the six even operators keep their numbers and
+        # 6: cdag_up, 7: c_up, 8: cdag_dn, 9: c_dn are appended.
         model = tenes_simple.make_model(hubbard_param())
         assert model.onesite_ops_name == [
             "n",
@@ -513,6 +540,10 @@ class TestHubbardModel:
             "Sz",
             "doublon",
             "holon",
+            "cdag_up",
+            "c_up",
+            "cdag_dn",
+            "c_dn",
         ]
         ops = dict(zip(model.onesite_ops_name, model.onesite_ops))
         assert np.allclose(np.diag(ops["n"]), [0.0, 1.0, 1.0, 2.0])
@@ -522,13 +553,86 @@ class TestHubbardModel:
         assert np.allclose(np.diag(ops["doublon"]), [0.0, 0.0, 0.0, 1.0])
         assert np.allclose(np.diag(ops["holon"]), [1.0, 0.0, 0.0, 0.0])
 
-    def test_every_onesite_observable_is_parity_even(self):
+    def test_creation_and_annihilation_operators(self):
+        # Hand derivation.  Local basis i = n_up + 2 n_dn:
+        #   |0> = 0, |up> = 1, |dn> = 2, |up dn> = 3 = c^dag_up c^dag_dn |0>.
+        # One-site operators are op[in, out] = <out|O|in>.
+        #   c^dag_up |0>  = |up>                                  op[0, 1] = +1
+        #   c^dag_up |dn> = c^dag_up c^dag_dn |0> = |up dn>        op[2, 3] = +1
+        #   c_up |up>     = |0>                                   op[1, 0] = +1
+        #   c_up |up dn>  = c_up c^dag_up c^dag_dn |0> = |dn>      op[3, 2] = +1
+        #   c^dag_dn |0>  = |dn>                                  op[0, 2] = +1
+        #   c^dag_dn |up> = c^dag_dn c^dag_up |0> = -|up dn>       op[1, 3] = -1
+        #   c_dn |dn>     = |0>                                   op[2, 0] = +1
+        #   c_dn |up dn>  = -c^dag_up c_dn c^dag_dn |0> = -|up>    op[3, 1] = -1
+        # so the down operators carry the sign of passing the up fermion and
+        # the up operators do not.
+        expected = {
+            "cdag_up": {(0, 1): 1.0, (2, 3): 1.0},
+            "c_up": {(1, 0): 1.0, (3, 2): 1.0},
+            "cdag_dn": {(0, 2): 1.0, (1, 3): -1.0},
+            "c_dn": {(2, 0): 1.0, (3, 1): -1.0},
+        }
+        model = tenes_simple.make_model(hubbard_param())
+        ops = dict(zip(model.onesite_ops_name, model.onesite_ops))
+        for name, elements in expected.items():
+            matrix = np.zeros((4, 4))
+            for index, value in elements.items():
+                matrix[index] = value
+            assert np.array_equal(ops[name], matrix), name
+
+    def test_creation_and_annihilation_follow_local_index_to_occupation(self):
+        # The same operators built from the tool's own index <-> occupation
+        # map and the intra-site order up before dn: c_s carries
+        # (-1)^(number of occupied modes before s).  Ties the operators to
+        # local_index_to_occupation (T4 contract item 1) rather than to a
+        # hard-coded table only.
+        model = tenes_simple.make_model(hubbard_param())
+        ops = dict(zip(model.onesite_ops_name, model.onesite_ops))
+        occupation = [tenes_simple.local_index_to_occupation(i, 2) for i in range(4)]
+        index_of = {tuple(occ): i for i, occ in enumerate(occupation)}
+        for spin, suffix in ((0, "up"), (1, "dn")):
+            annihilate = np.zeros((4, 4))
+            for i, occ in enumerate(occupation):
+                if occ[spin] == 0:
+                    continue
+                sign = (-1.0) ** sum(occ[:spin])
+                out = list(occ)
+                out[spin] = 0
+                annihilate[i, index_of[tuple(out)]] = sign  # op[in, out]
+            assert np.array_equal(ops["c_" + suffix], annihilate), suffix
+            # c^dag is the adjoint: op[in, out] of c^dag = op[out, in] of c
+            assert np.array_equal(ops["cdag_" + suffix], annihilate.T), suffix
+
+    def test_every_onesite_observable_has_a_definite_parity(self):
+        # Design section 4.1: every one-site operator is either all even
+        # (parity preserving) or all odd; the first six are even, the four
+        # creation / annihilation operators odd.
         model = tenes_simple.make_model(hubbard_param())
         parity = model.parity
-        for op in model.onesite_ops:
+        kinds = []
+        for name, op in zip(model.onesite_ops_name, model.onesite_ops):
+            even = odd = False
             for i, o in np.ndindex(op.shape):
-                if parity[i] != parity[o]:
-                    assert op[i, o] == 0.0
+                if op[i, o] != 0.0:
+                    if parity[i] == parity[o]:
+                        even = True
+                    else:
+                        odd = True
+            assert not (even and odd), name
+            kinds.append((name, "odd" if odd else "even"))
+        assert kinds == [
+            ("n", "even"),
+            ("n_up", "even"),
+            ("n_dn", "even"),
+            ("Sz", "even"),
+            ("doublon", "even"),
+            ("holon", "even"),
+            ("cdag_up", "odd"),
+            ("c_up", "odd"),
+            ("cdag_dn", "odd"),
+            ("c_dn", "odd"),
+        ]
 
     def test_nn_and_szsz_are_index_pair_products(self):
         # C3: "nn" and "SzSz" are two-site observables built as index-pair
@@ -713,11 +817,11 @@ class TestHubbardScopeGuards:
         with pytest.raises(RuntimeError, match="defined twice"):
             tenes_simple.tenes_simple(param)
 
-    def test_correlation_is_rejected(self):
+    # T4 contract item 1: accepted now (it used to be refused here).
+    def test_correlation_is_accepted(self):
         param = hubbard_param()
         param["correlation"] = {"r_max": 5, "operators": [[0, 0]]}
-        with pytest.raises(RuntimeError, match="correlation"):
-            tenes_simple.tenes_simple(param)
+        tenes_simple.tenes_simple(param)
 
     def test_correlation_length_is_rejected(self):
         param = hubbard_param()
@@ -1244,6 +1348,8 @@ class TestHubbardTransverseSpinEmission:
         assert groups == {4, 5}
 
     def test_onesite_observables_and_groups_are_unchanged(self):
+        # The first six are unchanged; T4 contract item 1 appends the four
+        # creation / annihilation operators after them.
         onesite = std_toml(hubbard_param())["observable"]["onesite"]
         assert [(o["name"], o["group"]) for o in onesite] == [
             ("n", 0),
@@ -1252,6 +1358,10 @@ class TestHubbardTransverseSpinEmission:
             ("Sz", 3),
             ("doublon", 4),
             ("holon", 5),
+            ("cdag_up", 6),
+            ("c_up", 7),
+            ("cdag_dn", 8),
+            ("c_dn", 9),
         ]
 
     @pytest.mark.parametrize("name, axis", TRANSVERSE)
@@ -1288,8 +1398,11 @@ class TestOtherModelsKeepTheirObservables:
         model = tenes_simple.make_model(spinless_param())
         assert [name for name, _ in model.twosite_ops_explicit] == ["hopping"]
         parsed = std_toml(spinless_param())
+        # T4 contract item 1 appends cdag and c after the density
         assert [(o["name"], o["group"]) for o in parsed["observable"]["onesite"]] == [
-            ("n", 0)
+            ("n", 0),
+            ("cdag", 1),
+            ("c", 2),
         ]
         assert [
             (o["name"], o["group"], "ops" in o) for o in parsed["observable"]["twosite"]
@@ -1336,3 +1449,250 @@ class TestOtherModelsKeepTheirObservables:
         assert [
             (o["name"], o["group"], "ops" in o) for o in parsed["observable"]["twosite"]
         ] == twosite
+
+
+# ---------------------------------------------------------------------------
+# T4 contract items 1 and 2 of docs/superpowers/plans/
+# 2026-09-25-fermion-longrange-measure.md (design section 5.2 / 5.3 of
+# docs/superpowers/specs/2026-09-25-fermion-longrange-measure-design.md):
+# the creation / annihilation operators are emitted as one-site observables,
+# [correlation] is accepted and gets a fermion-specific default operator
+# list, and the result survives tenes_std.
+#
+# Default lists: the even operators paired with themselves, and each spin's
+# [cdag, c]; never [c, cdag] (it follows from [cdag, c] of the reversed pair)
+# and never an odd operator with itself (<c^dag_s c^dag_t> = 0 in a
+# number-conserving state, and the solver would only print zeros).
+# ---------------------------------------------------------------------------
+
+SPINLESS_ONESITE = [("n", 0), ("cdag", 1), ("c", 2)]
+SPINLESS_DEFAULT_CORRELATION = [[0, 0], [1, 2]]
+HUBBARD_ONESITE = [
+    ("n", 0),
+    ("n_up", 1),
+    ("n_dn", 2),
+    ("Sz", 3),
+    ("doublon", 4),
+    ("holon", 5),
+    ("cdag_up", 6),
+    ("c_up", 7),
+    ("cdag_dn", 8),
+    ("c_dn", 9),
+]
+HUBBARD_DEFAULT_CORRELATION = [
+    [0, 0],
+    [1, 1],
+    [2, 2],
+    [3, 3],
+    [4, 4],
+    [5, 5],
+    [6, 7],
+    [8, 9],
+]
+
+FERMION_CASES = [
+    ("spinless", spinless_param, SPINLESS_ONESITE, SPINLESS_DEFAULT_CORRELATION),
+    ("hubbard", hubbard_param, HUBBARD_ONESITE, HUBBARD_DEFAULT_CORRELATION),
+]
+FERMION_IDS = [case[0] for case in FERMION_CASES]
+
+
+def with_correlation(make_param, correlation, is_real=None):
+    param = make_param()
+    param["correlation"] = dict(correlation)
+    if is_real is not None:
+        param["parameter"]["general"]["is_real"] = is_real
+    return param
+
+
+def through_tenes_std(text):
+    model = tenes_std.Model(toml.loads(text))
+    buf = io.StringIO()
+    model.to_toml(buf)
+    return toml.loads(buf.getvalue())
+
+
+class TestFermionOnesiteEmission:
+    @pytest.mark.parametrize("is_real", [None, True, False])
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_onesite_names_and_groups(self, case, is_real):
+        # the odd operators are real, so is_real = true keeps them too
+        _, make_param, onesite, _ = case
+        param = make_param()
+        if is_real is not None:
+            param["parameter"]["general"]["is_real"] = is_real
+        parsed = std_toml(param)
+        assert [(o["name"], o["group"]) for o in parsed["observable"]["onesite"]] == (
+            onesite
+        )
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_emitted_elements_are_the_model_operators(self, case):
+        # the elements block reads "in out re im", i.e. op[in, out]
+        _, make_param, _, _ = case
+        model = tenes_simple.make_model(make_param())
+        parsed = std_toml(make_param())
+        emitted = {o["name"]: o for o in parsed["observable"]["onesite"]}
+        for name, op in zip(model.onesite_ops_name, model.onesite_ops):
+            entry = emitted[name]
+            assert entry["dim"] == model.N
+            got = parse_elements(entry["elements"], (model.N, model.N))
+            assert np.array_equal(got, op), name
+
+    def test_spinless_emitted_cdag_and_c(self):
+        # independent of the model object: cdag|0> = |1>, c|1> = |0>
+        emitted = {
+            o["name"]: o for o in std_toml(spinless_param())["observable"]["onesite"]
+        }
+        cdag = parse_elements(emitted["cdag"]["elements"], (2, 2))
+        c = parse_elements(emitted["c"]["elements"], (2, 2))
+        assert np.array_equal(cdag, np.array([[0.0, 1.0], [0.0, 0.0]]))
+        assert np.array_equal(c, np.array([[0.0, 0.0], [1.0, 0.0]]))
+
+    def test_hubbard_emitted_c_dn_carries_the_sign(self):
+        # c_dn |up dn> = -|up>  ->  op[3, 1] = -1 (see
+        # TestHubbardModel.test_creation_and_annihilation_operators)
+        emitted = {
+            o["name"]: o for o in std_toml(hubbard_param())["observable"]["onesite"]
+        }
+        c_dn = parse_elements(emitted["c_dn"]["elements"], (4, 4))
+        c_up = parse_elements(emitted["c_up"]["elements"], (4, 4))
+        assert c_dn[3, 1] == -1.0
+        assert c_dn[2, 0] == 1.0
+        assert c_up[3, 2] == 1.0
+        assert c_up[1, 0] == 1.0
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_twosite_observables_are_unchanged(self, case):
+        # adding one-site operators must not renumber or reshape the
+        # two-site observables (they are built from indices 0 and 3)
+        name, make_param, _, _ = case
+        entries = twosite_entries(std_toml(make_param()))
+        groups = {n: e["group"] for n, e in entries.items()}
+        if name == "spinless":
+            assert groups == {"bond_hamiltonian": 0, "nn": 1, "hopping": 2}
+        else:
+            assert groups == {
+                "bond_hamiltonian": 0,
+                "nn": 1,
+                "SzSz": 2,
+                "hopping": 3,
+                "SxSx": 4,
+                "SySy": 5,
+            }
+        for entry in entries.values():
+            assert "ops" not in entry
+
+
+class TestFermionCorrelation:
+    @pytest.mark.parametrize("is_real", [None, True, False])
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_default_operators(self, case, is_real):
+        _, make_param, _, default = case
+        parsed = std_toml(with_correlation(make_param, {"r_max": 4}, is_real))
+        assert parsed["correlation"]["r_max"] == 4
+        assert parsed["correlation"]["operators"] == default
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_default_pairs_have_equal_parity(self, case):
+        # every default pair is even x even or odd x odd, and the odd pairs
+        # are [cdag_s, c_s] of the same spin
+        _, make_param, onesite, default = case
+        model = tenes_simple.make_model(make_param())
+        names = dict((group, name) for name, group in onesite)
+        parity = model.parity
+
+        def kind(op):
+            odd = any(
+                op[i, o] != 0.0 and parity[i] != parity[o]
+                for i, o in np.ndindex(op.shape)
+            )
+            return "odd" if odd else "even"
+
+        kinds = {
+            name: kind(op)
+            for name, op in zip(model.onesite_ops_name, model.onesite_ops)
+        }
+        for left, right in default:
+            lname, rname = names[left], names[right]
+            assert kinds[lname] == kinds[rname], (lname, rname)
+            if kinds[lname] == "odd":
+                assert lname.startswith("cdag") and rname == lname.replace("cdag", "c")
+            else:
+                assert left == right
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_explicit_operators_are_kept(self, case):
+        _, make_param, _, _ = case
+        operators = [[1, 2], [2, 1], [0, 0]]
+        parsed = std_toml(
+            with_correlation(make_param, {"r_max": 3, "operators": operators})
+        )
+        assert parsed["correlation"] == {"r_max": 3, "operators": operators}
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_tenes_std_writes_the_correlation_into_input_toml(self, case):
+        _, make_param, _, default = case
+        text, _ = tenes_simple.tenes_simple(with_correlation(make_param, {"r_max": 6}))
+        emitted = through_tenes_std(text)
+        assert emitted["parameter"]["general"]["fermion"] is True
+        assert emitted["correlation"] == {"r_max": 6, "operators": default}
+
+    @pytest.mark.parametrize("case", FERMION_CASES, ids=FERMION_IDS)
+    def test_input_toml_keeps_the_odd_onesite_operators(self, case):
+        _, make_param, onesite, _ = case
+        model = tenes_simple.make_model(make_param())
+        text, _ = tenes_simple.tenes_simple(with_correlation(make_param, {"r_max": 2}))
+        emitted = through_tenes_std(text)
+        entries = emitted["observable"]["onesite"]
+        assert [(o["name"], o["group"]) for o in entries] == onesite
+        by_name = {o["name"]: o for o in entries}
+        for name, op in zip(model.onesite_ops_name, model.onesite_ops):
+            got = parse_elements(by_name[name]["elements"], (model.N, model.N))
+            assert np.allclose(got, op, rtol=0.0, atol=1e-15), name
+
+
+class TestBosonicCorrelationDefaultIsUnchanged:
+    # The fermion default must not leak: a bosonic model without
+    # `operators` still gets [g, g] for every emitted one-site group.
+    @pytest.mark.parametrize(
+        "model, is_real, default",
+        [
+            ({"type": "spin"}, False, [[0, 0], [1, 1], [2, 2]]),
+            ({"type": "spin"}, True, [[0, 0], [1, 1]]),
+            ({"type": "boson"}, False, [[0, 0], [1, 1], [2, 2]]),
+        ],
+        ids=["spin-complex", "spin-real", "boson"],
+    )
+    def test_default(self, model, is_real, default):
+        param = {
+            "parameter": {"general": {"is_real": is_real}},
+            "lattice": {"type": "square lattice", "L": 2, "W": 2, "virtual_dim": 2},
+            "model": dict(model),
+            "correlation": {"r_max": 3},
+        }
+        assert std_toml(param)["correlation"]["operators"] == default
+
+
+class TestTenesStdOpsFormInFermionMode:
+    """T4 contract item 2 through the real pipeline: an ops-form two-site
+    observable added to a fermionic std.toml is accepted by tenes_std and
+    written to input.toml unchanged."""
+
+    @pytest.mark.parametrize(
+        "bonds",
+        ["0 1 0\n", "0 2 0\n1 1 1\n", "0 2 1\n3 0 -3\n"],
+        ids=["nearest", "second", "far"],
+    )
+    def test_spinless_cdag_c(self, bonds):
+        text, _ = tenes_simple.tenes_simple(spinless_param())
+        std = toml.loads(text)
+        std["observable"]["twosite"].append(
+            {"name": "cdag_c", "group": 10, "bonds": bonds, "ops": [1, 2]}
+        )
+        emitted = through_tenes_std(toml.dumps(std))
+        entries = twosite_entries(emitted)
+        assert entries["cdag_c"]["ops"] == [1, 2]
+        assert entries["cdag_c"]["group"] == 10
+        assert "elements" not in entries["cdag_c"]
+        assert bond_lines(entries["cdag_c"]["bonds"]) == bond_lines(bonds)

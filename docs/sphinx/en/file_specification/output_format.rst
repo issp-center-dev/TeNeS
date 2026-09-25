@@ -168,6 +168,7 @@ Example::
 ~~~~~~~~~~~~~~~~~~~~~~
 
 -  Expectation values for two-site operations are outputted.
+-  In fermion mode with the CTM environment, two-site observables may cover the 4 x 4 window and may be built from ``ops = [A, B]``. The value is the expectation value of the operator on the source site and the target site. Longer-distance two-site observables are not yet available with ``meanfield_env = true``.
 -  Each row consists of six columns.
 
    1. Index of the two-site operator
@@ -224,6 +225,7 @@ Example::
 ~~~~~~~~~~~~~~~~~~~~~
 
 -  Correlation functions :math:`C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle` are outputted.
+-  In fermion mode, this is :math:`\langle A_s B_t\rangle`, where :math:`A` is on the left site for horizontal correlations and on the lower site for vertical correlations. Pairs of one-site operators with different fermion parity are output as zero. Fermionic correlation functions are available with the CTM environment; ``meanfield_env = true`` is not yet supported.
 -  Each row consists of seven columns.
 
    1. Index of the left operator :math:`\alpha`

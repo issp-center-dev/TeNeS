@@ -383,6 +383,44 @@ add_test(NAME FreeFermionSimple
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_simple.py)
 set_tests_properties(FreeFermionSimple PROPERTIES TIMEOUT 600)
 
+# Items 3-6 of the T4 contract of
+# docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md: long-range
+# two-site observables and correlation functions in fermion mode, end to end.
+#   FreeFermionLongRange       free spinless fermions through tenes_simple ->
+#                              tenes_std -> tenes, against the Fermi sea
+#   BosonEquivalenceLongRange  an all-even parity table against the bosonic run
+#   HubbardLongRange           up/down symmetry of <c^dag c> in the Hubbard model
+# FreeFermionLongRangeMPI2 runs the free-fermion case on two processes and
+# compares it with a one-process run of the same input.toml (item 6).  All of
+# them take a few seconds in a Release build (see the report in
+# work/fermion-longrange/t4/); the golden files are in
+# test/data/output_<name>/, see the header of each script for how to
+# regenerate them.
+foreach(name free_fermion_longrange boson_equivalence_longrange
+        hubbard_longrange)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
+endforeach()
+add_test(NAME FreeFermionLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange.py)
+set_tests_properties(FreeFermionLongRange PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FreeFermionLongRangeMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange.py
+                   --nproc 2)
+  set_tests_properties(FreeFermionLongRangeMPI2 PROPERTIES TIMEOUT 600)
+endif()
+add_test(NAME BosonEquivalenceLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_longrange.py)
+set_tests_properties(BosonEquivalenceLongRange PROPERTIES TIMEOUT 600)
+add_test(NAME HubbardLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_longrange.py)
+set_tests_properties(HubbardLongRange PROPERTIES TIMEOUT 600)
+
 # S-1, S-4 and S-6 of
 # docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the
 # free-fermion run with fastfullupdate = false against the same run with

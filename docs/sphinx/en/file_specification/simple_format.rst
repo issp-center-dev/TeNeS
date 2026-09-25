@@ -195,8 +195,11 @@ The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bo
    ``t``, "Hopping of a nearest-neighbor bond", Real, 0.0
    ``v``, "Offsite repulsion of a nearest-neighbor bond", Real, 0.0
 
-The one-site operator :math:`n` is automatically defined.
+The one-site operators are automatically defined with the following group numbers: ``0: n``, ``1: cdag``, and ``2: c``.
+The parity-odd operators ``cdag`` and ``c`` are available for ``ops``-form two-site observables and correlation functions; their one-site expectation values are always output as zero.
 In addition, ``hopping`` and ``nn`` on nearest-neighbor bonds are automatically defined as two-site operators.
+``tenes_simple`` itself emits only nearest-neighbor two-site observables.
+To measure longer-distance two-site observables, add ``[[observable.twosite]]`` entries to the generated ``std.toml`` before running ``tenes_std``.
 
 Fermionic Hubbard model: ``"hubbard"``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -229,12 +232,17 @@ The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bo
    ``t``, "Hopping of a nearest-neighbor bond", Real, 0.0
    ``v``, "Offsite repulsion of a nearest-neighbor bond", Real, 0.0
 
-One-site operators :math:`n`, :math:`n_\uparrow`, :math:`n_\downarrow`, :math:`S^z`, doublon, and holon are automatically defined.
+One-site operators are automatically defined with the following group numbers: ``0: n``, ``1: n_up``, ``2: n_dn``, ``3: Sz``, ``4: doublon``, ``5: holon``, ``6: cdag_up``, ``7: c_up``, ``8: cdag_dn``, and ``9: c_dn``.
+The parity-odd operators ``cdag_up``, ``c_up``, ``cdag_dn``, and ``c_dn`` are available for ``ops``-form two-site observables and correlation functions; their one-site expectation values are always output as zero.
 In addition, ``hopping``, ``nn``, ``SzSz``, ``SxSx``, and ``SySy`` on nearest-neighbor bonds are automatically defined as two-site operators.
 The spin operators are :math:`S^\alpha = \frac{1}{2}\sum_{ss'} c^\dagger_s \sigma^\alpha_{ss'} c_{s'}`.
 Two-site values in ``density.dat`` are per site (the sum over bonds divided by the number of sites), so on the square lattice they are twice the correlation per nearest-neighbor bond.
+``tenes_simple`` itself emits only nearest-neighbor two-site observables.
+To measure longer-distance two-site observables, add ``[[observable.twosite]]`` entries to the generated ``std.toml`` before running ``tenes_std``.
 
-In the current version, fermionic models support only nearest-neighbor bonds on the square lattice.
+In the current version, fermionic models support nearest-neighbor Hamiltonian bonds on the square lattice.
+With the CTM environment, two-site observables are available in the 4 x 4 window (``|dx| <= 3`` and ``|dy| <= 3``) and may use either explicit ``elements`` or ``ops = [A, B]``.
+Longer-distance two-site observables and correlation functions are not yet available with ``meanfield_env = true``.
 
 
 ``lattice`` section
@@ -278,7 +286,7 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
   - The amount of fluctuation in the elements of the initial tensor
 
-In fermionic models, only nearest-neighbor bonds on the square lattice are supported.
+In fermionic models, ``tenes_simple`` supports square-lattice nearest-neighbor Hamiltonian bonds.
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -382,6 +390,8 @@ Parameters defined in this section is not used in ``tenes_simple`` but they are 
 
 For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
 For calculating correlation functions, they have to be specified in the same file format as the input file of ``tenes``.
+For fermionic spinless models, omitting ``operators`` selects ``[[0, 0], [1, 2]]``; for fermionic Hubbard models it selects ``[[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 7], [8, 9]]``.
+Fermionic correlation functions are available with the CTM environment only; pairs with different operator parity are output as zero.
 For details, See ``correlation`` section :doc:`expert_format`.
 
 
