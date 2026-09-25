@@ -185,7 +185,7 @@ std::vector<std::vector<tensor>> build_relay_window(
    - x_first は source の行を target の列まで進み、そこから target の行まで進む。y_first は逆。
    - source == target は `std::invalid_argument`。
    - `relay_leg` は右隣に 2、左隣に 0、上隣(row − 1)に 1、下隣に 3 を返し、隣接していなければ `std::invalid_argument`。
-2. **チャネル分解** `relay_channels`: 全チャネルの u_k と vt_k を κ で graded 縮約して足すと、元の `op12` に戻る(相対誤差 1e-12)。各 κ は次元 1 で、パリティ表の長さは 1。d = 2 の hopping(偶と奇のチャネルを持つ)と、d = 4 の hopping + nn(偶奇混在)で確かめる。
+2. **チャネル分解** `relay_channels`: 全チャネルの u_k と vt_k を κ で graded 縮約して足すと、元の `op12` に戻る(相対誤差 1e-12)。各 κ は次元 1 で、パリティ表の長さは 1。d = 2 の hopping(奇チャネルだけ)、d = 2 と d = 4 の hopping + nn(偶奇混在)で確かめる。
 3. **厳密照合(主条件)**: 外周の脚を次元 1(偶)に閉じた開いたパッチの上で、決定的なパリティ偶のサイトテンソル
    (`test/fermion/fold_geometry.cpp` の決定的テンソルと同じ式、実数と複素数)を使う。次の 2 つの量を比べる。
    - 真値 ⟨O⟩ = ⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩。単層 graded 縮約(`tenes::fermion::tensordot` など、fold を使わない)で計算する。
@@ -202,8 +202,8 @@ std::vector<std::vector<tensor>> build_relay_window(
 6. **最近接の一致**: |dx| + |dy| = 1 の 4 方向(source が左・右・上・下)で、relay 値が既存の bundled-k 構成(`build_reduced_pair_halves` の両半分を縮約したもの)の値と相対誤差 1e-12 以下で一致する。3×3 パッチの中央付近の対も 1 件含める。
 7. **入力検査**: `build_relay_site` は、source なのに entry_leg ≠ −1、target なのに exit_leg ≠ −1、middle で entry == exit または範囲外、のそれぞれで `std::invalid_argument` を投げる。
 8. **変異に対する感度**(テスト作成者は変異を実行しなくてよいが、次の変異で必ず赤くなるケース選定にすること。レビュアーが確認する):
-   κ の graded transpose を素の transpose に替える(全サイト / 途中サイトだけ)、交差符号を落とす、交差符号を両側に掛ける、融合順を (κ, bond) にする、途中サイトで κ_in と κ_out を入れ替える、途中サイトの S を物理脚の前に外積する、奇チャネルを落とす。
-   「交差符号を下流側に移す」は値の変わらない等価変異なので対象外。
+   κ の graded transpose を素の transpose に替える(全サイト / 途中サイトだけ)、交差符号を落とす、交差符号を両側に掛ける、途中サイトで κ_in と κ_out を入れ替える、奇チャネルを落とす。
+   「交差符号を下流側に移す」「融合順を (κ, bond) にする」「途中サイトの S を物理脚の前に外積する」は値の変わらない等価変異なので対象外(設計書 §7)。
 9. 実行時間: Debug ビルド 1 スレッドで 30 秒以内を目安にする。d = 4 の 3×3 は D = 2 に抑えてよい。
 
 **ゲート**: 3・4・5・6 がすべて通ること。通らない場合は T2 以降に進まない。原因を特定して設計書を改訂する。builder を部分的に「測定で合わせる」修正は禁止(設計書 §3.5)。
