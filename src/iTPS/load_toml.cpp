@@ -594,10 +594,6 @@ std::vector<std::vector<bool>> two_site_parity(
   return {phys[site0], phys[site1], phys[site0], phys[site1]};
 }
 
-bool is_nearest_neighbor_displacement(int dx, int dy) {
-  return std::abs(dx) + std::abs(dy) == 1;
-}
-
 bool is_inside_fermion_measure_window(int dx, int dy) {
   return !(dx == 0 && dy == 0) && std::abs(dx) <= 3 && std::abs(dy) <= 3;
 }
@@ -670,9 +666,6 @@ void validate_fermion_constraints(
   if (peps_parameters.Use_RSVD) {
     throw_fermion_guard("Use_RSVD=true");
   }
-  if (corparam.r_max > 0 && peps_parameters.MeanField_Env) {
-    throw_fermion_guard("meanfield_env=true with correlation.r_max > 0");
-  }
   if (!multisite_operators.empty()) {
     throw_fermion_guard("multisite operators");
   }
@@ -729,18 +722,7 @@ void validate_fermion_constraints(
         throw_fermion_guard(
             "ops form with one-site operators of different parity");
       }
-      if (peps_parameters.MeanField_Env &&
-          !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
-        throw_fermion_guard(
-            "meanfield_env=true with non-nearest-neighbor ops-form "
-            "two-site observables");
-      }
       continue;
-    }
-    if (peps_parameters.MeanField_Env &&
-        !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
-      throw_fermion_guard(
-          "meanfield_env=true with non-nearest-neighbor two-site observables");
     }
     const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
     if (has_odd_tensor_element(

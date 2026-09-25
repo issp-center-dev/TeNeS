@@ -73,7 +73,7 @@
 
     - 例えば1粒子生成消滅演算子の期待値は 0 として出力されます。
 
-  - 現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。CTM 環境では、2サイト物理量は明示的な ``elements`` 形式と ``ops = [A, B]`` 形式のどちらでも指定でき、4 x 4 の窓(``|dx| <= 3`` かつ ``|dy| <= 3``)で測定できます。 ``[correlation]`` も利用でき、左または下の演算子を :math:`A` とした :math:`\langle A_s B_t\rangle` を出力します。パリティが異なる演算子の組は 0 として出力されます。 ``Use_RSVD`` 、 ``Simple_Gauge_Fix`` 、有限温度計算、実時間発展、マルチサイト演算子、サイトが自分自身と最近接になるユニットセル(``LX = 1`` 、または ``LY = 1`` かつ ``skew = 0``)、長距離ハミルトニアンボンドは非対応で、入力読み込み時にエラーになります。 ``meanfield_env = true`` での長距離2サイト物理量と相関関数はまだ未対応です。相関長も非対応で、 ``tenes_simple`` はフェルミオン模型に対する ``[correlation_length]`` をエラーとし、ソルバーは測定時に警告を出して測定を無効化します
+  - 現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。2サイト物理量は明示的な ``elements`` 形式と ``ops = [A, B]`` 形式のどちらでも指定でき、4 x 4 の窓(``|dx| <= 3`` かつ ``|dy| <= 3``)で測定できます。 ``[correlation]`` も利用でき、左または下の演算子を :math:`A` とした :math:`\langle A_s B_t\rangle` を出力します。パリティが異なる演算子の組は 0 として出力されます。 ``meanfield_env = true`` での長距離2サイト物理量と相関関数は、測定窓または相関鎖の外側を simple update の :math:`\lambda` で閉じて評価します。 ``Use_RSVD`` 、 ``Simple_Gauge_Fix`` 、有限温度計算、実時間発展、マルチサイト演算子、サイトが自分自身と最近接になるユニットセル(``LX = 1`` 、または ``LY = 1`` かつ ``skew = 0``)、長距離ハミルトニアンボンドは非対応で、入力読み込み時にエラーになります。相関長も非対応で、 ``tenes_simple`` はフェルミオン模型に対する ``[correlation_length]`` をエラーとし、ソルバーは測定時に警告を出して測定を無効化します
 
 - ``iszero_tol``
 
@@ -212,7 +212,7 @@ full update に関するパラメータ
    ``projector_corner``,         "CTMのprojector計算で1/4角のテンソルのみを使う",                  真偽値, true
    ``use_rsvd``,                 "SVD を 乱択SVD で置き換えるかどうか",                            真偽値, false
    ``rsvd_oversampling_factor``, "乱択SVD 中に計算する特異値の数の、最終的に用いる数に対する比率", 実数,   2.0
-   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
+   ``meanfield_env``,            "CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、測定窓または相関鎖の外側を simple update の lambda で閉じて評価するため CTM 版より大幅に軽いが、精度は simple update 相当",        真偽値, false
 
 ``use_onesite_rdm_convergence`` が ``true`` の場合、角転送行列の特異値スペクトルに加えて、1サイト縮約密度行列の反復間距離を用いて CTM の収束を判定します。
 距離は全サイト・全行列要素に対する max 要素ノルムを、その密度行列のトレースで割ったものです（密度行列の形の変化とノルムの相対変化の両方が含まれます）。

@@ -580,6 +580,42 @@ ftensor<tensor> relay_product_target(const tensor& B,
   return ret;
 }
 
+/*!
+ * @brief CHI = 1 corner of the delta environment: shape (1, 1), value 1.
+ *
+ * With the mean-field environment the folded window is closed on its
+ * outer fused legs by delta_{x, xb}; handing the density kernels a CHI = 1
+ * environment built from this corner and make_delta_edge() does that.
+ */
+template <class tensor>
+tensor make_delta_corner(typename tensor::comm_type comm) {
+  tensor ret(comm, mptensor::Shape(1, 1));
+  ret.set_value(mptensor::Index(0, 0), typename tensor::value_type(1));
+  return ret;
+}
+
+/*!
+ * @brief CHI = 1 edge closing one outer fused leg [x xb] with delta_{x, xb}.
+ *
+ * Shape (1, 1, D * D), the density-CTM edge layout (src/iTPS/tensors.cpp);
+ * the fused index is x + D * xb, x fastest, as detail::doubled_pipeline()
+ * fuses it.
+ *
+ * @param[in] D Virtual dimension of that leg; legs of one window may differ.
+ */
+template <class tensor>
+tensor make_delta_edge(int D, typename tensor::comm_type comm) {
+  if (D <= 0) {
+    throw std::invalid_argument("make_delta_edge expects a positive dimension");
+  }
+  tensor ret(comm, mptensor::Shape(1, 1, D * D));
+  for (int x = 0; x < D; ++x) {
+    ret.set_value(mptensor::Index(0, 0, x + D * x),
+                  typename tensor::value_type(1));
+  }
+  return ret;
+}
+
 }  // namespace tenes::fermion
 
 #endif  // TENES_SRC_FERMION_RELAY_HPP_

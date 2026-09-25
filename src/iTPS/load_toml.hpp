@@ -91,12 +91,10 @@ std::vector<std::vector<bool>> gen_phys_parity(
  *   - unit cells in which a site is its own nearest neighbor (LX = 1, or
  *     LY = 1 with skew = 0); skewed and one-row cells are otherwise
  *     accepted,
- *   - any calculation mode other than ground state,
- *     Simple_Gauge_Fix, Use_RSVD, and correlation.r_max > 0
- *     (long-range correlation functions),
+ *   - any calculation mode other than ground state, Simple_Gauge_Fix, and
+ *     Use_RSVD,
  *   - multi-site operators, two-site observables outside the 4x4 window or
- *     at zero displacement, and non-nearest-neighbor two-site observables
- *     under meanfield_env,
+ *     at zero displacement,
  *   - ops-form two-site observables whose one-site factors have mixed or
  *     different parity,
  *   - product initial states with weight on an odd-parity basis state,

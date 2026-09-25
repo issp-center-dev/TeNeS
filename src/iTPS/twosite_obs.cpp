@@ -14,6 +14,7 @@
 /* You should have received a copy of the GNU General Public License /
 / along with this program. If not, see http://www.gnu.org/licenses/. */
 
+#include <algorithm>
 #include <cassert>
 #include <iomanip>
 
@@ -117,7 +118,8 @@ auto iTPS<ptensor>::measure_twosite()
 
     if (peps_parameters.MeanField_Env) {
       int iboundary = 0;
-      const int nboundary = 2 * (ncol + nrow - 2);
+      const int nboundary =
+          nrow * ncol - std::max(nrow - 2, 0) * std::max(ncol - 2, 0);
       boundaries.reserve(nboundary);
 
       for (int row = 0; row < nrow; ++row) {
@@ -171,12 +173,17 @@ auto iTPS<ptensor>::measure_twosite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
-    const bool is_fermion_longrange_ctm =
-        finfo.enabled && !is_TPO && !is_mf && nrow * ncol != 2;
+    const bool is_fermion_longrange_density =
+        finfo.enabled && !is_TPO && nrow * ncol != 2;
     std::vector<std::vector<tenes::fermion::ftensor<ptensor>>> fTn;
     std::vector<std::vector<ptensor>> reduced;
     std::vector<std::vector<const ptensor *>> reduced_ptr;
-    if (is_fermion_longrange_ctm) {
+    std::vector<ptensor> delta_C;
+    std::vector<ptensor> delta_eTt;
+    std::vector<ptensor> delta_eTr;
+    std::vector<ptensor> delta_eTb;
+    std::vector<ptensor> delta_eTl;
+    if (is_fermion_longrange_density) {
       fTn.resize(nrow);
       reduced.resize(nrow);
       reduced_ptr.assign(nrow, std::vector<const ptensor *>(ncol, nullptr));
@@ -189,6 +196,32 @@ auto iTPS<ptensor>::measure_twosite()
           reduced[row].push_back(
               tenes::fermion::build_reduced_op(fTn[row].back()));
           reduced_ptr[row][col] = &reduced[row].back();
+        }
+      }
+      if (is_mf) {
+        delta_C.assign(4, tenes::fermion::make_delta_corner<ptensor>(comm));
+        delta_eTt.reserve(ncol);
+        delta_eTb.reserve(ncol);
+        for (int col = 0; col < ncol; ++col) {
+          delta_eTt.push_back(tenes::fermion::make_delta_edge<ptensor>(
+              static_cast<int>(fTn[0][col].shape()[1]), comm));
+          delta_eTb.push_back(tenes::fermion::make_delta_edge<ptensor>(
+              static_cast<int>(fTn[nrow - 1][col].shape()[3]), comm));
+          eTt_[col] = &delta_eTt.back();
+          eTb_[col] = &delta_eTb.back();
+        }
+        delta_eTl.reserve(nrow);
+        delta_eTr.reserve(nrow);
+        for (int row = 0; row < nrow; ++row) {
+          delta_eTl.push_back(tenes::fermion::make_delta_edge<ptensor>(
+              static_cast<int>(fTn[row][0].shape()[0]), comm));
+          delta_eTr.push_back(tenes::fermion::make_delta_edge<ptensor>(
+              static_cast<int>(fTn[row][ncol - 1].shape()[2]), comm));
+          eTl_[row] = &delta_eTl.back();
+          eTr_[row] = &delta_eTr.back();
+        }
+        for (int i = 0; i < 4; ++i) {
+          C_[i] = &delta_C[i];
         }
       }
     }
@@ -241,7 +274,7 @@ auto iTPS<ptensor>::measure_twosite()
                     halves);
           }
         }
-      } else if (is_fermion_longrange_ctm) {
+      } else if (is_fermion_longrange_density) {
         norms[norm_key] = core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_,
                                                      reduced_ptr, op_);
       } else if (is_mf) {
@@ -385,7 +418,7 @@ auto iTPS<ptensor>::measure_twosite()
           //                   eTb[left], eTl[left], Tn[left], Tn[right], o);
         }
       } else {
-        if (is_fermion_longrange_ctm) {
+        if (is_fermion_longrange_density) {
           const auto wrapped_op = tenes::fermion::wrap_twosite_gate(
               *op12, finfo.phys[source], finfo.phys[target_site]);
           const auto channels = tenes::fermion::relay_channels(wrapped_op);

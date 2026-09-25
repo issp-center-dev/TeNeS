@@ -391,6 +391,17 @@ class iTPS {
   std::vector<Correlation> measure_correlation_ctm();
   //! measure_correlation() with the mean-field environment.
   std::vector<Correlation> measure_correlation_mf();
+  /*!
+   * @brief Fermionic correlation-function path shared by CTM and
+   *        mean-field environments.
+   *
+   * Relays each definite-parity operator channel along the correlation
+   * chain. When @p meanfield_env is true, the tensors are dressed by the
+   * mean-field lambda weights and the chain is closed by a synthetic
+   * CHI = 1 delta environment; otherwise the stored CTM corners and edges
+   * close the chain.
+   */
+  std::vector<Correlation> measure_correlation_fermion(bool meanfield_env);
 
   static constexpr int nleg = 4;  //!< virtual legs per center tensor
 

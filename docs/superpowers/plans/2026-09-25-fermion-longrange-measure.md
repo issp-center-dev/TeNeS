@@ -407,14 +407,14 @@ namespace tenes::fermion {
 
 //! CHI = 1 corner of the delta environment: shape (1, 1), value 1.
 template <class tensor>
-tensor make_delta_corner(MPI_Comm comm);
+tensor make_delta_corner(typename tensor::comm_type comm);
 
 //! CHI = 1 edge closing one outer fused leg [x xb] (x fastest, as
 //! doubled_pipeline fuses it) with delta_{x, xb}: shape (1, 1, D * D), the
 //! density-CTM edge layout (src/iTPS/tensors.cpp). D is the virtual
 //! dimension of that leg; legs of one window may differ.
 template <class tensor>
-tensor make_delta_edge(int D, MPI_Comm comm);
+tensor make_delta_edge(int D, typename tensor::comm_type comm);
 
 }  // namespace tenes::fermion
 ```

@@ -242,7 +242,7 @@ To measure longer-distance two-site observables, add ``[[observable.twosite]]`` 
 
 In the current version, fermionic models support nearest-neighbor Hamiltonian bonds on the square lattice.
 With the CTM environment, two-site observables are available in the 4 x 4 window (``|dx| <= 3`` and ``|dy| <= 3``) and may use either explicit ``elements`` or ``ops = [A, B]``.
-Longer-distance two-site observables and correlation functions are not yet available with ``meanfield_env = true``.
+With ``meanfield_env = true``, the same longer-distance two-site observables and correlation functions are available using the mean-field approximation, where the outside of the measured window is closed by the simple-update :math:`\lambda` weights.
 
 
 ``lattice`` section

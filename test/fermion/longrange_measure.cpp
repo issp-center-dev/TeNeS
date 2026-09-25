@@ -2178,19 +2178,22 @@ TEST_CASE(
   }
 }
 
-// Green against the stub by construction (the stub rejects every long-range
-// observable); pins that the MF environment keeps rejecting them until T5.
+// Task T5 of the same plan (contract item 1) lifts the mean-field
+// restriction: this case used to pin that the MF environment rejects
+// long-range observables until T5 ("[kept] T2-1h ... stay rejected") and now
+// requires that they be accepted. Their values are checked in
+// test/fermion/longrange_mf.cpp. Red until T5 is implemented.
 TEST_CASE(
-    "longrange [kept] T2-1h: with meanfield_env long-range two-site "
-    "observables and long-range ops forms stay rejected") {
+    "longrange T2-1h: with meanfield_env long-range two-site observables and "
+    "long-range ops forms are accepted (task T5)") {
   for (const lr_disp dd : {lr_disp{2, 0}, lr_disp{1, 1}, lr_disp{0, -3}}) {
     lr_guard_input in(2, true, false);
     in.add_twosite(dd.dx, dd.dy);
-    lr_check_rejects(in,
+    lr_check_accepts(in,
                      "mean field, hopping at " + lr_disp_name(dd.dx, dd.dy));
     lr_guard_input ops(2, true);
     ops.add_ops(dd.dx, dd.dy, 1, 2);
-    lr_check_rejects(
+    lr_check_accepts(
         ops, "mean field, ops = [1, 2] at " + lr_disp_name(dd.dx, dd.dy));
   }
 }

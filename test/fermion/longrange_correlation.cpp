@@ -1183,15 +1183,18 @@ TEST_CASE(
                    "d = 4, r_max = 3, pairs [1,2] [3,4] [5,5] [0,5] [5,2]");
 }
 
-// Green against the stub by construction (the stub rejects every r_max > 0);
-// pins that the mean-field environment keeps rejecting it until T5, at load
-// time and again at measurement time (design section 5.1, double guard).
+// Task T5 of the same plan (contract item 1) lifts the mean-field
+// restriction: this case used to pin that the mean-field environment rejects
+// r_max > 0 at load and at measurement until T5 ("[kept] T3-1b ... stays
+// rejected") and now requires that both accept it and that the measurement
+// run. The values are checked in test/fermion/longrange_mf.cpp. Red until T5
+// is implemented.
 TEST_CASE(
-    "longrange-corr [kept] T3-1b: with meanfield_env, r_max > 0 stays "
-    "rejected at load and at measurement") {
-  lc_check_rejects(lc_guard_input(2, true, lc_names2, 3, {{1, 2}}),
+    "longrange-corr T3-1b: with meanfield_env, r_max > 0 is accepted at load "
+    "and measured (task T5)") {
+  lc_check_accepts(lc_guard_input(2, true, lc_names2, 3, {{1, 2}}),
                    "mean field, r_max = 3, pair [1,2]");
-  lc_check_rejects(lc_guard_input(2, true, {"n"}, 2, {{0, 0}}),
+  lc_check_accepts(lc_guard_input(2, true, {"n"}, 2, {{0, 0}}),
                    "mean field, r_max = 2, pair [0,0] (even only)");
 
   const lc_case c{"T3-1b mean field", 2, lc_names2, {{0, 0}, {1, 2}}, 2, 0.0,
@@ -1214,15 +1217,18 @@ TEST_CASE(
       tenes::Operators<real_tensor>{}, tenes::Operators<real_tensor>{},
       lc_corparam(c), tenes::itps::TransferMatrix_Parameters{});
   lc_seed_Tn(state, lc_odd_scale, c.seed);
+  std::vector<Correlation> rows;
   try {
-    state.measure_correlation();
-    FAIL_CHECK("measure_correlation with meanfield_env and r_max > 0 ran");
-  } catch (const tenes::input_error&) {
+    rows = state.measure_correlation();
   } catch (const std::exception& e) {
-    FAIL_CHECK(
-        "measure_correlation with meanfield_env threw something other "
-        "than tenes::input_error: "
-        << std::string(e.what()));
+    FAIL_CHECK("measure_correlation with meanfield_env and r_max > 0 threw: "
+               << std::string(e.what()));
+  }
+  // 4 left sites x 2 pairs x r = 1, 2 x 2 directions.
+  CHECK(rows.size() == 32);
+  for (const Correlation& row : rows) {
+    CHECK(std::isfinite(row.real));
+    CHECK(std::isfinite(row.imag));
   }
 }
 

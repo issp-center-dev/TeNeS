@@ -181,6 +181,7 @@ In this diagram, :math:`\lambda_i` represents a non-negative diagonal matrix con
 The singular values obtained from the SVD of the matrix are used as the mean field :math:`\lambda` in the next step. The computation cost of the simple update is :math:`O(D^{5})`, if we use QR decomposition before we construct the matrix :ref:`[QR] <Ref-QR>`. Thus, it is much cheaper than that of the full update.
 
 Although the computation cost of the simple update is cheaper than that of the full update, it is known that the simple update shows strong initial state dependence and it tends to overestimate the local magnetization. Thus, for complicated problems, we need to carefully check results obtained by the simple update. 
+When observables are measured with ``meanfield_env = true``, TeNeS uses these :math:`\lambda` weights to close the environment outside the measured bond, window, or correlation chain; the result is therefore a mean-field approximation rather than a CTM contraction.
 
 Real-time evolution by iTPS
 ===========================

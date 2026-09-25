@@ -44,8 +44,6 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
   for (const auto &op : twosite_operators) {
     const int abs_dx = std::abs(op.dx[0]);
     const int abs_dy = std::abs(op.dy[0]);
-    const bool is_nearest_neighbor =
-        (abs_dx == 1 && abs_dy == 0) || (abs_dx == 0 && abs_dy == 1);
     if (op.dx[0] == 0 && op.dy[0] == 0) {
       throw tenes::input_error(
           "fermion CTM measurement does not support same-site two-site "
@@ -56,20 +54,10 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
           "fermion CTM measurement supports two-site observables only inside "
           "a 4x4 window");
     }
-    if (peps_parameters.MeanField_Env && !is_nearest_neighbor) {
-      throw tenes::input_error(
-          "fermion meanfield_env measurement supports nearest-neighbor "
-          "two-site observables only");
-    }
   }
   if (!multisite_operators.empty()) {
     throw tenes::input_error(
         "fermion CTM measurement does not support multisite observables");
-  }
-  if (corparam.r_max > 0 && peps_parameters.MeanField_Env) {
-    throw tenes::input_error(
-        "fermion meanfield_env measurement does not support "
-        "correlation.r_max > 0");
   }
   for (auto [left_group, right_group] : corparam.operators) {
     if (left_group < 0 || right_group < 0) {

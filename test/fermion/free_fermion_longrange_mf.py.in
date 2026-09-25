@@ -1,0 +1,670 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Item 6 of the T5 contract of
+# docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md
+# (design: docs/superpowers/specs/2026-09-25-fermion-longrange-measure-design.md,
+# section 6): the long-range two-site observables and the correlation
+# function of FreeFermionLongRange (free_fermion_longrange.py.in) with the
+# mean-field environment,
+#
+#   [parameter.ctm] meanfield_env = true
+#
+# through the standard pipeline
+#
+#   simple.toml -> tenes_simple -> std.toml -> tenes_std -> input.toml -> tenes
+#
+# The physics and the observables are those of FreeFermionLongRange (t = 1,
+# mu = 0, D = 2, tau = 0.01, num_step = 1000, seed = 11, noise = 1.0,
+# L_sub = [2, 2], [correlation] r_max = 6 with the default operators of
+# tenes_simple), plus one more ops-form observable, n_n = ops [n, n] on the
+# straight bonds, so that the even pair [n, n] of the correlation function
+# has a window counterpart too.
+#
+# The mean-field environment is an approximation, so nothing here is
+# compared with the momentum integral of the Fermi sea.  What is checked, in
+# this order:
+#
+#   1. the schema, and that input.toml really has meanfield_env = true;
+#   2. no norm warning;
+#   3. the one-site values of cdag and c are exactly 0 (design section 4.1);
+#   4. identities that hold for ANY state, per site, between numbers that
+#      come out of different code paths of one run, all to rounding
+#      (TIGHT_TOL).  The mean-field environment of a window is the product
+#      of the lambda weights on its perimeter, exact by construction, so,
+#      unlike the CTM environment, it leaves no convergence error to wait
+#      for:
+#        - the window measurement against the correlation function, [cdag, c]
+#          and [n, n], r = 1 .. 3.  At r = 1 the window is the pre-existing
+#          nearest-neighbour path (contract_pair_MF) and the correlation
+#          function is the new delta-environment path: this is gate 1 of the
+#          contract, end to end;
+#        - the nearest-neighbour hopping of tenes_simple (the pre-existing
+#          path) against twice the r = 1 correlation function (the new one);
+#        - the explicit hopping operator against the sum of the two ops-form
+#          products, [c, cdag] against -[cdag, c] on the reversed bond, and
+#          the reversed bond against the forward one (hermiticity);
+#   5. premise: the values carry signal (see SIGNAL_MIN);
+#   6. with --nproc N (N > 1) the same input.toml is also run on one process
+#      and every output file of the N-process run has to agree with it (see
+#      MPI_TOL);
+#   7. the golden files, with the rtol / atol of test/fulltest.py.in.
+#
+# Golden files: test/data/output_FreeFermionLongRangeMF/{density,onesite_obs,
+# twosite_obs,correlation}.dat in the SOURCE tree.  They do not exist until
+# the implementation is in place, and the test fails while they are missing.
+# To (re)generate them, on purpose only:
+#
+#   TENES_UPDATE_FERMION_LONGRANGE_MF_GOLDEN=1 ctest -R '^FreeFermionLongRangeMF$'
+#
+# in the build tree.  The update mode still runs checks 1-5 and refuses to
+# write anything if one of them fails; it writes the output of the
+# one-process run.  The --nproc registration never writes golden files.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+import toml
+
+TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
+TENES_STD = join("@CMAKE_BINARY_DIR@", "tool", "tenes_std")
+TENES = join("@CMAKE_BINARY_DIR@", "src", "tenes")
+MPIEXEC = "@MPIEXEC@"
+
+NAME = "FreeFermionLongRangeMF"
+GOLDEN_DIR = join("@CMAKE_CURRENT_SOURCE_DIR@", "data", "output_" + NAME)
+GOLDEN_FILES = ("density.dat", "onesite_obs.dat", "twosite_obs.dat", "correlation.dat")
+UPDATE_GOLDEN_ENV = "TENES_UPDATE_FERMION_LONGRANGE_MF_GOLDEN"
+
+# test/fulltest.py.in
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+
+R_MAX = 6
+# (dx, dy) of the T4 contract item 3, measured here with the mean field
+CONTRACT_DISPLACEMENTS = [(2, 0), (1, 1), (2, 1), (3, 0)]
+NEAREST = [(1, 0), (0, 1)]
+# straight bonds that the correlation function also measures (r = 1 .. 3)
+STRAIGHT = [(1, 0), (2, 0), (3, 0), (0, 1), (0, 2), (0, 3)]
+L_SUB = (2, 2)
+NSITES = L_SUB[0] * L_SUB[1]
+
+SIMPLE_TOML = """
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 1000
+
+[parameter.ctm]
+meanfield_env = true
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 2
+virtual_dim = 2
+initial = "random"
+noise = 1.0
+
+[model]
+type = "spinless fermion"
+t = 1.0
+mu = 0.0
+
+[correlation]
+r_max = {r_max}
+""".format(
+    r_max=R_MAX
+)
+
+# SCALE: a magnitude the compared values do not cancel against.  Every value
+# compared here is a mean-field expectation value of an operator of norm 1
+# (c^dag_s c_t, n_s n_t, or a sum of two of them for the hopping), a convex
+# combination of expectation values, so it is at most 2 in absolute value;
+# SCALE = 1 is the natural unit and does not depend on the state.
+SCALE = 1.0
+
+# TIGHT_TOL: identities between two numbers computed from the same state
+# through different contractions or different operator constructions; with
+# the mean-field environment every one of them is exact up to rounding (the
+# environment is the lambda weights themselves, not a converged
+# approximation).  The T5 test author's prototype implementation measured
+# at most 1.1e-16 for every identity of this script (Debug, g++-16, macOS,
+# 2026-09-25); 1e-10 SCALE leaves six decades for other compilers, BLAS and
+# summation orders.  What it has to
+# catch is a wrong sign or a dropped channel, which moves a value by the
+# value itself; SIGNAL_MIN keeps the compared values far above it.
+TIGHT_TOL = 1.0e-10 * SCALE
+
+# SIGNAL_MIN: premise of check 4.  The largest |<c^dag_s c_(s+(1,0))>| and
+# |<n_s n_(s+(1,0))>| over the sites must be at least this, so that the
+# identities compare numbers that carry signal, not zeros.  The T5 test
+# author's prototype implementation (Debug, g++-16, macOS, 2026-09-25)
+# measured 0.200 and 0.190; 1e-2 is a factor 19 below that and eight decades
+# above TIGHT_TOL.
+SIGNAL_MIN = 1.0e-2 * SCALE
+
+# MPI_TOL: an N-process run against the one-process run on the same
+# input.toml.  With the mean-field environment there is no CTM iteration
+# that could stop at a different sweep, so the two runs differ by the
+# summation order of the distributed contractions only; 1e-10 SCALE is far
+# above that and far below what an MPI reduction bug does (a partial sum
+# over one rank's blocks is off by a fraction of the value itself).
+MPI_TOL = 1.0e-10 * SCALE
+
+
+# ---------------------------------------------------------------------------
+# Running
+# ---------------------------------------------------------------------------
+
+
+def parse_args(argv):
+    nproc = 1
+    args = list(argv)
+    if "--nproc" in args:
+        nproc = int(args[args.index("--nproc") + 1])
+    return nproc
+
+
+def launcher(nproc):
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append(str(nproc))
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    elif nproc != 1:
+        raise RuntimeError("this build has no MPI launcher; --nproc must be 1")
+    return cmd
+
+
+def run(cmd, cwd):
+    print("run:", " ".join(cmd), flush=True)
+    proc = subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+    return proc
+
+
+def run_tool(cmd, cwd, label):
+    proc = run(cmd, cwd)
+    if proc.returncode != 0:
+        print(proc.stdout + proc.stderr)
+        print(f"{label} failed: {os.path.basename(cmd[0])} exited with {proc.returncode}")
+        return False
+    return True
+
+
+def site_index(x, y):
+    return (x % L_SUB[0]) + L_SUB[0] * (y % L_SUB[1])
+
+
+def target_site(source, dx, dy):
+    x, y = source % L_SUB[0], source // L_SUB[0]
+    return site_index(x + dx, y + dy)
+
+
+def bonds_text(displacements):
+    return "\n".join(
+        f"{source} {dx} {dy}" for source in range(NSITES) for dx, dy in displacements
+    )
+
+
+def unique(seq):
+    out = []
+    for item in seq:
+        if item not in out:
+            out.append(item)
+    return out
+
+
+HOPPING_DISPLACEMENTS = unique(NEAREST + CONTRACT_DISPLACEMENTS)
+OPS_DISPLACEMENTS = unique(
+    STRAIGHT
+    + CONTRACT_DISPLACEMENTS
+    + [(-dx, -dy) for dx, dy in unique(STRAIGHT + CONTRACT_DISPLACEMENTS)]
+)
+
+
+def extend_std_toml(path):
+    """Add the long-range two-site observables to the std.toml of
+    tenes_simple.  Returns the group numbers of the added observables and the
+    one-site operator table of the std.toml."""
+    std = toml.load(path)
+    onesite = [(o["name"], o["group"]) for o in std["observable"]["onesite"]]
+    groups = dict(onesite)
+    twosite = std["observable"]["twosite"]
+    hopping = [entry for entry in twosite if entry["name"] == "hopping"]
+    if len(hopping) != 1:
+        raise RuntimeError("tenes_simple did not emit exactly one 'hopping'")
+    next_group = max(entry["group"] for entry in twosite) + 1
+    added = {}
+    twosite.append(
+        {
+            "name": "hopping_longrange",
+            "group": next_group,
+            "dim": [2, 2],
+            "bonds": bonds_text(HOPPING_DISPLACEMENTS),
+            "elements": hopping[0]["elements"],
+        }
+    )
+    added["hopping_longrange"] = next_group
+    for name, ops, displacements in (
+        ("cdag_c", ["cdag", "c"], OPS_DISPLACEMENTS),
+        ("c_cdag", ["c", "cdag"], OPS_DISPLACEMENTS),
+        ("n_n", ["n", "n"], STRAIGHT),
+    ):
+        next_group += 1
+        twosite.append(
+            {
+                "name": name,
+                "group": next_group,
+                "dim": [2, 2],
+                "bonds": bonds_text(displacements),
+                "ops": [groups.get(ops[0], -1), groups.get(ops[1], -1)],
+            }
+        )
+        added[name] = next_group
+    added["hopping"] = hopping[0]["group"]
+    with open(path, "w") as f:
+        toml.dump(std, f)
+    return added, onesite
+
+
+# ---------------------------------------------------------------------------
+# Reading the output
+# ---------------------------------------------------------------------------
+
+
+def read_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_density(path):
+    values = []
+    with open(path) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values.append((name.strip(), complex(float(words[0]), float(words[1]))))
+    return values
+
+
+def twosite_table(outdir):
+    """{(group, source, dx, dy): complex}"""
+    table = {}
+    for row in read_rows(join(outdir, "twosite_obs.dat")):
+        group, source, dx, dy, re, im = row
+        table[(int(group), int(source), int(dx), int(dy))] = complex(re, im)
+    return table
+
+
+def correlation_table(outdir):
+    """{(left_op, left_site, right_op, dx, dy): complex}"""
+    table = {}
+    for row in read_rows(join(outdir, "correlation.dat")):
+        lop, lsite, rop, dx, dy, re, im = row
+        table[(int(lop), int(lsite), int(rop), int(dx), int(dy))] = complex(re, im)
+    return table
+
+
+# ---------------------------------------------------------------------------
+# Checks
+# ---------------------------------------------------------------------------
+
+
+def check_schema(onesite, input_param):
+    failures = []
+    if onesite[:3] != [("n", 0), ("cdag", 1), ("c", 2)]:
+        failures.append(
+            "std.toml: the one-site operators of the spinless fermion must be "
+            f"0: n, 1: cdag, 2: c; got {onesite}"
+        )
+    parameter = input_param.get("parameter", {})
+    if parameter.get("general", {}).get("fermion") is not True:
+        failures.append("input.toml: parameter.general.fermion is not true")
+    if parameter.get("ctm", {}).get("meanfield_env") is not True:
+        failures.append("input.toml: parameter.ctm.meanfield_env is not true")
+    correlation = input_param.get("correlation")
+    if correlation is None:
+        failures.append("input.toml has no [correlation] section")
+    else:
+        if correlation.get("r_max") != R_MAX:
+            failures.append(f"input.toml: r_max = {correlation.get('r_max')}")
+        if correlation.get("operators") != [[0, 0], [1, 2]]:
+            failures.append(
+                "input.toml: the default [correlation] operators of the "
+                "spinless fermion must be [[0, 0], [1, 2]]; got "
+                f"{correlation.get('operators')}"
+            )
+    return failures
+
+
+def check_warnings(label, output):
+    failures = []
+    for pattern in ("Norm is negative", "Norm is not real"):
+        hits = [line.strip() for line in output.splitlines() if pattern in line]
+        if hits:
+            failures.append(f"{label}: tenes printed {hits[0]!r}")
+    return failures
+
+
+def check_odd_onesite_is_zero(outdir):
+    failures = []
+    density = dict(read_density(join(outdir, "density.dat")))
+    for name in ("cdag", "c"):
+        if name not in density:
+            failures.append(f"density.dat has no {name} row")
+        elif density[name] != 0.0:
+            failures.append(f"density.dat: {name} = {density[name]}, must be exactly 0")
+    rows = read_rows(join(outdir, "onesite_obs.dat"))
+    seen = set()
+    for group, site, re, im in rows:
+        if int(group) in (1, 2):
+            seen.add((int(group), int(site)))
+            if re != 0.0 or im != 0.0:
+                failures.append(
+                    f"onesite_obs.dat: group {int(group)} site {int(site)} is "
+                    f"{re} + {im}i; an odd one-site operator must give exactly 0"
+                )
+    if len(seen) != 2 * NSITES:
+        failures.append(f"onesite_obs.dat: cdag / c rows for {sorted(seen)} only")
+    return failures
+
+
+WORST = {}
+
+
+def note(kind, err, what):
+    if err > WORST.get(kind, (-1.0, ""))[0]:
+        WORST[kind] = (err, what)
+
+
+def close(kind, value, reference, tol, what, failures):
+    err = abs(value - reference)
+    note(kind, err, what)
+    if not err <= tol:
+        failures.append(
+            f"{what}: {value} against {reference} (|diff| {err:.3e} > {tol:.3e})"
+        )
+
+
+def lookup(table, key, what, failures):
+    if key not in table:
+        failures.append(f"{what}: {key} is missing from the output")
+        return None
+    return table[key]
+
+
+def check_identities(outdir, groups):
+    """Check 4: per site, TIGHT_TOL."""
+    failures = []
+    two = twosite_table(outdir)
+    cor = correlation_table(outdir)
+    g_hop = groups["hopping"]
+    g_long = groups["hopping_longrange"]
+    g_cc = groups["cdag_c"]
+    g_ccd = groups["c_cdag"]
+    g_nn = groups["n_n"]
+
+    for key, value in list(two.items()) + list(cor.items()):
+        close("imag", value.imag, 0.0, TIGHT_TOL, f"imaginary part of {key}", failures)
+
+    for source in range(NSITES):
+        for dx, dy in OPS_DISPLACEMENTS:
+            t = target_site(source, dx, dy)
+            fwd = lookup(two, (g_cc, source, dx, dy), "cdag_c", failures)
+            back = lookup(two, (g_cc, t, -dx, -dy), "cdag_c", failures)
+            rev = lookup(two, (g_ccd, source, dx, dy), "c_cdag", failures)
+            if None in (fwd, back, rev):
+                continue
+            # <c^dag_s c_t> is real (real tensors) and equals its conjugate
+            # <c^dag_t c_s>, measured on the reversed bond from site t.
+            close(
+                "reverse",
+                fwd.real,
+                back.real,
+                TIGHT_TOL,
+                f"<cdag_{source} c_(+{dx},{dy})> vs the reversed bond",
+                failures,
+            )
+            # <c_s c^dag_t> = -<c^dag_t c_s>
+            close(
+                "c_cdag",
+                rev.real,
+                -back.real,
+                TIGHT_TOL,
+                f"<c_{source} cdag_(+{dx},{dy})> vs -<cdag c> of the reversed bond",
+                failures,
+            )
+        for dx, dy in HOPPING_DISPLACEMENTS:
+            t = target_site(source, dx, dy)
+            hop = lookup(two, (g_long, source, dx, dy), "hopping_longrange", failures)
+            fwd = lookup(two, (g_cc, source, dx, dy), "cdag_c", failures)
+            back = lookup(two, (g_cc, t, -dx, -dy), "cdag_c", failures)
+            if None in (hop, fwd, back):
+                continue
+            # explicit c^dag_s c_t + c^dag_t c_s against the two ops products
+            close(
+                "hopping_vs_ops",
+                hop.real,
+                fwd.real + back.real,
+                TIGHT_TOL,
+                f"hopping_longrange at {source} ({dx},{dy}) vs cdag_c sum",
+                failures,
+            )
+        for dx, dy in NEAREST:
+            old = lookup(two, (g_hop, source, dx, dy), "hopping", failures)
+            new = lookup(two, (g_long, source, dx, dy), "hopping_longrange", failures)
+            if None not in (old, new):
+                close(
+                    "nn_paths",
+                    new.real,
+                    old.real,
+                    TIGHT_TOL,
+                    f"hopping_longrange vs hopping at {source} ({dx},{dy})",
+                    failures,
+                )
+        for dx, dy in STRAIGHT:
+            r = max(abs(dx), abs(dy))
+            c = lookup(cor, (1, source, 2, dx, dy), "correlation (cdag, c)", failures)
+            w = lookup(two, (g_cc, source, dx, dy), "cdag_c", failures)
+            if None not in (c, w):
+                close(
+                    "window_vs_transfer",
+                    c.real,
+                    w.real,
+                    TIGHT_TOL,
+                    f"correlation (cdag, c) at {source} r={r} ({dx},{dy}) vs cdag_c",
+                    failures,
+                )
+            cn = lookup(cor, (0, source, 0, dx, dy), "correlation (n, n)", failures)
+            wn = lookup(two, (g_nn, source, dx, dy), "n_n", failures)
+            if None not in (cn, wn):
+                close(
+                    "window_vs_transfer",
+                    cn.real,
+                    wn.real,
+                    TIGHT_TOL,
+                    f"correlation (n, n) at {source} r={r} ({dx},{dy}) vs n_n",
+                    failures,
+                )
+            if r == 1:
+                old = lookup(two, (g_hop, source, dx, dy), "hopping", failures)
+                if None not in (c, old):
+                    # the r = 1 correlation (the new mean-field path) against
+                    # the nearest-neighbour hopping of tenes_simple (the
+                    # pre-existing contract_pair_MF path)
+                    close(
+                        "nn_paths",
+                        2.0 * c.real,
+                        old.real,
+                        TIGHT_TOL,
+                        f"2 x correlation (cdag, c) at {source} ({dx},{dy}) "
+                        "vs hopping",
+                        failures,
+                    )
+    return failures
+
+
+def check_signal(outdir, groups):
+    """Check 5: the compared values are not all (close to) zero."""
+    failures = []
+    two = twosite_table(outdir)
+    for name in ("cdag_c", "n_n"):
+        values = [
+            abs(two[(groups[name], source, 1, 0)])
+            for source in range(NSITES)
+            if (groups[name], source, 1, 0) in two
+        ]
+        largest = max(values) if values else 0.0
+        print(f"{NAME} largest |{name}| at (1, 0): {largest:.6e}")
+        if not largest >= SIGNAL_MIN:
+            failures.append(
+                f"premise: the largest |{name}| at (1, 0) is {largest}, below "
+                f"{SIGNAL_MIN}; the identities would compare zeros"
+            )
+    return failures
+
+
+def compare_files(filename, result_dir, reference_dir, rtol, atol, label):
+    failures = []
+    path_res = join(result_dir, filename)
+    path_ref = join(reference_dir, filename)
+    if not os.path.exists(path_ref):
+        return [f"{label}: reference file is missing: {path_ref}"]
+    if filename == "density.dat":
+        res = [v for _, v in read_density(path_res)]
+        ref = [v for _, v in read_density(path_ref)]
+        res = [[v.real, v.imag] for v in res]
+        ref = [[v.real, v.imag] for v in ref]
+    else:
+        res = read_rows(path_res)
+        ref = read_rows(path_ref)
+    if len(res) != len(ref):
+        return [f"{label}: {filename} has {len(res)} rows, the reference {len(ref)}"]
+    for index, (rrow, frow) in enumerate(zip(res, ref)):
+        if len(rrow) != len(frow) or not np.all(
+            np.isclose(rrow, frow, rtol=rtol, atol=atol)
+        ):
+            failures.append(
+                f"{label}: {filename} row {index} differs: {rrow} vs reference {frow}"
+            )
+    return failures
+
+
+def compare_runs(result_dir, reference_dir, tol, label):
+    failures = []
+    for filename in GOLDEN_FILES:
+        failures += compare_files(filename, result_dir, reference_dir, 0.0, tol, label)
+    return failures
+
+
+# ---------------------------------------------------------------------------
+
+
+def main():
+    nproc = parse_args(sys.argv[1:])
+    label = NAME if nproc == 1 else f"{NAME}MPI{nproc}"
+    update_golden = nproc == 1 and os.environ.get(UPDATE_GOLDEN_ENV) == "1"
+
+    failures = []
+    work_dir = join("@CMAKE_CURRENT_BINARY_DIR@", "output_" + label)
+    if os.path.isdir(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+    with open(join(work_dir, "simple.toml"), "w") as f:
+        f.write(SIMPLE_TOML)
+
+    if not run_tool([TENES_SIMPLE, "simple.toml", "-o", "std.toml"], work_dir, label):
+        return 1
+    groups, onesite = extend_std_toml(join(work_dir, "std.toml"))
+    if not run_tool([TENES_STD, "std.toml", "-o", "input.toml"], work_dir, label):
+        return 1
+
+    input_param = toml.load(join(work_dir, "input.toml"))
+    failures += check_schema(onesite, input_param)
+
+    runs = [nproc] if nproc == 1 else [nproc, 1]
+    outdirs = {}
+    for n in runs:
+        run_dir = join(work_dir, f"np{n}")
+        os.makedirs(run_dir)
+        shutil.copyfile(join(work_dir, "input.toml"), join(run_dir, "input.toml"))
+        proc = run(launcher(n) + [TENES, "input.toml"], run_dir)
+        output = proc.stdout + proc.stderr
+        with open(join(run_dir, "tenes.log"), "w") as f:
+            f.write(output)
+        if proc.returncode != 0:
+            print(output)
+            print(f"{label} failed: tenes on {n} process(es) exited with {proc.returncode}")
+            return 1
+        failures += check_warnings(f"{label} np{n}", output)
+        outdirs[n] = join(run_dir, "output")
+
+    outdir = outdirs[nproc]
+    failures += check_odd_onesite_is_zero(outdir)
+    failures += check_identities(outdir, groups)
+    failures += check_signal(outdir, groups)
+    if nproc != 1:
+        failures += compare_runs(outdir, outdirs[1], MPI_TOL, f"np{nproc} vs np1")
+
+    for kind, (err, what) in sorted(WORST.items()):
+        print(f"{label} worst |diff| [{kind}] {err:.3e} on {what}")
+
+    if failures:
+        for message in failures:
+            print(label + " failed: " + message)
+        return 1
+
+    if update_golden:
+        os.makedirs(GOLDEN_DIR, exist_ok=True)
+        for filename in GOLDEN_FILES:
+            shutil.copyfile(join(outdir, filename), join(GOLDEN_DIR, filename))
+        print(f"{label}: golden files written to {GOLDEN_DIR}")
+        return 0
+
+    for n, directory in sorted(outdirs.items()):
+        for filename in GOLDEN_FILES:
+            failures += compare_files(
+                filename, directory, GOLDEN_DIR, RTOL, ATOL, f"np{n} vs golden"
+            )
+    if failures:
+        for message in failures:
+            print(label + " failed: " + message)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
