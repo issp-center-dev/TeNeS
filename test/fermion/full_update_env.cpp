@@ -96,6 +96,37 @@ tensor fue_ones(const mptensor::Shape& sh) {
   return t;
 }
 
+/*! Elementwise modulus, as a tensor of the same value type.
+ *
+ * Feeding the modulus copy of every factor into one of the plain (sign-free)
+ * contractions below turns it into the sum of the ABSOLUTE values of that
+ * network's terms. That number is the size of the largest quantity the
+ * arithmetic ever handles, hence the scale of its round-off, and - unlike the
+ * closed value itself - it does not cancel. It is what the judgments here
+ * anchor their tolerance on; see fue_check_rel().
+ */
+template <class tensor>
+tensor fue_abs_copy(const tensor& a) {
+  tensor t(a.shape());
+  for (std::size_t n = 0; n < a.local_size(); ++n) {
+    const mptensor::Index idx = a.global_index(n);
+    typename tensor::value_type v;
+    a.get_value(idx, v);
+    t.set_value(idx, typename tensor::value_type(std::abs(v)));
+  }
+  return t;
+}
+
+template <class tensor>
+std::vector<tensor> fue_abs_copy_all(const std::vector<tensor>& v) {
+  std::vector<tensor> out;
+  out.reserve(v.size());
+  for (const tensor& a : v) {
+    out.push_back(fue_abs_copy(a));
+  }
+  return out;
+}
+
 //! Dense parity-even rank-4 operator over two arbitrary ledgers, legs
 //! (in1, in2, out1, out2). The plain (unwrapped) matrix elements.
 template <class tensor>
@@ -150,21 +181,51 @@ typename tensor::value_type fue_sum_product_flipped(
   return v;
 }
 
+/*! Relative coefficient of the scalar closure judgments below, applied to the
+ *  abs-network scale.
+ *
+ * 1e-10 is about 450,000 eps. The round-off these contractions actually show,
+ * measured against the abs-network scale, is 0.002 eps here (the two sides
+ * accumulate in nearly the same order) and 400 eps on the CI compiler that
+ * failed (macos-14 / g++-15, CI of 1fd37cfd): a twelve-site double-layer
+ * network contracted in two different orders, so a few hundred eps of the
+ * largest intermediate is the honest expectation. This leaves three orders of
+ * magnitude of compiler margin, while a sign or wiring defect moves the value
+ * itself and lands 1e3..1e9 times above the tolerance (the mutation runs in
+ * work/fue-tolerance/test-report.md). It is also the coefficient the T2-vi
+ * rows of this suite already use for an order-one closure ratio.
+ *
+ * The earlier 1e-12 was not the problem by itself - anchoring it on the closed
+ * value was - but 4500 eps of an abs network that a real compiler fills to 400
+ * is too little to be left alone.
+ */
+constexpr double fue_rel_closure = 1.0e-10;
+
 //! Relative judgment, tol = rel * max(|got|, |ref|, scale) (fold_geometry
 //! T15's convention).
 //!
-//! `scale` is the largest REFERENCE closure of the same kind computed in the
-//! same case - the window's identity closure, or the patch norm. Round-off in
-//! a contraction is set by the size of its largest intermediate, not by how
-//! much the final sum cancels, so a probe whose closure is two orders of
-//! magnitude below the identity closure of the same window still carries the
-//! identity closure's absolute round-off; judging it against itself asks for
-//! more than the arithmetic delivers and leaves a compiler-dependent margin
-//! (fold_geometry T15, CI 2026-09-05). Taking `scale` from the reference side
-//! keeps a broken implementation from inflating its own tolerance, and since
-//! `scale` never exceeds the largest closure of the case, the judgment on
-//! that largest closure is numerically unchanged. Callers that have no such
-//! closure to anchor on leave `scale` at 0 and get the plain relative form.
+//! `scale` is the round-off scale of the REFERENCE contraction: the value of
+//! the same network with every factor replaced by its modulus and every sign
+//! dropped (fue_abs_copy() + the same closure routine), i.e. the sum of the
+//! absolute values of its terms. Round-off in a contraction is set by the size
+//! of the largest quantity the arithmetic handles, not by how much the final
+//! sum cancels, so a judgment must not anchor on the closed value: the closed
+//! patch norm of the vp=eeo seed=500 window is 1.0e4 times smaller than the
+//! abs-network value of the very same contraction (4.3e-13 against 4.5e-09),
+//! and anchoring on it demanded four digits more than the arithmetic delivers.
+//! That left a compiler-dependent margin - the assertion whose |diff| is 4e-28
+//! here came out at 8e-23 on macos-14 / g++-15 (CI of 1fd37cfd, 2026-09-23)
+//! and failed, while another run of the same job passed.
+//!
+//! Taking `scale` from the reference side keeps a broken implementation from
+//! inflating its own tolerance: the abs network is built from the environment
+//! and the reference factors, never from the tensor under test. It is a bound
+//! on round-off, not on error, so it does not hide a wrong sign or a swapped
+//! leg - those move the value itself by O(|value|), which stays three to nine
+//! orders of magnitude above the tolerance (see the mutation runs in
+//! work/fue-tolerance/test-report.md). Callers that judge a quantity of order
+//! one, whose own magnitude already is its round-off scale, leave `scale` at 0
+//! and get the plain relative form.
 template <class V>
 void fue_check_rel(const std::string& label, V got, V ref, double rel,
                    double scale = 0.0) {
@@ -322,6 +383,12 @@ struct fue_case {
   std::vector<fg_ftensor<tensor>> sites;
   std::vector<tensor> reduced;
   std::vector<tensor> env;
+  // The same reduced tensors and the same ten slots with every element
+  // replaced by its modulus: contracting them gives the round-off scale of a
+  // closure (fue_abs_copy, fue_check_rel).
+  std::vector<tensor> reduced_abs;
+  std::vector<tensor> env_abs;
+  double abs_norm = 0.0;        // abs-network value of the patch norm
   fg_ftensor<tensor> QA, QB;    // rank 4, environment-side QR factors
   fg_ftensor<tensor> QAp, QBp;  // rank 5 pseudo-sites (internal leg = phys)
   fue::parity_vector pa, pb;    // ledgers of the two internal legs
@@ -414,6 +481,17 @@ fue_case<tensor> fue_make_case(char dir, const fue_geom& g,
   }
   c.env = fue_build_env(c.patch, c.reduced, ax, ay, dir);
 
+  // The modulus twin of the same patch and the same ten slots. Both closures
+  // below are judged against their own abs-network value, which is the scale
+  // their round-off is proportional to; the closed values themselves cancel
+  // (by 1.0e4 at vp=eeo, seed=500, and by 4.0e4 for the operator blob there)
+  // and cannot anchor a tolerance. See fue_check_rel().
+  c.reduced_abs = fue_abs_copy_all(c.reduced);
+  c.env_abs = fue_build_env(c.patch, c.reduced_abs, ax, ay, dir);
+  c.abs_norm = std::abs(fg_folded_norm(c.patch, c.reduced_abs));
+  INFO(c.label << " [abs-network patch norm = " << c.abs_norm << "]");
+  REQUIRE(c.abs_norm > 0.0);
+
   // Premise: the ten slots are wired the way the closures expect. Judged
   // against the exact plain contraction of the same patch, which
   // fold_geometry T1/T9 already tie to the single-layer graded truth.
@@ -422,9 +500,15 @@ fue_case<tensor> fue_make_case(char dir, const fue_geom& g,
   const auto norm_patch = fg_folded_norm(c.patch, c.reduced);
   INFO(c.label << " [premise: exact patch norm = " << norm_patch << "]");
   REQUIRE(std::abs(norm_patch) > 0.0);
-  fue_check_rel(c.label + " [premise: env wiring, identity blob]",
-                fue_close_blob(c.env, dir, id_blob), norm_patch, 1.0e-12,
-                std::abs(norm_patch));
+  // Both sides contribute round-off, and they are different contractions of
+  // the same network (the reference folds all twelve sites, the judged side
+  // closes a blob in the environment), so the scale is the larger of the two
+  // abs networks.
+  fue_check_rel(
+      c.label + " [premise: env wiring, identity blob]",
+      fue_close_blob(c.env, dir, id_blob), norm_patch, fue_rel_closure,
+      std::max(c.abs_norm, std::abs(fue_close_blob(c.env_abs, dir,
+                                                   fue_abs_copy(id_blob)))));
   {
     // ... and once more with a dense operator blob, so a slot swap that the
     // norm happens to be blind to is caught too.
@@ -437,9 +521,14 @@ fue_case<tensor> fue_make_case(char dir, const fue_geom& g,
     const auto ref =
         fg_blob_closure(c.patch, c.reduced, c.a, c.b, dir, op_blob);
     REQUIRE(std::abs(ref) > 0.0);
+    const tensor op_blob_abs = fue_abs_copy(op_blob);
+    const double scale =
+        std::max(std::abs(fg_blob_closure(c.patch, c.reduced_abs, c.a, c.b, dir,
+                                          op_blob_abs)),
+                 std::abs(fue_close_blob(c.env_abs, dir, op_blob_abs)));
     fue_check_rel(c.label + " [premise: env wiring, operator blob]",
-                  fue_close_blob(c.env, dir, op_blob), ref, 1.0e-12,
-                  std::abs(norm_patch));
+                  fue_close_blob(c.env, dir, op_blob), ref, fue_rel_closure,
+                  scale);
   }
 
   // Environment-side QR factors, leg orders exactly as tabulated in
@@ -513,12 +602,21 @@ void fue_run_probe(const fue_case<tensor>& c,
   const auto got = fue_sum_product(N.N.t, O.t);
 
   // Anti-vacuity: the probe must produce signal. The floor is built from the
-  // identity closure, i.e. from the reference path only.
+  // identity closure, i.e. from the reference path only. This is a floor on
+  // the SIGNAL, so it stays on the closed value; the tolerance below is a
+  // bound on ROUND-OFF and must not.
   const double floor = 1.0e-6 * ref_scale * fg_max_abs_entry(O.t);
   INFO(label << " [signal]: ref=" << ref << " floor=" << floor);
   REQUIRE(std::abs(ref) > floor);
 
-  fue_check_rel(label + " [T2-i open vs closed]", got, ref, 1.0e-12, ref_scale);
+  // Round-off scale: the same closure with the modulus of every factor.
+  const fgf::reduced_pair_halves<tensor> halves_abs{
+      fue_abs_copy(halves.PA), fue_abs_copy(halves.PB), halves.direction};
+  const double abs_scale = std::abs(fue_close_halves(c.env_abs, halves_abs));
+  INFO(label << " [abs-network closure = " << abs_scale << "]");
+  REQUIRE(abs_scale > 0.0);
+  fue_check_rel(label + " [T2-i open vs closed]", got, ref, fue_rel_closure,
+                abs_scale);
 
   // ... and it must reach the odd sector of N's first leg, otherwise a sign
   // error confined to that block would not show up in this scalar.
@@ -585,9 +683,16 @@ void fue_run_t2i_case(char dir, const std::string& vps, int dA, int dB,
     INFO(c.label << " [identity closure = " << ref_id << "]");
     REQUIRE(std::abs(ref_id) > 0.0);
     ref_scale = std::abs(ref_id);
-    // The identity probe is itself a T2-i row.
+    // The identity probe is itself a T2-i row; its tolerance is anchored on
+    // the abs network of the same closure, not on the closure (fue_check_rel).
+    const fgf::reduced_pair_halves<tensor> halves_abs{
+        fue_abs_copy(halves.PA), fue_abs_copy(halves.PB), halves.direction};
+    const double abs_scale = std::abs(fue_close_halves(c.env_abs, halves_abs));
+    INFO(c.label << " [abs-network identity closure = " << abs_scale << "]");
+    REQUIRE(abs_scale > 0.0);
     fue_check_rel(c.label + " [T2-i open vs closed, identity probe]",
-                  fue_sum_product(N.N.t, Oid.t), ref_id, 1.0e-12, ref_scale);
+                  fue_sum_product(N.N.t, Oid.t), ref_id, fue_rel_closure,
+                  abs_scale);
   }
 
   for (const int op_seed : {13, 57, 91}) {
@@ -815,6 +920,56 @@ TEST_CASE(
 
 namespace {
 
+/*! Round-off scale of T2-iv's truth: the single-layer network
+ *  <psi| O |psi> of the same pseudo-patch with every factor replaced by its
+ *  modulus and every grading sign dropped, i.e. the sum of the absolute
+ *  values of that contraction's terms. |norm_psi| cannot serve as the scale:
+ *  it is a closed value and cancels (see fue_check_rel).
+ */
+template <class tensor>
+double fue_abs_single_layer_scale(const fg_patch& p,
+                                  const std::vector<fg_ftensor<tensor>>& sites,
+                                  int site_a, int site_b, const tensor& op) {
+  std::vector<std::pair<tensor, std::vector<int>>> nodes;
+  for (int s = 0; s < p.nsite(); ++s) {
+    nodes.push_back({fue_abs_copy(sites[s].t),
+                     {s * 5 + 0, s * 5 + 1, s * 5 + 2, s * 5 + 3, s * 5 + 4}});
+  }
+  std::vector<int> labels;
+  const tensor psi = fg_assemble(p, nodes, labels);
+  const int rank = static_cast<int>(psi.shape().size());
+  int ax_a = -1;
+  int ax_b = -1;
+  for (std::size_t k = 0; k < labels.size(); ++k) {
+    if (labels[k] == site_a * 5 + 4) {
+      ax_a = static_cast<int>(k);
+    }
+    if (labels[k] == site_b * 5 + 4) {
+      ax_b = static_cast<int>(k);
+    }
+  }
+  REQUIRE(ax_a >= 0);
+  REQUIRE(ax_b >= 0);
+  tensor applied = fg_dot(psi, fue_abs_copy(op), mptensor::Axes(ax_a, ax_b),
+                          mptensor::Axes(0, 1));
+  // applied legs: psi's free legs in original relative order, then
+  // (out_a, out_b); permute them back to the physical positions, exactly as
+  // fg_graded_twosite() does.
+  mptensor::Axes perm;
+  int run = 0;
+  for (int ax = 0; ax < rank; ++ax) {
+    if (ax == ax_a) {
+      perm.push(rank - 2);
+    } else if (ax == ax_b) {
+      perm.push(rank - 1);
+    } else {
+      perm.push(run++);
+    }
+  }
+  applied = mptensor::transpose(applied, perm);
+  return std::abs(fue_sum_product(psi, applied));
+}
+
 /*! sum_x N(x) O(x) against the SINGLE-LAYER graded contraction of the same
  *  patch with the two window sites replaced by the pseudo-sites.
  *
@@ -859,8 +1014,12 @@ void fue_run_t2iv_case(char dir, const fue_geom& g, const std::string& vps,
   INFO(c.label << " [signal]: ref=" << ref << " floor=" << floor);
   REQUIRE(std::abs(ref) > floor);
 
+  const double abs_scale =
+      fue_abs_single_layer_scale(c.patch, sites, c.a, c.b, O.t);
+  INFO(c.label << " [abs-network single-layer value = " << abs_scale << "]");
+  REQUIRE(abs_scale > 0.0);
   fue_check_rel(c.label + " [T2-iv open N vs graded single-layer truth]", got,
-                ref, 1.0e-12, std::abs(norm_psi));
+                ref, fue_rel_closure, abs_scale);
 
   // The probe must reach the odd sector of N's first leg.
   const auto flipped = fue_sum_product_flipped(N.N.t, O.t, c.pa);
