@@ -20,6 +20,7 @@
 #include "iTPS.hpp"
 
 #include "../fermion/fops.hpp"
+#include "../fermion/relay.hpp"
 #include "../fermion/reduced_measure.hpp"
 #include "../tensor.hpp"
 
@@ -170,6 +171,28 @@ auto iTPS<ptensor>::measure_twosite()
       C_[3] = &(C4[indices[nrow - 1][0]]);
     }
 
+    const bool is_fermion_longrange_ctm =
+        finfo.enabled && !is_TPO && !is_mf && nrow * ncol != 2;
+    std::vector<std::vector<tenes::fermion::ftensor<ptensor>>> fTn;
+    std::vector<std::vector<ptensor>> reduced;
+    std::vector<std::vector<const ptensor *>> reduced_ptr;
+    if (is_fermion_longrange_ctm) {
+      fTn.resize(nrow);
+      reduced.resize(nrow);
+      reduced_ptr.assign(nrow, std::vector<const ptensor *>(ncol, nullptr));
+      for (int row = 0; row < nrow; ++row) {
+        fTn[row].reserve(ncol);
+        reduced[row].reserve(ncol);
+        for (int col = 0; col < ncol; ++col) {
+          fTn[row].push_back(tenes::fermion::wrap_Tn(*(Tn_[row][col]), finfo,
+                                                     indices[row][col]));
+          reduced[row].push_back(
+              tenes::fermion::build_reduced_op(fTn[row].back()));
+          reduced_ptr[row][col] = &reduced[row].back();
+        }
+      }
+    }
+
     const auto norm_key = Bond{indices[nrow - 1][0], nrow - 1, ncol - 1};
     if (norms.count(norm_key) == 0) {
       if (finfo.enabled && !is_TPO && nrow * ncol == 2) {
@@ -218,6 +241,9 @@ auto iTPS<ptensor>::measure_twosite()
                     halves);
           }
         }
+      } else if (is_fermion_longrange_ctm) {
+        norms[norm_key] = core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_,
+                                                     reduced_ptr, op_);
       } else if (is_mf) {
         norms[norm_key] = core::Contract_iTPS_MF(Tn_, op_);
       } else if (is_TPO) {
@@ -230,8 +256,34 @@ auto iTPS<ptensor>::measure_twosite()
     }
     auto norm = norms[norm_key];
 
+    const int target_site = lattice.other(op.source_site, dx, dy);
+    ptensor fermion_product_op;
+    const ptensor *op12 = &op.op;
+    bool use_fermion_product_op = false;
+    if (finfo.enabled && !is_TPO && !op.ops_indices.empty()) {
+      const int opA_index =
+          siteoperator_index(op.source_site, op.ops_indices[0]);
+      const int opB_index = siteoperator_index(target_site, op.ops_indices[1]);
+      const auto pA = onesite_parity[opA_index];
+      const auto pB = onesite_parity[opB_index];
+      if (pA == tenes::fermion::op_parity::mixed ||
+          pB == tenes::fermion::op_parity::mixed) {
+        throw std::runtime_error("fermion ops form contains mixed parity");
+      }
+      if (pA != pB) {
+        throw std::runtime_error(
+            "fermion ops form combines one-site operators of different parity");
+      }
+      fermion_product_op = tenes::fermion::product_twosite_op(
+          onesite_operators[opA_index].op, onesite_operators[opB_index].op,
+          finfo.phys[op.source_site], finfo.phys[target_site],
+          pB == tenes::fermion::op_parity::odd);
+      op12 = &fermion_product_op;
+      use_fermion_product_op = true;
+    }
+
     tensor_type value = 0.0;
-    if (op.ops_indices.empty()) {
+    if (op.ops_indices.empty() || use_fermion_product_op) {
       if (nrow * ncol == 2) {
         if (nrow == 2) {
           const int top = indices[0][0];
@@ -239,7 +291,7 @@ auto iTPS<ptensor>::measure_twosite()
           if (finfo.enabled && !is_TPO) {
             const int target = top == source ? bottom : top;
             auto o = tenes::fermion::wrap_twosite_gate(
-                op.op, finfo.phys[source], finfo.phys[target]);
+                *op12, finfo.phys[source], finfo.phys[target]);
             if (top != source) {
               // Graded transpose: carries the Fock reordering sign
               // |n_B n_A> = (-1)^{n_A n_B} |n_A n_B> on both leg pairs.
@@ -268,8 +320,8 @@ auto iTPS<ptensor>::measure_twosite()
             }
           } else {
             ptensor o =
-                (top == source ? op.op
-                               : mptensor::transpose(op.op, {1, 0, 3, 2}));
+                (top == source ? *op12
+                               : mptensor::transpose(*op12, {1, 0, 3, 2}));
             value = core::Contract_two_sites_vertical_op12(
                 C1[top], C2[top], C3[bottom], C4[bottom], eTt[top], eTr[top],
                 eTr[bottom], eTb[bottom], eTl[bottom], eTl[top], *(Tn_[0][0]),
@@ -288,7 +340,7 @@ auto iTPS<ptensor>::measure_twosite()
           if (finfo.enabled && !is_TPO) {
             const int target = left == source ? right : left;
             auto o = tenes::fermion::wrap_twosite_gate(
-                op.op, finfo.phys[source], finfo.phys[target]);
+                *op12, finfo.phys[source], finfo.phys[target]);
             if (left != source) {
               // Graded transpose; see the vertical branch.
               o = tenes::fermion::transpose(o, mptensor::Axes(1, 0, 3, 2));
@@ -316,8 +368,8 @@ auto iTPS<ptensor>::measure_twosite()
             }
           } else {
             ptensor o =
-                (left == source ? op.op
-                                : mptensor::transpose(op.op, {1, 0, 3, 2}));
+                (left == source ? *op12
+                                : mptensor::transpose(*op12, {1, 0, 3, 2}));
 
             value = core::Contract_two_sites_horizontal_op12(
                 C1[left], C2[right], C3[right], C4[left], eTt[left], eTt[right],
@@ -333,24 +385,62 @@ auto iTPS<ptensor>::measure_twosite()
           //                   eTb[left], eTl[left], Tn[left], Tn[right], o);
         }
       } else {
-        ptensor U, VT;
-        std::vector<double> s;
-        mptensor::svd(op.op, {0, 2}, {1, 3}, U, s, VT);
-        const int ns = s.size();
-        for (int is = 0; is < ns; ++is) {
-          ptensor source_op =
-              reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
-          op_[source_row][source_col] = &source_op;
-          ptensor target_op =
-              reshape(slice(VT, 0, is, is + 1), {VT.shape()[1], VT.shape()[1]});
-          op_[target_row][target_col] = &target_op;
-          auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_,
-                                           is_TPO, is_mf);
-          // auto localvalue =
-          //     peps_parameters.MeanField_Env
-          //         ? core::Contract_MF(Tn_, op_)
-          //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
-          value += localvalue * s[is];
+        if (is_fermion_longrange_ctm) {
+          const auto wrapped_op = tenes::fermion::wrap_twosite_gate(
+              *op12, finfo.phys[source], finfo.phys[target_site]);
+          const auto channels = tenes::fermion::relay_channels(wrapped_op);
+          const auto path = tenes::fermion::relay_path(
+              tenes::fermion::window_cell{source_row, source_col},
+              tenes::fermion::window_cell{target_row, target_col},
+              tenes::fermion::relay_order::x_first);
+          for (const auto &channel : channels) {
+            auto relay_Tn = reduced_ptr;
+            std::vector<ptensor> path_tensors;
+            path_tensors.reserve(path.size());
+            for (std::size_t i = 0; i < path.size(); ++i) {
+              const auto cell = path[i];
+              tenes::fermion::relay_role role =
+                  tenes::fermion::relay_role::middle;
+              int entry = -1;
+              int exit = -1;
+              if (i == 0) {
+                role = tenes::fermion::relay_role::source;
+                exit = tenes::fermion::relay_leg(path[i], path[i + 1]);
+              } else if (i + 1 == path.size()) {
+                role = tenes::fermion::relay_role::target;
+                entry = tenes::fermion::relay_leg(path[i], path[i - 1]);
+              } else {
+                entry = tenes::fermion::relay_leg(path[i], path[i - 1]);
+                exit = tenes::fermion::relay_leg(path[i], path[i + 1]);
+              }
+              path_tensors.push_back(tenes::fermion::build_relay_site(
+                  fTn[cell.row][cell.col], role, entry, exit, channel));
+              relay_Tn[cell.row][cell.col] = &path_tensors.back();
+            }
+            value += core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_,
+                                                relay_Tn, op_);
+          }
+        } else {
+          ptensor U, VT;
+          std::vector<double> s;
+          mptensor::svd(*op12, {0, 2}, {1, 3}, U, s, VT);
+          const int ns = s.size();
+          for (int is = 0; is < ns; ++is) {
+            ptensor source_op =
+                reshape(slice(U, 2, is, is + 1), {U.shape()[0], U.shape()[0]});
+            op_[source_row][source_col] = &source_op;
+            ptensor target_op = reshape(slice(VT, 0, is, is + 1),
+                                        {VT.shape()[1], VT.shape()[1]});
+            op_[target_row][target_col] = &target_op;
+            auto localvalue = core::Contract(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
+                                             op_, is_TPO, is_mf);
+            // auto localvalue =
+            //     peps_parameters.MeanField_Env
+            //         ? core::Contract_MF(Tn_, op_)
+            //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_,
+            //         op_);
+            value += localvalue * s[is];
+          }
         }
       }
     } else {
@@ -358,7 +448,6 @@ auto iTPS<ptensor>::measure_twosite()
           &(onesite_operators[siteoperator_index(op.source_site,
                                                  op.ops_indices[0])]
                 .op);
-      const int target_site = lattice.other(op.source_site, dx, dy);
       op_[target_row][target_col] = &(
           onesite_operators[siteoperator_index(target_site, op.ops_indices[1])]
               .op);

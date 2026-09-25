@@ -45,6 +45,10 @@ add_executable(test_fermion_skew_unfold fermion/skew_unfold.cpp)
 # truth, the Fock oracle and the bundled-k nearest-neighbour construction.
 add_executable(test_fermion_relay fermion/relay_window.cpp)
 
+# Task T2 of the same plan: long-range two-site observables, the ops form and
+# parity-odd one-site operators in fermion CTM mode, and their input guards.
+add_executable(test_fermion_longrange fermion/longrange_measure.cpp)
+
 set(tenes_unit_tests input simple_update full_update tensor_util util
     util_file correlation_length saveload arnoldi timer_registry onesite_rdm)
 if(TENES_ARPACK_FOUND)
@@ -68,7 +72,7 @@ foreach(basename IN LISTS tenes_unit_tests)
 endforeach()
 
 foreach(testname test_fermion_layer test_fermion_fold_full_update
-        test_fermion_skew_unfold test_fermion_relay)
+        test_fermion_skew_unfold test_fermion_relay test_fermion_longrange)
   target_link_libraries(${testname} PUBLIC tenes_static)
   target_compile_definitions(
     ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")

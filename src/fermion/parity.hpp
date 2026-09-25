@@ -30,9 +30,13 @@
 #define TENES_SRC_FERMION_PARITY_HPP_
 
 #include <cstddef>
+#include <cmath>
+#include <stdexcept>
 #include <vector>
 
 #include <mptensor/tensor.hpp>
+
+#include "../mpi.hpp"
 
 namespace tenes {
 namespace fermion {
@@ -107,6 +111,54 @@ inline std::vector<std::size_t> parity_sort_perm(const parity_vector& p) {
     }
   }
   return perm;
+}
+
+//! Parity class of a one-site operator.
+enum class op_parity { even, odd, mixed };
+
+/*!
+ * @brief Parity class of a one-site operator op[in, out].
+ *
+ * even: every nonzero element keeps the parity of the physical index; odd:
+ * every nonzero element flips it; mixed: both kinds occur. The zero
+ * operator is even. Collective over the tensor's communicator: every rank
+ * returns the same value.
+ *
+ * @param[in] op Plain rank-2 one-site operator.
+ * @param[in] phys Physical-leg parity ledger.
+ */
+template <class tensor>
+op_parity operator_parity(const tensor& op, const parity_vector& phys) {
+  if (op.rank() != 2) {
+    throw std::invalid_argument("operator_parity expects a rank-2 operator");
+  }
+  if (op.shape()[0] != phys.size() || op.shape()[1] != phys.size()) {
+    throw std::invalid_argument(
+        "operator_parity: physical parity size does not match operator");
+  }
+
+  double local_even = 0.0;
+  double local_odd = 0.0;
+  mptensor::Index idx;
+  idx.resize(2);
+  for (std::size_t n = 0; n < op.local_size(); ++n) {
+    op.global_index_fast(n, idx);
+    const double a = std::abs(op[n]);
+    if (phys[idx[0]] == phys[idx[1]]) {
+      local_even = std::max(local_even, a);
+    } else {
+      local_odd = std::max(local_odd, a);
+    }
+  }
+
+  std::vector<double> reduced{local_even, local_odd};
+  tenes::allreduce_max(reduced, op.get_comm());
+  const bool has_even = reduced[0] > 0.0;
+  const bool has_odd = reduced[1] > 0.0;
+  if (has_even && has_odd) {
+    return op_parity::mixed;
+  }
+  return has_odd ? op_parity::odd : op_parity::even;
 }
 
 }  // namespace fermion

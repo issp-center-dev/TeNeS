@@ -92,8 +92,14 @@ auto iTPS<tensor>::measure_onesite()
 
     for (auto const &op : onesite_operators) {
       const int i = op.source_site;
-      const auto val = core::Contract_one_site_iTPS_MF(Tn_[i], op.op);
-      local_obs[op.group][i] = op.coeff * val / norm[i];
+      const auto op_index = &op - &onesite_operators[0];
+      if (finfo.enabled &&
+          onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
+        local_obs[op.group][i] = tensor_type(0.0);
+      } else {
+        const auto val = core::Contract_one_site_iTPS_MF(Tn_[i], op.op);
+        local_obs[op.group][i] = op.coeff * val / norm[i];
+      }
     }
   } else {  // CTM
     if (is_density) {
@@ -104,10 +110,16 @@ auto iTPS<tensor>::measure_onesite()
       }
       for (auto const &op : onesite_operators) {
         const int i = op.source_site;
-        const auto val = core::Contract_one_site_density_CTM(
-            C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
-            op.op);
-        local_obs[op.group][i] = op.coeff * val / norm[i];
+        const auto op_index = &op - &onesite_operators[0];
+        if (finfo.enabled &&
+            onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
+          local_obs[op.group][i] = tensor_type(0.0);
+        } else {
+          const auto val = core::Contract_one_site_density_CTM(
+              C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
+              op.op);
+          local_obs[op.group][i] = op.coeff * val / norm[i];
+        }
       }
     } else if (finfo.enabled) {
       for (int i = 0; i < N_UNIT; ++i) {
@@ -119,12 +131,17 @@ auto iTPS<tensor>::measure_onesite()
       }
       for (auto const &op : onesite_operators) {
         const int i = op.source_site;
-        const tensor reduced = tenes::fermion::build_reduced_op(
-            tenes::fermion::wrap_Tn(Tn[i], finfo, i));
-        const auto val = core::Contract_one_site_density_CTM(
-            C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], reduced,
-            op.op);
-        local_obs[op.group][i] = op.coeff * val / norm[i];
+        const auto op_index = &op - &onesite_operators[0];
+        if (onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
+          local_obs[op.group][i] = tensor_type(0.0);
+        } else {
+          const tensor reduced = tenes::fermion::build_reduced_op(
+              tenes::fermion::wrap_Tn(Tn[i], finfo, i));
+          const auto val = core::Contract_one_site_density_CTM(
+              C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i],
+              reduced, op.op);
+          local_obs[op.group][i] = op.coeff * val / norm[i];
+        }
       }
     } else {
       for (int i = 0; i < N_UNIT; ++i) {

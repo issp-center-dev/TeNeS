@@ -415,6 +415,76 @@ std::vector<std::vector<tensor>> build_relay_window(
   return window;
 }
 
+/*!
+ * @brief Plain two-site operator of the product A_s B_t.
+ *
+ * In the ordered two-site Fock basis |n_s n_t>, with the internal layouts
+ * op[in, out] (one site) and op[in1, in2, out1, out2] (two sites):
+ * op4[i_s, i_t, o_s, o_t] = (-1)^{p_B p(i_s)} A[i_s, o_s] B[i_t, o_t].
+ * The result is what an explicit two-site observable of the same product
+ * would hold, ready for wrap_twosite_gate().
+ *
+ * @param[in] A One-site operator on the source, op[in, out].
+ * @param[in] B One-site operator on the target, op[in, out]; its parity
+ *            must be definite.
+ * @param[in] phys_s Physical-leg ledger of the source.
+ * @param[in] phys_t Physical-leg ledger of the target.
+ * @param[in] odd_B Whether B is parity odd.
+ */
+template <class tensor>
+tensor product_twosite_op(const tensor& A, const tensor& B,
+                          const parity_vector& phys_s,
+                          const parity_vector& phys_t, bool odd_B) {
+  if (A.rank() != 2 || B.rank() != 2) {
+    throw std::invalid_argument("product_twosite_op expects rank-2 operators");
+  }
+  if (A.shape()[0] != phys_s.size() || A.shape()[1] != phys_s.size() ||
+      B.shape()[0] != phys_t.size() || B.shape()[1] != phys_t.size()) {
+    throw std::invalid_argument(
+        "product_twosite_op: physical parity size does not match operator");
+  }
+
+  std::vector<typename tensor::value_type> Abuf(phys_s.size() * phys_s.size(),
+                                                0.0);
+  std::vector<typename tensor::value_type> Bbuf(phys_t.size() * phys_t.size(),
+                                                0.0);
+  mptensor::Index idx;
+  idx.resize(2);
+  for (std::size_t n = 0; n < A.local_size(); ++n) {
+    A.global_index_fast(n, idx);
+    Abuf[idx[0] * phys_s.size() + idx[1]] = A[n];
+  }
+  for (std::size_t n = 0; n < B.local_size(); ++n) {
+    B.global_index_fast(n, idx);
+    Bbuf[idx[0] * phys_t.size() + idx[1]] = B[n];
+  }
+  tenes::allreduce_sum(Abuf, A.get_comm());
+  tenes::allreduce_sum(Bbuf, B.get_comm());
+
+  tensor ret(A.get_comm(), mptensor::Shape(phys_s.size(), phys_t.size(),
+                                           phys_s.size(), phys_t.size()));
+  for (std::size_t is = 0; is < phys_s.size(); ++is) {
+    const typename tensor::value_type sign =
+        odd_B && phys_s[is] ? typename tensor::value_type(-1)
+                            : typename tensor::value_type(1);
+    for (std::size_t os = 0; os < phys_s.size(); ++os) {
+      const typename tensor::value_type a = Abuf[is * phys_s.size() + os];
+      if (a == typename tensor::value_type(0.0)) {
+        continue;
+      }
+      for (std::size_t it = 0; it < phys_t.size(); ++it) {
+        for (std::size_t ot = 0; ot < phys_t.size(); ++ot) {
+          const typename tensor::value_type b = Bbuf[it * phys_t.size() + ot];
+          if (b != typename tensor::value_type(0.0)) {
+            ret.set_value(mptensor::Index(is, it, os, ot), sign * a * b);
+          }
+        }
+      }
+    }
+  }
+  return ret;
+}
+
 }  // namespace tenes::fermion
 
 #endif  // TENES_SRC_FERMION_RELAY_HPP_

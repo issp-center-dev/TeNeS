@@ -141,6 +141,15 @@ struct iTPSTestAccessor {
   static SquareLattice const& lattice(iTPS<tensor>& state) {
     return state.lattice;
   }
+
+  //! The parity class of each one-site operator, same index as the
+  //! one-site operators the state was built with (task T2 of
+  //! docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md).
+  template <class tensor>
+  static std::vector<tenes::fermion::op_parity> const& onesite_parity(
+      iTPS<tensor>& state) {
+    return state.onesite_parity;
+  }
 };
 }  // namespace tenes::itps
 

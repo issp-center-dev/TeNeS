@@ -440,6 +440,10 @@ class iTPS {
   //! Identity operator on the physical leg, per site.
   std::vector<tensor> op_identity;
 
+  //! Parity class of each one-site operator (same index as
+  //! onesite_operators); filled at construction in fermion mode.
+  std::vector<tenes::fermion::op_parity> onesite_parity;
+
   CorrelationParameter corparam;            //!< correlation-function settings
   TransferMatrix_Parameters tmatrix_param;  //!< correlation-length settings
 

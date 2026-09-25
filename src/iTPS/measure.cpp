@@ -37,29 +37,38 @@ namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
-  if (!finfo.enabled || peps_parameters.MeanField_Env) {
+  if (!finfo.enabled) {
     return;
   }
 
-  bool has_non_nearest_twosite = false;
   for (const auto &op : twosite_operators) {
     const int abs_dx = std::abs(op.dx[0]);
     const int abs_dy = std::abs(op.dy[0]);
     const bool is_nearest_neighbor =
         (abs_dx == 1 && abs_dy == 0) || (abs_dx == 0 && abs_dy == 1);
-    // A same-site pair falls through to the raw-Tn path in measure_twosite(),
-    // which would mix it with the reduced CTM environment and silently return
-    // an incorrect result.
-    if (!is_nearest_neighbor) {
-      has_non_nearest_twosite = true;
-      break;
+    if (op.dx[0] == 0 && op.dy[0] == 0) {
+      throw tenes::input_error(
+          "fermion CTM measurement does not support same-site two-site "
+          "observables");
+    }
+    if (abs_dx > 3 || abs_dy > 3) {
+      throw tenes::input_error(
+          "fermion CTM measurement supports two-site observables only inside "
+          "a 4x4 window");
+    }
+    if (peps_parameters.MeanField_Env && !is_nearest_neighbor) {
+      throw tenes::input_error(
+          "fermion meanfield_env measurement supports nearest-neighbor "
+          "two-site observables only");
     }
   }
-  if (has_non_nearest_twosite || !multisite_operators.empty() ||
-      corparam.r_max > 0) {
+  if (!multisite_operators.empty()) {
     throw tenes::input_error(
-        "fermion CTM measurement supports nearest-neighbor two-site "
-        "observables only");
+        "fermion CTM measurement does not support multisite observables");
+  }
+  if (corparam.r_max > 0) {
+    throw tenes::input_error(
+        "fermion CTM measurement does not support correlation.r_max > 0");
   }
 }
 

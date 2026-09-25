@@ -29,6 +29,7 @@
 
 #include "../arpack_solver.hpp"
 #include "../exception.hpp"
+#include "../fermion/parity.hpp"
 #include "../util/read_tensor.hpp"
 #include "../util/string.hpp"
 #include "../tensor.hpp"
@@ -596,6 +597,22 @@ std::vector<std::vector<bool>> two_site_parity(
 bool is_nearest_neighbor_displacement(int dx, int dy) {
   return std::abs(dx) + std::abs(dy) == 1;
 }
+
+bool is_inside_fermion_measure_window(int dx, int dy) {
+  return !(dx == 0 && dy == 0) && std::abs(dx) <= 3 && std::abs(dy) <= 3;
+}
+
+template <class tensor>
+const Operator<tensor> &find_onesite_operator(
+    const Operators<tensor> &onesite_operators, int site, int group) {
+  for (const auto &op : onesite_operators) {
+    if (op.source_site == site && op.group == group) {
+      return op;
+    }
+  }
+  throw_fermion_guard("ops form referring to a missing one-site operator");
+  throw std::logic_error("unreachable");
+}
 }  // namespace
 
 template <class tensor>
@@ -671,20 +688,47 @@ void validate_fermion_constraints(
   }
 
   for (const auto &op : onesite_operators) {
-    if (has_odd_tensor_element(
-            op.op,
-            one_site_parity(peps_parameters.phys_parity, op.source_site))) {
-      throw_fermion_guard("parity-odd one-site operators");
+    if (tenes::fermion::operator_parity(
+            op.op, peps_parameters.phys_parity[op.source_site]) ==
+        tenes::fermion::op_parity::mixed) {
+      throw_fermion_guard("mixed parity one-site operators");
     }
   }
   for (const auto &op : twosite_operators) {
     if (!op.dx.empty() &&
-        !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
-      throw_fermion_guard("distance-2-or-longer two-site operators");
+        !is_inside_fermion_measure_window(op.dx[0], op.dy[0])) {
+      throw_fermion_guard("two-site observables outside the 4x4 window");
     }
     if (!op.ops_indices.empty()) {
+      const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+      const auto &op0 = find_onesite_operator(onesite_operators, op.source_site,
+                                              op.ops_indices[0]);
+      const auto &op1 =
+          find_onesite_operator(onesite_operators, site1, op.ops_indices[1]);
+      const auto p0 = tenes::fermion::operator_parity(
+          op0.op, peps_parameters.phys_parity[op.source_site]);
+      const auto p1 = tenes::fermion::operator_parity(
+          op1.op, peps_parameters.phys_parity[site1]);
+      if (p0 == tenes::fermion::op_parity::mixed ||
+          p1 == tenes::fermion::op_parity::mixed) {
+        throw_fermion_guard("mixed parity one-site operators in ops form");
+      }
+      if (p0 != p1) {
+        throw_fermion_guard(
+            "ops form with one-site operators of different parity");
+      }
+      if (peps_parameters.MeanField_Env &&
+          !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
+        throw_fermion_guard(
+            "meanfield_env=true with non-nearest-neighbor ops-form "
+            "two-site observables");
+      }
+      continue;
+    }
+    if (peps_parameters.MeanField_Env &&
+        !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
       throw_fermion_guard(
-          "two-site observables in the ops form; write them out as elements");
+          "meanfield_env=true with non-nearest-neighbor two-site observables");
     }
     const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
     if (has_odd_tensor_element(
