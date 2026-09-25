@@ -1694,7 +1694,9 @@ TEST_CASE(
   REQUIRE_NOTHROW(b = with_long->measure_twosite());
   REQUIRE(b.size() >= groups.size());
   for (std::size_t g = 0; g < groups.size(); ++g) {
-    for (const auto& [bond, v] : a[g]) {
+    for (const auto& kv : a[g]) {
+      const Bond& bond = kv.first;
+      const auto& v = kv.second;
       INFO("group " << groups[g].kind << " "
                     << lr_bond_label(bond.source_site, bond.dx, bond.dy));
       REQUIRE(b[g].count(bond) == 1);
