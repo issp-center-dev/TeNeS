@@ -148,6 +148,14 @@ enum class relay_order { x_first, y_first };
 //! Role of a site on the relay path.
 enum class relay_role { source, middle, target };
 
+//! Role and string entry/exit legs assigned to one path cell.
+struct relay_site_role {
+  window_cell cell;
+  relay_role role;
+  int entry;
+  int exit;
+};
+
 /*!
  * @brief Cells from source to target inclusive, one nearest-neighbour step
  *        at a time.
@@ -210,6 +218,41 @@ inline int relay_leg(window_cell from, window_cell to) {
     return 3;
   }
   throw std::invalid_argument("relay_leg: cells are not adjacent");
+}
+
+/*!
+ * @brief Assign source/middle/target roles and entry/exit legs to a path.
+ *
+ * The input path must run from source to target and contain at least two
+ * adjacent cells, as returned by relay_path().
+ *
+ * @throw std::invalid_argument if the path has fewer than two cells or if
+ *        relay_leg() rejects a non-adjacent step.
+ */
+inline std::vector<relay_site_role> relay_site_roles(
+    const std::vector<window_cell>& path) {
+  if (path.size() < 2) {
+    throw std::invalid_argument("relay_site_roles: path too short");
+  }
+  std::vector<relay_site_role> roles;
+  roles.reserve(path.size());
+  for (std::size_t i = 0; i < path.size(); ++i) {
+    relay_role role = relay_role::middle;
+    int entry = -1;
+    int exit = -1;
+    if (i == 0) {
+      role = relay_role::source;
+      exit = relay_leg(path[i], path[i + 1]);
+    } else if (i + 1 == path.size()) {
+      role = relay_role::target;
+      entry = relay_leg(path[i], path[i - 1]);
+    } else {
+      entry = relay_leg(path[i], path[i - 1]);
+      exit = relay_leg(path[i], path[i + 1]);
+    }
+    roles.push_back({path[i], role, entry, exit});
+  }
+  return roles;
 }
 
 /*!
@@ -391,26 +434,13 @@ std::vector<std::vector<tensor>> build_relay_window(
   }
 
   const std::vector<window_cell> path = relay_path(source, target, order);
-  for (std::size_t i = 0; i < path.size(); ++i) {
-    const window_cell c = path[i];
+  for (const auto& site : relay_site_roles(path)) {
+    const window_cell c = site.cell;
     if (!in_window(c)) {
       throw std::invalid_argument("build_relay_window: path out of range");
     }
-    relay_role role = relay_role::middle;
-    int entry = -1;
-    int exit = -1;
-    if (i == 0) {
-      role = relay_role::source;
-      exit = relay_leg(path[i], path[i + 1]);
-    } else if (i + 1 == path.size()) {
-      role = relay_role::target;
-      entry = relay_leg(path[i], path[i - 1]);
-    } else {
-      entry = relay_leg(path[i], path[i - 1]);
-      exit = relay_leg(path[i], path[i + 1]);
-    }
-    window[c.row][c.col] =
-        build_relay_site(Tn[c.row][c.col], role, entry, exit, channel);
+    window[c.row][c.col] = build_relay_site(Tn[c.row][c.col], site.role,
+                                            site.entry, site.exit, channel);
   }
   return window;
 }

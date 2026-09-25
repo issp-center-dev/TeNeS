@@ -29,6 +29,7 @@
 #ifndef TENES_SRC_FERMION_PARITY_HPP_
 #define TENES_SRC_FERMION_PARITY_HPP_
 
+#include <algorithm>
 #include <cstddef>
 #include <cmath>
 #include <stdexcept>

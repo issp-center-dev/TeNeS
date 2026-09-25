@@ -20,6 +20,7 @@
 
 #include "iTPS.hpp"
 
+#include "../exception.hpp"
 #include "../fermion/fops.hpp"
 #include "../fermion/relay.hpp"
 #include "../fermion/reduced_measure.hpp"
@@ -301,10 +302,10 @@ auto iTPS<ptensor>::measure_twosite()
       const auto pB = onesite_parity[opB_index];
       if (pA == tenes::fermion::op_parity::mixed ||
           pB == tenes::fermion::op_parity::mixed) {
-        throw std::runtime_error("fermion ops form contains mixed parity");
+        throw tenes::input_error("fermion ops form contains mixed parity");
       }
       if (pA != pB) {
-        throw std::runtime_error(
+        throw tenes::input_error(
             "fermion ops form combines one-site operators of different parity");
       }
       fermion_product_op = tenes::fermion::product_twosite_op(
@@ -430,24 +431,11 @@ auto iTPS<ptensor>::measure_twosite()
             auto relay_Tn = reduced_ptr;
             std::vector<ptensor> path_tensors;
             path_tensors.reserve(path.size());
-            for (std::size_t i = 0; i < path.size(); ++i) {
-              const auto cell = path[i];
-              tenes::fermion::relay_role role =
-                  tenes::fermion::relay_role::middle;
-              int entry = -1;
-              int exit = -1;
-              if (i == 0) {
-                role = tenes::fermion::relay_role::source;
-                exit = tenes::fermion::relay_leg(path[i], path[i + 1]);
-              } else if (i + 1 == path.size()) {
-                role = tenes::fermion::relay_role::target;
-                entry = tenes::fermion::relay_leg(path[i], path[i - 1]);
-              } else {
-                entry = tenes::fermion::relay_leg(path[i], path[i - 1]);
-                exit = tenes::fermion::relay_leg(path[i], path[i + 1]);
-              }
+            for (const auto &site : tenes::fermion::relay_site_roles(path)) {
+              const auto cell = site.cell;
               path_tensors.push_back(tenes::fermion::build_relay_site(
-                  fTn[cell.row][cell.col], role, entry, exit, channel));
+                  fTn[cell.row][cell.col], site.role, site.entry, site.exit,
+                  channel));
               relay_Tn[cell.row][cell.col] = &path_tensors.back();
             }
             value += core::Contract_density_CTM(C_, eTt_, eTr_, eTb_, eTl_,

@@ -46,29 +46,52 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
     const int abs_dy = std::abs(op.dy[0]);
     if (op.dx[0] == 0 && op.dy[0] == 0) {
       throw tenes::input_error(
-          "fermion CTM measurement does not support same-site two-site "
+          "fermion measurement does not support same-site two-site "
           "observables");
     }
     if (abs_dx > 3 || abs_dy > 3) {
       throw tenes::input_error(
-          "fermion CTM measurement supports two-site observables only inside "
+          "fermion measurement supports two-site observables only inside "
           "a 4x4 window");
+    }
+    if (!op.ops_indices.empty()) {
+      const int target_site = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+      const int opA_index =
+          siteoperator_index(op.source_site, op.ops_indices[0]);
+      const int opB_index = siteoperator_index(target_site, op.ops_indices[1]);
+      if (opA_index < 0 || opB_index < 0) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to a missing one-site "
+            "operator");
+      }
+      const auto pA = onesite_parity[opA_index];
+      const auto pB = onesite_parity[opB_index];
+      if (pA == tenes::fermion::op_parity::mixed ||
+          pB == tenes::fermion::op_parity::mixed) {
+        throw tenes::input_error(
+            "fermion measurement ops form contains mixed parity");
+      }
+      if (pA != pB) {
+        throw tenes::input_error(
+            "fermion measurement ops form combines one-site operators of "
+            "different parity");
+      }
     }
   }
   if (!multisite_operators.empty()) {
     throw tenes::input_error(
-        "fermion CTM measurement does not support multisite observables");
+        "fermion measurement does not support multisite observables");
   }
   for (auto [left_group, right_group] : corparam.operators) {
     if (left_group < 0 || right_group < 0) {
       throw tenes::input_error(
-          "fermion CTM measurement does not support correlation operators "
+          "fermion measurement does not support correlation operators "
           "with negative indices");
     }
     if (left_group >= num_onesite_operators ||
         right_group >= num_onesite_operators) {
       throw tenes::input_error(
-          "fermion CTM measurement does not support correlation operators "
+          "fermion measurement does not support correlation operators "
           "outside one-site groups");
     }
   }

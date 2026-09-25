@@ -391,7 +391,7 @@ Parameters defined in this section is not used in ``tenes_simple`` but they are 
 For ``tenes_simple`` , correlation functions :math:`C = \langle A(0)B(r)\rangle` are not calculated by default.
 For calculating correlation functions, they have to be specified in the same file format as the input file of ``tenes``.
 For fermionic spinless models, omitting ``operators`` selects ``[[0, 0], [1, 2]]``; for fermionic Hubbard models it selects ``[[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 7], [8, 9]]``.
-Fermionic correlation functions are available with the CTM environment only; pairs with different operator parity are output as zero.
+Fermionic correlation functions are available with the CTM environment and with ``meanfield_env = true``; in the mean-field case the outside of the correlation chain is closed approximately with the simple-update :math:`\lambda` weights. Pairs with different operator parity are output as zero.
 For details, See ``correlation`` section :doc:`expert_format`.
 
 

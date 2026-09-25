@@ -598,6 +598,7 @@ bool is_inside_fermion_measure_window(int dx, int dy) {
   return !(dx == 0 && dy == 0) && std::abs(dx) <= 3 && std::abs(dy) <= 3;
 }
 
+//! Find the one-site operator for an ops-form fermion observable factor.
 template <class tensor>
 const Operator<tensor> &find_onesite_operator(
     const Operators<tensor> &onesite_operators, int site, int group) {
@@ -700,9 +701,13 @@ void validate_fermion_constraints(
     }
   }
   for (const auto &op : twosite_operators) {
-    if (!op.dx.empty() &&
-        !is_inside_fermion_measure_window(op.dx[0], op.dy[0])) {
-      throw_fermion_guard("two-site observables outside the 4x4 window");
+    if (!op.dx.empty()) {
+      if (op.dx[0] == 0 && op.dy[0] == 0) {
+        throw_fermion_guard("same-site two-site observables");
+      }
+      if (!is_inside_fermion_measure_window(op.dx[0], op.dy[0])) {
+        throw_fermion_guard("two-site observables outside the 4x4 window");
+      }
     }
     if (!op.ops_indices.empty()) {
       const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);

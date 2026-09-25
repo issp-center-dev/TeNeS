@@ -2268,3 +2268,241 @@ TEST_CASE(
         "measure_twosite at " + lr_disp_name(dd.dx, dd.dy));
   }
 }
+
+// ============================================================================
+// Final review minor-1: the measurement-side guard agrees with the load-time
+// guard (work/fermion-longrange/final/fix-contract.md, items 1 to 4)
+// ============================================================================
+//
+// validate_fermion_ctm_measurement() runs for the mean-field environment as
+// well since task T5, and it is the only guard a library caller who builds
+// an iTPS directly (without validate_fermion_constraints) gets. These cases
+// pin that it rejects what the load-time guard rejects, with the same
+// exception type, and that the two guards name a same-site (0, 0) pair the
+// same way. Cases whose name carries [kept] pin behaviour that was already
+// there before the fix; every other case fails until the fix is in.
+
+namespace {
+
+//! A solver built straight from a guard input, bypassing
+//! validate_fermion_constraints (as a library caller would).
+std::unique_ptr<lr_state<lr_gtensor>> lr_guard_state(const lr_guard_input& in) {
+  return std::make_unique<lr_state<lr_gtensor>>(
+      MPI_COMM_WORLD, in.params, in.lattice,
+      tenes::EvolutionOperators<lr_gtensor>{},
+      tenes::EvolutionOperators<lr_gtensor>{}, in.onesite, in.twosite,
+      in.multisite, in.corparam, tenes::itps::TransferMatrix_Parameters{});
+}
+
+//! Runs fn, which must throw tenes::input_error, and returns the message
+//! (empty after a recorded failure).
+template <class Fn>
+std::string lr_guard_message(Fn&& fn, const std::string& what) {
+  INFO(what);
+  try {
+    fn();
+    FAIL_CHECK(what << " was accepted");
+  } catch (const tenes::input_error& e) {
+    return std::string(e.what());
+  } catch (const std::exception& e) {
+    FAIL_CHECK(what << " threw something other than tenes::input_error: "
+                    << std::string(e.what()));
+  }
+  return std::string();
+}
+
+void lr_check_contains(const std::string& message, const std::string& needle,
+                       const std::string& what) {
+  INFO(what << ": message \"" << message << "\"");
+  CHECK(message.find(needle) != std::string::npos);
+}
+
+void lr_check_lacks(const std::string& message, const std::string& needle,
+                    const std::string& what) {
+  INFO(what << ": message \"" << message << "\"");
+  CHECK(message.find(needle) == std::string::npos);
+}
+
+//! Contract item 1 for one environment: an ops form of one-site operators of
+//! different parity is refused by the measurement-side guard and by
+//! measure_twosite(), both with tenes::input_error.
+void lr_run_ops_parity_measure_guard(bool meanfield) {
+  const std::string env = meanfield ? "mean field" : "CTM";
+  // Control: the same guard lets same-parity ops forms through.
+  for (const int d : {2, 4}) {
+    for (const auto& ij :
+         std::vector<std::pair<int, int>>{{1, 2}, {2, 1}, {0, 0}}) {
+      lr_guard_input in(d, meanfield);
+      in.add_ops(2, 1, ij.first, ij.second);
+      auto state = lr_guard_state(in);
+      INFO(env << ", d = " << d << ", ops = [" << ij.first << ", " << ij.second
+               << "] at (2, 1)");
+      CHECK_NOTHROW(lr_acc::validate_fermion_ctm_measurement(*state));
+    }
+  }
+  for (const int d : {2, 4}) {
+    for (const lr_disp dd :
+         {lr_disp{1, 0}, lr_disp{0, -1}, lr_disp{2, 1}, lr_disp{-3, 3}}) {
+      for (const auto& ij : std::vector<std::pair<int, int>>{{0, 1}, {2, 0}}) {
+        const std::string what =
+            env + ", d = " + std::to_string(d) + ", ops = [" +
+            std::to_string(ij.first) + ", " + std::to_string(ij.second) +
+            "] (even x odd) at " + lr_disp_name(dd.dx, dd.dy);
+        INFO(what);
+        lr_guard_input in(d, meanfield);  // group 0 even, groups 1, 2 odd
+        in.add_ops(dd.dx, dd.dy, ij.first, ij.second);
+        // Premise: the load-time guard refuses this input.
+        REQUIRE_THROWS_AS(in.validate(), tenes::input_error);
+        auto state = lr_guard_state(in);
+        lr_seed_Tn(*state, lr_odd_scale, lr_seed);
+        if (!meanfield) {
+          state->update_CTM();
+        }
+        // The guard alone first, as in T3-12.
+        REQUIRE_THROWS_AS(lr_acc::validate_fermion_ctm_measurement(*state),
+                          tenes::input_error);
+        CHECK_THROWS_AS(state->measure_twosite(), tenes::input_error);
+      }
+    }
+  }
+}
+
+}  // namespace
+
+TEST_CASE(
+    "longrange F-1a: without validate_fermion_constraints, an ops form of "
+    "one-site operators of different parity is refused at measurement with "
+    "tenes::input_error (CTM)") {
+  lr_run_ops_parity_measure_guard(false);
+}
+
+TEST_CASE(
+    "longrange F-1b: without validate_fermion_constraints, an ops form of "
+    "one-site operators of different parity is refused at measurement with "
+    "tenes::input_error (meanfield_env)") {
+  lr_run_ops_parity_measure_guard(true);
+}
+
+TEST_CASE(
+    "longrange F-2: a same-site (0, 0) two-site observable is refused as "
+    "\"same-site\" at load and at measurement") {
+  for (const bool meanfield : {false, true}) {
+    for (const int d : {2, 4}) {
+      const std::string env = std::string(meanfield ? "mean field" : "CTM") +
+                              ", d = " + std::to_string(d);
+      {
+        lr_guard_input in(d, meanfield, false);
+        in.add_twosite(0, 0);
+        const std::string what = env + ", hopping at (0, 0)";
+        lr_check_contains(
+            lr_guard_message([&] { in.validate(); }, what + " [load]"),
+            "same-site", what + " [load]");
+        auto state = lr_guard_state(in);
+        lr_check_contains(
+            lr_guard_message(
+                [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+                what + " [measurement]"),
+            "same-site", what + " [measurement]");
+      }
+      {
+        lr_guard_input in(d, meanfield, false);
+        in.add_ops(0, 0, 0, 0);
+        const std::string what = env + ", ops = [0, 0] at (0, 0)";
+        lr_check_contains(
+            lr_guard_message([&] { in.validate(); }, what + " [load]"),
+            "same-site", what + " [load]");
+        auto state = lr_guard_state(in);
+        lr_check_contains(
+            lr_guard_message(
+                [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+                what + " [measurement]"),
+            "same-site", what + " [measurement]");
+      }
+    }
+  }
+}
+
+TEST_CASE(
+    "longrange [kept] F-3: a pair beyond the 4x4 window is refused naming "
+    "4x4, at load and at measurement") {
+  for (const bool meanfield : {false, true}) {
+    for (const lr_disp dd :
+         {lr_disp{4, 0}, lr_disp{0, -4}, lr_disp{-4, 1}, lr_disp{4, 4}}) {
+      const std::string env = meanfield ? "mean field" : "CTM";
+      {
+        lr_guard_input in(2, meanfield, false);
+        in.add_twosite(dd.dx, dd.dy);
+        const std::string what =
+            env + ", hopping at " + lr_disp_name(dd.dx, dd.dy);
+        lr_check_contains(
+            lr_guard_message([&] { in.validate(); }, what + " [load]"), "4x4",
+            what + " [load]");
+        auto state = lr_guard_state(in);
+        lr_check_contains(
+            lr_guard_message(
+                [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+                what + " [measurement]"),
+            "4x4", what + " [measurement]");
+      }
+      {
+        lr_guard_input in(2, meanfield);
+        in.add_ops(dd.dx, dd.dy, 1, 2);
+        const std::string what =
+            env + ", ops = [1, 2] at " + lr_disp_name(dd.dx, dd.dy);
+        lr_check_contains(
+            lr_guard_message([&] { in.validate(); }, what + " [load]"), "4x4",
+            what + " [load]");
+        auto state = lr_guard_state(in);
+        lr_check_contains(
+            lr_guard_message(
+                [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+                what + " [measurement]"),
+            "4x4", what + " [measurement]");
+      }
+    }
+  }
+}
+
+TEST_CASE(
+    "longrange F-4: with meanfield_env the measurement-side guard does not "
+    "call itself \"CTM measurement\"") {
+  constexpr const char* needle = "CTM measurement";
+  const auto check_mf = [&](const lr_guard_input& in, const std::string& what) {
+    REQUIRE(in.params.MeanField_Env);
+    auto state = lr_guard_state(in);
+    lr_check_lacks(
+        lr_guard_message(
+            [&] { lr_acc::validate_fermion_ctm_measurement(*state); }, what),
+        needle, what);
+  };
+  for (const lr_disp dd : {lr_disp{4, 0}, lr_disp{0, -4}, lr_disp{0, 0}}) {
+    lr_guard_input in(2, true, false);
+    in.add_twosite(dd.dx, dd.dy);
+    check_mf(in, "mean field, hopping at " + lr_disp_name(dd.dx, dd.dy));
+  }
+  {
+    lr_guard_input in(2, true, false);
+    in.add_ops(0, 0, 0, 0);
+    check_mf(in, "mean field, ops = [0, 0] at (0, 0)");
+  }
+  {
+    lr_guard_input in(2, true);
+    in.add_ops(2, 1, 0, 1);
+    check_mf(in, "mean field, ops = [0, 1] (even x odd) at (2, 1)");
+  }
+  {
+    lr_guard_input in(2, true, false);
+    lr_gtensor op3(mptensor::Shape(2, 2, 2, 2, 2, 2));
+    op3.set_value(mptensor::Index(1, 1, 1, 1, 1, 1), 1.0);
+    in.multisite.emplace_back("nnn", 0, 0, std::vector<int>{1, 2},
+                              std::vector<int>{0, 0}, op3);
+    check_mf(in, "mean field, a multisite observable");
+  }
+  for (const auto& bad :
+       std::vector<std::pair<int, int>>{{-1, 0}, {0, -1}, {0, 3}, {5, 1}}) {
+    lr_guard_input in(2, true);  // three one-site groups
+    in.corparam = tenes::itps::CorrelationParameter(2, {{0, 0}, bad});
+    check_mf(in, "mean field, correlation pair [" + std::to_string(bad.first) +
+                     ", " + std::to_string(bad.second) + "]");
+  }
+}
