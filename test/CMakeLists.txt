@@ -47,7 +47,11 @@ add_executable(test_fermion_relay fermion/relay_window.cpp)
 
 # Task T2 of the same plan: long-range two-site observables, the ops form and
 # parity-odd one-site operators in fermion CTM mode, and their input guards.
-add_executable(test_fermion_longrange fermion/longrange_measure.cpp)
+# Task T3: the correlation function (r_max > 0) in fermion CTM mode.
+add_executable(
+  test_fermion_longrange
+  fermion/longrange_measure.cpp
+  fermion/longrange_correlation.cpp)
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
     util_file correlation_length saveload arnoldi timer_registry onesite_rdm)
@@ -96,6 +100,21 @@ if(ENABLE_MPI)
            COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
                    ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_layer>
                    --source-file=*mpi_reduction.cpp)
+endif()
+
+# The correlation function of task T3 at two ranks (contract item 8): the
+# case T3-8 of fermion/longrange_correlation.cpp compares the distributed
+# result with a one-rank solver built in the same run and checks that every
+# rank holds the same rows. Only that case: the rest of the file repeats at
+# two ranks what the one-rank registration already checks, and ran the
+# registration up to 234 s under ctest -j2 (T3-8 alone: about 6.5 s in a
+# Debug build).
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_longrange_mpi2
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_longrange>
+                   --test-case=*T3-8*)
+  set_tests_properties(test_fermion_longrange_mpi2 PROPERTIES TIMEOUT 300)
 endif()
 
 # The graded decompositions and the full-update environment must be collective

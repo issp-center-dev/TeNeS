@@ -66,9 +66,23 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
     throw tenes::input_error(
         "fermion CTM measurement does not support multisite observables");
   }
-  if (corparam.r_max > 0) {
+  if (corparam.r_max > 0 && peps_parameters.MeanField_Env) {
     throw tenes::input_error(
-        "fermion CTM measurement does not support correlation.r_max > 0");
+        "fermion meanfield_env measurement does not support "
+        "correlation.r_max > 0");
+  }
+  for (auto [left_group, right_group] : corparam.operators) {
+    if (left_group < 0 || right_group < 0) {
+      throw tenes::input_error(
+          "fermion CTM measurement does not support correlation operators "
+          "with negative indices");
+    }
+    if (left_group >= num_onesite_operators ||
+        right_group >= num_onesite_operators) {
+      throw tenes::input_error(
+          "fermion CTM measurement does not support correlation operators "
+          "outside one-site groups");
+    }
   }
 }
 

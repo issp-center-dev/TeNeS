@@ -485,6 +485,101 @@ tensor product_twosite_op(const tensor& A, const tensor& B,
   return ret;
 }
 
+/*!
+ * @brief Source factor of the product A_s B_t for the relay.
+ *
+ * For A and B of the same parity the wrapped product operator is rank one
+ * in the (source | target) split, so the channel factors separate: u is
+ * built from A alone and vt from B alone, and one relay chain started from
+ * u can be closed by any B of that parity.
+ *
+ * @param[in] A One-site operator on the source, op[in, out].
+ * @param[in] phys_s Physical-leg ledger of the source.
+ * @param[in] odd Whether A (and B) are parity odd.
+ * @return u(in, out, kappa) with kappa of dimension 1 and parity @p odd.
+ */
+template <class tensor>
+ftensor<tensor> relay_product_source(const tensor& A,
+                                     const parity_vector& phys_s, bool odd) {
+  if (A.rank() != 2 || A.shape()[0] != phys_s.size() ||
+      A.shape()[1] != phys_s.size()) {
+    throw std::invalid_argument(
+        "relay_product_source: physical parity size does not match operator");
+  }
+
+  std::vector<typename tensor::value_type> Abuf(phys_s.size() * phys_s.size(),
+                                                0.0);
+  mptensor::Index idx;
+  idx.resize(2);
+  for (std::size_t n = 0; n < A.local_size(); ++n) {
+    A.global_index_fast(n, idx);
+    Abuf[idx[0] * phys_s.size() + idx[1]] = A[n];
+  }
+  tenes::allreduce_sum(Abuf, A.get_comm());
+
+  ftensor<tensor> ret{
+      tensor(A.get_comm(), mptensor::Shape(phys_s.size(), phys_s.size(), 1)),
+      {phys_s, phys_s, parity_vector{odd}}};
+  for (std::size_t is = 0; is < phys_s.size(); ++is) {
+    // Design §3.4: source carries (-1)^p (-1)^{p p(i_s)}.
+    const typename tensor::value_type sign =
+        odd && !phys_s[is] ? typename tensor::value_type(-1)
+                           : typename tensor::value_type(1);
+    for (std::size_t os = 0; os < phys_s.size(); ++os) {
+      const typename tensor::value_type a = Abuf[is * phys_s.size() + os];
+      if (a != typename tensor::value_type(0.0)) {
+        ret.set_value(mptensor::Index(is, os, 0), sign * a);
+      }
+    }
+  }
+  return ret;
+}
+
+/*!
+ * @brief Target factor of the product A_s B_t for the relay.
+ *
+ * @param[in] B One-site operator on the target, op[in, out].
+ * @param[in] phys_t Physical-leg ledger of the target.
+ * @param[in] odd Whether A and B are parity odd.
+ * @return vt(kappa, in, out) with kappa of dimension 1 and parity @p odd.
+ * @see relay_product_source()
+ */
+template <class tensor>
+ftensor<tensor> relay_product_target(const tensor& B,
+                                     const parity_vector& phys_t, bool odd) {
+  if (B.rank() != 2 || B.shape()[0] != phys_t.size() ||
+      B.shape()[1] != phys_t.size()) {
+    throw std::invalid_argument(
+        "relay_product_target: physical parity size does not match operator");
+  }
+
+  std::vector<typename tensor::value_type> Bbuf(phys_t.size() * phys_t.size(),
+                                                0.0);
+  mptensor::Index idx;
+  idx.resize(2);
+  for (std::size_t n = 0; n < B.local_size(); ++n) {
+    B.global_index_fast(n, idx);
+    Bbuf[idx[0] * phys_t.size() + idx[1]] = B[n];
+  }
+  tenes::allreduce_sum(Bbuf, B.get_comm());
+
+  ftensor<tensor> ret{
+      tensor(B.get_comm(), mptensor::Shape(1, phys_t.size(), phys_t.size())),
+      {parity_vector{odd}, phys_t, phys_t}};
+  for (std::size_t it = 0; it < phys_t.size(); ++it) {
+    for (std::size_t ot = 0; ot < phys_t.size(); ++ot) {
+      const typename tensor::value_type b = Bbuf[it * phys_t.size() + ot];
+      if (b != typename tensor::value_type(0.0)) {
+        const typename tensor::value_type sign =
+            odd && phys_t[ot] ? typename tensor::value_type(-1)
+                              : typename tensor::value_type(1);
+        ret.set_value(mptensor::Index(0, it, ot), sign * b);
+      }
+    }
+  }
+  return ret;
+}
+
 }  // namespace tenes::fermion
 
 #endif  // TENES_SRC_FERMION_RELAY_HPP_

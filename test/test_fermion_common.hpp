@@ -150,6 +150,23 @@ struct iTPSTestAccessor {
       iTPS<tensor>& state) {
     return state.onesite_parity;
   }
+
+  //! The correlation-length settings; measure() switches to_calculate off
+  //! in fermion mode (task T3 of
+  //! docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md).
+  template <class tensor>
+  static TransferMatrix_Parameters const& tmatrix_param(iTPS<tensor>& state) {
+    return state.tmatrix_param;
+  }
+
+  //! The measurement-side input guard (design section 5.1 of
+  //! docs/superpowers/specs/2026-09-25-fermion-longrange-measure-design.md),
+  //! callable on its own so that a test can see it reject an input before
+  //! the measurement would index past the end of a table.
+  template <class tensor>
+  static void validate_fermion_ctm_measurement(iTPS<tensor>& state) {
+    state.validate_fermion_ctm_measurement();
+  }
 };
 }  // namespace tenes::itps
 

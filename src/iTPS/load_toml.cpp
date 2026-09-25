@@ -670,8 +670,8 @@ void validate_fermion_constraints(
   if (peps_parameters.Use_RSVD) {
     throw_fermion_guard("Use_RSVD=true");
   }
-  if (corparam.r_max > 0) {
-    throw_fermion_guard("correlation.r_max > 0");
+  if (corparam.r_max > 0 && peps_parameters.MeanField_Env) {
+    throw_fermion_guard("meanfield_env=true with correlation.r_max > 0");
   }
   if (!multisite_operators.empty()) {
     throw_fermion_guard("multisite operators");
@@ -692,6 +692,18 @@ void validate_fermion_constraints(
             op.op, peps_parameters.phys_parity[op.source_site]) ==
         tenes::fermion::op_parity::mixed) {
       throw_fermion_guard("mixed parity one-site operators");
+    }
+  }
+  int num_onesite_groups = 0;
+  for (const auto &op : onesite_operators) {
+    num_onesite_groups = std::max(num_onesite_groups, op.group + 1);
+  }
+  for (auto [left_group, right_group] : corparam.operators) {
+    if (left_group < 0 || right_group < 0) {
+      throw_fermion_guard("correlation operators with negative indices");
+    }
+    if (left_group >= num_onesite_groups || right_group >= num_onesite_groups) {
+      throw_fermion_guard("correlation operators outside one-site groups");
     }
   }
   for (const auto &op : twosite_operators) {
