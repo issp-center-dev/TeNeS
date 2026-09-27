@@ -185,7 +185,10 @@ def check_density(casename, std_toml, expected):
 
 def check_rejected(casename, std_toml, message):
     """tenes must stop with an error that says why, not die on a signal."""
-    casedir = prepare(casename, std_toml)
+    return check_rejected_in(casename, prepare(casename, std_toml), message)
+
+
+def check_rejected_in(casename, casedir, message):
     code, stderr = run_tenes(casedir)
     ok = True
     if code <= 0:
@@ -283,6 +286,23 @@ ops = [1, 1]
     )
 
 
+def observable_out_of_range():
+    # A bond of four lattice spacings does not fit into the 4 x 4 window of
+    # the measurement, and the energy without it is not the energy of the
+    # input. tenes_std rejects such an observable itself, so it is written
+    # into input.toml here.
+    casename = "observable_out_of_range"
+    casedir = prepare(casename, HEAD + bond_term(HEISENBERG))
+    in_range = 'name = "bond_hamiltonian"\ngroup = 0\nbonds = """\n0 1 0\n'
+    with open(join(casedir, "input.toml")) as f:
+        input_toml = f.read()
+    if input_toml.count(in_range) != 1:
+        setup_failure("input.toml is not what this case expects")
+    with open(join(casedir, "input.toml"), "w") as f:
+        f.write(input_toml.replace(in_range, in_range.replace("0 1 0", "0 4 0")))
+    return check_rejected_in(casename, casedir, "cannot be measured")
+
+
 def main():
     if os.path.exists(WORKDIR):
         shutil.rmtree(WORKDIR)
@@ -293,6 +313,7 @@ def main():
     result = observable_on_some_sites() and result
     result = terms_on_the_same_site_and_bond() and result
     result = product_of_an_operator_given_twice() and result
+    result = observable_out_of_range() and result
 
     sys.exit(0 if result else 1)
 

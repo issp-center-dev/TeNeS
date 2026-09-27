@@ -25,6 +25,7 @@
 #include "../timer.hpp"
 
 #include "core/contract.hpp"
+#include "measure_window.hpp"
 
 namespace tenes::itps {
 
@@ -32,6 +33,7 @@ template <class ptensor>
 auto iTPS<ptensor>::measure_multisite()
     -> std::vector<std::map<Multisites, typename iTPS<ptensor>::tensor_type>> {
   validate_fermion_ctm_measurement();
+  validate_measure_window(twosite_operators, multisite_operators);
 
   Timer<> timer;
   ScopedTimer scoped_timer("measure/multisite");
@@ -45,8 +47,6 @@ auto iTPS<ptensor>::measure_multisite()
   if (nlops == 0) {
     return ret;
   }
-
-  constexpr int nmax = 4;
 
   std::map<Bond, tensor_type> norms;
 
@@ -63,16 +63,9 @@ auto iTPS<ptensor>::measure_multisite()
       mindy = std::min(mindy, dy);
       maxdy = std::max(maxdy, dy);
     }
+    // at most 4 x 4 sites: validate_measure_window() above
     const int ncol = maxdx - mindx + 1;
     const int nrow = maxdy - mindy + 1;
-
-    if (ncol > nmax || nrow > nmax) {
-      std::cerr
-          << "Warning: now version of TeNeS does not support too long-ranged "
-             "operator"
-          << std::endl;
-      continue;
-    }
 
     std::vector<const ptensor *> C_(4, nullptr);
     std::vector<const ptensor *> eTt_(ncol, nullptr);

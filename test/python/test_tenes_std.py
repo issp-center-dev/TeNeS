@@ -1183,3 +1183,82 @@ class TestBosonicMultisiteObservableUnaffected:
         param["parameter"]["general"]["fermion"] = False
         model = tenes_std.Model(param)  # must not raise
         assert len(model.multibodies) == 1
+
+
+class TestObservableRangeGuard:
+    # tenes measures in a window of 4 x 4 sites; what does not fit used to be
+    # left out of the result with a warning.
+
+    @staticmethod
+    def sz():
+        return {
+            "name": "Sz",
+            "group": 1,
+            "sites": [],
+            "dim": 2,
+            "elements": "0 0 0.5 0.0\n1 1 -0.5 0.0",
+        }
+
+    def test_hamiltonian_bond_out_of_range_is_rejected(self):
+        param = minimal_std_input()
+        param["hamiltonian"][0]["bonds"] += "\n0 4 0"
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert '"0 4 0"' in message
+        assert "cannot measure" in message
+        assert "[[hamiltonian]]" in message
+
+    @pytest.mark.parametrize("bond", ["0 -4 0", "0 0 4", "1 2 -4"])
+    def test_twosite_observable_out_of_range_is_rejected(self, bond):
+        param = minimal_std_input()
+        param["observable"] = {
+            "twosite": [
+                {
+                    "name": "far",
+                    "group": 1,
+                    "dim": [2, 2],
+                    "bonds": bond,
+                    "elements": "0 0 0 0 1.0 0.0",
+                }
+            ]
+        }
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        message = str(excinfo.value)
+        assert '"far"' in message
+        assert '"{}"'.format(bond) in message
+        assert "[[hamiltonian]]" not in message
+
+    def test_multisite_observable_out_of_range_is_rejected(self):
+        param = minimal_std_input()
+        param["observable"] = {
+            "onesite": [self.sz()],
+            "multisite": [
+                {
+                    "name": "wide",
+                    "group": 0,
+                    "multisites": "0 2 0 -2 0",
+                    "ops": [1, 1, 1],
+                }
+            ],
+        }
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        assert '"wide"' in str(excinfo.value)
+
+    def test_the_largest_range_is_accepted(self):
+        param = minimal_std_input()
+        param["hamiltonian"][0]["bonds"] += "\n0 3 0\n0 -3 3"
+        param["observable"] = {
+            "onesite": [self.sz()],
+            "multisite": [
+                {
+                    "name": "wide",
+                    "group": 0,
+                    "multisites": "0 2 0 -1 3",
+                    "ops": [1, 1, 1],
+                }
+            ],
+        }
+        tenes_std.Model(param)  # must not raise

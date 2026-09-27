@@ -27,6 +27,7 @@
 
 #include "load_toml.hpp"
 #include "iTPS.hpp"
+#include "measure_window.hpp"
 
 using std::size_t;
 
@@ -321,6 +322,8 @@ int itps_main(std::string input_filename, MPI_Comm comm,
                                multisite_obs, corparam);
   infer_fermion_gate_ledgers(peps_parameters, lattice, simple_updates,
                              full_updates);
+  // after the fermion checks, which name the same limit in their own words
+  validate_measure_window(twosite_obs, multisite_obs);
 
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);
