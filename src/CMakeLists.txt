@@ -5,7 +5,22 @@ if(OpenMP_CXX_LIBRARY_DIRS)
   link_directories(${OpenMP_CXX_LIBRARY_DIRS})
 endif()
 
-add_library(tenes_mpi STATIC mpi.cpp timer.cpp)
+# version.cpp is rewritten at every build, since the commit changes without
+# a new configuration; it is touched only when its content changes
+add_custom_target(tenes_version_source
+  COMMAND ${CMAKE_COMMAND}
+    -DSOURCE_DIR=${TeNeS_SOURCE_DIR}
+    -DTENES_VERSION=${TENES_VERSION}
+    -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/version.cpp.in
+    -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/version.cpp
+    -P ${TeNeS_SOURCE_DIR}/config/write_version.cmake
+  BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/version.cpp
+  VERBATIM)
+
+add_library(tenes_mpi STATIC mpi.cpp timer.cpp
+                             ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
+target_include_directories(tenes_mpi PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_dependencies(tenes_mpi tenes_version_source)
 
 target_compile_options(tenes_mpi PUBLIC -Wall)
 target_compile_options(

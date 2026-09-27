@@ -15,7 +15,7 @@ Usage of ``tenes``
    - ``--help``
      - Show help messages.
    - ``--version``
-     - Show the version number.
+     - Show the version number and the commit TeNeS was built from.
    - ``--quiet``
      - Do not print any messages to the standard output.
 

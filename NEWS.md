@@ -35,6 +35,8 @@
   - Loading a checkpoint now validates `params.dat` on every MPI rank. A damaged header, or a site count that differs from the input, used to throw on rank 0 alone and leave the other ranks waiting in the next broadcast; both now stop on every rank with a message naming the file
   - A `skew` outside `-L_sub[0] < skew < L_sub[0]` is now an input error in `tenes` and `tenes_std`, since `skew` and `skew` ± `L_sub[0]` describe the same lattice. A skew that was a non-zero multiple of `L_sub[0]` used to divide by zero while building the lattice: on x86-64 the run crashed, and on arm64 the CTM silently skipped every move
   - When ARPACK-NG fails to converge with an automatic `arnoldi_maxdim`, the Krylov subspace is doubled (up to the matrix size) and the computation retried; with an explicit `arnoldi_maxdim`, unconverged eigenvalues and the resulting correlation length are reported as NaN instead of a misleading finite value ([#111][])
+- `tenes` / `tenes_simple` / `tenes_std`
+  - `--version` now prints the commit after the version number, as in `TeNeS v2.2-dev (06780eac)`: the first 8 digits of the hash, followed by `-dirty` when the source tree had uncommitted changes to tracked files. In a git checkout the commit is asked from git at every build; in a tarball made by `git archive` (the source archives of GitHub) it is the one `git archive` wrote into `config/git_archive.txt`; in any other copy of the sources the version number is printed alone. `output/timers.json` records the commit as `git_commit` (the full hash) and `git_dirty`, both `null` when the commit is not known. `tenes_simple` and `tenes_std` used to print the bare version number
 
 ### Bug fixes
 
@@ -59,6 +61,7 @@
 - Added a `correlation_length` benchmark suite comparing the builtin Arnoldi and ARPACK-NG eigensolvers within one run ([#111][])
 - The benchmark harness now applies a 10-second timeout when collecting `tenes --version` for provenance, so a non-returning binary cannot wedge the whole run ([#111][])
 - Added `bench.py show <label-dir>` rendering the results of a single run, pairing within-run A/B cases (builtin vs arpack) side by side with a ratio column ([#111][])
+- The version number is written in one place, `set(TENES_VERSION ...)` in the top-level `CMakeLists.txt`; `tenes`, `tenes_simple`, `tenes_std` and the manual take it from there. The macro `TENES_VERSION` of `version.hpp` is now a function call, `tenes::version()`, and no longer a string literal
 
 ### Documentation and samples
 

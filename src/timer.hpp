@@ -122,9 +122,11 @@ std::map<std::string, TimerAggregate> aggregate_timers(
     TimerRegistry const &registry, MPI_Comm comm);
 
 //! Render aggregated timers and metadata as a JSON document.
+//! An empty git_commit (not known) is written as null, and so is git_dirty.
 std::string timers_to_json(std::map<std::string, TimerAggregate> const &timers,
-                           std::string const &tenes_version, int mpi_size,
-                           int omp_threads);
+                           std::string const &tenes_version,
+                           std::string const &git_commit, bool git_dirty,
+                           int mpi_size, int omp_threads);
 
 }  // end of namespace tenes
 
