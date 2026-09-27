@@ -183,6 +183,26 @@ def check_density(casename, std_toml, expected):
     return ok
 
 
+def check_rejected(casename, std_toml, message):
+    """tenes must stop with an error that says why, not die on a signal."""
+    casedir = prepare(casename, std_toml)
+    code, stderr = run_tenes(casedir)
+    ok = True
+    if code <= 0:
+        # 0: accepted; negative: killed by a signal
+        print("{}: tenes exited with code {}".format(casename, code))
+        ok = False
+    if message not in stderr:
+        print("{}: the error does not say '{}'".format(casename, message))
+        ok = False
+    if os.path.exists(join(casedir, "output", "density.dat")):
+        print("{}: density.dat is written all the same".format(casename))
+        ok = False
+    if ok:
+        print("{}: OK".format(casename))
+    return ok
+
+
 def no_onesite_observable():
     # Bond terms only, and no [observable]: the input of tenes has no
     # one-site observable at all.
@@ -219,6 +239,50 @@ elements = \"\"\"{}\"\"\"
     )
 
 
+def terms_on_the_same_site_and_bond():
+    # The field as two terms on the same sites, and the bond term as its
+    # Ising part and its XY part on the same bonds: they add up.
+    std_toml = HEAD + field(0.25) + field(0.75)
+    std_toml += bond_term(ISING) + bond_term(XY)
+    return check_density(
+        "terms_on_the_same_site_and_bond",
+        std_toml,
+        {"Energy": -0.75, "site_hamiltonian": -0.5, "bond_hamiltonian": -0.25},
+    )
+
+
+def product_of_an_operator_given_twice():
+    # S^z is given as two halves, so "the" operator of group 1 that ops
+    # refers to is not one operator.
+    std_toml = HEAD + bond_term(HEISENBERG)
+    std_toml += """
+[observable]
+"""
+    for _ in range(2):
+        std_toml += """
+[[observable.onesite]]
+name = "Sz"
+group = 1
+sites = []
+dim = 2
+coeff = 0.5
+elements = \"\"\"{}\"\"\"
+""".format(SZ)
+    std_toml += """
+[[observable.twosite]]
+name = "SzSz"
+group = 1
+dim = [2, 2]
+bonds = \"\"\"
+0 1 0
+\"\"\"
+ops = [1, 1]
+"""
+    return check_rejected(
+        "product_of_an_operator_given_twice", std_toml, "more than once"
+    )
+
+
 def main():
     if os.path.exists(WORKDIR):
         shutil.rmtree(WORKDIR)
@@ -227,6 +291,8 @@ def main():
     result = True
     result = no_onesite_observable() and result
     result = observable_on_some_sites() and result
+    result = terms_on_the_same_site_and_bond() and result
+    result = product_of_an_operator_given_twice() and result
 
     sys.exit(0 if result else 1)
 

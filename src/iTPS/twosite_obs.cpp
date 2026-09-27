@@ -480,7 +480,8 @@ auto iTPS<ptensor>::measure_twosite()
       //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+    // several terms of one group on one bond add up
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] +=
         op.coeff * value / norm;
   }
   ret.push_back(norms);
@@ -814,7 +815,8 @@ auto iTPS<ptensor>::measure_twosite_density()
         }
       }
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+    // several terms of one group on one bond add up
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] +=
         op.coeff * value / norm;
   }
   ret.push_back(norms);

@@ -48,6 +48,7 @@
   - `tenes --version` / `--help` no longer initialize MPI, fixing a hang of MPI-linked binaries where the launcher infrastructure is unavailable, e.g. on cluster login nodes ([#111][])
   - Fixed a segmentation fault at the end of a ground-state calculation whose input has no one-site observable, for example a `std.toml` with bond Hamiltonians only and no `[observable]` section; `density.dat` took the width of its name column from the first one-site observable
   - `density.dat` (and `FT_density.dat`, `TE_density.dat`) reported `nan` for a one-site observable given on a part of the sites, and then for `Energy` when the site Hamiltonian was such an observable, as in a unit cell that mixes kinds of sites. The value is now the sum over the sites that have the observable divided by the number of all sites, which is what the two-site observables already were
+  - Observables of the same `group` given more than once on the same site, bond or set of sites are now summed; only the last one was reported. `tenes_std` writes every `[[hamiltonian]]` as an observable of group 0, so a Hamiltonian written as a sum of terms on one bond (e.g. Heisenberg + Dzyaloshinskii-Moriya) or on one site was evolved as given but its `Energy` missed all the terms but the last. A one-site observable given more than once on a site cannot be referred to by `ops` or by `correlation`, which is now an input error
 - `tenes_std`
   - No longer fails with a `ValueError` on a bosonic long-range bond across sites with different physical dimensions.
 

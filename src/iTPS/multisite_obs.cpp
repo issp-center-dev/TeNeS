@@ -205,7 +205,8 @@ auto iTPS<ptensor>::measure_multisite()
                                        is_density, is_meanfield);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx, op.dy}] = op.coeff * value / norm;
+    // several terms of one group on the same sites add up
+    ret[op.group][{op.source_site, op.dx, op.dy}] += op.coeff * value / norm;
   }
   // ret.push_back(norms);
 

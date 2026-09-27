@@ -56,6 +56,17 @@ std::vector<typename tensor::value_type> gather_rank2_tensor(tensor const &t) {
   return buf;
 }
 
+// Several operators of one group on one site add up. A site that has none
+// stays NaN, which is how the site is known to be left out.
+template <class T>
+void add_local_obs(T &obs, T value) {
+  if (std::isnan(std::real(obs))) {
+    obs = value;
+  } else {
+    obs += value;
+  }
+}
+
 }  // namespace
 
 template <class tensor>
@@ -97,10 +108,10 @@ auto iTPS<tensor>::measure_onesite()
       const auto op_index = &op - &onesite_operators[0];
       if (finfo.enabled &&
           onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
-        local_obs[op.group][i] = tensor_type(0.0);
+        add_local_obs(local_obs[op.group][i], tensor_type(0.0));
       } else {
         const auto val = core::Contract_one_site_iTPS_MF(Tn_[i], op.op);
-        local_obs[op.group][i] = op.coeff * val / norm[i];
+        add_local_obs(local_obs[op.group][i], op.coeff * val / norm[i]);
       }
     }
   } else {  // CTM
@@ -115,12 +126,12 @@ auto iTPS<tensor>::measure_onesite()
         const auto op_index = &op - &onesite_operators[0];
         if (finfo.enabled &&
             onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
-          local_obs[op.group][i] = tensor_type(0.0);
+          add_local_obs(local_obs[op.group][i], tensor_type(0.0));
         } else {
           const auto val = core::Contract_one_site_density_CTM(
               C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
               op.op);
-          local_obs[op.group][i] = op.coeff * val / norm[i];
+          add_local_obs(local_obs[op.group][i], op.coeff * val / norm[i]);
         }
       }
     } else if (finfo.enabled) {
@@ -135,14 +146,14 @@ auto iTPS<tensor>::measure_onesite()
         const int i = op.source_site;
         const auto op_index = &op - &onesite_operators[0];
         if (onesite_parity[op_index] == tenes::fermion::op_parity::odd) {
-          local_obs[op.group][i] = tensor_type(0.0);
+          add_local_obs(local_obs[op.group][i], tensor_type(0.0));
         } else {
           const tensor reduced = tenes::fermion::build_reduced_op(
               tenes::fermion::wrap_Tn(Tn[i], finfo, i));
           const auto val = core::Contract_one_site_density_CTM(
               C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i],
               reduced, op.op);
-          local_obs[op.group][i] = op.coeff * val / norm[i];
+          add_local_obs(local_obs[op.group][i], op.coeff * val / norm[i]);
         }
       }
     } else {
@@ -156,7 +167,7 @@ auto iTPS<tensor>::measure_onesite()
         const auto val = core::Contract_one_site_iTPS_CTM(
             C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
             op.op);
-        local_obs[op.group][i] = op.coeff * val / norm[i];
+        add_local_obs(local_obs[op.group][i], op.coeff * val / norm[i]);
       }
     }
   }
@@ -444,7 +455,7 @@ auto iTPS<tensor>::measure_onesite_density()
     const auto val = core::Contract_one_site_density_CTM(
         C1[i], C2[i], C3[i], C4[i], eTt[i], eTr[i], eTb[i], eTl[i], Tn[i],
         op.op);
-    local_obs[op.group][i] = op.coeff * val / norm[i];
+    add_local_obs(local_obs[op.group][i], op.coeff * val / norm[i]);
   }
   //  }
   double norm_real_min = 1e100;

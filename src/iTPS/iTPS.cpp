@@ -31,6 +31,7 @@ int omp_get_max_threads() { return 1; }
 
 #include <mptensor/rsvd.hpp>
 
+#include "../exception.hpp"
 #include "../tensor.hpp"
 
 #include "../operator.hpp"
@@ -446,8 +447,15 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   }
 
   site_ops_indices.resize(N_UNIT, std::vector<int>(num_onesite_operators, -1));
+  // The values of several operators of one group on one site add up, but a
+  // product of one-site operators (ops) or a correlation function refers to
+  // the operator of a group on a site, which has to be one.
+  std::set<int> repeated_groups;
   for (int i = 0; i < static_cast<int>(onesite_operators.size()); ++i) {
     auto const &op = onesite_operators[i];
+    if (site_ops_indices[op.source_site][op.group] >= 0) {
+      repeated_groups.insert(op.group);
+    }
     site_ops_indices[op.source_site][op.group] = i;
   }
   if (finfo.enabled) {
@@ -457,6 +465,31 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
       onesite_parity[i] =
           tenes::fermion::operator_parity(op.op, finfo.phys[op.source_site]);
     }
+  }
+  const auto refer_to = [&](int group, std::string const &by) {
+    if (repeated_groups.count(group) == 0) {
+      return;
+    }
+    std::stringstream ss;
+    ss << "ERROR: " << by << " refers to the onesite observable of group "
+       << group << ", which is given more than once on a site.\n"
+       << "       Give it as one operator, or write the elements of " << by
+       << " out.";
+    throw tenes::input_error(ss.str());
+  };
+  for (auto const &op : twosite_operators) {
+    for (int group : op.ops_indices) {
+      refer_to(group, "twosite observable \"" + op.name + "\"");
+    }
+  }
+  for (auto const &op : multisite_operators) {
+    for (int group : op.ops_indices) {
+      refer_to(group, "multisite observable \"" + op.name + "\"");
+    }
+  }
+  for (auto const &ops : corparam.operators) {
+    refer_to(std::get<0>(ops), "correlation");
+    refer_to(std::get<1>(ops), "correlation");
   }
 }
 

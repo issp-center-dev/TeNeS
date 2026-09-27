@@ -37,6 +37,7 @@ Let the whole Hamiltonian be the sum of the site Hamiltonian (one-site Hamiltoni
 
 In ``hamiltonian`` section, each local Hamiltonian is defined.
 The format is similar to that of the one-site and two-site operator specified in ``observable.onesite`` and ``observable.twosite``.
+Terms given on the same site or on the same bond, in one ``[[hamiltonian]]`` or in several, are summed.
 
 .. csv-table::
    :header: "Name", "Description", "Type"

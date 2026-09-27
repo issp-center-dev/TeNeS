@@ -24,6 +24,7 @@ Define one-body operators that indicate physical quantities defined at each site
 ``name``  specifies an operator name.
 
 ``group`` specifies an identification number of one-site operators.
+The values of operators of the same ``group`` on the same site are summed. Such a ``group`` cannot be referred to by ``ops`` of ``observable.twosite`` and ``observable.multisite``, nor by ``correlation``.
 
 ``sites`` specifies a site number where an operater acts on.
 By using a list, the operators can be defined on the multiple sites at the same time.
@@ -105,6 +106,7 @@ Define two-body operators that indicate physical quantities defined on two sites
 ``name``  specifies an operator name.
 
 ``group`` specifies an identification number of two sites operators.
+The values of operators of the same ``group`` on the same sites are summed.
 
 ``bonds`` specifies a string representing the set of site pairs on which the operator acts.
 One line consisting of three integers means one site pair.
@@ -209,6 +211,7 @@ It is defined as a direct product of one-body operators defined in ``observable.
 ``name``  specifies an operator name.
 
 ``group`` specifies an identification number of two sites operators.
+The values of operators of the same ``group`` on the same sites are summed.
 
 ``multisites`` specifies a string representing the set of sets of sites on which the operator acts.
 One line consisting of integers means a set sites.
