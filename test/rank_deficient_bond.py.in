@@ -1,0 +1,253 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# The simple update on a bond whose Schmidt rank is smaller than its
+# dimension.
+#
+# The update multiplies a tensor by the weights lambda of its other bonds,
+# decomposes it, and divides by them again. lambda is the square root of a
+# Schmidt value, and a Schmidt value that is zero comes out of the SVD as
+# something of the order of the machine epsilon, so its lambda is about 1e-8
+# and 1 / lambda blows the round-off of the decomposition up to the size of
+# the component itself and beyond. [parameter.simple_update] lambda_cutoff
+# is there to take such a lambda for zero; at 1e-12, its former default, it
+# did not.
+#
+# Both cases have an answer in closed form and print no warning when they
+# miss it.
+
+import math
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+os.environ["OMP_NUM_THREADS"] = "1"
+
+WORKDIR = join("@CMAKE_CURRENT_BINARY_DIR@", "rank_deficient_bond_work")
+
+SZ = """
+0 0 0.5 0.0
+1 1 -0.5 0.0
+"""
+
+
+def field(h, sites):
+    """-h S^z on the given sites."""
+    return """
+[[hamiltonian]]
+dim = [2]
+sites = {sites}
+elements = \"\"\"
+0 0 {up} 0.0
+1 1 {down} 0.0
+\"\"\"
+""".format(sites=sites, up=-0.5 * h, down=0.5 * h)
+
+
+# Decoupled dimers at a finite temperature. The run starts from the identity,
+# which has one component on every bond, and the horizontal bonds, which no
+# term of the Hamiltonian uses, never get another one.
+DIMERS = """\
+[parameter]
+[parameter.general]
+mode = "finite"
+measure_interval = 50
+is_real = true
+[parameter.simple_update]
+num_step = 50
+tau = 0.01
+[parameter.ctm]
+iteration_max = 100
+dimension = 16
+
+[tensor]
+L_sub = [2, 2]
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 4
+""" + field(0.3, "[]") + """
+[[hamiltonian]]
+dim = [2, 2]
+bonds = \"\"\"
+0 0 1
+1 0 1
+\"\"\"
+elements = \"\"\"
+0 0 0 0 0.25 0.0
+0 1 0 1 -0.25 0.0
+1 0 1 0 -0.25 0.0
+1 1 1 1 0.25 0.0
+0 1 1 0 0.5 0.0
+1 0 0 1 0.5 0.0
+\"\"\"
+"""
+
+
+def dimer_energy(beta, h):
+    """Energy per site of S.S - h (S^z_1 + S^z_2)."""
+    levels = [-0.75, 0.25 - h, 0.25, 0.25 + h]
+    weights = [math.exp(-beta * e) for e in levels]
+    return sum(e * w for e, w in zip(levels, weights)) / sum(weights) / 2
+
+
+# One Ising bond between sites two lattice spacings apart, in a field that is
+# reversed on one of them. The ground state is a product state, so every
+# bond ends at Schmidt rank one. The bond is carried through the site in
+# between by a chain of two gates, which is where the round-off comes from:
+# the gates of a nearest-neighbour bond of this model are diagonal and keep
+# exact zeros exact.
+CHAIN = """\
+[parameter]
+[parameter.general]
+is_real = true
+[parameter.random]
+seed = {seed}
+[parameter.simple_update]
+num_step = 500
+tau = 0.1
+[parameter.ctm]
+iteration_max = 100
+dimension = 10
+
+[correlation_length]
+measure = false
+
+[tensor]
+L_sub = [4, 2]
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+initial_state = [0.0, 0.0]
+noise = 0.01
+""" + field(0.5, "[0, 1, 3, 4, 5, 6, 7]") + field(-0.5, "[2]") + """
+[[hamiltonian]]
+dim = [2, 2]
+bonds = \"\"\"
+0 2 0
+\"\"\"
+elements = \"\"\"
+0 0 0 0 0.25 0.0
+0 1 0 1 -0.25 0.0
+1 0 1 0 -0.25 0.0
+1 1 1 1 0.25 0.0
+\"\"\"
+"""
+# eight sites at -1/4 and one bond at -1/4
+CHAIN_ENERGY = (8 * (-0.25) - 0.25) / 8
+# which seeds miss depends on the build; about four in ten did
+CHAIN_SEEDS = [1, 2, 3, 4, 5, 6]
+
+
+def setup_failure(msg):
+    """A failure before the checks proper (a defect of the test rig)."""
+    print("SETUP FAILURE: {}".format(msg))
+    sys.exit(1)
+
+
+def run(cmd, cwd):
+    print("+ " + " ".join(cmd))
+    ret = subprocess.call(cmd, cwd=cwd)
+    if ret != 0:
+        setup_failure("command {} exited with code {}".format(cmd, ret))
+
+
+def run_case(casename, std_toml):
+    casedir = join(WORKDIR, casename)
+    os.makedirs(casedir)
+    with open(join(casedir, "std.toml"), "w") as f:
+        f.write(std_toml)
+    run(
+        [
+            join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"),
+            "-o",
+            "input.toml",
+            "std.toml",
+        ],
+        cwd=casedir,
+    )
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append("input.toml")
+    run(cmd, cwd=casedir)
+    return join(casedir, "output")
+
+
+def check(casename, energy, expected, tol):
+    # not (diff <= tol): a nan must fail
+    if not abs(energy - expected) <= tol:
+        print(
+            "{}: the energy is {}, expected {}".format(casename, energy, expected)
+        )
+        return False
+    print("{}: OK".format(casename))
+    return True
+
+
+def finite_temperature_energy(outdir):
+    """The energy (observable 0) of the last temperature."""
+    energy = None
+    with open(join(outdir, "FT_density.dat")) as f:
+        for line in f:
+            words = line.split()
+            if len(words) == 4 and words[1] == "0":
+                beta, energy = float(words[0]), float(words[2])
+    return beta, energy
+
+
+def ground_state_energy(outdir):
+    with open(join(outdir, "density.dat")) as f:
+        for line in f:
+            name, _, values = line.partition("=")
+            if name.strip() == "Energy":
+                return float(values.split()[0])
+    setup_failure("density.dat has no Energy")
+
+
+def main():
+    if os.path.exists(WORKDIR):
+        shutil.rmtree(WORKDIR)
+    os.makedirs(WORKDIR)
+
+    result = True
+
+    outdir = run_case("dimers", DIMERS)
+    beta, energy = finite_temperature_energy(outdir)
+    # the Trotter error of the dimer is below 1e-8 at tau = 0.01
+    result = check("dimers", energy, dimer_energy(beta, 0.3), 1.0e-6) and result
+
+    for seed in CHAIN_SEEDS:
+        casename = "chain_seed{}".format(seed)
+        outdir = run_case(casename, CHAIN.format(seed=seed))
+        energy = ground_state_energy(outdir)
+        result = check(casename, energy, CHAIN_ENERGY, 1.0e-6) and result
+
+    sys.exit(0 if result else 1)
+
+
+if __name__ == "__main__":
+    main()

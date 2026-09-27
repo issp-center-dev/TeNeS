@@ -147,7 +147,7 @@ simple update に関するパラメータ
 
    ``tau``,                       "(虚)時間発展演算子における(虚)時間刻み :math:`\tau`",         実数 or 実数のリスト,   0.01
    ``num_step``,                  "simple update の回数",                                        整数 or 整数のリスト,   0
-   ``lambda_cutoff``,             "simple update において平均場 :math:`\lambda` の切り捨て閾値", 実数,   1e-12
+   ``lambda_cutoff``,             "simple update において平均場 :math:`\lambda` の切り捨て閾値", 実数,   1e-7
    ``gauge_fix``,                 "テンソルのゲージを固定するかどうか",                          真偽値, false
    ``gauge_maxiter``,             "ゲージ固定操作のループ最大数",                                整数,   100
    ``gauge_convergence_epsilon``, "ゲージ固定操作の収束判定値",                                  実数,   1e-2
@@ -169,6 +169,11 @@ simple update に関するパラメータ
 
   - simple update の回数を指定します
   - リストを指定すると、時間発展演算子のグループごとに回数を変えることができます
+
+- ``lambda_cutoff``
+
+  - simple update では、テンソルを各ボンドの平均場 :math:`\lambda` で割ります。 ``lambda_cutoff`` 以下の :math:`\lambda` はゼロとみなし、その逆数をゼロとします
+  - :math:`\lambda` は規格化された Schmidt 係数の平方根です。 計算機イプシロンの平方根にあたる :math:`10^{-8}` 程度より小さい値を指定すると丸め誤差が増幅されます。 直積状態や、ハミルトニアンのどの項も使わないボンドのように、非ゼロの Schmidt 係数の数がボンド次元より少ない場合に、警告なしに誤った結果になることがあります
 
 
 ``parameter.full_update``

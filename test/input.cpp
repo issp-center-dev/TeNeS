@@ -73,7 +73,7 @@ TEST_CASE("input") {
 
     CHECK(peps_parameters.num_simple_step.size() == 1);
     CHECK(peps_parameters.num_simple_step[0] == 0);
-    CHECK(peps_parameters.Inverse_lambda_cut == 1e-12);
+    CHECK(peps_parameters.Inverse_lambda_cut == 1e-7);
 
     CHECK(peps_parameters.num_full_step.size() == 1);
     CHECK(peps_parameters.num_full_step[0] == 0);
