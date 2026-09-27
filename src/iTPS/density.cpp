@@ -41,6 +41,11 @@ void iTPS<ptensor>::save_density(
     if (lattice.physical_dims[i] > 1) {
       ++numsites;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+        // An operator may be given on some of the sites only; the others
+        // have nothing to add (measure_onesite leaves them NaN).
+        if (site_ops_indices[i][ilops] < 0) {
+          continue;
+        }
         loc_obs[ilops] += onesite_obs[ilops][i];
       }
     }

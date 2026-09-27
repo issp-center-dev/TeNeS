@@ -193,6 +193,32 @@ def no_onesite_observable():
     )
 
 
+def observable_on_some_sites():
+    # The field and S^z on site 0 only. A density is the sum over the sites
+    # that have the operator, divided by the number of all sites, as the sum
+    # over the bonds is; the Energy is then the energy per site.
+    std_toml = HEAD + field(1.0, sites="[0]") + bond_term(HEISENBERG)
+    std_toml += """
+[observable]
+[[observable.onesite]]
+name = "Sz"
+group = 1
+sites = [0]
+dim = 2
+elements = \"\"\"{}\"\"\"
+""".format(SZ)
+    return check_density(
+        "observable_on_some_sites",
+        std_toml,
+        {
+            "Energy": -0.5,
+            "site_hamiltonian": -0.25,
+            "Sz": 0.25,
+            "bond_hamiltonian": -0.25,
+        },
+    )
+
+
 def main():
     if os.path.exists(WORKDIR):
         shutil.rmtree(WORKDIR)
@@ -200,6 +226,7 @@ def main():
 
     result = True
     result = no_onesite_observable() and result
+    result = observable_on_some_sites() and result
 
     sys.exit(0 if result else 1)
 
