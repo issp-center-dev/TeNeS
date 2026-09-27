@@ -1,0 +1,208 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# What density.dat reports must be the observables of the input.
+#
+# Every case is a ferromagnetic S = 1/2 Heisenberg chain, two sites in the
+# unit cell, in a field along z where the case has one. The fully polarized
+# product state is the exact ground state, the run starts from it, and every
+# expectation value is known in closed form: -1/4 on a bond, and -h/2 on a
+# site with the field term -h S^z.
+
+import os
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+os.environ["OMP_NUM_THREADS"] = "1"
+
+TOL = 1.0e-6
+
+WORKDIR = join("@CMAKE_CURRENT_BINARY_DIR@", "observable_density_work")
+
+HEAD = """\
+[parameter]
+[parameter.general]
+is_real = true
+[parameter.simple_update]
+num_step = 100
+tau = 0.1
+[parameter.ctm]
+dimension = 4
+iteration_max = 100
+
+[correlation_length]
+measure = false
+
+[tensor]
+L_sub = [2, 1]
+
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = [2, 1, 2, 1]
+initial_state = [1.0, 0.0]
+noise = 0.01
+"""
+
+SZ = """
+0 0 0.5 0.0
+1 1 -0.5 0.0
+"""
+
+
+def field(h, sites="[]"):
+    """-h S^z on the given sites."""
+    return """
+[[hamiltonian]]
+dim = [2]
+sites = {sites}
+elements = \"\"\"
+0 0 {up} 0.0
+1 1 {down} 0.0
+\"\"\"
+""".format(sites=sites, up=-0.5 * h, down=0.5 * h)
+
+
+def bond_term(elements, bonds="0 1 0\n1 1 0"):
+    return """
+[[hamiltonian]]
+dim = [2, 2]
+bonds = \"\"\"
+{bonds}
+\"\"\"
+elements = \"\"\"{elements}\"\"\"
+""".format(bonds=bonds, elements=elements)
+
+
+# -S.S = -S^z S^z - (S^+ S^- + S^- S^+) / 2
+ISING = """
+0 0 0 0 -0.25 0.0
+0 1 0 1 0.25 0.0
+1 0 1 0 0.25 0.0
+1 1 1 1 -0.25 0.0
+"""
+XY = """
+0 1 1 0 -0.5 0.0
+1 0 0 1 -0.5 0.0
+"""
+HEISENBERG = ISING + XY.lstrip("\n")
+
+
+def setup_failure(msg):
+    """A failure before the checks proper (a defect of the test rig)."""
+    print("SETUP FAILURE: {}".format(msg))
+    sys.exit(1)
+
+
+def prepare(casename, std_toml):
+    """Write std.toml and make input.toml of it."""
+    casedir = join(WORKDIR, casename)
+    os.makedirs(casedir)
+    with open(join(casedir, "std.toml"), "w") as f:
+        f.write(std_toml)
+    cmd = [join("@CMAKE_BINARY_DIR@", "tool", "tenes_std"), "-o", "input.toml"]
+    cmd.append("std.toml")
+    print("+ " + " ".join(cmd))
+    ret = subprocess.call(cmd, cwd=casedir)
+    if ret != 0:
+        setup_failure("tenes_std exited with code {}".format(ret))
+    return casedir
+
+
+def run_tenes(casedir):
+    """Run tenes; returns the exit code and what it wrote to stderr."""
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    cmd.append(join("@CMAKE_BINARY_DIR@", "src", "tenes"))
+    cmd.append("input.toml")
+    print("+ " + " ".join(cmd))
+    proc = subprocess.run(
+        cmd, cwd=casedir, stderr=subprocess.PIPE, universal_newlines=True
+    )
+    sys.stderr.write(proc.stderr)
+    return proc.returncode, proc.stderr
+
+
+def read_density(casedir):
+    """density.dat as {name: real part}."""
+    ret = {}
+    with open(join(casedir, "output", "density.dat")) as f:
+        for line in f:
+            name, _, values = line.partition("=")
+            ret[name.strip()] = float(values.split()[0])
+    return ret
+
+
+def check_density(casename, std_toml, expected):
+    """Run the case; density.dat must hold exactly the expected values."""
+    casedir = prepare(casename, std_toml)
+    code, _ = run_tenes(casedir)
+    if code != 0:
+        print("{}: tenes exited with code {}".format(casename, code))
+        return False
+    density = read_density(casedir)
+    ok = True
+    if sorted(density) != sorted(expected):
+        print(
+            "{}: density.dat has {}, expected {}".format(
+                casename, sorted(density), sorted(expected)
+            )
+        )
+        ok = False
+    for name, value in expected.items():
+        # not (diff <= TOL): a nan must fail
+        if name in density and not abs(density[name] - value) <= TOL:
+            print(
+                "{}: {} is {}, expected {}".format(
+                    casename, name, density[name], value
+                )
+            )
+            ok = False
+    if ok:
+        print("{}: OK".format(casename))
+    return ok
+
+
+def no_onesite_observable():
+    # Bond terms only, and no [observable]: the input of tenes has no
+    # one-site observable at all.
+    return check_density(
+        "no_onesite_observable",
+        HEAD + bond_term(HEISENBERG),
+        {"Energy": -0.25, "bond_hamiltonian": -0.25},
+    )
+
+
+def main():
+    if os.path.exists(WORKDIR):
+        shutil.rmtree(WORKDIR)
+    os.makedirs(WORKDIR)
+
+    result = True
+    result = no_onesite_observable() and result
+
+    sys.exit(0 if result else 1)
+
+
+if __name__ == "__main__":
+    main()

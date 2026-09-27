@@ -97,20 +97,6 @@ bonds = \"\"\"{bonds}\"\"\"
 elements = \"\"\"{elements}\"\"\"
 
 [observable]
-# At least one onesite observable is required: the ground-state branch of
-# save_density (src/iTPS/density.cpp) reads onesite_operator_names[0] for
-# column padding and crashes without one (its name must also be at least
-# as long as "Energy").  This observable is not used by the test.
-[[observable.onesite]]
-name = "onesite_sz"
-group = 0
-sites = []
-dim = 2
-elements = \"\"\"
-0 0 0.5 0.0
-1 1 -0.5 0.0
-\"\"\"
-
 [[observable.twosite]]
 name = "bond_hamiltonian"
 group = 0
