@@ -332,7 +332,14 @@ class iTPS {
   void load_tensors();
 
  private:
-  //! Reject measurement requests unsupported by fermion measurement paths.
+  /*! @brief Reject measurement requests unsupported by fermion measurement
+   *         paths.
+   *
+   *  In fermion mode this rejects mixed-parity one-site operators before
+   *  onesite/correlation measurements, and validates ops-form two-site
+   *  operator group indices before siteoperator_index() can dereference
+   *  site_ops_indices.
+   */
   void validate_fermion_ctm_measurement() const;
   //! Apply a one-site gate through the fermionic wrapper.
   void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);

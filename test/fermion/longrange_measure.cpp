@@ -2508,3 +2508,300 @@ TEST_CASE(
                      ", " + std::to_string(bad.second) + "]");
   }
 }
+
+// ============================================================================
+// Copilot review of PR #117: the measurement-side guard on its own
+// (work/fermion-longrange/copilot/contract.md, items 1 to 3)
+// ============================================================================
+//
+// As in the section above, every solver here is built straight from a guard
+// input, without validate_fermion_constraints, so that
+// validate_fermion_ctm_measurement() is the only guard in the way. Item 2
+// (mixed-parity one-site operators) comes first and item 3 (the controls,
+// marked [kept]) second; item 1 (ops-form indices out of range) comes last,
+// because before the fix the guard itself indexes past the end of
+// site_ops_indices there, which aborts a Debug build. Doctest runs the cases
+// of a file in line order, so the abort cannot take the other cases of this
+// file with it. Each item 1 case still calls the guard on its own first and
+// REQUIREs it to throw, so that no measurement runs on an index the guard let
+// through.
+
+namespace {
+
+constexpr int lr_cp_r_max = 2;
+
+//! The mixed-parity one-site operator of T2-1d: c (d = 2) or c_dn (d = 4)
+//! plus half the number operator.
+lr_gtensor lr_cp_mixed_op(int d) {
+  lr_onesite o = lr_onesite_op(d == 2 ? "c" : "c_dn", d);
+  const lr_onesite n = lr_onesite_op("n", d);
+  for (int k = 0; k < d * d; ++k) {
+    o.m[k] += 0.5 * n.m[k];
+  }
+  return lr_onesite_tensor<lr_gtensor>(o);
+}
+
+//! A solver built as lr_guard_state() does, with a seeded Tn and, for the
+//! CTM environment, an environment from update_CTM().
+std::unique_ptr<lr_state<lr_gtensor>> lr_cp_ready_state(
+    const lr_guard_input& in, unsigned seed) {
+  auto state = lr_guard_state(in);
+  lr_seed_Tn(*state, lr_odd_scale, seed);
+  if (!in.params.MeanField_Env) {
+    state->update_CTM();
+  }
+  return state;
+}
+
+//! Runs fn, which must not throw.
+template <class Fn>
+void lr_cp_check_runs(Fn&& fn, const std::string& what) {
+  INFO(what);
+  try {
+    fn();
+  } catch (const std::exception& e) {
+    FAIL_CHECK(what << " threw: " << std::string(e.what()));
+  }
+}
+
+std::string lr_cp_pair_name(int i, int j) {
+  return "[" + std::to_string(i) + ", " + std::to_string(j) + "]";
+}
+
+//! Contract item 2 for one environment: a mixed-parity one-site operator is
+//! refused by the guard alone, by measure_onesite() and by
+//! measure_correlation(), each with tenes::input_error.
+void lr_run_mixed_onesite_guard(bool meanfield) {
+  const std::string env = meanfield ? "mean field" : "CTM";
+  for (const int d : {2, 4}) {
+    // Group 3 is the mixed operator, on every site or on site 1 only (a
+    // group defined on some sites only).
+    for (const bool every_site : {true, false}) {
+      const std::string what = env + ", d = " + std::to_string(d) +
+                               ", a mixed-parity one-site group 3 on " +
+                               (every_site ? "every site" : "site 1 only");
+      INFO(what);
+      lr_guard_input in(d, meanfield);  // group 0 even, groups 1, 2 odd
+      const lr_gtensor mixed = lr_cp_mixed_op(d);
+      for (int s = 0; s < in.lattice.N_UNIT; ++s) {
+        if (every_site || s == 1) {
+          in.onesite.emplace_back("mixed", 3, s, mixed);
+        }
+      }
+      // Premise: the load-time guard refuses this input.
+      REQUIRE_THROWS_AS(in.validate(), tenes::input_error);
+      {
+        auto state = lr_guard_state(in);
+        lr_check_measure_rejects(
+            [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+            what + " [validate_fermion_ctm_measurement]");
+      }
+      {
+        auto state = lr_cp_ready_state(in, lr_seed + 201);
+        lr_check_measure_rejects([&] { state->measure_onesite(); },
+                                 what + " [measure_onesite]");
+      }
+      // The last pair does not use group 3: the operator set contains a
+      // mixed operator all the same.
+      for (const auto& ij :
+           std::vector<std::pair<int, int>>{{3, 3}, {3, 0}, {1, 3}, {0, 0}}) {
+        lr_guard_input cor = in;
+        cor.corparam = tenes::itps::CorrelationParameter(
+            lr_cp_r_max, {{ij.first, ij.second}});
+        auto state = lr_cp_ready_state(cor, lr_seed + 202);
+        lr_check_measure_rejects([&] { state->measure_correlation(); },
+                                 what + " [measure_correlation, pair " +
+                                     lr_cp_pair_name(ij.first, ij.second) +
+                                     "]");
+      }
+    }
+  }
+}
+
+//! Contract item 3 for one environment: what the guard accepts today stays
+//! accepted, by the guard alone and by the measurements.
+void lr_run_copilot_controls(bool meanfield) {
+  const std::string env = meanfield ? "mean field" : "CTM";
+  for (const int d : {2, 4}) {
+    const std::string envd = env + ", d = " + std::to_string(d);
+    // Ops forms with in-range indices, the last group (2) included.
+    for (const lr_disp dd : {lr_disp{1, 0}, lr_disp{2, 1}, lr_disp{-3, 3}}) {
+      for (const auto& ij :
+           std::vector<std::pair<int, int>>{{0, 0}, {1, 2}, {2, 1}, {2, 2}}) {
+        const std::string what =
+            envd + ", ops = " + lr_cp_pair_name(ij.first, ij.second) + " at " +
+            lr_disp_name(dd.dx, dd.dy);
+        INFO(what);
+        lr_guard_input in(d, meanfield);
+        in.add_ops(dd.dx, dd.dy, ij.first, ij.second);
+        lr_check_accepts(in, what + " [load]");
+        auto state = lr_cp_ready_state(in, lr_seed + 211);
+        lr_cp_check_runs(
+            [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+            what + " [validate_fermion_ctm_measurement]");
+        lr_cp_check_runs([&] { state->measure_twosite(); },
+                         what + " [measure_twosite]");
+      }
+    }
+    // One-site operators of definite parity: n (even), c+ and c (odd) and,
+    // for d = 4, the even operators pair and flip, which are off-diagonal.
+    {
+      const std::string what = envd + ", one-site operators of definite parity";
+      INFO(what);
+      lr_guard_input in(d, meanfield);
+      if (d == 4) {
+        for (int s = 0; s < in.lattice.N_UNIT; ++s) {
+          in.onesite.emplace_back(
+              "pair", 3, s,
+              lr_onesite_tensor<lr_gtensor>(lr_onesite_op("pair", d)));
+          in.onesite.emplace_back(
+              "flip", 4, s,
+              lr_onesite_tensor<lr_gtensor>(lr_onesite_op("flip", d)));
+        }
+      }
+      std::vector<std::tuple<int, int>> pairs{{0, 0}, {1, 2}, {2, 1}, {2, 0}};
+      if (d == 4) {
+        pairs.emplace_back(3, 4);
+        pairs.emplace_back(4, 3);
+      }
+      in.corparam = tenes::itps::CorrelationParameter(lr_cp_r_max, pairs);
+      lr_check_accepts(in, what + " [load]");
+      auto state = lr_cp_ready_state(in, lr_seed + 212);
+      lr_cp_check_runs(
+          [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+          what + " [validate_fermion_ctm_measurement]");
+      lr_cp_check_runs([&] { state->measure_onesite(); },
+                       what + " [measure_onesite]");
+      lr_cp_check_runs([&] { state->measure_correlation(); },
+                       what + " [measure_correlation]");
+    }
+    // Groups defined on some sites only: group 3 = n (even) on the source
+    // site 0 and on the target of the ops form at (2, 1) only, group 4 = c+
+    // (odd) on site 1 only.
+    {
+      const std::string what = envd + ", groups defined on some sites only";
+      INFO(what);
+      lr_guard_input in(d, meanfield);
+      const int target = in.lattice.other(0, 2, 1);
+      const lr_gtensor n_op =
+          lr_onesite_tensor<lr_gtensor>(lr_onesite_op("n", d));
+      const lr_gtensor cdag_op = lr_onesite_tensor<lr_gtensor>(
+          lr_onesite_op(d == 2 ? "cdag" : "cdag_up", d));
+      int n_missing = 0;
+      for (int s = 0; s < in.lattice.N_UNIT; ++s) {
+        if (s == 0 || s == target) {
+          in.onesite.emplace_back("n_part", 3, s, n_op);
+        } else {
+          ++n_missing;
+        }
+      }
+      in.onesite.emplace_back("cdag_part", 4, 1, cdag_op);
+      // Premise: group 3 is missing on some site.
+      REQUIRE(n_missing > 0);
+      in.add_ops(2, 1, 3, 3);
+      in.corparam = tenes::itps::CorrelationParameter(
+          lr_cp_r_max, {{3, 3}, {3, 0}, {4, 1}, {1, 4}, {4, 4}});
+      lr_check_accepts(in, what + " [load]");
+      auto state = lr_cp_ready_state(in, lr_seed + 213);
+      lr_cp_check_runs(
+          [&] { lr_acc::validate_fermion_ctm_measurement(*state); },
+          what + " [validate_fermion_ctm_measurement]");
+      lr_cp_check_runs([&] { state->measure_onesite(); },
+                       what + " [measure_onesite]");
+      lr_cp_check_runs([&] { state->measure_twosite(); },
+                       what + " [measure_twosite, ops = [3, 3] at (2, 1)]");
+      lr_cp_check_runs([&] { state->measure_correlation(); },
+                       what + " [measure_correlation]");
+    }
+  }
+}
+
+//! Contract item 1 for one environment: an ops form whose index is negative
+//! (negative = true) or not below num_onesite_operators (three groups here)
+//! is refused by the guard alone, by measure_twosite() and by measure(), each
+//! with tenes::input_error.
+void lr_run_ops_range_guard(bool meanfield, bool negative) {
+  const std::string env = meanfield ? "mean field" : "CTM";
+  const std::vector<std::pair<int, int>> bad =
+      negative ? std::vector<std::pair<int, int>>{{-1, 1}, {1, -1}, {-2, -2}}
+               : std::vector<std::pair<int, int>>{{3, 1}, {1, 3}, {7, 2}};
+  for (const int d : {2, 4}) {
+    for (const lr_disp dd : {lr_disp{1, 0}, lr_disp{2, 1}, lr_disp{0, -3}}) {
+      for (const auto& ij : bad) {
+        const std::string what =
+            env + ", d = " + std::to_string(d) +
+            ", ops = " + lr_cp_pair_name(ij.first, ij.second) + " at " +
+            lr_disp_name(dd.dx, dd.dy) + " with three one-site groups";
+        INFO(what);
+        lr_guard_input in(d, meanfield);  // groups 0, 1, 2 on every site
+        in.add_ops(dd.dx, dd.dy, ij.first, ij.second);
+        // Premise: the load-time guard refuses this input.
+        REQUIRE_THROWS_AS(in.validate(), tenes::input_error);
+        auto state = lr_cp_ready_state(in, lr_seed + 221);
+        // The guard alone first: fail here rather than let a measurement run
+        // into the out-of-range index.
+        REQUIRE_THROWS_AS(lr_acc::validate_fermion_ctm_measurement(*state),
+                          tenes::input_error);
+        CHECK_THROWS_AS(state->measure_twosite(), tenes::input_error);
+        CHECK_THROWS_AS(state->measure(), tenes::input_error);
+      }
+    }
+  }
+}
+
+}  // namespace
+
+TEST_CASE(
+    "longrange CP-2a: without validate_fermion_constraints, a mixed-parity "
+    "one-site operator is refused by the guard, measure_onesite and "
+    "measure_correlation with tenes::input_error (CTM)") {
+  lr_run_mixed_onesite_guard(false);
+}
+
+TEST_CASE(
+    "longrange CP-2b: without validate_fermion_constraints, a mixed-parity "
+    "one-site operator is refused by the guard, measure_onesite and "
+    "measure_correlation with tenes::input_error (meanfield_env)") {
+  lr_run_mixed_onesite_guard(true);
+}
+
+TEST_CASE(
+    "longrange [kept] CP-3a: in-range ops forms, one-site operators of "
+    "definite parity and groups on some sites only are still accepted "
+    "(CTM)") {
+  lr_run_copilot_controls(false);
+}
+
+TEST_CASE(
+    "longrange [kept] CP-3b: in-range ops forms, one-site operators of "
+    "definite parity and groups on some sites only are still accepted "
+    "(meanfield_env)") {
+  lr_run_copilot_controls(true);
+}
+
+TEST_CASE(
+    "longrange CP-1a: without validate_fermion_constraints, an ops form with "
+    "a negative one-site index is refused with tenes::input_error (CTM)") {
+  lr_run_ops_range_guard(false, true);
+}
+
+TEST_CASE(
+    "longrange CP-1b: without validate_fermion_constraints, an ops form with "
+    "a one-site index not below num_onesite_operators is refused with "
+    "tenes::input_error (CTM)") {
+  lr_run_ops_range_guard(false, false);
+}
+
+TEST_CASE(
+    "longrange CP-1c: without validate_fermion_constraints, an ops form with "
+    "a negative one-site index is refused with tenes::input_error "
+    "(meanfield_env)") {
+  lr_run_ops_range_guard(true, true);
+}
+
+TEST_CASE(
+    "longrange CP-1d: without validate_fermion_constraints, an ops form with "
+    "a one-site index not below num_onesite_operators is refused with "
+    "tenes::input_error (meanfield_env)") {
+  lr_run_ops_range_guard(true, false);
+}

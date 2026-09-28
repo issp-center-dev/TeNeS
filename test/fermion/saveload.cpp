@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <string>
@@ -179,13 +180,14 @@ inline lambda_table bond_lambdas(const tenes::SquareLattice &lattice) {
   return lambda;
 }
 
-// Real symmetric one-site operator; the diagonal keeps the expectation
-// value away from zero even though the off-diagonal part is parity-odd.
+// Real parity-even one-site operator 0.2 n_0 - 0.3 n_1 (n_p: projector on
+// the physical state p). Fermion measurement rejects a mixed-parity one-site
+// operator, and a parity-odd part would add nothing on this parity-even
+// state anyway. The value depends on the occupation of the state; the layer-2
+// case checks that it is not close to zero (about 0.011 at its smallest).
 inline tenes::real_tensor onesite_op() {
   tenes::real_tensor op(mptensor::Shape(sl_pdim, sl_pdim));
   op.set_value(mptensor::Index(0, 0), 0.2);
-  op.set_value(mptensor::Index(0, 1), 0.5);
-  op.set_value(mptensor::Index(1, 0), 0.5);
   op.set_value(mptensor::Index(1, 1), -0.3);
   return op;
 }
@@ -490,8 +492,15 @@ TEST_CASE("SL layer2 measured values survive the round trip") {
     }
   }
 
-  // The saved state must not be trivial, otherwise the comparison above
+  // The saved state must not be trivial, otherwise the comparisons above
   // would hold for any pair of states.
+  double min_onesite = std::numeric_limits<double>::infinity();
+  for (const auto &group : saved_onesite) {
+    for (const auto &value : group) {
+      min_onesite = std::min(min_onesite, std::abs(value));
+    }
+  }
+  CHECK(min_onesite > 1.0e-3);
   double max_value = 0.0;
   for (const auto &group : saved_twosite) {
     for (const auto &entry : group) {

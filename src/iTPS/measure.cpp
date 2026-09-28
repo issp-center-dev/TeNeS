@@ -41,6 +41,13 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
     return;
   }
 
+  for (const auto parity : onesite_parity) {
+    if (parity == tenes::fermion::op_parity::mixed) {
+      throw tenes::input_error(
+          "fermion measurement contains mixed parity one-site operators");
+    }
+  }
+
   for (const auto &op : twosite_operators) {
     const int abs_dx = std::abs(op.dx[0]);
     const int abs_dy = std::abs(op.dy[0]);
@@ -55,6 +62,17 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
           "a 4x4 window");
     }
     if (!op.ops_indices.empty()) {
+      if (op.ops_indices[0] < 0 || op.ops_indices[1] < 0) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to negative one-site "
+            "operator indices");
+      }
+      if (op.ops_indices[0] >= num_onesite_operators ||
+          op.ops_indices[1] >= num_onesite_operators) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to one-site operator "
+            "indices outside one-site groups");
+      }
       const int target_site = lattice.other(op.source_site, op.dx[0], op.dy[0]);
       const int opA_index =
           siteoperator_index(op.source_site, op.ops_indices[0]);
@@ -66,11 +84,6 @@ void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
       }
       const auto pA = onesite_parity[opA_index];
       const auto pB = onesite_parity[opB_index];
-      if (pA == tenes::fermion::op_parity::mixed ||
-          pB == tenes::fermion::op_parity::mixed) {
-        throw tenes::input_error(
-            "fermion measurement ops form contains mixed parity");
-      }
       if (pA != pB) {
         throw tenes::input_error(
             "fermion measurement ops form combines one-site operators of "

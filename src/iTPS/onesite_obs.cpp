@@ -61,6 +61,8 @@ std::vector<typename tensor::value_type> gather_rank2_tensor(tensor const &t) {
 template <class tensor>
 auto iTPS<tensor>::measure_onesite()
     -> std::vector<std::vector<typename iTPS<tensor>::tensor_type>> {
+  validate_fermion_ctm_measurement();
+
   Timer<> timer;
   ScopedTimer scoped_timer("measure/onesite");
   const bool is_meanfield = peps_parameters.MeanField_Env;
