@@ -96,6 +96,8 @@ and similarly the nearest neighbor correlation :math:`\langle \Psi|S^z_iS^z_{i+1
 
 Notice that by using the second representation, we can calculate expectation values of any two-site operators. Although we can generalize such a diagram for any operator, the computation cost to contract the tensor network becomes huge for larger clusters.
 
+In fermion mode with the CTM environment, longer-distance two-site measurements are evaluated by decomposing the two-site operator into graded-SVD channels.  Each channel carries a one-dimensional auxiliary leg :math:`\kappa` along the virtual bonds between the two sites.  The implementation relays this leg through the window, applies the crossing sign and the sign from the virtual-bond orientation on each edge, and then folds the bra and ket layers into the usual CTM contraction.  Correlation functions use the same channel idea, but factor :math:`A_s B_t` into left and right one-site factors so that the transfer chain can be extended with the relayed :math:`\kappa` leg.
+
 Removing the operator :math:`S^z_i` from the diagram of the local magnetization and leaving the two physical legs uncontracted gives the one-site reduced density matrix :math:`\rho_i` of that site. Since the expectation value of any one-site operator follows from :math:`\rho_i` as :math:`\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i`, TeNeS also writes out :math:`\rho_i` itself for every site (``onesite_density_matrix.dat``). It is not normalized, so its trace is the norm of the wave function :math:`\langle \Psi | \Psi \rangle` itself. This :math:`\rho_i` is what the convergence criterion described above uses as well. In fermion mode with the CTM environment, the environment carries a window-dependent overall phase, so the convergence criterion compares :math:`\rho_i` after dividing it by the phase of its trace, and the written :math:`\rho_i` is normalized in the same way (its trace is then :math:`|\langle \Psi | \Psi \rangle|`).
 
 Optimization of iTPS
@@ -179,6 +181,7 @@ In this diagram, :math:`\lambda_i` represents a non-negative diagonal matrix con
 The singular values obtained from the SVD of the matrix are used as the mean field :math:`\lambda` in the next step. The computation cost of the simple update is :math:`O(D^{5})`, if we use QR decomposition before we construct the matrix :ref:`[QR] <Ref-QR>`. Thus, it is much cheaper than that of the full update.
 
 Although the computation cost of the simple update is cheaper than that of the full update, it is known that the simple update shows strong initial state dependence and it tends to overestimate the local magnetization. Thus, for complicated problems, we need to carefully check results obtained by the simple update. 
+When observables are measured with ``meanfield_env = true``, TeNeS uses these :math:`\lambda` weights to close the environment outside the measured bond, window, or correlation chain; the result is therefore a mean-field approximation rather than a CTM contraction.
 
 Real-time evolution by iTPS
 ===========================

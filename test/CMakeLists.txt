@@ -40,6 +40,20 @@ add_executable(test_fermion_fold_full_update fermion/fold_full_update_unit.cpp)
 # ctest -j runs it beside test_fermion_layer instead of after it.
 add_executable(test_fermion_skew_unfold fermion/skew_unfold.cpp)
 
+# Task T1 of docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md:
+# the string relay of src/fermion/relay.hpp against the single-layer graded
+# truth, the Fock oracle and the bundled-k nearest-neighbour construction.
+add_executable(test_fermion_relay fermion/relay_window.cpp)
+
+# Task T2 of the same plan: long-range two-site observables, the ops form and
+# parity-odd one-site operators in fermion CTM mode, and their input guards.
+# Task T3: the correlation function (r_max > 0) in fermion CTM mode.
+# Task T5: both of them with the mean-field environment (meanfield_env).
+add_executable(
+  test_fermion_longrange
+  fermion/longrange_measure.cpp
+  fermion/longrange_correlation.cpp
+  fermion/longrange_mf.cpp)
 
 set(tenes_unit_tests input simple_update full_update tensor_util util
     util_file correlation_length saveload arnoldi timer_registry onesite_rdm)
@@ -64,7 +78,7 @@ foreach(basename IN LISTS tenes_unit_tests)
 endforeach()
 
 foreach(testname test_fermion_layer test_fermion_fold_full_update
-        test_fermion_skew_unfold)
+        test_fermion_skew_unfold test_fermion_relay test_fermion_longrange)
   target_link_libraries(${testname} PUBLIC tenes_static)
   target_compile_definitions(
     ${testname} PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
@@ -88,6 +102,21 @@ if(ENABLE_MPI)
            COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
                    ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_layer>
                    --source-file=*mpi_reduction.cpp)
+endif()
+
+# The correlation function of task T3 at two ranks (contract item 8): the
+# case T3-8 of fermion/longrange_correlation.cpp compares the distributed
+# result with a one-rank solver built in the same run and checks that every
+# rank holds the same rows. Only that case: the rest of the file repeats at
+# two ranks what the one-rank registration already checks, and ran the
+# registration up to 234 s under ctest -j2 (T3-8 alone: about 6.5 s in a
+# Debug build).
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_longrange_mpi2
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2
+                   ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:test_fermion_longrange>
+                   --test-case=*T3-8*)
+  set_tests_properties(test_fermion_longrange_mpi2 PROPERTIES TIMEOUT 300)
 endif()
 
 # The graded decompositions and the full-update environment must be collective
@@ -355,6 +384,65 @@ add_test(NAME FreeFermionSimple
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_simple.py)
 set_tests_properties(FreeFermionSimple PROPERTIES TIMEOUT 600)
+
+# Items 3-6 of the T4 contract of
+# docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md: long-range
+# two-site observables and correlation functions in fermion mode, end to end.
+#   FreeFermionLongRange       free spinless fermions through tenes_simple ->
+#                              tenes_std -> tenes, against the Fermi sea
+#   BosonEquivalenceLongRange  an all-even parity table against the bosonic run
+#   HubbardLongRange           up/down symmetry of <c^dag c> in the Hubbard model
+# FreeFermionLongRangeMPI2 runs the free-fermion case on two processes and
+# compares it with a one-process run of the same input.toml (item 6).  All of
+# them take a few seconds in a Release build (see the report in
+# work/fermion-longrange/t4/); the golden files are in
+# test/data/output_<name>/, see the header of each script for how to
+# regenerate them.
+foreach(name free_fermion_longrange boson_equivalence_longrange
+        hubbard_longrange)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
+endforeach()
+add_test(NAME FreeFermionLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange.py)
+set_tests_properties(FreeFermionLongRange PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FreeFermionLongRangeMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange.py
+                   --nproc 2)
+  set_tests_properties(FreeFermionLongRangeMPI2 PROPERTIES TIMEOUT 600)
+endif()
+add_test(NAME BosonEquivalenceLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_longrange.py)
+set_tests_properties(BosonEquivalenceLongRange PROPERTIES TIMEOUT 600)
+add_test(NAME HubbardLongRange
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_longrange.py)
+set_tests_properties(HubbardLongRange PROPERTIES TIMEOUT 600)
+
+# Item 6 of the T5 contract of the same plan: FreeFermionLongRange with the
+# mean-field environment (meanfield_env = true), checked through identities
+# between code paths of one run and the golden files in
+# test/data/output_FreeFermionLongRangeMF/ (no analytic comparison: the
+# mean-field environment is an approximation). FreeFermionLongRangeMFMPI2
+# compares a two-process run with a one-process run of the same input.toml.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/free_fermion_longrange_mf.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange_mf.py
+               @ONLY)
+add_test(NAME FreeFermionLongRangeMF
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange_mf.py)
+set_tests_properties(FreeFermionLongRangeMF PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FreeFermionLongRangeMFMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_longrange_mf.py
+                   --nproc 2)
+  set_tests_properties(FreeFermionLongRangeMFMPI2 PROPERTIES TIMEOUT 600)
+endif()
 
 # S-1, S-4 and S-6 of
 # docs/superpowers/specs/2026-09-07-fermion-fast-full-update-contract.md: the

@@ -724,6 +724,7 @@ class Model(abc.ABC):
     twosite_ops_name: List[str]
     twosite_ops_explicit: List[Tuple[str, np.ndarray]]
     parity: List[int]
+    correlation_ops_default: Optional[List[List[int]]]
     params_onesite: Dict[str, Any]  # [neighbor_level][bond_type]
     params_twosite: List[List[Dict[str, Any]]]  # [neighbor_level][bond_type]
     ham_twosites_list: List[List[Tuple[int, int]]]
@@ -736,6 +737,7 @@ class Model(abc.ABC):
         self.onesite_ops = []
         self.twosite_ops_explicit = []
         self.parity = []
+        self.correlation_ops_default = None
         self.params_onesite = {}
         self.params_twosite = [[]]
         self.ham_twosites_list = [[]]
@@ -1347,9 +1349,16 @@ class SpinlessFermionModel(Model):
         self.parity = [0, 1]
 
         nmodes = 1
+        cdag = fock_cop(True, 0, nmodes)
+        c = fock_cop(False, 0, nmodes)
         n_op = fock_cop(True, 0, nmodes) @ fock_cop(False, 0, nmodes)
-        self.onesite_ops = [onesite_matrix(n_op)]
-        self.onesite_ops_name = ["n"]
+        self.onesite_ops = [
+            onesite_matrix(n_op),
+            onesite_matrix(cdag),
+            onesite_matrix(c),
+        ]
+        self.onesite_ops_name = ["n", "cdag", "c"]
+        self.correlation_ops_default = [[0, 0], [1, 2]]
 
         self.twosite_ops = [(0, 0)]
         self.twosite_ops_name = ["nn"]
@@ -1470,6 +1479,10 @@ class HubbardModel(Model):
         doublon = n_up @ n_dn
         eye = np.eye(self.N)
         holon = (eye - n_up) @ (eye - n_dn)
+        cdag_up = cd1(0)
+        c_up = cop1(0)
+        cdag_dn = cd1(1)
+        c_dn = cop1(1)
 
         self.onesite_ops = [
             onesite_matrix(n_tot),
@@ -1478,8 +1491,33 @@ class HubbardModel(Model):
             onesite_matrix(sz),
             onesite_matrix(doublon),
             onesite_matrix(holon),
+            onesite_matrix(cdag_up),
+            onesite_matrix(c_up),
+            onesite_matrix(cdag_dn),
+            onesite_matrix(c_dn),
         ]
-        self.onesite_ops_name = ["n", "n_up", "n_dn", "Sz", "doublon", "holon"]
+        self.onesite_ops_name = [
+            "n",
+            "n_up",
+            "n_dn",
+            "Sz",
+            "doublon",
+            "holon",
+            "cdag_up",
+            "c_up",
+            "cdag_dn",
+            "c_dn",
+        ]
+        self.correlation_ops_default = [
+            [0, 0],
+            [1, 1],
+            [2, 2],
+            [3, 3],
+            [4, 4],
+            [5, 5],
+            [6, 7],
+            [8, 9],
+        ]
 
         self.twosite_ops = [(0, 0), (3, 3)]
         self.twosite_ops_name = ["nn", "SzSz"]
@@ -1729,9 +1767,9 @@ def _check_fermion_scope(
 ) -> None:
     """Reject inputs outside the supported fermionic scope.
 
-    The current version supports the square lattice with nearest-neighbour
-    bonds only. Nothing else is silently converted; every unsupported input
-    stops here with a reason.
+    Fermionic simple mode supports square-lattice nearest-neighbour
+    Hamiltonian bonds and CTM correlation functions. Unsupported inputs are
+    rejected here instead of being silently converted.
     """
     general = param.get("parameter", {}).get("general", {})
     if general.get("fermion", False) and not model.is_fermion:
@@ -1746,7 +1784,7 @@ def _check_fermion_scope(
 
     scope = (
         "the fermion support in this version covers the square lattice with"
-        " nearest-neighbour bonds only"
+        " nearest-neighbour Hamiltonian bonds"
     )
 
     if not isinstance(lattice, SquareLattice):
@@ -1765,11 +1803,6 @@ def _check_fermion_scope(
                         name, value, n + 1, scope
                     )
                     raise RuntimeError(msg)
-
-    if "correlation" in param:
-        msg = "[correlation] is not available for fermionic models in this version"
-        msg += "; remove the section."
-        raise RuntimeError(msg)
 
     if "correlation_length" in param:
         msg = "[correlation_length] is not available for fermionic models in this"
@@ -1992,9 +2025,15 @@ def tenes_simple(
         ret.append("[correlation]")
         ret.append("r_max = {}".format(corparam["r_max"]))
         if "operators" not in corparam:
-            corparam["operators"] = []
-            for g in groups:
-                corparam["operators"].append([g, g])
+            if model.correlation_ops_default is None:
+                corparam["operators"] = []
+                for g in groups:
+                    corparam["operators"].append([g, g])
+            else:
+                corparam["operators"] = [
+                    [op[0] + onesite_offset, op[1] + onesite_offset]
+                    for op in model.correlation_ops_default
+                ]
 
         ret.append("operators = [")
         for ops in corparam["operators"]:

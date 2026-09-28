@@ -21,6 +21,7 @@
 #include <string>
 #include <type_traits>
 
+#include "../fermion/relay.hpp"
 #include "iTPS.hpp"
 
 #include "core/contract.hpp"
@@ -28,6 +29,33 @@
 namespace tenes::itps {
 
 using mptensor::Shape;
+
+namespace {
+
+template <class ptensor>
+ptensor fermion_correlation_site(
+    const tenes::fermion::ftensor<ptensor> &Tn, tenes::fermion::relay_role role,
+    int entry, int exit, const tenes::fermion::relay_channel<ptensor> &channel,
+    bool vertical) {
+  ptensor site =
+      tenes::fermion::build_relay_site(Tn, role, entry, exit, channel);
+  if (vertical) {
+    site = transpose(site, mptensor::Axes(3, 0, 1, 2, 4, 5));
+  }
+  return site;
+}
+
+template <class ptensor>
+struct fermion_correlation_mf_target {
+  tenes::fermion::ftensor<ptensor> fT;
+  ptensor reduced;
+  ptensor edge0;
+  ptensor edge1;
+  ptensor edge2;
+  bool ready = false;
+};
+
+}  // namespace
 
 template <class ptensor>
 std::vector<Correlation> iTPS<ptensor>::measure_correlation() {
@@ -41,12 +69,360 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation() {
 }
 
 template <class ptensor>
-std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
+std::vector<Correlation> iTPS<ptensor>::measure_correlation_fermion(
+    bool meanfield_env) {
   Timer<> timer;
   ScopedTimer scoped_timer("measure/correlation");
 
+  const int nlops = num_onesite_operators;
+  const int r_max = corparam.r_max;
+  std::vector<std::vector<int>> r_ops(nlops);
+  for (auto [left_op, right_op] : corparam.operators) {
+    r_ops[left_op].push_back(right_op);
+  }
+
+  std::vector<tenes::fermion::ftensor<ptensor>> fTn;
+  std::vector<ptensor> reduced;
+  std::vector<ptensor> reduced_vertical;
+  std::vector<ptensor> Tn_horizontal;
+  std::vector<ptensor> Tn_vertical;
+  if (meanfield_env) {
+    Tn_horizontal.assign(Tn.begin(), Tn.end());
+    Tn_vertical.assign(Tn.begin(), Tn.end());
+    for (int index = 0; index < N_UNIT; ++index) {
+      std::vector<std::vector<double>> const &lambda = lambda_tensor[index];
+      Tn_horizontal[index].multiply_vector(lambda[1], 1, lambda[3], 3);
+      Tn_vertical[index].multiply_vector(lambda[0], 0, lambda[2], 2);
+    }
+  } else {
+    fTn.reserve(N_UNIT);
+    reduced.reserve(N_UNIT);
+    reduced_vertical.reserve(N_UNIT);
+    for (int index = 0; index < N_UNIT; ++index) {
+      fTn.push_back(tenes::fermion::wrap_Tn(Tn[index], finfo, index));
+      reduced.push_back(tenes::fermion::build_reduced_op(fTn.back()));
+      reduced_vertical.push_back(
+          transpose(reduced.back(), mptensor::Axes(3, 0, 1, 2, 4, 5)));
+    }
+  }
+
+  const auto delta_corner = tenes::fermion::make_delta_corner<ptensor>(comm);
+  const auto delta_edge = [&](int D) {
+    return tenes::fermion::make_delta_edge<ptensor>(D, comm);
+  };
+
+  std::vector<std::vector<ptensor>> relay_middle_horizontal(
+      2, std::vector<ptensor>(N_UNIT));
+  std::vector<std::vector<ptensor>> relay_middle_vertical(
+      2, std::vector<ptensor>(N_UNIT));
+  std::vector<std::vector<bool>> relay_middle_horizontal_ready(
+      2, std::vector<bool>(N_UNIT, false));
+  std::vector<std::vector<bool>> relay_middle_vertical_ready(
+      2, std::vector<bool>(N_UNIT, false));
+  std::vector<ptensor> reduced_horizontal(N_UNIT);
+  std::vector<ptensor> reduced_vertical_mf(N_UNIT);
+  std::vector<bool> reduced_horizontal_ready(N_UNIT, false);
+  std::vector<bool> reduced_vertical_mf_ready(N_UNIT, false);
+
+  const auto horizontal_reduced = [&](int index) -> const ptensor & {
+    if (meanfield_env) {
+      if (!reduced_horizontal_ready[index]) {
+        const auto fT =
+            tenes::fermion::wrap_Tn(Tn_horizontal[index], finfo, index);
+        reduced_horizontal[index] = tenes::fermion::build_reduced_op(fT);
+        reduced_horizontal_ready[index] = true;
+      }
+      return reduced_horizontal[index];
+    }
+    return reduced[index];
+  };
+  const auto vertical_reduced = [&](int index) -> const ptensor & {
+    if (meanfield_env) {
+      if (!reduced_vertical_mf_ready[index]) {
+        const auto fT =
+            tenes::fermion::wrap_Tn(Tn_vertical[index], finfo, index);
+        reduced_vertical_mf[index] =
+            transpose(tenes::fermion::build_reduced_op(fT),
+                      mptensor::Axes(3, 0, 1, 2, 4, 5));
+        reduced_vertical_mf_ready[index] = true;
+      }
+      return reduced_vertical_mf[index];
+    }
+    return reduced_vertical[index];
+  };
+  const auto horizontal_middle =
+      [&](int index, const tenes::fermion::relay_channel<ptensor> &channel)
+      -> const ptensor & {
+    const int parity = channel.u.parity[2][0] ? 1 : 0;
+    if (!relay_middle_horizontal_ready[parity][index]) {
+      const auto fT = meanfield_env ? tenes::fermion::wrap_Tn(
+                                          Tn_horizontal[index], finfo, index)
+                                    : fTn[index];
+      relay_middle_horizontal[parity][index] = tenes::fermion::build_relay_site(
+          fT, tenes::fermion::relay_role::middle, 0, 2, channel);
+      relay_middle_horizontal_ready[parity][index] = true;
+    }
+    return relay_middle_horizontal[parity][index];
+  };
+  const auto vertical_middle =
+      [&](int index, const tenes::fermion::relay_channel<ptensor> &channel)
+      -> const ptensor & {
+    const int parity = channel.u.parity[2][0] ? 1 : 0;
+    if (!relay_middle_vertical_ready[parity][index]) {
+      const auto fT = meanfield_env ? tenes::fermion::wrap_Tn(
+                                          Tn_vertical[index], finfo, index)
+                                    : fTn[index];
+      relay_middle_vertical[parity][index] = fermion_correlation_site(
+          fT, tenes::fermion::relay_role::middle, 3, 1, channel, true);
+      relay_middle_vertical_ready[parity][index] = true;
+    }
+    return relay_middle_vertical[parity][index];
+  };
+
+  std::vector<fermion_correlation_mf_target<ptensor>> target_horizontal(N_UNIT);
+  std::vector<fermion_correlation_mf_target<ptensor>> target_vertical(N_UNIT);
+  const auto mf_target =
+      [&](bool vertical,
+          int index) -> const fermion_correlation_mf_target<ptensor> & {
+    auto &cache = vertical ? target_vertical[index] : target_horizontal[index];
+    if (!cache.ready) {
+      ptensor Ttarget = vertical ? Tn_vertical[index] : Tn_horizontal[index];
+      if (vertical) {
+        Ttarget.multiply_vector(lambda_tensor[index][1], 1);
+      } else {
+        Ttarget.multiply_vector(lambda_tensor[index][2], 2);
+      }
+      cache.fT = tenes::fermion::wrap_Tn(Ttarget, finfo, index);
+      cache.reduced = tenes::fermion::build_reduced_op(cache.fT);
+      if (vertical) {
+        cache.reduced =
+            transpose(cache.reduced, mptensor::Axes(3, 0, 1, 2, 4, 5));
+        cache.edge0 = delta_edge(static_cast<int>(cache.fT.shape()[0]));
+        cache.edge1 = delta_edge(static_cast<int>(cache.fT.shape()[1]));
+        cache.edge2 = delta_edge(static_cast<int>(cache.fT.shape()[2]));
+      } else {
+        cache.edge0 = delta_edge(static_cast<int>(cache.fT.shape()[1]));
+        cache.edge1 = delta_edge(static_cast<int>(cache.fT.shape()[2]));
+        cache.edge2 = delta_edge(static_cast<int>(cache.fT.shape()[3]));
+      }
+      cache.ready = true;
+    }
+    return cache;
+  };
+
+  std::vector<Correlation> correlations;
+  for (int left_index = 0; left_index < N_UNIT; ++left_index) {
+    ptensor correlation_T;
+    ptensor correlation_norm;
+    for (int left_ilop = 0; left_ilop < nlops; ++left_ilop) {
+      if (r_ops[left_ilop].empty()) {
+        continue;
+      }
+
+      const auto measure_direction = [&](bool vertical) {
+        int left_op_index = siteoperator_index(left_index, left_ilop);
+        if (left_op_index < 0) {
+          return;
+        }
+        tenes::fermion::ftensor<ptensor> fSource;
+        if (meanfield_env) {
+          ptensor T =
+              vertical ? Tn_vertical[left_index] : Tn_horizontal[left_index];
+          if (vertical) {
+            T.multiply_vector(lambda_tensor[left_index][3], 3);
+          } else {
+            T.multiply_vector(lambda_tensor[left_index][0], 0);
+          }
+          fSource = tenes::fermion::wrap_Tn(T, finfo, left_index);
+        } else {
+          fSource = fTn[left_index];
+        }
+        const auto left_op = onesite_operators[left_op_index].op;
+        tenes::fermion::relay_channel<ptensor> channel;
+        const bool left_odd =
+            onesite_parity[left_op_index] == tenes::fermion::op_parity::odd;
+        channel.u = tenes::fermion::relay_product_source(
+            left_op, finfo.phys[left_index], left_odd);
+        channel.vt = tenes::fermion::relay_product_target(
+            left_op, finfo.phys[left_index], left_odd);
+        auto source = fermion_correlation_site(
+            fSource, tenes::fermion::relay_role::source, -1, vertical ? 1 : 2,
+            channel, vertical);
+        if (meanfield_env) {
+          auto source_reduced = tenes::fermion::build_reduced_op(fSource);
+          if (vertical) {
+            source_reduced =
+                transpose(source_reduced, mptensor::Axes(3, 0, 1, 2, 4, 5));
+            auto eTl_source = delta_edge(static_cast<int>(fSource.shape()[0]));
+            auto eTr_source = delta_edge(static_cast<int>(fSource.shape()[2]));
+            auto eTb_source = delta_edge(static_cast<int>(fSource.shape()[3]));
+            core::StartCorrelation_density_CTM(
+                correlation_T, delta_corner, delta_corner, eTl_source,
+                eTr_source, eTb_source, source, op_identity[left_index]);
+            core::StartCorrelation_density_CTM(
+                correlation_norm, delta_corner, delta_corner, eTl_source,
+                eTr_source, eTb_source, source_reduced,
+                op_identity[left_index]);
+          } else {
+            auto eTt_source = delta_edge(static_cast<int>(fSource.shape()[1]));
+            auto eTb_source = delta_edge(static_cast<int>(fSource.shape()[3]));
+            auto eTl_source = delta_edge(static_cast<int>(fSource.shape()[0]));
+            core::StartCorrelation_density_CTM(
+                correlation_T, delta_corner, delta_corner, eTt_source,
+                eTb_source, eTl_source, source, op_identity[left_index]);
+            core::StartCorrelation_density_CTM(
+                correlation_norm, delta_corner, delta_corner, eTt_source,
+                eTb_source, eTl_source, source_reduced,
+                op_identity[left_index]);
+          }
+        } else if (vertical) {
+          core::StartCorrelation_density_CTM(correlation_T, C4[left_index],
+                                             C3[left_index], eTl[left_index],
+                                             eTr[left_index], eTb[left_index],
+                                             source, op_identity[left_index]);
+          core::StartCorrelation_density_CTM(
+              correlation_norm, C4[left_index], C3[left_index], eTl[left_index],
+              eTr[left_index], eTb[left_index], reduced_vertical[left_index],
+              op_identity[left_index]);
+        } else {
+          core::StartCorrelation_density_CTM(correlation_T, C1[left_index],
+                                             C4[left_index], eTt[left_index],
+                                             eTb[left_index], eTl[left_index],
+                                             source, op_identity[left_index]);
+          core::StartCorrelation_density_CTM(
+              correlation_norm, C1[left_index], C4[left_index], eTt[left_index],
+              eTb[left_index], eTl[left_index], reduced[left_index],
+              op_identity[left_index]);
+        }
+
+        int right_index = left_index;
+        for (int r = 0; r < r_max; ++r) {
+          right_index =
+              vertical ? lattice.top(right_index) : lattice.right(right_index);
+          tenes::fermion::ftensor<ptensor> const *fTarget = nullptr;
+          tensor_type norm = 0.0;
+          const fermion_correlation_mf_target<ptensor> *target_cache = nullptr;
+          if (meanfield_env) {
+            target_cache = &mf_target(vertical, right_index);
+            fTarget = &target_cache->fT;
+            norm = core::FinishCorrelation_density_CTM(
+                correlation_norm, delta_corner, delta_corner,
+                target_cache->edge0, target_cache->edge1, target_cache->edge2,
+                target_cache->reduced, op_identity[right_index]);
+          } else if (vertical) {
+            fTarget = &fTn[right_index];
+            norm = core::FinishCorrelation_density_CTM(
+                correlation_norm, C1[right_index], C2[right_index],
+                eTl[right_index], eTt[right_index], eTr[right_index],
+                reduced_vertical[right_index], op_identity[right_index]);
+          } else {
+            fTarget = &fTn[right_index];
+            norm = core::FinishCorrelation_density_CTM(
+                correlation_norm, C2[right_index], C3[right_index],
+                eTt[right_index], eTr[right_index], eTb[right_index],
+                reduced[right_index], op_identity[right_index]);
+          }
+          for (auto right_ilop : r_ops[left_ilop]) {
+            int right_op_index = siteoperator_index(right_index, right_ilop);
+            if (right_op_index < 0) {
+              continue;
+            }
+            const auto right_op = onesite_operators[right_op_index].op;
+            tensor_type val = 0.0;
+            const auto pA = onesite_parity[left_op_index];
+            const auto pB = onesite_parity[right_op_index];
+            if (pA == pB) {
+              channel.vt = tenes::fermion::relay_product_target(
+                  right_op, finfo.phys[right_index], left_odd);
+              auto target = fermion_correlation_site(
+                  *fTarget, tenes::fermion::relay_role::target,
+                  vertical ? 3 : 0, -1, channel, vertical);
+              if (meanfield_env) {
+                val =
+                    core::FinishCorrelation_density_CTM(
+                        correlation_T, delta_corner, delta_corner,
+                        target_cache->edge0, target_cache->edge1,
+                        target_cache->edge2, target, op_identity[right_index]) /
+                    norm;
+              } else if (vertical) {
+                val = core::FinishCorrelation_density_CTM(
+                          correlation_T, C1[right_index], C2[right_index],
+                          eTl[right_index], eTt[right_index], eTr[right_index],
+                          target, op_identity[right_index]) /
+                      norm;
+              } else {
+                val = core::FinishCorrelation_density_CTM(
+                          correlation_T, C2[right_index], C3[right_index],
+                          eTt[right_index], eTr[right_index], eTb[right_index],
+                          target, op_identity[right_index]) /
+                      norm;
+              }
+            }
+            correlations.push_back(Correlation{
+                left_index, vertical ? 0 : r + 1, vertical ? r + 1 : 0,
+                left_ilop, right_ilop, std::real(val), std::imag(val)});
+          }
+
+          if (meanfield_env) {
+            if (vertical) {
+              auto eTl_middle = delta_edge(
+                  static_cast<int>(Tn_vertical[right_index].shape()[0]));
+              auto eTr_middle = delta_edge(
+                  static_cast<int>(Tn_vertical[right_index].shape()[2]));
+              core::Transfer_density_CTM(correlation_T, eTl_middle, eTr_middle,
+                                         vertical_middle(right_index, channel));
+              core::Transfer_density_CTM(correlation_norm, eTl_middle,
+                                         eTr_middle,
+                                         vertical_reduced(right_index));
+            } else {
+              auto eTt_middle = delta_edge(
+                  static_cast<int>(Tn_horizontal[right_index].shape()[1]));
+              auto eTb_middle = delta_edge(
+                  static_cast<int>(Tn_horizontal[right_index].shape()[3]));
+              core::Transfer_density_CTM(
+                  correlation_T, eTt_middle, eTb_middle,
+                  horizontal_middle(right_index, channel));
+              core::Transfer_density_CTM(correlation_norm, eTt_middle,
+                                         eTb_middle,
+                                         horizontal_reduced(right_index));
+            }
+          } else if (vertical) {
+            core::Transfer_density_CTM(correlation_T, eTl[right_index],
+                                       eTr[right_index],
+                                       vertical_middle(right_index, channel));
+            core::Transfer_density_CTM(correlation_norm, eTl[right_index],
+                                       eTr[right_index],
+                                       reduced_vertical[right_index]);
+          } else {
+            core::Transfer_density_CTM(correlation_T, eTt[right_index],
+                                       eTb[right_index],
+                                       horizontal_middle(right_index, channel));
+            core::Transfer_density_CTM(correlation_norm, eTt[right_index],
+                                       eTb[right_index],
+                                       horizontal_reduced(right_index));
+          }
+        }
+      };
+
+      measure_direction(false);
+      measure_direction(true);
+    }
+  }
+
+  time_observable += timer.elapsed();
+  return correlations;
+}
+
+template <class ptensor>
+std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
   const bool is_tpo = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
+  if (finfo.enabled && !is_tpo) {
+    return measure_correlation_fermion(false);
+  }
+
+  Timer<> timer;
+  ScopedTimer scoped_timer("measure/correlation");
 
   const int nlops = num_onesite_operators;
   const int r_max = corparam.r_max;
@@ -170,7 +546,7 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
         int right_index = left_index;
         for (int r = 0; r < r_max; ++r) {
           right_index = lattice.top(right_index);
-          ptensor tn =
+          tn =
               is_tpo
                   ? transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4, 5))
                   : transpose(Tn[right_index], mptensor::Axes(3, 0, 1, 2, 4));
@@ -227,7 +603,6 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_ctm() {
 
 template <class ptensor>
 std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
-  ScopedTimer scoped_timer("measure/correlation");
   const bool is_tpo = peps_parameters.calcmode ==
                       PEPS_Parameters::CalculationMode::finite_temperature;
   if (is_tpo) {
@@ -235,7 +610,11 @@ std::vector<Correlation> iTPS<ptensor>::measure_correlation_mf() {
         "iTPS::measure_correlation_mf() is not implemented for finite "
         "temperature");
   }
+  if (finfo.enabled) {
+    return measure_correlation_fermion(true);
+  }
 
+  ScopedTimer scoped_timer("measure/correlation");
   Timer<> timer;
 
   const int nlops = num_onesite_operators;

@@ -332,7 +332,14 @@ class iTPS {
   void load_tensors();
 
  private:
-  //! Reject measurement requests unsupported by the fermionic CTM path.
+  /*! @brief Reject measurement requests unsupported by fermion measurement
+   *         paths.
+   *
+   *  In fermion mode this rejects mixed-parity one-site operators before
+   *  onesite/correlation measurements, and validates ops-form two-site
+   *  operator group indices before siteoperator_index() can dereference
+   *  site_ops_indices.
+   */
   void validate_fermion_ctm_measurement() const;
   //! Apply a one-site gate through the fermionic wrapper.
   void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);
@@ -391,6 +398,17 @@ class iTPS {
   std::vector<Correlation> measure_correlation_ctm();
   //! measure_correlation() with the mean-field environment.
   std::vector<Correlation> measure_correlation_mf();
+  /*!
+   * @brief Fermionic correlation-function path shared by CTM and
+   *        mean-field environments.
+   *
+   * Relays each definite-parity operator channel along the correlation
+   * chain. When @p meanfield_env is true, the tensors are dressed by the
+   * mean-field lambda weights and the chain is closed by a synthetic
+   * CHI = 1 delta environment; otherwise the stored CTM corners and edges
+   * close the chain.
+   */
+  std::vector<Correlation> measure_correlation_fermion(bool meanfield_env);
 
   static constexpr int nleg = 4;  //!< virtual legs per center tensor
 
@@ -439,6 +457,10 @@ class iTPS {
 
   //! Identity operator on the physical leg, per site.
   std::vector<tensor> op_identity;
+
+  //! Parity class of each one-site operator (same index as
+  //! onesite_operators); filled at construction in fermion mode.
+  std::vector<tenes::fermion::op_parity> onesite_parity;
 
   CorrelationParameter corparam;            //!< correlation-function settings
   TransferMatrix_Parameters tmatrix_param;  //!< correlation-length settings

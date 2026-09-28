@@ -556,8 +556,13 @@ parity = [0, 1]
         Operators<ptensor>{}, Operators<ptensor>{}, CorrelationParameter{}));
   }
 
-  SUBCASE("fermion rejects odd one-site operator") {
-    INFO("fermion rejects odd one-site operator");
+  // Task T2 of docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md
+  // (contract item 12): a parity-odd one-site operator (c, c+) used to be
+  // refused and is now accepted -- it measures exactly 0 on its own and is a
+  // factor of the ops form and the correlation functions. What is refused
+  // instead is an operator of mixed parity (design section 4.1).
+  SUBCASE("fermion accepts odd one-site operator and rejects mixed parity") {
+    INFO("fermion accepts odd one-site operator and rejects mixed parity");
     auto param_toml = parse_str(R"(
 [parameter]
 [parameter.general]
@@ -565,8 +570,7 @@ fermion = true
 )");
     // L_sub = [2, 2]: same reasoning as "fermion accepts mean-field
     // environment" above -- a 1x1 cell would trip the self-neighbour guard
-    // before the parity-odd one-site operator check this subcase is named
-    // for.
+    // before the one-site operator check this subcase is named for.
     auto tensor_toml = parse_str(R"(
 [tensor]
 L_sub = [2, 2]
@@ -576,13 +580,40 @@ physical_dim = 2
 virtual_dim = 2
 parity = [0, 1]
 )");
-    auto observable_toml = parse_str(R"(
+    // Group 0 is odd (c+), group 1 is odd (c), group 2 is even (n).
+    auto odd_toml = parse_str(R"(
+[observable]
+[[observable.onesite]]
+group = 0
+sites = []
+dim = 2
+elements = """
+0 1 1.0 0.0
+"""
+[[observable.onesite]]
+group = 1
+sites = []
+dim = 2
+elements = """
+1 0 1.0 0.0
+"""
+[[observable.onesite]]
+group = 2
+sites = []
+dim = 2
+elements = """
+1 1 1.0 0.0
+"""
+)");
+    // One element keeps the parity, one flips it.
+    auto mixed_toml = parse_str(R"(
 [observable]
 [[observable.onesite]]
 group = 0
 sites = [0]
 dim = 2
 elements = """
+0 0 1.0 0.0
 0 1 1.0 0.0
 """
 )");
@@ -590,18 +621,37 @@ elements = """
     SquareLattice lattice = gen_lattice(tensor_toml.at("tensor"));
     peps_parameters.phys_parity =
         gen_phys_parity(tensor_toml.at("tensor"), lattice);
-    auto onesite = load_operators<ptensor>(observable_toml, MPI_COMM_WORLD, 4,
-                                           1, 0.0, "observable.onesite");
-    CHECK_THROWS_AS(
-        validate_fermion_constraints(
-            peps_parameters, lattice, EvolutionOperators<ptensor>{},
-            EvolutionOperators<ptensor>{}, onesite, Operators<ptensor>{},
-            Operators<ptensor>{}, CorrelationParameter{}),
-        tenes::input_error);
+    auto odd = load_operators<ptensor>(odd_toml, MPI_COMM_WORLD, 4, 1, 0.0,
+                                       "observable.onesite");
+    REQUIRE(odd.size() == 12);
+    CHECK_NOTHROW(validate_fermion_constraints(
+        peps_parameters, lattice, EvolutionOperators<ptensor>{},
+        EvolutionOperators<ptensor>{}, odd, Operators<ptensor>{},
+        Operators<ptensor>{}, CorrelationParameter{}));
+
+    auto mixed = load_operators<ptensor>(mixed_toml, MPI_COMM_WORLD, 4, 1, 0.0,
+                                         "observable.onesite");
+    try {
+      validate_fermion_constraints(
+          peps_parameters, lattice, EvolutionOperators<ptensor>{},
+          EvolutionOperators<ptensor>{}, mixed, Operators<ptensor>{},
+          Operators<ptensor>{}, CorrelationParameter{});
+      FAIL_CHECK("a mixed-parity one-site operator was accepted");
+    } catch (const tenes::input_error &e) {
+      INFO("message: " << std::string(e.what()));
+      CHECK(std::string(e.what()).find("mixed parity") != std::string::npos);
+    }
   }
 
-  SUBCASE("fermion odd operator is rejected through itps_main load path") {
-    INFO("fermion odd operator is rejected through itps_main load path");
+  // Task T2 (contract item 12): the odd one-site operator of this subcase is
+  // accepted now, so the load path is exercised with a mixed-parity one,
+  // which is what the guard refuses instead.
+  SUBCASE(
+      "fermion mixed-parity operator is rejected through itps_main load "
+      "path") {
+    INFO(
+        "fermion mixed-parity operator is rejected through itps_main load "
+        "path");
     const std::string input_filename =
         "test_input_fermion_odd_operator_main_path.toml";
     const std::string outdir =
@@ -610,7 +660,7 @@ elements = """
       std::ofstream ofs(input_filename);
       // L_sub = [2, 2]: a 1x1 cell trips the self-neighbour guard
       // (docs/superpowers/specs/2026-09-11-fermion-skew-guard-contract.md
-      // section 2.1) before reaching the parity-odd one-site operator check
+      // section 2.1) before reaching the one-site operator parity check
       // this subcase exercises; a single site definition broadcast via
       // index = [] keeps this a minimal fixture while clearing that guard.
       ofs << R"(
@@ -631,11 +681,12 @@ parity = [0, 1]
 
 [observable]
 [[observable.onesite]]
-name = "odd"
+name = "mixed"
 group = 0
 sites = [0]
 dim = 2
 elements = """
+0 0 1.0 0.0
 0 1 1.0 0.0
 """
 
@@ -645,10 +696,10 @@ elements = """
 
     try {
       tenes::itps::itps_main(input_filename, MPI_COMM_WORLD, PrintLevel::none);
-      FAIL("fermion odd operator was accepted through itps_main");
+      FAIL("fermion mixed-parity operator was accepted through itps_main");
     } catch (const tenes::input_error &e) {
-      CHECK(std::string(e.what()).find("parity-odd one-site operators") !=
-            std::string::npos);
+      INFO("message: " << std::string(e.what()));
+      CHECK(std::string(e.what()).find("mixed parity") != std::string::npos);
     }
     std::remove(input_filename.c_str());
   }

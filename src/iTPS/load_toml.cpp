@@ -29,6 +29,7 @@
 
 #include "../arpack_solver.hpp"
 #include "../exception.hpp"
+#include "../fermion/parity.hpp"
 #include "../util/read_tensor.hpp"
 #include "../util/string.hpp"
 #include "../tensor.hpp"
@@ -593,8 +594,21 @@ std::vector<std::vector<bool>> two_site_parity(
   return {phys[site0], phys[site1], phys[site0], phys[site1]};
 }
 
-bool is_nearest_neighbor_displacement(int dx, int dy) {
-  return std::abs(dx) + std::abs(dy) == 1;
+bool is_inside_fermion_measure_window(int dx, int dy) {
+  return !(dx == 0 && dy == 0) && std::abs(dx) <= 3 && std::abs(dy) <= 3;
+}
+
+//! Find the one-site operator for an ops-form fermion observable factor.
+template <class tensor>
+const Operator<tensor> &find_onesite_operator(
+    const Operators<tensor> &onesite_operators, int site, int group) {
+  for (const auto &op : onesite_operators) {
+    if (op.source_site == site && op.group == group) {
+      return op;
+    }
+  }
+  throw_fermion_guard("ops form referring to a missing one-site operator");
+  throw std::logic_error("unreachable");
 }
 }  // namespace
 
@@ -653,9 +667,6 @@ void validate_fermion_constraints(
   if (peps_parameters.Use_RSVD) {
     throw_fermion_guard("Use_RSVD=true");
   }
-  if (corparam.r_max > 0) {
-    throw_fermion_guard("correlation.r_max > 0");
-  }
   if (!multisite_operators.empty()) {
     throw_fermion_guard("multisite operators");
   }
@@ -671,20 +682,52 @@ void validate_fermion_constraints(
   }
 
   for (const auto &op : onesite_operators) {
-    if (has_odd_tensor_element(
-            op.op,
-            one_site_parity(peps_parameters.phys_parity, op.source_site))) {
-      throw_fermion_guard("parity-odd one-site operators");
+    if (tenes::fermion::operator_parity(
+            op.op, peps_parameters.phys_parity[op.source_site]) ==
+        tenes::fermion::op_parity::mixed) {
+      throw_fermion_guard("mixed parity one-site operators");
+    }
+  }
+  int num_onesite_groups = 0;
+  for (const auto &op : onesite_operators) {
+    num_onesite_groups = std::max(num_onesite_groups, op.group + 1);
+  }
+  for (auto [left_group, right_group] : corparam.operators) {
+    if (left_group < 0 || right_group < 0) {
+      throw_fermion_guard("correlation operators with negative indices");
+    }
+    if (left_group >= num_onesite_groups || right_group >= num_onesite_groups) {
+      throw_fermion_guard("correlation operators outside one-site groups");
     }
   }
   for (const auto &op : twosite_operators) {
-    if (!op.dx.empty() &&
-        !is_nearest_neighbor_displacement(op.dx[0], op.dy[0])) {
-      throw_fermion_guard("distance-2-or-longer two-site operators");
+    if (!op.dx.empty()) {
+      if (op.dx[0] == 0 && op.dy[0] == 0) {
+        throw_fermion_guard("same-site two-site observables");
+      }
+      if (!is_inside_fermion_measure_window(op.dx[0], op.dy[0])) {
+        throw_fermion_guard("two-site observables outside the 4x4 window");
+      }
     }
     if (!op.ops_indices.empty()) {
-      throw_fermion_guard(
-          "two-site observables in the ops form; write them out as elements");
+      const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+      const auto &op0 = find_onesite_operator(onesite_operators, op.source_site,
+                                              op.ops_indices[0]);
+      const auto &op1 =
+          find_onesite_operator(onesite_operators, site1, op.ops_indices[1]);
+      const auto p0 = tenes::fermion::operator_parity(
+          op0.op, peps_parameters.phys_parity[op.source_site]);
+      const auto p1 = tenes::fermion::operator_parity(
+          op1.op, peps_parameters.phys_parity[site1]);
+      if (p0 == tenes::fermion::op_parity::mixed ||
+          p1 == tenes::fermion::op_parity::mixed) {
+        throw_fermion_guard("mixed parity one-site operators in ops form");
+      }
+      if (p0 != p1) {
+        throw_fermion_guard(
+            "ops form with one-site operators of different parity");
+      }
+      continue;
     }
     const int site1 = lattice.other(op.source_site, op.dx[0], op.dy[0]);
     if (has_odd_tensor_element(

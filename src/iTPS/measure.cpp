@@ -37,29 +37,76 @@ namespace tenes::itps {
 
 template <class ptensor>
 void iTPS<ptensor>::validate_fermion_ctm_measurement() const {
-  if (!finfo.enabled || peps_parameters.MeanField_Env) {
+  if (!finfo.enabled) {
     return;
   }
 
-  bool has_non_nearest_twosite = false;
+  for (const auto parity : onesite_parity) {
+    if (parity == tenes::fermion::op_parity::mixed) {
+      throw tenes::input_error(
+          "fermion measurement contains mixed parity one-site operators");
+    }
+  }
+
   for (const auto &op : twosite_operators) {
     const int abs_dx = std::abs(op.dx[0]);
     const int abs_dy = std::abs(op.dy[0]);
-    const bool is_nearest_neighbor =
-        (abs_dx == 1 && abs_dy == 0) || (abs_dx == 0 && abs_dy == 1);
-    // A same-site pair falls through to the raw-Tn path in measure_twosite(),
-    // which would mix it with the reduced CTM environment and silently return
-    // an incorrect result.
-    if (!is_nearest_neighbor) {
-      has_non_nearest_twosite = true;
-      break;
+    if (op.dx[0] == 0 && op.dy[0] == 0) {
+      throw tenes::input_error(
+          "fermion measurement does not support same-site two-site "
+          "observables");
+    }
+    if (abs_dx > 3 || abs_dy > 3) {
+      throw tenes::input_error(
+          "fermion measurement supports two-site observables only inside "
+          "a 4x4 window");
+    }
+    if (!op.ops_indices.empty()) {
+      if (op.ops_indices[0] < 0 || op.ops_indices[1] < 0) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to negative one-site "
+            "operator indices");
+      }
+      if (op.ops_indices[0] >= num_onesite_operators ||
+          op.ops_indices[1] >= num_onesite_operators) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to one-site operator "
+            "indices outside one-site groups");
+      }
+      const int target_site = lattice.other(op.source_site, op.dx[0], op.dy[0]);
+      const int opA_index =
+          siteoperator_index(op.source_site, op.ops_indices[0]);
+      const int opB_index = siteoperator_index(target_site, op.ops_indices[1]);
+      if (opA_index < 0 || opB_index < 0) {
+        throw tenes::input_error(
+            "fermion measurement ops form refers to a missing one-site "
+            "operator");
+      }
+      const auto pA = onesite_parity[opA_index];
+      const auto pB = onesite_parity[opB_index];
+      if (pA != pB) {
+        throw tenes::input_error(
+            "fermion measurement ops form combines one-site operators of "
+            "different parity");
+      }
     }
   }
-  if (has_non_nearest_twosite || !multisite_operators.empty() ||
-      corparam.r_max > 0) {
+  if (!multisite_operators.empty()) {
     throw tenes::input_error(
-        "fermion CTM measurement supports nearest-neighbor two-site "
-        "observables only");
+        "fermion measurement does not support multisite observables");
+  }
+  for (auto [left_group, right_group] : corparam.operators) {
+    if (left_group < 0 || right_group < 0) {
+      throw tenes::input_error(
+          "fermion measurement does not support correlation operators "
+          "with negative indices");
+    }
+    if (left_group >= num_onesite_operators ||
+        right_group >= num_onesite_operators) {
+      throw tenes::input_error(
+          "fermion measurement does not support correlation operators "
+          "outside one-site groups");
+    }
   }
 }
 

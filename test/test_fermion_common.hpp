@@ -141,6 +141,32 @@ struct iTPSTestAccessor {
   static SquareLattice const& lattice(iTPS<tensor>& state) {
     return state.lattice;
   }
+
+  //! The parity class of each one-site operator, same index as the
+  //! one-site operators the state was built with (task T2 of
+  //! docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md).
+  template <class tensor>
+  static std::vector<tenes::fermion::op_parity> const& onesite_parity(
+      iTPS<tensor>& state) {
+    return state.onesite_parity;
+  }
+
+  //! The correlation-length settings; measure() switches to_calculate off
+  //! in fermion mode (task T3 of
+  //! docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md).
+  template <class tensor>
+  static TransferMatrix_Parameters const& tmatrix_param(iTPS<tensor>& state) {
+    return state.tmatrix_param;
+  }
+
+  //! The measurement-side input guard (design section 5.1 of
+  //! docs/superpowers/specs/2026-09-25-fermion-longrange-measure-design.md),
+  //! callable on its own so that a test can see it reject an input before
+  //! the measurement would index past the end of a table.
+  template <class tensor>
+  static void validate_fermion_ctm_measurement(iTPS<tensor>& state) {
+    state.validate_fermion_ctm_measurement();
+  }
 };
 }  // namespace tenes::itps
 

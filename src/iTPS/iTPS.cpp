@@ -34,6 +34,7 @@ int omp_get_max_threads() { return 1; }
 #include "../tensor.hpp"
 
 #include "../operator.hpp"
+#include "../fermion/parity.hpp"
 #include "../fermion/reduced_measure.hpp"
 #include "../printlevel.hpp"
 #include "../timer.hpp"
@@ -448,6 +449,14 @@ iTPS<tensor>::iTPS(MPI_Comm comm_, PEPS_Parameters peps_parameters_,
   for (int i = 0; i < static_cast<int>(onesite_operators.size()); ++i) {
     auto const &op = onesite_operators[i];
     site_ops_indices[op.source_site][op.group] = i;
+  }
+  if (finfo.enabled) {
+    onesite_parity.resize(onesite_operators.size());
+    for (std::size_t i = 0; i < onesite_operators.size(); ++i) {
+      auto const &op = onesite_operators[i];
+      onesite_parity[i] =
+          tenes::fermion::operator_parity(op.op, finfo.phys[op.source_site]);
+    }
   }
 }
 

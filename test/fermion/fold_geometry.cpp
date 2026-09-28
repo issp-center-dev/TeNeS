@@ -1171,10 +1171,6 @@ TEST_CASE(
 
 namespace {
 
-constexpr const char* fg_guard_message =
-    "fermion CTM measurement supports nearest-neighbor two-site observables "
-    "only";
-
 tenes::SquareLattice fg_guard_lattice() {
   tenes::SquareLattice lattice(2, 2);
   for (int site = 0; site < lattice.N_UNIT; ++site) {
@@ -1244,8 +1240,26 @@ void fg_guard_inject_state(tenes::itps::iTPS<tenes::real_tensor>& state,
 // tensors mismatch the fermionic reduced environment, and an mptensor
 // assert SIGABRTed the whole test binary. The guard was implemented on
 // 2026-08-28, so the cases now run unconditionally.
+//
+// Task T2 of docs/superpowers/plans/2026-09-25-fermion-longrange-measure.md
+// (contract item 12) lifts the distance restriction: T14a used to require
+// that a distance-2 observable be rejected and now requires that it be
+// measured. Its values are checked against the relay window in
+// test/fermion/longrange_measure.cpp; here it is the smoke test of the guard
+// no longer firing. The guard message "fermion CTM measurement supports
+// nearest-neighbor two-site observables only" is no longer true after T2, so
+// T14b and T14e, which keep their rejections, pin the exception type
+// (tenes::input_error) rather than that wording.
+//
+// Task T3 of the same plan lifts the correlation restriction in the CTM
+// environment: T14c used to require that r_max > 0 be rejected and now
+// requires that the correlation function be measured (its values are checked
+// in test/fermion/longrange_correlation.cpp). Task T5 does the same for the
+// mean-field environment: T14f used to require that r_max > 0 be rejected
+// there and now requires that it be measured (values checked in
+// test/fermion/longrange_mf.cpp).
 TEST_CASE(
-    "fold geometry T14a: fermion CTM rejects a distance-2 two-site "
+    "fold geometry T14a: fermion CTM measures a distance-2 two-site "
     "observable") {
   using tensor = tenes::real_tensor;
   const tenes::SquareLattice lattice = fg_guard_lattice();
@@ -1259,8 +1273,11 @@ TEST_CASE(
       tenes::itps::CorrelationParameter{},
       tenes::itps::TransferMatrix_Parameters{});
   fg_guard_inject_state(state, false);
-  CHECK_THROWS_WITH(state.measure_twosite(),
-                    doctest::Contains(fg_guard_message));
+  std::vector<std::map<tenes::itps::Bond, double>> measured;
+  REQUIRE_NOTHROW(measured = state.measure_twosite());
+  REQUIRE(measured.size() >= 1);
+  REQUIRE(measured[0].count(tenes::itps::Bond{0, 2, 0}) == 1);
+  CHECK(std::isfinite(measured[0].at(tenes::itps::Bond{0, 2, 0})));
 }
 
 TEST_CASE("fold geometry T14b: fermion CTM rejects a multisite observable") {
@@ -1287,12 +1304,11 @@ TEST_CASE("fold geometry T14b: fermion CTM rejects a multisite observable") {
       tenes::itps::CorrelationParameter{},
       tenes::itps::TransferMatrix_Parameters{});
   fg_guard_inject_state(state, false);
-  CHECK_THROWS_WITH(state.measure_multisite(),
-                    doctest::Contains(fg_guard_message));
+  CHECK_THROWS_AS(state.measure_multisite(), tenes::input_error);
 }
 
 TEST_CASE(
-    "fold geometry T14c: fermion CTM rejects correlation measurement with "
+    "fold geometry T14c: fermion CTM measures the correlation function with "
     "r_max > 0") {
   using tensor = tenes::real_tensor;
   const tenes::SquareLattice lattice = fg_guard_lattice();
@@ -1311,8 +1327,42 @@ TEST_CASE(
       tenes::Operators<tensor>{}, tenes::Operators<tensor>{}, corparam,
       tenes::itps::TransferMatrix_Parameters{});
   fg_guard_inject_state(state, false);
-  CHECK_THROWS_WITH(state.measure_correlation(),
-                    doctest::Contains(fg_guard_message));
+  std::vector<tenes::itps::Correlation> correlations;
+  REQUIRE_NOTHROW(correlations = state.measure_correlation());
+  // 4 left sites x 1 pair x r = 1, 2 x 2 directions.
+  CHECK(correlations.size() == 16);
+  for (const auto& c : correlations) {
+    CHECK(std::isfinite(c.real));
+  }
+}
+
+TEST_CASE(
+    "fold geometry T14f: fermion mean-field environment measures the "
+    "correlation function with r_max > 0") {
+  using tensor = tenes::real_tensor;
+  const tenes::SquareLattice lattice = fg_guard_lattice();
+  const auto params = fg_guard_params(true, "output_test_fold_geometry_t14f");
+  tenes::real_tensor number(mptensor::Shape(2, 2));
+  number.set_value(mptensor::Index(1, 1), 1.0);
+  tenes::Operators<tensor> onesite_ops;
+  for (int site = 0; site < lattice.N_UNIT; ++site) {
+    onesite_ops.emplace_back("n", 0, site, number);
+  }
+  const tenes::itps::CorrelationParameter corparam(
+      2, std::vector<std::tuple<int, int>>{{0, 0}});
+  tenes::itps::iTPS<tensor> state(
+      MPI_COMM_WORLD, params, lattice, tenes::EvolutionOperators<tensor>{},
+      tenes::EvolutionOperators<tensor>{}, onesite_ops,
+      tenes::Operators<tensor>{}, tenes::Operators<tensor>{}, corparam,
+      tenes::itps::TransferMatrix_Parameters{});
+  fg_guard_inject_state(state, true);
+  std::vector<tenes::itps::Correlation> correlations;
+  REQUIRE_NOTHROW(correlations = state.measure_correlation());
+  // 4 left sites x 1 pair x r = 1, 2 x 2 directions.
+  CHECK(correlations.size() == 16);
+  for (const auto& c : correlations) {
+    CHECK(std::isfinite(c.real));
+  }
 }
 
 TEST_CASE(
@@ -1358,8 +1408,7 @@ TEST_CASE(
       tenes::itps::CorrelationParameter{},
       tenes::itps::TransferMatrix_Parameters{});
   fg_guard_inject_state(state, false);
-  CHECK_THROWS_WITH(state.measure_twosite(),
-                    doctest::Contains(fg_guard_message));
+  CHECK_THROWS_AS(state.measure_twosite(), tenes::input_error);
 }
 
 // ---- addendum: doubled_pipeline with asymmetric bra/ket layers -------------
