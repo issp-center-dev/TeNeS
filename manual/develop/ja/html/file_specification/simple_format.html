@@ -480,8 +480,11 @@
 </tr>
 </tbody>
 </table>
-<p>物理量測定に使われる1サイト物理量として、 <span class="math notranslate nohighlight">\(n\)</span> が自動的に定義されます。
-また、2サイト物理量として、最近接ボンド上の <code class="docutils literal notranslate"><span class="pre">hopping</span></code> と <code class="docutils literal notranslate"><span class="pre">nn</span></code> が自動的に定義されます。</p>
+<p>物理量測定に使われる1サイト物理量として、 <code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">n</span></code>、 <code class="docutils literal notranslate"><span class="pre">1:</span> <span class="pre">cdag</span></code>、 <code class="docutils literal notranslate"><span class="pre">2:</span> <span class="pre">c</span></code> が自動的に定義されます。
+パリティ奇の <code class="docutils literal notranslate"><span class="pre">cdag</span></code> と <code class="docutils literal notranslate"><span class="pre">c</span></code> は <code class="docutils literal notranslate"><span class="pre">ops</span></code> 形式の2サイト物理量と相関関数で使えます。1サイト期待値としては常に 0 が出力されます。
+また、2サイト物理量として、最近接ボンド上の <code class="docutils literal notranslate"><span class="pre">hopping</span></code> と <code class="docutils literal notranslate"><span class="pre">nn</span></code> が自動的に定義されます。
+<code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> 自身が出力する2サイト物理量は最近接ボンド上のものだけです。
+長距離の2サイト物理量を測定する場合は、生成された <code class="docutils literal notranslate"><span class="pre">std.toml</span></code> に <code class="docutils literal notranslate"><span class="pre">[[observable.twosite]]</span></code> を追記してから <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> を実行してください。</p>
 </section>
 <section id="hubbard-hubbard">
 <h3>Hubbard 模型 hubbard<a class="headerlink" href="#hubbard-hubbard" title="Link to this heading">¶</a></h3>
@@ -552,11 +555,16 @@
 </tr>
 </tbody>
 </table>
-<p>物理量測定に使われる1サイト物理量として、 <span class="math notranslate nohighlight">\(n\)</span>, <span class="math notranslate nohighlight">\(n_\uparrow\)</span>, <span class="math notranslate nohighlight">\(n_\downarrow\)</span>, <span class="math notranslate nohighlight">\(S^z\)</span>, doublon, holon が自動的に定義されます。
+<p>物理量測定に使われる1サイト物理量として、 <code class="docutils literal notranslate"><span class="pre">0:</span> <span class="pre">n</span></code>、 <code class="docutils literal notranslate"><span class="pre">1:</span> <span class="pre">n_up</span></code>、 <code class="docutils literal notranslate"><span class="pre">2:</span> <span class="pre">n_dn</span></code>、 <code class="docutils literal notranslate"><span class="pre">3:</span> <span class="pre">Sz</span></code>、 <code class="docutils literal notranslate"><span class="pre">4:</span> <span class="pre">doublon</span></code>、 <code class="docutils literal notranslate"><span class="pre">5:</span> <span class="pre">holon</span></code>、 <code class="docutils literal notranslate"><span class="pre">6:</span> <span class="pre">cdag_up</span></code>、 <code class="docutils literal notranslate"><span class="pre">7:</span> <span class="pre">c_up</span></code>、 <code class="docutils literal notranslate"><span class="pre">8:</span> <span class="pre">cdag_dn</span></code>、 <code class="docutils literal notranslate"><span class="pre">9:</span> <span class="pre">c_dn</span></code> が自動的に定義されます。
+パリティ奇の <code class="docutils literal notranslate"><span class="pre">cdag_up</span></code>、 <code class="docutils literal notranslate"><span class="pre">c_up</span></code>、 <code class="docutils literal notranslate"><span class="pre">cdag_dn</span></code>、 <code class="docutils literal notranslate"><span class="pre">c_dn</span></code> は <code class="docutils literal notranslate"><span class="pre">ops</span></code> 形式の2サイト物理量と相関関数で使えます。1サイト期待値としては常に 0 が出力されます。
 また、2サイト物理量として、最近接ボンド上の <code class="docutils literal notranslate"><span class="pre">hopping</span></code>、 <code class="docutils literal notranslate"><span class="pre">nn</span></code>、 <code class="docutils literal notranslate"><span class="pre">SzSz</span></code>、 <code class="docutils literal notranslate"><span class="pre">SxSx</span></code>、 <code class="docutils literal notranslate"><span class="pre">SySy</span></code> が自動的に定義されます。
 スピン演算子は <span class="math notranslate nohighlight">\(S^\alpha = \frac{1}{2}\sum_{ss'} c^\dagger_s \sigma^\alpha_{ss'} c_{s'}\)</span> です。
-<code class="docutils literal notranslate"><span class="pre">density.dat</span></code> の2サイト物理量はサイトあたりの値(ボンドの和をサイト数で割ったもの)なので、正方格子では最近接ボンド1本あたりの相関の2倍になります。</p>
-<p>フェルミオン模型は現行版では正方格子の最近接ボンドのみをサポートします。</p>
+<code class="docutils literal notranslate"><span class="pre">density.dat</span></code> の2サイト物理量はサイトあたりの値(ボンドの和をサイト数で割ったもの)なので、正方格子では最近接ボンド1本あたりの相関の2倍になります。
+<code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> 自身が出力する2サイト物理量は最近接ボンド上のものだけです。
+長距離の2サイト物理量を測定する場合は、生成された <code class="docutils literal notranslate"><span class="pre">std.toml</span></code> に <code class="docutils literal notranslate"><span class="pre">[[observable.twosite]]</span></code> を追記してから <code class="docutils literal notranslate"><span class="pre">tenes_std</span></code> を実行してください。</p>
+<p>フェルミオン模型のハミルトニアンは、現行版では正方格子の最近接ボンドのみをサポートします。
+CTM 環境では、2サイト物理量は 4 x 4 の窓(<code class="docutils literal notranslate"><span class="pre">|dx|</span> <span class="pre">&lt;=</span> <span class="pre">3</span></code> かつ <code class="docutils literal notranslate"><span class="pre">|dy|</span> <span class="pre">&lt;=</span> <span class="pre">3</span></code>)で測定でき、明示的な <code class="docutils literal notranslate"><span class="pre">elements</span></code> 形式と <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[A,</span> <span class="pre">B]</span></code> 形式のどちらも使えます。
+<code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> でも同じ長距離2サイト物理量と相関関数を使えます。この場合、測定窓の外側は simple update の <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じる平均場近似になります。</p>
 </section>
 </section>
 <section id="lattice">
@@ -656,7 +664,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </div></blockquote>
 </li>
 </ul>
-<p>フェルミオン模型は正方格子の最近接ボンドのみをサポートします。</p>
+<p>フェルミオン模型では、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> が扱うハミルトニアンボンドは正方格子の最近接ボンドです。</p>
 <section id="square-lattice">
 <h3>正方格子 square lattice<a class="headerlink" href="#square-lattice" title="Link to this heading">¶</a></h3>
 <p>正方格子 <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;square</span> <span class="pre">lattice&quot;</span></code> では、 サイトが <span class="math notranslate nohighlight">\((1,0)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">L</span></code> 個、 <span class="math notranslate nohighlight">\((0,1)\)</span> 方向に <code class="docutils literal notranslate"><span class="pre">W</span></code> 個並びます。
@@ -865,12 +873,12 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 </div></blockquote>
 </li>
 <li><p>サイト <strong>間</strong> の交換符号(2次元幾何由来のものを含む)はすべて TeNeS が生成します。ユーザーが与えるのは上記の符号込み局所行列のみです</p></li>
-<li><p>演算子・時間発展ゲートはフェルミオンパリティを保存する必要があり、パリティ奇の演算子は入力読み込み時にエラーになります</p>
+<li><p>時間発展ゲートと2サイト演算子はフェルミオンパリティを保存する必要があります。1サイト観測量はパリティ奇でも定義できますが、その1サイト期待値は厳密に 0 になります。パリティ奇の1サイト演算子は、 <code class="docutils literal notranslate"><span class="pre">ops</span></code> 形式の2サイト物理量や <code class="docutils literal notranslate"><span class="pre">[correlation]</span></code> の因子として使えます</p>
 <ul class="simple">
-<li><p>例えば1粒子生成消滅演算子の期待値計算はできません。</p></li>
+<li><p>例えば1粒子生成消滅演算子の期待値は 0 として出力されます。</p></li>
 </ul>
 </li>
-<li><p>現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。 <code class="docutils literal notranslate"><span class="pre">Use_RSVD</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Simple_Gauge_Fix</span></code> 、有限温度計算、実時間発展、マルチサイト演算子、 <code class="docutils literal notranslate"><span class="pre">ops</span></code> 形式2サイト観測量、距離2以上の2サイト演算子、サイトが自分自身と最近接になるユニットセル(<code class="docutils literal notranslate"><span class="pre">LX</span> <span class="pre">=</span> <span class="pre">1</span></code> 、または <code class="docutils literal notranslate"><span class="pre">LY</span> <span class="pre">=</span> <span class="pre">1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">skew</span> <span class="pre">=</span> <span class="pre">0</span></code>)、相関関数は非対応で、入力読み込み時にエラーになります。相関長も非対応で、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> はフェルミオン模型に対する <code class="docutils literal notranslate"><span class="pre">[correlation_length]</span></code> をエラーとし、ソルバーは測定時に警告を出して測定を無効化します</p></li>
+<li><p>現バージョンでは基底状態計算(simple update および full update)に対応しています。simple update の環境は CTM または平均場、full update は CTM 環境のみです。2サイト物理量は明示的な <code class="docutils literal notranslate"><span class="pre">elements</span></code> 形式と <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[A,</span> <span class="pre">B]</span></code> 形式のどちらでも指定でき、4 x 4 の窓(<code class="docutils literal notranslate"><span class="pre">|dx|</span> <span class="pre">&lt;=</span> <span class="pre">3</span></code> かつ <code class="docutils literal notranslate"><span class="pre">|dy|</span> <span class="pre">&lt;=</span> <span class="pre">3</span></code>)で測定できます。 <code class="docutils literal notranslate"><span class="pre">[correlation]</span></code> も利用でき、左または下の演算子を <span class="math notranslate nohighlight">\(A\)</span> とした <span class="math notranslate nohighlight">\(\langle A_s B_t\rangle\)</span> を出力します。パリティが異なる演算子の組は 0 として出力されます。 <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> での長距離2サイト物理量と相関関数は、測定窓または相関鎖の外側を simple update の <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じて評価します。 <code class="docutils literal notranslate"><span class="pre">Use_RSVD</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Simple_Gauge_Fix</span></code> 、有限温度計算、実時間発展、マルチサイト演算子、サイトが自分自身と最近接になるユニットセル(<code class="docutils literal notranslate"><span class="pre">LX</span> <span class="pre">=</span> <span class="pre">1</span></code> 、または <code class="docutils literal notranslate"><span class="pre">LY</span> <span class="pre">=</span> <span class="pre">1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">skew</span> <span class="pre">=</span> <span class="pre">0</span></code>)、長距離ハミルトニアンボンドは非対応で、入力読み込み時にエラーになります。相関長も非対応で、 <code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> はフェルミオン模型に対する <code class="docutils literal notranslate"><span class="pre">[correlation_length]</span></code> をエラーとし、ソルバーは測定時に警告を出して測定を無効化します</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">iszero_tol</span></code></p>
@@ -1146,7 +1154,7 @@ TeNeS では波動関数を正方格子状に並べられたテンソルによ�
 <td><p>2.0</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">meanfield_env</span></code></p></td>
-<td><p>CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、2サイト観測量は単層縮約で評価されるため CTM 版より大幅に軽いが、精度は simple update 相当</p></td>
+<td><p>CTM ではなく simple update で得られる平均場環境を用いる。フェルミオン系でも使用でき、測定窓または相関鎖の外側を simple update の lambda で閉じて評価するため CTM 版より大幅に軽いが、精度は simple update 相当</p></td>
 <td><p>真偽値</p></td>
 <td><p>false</p></td>
 </tr>
@@ -1208,7 +1216,10 @@ dimension = 9 # CHI
 <section id="correlation">
 <h2><span class="section-number">5.2.4. </span><code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクション<a class="headerlink" href="#correlation" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">tenes_simple</span></code> では相関関数 <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">=</span> <span class="pre">&lt;A(0)B(r)&gt;</span></code> はデフォルトでは計算されません。
-相関関数を計算したい場合は、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルで指定する <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションと共通のフォーマットで指定することができます。詳細は、<a class="reference internal" href="expert_format.html"><span class="doc">tenes の入力ファイル</span></a> の <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションをご覧ください。</p>
+相関関数を計算したい場合は、 <code class="docutils literal notranslate"><span class="pre">tenes</span></code> の入力ファイルで指定する <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションと共通のフォーマットで指定することができます。詳細は、<a class="reference internal" href="expert_format.html"><span class="doc">tenes の入力ファイル</span></a> の <code class="docutils literal notranslate"><span class="pre">correlation</span></code> セクションをご覧ください。
+フェルミオンのスピンレス模型で <code class="docutils literal notranslate"><span class="pre">operators</span></code> を省略すると <code class="docutils literal notranslate"><span class="pre">[[0,</span> <span class="pre">0],</span> <span class="pre">[1,</span> <span class="pre">2]]</span></code> が使われます。
+フェルミオン Hubbard 模型では <code class="docutils literal notranslate"><span class="pre">[[0,</span> <span class="pre">0],</span> <span class="pre">[1,</span> <span class="pre">1],</span> <span class="pre">[2,</span> <span class="pre">2],</span> <span class="pre">[3,</span> <span class="pre">3],</span> <span class="pre">[4,</span> <span class="pre">4],</span> <span class="pre">[5,</span> <span class="pre">5],</span> <span class="pre">[6,</span> <span class="pre">7],</span> <span class="pre">[8,</span> <span class="pre">9]]</span></code> が使われます。
+フェルミオンの相関関数は CTM 環境と <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> の両方で使えます。平均場の場合は、相関鎖の外側を simple update の <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じる近似です。パリティが異なる演算子の組は 0 として出力されます。</p>
 </section>
 <section id="correlation-length">
 <h2><span class="section-number">5.2.5. </span><code class="docutils literal notranslate"><span class="pre">correlation_length</span></code> セクション<a class="headerlink" href="#correlation-length" title="Link to this heading">¶</a></h2>

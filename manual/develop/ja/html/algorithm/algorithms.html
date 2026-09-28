@@ -85,6 +85,7 @@
 <p>のように表わされ、同様に最近接相関 <span class="math notranslate nohighlight">\(\langle \Psi|S^z_iS^z_{i+1}|\Psi\rangle\)</span> は</p>
 <img alt="../_images/SzSz.png" class="align-center" src="../_images/SzSz.png" />
 <p>と表現することができます。また、ダイアグラムの２番目の表記を用いることで、任意の２サイト演算子の期待値も計算できることがわかります。このようなダイグラムを任意の演算子に対して描くことは可能ですが、クラスターが大きくなるとその縮約計算に必要となる計算コストが莫大になることに注意してください。</p>
+<p>フェルミオン系で CTM 環境を用いる長距離2サイト測定では、2サイト演算子を graded SVD のチャネルに分解します。各チャネルは1次元の補助脚 <span class="math notranslate nohighlight">\(\kappa\)</span> を持ち、この脚を2サイト間の仮想ボンドに沿ってリレーします。実装では、窓の中でこの脚を受け渡し、各辺で交差符号と仮想ボンドの向きに由来する符号を掛けたうえで、bra 層と ket 層を通常の CTM 縮約に折りたたみます。相関関数では同じチャネルの考え方を用いつつ、 <span class="math notranslate nohighlight">\(A_s B_t\)</span> を左右の1サイト因子に分解し、 <span class="math notranslate nohighlight">\(\kappa\)</span> 脚をリレーした転送鎖として伸ばします。</p>
 <p>局所磁化のダイアグラムから演算子 <span class="math notranslate nohighlight">\(S^z_i\)</span> を取り除き、2本の物理脚を縮約せずに残すと、そのサイトの1サイト縮約密度行列 <span class="math notranslate nohighlight">\(\rho_i\)</span> が得られます。任意の1サイト演算子の期待値は <span class="math notranslate nohighlight">\(\mathrm{Tr} (\rho_i O) / \mathrm{Tr} \rho_i\)</span> として <span class="math notranslate nohighlight">\(\rho_i\)</span> から得られるため、TeNeS では <span class="math notranslate nohighlight">\(\rho_i\)</span> 自体も全サイトについて出力しています（ <code class="docutils literal notranslate"><span class="pre">onesite_density_matrix.dat</span></code> ）。規格化していないので、そのトレースは波動関数のノルム <span class="math notranslate nohighlight">\(\langle \Psi | \Psi \rangle\)</span> そのものになっています。この <span class="math notranslate nohighlight">\(\rho_i\)</span> は、上で述べた収束判定にも用いられます。フェルミオン系で CTM 環境を用いる場合、環境は窓ごとに異なる全体位相を持つため、収束判定では <span class="math notranslate nohighlight">\(\rho_i\)</span> をそのトレースの位相で割ってから比較し、出力される <span class="math notranslate nohighlight">\(\rho_i\)</span> も同じように正規化されます(トレースは <span class="math notranslate nohighlight">\(|\langle \Psi | \Psi \rangle|\)</span> になります)。</p>
 </section>
 <section id="id3">
@@ -132,7 +133,8 @@
 <p>このダイアグラムでは、 <span class="math notranslate nohighlight">\(\lambda_i\)</span> は非負の対角行列を表していて、これはボンド <span class="math notranslate nohighlight">\(i\)</span> の先にある無視した環境を表わす平均場だと考えることができます。 <span class="math notranslate nohighlight">\(\lambda_i\)</span> の具体的な定義は後で与えられます。 このダイアグラムが表わす最適化問題は、テンソル二つと虚時間発展演算子一つが一体となった行列の低ランク近似と見做すことができるため、SVDを用いて解くことができます。この手続きは、ダイアグラムを用いて、</p>
 <img alt="../_images/Simple_update.png" class="align-center" src="../_images/Simple_update.png" />
 <p>と表すことができます。計算途中のSVDで出てきた行列の特異値は、次のステップでの平均場 <span class="math notranslate nohighlight">\(\lambda\)</span> として利用されます。Simple update法の計算コストは、行列を構成する前にQR分解を行うことで、 <span class="math notranslate nohighlight">\(O(D^{5})\)</span> になります <a class="reference internal" href="#ref-qr"><span class="std std-ref">[QR]</span></a> 。したがって、simple update法はfull update法よりもずっと計算コストが軽くなっています。</p>
-<p>ただし、simple update法はfull update法よりも計算コストが小さいですが、simple update法は初期状態依存性が強く、また、最終結果の局所磁化の大きさを過剰評価する問題が知られています。したがって、未知の問題に適用する場合には、得られた結果を慎重に検証する必要があります。</p>
+<p>ただし、simple update法はfull update法よりも計算コストが小さいですが、simple update法は初期状態依存性が強く、また、最終結果の局所磁化の大きさを過剰評価する問題が知られています。したがって、未知の問題に適用する場合には、得られた結果を慎重に検証する必要があります。
+<code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> で物理量を測定する場合、TeNeS は測定するボンド、窓、または相関鎖の外側をこれらの <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じます。そのため、結果は CTM 縮約ではなく平均場近似になります。</p>
 </section>
 <section id="id4">
 <h2><span class="section-number">6.4. </span>iTPSを用いた実時間発展<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h2>

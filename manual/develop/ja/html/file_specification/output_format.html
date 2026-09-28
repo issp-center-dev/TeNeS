@@ -191,6 +191,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 <section id="twosite-obs-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <p>twosite 演算子の期待値が出力されます。
+フェルミオン系では、2サイト物理量は 4 x 4 の窓を扱え、 <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[A,</span> <span class="pre">B]</span></code> 形式からも構成できます。出力値は source サイトと target サイトに置いた演算子の期待値です。 <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> での長距離値は、測定窓の外側を simple update の <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じて評価します。
 各行6列からなります。</p>
 <ol class="arabic simple">
 <li><p>twosite 演算子の識別番号</p></li>
@@ -242,6 +243,7 @@ SySy             = -1.12817627661272438e-05  4.76468712680822333e-21
 <section id="correlation-dat">
 <h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Link to this heading">¶</a></h3>
 <p>相関関数 <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> が出力されます。
+フェルミオン系では <span class="math notranslate nohighlight">\(\langle A_s B_t\rangle\)</span> を出力します。水平方向では左のサイト、垂直方向では下のサイトにある演算子を <span class="math notranslate nohighlight">\(A\)</span> とします。フェルミオンパリティが異なる1サイト演算子の組は 0 として出力されます。フェルミオンの相関関数は <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code> でも利用でき、この場合は相関鎖に垂直な方向を simple update の <span class="math notranslate nohighlight">\(\lambda\)</span> で閉じます。
 各行7列から構成されます。</p>
 <ol class="arabic simple">
 <li><p>左演算子の識別番号 <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>

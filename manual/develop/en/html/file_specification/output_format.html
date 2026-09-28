@@ -197,6 +197,7 @@ Each row consists of five columns.</p>
 <h3><code class="docutils literal notranslate"><span class="pre">twosite_obs.dat</span></code><a class="headerlink" href="#twosite-obs-dat" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>Expectation values for two-site operations are outputted.</p></li>
+<li><p>In fermion mode, two-site observables may cover the 4 x 4 window and may be built from <code class="docutils literal notranslate"><span class="pre">ops</span> <span class="pre">=</span> <span class="pre">[A,</span> <span class="pre">B]</span></code>. The value is the expectation value of the operator on the source site and the target site. With <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code>, longer-distance values are evaluated by closing the outside of the window with the simple-update <span class="math notranslate nohighlight">\(\lambda\)</span> weights.</p></li>
 <li><p>Each row consists of six columns.</p>
 <ol class="arabic simple">
 <li><p>Index of the two-site operator</p></li>
@@ -267,6 +268,7 @@ Each row consists of five columns.</p>
 <h3><code class="docutils literal notranslate"><span class="pre">correlation.dat</span></code><a class="headerlink" href="#correlation-dat" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Correlation functions <span class="math notranslate nohighlight">\(C^{\alpha \beta}_i(x,y) \equiv \langle \hat{A}^\alpha(x_i,y_i) \hat{A}^\beta(x_i+x,y_i+y) \rangle\)</span> are outputted.</p></li>
+<li><p>In fermion mode, this is <span class="math notranslate nohighlight">\(\langle A_s B_t\rangle\)</span>, where <span class="math notranslate nohighlight">\(A\)</span> is on the left site for horizontal correlations and on the lower site for vertical correlations. Pairs of one-site operators with different fermion parity are output as zero. Fermionic correlation functions are also available with <code class="docutils literal notranslate"><span class="pre">meanfield_env</span> <span class="pre">=</span> <span class="pre">true</span></code>; this uses the simple-update <span class="math notranslate nohighlight">\(\lambda\)</span> weights to close the directions transverse to the correlation chain.</p></li>
 <li><p>Each row consists of seven columns.</p>
 <ol class="arabic simple">
 <li><p>Index of the left operator <span class="math notranslate nohighlight">\(\alpha\)</span></p></li>
