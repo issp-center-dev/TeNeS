@@ -214,6 +214,11 @@ struct EvolutionOperator {
   int source_leg;   //!< bond direction from source_site; -1 for one-site
   int group;        //!< evolution-operator group this gate belongs to
   tensor op;        //!< gate elements: (in, out) or (in1, in2, out1, out2)
+  //! Fermion mode only: parity ledgers of the legs (in1, in2, out1, out2)
+  //! of a two-site gate, or (in, out) of a one-site gate, in the orientation
+  //! of the input (1 = source). Filled by infer_fermion_gate_ledgers();
+  //! empty in bosonic runs.
+  std::vector<std::vector<bool>> fermion_legs;
 
   //! Prefer the make_*_EvolutionOperator() factories, which validate.
   EvolutionOperator(int source_site, int source_leg, int group,

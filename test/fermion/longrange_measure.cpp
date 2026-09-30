@@ -2030,11 +2030,18 @@ struct lr_guard_input {
     twosite.emplace_back("ops", 0, 0, dx, dy, std::vector<int>{i, j});
   }
 
+  //! The load-time checks of main.cpp. Task T2 of
+  //! docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md moves
+  //! the gate checks (an odd one-site gate, for T2-1i) from
+  //! validate_fermion_constraints to infer_fermion_gate_ledgers. Every input
+  //! here has at most one defect, so the order of the two calls does not
+  //! change which one refuses it.
   void validate() const {
+    tenes::EvolutionOperators<lr_gtensor> simple = simple_updates;
+    tenes::EvolutionOperators<lr_gtensor> full;
     tenes::itps::validate_fermion_constraints(
-        params, lattice, simple_updates,
-        tenes::EvolutionOperators<lr_gtensor>{}, onesite, twosite, multisite,
-        corparam);
+        params, lattice, simple, full, onesite, twosite, multisite, corparam);
+    tenes::itps::infer_fermion_gate_ledgers(params, lattice, simple, full);
   }
 };
 
@@ -2208,7 +2215,7 @@ TEST_CASE(
     in.simple_updates.push_back(
         tenes::make_onesite_EvolutionOperator<lr_gtensor>(
             0, 0, lr_onesite_tensor<lr_gtensor>(lr_onesite_op("c", 2))));
-    lr_check_rejects(in, "an odd one-site gate");
+    lr_check_rejects(in, "an odd one-site gate", "parity-odd one-site gate");
   }
   {
     lr_guard_input in(2, false, false);

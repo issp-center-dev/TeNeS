@@ -111,6 +111,7 @@ to_real(tenes::EvolutionOperators<mptensor::Tensor<
       A[lindex] = op.op[lindex].real();
     }
     ret.emplace_back(op.source_site, op.source_leg, op.group, A);
+    ret.back().fermion_legs = op.fermion_legs;
   }
   return ret;
 }
@@ -276,7 +277,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   // A bond no gate acts on is never canonicalised by the simple update and
   // the CTM then fails to converge on it; identity gates make the update
   // touch (truncate and normalise) every bond with virtual dimension > 1.
-  const auto simple_updates =
+  auto simple_updates =
       complete_ungated_bonds(loaded_simple_updates, lattice, comm);
   if (simple_updates.size() > loaded_simple_updates.size() && mpirank == 0 &&
       print_level >= PrintLevel::info) {
@@ -286,7 +287,7 @@ int itps_main(std::string input_filename, MPI_Comm comm,
                  "evolution operator acts on, so that they are canonicalised"
               << std::endl;
   }
-  const auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
+  auto full_updates = load_full_updates<tensor_complex>(input_toml, comm);
 
   // observable
   const toml::value *toml_observable = section("observable");
@@ -318,6 +319,8 @@ int itps_main(std::string input_filename, MPI_Comm comm,
   validate_fermion_constraints(peps_parameters, lattice, simple_updates,
                                full_updates, onesite_obs, twosite_obs,
                                multisite_obs, corparam);
+  infer_fermion_gate_ledgers(peps_parameters, lattice, simple_updates,
+                             full_updates);
 
   bool is_real = peps_parameters.is_real;
   is_real = is_real && ::is_real(simple_updates, tol);

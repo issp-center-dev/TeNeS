@@ -584,11 +584,6 @@ bool has_odd_tensor_element(tensor const &t,
   return reduced[0] > 0.0;
 }
 
-std::vector<std::vector<bool>> one_site_parity(
-    std::vector<std::vector<bool>> const &phys, int site) {
-  return {phys[site], phys[site]};
-}
-
 std::vector<std::vector<bool>> two_site_parity(
     std::vector<std::vector<bool>> const &phys, int site0, int site1) {
   return {phys[site0], phys[site1], phys[site0], phys[site1]};
@@ -734,38 +729,6 @@ void validate_fermion_constraints(
             op.op, two_site_parity(peps_parameters.phys_parity, op.source_site,
                                    site1))) {
       throw_fermion_guard("parity-odd two-site operators");
-    }
-  }
-  for (const auto &op : simple_updates) {
-    if (op.is_onesite()) {
-      if (has_odd_tensor_element(
-              op.op,
-              one_site_parity(peps_parameters.phys_parity, op.source_site))) {
-        throw_fermion_guard("parity-odd one-site gates");
-      }
-    } else {
-      const int site1 = lattice.neighbor(op.source_site, op.source_leg);
-      if (has_odd_tensor_element(op.op,
-                                 two_site_parity(peps_parameters.phys_parity,
-                                                 op.source_site, site1))) {
-        throw_fermion_guard("parity-odd two-site gates");
-      }
-    }
-  }
-  for (const auto &op : full_updates) {
-    if (op.is_onesite()) {
-      if (has_odd_tensor_element(
-              op.op,
-              one_site_parity(peps_parameters.phys_parity, op.source_site))) {
-        throw_fermion_guard("parity-odd one-site full-update gates");
-      }
-    } else {
-      const int site1 = lattice.neighbor(op.source_site, op.source_leg);
-      if (has_odd_tensor_element(op.op,
-                                 two_site_parity(peps_parameters.phys_parity,
-                                                 op.source_site, site1))) {
-        throw_fermion_guard("parity-odd two-site full-update gates");
-      }
     }
   }
 }
@@ -1153,6 +1116,185 @@ template EvolutionOperators<real_tensor> load_full_updates(
     const toml::value &param, MPI_Comm comm, double atol);
 template EvolutionOperators<complex_tensor> load_full_updates(
     const toml::value &param, MPI_Comm comm, double atol);
+
+namespace {
+std::string gate_context(const char *kind, int group, int position,
+                         int source_site, int source_leg,
+                         std::string const &reason) {
+  std::stringstream ss;
+  ss << kind << " gate chain, group " << group << ", position " << position
+     << ", source_site " << source_site << ", source_leg " << source_leg << ": "
+     << reason;
+  return ss.str();
+}
+
+template <class tensor>
+std::vector<bool> infer_out2_ledger(tensor const &op,
+                                    std::vector<bool> const &in1,
+                                    std::vector<bool> const &in2,
+                                    std::vector<bool> const &out1,
+                                    const char *kind, int group, int position,
+                                    int source_site, int source_leg) {
+  const auto shape = op.shape();
+  std::vector<int> seen_even(shape[3], 0);
+  std::vector<int> seen_odd(shape[3], 0);
+  mptensor::Index idx;
+  idx.resize(op.shape().size());
+  for (std::size_t n = 0; n < op.local_size(); ++n) {
+    if (op[n] == typename tensor::value_type(0)) {
+      continue;
+    }
+    op.global_index_fast(n, idx);
+    const bool p = in1[idx[0]] ^ in2[idx[1]] ^ out1[idx[2]];
+    if (p) {
+      seen_odd[idx[3]] = 1;
+    } else {
+      seen_even[idx[3]] = 1;
+    }
+  }
+  tenes::allreduce_sum(seen_even, op.get_comm());
+  tenes::allreduce_sum(seen_odd, op.get_comm());
+
+  std::vector<bool> out2(shape[3]);
+  for (std::size_t i = 0; i < out2.size(); ++i) {
+    if (seen_even[i] > 0 && seen_odd[i] > 0) {
+      throw_fermion_guard(gate_context(kind, group, position, source_site,
+                                       source_leg,
+                                       "out2 index has mixed parity"));
+    }
+    if (seen_even[i] == 0 && seen_odd[i] == 0) {
+      throw_fermion_guard(gate_context(kind, group, position, source_site,
+                                       source_leg,
+                                       "out2 index has no nonzero element"));
+    }
+    out2[i] = (seen_odd[i] > 0);
+  }
+  return out2;
+}
+
+bool any_full_update_runs(PEPS_Parameters const &peps_parameters) {
+  for (int nstep : peps_parameters.num_full_step) {
+    if (nstep > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <class tensor>
+void infer_gate_ledgers_for_list(PEPS_Parameters const &peps_parameters,
+                                 SquareLattice const &lattice,
+                                 EvolutionOperators<tensor> &updates,
+                                 const char *kind, bool reject_full_chains) {
+  std::set<int> groups;
+  for (auto const &op : updates) {
+    groups.insert(op.group);
+  }
+  for (int group : groups) {
+    auto current = peps_parameters.phys_parity;
+    int position = 0;
+    for (auto &op : updates) {
+      if (op.group != group) {
+        continue;
+      }
+      const int source = op.source_site;
+      const int source_leg = op.source_leg;
+      const auto shape = op.op.shape();
+      op.fermion_legs.clear();
+      if (op.is_onesite()) {
+        if (op.op.rank() != 2 || shape[0] != current[source].size() ||
+            shape[1] != current[source].size()) {
+          throw_fermion_guard(gate_context(
+              kind, group, position, source, source_leg,
+              "one-site gate dimensions do not match the current ledger"));
+        }
+        if (has_odd_tensor_element(op.op, {current[source], current[source]})) {
+          throw_fermion_guard(gate_context(kind, group, position, source,
+                                           source_leg,
+                                           "parity-odd one-site gate"));
+        }
+        op.fermion_legs = {current[source], current[source]};
+      } else {
+        const int target = lattice.neighbor(source, source_leg);
+        if (op.op.rank() != 4) {
+          throw_fermion_guard(gate_context(kind, group, position, source,
+                                           source_leg,
+                                           "two-site gate is not rank 4"));
+        }
+        if (shape[0] != current[source].size()) {
+          throw_fermion_guard(gate_context(
+              kind, group, position, source, source_leg,
+              "in1 dimension does not match the source current ledger"));
+        }
+        if (shape[1] != current[target].size()) {
+          throw_fermion_guard(gate_context(
+              kind, group, position, source, source_leg,
+              "in2 dimension does not match the target current ledger"));
+        }
+        const auto out1 = peps_parameters.phys_parity[source];
+        if (shape[2] != out1.size()) {
+          throw_fermion_guard(gate_context(
+              kind, group, position, source, source_leg,
+              "out1 dimension does not match the source original ledger"));
+        }
+        auto out2 =
+            infer_out2_ledger(op.op, current[source], current[target], out1,
+                              kind, group, position, source, source_leg);
+        op.fermion_legs = {current[source], current[target], out1, out2};
+        const bool full_chain_gate =
+            (current[source].size() !=
+             peps_parameters.phys_parity[source].size()) ||
+            (current[target].size() !=
+             peps_parameters.phys_parity[target].size()) ||
+            (out2 != peps_parameters.phys_parity[target]);
+        if (reject_full_chains && full_chain_gate) {
+          throw_fermion_guard(gate_context(
+              kind, group, position, source, source_leg,
+              "full update contains a gate with changing physical ledgers"));
+        }
+        current[source] = out1;
+        current[target] = out2;
+      }
+      ++position;
+    }
+    for (int site = 0; site < lattice.N_UNIT; ++site) {
+      if (current[site] != peps_parameters.phys_parity[site]) {
+        throw_fermion_guard(gate_context(kind, group, position, site, -1,
+                                         "group ends before all site ledgers "
+                                         "return to their original values"));
+      }
+    }
+  }
+}
+}  // namespace
+
+template <class tensor>
+void infer_fermion_gate_ledgers(const PEPS_Parameters &peps_parameters,
+                                const SquareLattice &lattice,
+                                EvolutionOperators<tensor> &simple_updates,
+                                EvolutionOperators<tensor> &full_updates) {
+  if (!peps_parameters.fermion) {
+    return;
+  }
+  if (peps_parameters.phys_parity.size() !=
+      static_cast<std::size_t>(lattice.N_UNIT)) {
+    throw_fermion_guard("missing tensor.unitcell.parity metadata");
+  }
+  infer_gate_ledgers_for_list(peps_parameters, lattice, simple_updates,
+                              "simple-update", false);
+  infer_gate_ledgers_for_list(peps_parameters, lattice, full_updates,
+                              "full-update",
+                              any_full_update_runs(peps_parameters));
+}
+
+template void infer_fermion_gate_ledgers(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    EvolutionOperators<real_tensor> &simple_updates,
+    EvolutionOperators<real_tensor> &full_updates);
+template void infer_fermion_gate_ledgers(
+    const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,
+    EvolutionOperators<complex_tensor> &simple_updates,
+    EvolutionOperators<complex_tensor> &full_updates);
 
 template void validate_fermion_constraints(
     const PEPS_Parameters &peps_parameters, const SquareLattice &lattice,

@@ -99,9 +99,11 @@ std::vector<std::vector<bool>> gen_phys_parity(
  *     different parity,
  *   - product initial states with weight on an odd-parity basis state,
  *   - mixed-parity one-site observables,
- *   - parity-odd gates and parity-odd explicit two-site observables (any
- *     tensor element connecting the even and odd sectors, checked elementwise
- *     across all processes).
+ *   - parity-odd explicit two-site observables (any tensor element connecting
+ *     the even and odd sectors, checked elementwise across all processes).
+ *
+ * Evolution-gate parity and temporary physical-ledger chains are validated
+ * by infer_fermion_gate_ledgers().
  */
 template <class tensor>
 void validate_fermion_constraints(
@@ -112,6 +114,23 @@ void validate_fermion_constraints(
     const Operators<tensor> &twosite_operators,
     const Operators<tensor> &multisite_operators,
     const CorrelationParameter &corparam);
+
+/*!
+ * @brief Fermion mode: infer and check the parity ledgers of every gate.
+ *
+ * Simulates each group of simple_updates and full_updates in list order,
+ * infers the ledger of every two-site gate's out2 leg (design 6.1), stores
+ * the ledgers in EvolutionOperator::fermion_legs, and rejects inputs that
+ * break the chain rules (input_error, on every rank). No-op unless
+ * peps_parameters.fermion. Call after complete_ungated_bonds() and
+ * load_full_updates(), after validate_fermion_constraints(), and before
+ * is_real(), to_real(), or iTPS construction inspect the gates.
+ */
+template <class tensor>
+void infer_fermion_gate_ledgers(const PEPS_Parameters &peps_parameters,
+                                const SquareLattice &lattice,
+                                EvolutionOperators<tensor> &simple_updates,
+                                EvolutionOperators<tensor> &full_updates);
 
 //! Parse "source_site dx dy" (one bond) from one line.
 std::tuple<int, int, int> read_bond(std::string line);

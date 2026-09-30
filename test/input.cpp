@@ -905,16 +905,35 @@ num_step = 1
     // Lifting the "full update" guard must not take the parity check on the
     // full-update gates with it. (0, 0, 0, 1) has one odd leg, so with the
     // physical ledger [0, 1] the gate is parity odd.
+    //
+    // Task T2 of
+    // docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md moves
+    // the gate checks from validate_fermion_constraints to
+    // infer_fermion_gate_ledgers (design section 6.1: the gate's out2 ledger
+    // is inferred, and a group that does not end on the physical ledgers is
+    // refused). The input is run through both (validate first, as main.cpp
+    // does; the input has no other defect, so the order does not matter),
+    // and the refusal must come from the gate check of the full-update list,
+    // whichever of its rules (this gate has an out2 index without any
+    // nonzero element and would also leave the ledger changed).
     ptensor op(comm, mptensor::Shape(2, 2, 2, 2));
     op.set_value(mptensor::Index(0, 0, 0, 1), 1.0);
     EvolutionOperators<ptensor> full_updates{
         make_twosite_EvolutionOperator<ptensor>(0, 2, 0, op)};
-    CHECK_THROWS_AS(
-        validate_fermion_constraints(
-            peps_parameters, lattice, EvolutionOperators<ptensor>{},
-            full_updates, Operators<ptensor>{}, Operators<ptensor>{},
-            Operators<ptensor>{}, CorrelationParameter{}),
-        tenes::input_error);
+    try {
+      EvolutionOperators<ptensor> simple_updates;
+      validate_fermion_constraints(peps_parameters, lattice, simple_updates,
+                                   full_updates, Operators<ptensor>{},
+                                   Operators<ptensor>{}, Operators<ptensor>{},
+                                   CorrelationParameter{});
+      infer_fermion_gate_ledgers(peps_parameters, lattice, simple_updates,
+                                 full_updates);
+      FAIL_CHECK("a parity-odd full-update gate was accepted");
+    } catch (const tenes::input_error &e) {
+      const std::string msg(e.what());
+      INFO("message: " << msg);
+      CHECK(msg.find("full-update gate chain") != std::string::npos);
+    }
   }
 }
 
