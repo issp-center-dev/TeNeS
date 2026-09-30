@@ -1,0 +1,28 @@
+[[hamiltonian]]
+dim = [ 2, 2,]
+bonds = "0 1 0\n0 0 1\n3 -1 0\n3 0 -1\n"
+elements = "0 0 0 0 0.25 0.0\n0 1 0 1 -0.25 0.0\n0 1 1 0 0.5 -0.15\n1 0 0 1 0.5 0.15\n1 0 1 0 -0.25 0.0\n1 1 1 1 0.25 0.0\n"
+
+[[hamiltonian]]
+dim = [ 2, 2,]
+bonds = "0 -1 1\n1 0 -2\n"
+elements = "0 0 0 0 0.05 0.0\n0 1 0 1 -0.05 0.0\n0 1 1 0 0.1 -0.25\n1 0 0 1 0.1 0.25\n1 0 1 0 -0.05 0.0\n1 1 1 1 0.05 0.0\n"
+
+[tensor]
+L_sub = [ 2, 2,]
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+
+[parameter.general]
+mode = "time evolution"
+is_real = false
+
+[parameter.simple_update]
+num_step = 10
+tau = 0.01
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01

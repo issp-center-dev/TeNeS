@@ -1158,6 +1158,7 @@ def make_evolution_twosite(
     tau: Union[float, complex],
     group: int = 0,
     result_cutoff: float = 1e-15,
+    fermion: bool = False,
 ) -> List[NNOperator]:
     """Exponentiate a two-site Hamiltonian term into Trotter gates.
 
@@ -1202,6 +1203,23 @@ def make_evolution_twosite(
     unitcell = graph.unitcell
     for bond in bonds[1:]:
         mdofs.append(unitcell.sites[bond.source_site].phys_dim)
+    if fermion:
+        return _make_fermion_evolution_chain(
+            evo, hamiltonian.bond, bonds, graph, group=group
+        )
+
+    return _decompose_evolution_chain(evo, dims, mdofs, bonds, group)
+
+
+def _decompose_evolution_chain(
+    evo: np.ndarray,
+    dims: Tuple[int, ...],
+    mdofs: List[int],
+    bonds: List[Bond],
+    group: int,
+) -> List[NNOperator]:
+    """Bosonic long-range gate decomposition, kept as the original path."""
+    nhops = len(bonds)
     nsites = nhops + 1
     nmids = nsites - 2
     index = [0]
@@ -1222,7 +1240,7 @@ def make_evolution_twosite(
         index += list(range(2, nsites))
         index += list(range(nsites + 1, ndim))
         A = A.transpose(index)
-        C = A.reshape((A.shape[0] * A.shape[1] * A.shape[nsites], -1))
+        C = A.reshape((A.shape[0] * A.shape[1] * A.shape[2], -1))
         U, S, Vt = np.linalg.svd(C, full_matrices=False)
         U = np.dot(U, np.diag(S))
         B = U.reshape((A.shape[0], A.shape[1], dofs[0], -1))
@@ -1233,12 +1251,156 @@ def make_evolution_twosite(
     return ret
 
 
+def _path_site_indices(
+    original_bond: Bond, bonds: List[Bond], unitcell: Unitcell
+) -> List[int]:
+    """Unit-cell site index at every position of a decomposed path."""
+    sites = [bond.source_site for bond in bonds]
+    sites.append(unitcell.target_site(original_bond))
+    return sites
+
+
+def _make_fermion_path_tensor(
+    evo: np.ndarray, path_parities: List[List[int]]
+) -> np.ndarray:
+    """Build the path-ordered graded operator of design section 4.1."""
+    nsites = len(path_parities)
+    dofs = [len(parity) for parity in path_parities]
+    T = np.zeros(dofs + dofs, dtype=evo.dtype)
+    nmids = nsites - 2
+    for inputs in product(*[range(dof) for dof in dofs]):
+        mid_parity = 0
+        for m in range(nmids):
+            mid_parity += path_parities[m + 1][inputs[m + 1]]
+        mid_parity %= 2
+        for out_source in range(dofs[0]):
+            for out_target in range(dofs[-1]):
+                channel_parity = (
+                    path_parities[-1][inputs[-1]] + path_parities[-1][out_target]
+                ) % 2
+                sign = -1 if mid_parity * channel_parity else 1
+                outputs = [out_source] + list(inputs[1:-1]) + [out_target]
+                T[inputs + tuple(outputs)] = (
+                    sign * evo[inputs[0], inputs[-1], out_source, out_target]
+                )
+    return T
+
+
+def _block_svd_by_parity(
+    C: np.ndarray,
+    row_parity: List[int],
+    col_parity: List[int],
+    cutoff: float = 1.0e-14,
+) -> Tuple[np.ndarray, np.ndarray, List[int]]:
+    """SVD each parity block and return (U*S, Vt, chi_parity)."""
+    decomposed = []
+    smax = 0.0
+    for parity in (0, 1):
+        rows = [i for i, p in enumerate(row_parity) if p == parity]
+        cols = [i for i, p in enumerate(col_parity) if p == parity]
+        if len(rows) == 0 or len(cols) == 0:
+            decomposed.append((parity, rows, cols, None, None, None))
+            continue
+        block = C[np.ix_(rows, cols)]
+        U, S, Vt = np.linalg.svd(block, full_matrices=False)
+        if len(S) > 0:
+            smax = max(smax, float(np.max(S)))
+        decomposed.append((parity, rows, cols, U, S, Vt))
+
+    threshold = cutoff * smax
+    columns = []
+    vts = []
+    chi_parity = []
+    for parity, rows, cols, U, S, Vt in decomposed:
+        if U is None or S is None or Vt is None:
+            continue
+        keep = [i for i, value in enumerate(S) if value > threshold]
+        if len(keep) == 0:
+            continue
+        us_block = np.zeros((C.shape[0], len(keep)), dtype=C.dtype)
+        us_block[np.ix_(rows, range(len(keep)))] = U[:, keep] * S[keep]
+        vt_block = np.zeros((len(keep), C.shape[1]), dtype=C.dtype)
+        vt_block[np.ix_(range(len(keep)), cols)] = Vt[keep, :]
+        columns.append(us_block)
+        vts.append(vt_block)
+        chi_parity += [parity] * len(keep)
+
+    if len(columns) == 0:
+        empty_us = np.zeros((C.shape[0], 0), dtype=C.dtype)
+        empty_vt = np.zeros((0, C.shape[1]), dtype=C.dtype)
+        return empty_us, empty_vt, []
+    return np.concatenate(columns, axis=1), np.concatenate(vts, axis=0), chi_parity
+
+
+def _make_fermion_evolution_chain(
+    evo: np.ndarray,
+    original_bond: Bond,
+    bonds: List[Bond],
+    graph: LatticeGraph,
+    group: int,
+) -> List[NNOperator]:
+    """Long-range fermion gate as a path-ordered graded MPO."""
+    unitcell = graph.unitcell
+    sites = _path_site_indices(original_bond, bonds, unitcell)
+    path_parities = []
+    for site in sites:
+        parity = unitcell.sites[site].parity
+        if parity is None:
+            msg = (
+                "Fermion mode requires tensor.unitcell site {} to define "
+                "parity metadata. Add parity = [...] with one 0/1 entry per "
+                "physical state."
+            ).format(site)
+            raise RuntimeError(msg)
+        path_parities.append(parity)
+
+    dofs = [len(parity) for parity in path_parities]
+    A = _make_fermion_path_tensor(evo, path_parities)
+
+    ret = []
+    current_parity = path_parities[0]
+    for k, bond in enumerate(bonds[0:-1]):
+        ndim = A.ndim
+        nsites = ndim // 2
+        index = [0, 1, nsites]
+        index += list(range(2, nsites))
+        index += list(range(nsites + 1, ndim))
+        A = A.transpose(index)
+
+        row_shape = A.shape[:3]
+        row_parity = []
+        for i0, i1, o0 in product(
+            range(row_shape[0]), range(row_shape[1]), range(row_shape[2])
+        ):
+            row_parity.append(
+                (current_parity[i0] + path_parities[k + 1][i1] + path_parities[k][o0])
+                % 2
+            )
+        remaining_parities = path_parities[k + 2 :] + path_parities[k + 1 :]
+        col_parity = []
+        for indices in product(*[range(len(p)) for p in remaining_parities]):
+            parity = 0
+            for index, table in zip(indices, remaining_parities):
+                parity += table[index]
+            col_parity.append(parity % 2)
+
+        C = A.reshape((A.shape[0] * A.shape[1] * A.shape[2], -1))
+        US, Vt, chi_parity = _block_svd_by_parity(C, row_parity, col_parity)
+        B = US.reshape((A.shape[0], A.shape[1], dofs[k], -1))
+        A = Vt.reshape([B.shape[3]] + dofs[k + 2 :] + dofs[k + 1 :])
+        ret.append(NNOperator(bond, elements=B, group=group))
+        current_parity = chi_parity
+    ret.append(NNOperator(bonds[-1], elements=A, group=group))
+    return ret
+
+
 def make_evolution(
     hamiltonian: Operator,
     graph: LatticeGraph,
     tau: Union[float, complex],
     group: int = 0,
     result_cutoff: float = 1e-15,
+    fermion: bool = False,
 ) -> Union[List[SiteOperator], List[NNOperator]]:
     """Exponentiate one Hamiltonian term into evolution gates (dispatch
     over one-site / two-site)."""
@@ -1248,7 +1410,12 @@ def make_evolution(
         )
     else:
         return make_evolution_twosite(
-            hamiltonian, graph, tau, group=group, result_cutoff=result_cutoff
+            hamiltonian,
+            graph,
+            tau,
+            group=group,
+            result_cutoff=result_cutoff,
+            fermion=fermion,
         )
 
 
@@ -1509,7 +1676,8 @@ class Model:
             )
             self.multibodies.append(obs)
 
-        if self.parameter.get("general", {}).get("fermion", False):
+        fermion = self.parameter.get("general", {}).get("fermion", False)
+        if fermion:
             self._validate_fermion_mode_input()
 
         self.simple_updates = []
@@ -1519,13 +1687,17 @@ class Model:
             if self.time_evolution:
                 tau *= 1.0j
             for ham in self.hamiltonians:
-                for evo in make_evolution(ham, self.graph, tau, group=g):
+                for evo in make_evolution(
+                    ham, self.graph, tau, group=g, fermion=fermion
+                ):
                     self.simple_updates.append(evo)
         for g, tau in enumerate(self.full_tau):
             if self.time_evolution:
                 tau *= 1.0j
             for ham in self.hamiltonians:
-                for evo in make_evolution(ham, self.graph, tau, group=g):
+                for evo in make_evolution(
+                    ham, self.graph, tau, group=g, fermion=fermion
+                ):
                     self.full_updates.append(evo)
 
     def _validate_fermion_mode_input(self) -> None:
@@ -1566,19 +1738,27 @@ class Model:
             ).format(obs.name, obs.group)
             raise RuntimeError(msg)
 
+        has_long_range_hamiltonian = False
         for ham in self.hamiltonians:
             if not isinstance(ham, NNOperator):
                 continue
             bonds = self.graph.make_path(ham.bond)
             nhops = len(bonds)
-            if nhops != 1:
-                bond = ham.bond
+            if nhops >= 2:
+                has_long_range_hamiltonian = True
+
+        if has_long_range_hamiltonian:
+            num_step = self.parameter.get("full_update", {}).get("num_step", 0)
+            if isinstance(num_step, list):
+                full_update_enabled = any(step > 0 for step in num_step)
+            else:
+                full_update_enabled = num_step > 0
+            if full_update_enabled:
                 msg = (
-                    "Fermion mode does not support Hamiltonian bond source_site "
-                    "{} with displacement (dx, dy) = ({}, {}): it requires {} "
-                    "nearest-neighbour hops. Use only nearest-neighbour "
-                    "Hamiltonian bonds."
-                ).format(bond.source_site, bond.dx, bond.dy, nhops)
+                    "Long-range Hamiltonian bonds are available only with the "
+                    "simple update in fermion mode; set "
+                    "parameter.full_update.num_step = 0."
+                )
                 raise RuntimeError(msg)
 
     def to_toml(self, f: TextIO):

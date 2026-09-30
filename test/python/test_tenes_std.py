@@ -410,8 +410,13 @@ class TestFermionModeValidation:
         with pytest.raises(RuntimeError, match="multisite"):
             tenes_std.Model(param)
 
-    def test_multihop_hamiltonian_is_still_rejected_next_to_ops_form(self):
-        # ... nor the refusal of Hamiltonian bonds beyond nearest neighbours
+    def test_multihop_hamiltonian_is_accepted_next_to_ops_form(self):
+        # Hamiltonian bonds beyond nearest neighbours used to be refused in
+        # fermion mode (C3c).  Task T1 of
+        # docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md
+        # (contract item 5) lifts that: tenes_std decomposes them into a
+        # graded chain of nearest-neighbour gates.  The ops-form observable
+        # next to it goes through untouched.
         param = copy.deepcopy(minimal_fermion_std_input())
         param["hamiltonian"][0]["bonds"] = "0 2 0\n"
         param["observable"] = {
@@ -419,26 +424,36 @@ class TestFermionModeValidation:
                 {"name": "a_ops", "group": 1, "bonds": "0 1 0\n", "ops": [0, 0]}
             ]
         }
-        with pytest.raises(RuntimeError, match="nearest-neighbour"):
-            tenes_std.Model(param)
+        model = tenes_std.Model(param)  # must not raise
+        assert len(model.simple_updates) == 2
+        named = [t for t in model.twobodies if t.name == "a_ops"]
+        assert len(named) == 1
+        assert named[0].ops == [0, 0]
 
-    def test_multihop_bond_is_rejected(self):
-        # C3c: a bond term whose graph.make_path length is not 1 must be
-        # rejected before gates are built, because make_evolution_twosite's
-        # decomposition places an unsigned identity on the intermediate
-        # site (wrong for fermions) while still emitting nearest-neighbour
-        # gates that no downstream guard would catch.
+    def test_multihop_bond_is_accepted(self):
+        # Formerly C3c (a bond with make_path length != 1 was refused);
+        # T1 contract item 5 makes it valid fermion-mode input.  The gate
+        # chain follows make_path, one gate per hop; its signs are checked
+        # in test_fermion_chain.py.
         param = copy.deepcopy(minimal_fermion_std_input())
         param["hamiltonian"][0]["bonds"] = "0 2 0\n"  # make_path length 2
-        with pytest.raises(RuntimeError):
-            tenes_std.Model(param)
+        model = tenes_std.Model(param)  # must not raise
+        path = model.graph.make_path(tenes_std.Bond(0, 2, 0))
+        assert len(path) == 2
+        assert len(model.simple_updates) == len(path)
+        for gate, hop in zip(model.simple_updates, path):
+            assert (gate.bond.source_site, gate.bond.dx, gate.bond.dy) == (
+                hop.source_site,
+                hop.dx,
+                hop.dy,
+            )
 
     def test_nearest_neighbor_bond_is_accepted_in_same_fermionic_config(self):
-        # Pins the DISTINCTION C3c cares about: in the exact same
-        # fermionic configuration that rejects a 2-hop bond above, a
-        # 1-hop bond must be accepted. A test that only shows rejection
-        # would not prove the guard discriminates rather than rejecting
-        # everything in fermion mode.
+        # The one-hop counterpart of test_multihop_bond_is_accepted above:
+        # in the same fermionic configuration a nearest-neighbour bond is
+        # accepted too and yields a single gate. (This used to pin the
+        # distinction of the former C3c refusal of multi-hop bonds, which
+        # T1 lifted.)
         param = copy.deepcopy(minimal_fermion_std_input())
         param["hamiltonian"][0]["bonds"] = "0 1 0\n"  # make_path length 1
         model = tenes_std.Model(param)  # must not raise
@@ -520,13 +535,17 @@ class TestFermionErrorMessageQuality:
         # TestFermionModeValidation.test_ops_form_twosite_observable_is_accepted).
         missing_parity = two_site_fermion_input({0: [0, 1]})  # site 1 has none
 
-        multihop = copy.deepcopy(minimal_fermion_std_input())
-        multihop["hamiltonian"][0]["bonds"] = "0 2 0\n"
+        # A multi-hop bond alone is valid input since T1 (contract item 5 of
+        # docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md);
+        # it is refused only together with a positive full-update step count.
+        multihop_full_update = copy.deepcopy(minimal_fermion_std_input())
+        multihop_full_update["hamiltonian"][0]["bonds"] = "0 2 0\n"
+        multihop_full_update["parameter"]["full_update"] = {"num_step": 1}
 
         bad_parity_length = copy.deepcopy(minimal_fermion_std_input())
         bad_parity_length["tensor"]["unitcell"][0]["parity"] = [0, 1, 0]
 
-        return [missing_parity, multihop, bad_parity_length]
+        return [missing_parity, multihop_full_update, bad_parity_length]
 
     def test_no_milestone_labels_in_rejection_messages(self):
         for param in self._violations():
@@ -563,32 +582,21 @@ class TestFermionErrorMessageQuality:
         assert not re.search(r"\b2\b", msg3), msg3
         assert msg2 != msg3
 
-    def test_multihop_bond_message_differs_by_offending_bond(self):
-        # Strengthened per code review, same rationale as above: pin the
-        # actual bond identifiers (source_site, dx, and the resulting hop
-        # count) rather than merely observing that two messages differ.
-        # dx = 5 and dx = 6 are used (rather than small values like 1-3)
-        # so neither digit can coincide with source_site (0) or dy (0) in
-        # the message.
-        param_5hop = copy.deepcopy(minimal_fermion_std_input())
-        param_5hop["hamiltonian"][0]["bonds"] = "0 5 0\n"  # make_path length 5
-
-        param_6hop = copy.deepcopy(minimal_fermion_std_input())
-        param_6hop["hamiltonian"][0]["bonds"] = "0 6 0\n"  # make_path length 6
-
-        with pytest.raises(RuntimeError) as e5:
-            tenes_std.Model(param_5hop)
-        with pytest.raises(RuntimeError) as e6:
-            tenes_std.Model(param_6hop)
-
-        msg5, msg6 = str(e5.value), str(e6.value)
-        assert re.search(r"\b5\b", msg5), msg5
-        assert re.search(r"\b6\b", msg6), msg6
-        # Discrimination: a message that hard-codes one bond's
-        # displacement/hop-count cannot simultaneously name the other.
-        assert not re.search(r"\b6\b", msg5), msg5
-        assert not re.search(r"\b5\b", msg6), msg6
-        assert msg5 != msg6
+    # test_multihop_bond_message_differs_by_offending_bond was removed with
+    # T1 contract item 5: multi-hop bonds are no longer refused, so there is
+    # no message left to pin.  (Its 5- and 6-hop bonds are also outside the
+    # 4x4 measurement window, where the design lets tenes_std either refuse
+    # early or leave the refusal to tenes; neither is pinned here.)  In its
+    # place: two- and three-hop bonds inside the window are accepted, each
+    # with one gate per hop.
+    @pytest.mark.parametrize("dx, dy", [(2, 0), (3, 0), (2, 1), (-1, 1)])
+    def test_multihop_bonds_are_accepted_with_one_gate_per_hop(self, dx, dy):
+        param = copy.deepcopy(minimal_fermion_std_input())
+        param["hamiltonian"][0]["bonds"] = "0 {} {}\n".format(dx, dy)
+        model = tenes_std.Model(param)  # must not raise
+        path = model.graph.make_path(tenes_std.Bond(0, dx, dy))
+        assert len(path) >= 2
+        assert len(model.simple_updates) == len(path)
 
     # test_ops_form_observable_message_differs_by_offending_observable was
     # removed with T4 contract item 2: the ops form is no longer refused, so
