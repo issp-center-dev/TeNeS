@@ -1333,7 +1333,7 @@ class BoseHubbardModel(Model):
 
 
 class SpinlessFermionModel(Model):
-    """Spinless fermions on the square lattice (nearest neighbour only).
+    """Spinless fermions on square and triangular lattices.
 
     Local basis |0>, |1> with fermion parity [0, 1].
 
@@ -1450,7 +1450,7 @@ class SpinlessFermionModel(Model):
 
 
 class HubbardModel(Model):
-    """Fermionic Hubbard model on the square lattice.
+    """Fermionic Hubbard model on square and triangular lattices.
 
     Local basis |0>, |up>, |dn>, |up dn> with i = n_up + 2 n_dn and
     fermion parity [0, 1, 1, 0].
@@ -1767,9 +1767,9 @@ def _check_fermion_scope(
 ) -> None:
     """Reject inputs outside the supported fermionic scope.
 
-    Fermionic simple mode supports square-lattice nearest-neighbour
-    Hamiltonian bonds and CTM correlation functions. Unsupported inputs are
-    rejected here instead of being silently converted.
+    Fermionic simple mode supports square-lattice Hamiltonian bonds up to
+    third neighbours and triangular-lattice Hamiltonian bonds. Unsupported
+    inputs are rejected here instead of being silently converted.
     """
     general = param.get("parameter", {}).get("general", {})
     if general.get("fermion", False) and not model.is_fermion:
@@ -1784,25 +1784,14 @@ def _check_fermion_scope(
 
     scope = (
         "the fermion support in this version covers the square lattice with"
-        " nearest-neighbour Hamiltonian bonds"
+        " Hamiltonian bonds up to third neighbours and the triangular lattice"
     )
 
-    if not isinstance(lattice, SquareLattice):
+    if not isinstance(lattice, (SquareLattice, TriangularLattice)):
         msg = 'lattice type "{}" is not available for fermionic models; {}.'.format(
             param["lattice"]["type"], scope
         )
         raise RuntimeError(msg)
-
-    for n, per_level in enumerate(model.params_twosite):
-        if n == 0:
-            continue
-        for typ, params in enumerate(per_level):
-            for name, value in params.items():
-                if value != 0.0:
-                    msg = "{} = {} is a {}-neighbour term; {}.".format(
-                        name, value, n + 1, scope
-                    )
-                    raise RuntimeError(msg)
 
     if "correlation_length" in param:
         msg = "[correlation_length] is not available for fermionic models in this"

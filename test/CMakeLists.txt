@@ -446,6 +446,47 @@ add_test(NAME HubbardLongRange
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_longrange.py)
 set_tests_properties(HubbardLongRange PROPERTIES TIMEOUT 600)
 
+# Items 2-5 of the T3 contract of
+# docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md:
+# Hamiltonian bonds beyond the nearest neighbour in fermion mode, end to end
+# (tenes_simple -> tenes_std -> tenes), where tenes_std splits the gate of a
+# two-hop bond into a chain of nearest-neighbour gates.
+#   FreeFermionTPrime      free spinless fermions with t' on the square
+#                          lattice, t' = +0.3 and -0.3, against the Fermi sea
+#   FreeFermionTriangular  free spinless fermions on the triangular lattice
+#                          (its (-1, 1) bond is a chain), against the Fermi sea
+#   HubbardTriangular      the triangular Hubbard model: hopping signs, the
+#                          energy balance and golden files
+# FreeFermionTriangularMPI2 runs the triangular case on two processes and
+# compares it with a one-process run of the same input.toml.  Each takes
+# 80-190 s at OMP_NUM_THREADS=1 in a Debug build (see
+# work/fermion-longrange-ham/t3/test-author-report.md); the golden files of
+# HubbardTriangular are in test/data/output_HubbardTriangular/, see the
+# header of the script for how to regenerate them.
+foreach(name free_fermion_tprime free_fermion_triangular hubbard_triangular)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
+endforeach()
+add_test(NAME FreeFermionTPrime
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_tprime.py)
+set_tests_properties(FreeFermionTPrime PROPERTIES TIMEOUT 600)
+add_test(NAME FreeFermionTriangular
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_triangular.py)
+set_tests_properties(FreeFermionTriangular PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FreeFermionTriangularMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_triangular.py
+                   --nproc 2)
+  set_tests_properties(FreeFermionTriangularMPI2 PROPERTIES TIMEOUT 600)
+endif()
+add_test(NAME HubbardTriangular
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_triangular.py)
+set_tests_properties(HubbardTriangular PROPERTIES TIMEOUT 600)
+
 # Item 6 of the T5 contract of the same plan: FreeFermionLongRange with the
 # mean-field environment (meanfield_env = true), checked through identities
 # between code paths of one run and the golden files in

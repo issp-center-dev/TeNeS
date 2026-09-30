@@ -156,12 +156,15 @@ class TestSpinlessFermionSchema:
 
 
 class TestFermionScopeGuards:
-    @pytest.mark.parametrize(
-        "latname", ["honeycomb lattice", "triangular lattice", "kagome lattice"]
-    )
-    def test_non_square_lattices_are_rejected(self, latname):
+    # T3 contract item 1 of docs/superpowers/plans/
+    # 2026-09-30-fermion-longrange-hamiltonian.md: the triangular lattice is
+    # accepted now (TestFermionBeyondNearestNeighbour below); the honeycomb
+    # and kagome lattices stay refused until T5.  The message has to name
+    # the refused lattice.
+    @pytest.mark.parametrize("latname", ["honeycomb lattice", "kagome lattice"])
+    def test_honeycomb_and_kagome_lattices_are_rejected(self, latname):
         param = spinless_param(lattice_extra={"type": latname})
-        with pytest.raises(RuntimeError, match="square"):
+        with pytest.raises(RuntimeError, match=re.escape(latname)):
             tenes_simple.tenes_simple(param)
 
     def test_square_lattice_is_accepted(self):
@@ -169,12 +172,11 @@ class TestFermionScopeGuards:
 
     # In read_params the digit is the BOND TYPE and the number of primes is
     # the NEIGHBOUR LEVEL, so t1 / t2 are still nearest neighbour and only the
-    # primed keys go beyond it.
+    # primed keys go beyond it.  T3 contract item 1: they are accepted now;
+    # what they emit is checked in TestFermionBeyondNearestNeighbour.
     @pytest.mark.parametrize("key", ["t'", "t''", "v'", "v''"])
-    def test_beyond_nearest_neighbour_parameters_are_rejected(self, key):
-        param = spinless_param({key: 0.5})
-        with pytest.raises(RuntimeError, match="nearest"):
-            tenes_simple.tenes_simple(param)
+    def test_beyond_nearest_neighbour_parameters_are_accepted(self, key):
+        tenes_simple.tenes_simple(spinless_param({key: 0.5}))
 
     def test_zero_valued_far_neighbour_parameters_are_accepted(self):
         tenes_simple.tenes_simple(spinless_param({"t'": 0.0}))
@@ -214,11 +216,25 @@ class TestFermionScopeGuards:
         with pytest.raises(RuntimeError, match="correlation_length"):
             tenes_simple.tenes_simple(param)
 
+    # T3 contract item 1: far-neighbour terms are accepted next to
+    # [correlation] as well (this used to be a refusal) ...
     @pytest.mark.parametrize("key", ["t'", "v''"])
-    def test_far_neighbour_terms_are_rejected_next_to_correlation(self, key):
+    def test_far_neighbour_terms_are_accepted_next_to_correlation(self, key):
         param = spinless_param({key: 0.5})
         param["correlation"] = {"r_max": 5}
-        with pytest.raises(RuntimeError, match="nearest"):
+        tenes_simple.tenes_simple(param)
+
+    # ... and accepting them, or the triangular lattice, must not let
+    # [correlation_length] through.
+    @pytest.mark.parametrize(
+        "model_extra, lattice_extra",
+        [({"t'": 0.5}, None), (None, {"type": "triangular lattice"})],
+        ids=["t-prime", "triangular"],
+    )
+    def test_correlation_length_is_still_rejected(self, model_extra, lattice_extra):
+        param = spinless_param(model_extra, lattice_extra)
+        param["correlation_length"] = {"measure": True}
+        with pytest.raises(RuntimeError, match="correlation_length"):
             tenes_simple.tenes_simple(param)
 
     def test_bosonic_models_are_untouched_by_the_guards(self):
@@ -259,9 +275,10 @@ class TestFermionScopeGuards:
 #
 # tenes_simple cannot produce a self-neighbour fermion cell at all (the
 # square lattice asserts L > 1, and W = 1 always gets skew = 1), so it has no
-# cell-shape refusal left. Unchanged: non-square lattices are refused for
-# fermionic models (TestFermionScopeGuards), W >= 2 gives skew = 0, and
-# bosonic models are untouched.
+# cell-shape refusal left. Unchanged: the honeycomb and kagome lattices are
+# refused for fermionic models (TestFermionScopeGuards; the triangular one
+# is accepted since the T3 contract of 2026-09-30), W >= 2 gives skew = 0,
+# and bosonic models are untouched.
 # ---------------------------------------------------------------------------
 
 
@@ -782,26 +799,25 @@ class TestSquareLatticeCdw:
 
 
 class TestHubbardScopeGuards:
-    @pytest.mark.parametrize(
-        "latname", ["honeycomb lattice", "triangular lattice", "kagome lattice"]
-    )
-    def test_non_square_lattices_are_rejected(self, latname):
-        # C6, and the is_fermion-wiring proof the contract asks for: a
-        # triangular lattice is rejected specifically *because*
-        # HubbardModel.is_fermion is True and the guard is generic across
-        # fermionic models, not because of anything spinless-specific.
+    # C6, and the is_fermion-wiring proof the contract asks for: a honeycomb
+    # or kagome lattice is rejected specifically *because*
+    # HubbardModel.is_fermion is True and the guard is generic across
+    # fermionic models, not because of anything spinless-specific.  (The
+    # triangular lattice used to be one of them; the T3 contract of
+    # 2026-09-30 accepts it, see TestFermionBeyondNearestNeighbour.)
+    @pytest.mark.parametrize("latname", ["honeycomb lattice", "kagome lattice"])
+    def test_honeycomb_and_kagome_lattices_are_rejected(self, latname):
         param = hubbard_param(lattice_extra={"type": latname})
-        with pytest.raises(RuntimeError, match="square"):
+        with pytest.raises(RuntimeError, match=re.escape(latname)):
             tenes_simple.tenes_simple(param)
 
     def test_square_lattice_is_accepted(self):
         tenes_simple.tenes_simple(hubbard_param())
 
+    # T3 contract item 1: accepted now (they used to be refused here).
     @pytest.mark.parametrize("key", ["t'", "t''", "v'", "v''"])
-    def test_beyond_nearest_neighbour_parameters_are_rejected(self, key):
-        param = hubbard_param({key: 0.5})
-        with pytest.raises(RuntimeError, match="nearest"):
-            tenes_simple.tenes_simple(param)
+    def test_beyond_nearest_neighbour_parameters_are_accepted(self, key):
+        tenes_simple.tenes_simple(hubbard_param({key: 0.5}))
 
     def test_zero_valued_far_neighbour_parameters_are_accepted(self):
         tenes_simple.tenes_simple(hubbard_param({"t'": 0.0}))
@@ -849,6 +865,174 @@ class TestHubbardOneRowSkewedCell:
     def test_square_cell_no_skew_is_accepted(self):
         text, lattice = tenes_simple.tenes_simple(hubbard_param())
         assert lattice.skew == 0
+
+
+# ---------------------------------------------------------------------------
+# T3 contract item 1 of docs/superpowers/plans/
+# 2026-09-30-fermion-longrange-hamiltonian.md: for both fermionic models
+# tenes_simple accepts the second- and third-neighbour terms t', t'', v',
+# v'' of the square lattice and the triangular lattice with first to third
+# neighbours, and writes them into the std.toml.  (The honeycomb and kagome
+# lattices stay refused: TestFermionScopeGuards, TestHubbardScopeGuards.)
+#
+# The bond displacements per neighbour level are those of
+# tool/tenes_simple.py (SquareLattice, TriangularLattice): square (1, 1),
+# (-1, 1) for the second level and (2, 0), (0, 2) for the third; triangular
+# (1, 0), (0, 1), (-1, 1), then (-1, 2), (-2, 1), (1, 1), then (2, 0),
+# (0, 2), (-2, 2).  The coupling of a far level enters the same bond
+# formula as the nearest-neighbour one, so with mu = U = 0 the hopping
+# Hamiltonian of a far level is the nearest-neighbour one times t_level / t,
+# and V_level n_s n_t is diagonal with the site occupations as entries.
+# What tenes_std and the solver make of these bonds is the business of the
+# end-to-end tests (test/fermion/free_fermion_tprime.py.in and the
+# triangular ones).
+# ---------------------------------------------------------------------------
+
+FERMION_MODELS = {
+    "spinless": (spinless_param, [0, 1], [0, 1]),
+    "hubbard": (hubbard_param, [0, 1, 1, 0], [0, 1, 1, 2]),
+}
+SQUARE_LEVEL_DISPLACEMENTS = {
+    "'": [(1, 1), (-1, 1)],
+    "''": [(2, 0), (0, 2)],
+}
+TRIANGULAR_DISPLACEMENTS = [
+    [(1, 0), (0, 1), (-1, 1)],
+    [(-1, 2), (-2, 1), (1, 1)],
+    [(2, 0), (0, 2), (-2, 2)],
+]
+
+
+def hamiltonians_by_bonds(parsed):
+    """{frozenset of (source, dx, dy): op[in1, in2, out1, out2]} of the
+    [[hamiltonian]] entries of a parsed std.toml."""
+    out = {}
+    for ham in parsed["hamiltonian"]:
+        bonds = frozenset(
+            tuple(int(word) for word in line) for line in bond_lines(ham["bonds"])
+        )
+        assert bonds not in out
+        d = ham["dim"][0]
+        out[bonds] = parse_elements(ham["elements"], (d,) * 4)
+    return out
+
+
+def level_bonds(nsites, displacements):
+    return frozenset(
+        (source, dx, dy) for source in range(nsites) for dx, dy in displacements
+    )
+
+
+class TestFermionBeyondNearestNeighbour:
+    NEAREST = [(1, 0), (0, 1)]
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    @pytest.mark.parametrize("primes", ["'", "''"])
+    def test_square_far_hopping_is_emitted(self, model, primes):
+        make, parity, _ = FERMION_MODELS[model]
+        parsed = std_toml(make({"t": 1.0, "t" + primes: 0.5}))
+        assert parsed["parameter"]["general"]["fermion"] is True
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert ucell["parity"] == parity
+        hams = hamiltonians_by_bonds(parsed)
+        nearest = level_bonds(4, self.NEAREST)
+        far = level_bonds(4, SQUARE_LEVEL_DISPLACEMENTS[primes])
+        assert set(hams) == {nearest, far}
+        assert np.abs(hams[nearest]).max() > 0.5
+        np.testing.assert_allclose(hams[far], 0.5 * hams[nearest], atol=1e-14)
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    @pytest.mark.parametrize("primes", ["'", "''"])
+    def test_square_far_repulsion_is_emitted(self, model, primes):
+        make, _, occupation = FERMION_MODELS[model]
+        parsed = std_toml(make({"t": 1.0, "v" + primes: 0.5}))
+        hams = hamiltonians_by_bonds(parsed)
+        far = level_bonds(4, SQUARE_LEVEL_DISPLACEMENTS[primes])
+        assert far in hams
+        d = len(occupation)
+        expected = np.zeros((d,) * 4)
+        for i1 in range(d):
+            for i2 in range(d):
+                expected[i1, i2, i1, i2] = 0.5 * occupation[i1] * occupation[i2]
+        np.testing.assert_allclose(hams[far], expected, atol=1e-14)
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    def test_all_square_far_terms_together(self, model):
+        make, _, _ = FERMION_MODELS[model]
+        couplings = {"t": 1.0, "t'": 0.3, "t''": 0.2, "v'": 0.5, "v''": 0.4}
+        parsed = std_toml(make(couplings))
+        bonds = set()
+        for key in hamiltonians_by_bonds(parsed):
+            bonds |= key
+        expected = self.NEAREST + [
+            r for rs in SQUARE_LEVEL_DISPLACEMENTS.values() for r in rs
+        ]
+        assert bonds == set(level_bonds(4, expected))
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    def test_triangular_nearest_neighbour_is_emitted(self, model):
+        make, parity, _ = FERMION_MODELS[model]
+        parsed = std_toml(make({"t": 1.0}, {"type": "triangular lattice"}))
+        assert parsed["parameter"]["general"]["fermion"] is True
+        assert parsed["tensor"]["L_sub"] == [2, 2]
+        for ucell in parsed["tensor"]["unitcell"]:
+            assert ucell["parity"] == parity
+        hams = hamiltonians_by_bonds(parsed)
+        # one Hamiltonian on all three directions, (-1, 1) included
+        assert set(hams) == {level_bonds(4, TRIANGULAR_DISPLACEMENTS[0])}
+        hopping = twosite_entries(parsed)["hopping"]
+        assert frozenset(
+            tuple(int(w) for w in line) for line in bond_lines(hopping["bonds"])
+        ) == level_bonds(4, TRIANGULAR_DISPLACEMENTS[0])
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    def test_triangular_first_to_third_neighbours_are_emitted(self, model):
+        make, _, _ = FERMION_MODELS[model]
+        couplings = [1.0, 0.5, 0.25]
+        parsed = std_toml(
+            make(
+                {"t": couplings[0], "t'": couplings[1], "t''": couplings[2]},
+                {"type": "triangular lattice"},
+            )
+        )
+        hams = hamiltonians_by_bonds(parsed)
+        levels = [level_bonds(4, rs) for rs in TRIANGULAR_DISPLACEMENTS]
+        assert set(hams) == set(levels)
+        assert np.abs(hams[levels[0]]).max() > 0.5
+        for level in (1, 2):
+            np.testing.assert_allclose(
+                hams[levels[level]],
+                couplings[level] * hams[levels[0]],
+                atol=1e-14,
+            )
+
+    # The std.toml has to be usable by the next stage: tenes_std builds the
+    # gates (chains of nearest-neighbour gates for the far bonds, T1) and
+    # emits an input.toml in fermion mode.
+    @pytest.mark.parametrize(
+        "model, model_extra, lattice_extra",
+        [
+            ("spinless", {"t'": 0.3, "t''": 0.2, "v'": 0.5, "v''": 0.4}, None),
+            ("hubbard", {"t'": 0.3, "v''": 0.4}, None),
+            ("spinless", {"t'": 0.3, "t''": 0.2}, {"type": "triangular lattice"}),
+            ("hubbard", {}, {"type": "triangular lattice"}),
+        ],
+        ids=["spinless-square", "hubbard-square", "spinless-tri", "hubbard-tri"],
+    )
+    def test_tenes_std_accepts_the_std_toml(self, model, model_extra, lattice_extra):
+        make, parity, _ = FERMION_MODELS[model]
+        extra = {"t": 1.0, "mu": 0.5}
+        extra.update(model_extra)
+        text, _ = tenes_simple.tenes_simple(make(extra, lattice_extra))
+        std_model = tenes_std.Model(toml.loads(text))
+        assert std_model.parameter["general"]["fermion"] is True
+        buf = io.StringIO()
+        std_model.to_toml(buf)
+        emitted = toml.loads(buf.getvalue())
+        assert emitted["parameter"]["general"]["fermion"] is True
+        assert emitted["evolution"]["simple"]
+        for ucell in emitted["tensor"]["unitcell"]:
+            assert ucell["parity"] == parity
 
 
 # ---------------------------------------------------------------------------

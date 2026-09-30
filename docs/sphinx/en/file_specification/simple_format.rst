@@ -128,6 +128,8 @@ The parameters of the one-body terms are defined as follows.
    ``mu``,   "Chemical potential",                    Real,    0.0
 
 The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+Use ``t'`` and ``v'`` for second-neighbor bonds, and ``t''`` and ``v''`` for third-neighbor bonds.
+The typed forms such as ``t0'`` and ``v1''`` select a bond type within a neighbor shell.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -187,6 +189,8 @@ The parameter of the one-body term is defined as follows.
    ``mu``, "Chemical potential", Real, 0.0
 
 The hopping constant :math:`t` and the offsite repulsion :math:`V` can have a bond dependency.
+Use ``t'`` and ``v'`` for second-neighbor bonds, and ``t''`` and ``v''`` for third-neighbor bonds.
+The typed forms such as ``t0'`` and ``v1''`` select a bond type within a neighbor shell.
 
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
@@ -240,7 +244,9 @@ Two-site values in ``density.dat`` are per site (the sum over bonds divided by t
 ``tenes_simple`` itself emits only nearest-neighbor two-site observables.
 To measure longer-distance two-site observables, add ``[[observable.twosite]]`` entries to the generated ``std.toml`` before running ``tenes_std``.
 
-In the current version, fermionic models support nearest-neighbor Hamiltonian bonds on the square lattice.
+In the current version, ``tenes_simple`` accepts fermionic models on the square lattice with Hamiltonian bonds up to third neighbors and on the triangular lattice.
+Honeycomb and kagome lattices are not yet available for fermionic models.
+Beyond-nearest-neighbor Hamiltonian bonds in fermion mode are supported with the simple update only; they are rejected when the full update has a positive ``num_step``.
 With the CTM environment, two-site observables are available in the 4 x 4 window (``|dx| <= 3`` and ``|dy| <= 3``) and may use either explicit ``elements`` or ``ops = [A, B]``.
 With ``meanfield_env = true``, the same longer-distance two-site observables and correlation functions are available using the mean-field approximation, where the outside of the measured window is closed by the simple-update :math:`\lambda` weights.
 
@@ -286,7 +292,8 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
   - The amount of fluctuation in the elements of the initial tensor
 
-In fermionic models, ``tenes_simple`` supports square-lattice nearest-neighbor Hamiltonian bonds.
+In fermionic models, ``tenes_simple`` supports square-lattice Hamiltonian bonds up to third neighbors and triangular-lattice Hamiltonian bonds.
+Honeycomb and kagome lattices are not yet available for fermionic models.
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
