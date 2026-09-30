@@ -240,13 +240,13 @@ One-site operators are automatically defined with the following group numbers: `
 The parity-odd operators ``cdag_up``, ``c_up``, ``cdag_dn``, and ``c_dn`` are available for ``ops``-form two-site observables and correlation functions; their one-site expectation values are always output as zero.
 In addition, ``hopping``, ``nn``, ``SzSz``, ``SxSx``, and ``SySy`` on nearest-neighbor bonds are automatically defined as two-site operators.
 The spin operators are :math:`S^\alpha = \frac{1}{2}\sum_{ss'} c^\dagger_s \sigma^\alpha_{ss'} c_{s'}`.
-Two-site values in ``density.dat`` are per site (the sum over bonds divided by the number of sites), so on the square lattice they are twice the correlation per nearest-neighbor bond.
+Two-site values in ``density.dat`` are per site (the sum over bonds divided by the number of sites with a physical dimension larger than 1, that is, excluding vacancies), so on the square lattice they are twice the correlation per nearest-neighbor bond.
 ``tenes_simple`` itself emits only nearest-neighbor two-site observables.
 To measure longer-distance two-site observables, add ``[[observable.twosite]]`` entries to the generated ``std.toml`` before running ``tenes_std``.
 
-In the current version, ``tenes_simple`` accepts fermionic models on the square lattice with Hamiltonian bonds up to third neighbors and on the triangular lattice.
-Honeycomb and kagome lattices are not yet available for fermionic models.
+In the current version, ``tenes_simple`` accepts fermionic models on square, triangular, honeycomb, and kagome lattices with Hamiltonian bonds up to third neighbors.
 Beyond-nearest-neighbor Hamiltonian bonds in fermion mode are supported with the simple update only; they are rejected when the full update has a positive ``num_step``.
+On the kagome lattice, nearest-neighbor bonds in one direction are two-hop chains in the square-lattice embedding, so even a nearest-neighbor kagome model uses the long-range gate chain and is restricted to the simple update when those bonds are present.
 With the CTM environment, two-site observables are available in the 4 x 4 window (``|dx| <= 3`` and ``|dy| <= 3``) and may use either explicit ``elements`` or ``ops = [A, B]``.
 With ``meanfield_env = true``, the same longer-distance two-site observables and correlation functions are available using the mean-field approximation, where the outside of the measured window is closed by the simple-update :math:`\lambda` weights.
 
@@ -260,7 +260,7 @@ Square, triangular, honeycomb, and Kagome lattices are defined.
 .. csv-table::
    :header: "Name", "Description", "Type", "Default"
 
-   ``type``,        "lattice name (square,                triangular or honeycomb lattice)", String, --
+   ``type``,        "lattice name (square, triangular, honeycomb or kagome lattice)", String, --
    ``L``,           Unit cell size in x direction,        Integer,                           --
    ``W``,           Unit cell size in y direction,        Integer,                           ``L``
    ``virtual_dim``, Bond dimension,                       Integer,                           --
@@ -292,8 +292,8 @@ If ``tensor_load`` is set in ``parameter.general``, ``initial`` is ignored.
 
   - The amount of fluctuation in the elements of the initial tensor
 
-In fermionic models, ``tenes_simple`` supports square-lattice Hamiltonian bonds up to third neighbors and triangular-lattice Hamiltonian bonds.
-Honeycomb and kagome lattices are not yet available for fermionic models.
+In fermionic models, ``tenes_simple`` supports Hamiltonian bonds up to third neighbors on square, triangular, honeycomb, and kagome lattices.
+On the kagome lattice, nearest-neighbor bonds in one direction are two-hop chains in the square-lattice embedding, so even a nearest-neighbor kagome model uses the long-range gate chain and is restricted to the simple update when those bonds are present.
 
 Square lattice
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -370,6 +370,8 @@ In addition, the definitions of the first, second and third nearest neighbor bon
 :numref:`fig_kagome_lattice` (b), (c), and (d), respectively.
 The blue and the red lines represent bonds of ``bondtype = 0``, and ``1``, respectively.
 (e) shows the corresponding square TPS with ``L=2, W=2``.
+In fermionic models, the dummy tensor in this square-lattice embedding is a vacancy with physical dimension 1 and even parity.
+``tenes`` writes the energy in ``density.dat`` per site with a physical dimension larger than 1, so for the kagome lattice it is per non-vacancy site.
 
 .. figure:: ../../img/KagomeLattice.*
    :width: 550px

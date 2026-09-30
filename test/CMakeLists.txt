@@ -505,6 +505,49 @@ add_test(NAME HubbardTriangular
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_triangular.py)
 set_tests_properties(HubbardTriangular PROPERTIES TIMEOUT 600)
 
+# Items 1-4 of the T5 contract of
+# docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md: the
+# honeycomb and kagome lattices in fermion mode, end to end (tenes_simple ->
+# tenes_std -> tenes).  Both embed into the square grid with bonds of
+# dimension 1 (and, on the kagome lattice, a vacancy); design section 7.
+#   FreeFermionHoneycomb  free spinless fermions with t' on the honeycomb
+#                         lattice (its second neighbours are chains), against
+#                         the Fermi sea
+#   FreeFermionKagome     free spinless fermions on the kagome lattice (two of
+#                         its nearest-neighbour bonds are chains), against the
+#                         Fermi sea
+#   HubbardHoneycomb      the honeycomb Hubbard model with t': hopping signs,
+#                         the energy balance and golden files
+# FreeFermionKagomeMPI2 runs the kagome case on two processes and compares it
+# with a one-process run of the same input.toml.  They take 11-91 s at
+# OMP_NUM_THREADS=1 in a Debug build (see
+# work/fermion-longrange-ham/t5/test-author-report.md); the golden files of
+# HubbardHoneycomb are in test/data/output_HubbardHoneycomb/, see the header
+# of the script for how to regenerate them.
+foreach(name free_fermion_honeycomb free_fermion_kagome hubbard_honeycomb)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
+endforeach()
+add_test(NAME FreeFermionHoneycomb
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_honeycomb.py)
+set_tests_properties(FreeFermionHoneycomb PROPERTIES TIMEOUT 600)
+add_test(NAME FreeFermionKagome
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_kagome.py)
+set_tests_properties(FreeFermionKagome PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FreeFermionKagomeMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion_kagome.py
+                   --nproc 2)
+  set_tests_properties(FreeFermionKagomeMPI2 PROPERTIES TIMEOUT 600)
+endif()
+add_test(NAME HubbardHoneycomb
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/hubbard_honeycomb.py)
+set_tests_properties(HubbardHoneycomb PROPERTIES TIMEOUT 600)
+
 # Item 6 of the T5 contract of the same plan: FreeFermionLongRange with the
 # mean-field environment (meanfield_env = true), checked through identities
 # between code paths of one run and the golden files in

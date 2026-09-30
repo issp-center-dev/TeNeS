@@ -157,15 +157,13 @@ class TestSpinlessFermionSchema:
 
 class TestFermionScopeGuards:
     # T3 contract item 1 of docs/superpowers/plans/
-    # 2026-09-30-fermion-longrange-hamiltonian.md: the triangular lattice is
-    # accepted now (TestFermionBeyondNearestNeighbour below); the honeycomb
-    # and kagome lattices stay refused until T5.  The message has to name
-    # the refused lattice.
+    # 2026-09-30-fermion-longrange-hamiltonian.md accepted the triangular
+    # lattice (TestFermionBeyondNearestNeighbour below), and T5 contract
+    # item 1 the honeycomb and kagome lattices, which used to be refused
+    # here (TestFermionHoneycombAndKagome below has what they emit).
     @pytest.mark.parametrize("latname", ["honeycomb lattice", "kagome lattice"])
-    def test_honeycomb_and_kagome_lattices_are_rejected(self, latname):
-        param = spinless_param(lattice_extra={"type": latname})
-        with pytest.raises(RuntimeError, match=re.escape(latname)):
-            tenes_simple.tenes_simple(param)
+    def test_honeycomb_and_kagome_lattices_are_accepted(self, latname):
+        tenes_simple.tenes_simple(spinless_param(lattice_extra={"type": latname}))
 
     def test_square_lattice_is_accepted(self):
         tenes_simple.tenes_simple(spinless_param())
@@ -224,12 +222,17 @@ class TestFermionScopeGuards:
         param["correlation"] = {"r_max": 5}
         tenes_simple.tenes_simple(param)
 
-    # ... and accepting them, or the triangular lattice, must not let
-    # [correlation_length] through.
+    # ... and accepting them, or the triangular, honeycomb and kagome
+    # lattices, must not let [correlation_length] through.
     @pytest.mark.parametrize(
         "model_extra, lattice_extra",
-        [({"t'": 0.5}, None), (None, {"type": "triangular lattice"})],
-        ids=["t-prime", "triangular"],
+        [
+            ({"t'": 0.5}, None),
+            (None, {"type": "triangular lattice"}),
+            (None, {"type": "honeycomb lattice"}),
+            (None, {"type": "kagome lattice"}),
+        ],
+        ids=["t-prime", "triangular", "honeycomb", "kagome"],
     )
     def test_correlation_length_is_still_rejected(self, model_extra, lattice_extra):
         param = spinless_param(model_extra, lattice_extra)
@@ -246,8 +249,11 @@ class TestFermionScopeGuards:
         }
         tenes_simple.tenes_simple(param)
 
+    # With the honeycomb and kagome lattices accepted (T5), no lattice is
+    # refused any more; [correlation_length] is the refusal left.
     def test_the_message_does_not_mention_the_internal_milestone(self):
-        param = spinless_param(lattice_extra={"type": "honeycomb lattice"})
+        param = spinless_param()
+        param["correlation_length"] = {"measure": True}
         with pytest.raises(RuntimeError) as excinfo:
             tenes_simple.tenes_simple(param)
         assert "M1" not in str(excinfo.value)
@@ -275,10 +281,10 @@ class TestFermionScopeGuards:
 #
 # tenes_simple cannot produce a self-neighbour fermion cell at all (the
 # square lattice asserts L > 1, and W = 1 always gets skew = 1), so it has no
-# cell-shape refusal left. Unchanged: the honeycomb and kagome lattices are
-# refused for fermionic models (TestFermionScopeGuards; the triangular one
-# is accepted since the T3 contract of 2026-09-30), W >= 2 gives skew = 0,
-# and bosonic models are untouched.
+# cell-shape refusal left. Unchanged: W >= 2 gives skew = 0, and bosonic
+# models are untouched.  (The triangular lattice is accepted for fermionic
+# models since the T3 contract of 2026-09-30, the honeycomb and kagome
+# lattices since its T5 contract; TestFermionScopeGuards.)
 # ---------------------------------------------------------------------------
 
 
@@ -799,17 +805,15 @@ class TestSquareLatticeCdw:
 
 
 class TestHubbardScopeGuards:
-    # C6, and the is_fermion-wiring proof the contract asks for: a honeycomb
-    # or kagome lattice is rejected specifically *because*
-    # HubbardModel.is_fermion is True and the guard is generic across
-    # fermionic models, not because of anything spinless-specific.  (The
-    # triangular lattice used to be one of them; the T3 contract of
-    # 2026-09-30 accepts it, see TestFermionBeyondNearestNeighbour.)
+    # C6: the guards are generic across fermionic models, not
+    # spinless-specific.  The triangular, honeycomb and kagome lattices used
+    # to be refused here; the T3 and T5 contracts of 2026-09-30 accept them
+    # (TestFermionBeyondNearestNeighbour, TestFermionHoneycombAndKagome).
+    # The is_fermion wiring is now shown by the [correlation_length] refusal
+    # below, which bosonic models do not get.
     @pytest.mark.parametrize("latname", ["honeycomb lattice", "kagome lattice"])
-    def test_honeycomb_and_kagome_lattices_are_rejected(self, latname):
-        param = hubbard_param(lattice_extra={"type": latname})
-        with pytest.raises(RuntimeError, match=re.escape(latname)):
-            tenes_simple.tenes_simple(param)
+    def test_honeycomb_and_kagome_lattices_are_accepted(self, latname):
+        tenes_simple.tenes_simple(hubbard_param(lattice_extra={"type": latname}))
 
     def test_square_lattice_is_accepted(self):
         tenes_simple.tenes_simple(hubbard_param())
@@ -846,7 +850,8 @@ class TestHubbardScopeGuards:
             tenes_simple.tenes_simple(param)
 
     def test_the_message_does_not_mention_the_internal_milestone(self):
-        param = hubbard_param(lattice_extra={"type": "honeycomb lattice"})
+        param = hubbard_param()
+        param["correlation_length"] = {"measure": True}
         with pytest.raises(RuntimeError) as excinfo:
             tenes_simple.tenes_simple(param)
         message = str(excinfo.value)
@@ -873,7 +878,8 @@ class TestHubbardOneRowSkewedCell:
 # tenes_simple accepts the second- and third-neighbour terms t', t'', v',
 # v'' of the square lattice and the triangular lattice with first to third
 # neighbours, and writes them into the std.toml.  (The honeycomb and kagome
-# lattices stay refused: TestFermionScopeGuards, TestHubbardScopeGuards.)
+# lattices, accepted by the T5 contract, are TestFermionHoneycombAndKagome
+# below.)
 #
 # The bond displacements per neighbour level are those of
 # tool/tenes_simple.py (SquareLattice, TriangularLattice): square (1, 1),
@@ -1033,6 +1039,232 @@ class TestFermionBeyondNearestNeighbour:
         assert emitted["evolution"]["simple"]
         for ucell in emitted["tensor"]["unitcell"]:
             assert ucell["parity"] == parity
+
+
+# ---------------------------------------------------------------------------
+# T5 contract item 1 of docs/superpowers/plans/
+# 2026-09-30-fermion-longrange-hamiltonian.md (design section 7): for both
+# fermionic models tenes_simple accepts the honeycomb and kagome lattices
+# with first to third neighbours.  A vacancy gets physical_dim = 1 and
+# parity = [0]; every other site the model's dimension and parity table.
+#
+# The expected bonds are derived here from the geometry of the embeddings
+# (read from tool/tenes_simple.py, HoneycombLattice and KagomeLattice, on
+# 2026-09-30), not from tenes_simple's bond lists:
+#
+# * honeycomb: the grid site (x, y) sits at floor(X / 2) a0 + y a1 +
+#   (X mod 2)(a0 + a1) / 3, X = x - y, a0 = (sqrt 3, 0),
+#   a1 = (sqrt 3 / 2, 3 / 2): a brick wall, first neighbours at distance 1,
+#   second at sqrt 3, third at 2 (3, 6 and 3 per site); no vacancy.
+# * kagome: the grid site (x, y) sits at x a0 + y a1, a0 = (1, 0),
+#   a1 = (1 / 2, sqrt 3 / 2), and is a vacancy where x and y are both odd:
+#   first neighbours at distance 1, second at sqrt 3, third at 2 (4, 4 and 6
+#   per non-vacancy site, none on a vacancy).
+#
+# A bond (source, dx, dy) and its reverse are the same pair of sites, so
+# the bonds of one level are compared as unordered pairs up to a
+# translation by the cell.  The cells used have skew 0.  What tenes_std and
+# the solver make of these bonds is the business of the end-to-end tests
+# (test/fermion/free_fermion_honeycomb.py.in, free_fermion_kagome.py.in,
+# hubbard_honeycomb.py.in).
+# ---------------------------------------------------------------------------
+
+HONEYCOMB_A0 = np.array([np.sqrt(3.0), 0.0])
+HONEYCOMB_A1 = np.array([np.sqrt(3.0) / 2.0, 1.5])
+LEVEL_DISTANCES = [1.0, np.sqrt(3.0), 2.0]
+
+
+def honeycomb_position(x, y):
+    q, r = divmod(x - y, 2)
+    return q * HONEYCOMB_A0 + y * HONEYCOMB_A1 + r * (HONEYCOMB_A0 + HONEYCOMB_A1) / 3.0
+
+
+def kagome_position(x, y):
+    return np.array([x + 0.5 * y, np.sqrt(3.0) / 2.0 * y])
+
+
+def kagome_is_vacancy(x, y):
+    return x % 2 == 1 and y % 2 == 1
+
+
+# lattice type -> (position, is_vacancy, simple-mode (L, W) -> grid cell)
+EMBEDDINGS = {
+    "honeycomb lattice": (honeycomb_position, lambda x, y: False, (2, 1)),
+    "kagome lattice": (kagome_position, kagome_is_vacancy, (2, 2)),
+}
+# (lattice type, simple-mode L, W): cells with skew 0
+EMBEDDED_CELLS = [
+    ("honeycomb lattice", 1, 2),
+    ("honeycomb lattice", 2, 4),
+    ("kagome lattice", 1, 1),
+    ("kagome lattice", 2, 2),
+]
+
+
+def embedded_cell(latname, L, W):
+    _, _, (fx, fy) = EMBEDDINGS[latname]
+    return fx * L, fy * W
+
+
+def pair_key(cell, source, dx, dy):
+    """The unordered pair of sites of the bond (source, dx, dy), up to a
+    translation by the cell (skew 0)."""
+    lx, ly = cell
+    x, y = source % lx, source // lx
+    ox, xt = divmod(x + dx, lx)
+    oy, yt = divmod(y + dy, ly)
+    target = xt + lx * yt
+    return min((source, target, ox, oy), (target, source, -ox, -oy))
+
+
+def geometric_pairs(latname, cell, distance):
+    """The pairs of non-vacancy sites at the given Cartesian distance."""
+    position, is_vacancy, _ = EMBEDDINGS[latname]
+    lx, ly = cell
+    pairs = set()
+    for source in range(lx * ly):
+        x, y = source % lx, source // lx
+        if is_vacancy(x, y):
+            continue
+        for dx in range(-4, 5):
+            for dy in range(-4, 5):
+                if is_vacancy(x + dx, y + dy):
+                    continue
+                d = np.linalg.norm(position(x + dx, y + dy) - position(x, y))
+                if abs(d - distance) < 1.0e-9:
+                    pairs.add(pair_key(cell, source, dx, dy))
+    return pairs
+
+
+def vacancies(latname, cell):
+    _, is_vacancy, _ = EMBEDDINGS[latname]
+    lx, ly = cell
+    return sorted(s for s in range(lx * ly) if is_vacancy(s % lx, s // lx))
+
+
+def honeycomb_kagome_param(model, latname, L, W, model_extra=None):
+    make, _, _ = FERMION_MODELS[model]
+    return make(model_extra, {"type": latname, "L": L, "W": W})
+
+
+class TestFermionHoneycombAndKagome:
+    COUPLINGS = [1.0, 0.5, 0.25]
+
+    def test_geometry_self_check(self):
+        # the helpers themselves: coordination numbers of the two lattices
+        for latname, L, W in EMBEDDED_CELLS:
+            cell = embedded_cell(latname, L, W)
+            nreal = cell[0] * cell[1] - len(vacancies(latname, cell))
+            per_site = [3, 6, 3] if latname == "honeycomb lattice" else [4, 4, 6]
+            for distance, z in zip(LEVEL_DISTANCES, per_site):
+                assert len(geometric_pairs(latname, cell, distance)) == nreal * z // 2
+        assert vacancies("kagome lattice", (2, 2)) == [3]
+        assert vacancies("kagome lattice", (4, 4)) == [5, 7, 13, 15]
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    @pytest.mark.parametrize("latname, L, W", EMBEDDED_CELLS)
+    def test_unitcells_carry_the_parity_and_the_vacancy(self, model, latname, L, W):
+        _, parity, _ = FERMION_MODELS[model]
+        parsed = std_toml(honeycomb_kagome_param(model, latname, L, W))
+        assert parsed["parameter"]["general"]["fermion"] is True
+        cell = embedded_cell(latname, L, W)
+        assert parsed["tensor"]["L_sub"] == list(cell)
+        assert parsed["tensor"]["skew"] == 0
+        vacant = vacancies(latname, cell)
+        covered = []
+        for ucell in parsed["tensor"]["unitcell"]:
+            covered += ucell["index"]
+            if set(ucell["index"]) & set(vacant):
+                # contract item 1: the vacancy
+                assert sorted(ucell["index"]) == vacant
+                assert ucell["physical_dim"] == 1
+                assert ucell["parity"] == [0]
+                assert ucell["virtual_dim"] == [1, 1, 1, 1]
+            else:
+                assert ucell["physical_dim"] == len(parity)
+                assert ucell["parity"] == parity
+        assert sorted(covered) == list(range(cell[0] * cell[1]))
+
+    @pytest.mark.parametrize("model", sorted(FERMION_MODELS))
+    @pytest.mark.parametrize("latname, L, W", EMBEDDED_CELLS)
+    def test_first_to_third_neighbours_are_emitted(self, model, latname, L, W):
+        couplings = self.COUPLINGS
+        parsed = std_toml(
+            honeycomb_kagome_param(
+                model,
+                latname,
+                L,
+                W,
+                {"t": couplings[0], "t'": couplings[1], "t''": couplings[2]},
+            )
+        )
+        cell = embedded_cell(latname, L, W)
+        expected = [geometric_pairs(latname, cell, d) for d in LEVEL_DISTANCES]
+        emitted = [set() for _ in LEVEL_DISTANCES]
+        matrices = [[] for _ in LEVEL_DISTANCES]
+        for bonds, op in hamiltonians_by_bonds(parsed).items():
+            levels = set()
+            for source, dx, dy in bonds:
+                key = pair_key(cell, source, dx, dy)
+                found = [level for level in range(3) if key in expected[level]]
+                assert len(found) == 1, (source, dx, dy)
+                assert key not in emitted[found[0]], (source, dx, dy)
+                emitted[found[0]].add(key)
+                levels.add(found[0])
+            assert len(levels) == 1, bonds
+            matrices[levels.pop()].append(op)
+        for level in range(3):
+            assert emitted[level] == expected[level]
+        # with mu = U = 0 a far level is the nearest-neighbour hopping times
+        # t_level / t
+        nearest = matrices[0][0]
+        assert np.abs(nearest).max() > 0.5
+        for level in range(3):
+            for op in matrices[level]:
+                np.testing.assert_allclose(
+                    op, couplings[level] / couplings[0] * nearest, atol=1e-14
+                )
+
+    @pytest.mark.parametrize("latname, L, W", EMBEDDED_CELLS)
+    def test_onesite_observables_skip_the_vacancy(self, latname, L, W):
+        parsed = std_toml(honeycomb_kagome_param("spinless", latname, L, W))
+        cell = embedded_cell(latname, L, W)
+        vacant = vacancies(latname, cell)
+        real = [s for s in range(cell[0] * cell[1]) if s not in vacant]
+        for entry in parsed["observable"]["onesite"]:
+            assert sorted(entry["sites"] or real) == real, entry["name"]
+
+    # The std.toml has to be usable by the next stage: tenes_std builds the
+    # gates (chains of nearest-neighbour gates for the bonds that are more
+    # than one hop apart on the grid, T1) and keeps the parity tables,
+    # [0] on the vacancy.  (Hubbard without t'': its three-hop chains with
+    # d = 4 take 15 s in tenes_std.)
+    @pytest.mark.parametrize(
+        "model, far",
+        [("spinless", {"t'": 0.3, "t''": 0.2}), ("hubbard", {"t'": 0.3})],
+        ids=["spinless", "hubbard"],
+    )
+    @pytest.mark.parametrize("latname, L, W", [EMBEDDED_CELLS[0], EMBEDDED_CELLS[2]])
+    def test_tenes_std_accepts_the_std_toml(self, model, far, latname, L, W):
+        _, parity, _ = FERMION_MODELS[model]
+        extra = {"t": 1.0, "mu": 0.5}
+        extra.update(far)
+        text, _ = tenes_simple.tenes_simple(
+            honeycomb_kagome_param(model, latname, L, W, extra)
+        )
+        std_model = tenes_std.Model(toml.loads(text))
+        buf = io.StringIO()
+        std_model.to_toml(buf)
+        emitted = toml.loads(buf.getvalue())
+        assert emitted["parameter"]["general"]["fermion"] is True
+        assert emitted["evolution"]["simple"]
+        vacant = vacancies(latname, embedded_cell(latname, L, W))
+        for ucell in emitted["tensor"]["unitcell"]:
+            if set(ucell["index"]) & set(vacant):
+                assert ucell["physical_dim"] == 1
+                assert ucell["parity"] == [0]
+            else:
+                assert ucell["parity"] == parity
 
 
 # ---------------------------------------------------------------------------
