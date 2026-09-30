@@ -303,7 +303,7 @@ git commit -m "Carry the physical parity ledger through a chain of fermion gates
 **Files:**
 - Modify: `tool/tenes_simple.py`(`_check_fermion_scope`、`SpinlessFermionModel` と `HubbardModel` の docstring)
 - Modify: `test/python/test_fermion_models.py`(三角格子と 2・3 近接の拒否テストを受理に更新。ハニカムとカゴメの拒否は残す。テスト作成者)
-- Create: `test/fermion/free_fermion_tprime.py.in`、`test/fermion/hubbard_triangular.py.in`(テスト作成者)、golden `test/data/output_FreeFermionTPrime/`、`test/data/output_HubbardTriangular/`
+- Create: `test/fermion/free_fermion_tprime.py.in`、`test/fermion/free_fermion_triangular.py.in`、`test/fermion/hubbard_triangular.py.in`(テスト作成者)、golden `test/data/output_HubbardTriangular/`(自由フェルミオンの 2 本は厳密値と比べるので golden を持たせるかは作成者が判断)
 - Modify: `test/CMakeLists.txt`(E2E の登録)
 - Modify: `docs/sphinx/{ja,en}/file_specification/parameter_section.rst`、`simple_format.rst`、`std_format.rst`(該当する記述)、`NEWS.md`
 
@@ -317,16 +317,27 @@ git commit -m "Carry the physical parity ledger through a chain of fermion gates
    - ハニカムとカゴメは、引き続き拒否する(T5 で許可する)。
    - `[correlation_length]` の拒否は変わらない。
 2. **パイプライン**:`tenes_simple` → `tenes_std` → `tenes` が、正方格子の t-t'(スピンレス)と三角格子(Hubbard)で最後まで走る。
-3. **t-t' 自由フェルミオンの厳密照合**(`FreeFermionTPrime`):
-   - スピンレス、正方格子、t = 1、t' ≠ 0、μ は半充填から外れた値(粒子正孔対称性が破れ、t' の符号でエネルギーが変わる点)。
-   - 参照は k 積分:ε(k) = −2t(cos kx + cos ky) − 4t' cos kx cos ky(`tenes_simple` の t' の符号規約に合わせる。規約を `tool/tenes_simple.py` で確かめ、コメントに書く)。
-   - **判定点の選び方**:t' と −t' の厳密なエネルギー差 ΔE_sign を求める。有限 D の TeNeS の誤差 |E_TeNeS − E_exact| が ΔE_sign の 1/4 以下になる (D, χ, 反復数) を、実装前に作成者が決める(作成者は既存の NN 実装で t' = 0 の誤差を測り、そこから見積もってよい。見積もりの根拠を報告に書く)。許容誤差は ΔE_sign/4 とする。
-   - 実装後に統括が、t' の符号を反転させた実行でこのテストが落ちることを確かめる(変異)。
-   - あわせて、⟨c†_s c_t⟩ の (1, 1) 成分の符号が厳密値と一致することを確かめる(大きさの許容は D による)。
-4. **三角格子 Hubbard**(`HubbardTriangular`):小さい D で走る設定。golden(`test/fulltest.py.in` の rtol/atol)で比べる。あわせて、同じ設定のスピン反転対称性・格子の 3 方向の NN ボンドエネルギーが等しいことなど、厳密に成り立つ関係を 1 つ以上確かめる(golden だけにしない)。
-5. **既存の E2E と golden は変わらない**。
-6. **ドキュメント**:設計書 §6.1 のゲート列の規約(`out2` が太り `in1` が消費される)を `std_format.rst` か入力ファイル仕様に明記する。fermion の制限の一覧から「longer-distance Hamiltonian bonds」を外し、FU では使えないこと、ハニカムとカゴメが未対応であること(T5 まで)を書く。ja と en の両方。
-7. 実行時間:各 E2E が `OMP_NUM_THREADS=1` で 300 秒以内。
+3. **t-t' 自由フェルミオンの厳密照合**(`FreeFermionTPrime`)。判定点は Step 1 の実測(台帳 2026-09-30)で決めた:
+   - スピンレス、正方格子 L = W = 2、t = 1、μ = −1、D = 3、χ = 18、τ = 0.05 × 400 ステップ、`initial = "random"`、シード固定。t' = +0.3 と t' = −0.3 の 2 回走らせる(各 85 秒程度)。
+   - **μ = 0 は使わない**:粒子正孔対称性で E(t') = E(−t') となり、符号の誤りが見えない。
+   - 参照は k 積分:ε(k) = −2t(cos kx + cos ky) − 4t' cos kx cos ky(`tenes_simple` の t' の符号規約。規約を `tool/tenes_simple.py` で確かめ、コメントに書く)。厳密値:E(+0.3) = −0.53007、E(−0.3) = −0.34272、n(+0.3) = 0.2837、n(−0.3) = 0.4275、⟨c†_0 c_(1,1) + h.c.⟩ = 0.1915(t' = +0.3)/ 0.0086(t' = −0.3)。
+   - 判定(符号の誤りを確実に落とし、D = 3 の誤差には耐えるもの):
+     - **対角方向の hopping**:std.toml に (1, 1) と (−1, 1) の対角ボンドの hopping 観測量(c†_s c_t + h.c.)を足して測る(`tenes_simple` の hopping 観測量は NN だけなので、E2E が std.toml に追記してよい)。t' = +0.3 で 0.1915 ± 0.08(実測 D = 3 で 0.175 前後。符号が逆の実装では 0.0086 付近になる)。
+     - **エネルギー差**:E(+0.3) − E(−0.3) が厳密値 −0.187 の ±25% 以内(実測 D = 3 で −0.193)。
+     - 密度:厳密値の ±0.05 以内(実測 D = 3 で 0.262〜0.267、t' = +0.3)。
+   - 実装後に統括が、`tenes_std` のパリティ紐を外したコピーで作った入力で、このテストが落ちることを確かめる(変異)。
+4. **三角格子の自由フェルミオン**(`FreeFermionTriangular`):
+   - スピンレス、三角格子 L = W = 2、t = 1、μ = −1、D = 3、χ = 18、τ = 0.05 × 400、シード固定(70 秒程度)。三角格子の NN の (−1, 1) 方向は 2 ホップのゲート列になる。
+   - 厳密値(ε(k) = −2t(cos kx + cos ky + cos(ky − kx))):E = −0.68303、n = 0.304、各 NN 方向の ⟨c†c + h.c.⟩ = 0.329。(−1, 1) の符号を逆にした模型では、その方向が −0.322 になる。
+   - 判定:(−1, 1) 方向の hopping が 0.329 ± 0.1(実測 D = 3 でシード 1〜4 が 0.280〜0.290)。(1, 0)・(0, 1) 方向も正で 0.329 ± 0.12。エネルギーは D = 3 でシードによって −0.535〜−0.599 とばらつくので、厳密値との比較は緩く(±0.2)とどめ、符号の判定には使わない。
+5. **三角格子 Hubbard**(`HubbardTriangular`):
+   - 小さい D(D = 2、3×3 セル、ステップ数は 300 秒以内に収まるよう絞る。200 ステップで 107 秒の実測あり)。golden(`test/fulltest.py.in` の rtol/atol)で比べる。
+   - golden だけにしない。符号の健全性として、3 方向すべての NN ボンドで hopping の期待値が正であることを確かめる。**3 方向のボンドエネルギーが等しいことは使わない**(SU の状態が格子の対称性を破るので、実測でも等しくない)。
+6. **既存の E2E と golden は変わらない**。
+7. **ドキュメント**:設計書 §6.1 のゲート列の規約(`out2` が太り `in1` が消費される)を `std_format.rst` か入力ファイル仕様に明記する。fermion の制限の一覧から「longer-distance Hamiltonian bonds」を外し、FU では使えないこと、ハニカムとカゴメが未対応であること(T5 まで)を書く。ja と en の両方。あわせて次の 2 点を書く。
+   - 小さい D(実測では D = 2)でランダムな初期状態から長距離項を入れると、状態が真空に落ちて抜け出せないことがある。NN だけの計算で収束させた状態から始める(`tensor_save` / `tensor_load`)か、D を上げる。
+   - 出力脚の添字に非零要素が一つもない二サイトゲート(射影演算子のような非可逆なゲート)は、fermion モードでは NN でも入力時に拒否される。exp(−τh) の形のゲートは影響を受けない。
+8. 実行時間:各 E2E が `OMP_NUM_THREADS=1` で 300 秒以内。
 
 #### 手順(T3)
 
@@ -335,7 +346,7 @@ git commit -m "Carry the physical parity ledger through a chain of fermion gates
 - [ ] **Step 3: RED 確認**。E2E は `tenes_simple` の拒否で落ち、pytest の受理テストも拒否で落ちることを確認する。スナップショットを取る。
 - [ ] **Step 4: Codex に実装させる**(`tool/tenes_simple.py` とドキュメント)。報告 `work/fermion-longrange-ham/t3/codex-report.md`。
 - [ ] **Step 5: golden の生成**(Claude)。E2E のスクリプトの生成モードか手順に従って `test/data/output_*` を作る。手で編集しない。スナップショットを更新し、更新理由を台帳に書く。
-- [ ] **Step 6: 独立検証**。`ctest --preset gcc` 全件、MPI ビルドで全件。変異:t' の符号を反転(`tenes_simple` のコピーで)して `FreeFermionTPrime` が落ちることを確認する。
+- [ ] **Step 6: 独立検証**。`ctest --preset gcc` 全件、MPI ビルドで全件。変異:`tenes_std` のパリティ紐を外したコピーで `FreeFermionTPrime` と `FreeFermionTriangular` の入力を作って走らせ、落ちることを確認する。
 - [ ] **Step 7: タスクレビュー → 整形 → コミット**。
 
 ```bash
