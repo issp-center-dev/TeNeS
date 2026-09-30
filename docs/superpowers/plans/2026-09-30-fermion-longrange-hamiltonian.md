@@ -244,7 +244,7 @@ void infer_fermion_gate_ledgers(const PEPS_Parameters& peps_parameters,
    - 経路:設計書 §4.3 の一覧をすべて含める。少なくとも 1 ケースが `source_leg` 0 の段を、1 ケースが `source_leg` 1 の段を含むことを、テスト自身が確かめる。
    - 演算子:d = 2 の hopping と n_s n_t、d = 4 の Hubbard の hopping + 密度相互作用(T1 と同じもの)。real と complex の両方(complex は少なくとも 2 経路)。
 2. **経路上で同じ単位胞サイトが再び現れる場合**:2×2 単位胞の (2, 0) を、上と同じ方法で照合する。この場合の開放パッチは、単位胞を展開したものとして作る(同じ単位胞サイトの 2 つの位置は、どちらも更新後のテンソルになる)。展開の扱いを報告に書く。
-3. **台帳の持ち回し**:ゲート列の途中で、`iTPSTestAccessor::finfo(state).phys[m]` が推定した χ の台帳になり、末尾ゲートの後で元の台帳に戻る。左か上に進む段では、台帳が raster 化後のサイトに付くことを確かめる(TOML 上の source/target に付ける誤りで赤くなるケース)。
+3. **台帳の持ち回し**:ゲート列の途中で、`iTPSTestAccessor::finfo(state).phys[m]` が推定した χ の台帳になり、末尾ゲートの後で元の台帳に戻る。左か上に進む段では、台帳が raster 化後のサイトに付くことを確かめる(raster 化後のサイトに TOML 上の out1/out2 を付ける、両者を混ぜた誤りで赤くなるケース)。
 4. **入力時の推定と拒否**(`infer_fermion_gate_ledgers` を直接呼ぶ単体テスト):
    - 受理:T1 の出力のゲート列。χ の次元が d と等しいゲートを含むもの(T1 契約 3 のケース)。`complete_ungated_bonds()` の identity ゲートが末尾に付いた完全なリスト。
    - 推定値:受理したゲートの `fermion_legs` が、ゲートの非零要素から求めた台帳と一致する。
@@ -262,7 +262,7 @@ void infer_fermion_gate_ledgers(const PEPS_Parameters& peps_parameters,
 6. **既存の SU は変わらない**:NN だけのゲート列では、変更前と同じ結果になる(既存の `test_fermion_*`、`test_simple_update`、E2E が通ることで確かめる。新しいテストは不要)。
 7. **変異に対する感度**(レビュアーが確認する):
    - `finfo.phys` の更新を止める
-   - 台帳の更新を raster 化前の TOML 上の source/target と `out1`/`out2` で行う
+   - 台帳の更新で、raster 化後のサイト s1/s2 に TOML 上の `out1`/`out2` を付ける(両者を混ぜる)
    - raster 化の graded transpose で、4 本の台帳の入れ替えを忘れる
    - `out1` を推定に切り替え、`out2` を「次元が同じなら元の台帳」にする
    - 群末の検査を外す
