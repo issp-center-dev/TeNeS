@@ -244,9 +244,8 @@ Two-site values in ``density.dat`` are per site (the sum over bonds divided by t
 ``tenes_simple`` itself emits only nearest-neighbor two-site observables.
 To measure longer-distance two-site observables, add ``[[observable.twosite]]`` entries to the generated ``std.toml`` before running ``tenes_std``.
 
-In the current version, ``tenes_simple`` accepts fermionic models on square, triangular, honeycomb, and kagome lattices with Hamiltonian bonds up to third neighbors.
 Beyond-nearest-neighbor Hamiltonian bonds in fermion mode are supported with the simple update only; they are rejected when the full update has a positive ``num_step``.
-On the kagome lattice, nearest-neighbor bonds in one direction are two-hop chains in the square-lattice embedding, so even a nearest-neighbor kagome model uses the long-range gate chain and is restricted to the simple update when those bonds are present.
+See the ``lattice`` section for the fermionic lattices and neighbor ranges supported by ``tenes_simple``.
 With the CTM environment, two-site observables are available in the 4 x 4 window (``|dx| <= 3`` and ``|dy| <= 3``) and may use either explicit ``elements`` or ``ops = [A, B]``.
 With ``meanfield_env = true``, the same longer-distance two-site observables and correlation functions are available using the mean-field approximation, where the outside of the measured window is closed by the simple-update :math:`\lambda` weights.
 

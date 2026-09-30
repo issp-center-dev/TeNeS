@@ -1742,6 +1742,15 @@ class Model:
         for ham in self.hamiltonians:
             if not isinstance(ham, NNOperator):
                 continue
+            dx, dy = ham.bond.dx, ham.bond.dy
+            if abs(dx) > 3 or abs(dy) > 3:
+                msg = (
+                    "Fermion mode rejects Hamiltonian bond from source_site {} "
+                    "with (dx, dy) = ({}, {}) because the bond is outside the "
+                    "4x4 measurement window (|dx| <= 3 and |dy| <= 3), so its "
+                    "energy cannot be measured in fermion mode."
+                ).format(ham.bond.source_site, dx, dy)
+                raise RuntimeError(msg)
             bonds = self.graph.make_path(ham.bond)
             nhops = len(bonds)
             if nhops >= 2:

@@ -15,7 +15,6 @@
 - `tenes_simple` / `tenes_std`
   - `tenes_simple` now supports two fermionic models: `type = "spinless fermion"` (spinless fermions; parameters `t`, `v`, `mu`) and `type = "hubbard"` (the fermionic Hubbard model; parameters `t`, `u`, `v`, `mu`, `h`; the Bose-Hubbard model remains `type = "boson"`), with initial states `vacuum` (both), `full` and `cdw` (Hubbard); `tenes_simple` defines the parity-odd one-site operators `c`, `cdag`, `c_up`, `cdag_up`, `c_dn`, and `cdag_dn`, accepts `[correlation]`, and supplies fermionic default correlation operator pairs; `tenes_std` carries the `parity` metadata through to `input.toml` and accepts `ops`-form two-site observables while still rejecting inputs the fermion mode cannot handle (multi-site observables, unit cells in which a site is its own nearest neighbor); skewed unit cells, including the one-row cell (`L_sub = [L, 1]`, `skew = 1`) that `tenes_simple` builds for a square lattice with `W = 1`, work in fermion mode. Such a cell restricts the ansatz, and its CTM can need a larger `dimension`: raise `dimension`, then `iteration_max`, if the CTM does not converge or the full update stops on an environment that is not parity clean
   - In fermion mode, Hamiltonian bonds beyond nearest neighbors are supported with the simple update: `tenes_std` decomposes them into a graded chain of nearest-neighbor gates, and the full update rejects them. `tenes_simple` accepts fermionic models on the square, triangular, honeycomb, and kagome lattices with terms up to third neighbors; on kagome, one nearest-neighbor direction is already a two-hop chain in the square-lattice embedding.
-  - `tenes_std` no longer fails with a `ValueError` on a bosonic long-range bond across sites with different physical dimensions.
 
 ### Changes
 
@@ -45,6 +44,8 @@
   - Fixed an out-of-bounds access in mptensor (`make_l2g_map`) that aborted finite-temperature calculations in Debug builds, by updating mptensor to v0.5.0 ([#104][])
   - Fixed an out-of-bounds access in mptensor (`&v[0]` on an empty `std::vector`) that aborted every MPI run with two or more processes in Debug builds. Empty local blocks are routine with the ScaLAPACK backend, and GCC 15 and later enable `_GLIBCXX_ASSERTIONS` by default when compiling without optimization, turning the previously harmless undefined behavior into an abort ([#113][])
   - `tenes --version` / `--help` no longer initialize MPI, fixing a hang of MPI-linked binaries where the launcher infrastructure is unavailable, e.g. on cluster login nodes ([#111][])
+- `tenes_std`
+  - No longer fails with a `ValueError` on a bosonic long-range bond across sites with different physical dimensions.
 
 ### Development
 

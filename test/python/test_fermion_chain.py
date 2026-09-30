@@ -53,6 +53,7 @@ its left cancel in pairs and the modes on its right are untouched.
 import copy
 import io
 import os
+import re
 import sys
 
 import numpy as np
@@ -1280,3 +1281,78 @@ class TestFermionLongRangeInputChecks:
         }
         with pytest.raises(RuntimeError, match="multisite"):
             tenes_std.Model(param)
+
+
+# ---------------------------------------------------------------------------
+# Design section 1: a fermion Hamiltonian bond outside the 4x4 measurement
+# window (|dx| > 3 or |dy| > 3) cannot have its energy measured, so it is
+# refused -- also when the input defines its own group-0 two-site observable
+# and tenes_std therefore does not add the Hamiltonian as one (then nothing
+# downstream would refuse it).
+# ---------------------------------------------------------------------------
+
+
+def with_user_twosite_observable(param):
+    """Give the input its own group-0 two-site observable (n_s n_t on a
+    nearest-neighbour bond), so the Hamiltonian is not added as one."""
+    param["observable"] = {
+        "twosite": [
+            {
+                "name": "nn_user",
+                "group": 0,
+                "bonds": "5 1 0\n",
+                "dim": [2, 2],
+                "elements": "1 1 1 1 1.0 0.0",
+            }
+        ]
+    }
+    return param
+
+
+def window_input(bond, user_observable):
+    param = spinless_long_range_input(bonds=(bond,))
+    if user_observable:
+        with_user_twosite_observable(param)
+    return param
+
+
+def displacement_pattern(dx, dy):
+    return r"\(\s*{}\s*,\s*{}\s*\)".format(dx, dy)
+
+
+class TestFermionMeasurementWindow:
+    @pytest.mark.parametrize("user_observable", [True, False], ids=["user", "auto"])
+    @pytest.mark.parametrize("dx, dy", [(4, 0), (0, -4), (4, 1)])
+    def test_bond_outside_the_window_is_rejected(self, dx, dy, user_observable):
+        param = window_input((5, dx, dy), user_observable)
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        msg = str(excinfo.value)
+        assert "4x4" in msg, msg
+        assert re.search(displacement_pattern(dx, dy), msg), msg
+        assert re.search(r"\b5\b", msg), msg  # the source site
+
+    @pytest.mark.parametrize("user_observable", [True, False], ids=["user", "auto"])
+    @pytest.mark.parametrize("dx, dy", [(3, 0), (-3, 3)])
+    def test_bond_on_the_window_edge_is_accepted(self, dx, dy, user_observable):
+        param = window_input((5, dx, dy), user_observable)
+        model = tenes_std.Model(param)
+        path = model.graph.make_path(tenes_std.Bond(5, dx, dy))
+        assert len([g for g in model.simple_updates if g.group == 0]) == len(path)
+        names = [t.name for t in model.twobodies]
+        if user_observable:
+            # the fixture really suppresses the automatic energy observable
+            assert names == ["nn_user"], names
+        else:
+            assert "bond_hamiltonian" in names, names
+
+    @pytest.mark.parametrize("user_observable", [True, False], ids=["user", "auto"])
+    def test_bosonic_bond_outside_the_window_is_accepted(self, user_observable):
+        param = window_input((5, 4, 0), user_observable)
+        del param["parameter"]["general"]["fermion"]
+        for site in param["tensor"]["unitcell"]:
+            del site["parity"]
+        model = tenes_std.Model(param)
+        path = model.graph.make_path(tenes_std.Bond(5, 4, 0))
+        assert len(path) == 4
+        assert len([g for g in model.simple_updates if g.group == 0]) == 4
