@@ -55,6 +55,8 @@ import io
 import os
 import re
 import sys
+import time
+import tracemalloc
 
 import numpy as np
 import pytest
@@ -1356,3 +1358,180 @@ class TestFermionMeasurementWindow:
         path = model.graph.make_path(tenes_std.Bond(5, 4, 0))
         assert len(path) == 4
         assert len([g for g in model.simple_updates if g.group == 0]) == 4
+
+
+# ---------------------------------------------------------------------------
+# PR #118 review, item 1: a fermion-mode Hamiltonian bond term must be parity
+# even.  The block SVD of the long-range decomposition only keeps the
+# parity-diagonal blocks, so an odd or mixed term would otherwise be
+# replaced silently by the even part of exp(-tau H); a nearest-neighbour odd
+# term would reach tenes unchecked.  Elements no larger than tenes_std's
+# atol (1e-15, the default of Model) do not count.
+# ---------------------------------------------------------------------------
+
+
+def h_majorana_source(sp):
+    # gamma_s = c_s + c^dag_s: Hermitian and parity odd
+    return sp.majorana(0, 0)
+
+
+def h_nn_plus_majorana(sp):
+    # parity mixed: an even and an odd part
+    return h_spinless_nn(sp) + 0.3 * sp.majorana(0, 0)
+
+
+def h_hop_plus(epsilon):
+    def builder(sp):
+        return h_spinless_hop(sp) + epsilon * sp.majorana(0, 0)
+
+    return builder
+
+
+def parity_input(builder, bond, user_observable=True, fermion=True):
+    param = fermion_model_input(SPINLESS, builder, [4, 4], [bond])
+    if user_observable:
+        # tenes_std then does not add the Hamiltonian as an observable,
+        # which is the input that used to run through silently
+        with_user_twosite_observable(param)
+    if not fermion:
+        del param["parameter"]["general"]["fermion"]
+        for site in param["tensor"]["unitcell"]:
+            del site["parity"]
+    return param
+
+
+class _ModelPath:
+    """Path of one bond of a Model, shaped for infer_parity_chain."""
+
+    def __init__(self, model, bond):
+        self.unitcell = model.unitcell
+        self.path = model.graph.make_path(tenes_std.Bond(*bond))
+        self.sites = [int(b.source_site) for b in self.path]
+        self.sites.append(int(self.unitcell.target_site(self.path[-1])))
+
+    def phys_parity(self, position):
+        return list(self.unitcell.sites[self.sites[position]].parity)
+
+
+class TestFermionHamiltonianTermParity:
+    @pytest.mark.parametrize("user_observable", [True, False], ids=["user", "auto"])
+    @pytest.mark.parametrize(
+        "bond",
+        [(5, 2, 0), (5, 2, 1), (5, 1, 0)],
+        ids=["two-hop", "three-hop", "nearest-neighbour"],
+    )
+    @pytest.mark.parametrize(
+        "builder",
+        [h_majorana_source, h_nn_plus_majorana],
+        ids=["odd", "mixed"],
+    )
+    def test_odd_or_mixed_bond_term_is_rejected(self, builder, bond, user_observable):
+        param = parity_input(builder, bond, user_observable)
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(param)
+        msg = str(excinfo.value)
+        assert re.search("(?i)parity", msg), msg
+        assert re.search(displacement_pattern(bond[1], bond[2]), msg), msg
+
+    @pytest.mark.parametrize("bond", [(5, 2, 0), (5, 2, 1), (5, 1, 0)])
+    def test_even_bond_term_is_accepted(self, bond):
+        model = tenes_std.Model(parity_input(h_hop_plus(0.0), bond))
+        path = model.graph.make_path(tenes_std.Bond(*bond))
+        assert len([g for g in model.simple_updates if g.group == 0]) == len(path)
+
+    @pytest.mark.parametrize("bond", [(5, 2, 0), (5, 1, 0)])
+    def test_odd_bond_term_is_accepted_without_fermion_mode(self, bond):
+        model = tenes_std.Model(
+            parity_input(h_majorana_source, bond, user_observable=True, fermion=False)
+        )
+        path = model.graph.make_path(tenes_std.Bond(*bond))
+        assert len([g for g in model.simple_updates if g.group == 0]) == len(path)
+
+    @pytest.mark.parametrize("bond", [(5, 2, 1), (5, 1, 0)])
+    def test_odd_residue_below_atol_is_accepted(self, bond):
+        # 5e-16 < atol = 1e-15: rounding noise, not an odd term.  The gates
+        # that come out must still be exactly even (the solver counts every
+        # nonzero element).
+        model = tenes_std.Model(parity_input(h_hop_plus(5e-16), bond))
+        gates = [g.elements for g in model.simple_updates if g.group == 0]
+        # for one hop infer_parity_chain checks the single gate against the
+        # physical ledgers of both sites
+        _, problems = infer_parity_chain(_ModelPath(model, bond), gates)
+        assert not problems, problems
+
+    @pytest.mark.parametrize("bond", [(5, 2, 1), (5, 1, 0)])
+    def test_odd_part_above_atol_is_rejected(self, bond):
+        with pytest.raises(RuntimeError, match="(?i)parity"):
+            tenes_std.Model(parity_input(h_hop_plus(1e-9), bond))
+
+
+# ---------------------------------------------------------------------------
+# PR #118 review, item 2: the fermion chain must not build the dense
+# operator over the whole path (d^(2 nsites) elements: 4^14 for a Hubbard
+# bond of six hops).  The gates themselves need chi <= r * d_m, r being the
+# operator Schmidt rank of exp(-tau H) across (source | target).
+# ---------------------------------------------------------------------------
+
+LONG_CHAIN_PEAK_BYTES = 64 * 1024 * 1024
+LONG_CHAIN_SECONDS = 10.0
+
+
+def operator_schmidt_rank(evo, tol=1e-12):
+    ds, dt = evo.shape[0], evo.shape[1]
+    M = evo.transpose(0, 2, 1, 3).reshape(ds * ds, dt * dt)
+    s = np.linalg.svd(M, compute_uv=False)
+    return int(np.sum(s > tol * s[0]))
+
+
+def test_long_hubbard_chain_stays_small():
+    """Hubbard (d = 4) bonds of five hops ((3, 2)) and six hops ((3, 3), 4x4
+    window edge) from site 5 of a 4x4 cell: peak numpy allocation (traced
+    by tracemalloc) and wall time stay small, every chi is at most r * d_m,
+    and every chi index has one parity (contract item 2).
+
+    The five-hop bond comes first on purpose: building the dense path
+    operator for it already needs 4^12 * 8 B = 128 MiB, so an implementation
+    that still does that fails here before the six-hop bond would ask for
+    2 GiB.
+    """
+    for disp in [(3, 2), (3, 3)]:
+        c = Case("4x4", disp, "hubbard_hopV")
+        assert len(c.path) == abs(disp[0]) + abs(disp[1]), c.describe()
+        tracemalloc.start()
+        t0 = time.perf_counter()
+        try:
+            gates = [g.elements for g in c.fermion_gates()]
+            elapsed = time.perf_counter() - t0
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        info = "{}: peak {:.1f} MiB, {:.2f} s".format(
+            c.describe(), peak / 2**20, elapsed
+        )
+        assert peak <= LONG_CHAIN_PEAK_BYTES, info
+        assert elapsed <= LONG_CHAIN_SECONDS, info
+
+        evo = path_reference(c.kind, c.builder, c.tau, 2)
+        r = operator_schmidt_rank(evo)
+        assert len(gates) == len(c.path), info
+        for k, G in enumerate(gates[:-1]):
+            d_m = len(c.phys_parity(k + 1))
+            assert G.shape[3] <= r * d_m, "{}: gate {} chi {} > r d = {} x {}".format(
+                info, k, G.shape[3], r, d_m
+            )
+        _, problems = infer_parity_chain(c, gates)
+        assert not problems, "{}:\n  {}".format(info, "\n  ".join(problems))
+
+
+def test_six_hop_spinless_chain_composes_to_the_path_ordered_operator():
+    """The six-hop (3, 3) bond with d = 2: the dense reference is 2^7 x 2^7,
+    cheap enough for the exact composition check of contract item 1."""
+    c = Case("4x4", (3, 3), "spinless_hop")
+    assert len(c.path) == 6, c.describe()
+    gates = [g.elements for g in c.fermion_gates()]
+    got = compose_chain(gates)
+    ref = path_reference(c.kind, c.builder, c.tau, c.nsites)
+    err = np.max(np.abs(got - ref))
+    assert err <= ATOL, "{}: {:.3e}".format(c.describe(), err)
+    _, problems = infer_parity_chain(c, gates)
+    assert not problems, problems

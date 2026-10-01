@@ -1137,6 +1137,70 @@ def _drop_tiny(evo: np.ndarray, cutoff: float) -> np.ndarray:
     return evo
 
 
+def _zero_parity_odd_elements(
+    tensor: np.ndarray,
+    source_parity: List[int],
+    target_parity: List[int],
+) -> np.ndarray:
+    ret = np.array(tensor)
+    for i_s, i_t, o_s, o_t in product(
+        range(ret.shape[0]),
+        range(ret.shape[1]),
+        range(ret.shape[2]),
+        range(ret.shape[3]),
+    ):
+        parity = (
+            source_parity[i_s]
+            + target_parity[i_t]
+            + source_parity[o_s]
+            + target_parity[o_t]
+        ) % 2
+        if parity != 0:
+            ret[i_s, i_t, o_s, o_t] = 0.0
+    return ret
+
+
+def _check_fermion_twosite_parity_even(
+    operator: NNOperator,
+    unitcell: "Unitcell",
+    atol: float,
+    kind: str,
+) -> None:
+    if operator.elements is None:
+        return
+
+    source_site = operator.bond.source_site
+    target_site = unitcell.target_site(operator.bond)
+    source_parity = unitcell.sites[source_site].parity
+    target_parity = unitcell.sites[target_site].parity
+    if source_parity is None or target_parity is None:
+        return
+
+    for i_s, i_t, o_s, o_t in product(
+        range(operator.elements.shape[0]),
+        range(operator.elements.shape[1]),
+        range(operator.elements.shape[2]),
+        range(operator.elements.shape[3]),
+    ):
+        value = operator.elements[i_s, i_t, o_s, o_t]
+        if np.abs(value) <= atol:
+            continue
+        parity = (
+            source_parity[i_s]
+            + target_parity[i_t]
+            + source_parity[o_s]
+            + target_parity[o_t]
+        ) % 2
+        if parity == 0:
+            continue
+        dx, dy = operator.bond.dx, operator.bond.dy
+        msg = (
+            "Fermion mode requires {} two-site term from source_site {} "
+            "with (dx, dy) = ({}, {}) to be parity even."
+        ).format(kind, source_site, dx, dy)
+        raise RuntimeError(msg)
+
+
 def make_evolution_onesite(
     hamiltonian: SiteOperator,
     graph: LatticeGraph,
@@ -1185,6 +1249,13 @@ def make_evolution_twosite(
         hamiltonian.elements.shape,
     )
     evo = _drop_tiny(evo, result_cutoff)
+    if fermion:
+        source_site = hamiltonian.bond.source_site
+        target_site = graph.unitcell.target_site(hamiltonian.bond)
+        source_parity = graph.unitcell.sites[source_site].parity
+        target_parity = graph.unitcell.sites[target_site].parity
+        if source_parity is not None and target_parity is not None:
+            evo = _zero_parity_odd_elements(evo, source_parity, target_parity)
     bonds = graph.make_path(hamiltonian.bond)
     nhops = len(bonds)
 
@@ -1260,32 +1331,6 @@ def _path_site_indices(
     return sites
 
 
-def _make_fermion_path_tensor(
-    evo: np.ndarray, path_parities: List[List[int]]
-) -> np.ndarray:
-    """Build the path-ordered graded operator of design section 4.1."""
-    nsites = len(path_parities)
-    dofs = [len(parity) for parity in path_parities]
-    T = np.zeros(dofs + dofs, dtype=evo.dtype)
-    nmids = nsites - 2
-    for inputs in product(*[range(dof) for dof in dofs]):
-        mid_parity = 0
-        for m in range(nmids):
-            mid_parity += path_parities[m + 1][inputs[m + 1]]
-        mid_parity %= 2
-        for out_source in range(dofs[0]):
-            for out_target in range(dofs[-1]):
-                channel_parity = (
-                    path_parities[-1][inputs[-1]] + path_parities[-1][out_target]
-                ) % 2
-                sign = -1 if mid_parity * channel_parity else 1
-                outputs = [out_source] + list(inputs[1:-1]) + [out_target]
-                T[inputs + tuple(outputs)] = (
-                    sign * evo[inputs[0], inputs[-1], out_source, out_target]
-                )
-    return T
-
-
 def _block_svd_by_parity(
     C: np.ndarray,
     row_parity: List[int],
@@ -1332,6 +1377,30 @@ def _block_svd_by_parity(
     return np.concatenate(columns, axis=1), np.concatenate(vts, axis=0), chi_parity
 
 
+def _split_fermion_twosite_channels(
+    evo: np.ndarray,
+    source_parity: List[int],
+    target_parity: List[int],
+    cutoff: float = 1.0e-14,
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[int]]:
+    """Split evo = sum_c A_c[i_s,o_s] B_c[i_t,o_t] by channel parity."""
+    ds, dt = evo.shape[0], evo.shape[1]
+    M = evo.transpose(0, 2, 1, 3).reshape((ds * ds, dt * dt))
+    source_pair_parity = []
+    for i_s, o_s in product(range(ds), range(ds)):
+        source_pair_parity.append((source_parity[i_s] + source_parity[o_s]) % 2)
+    target_pair_parity = []
+    for i_t, o_t in product(range(dt), range(dt)):
+        target_pair_parity.append((target_parity[i_t] + target_parity[o_t]) % 2)
+
+    US, Vt, channel_parity = _block_svd_by_parity(
+        M, source_pair_parity, target_pair_parity, cutoff=cutoff
+    )
+    As = [US[:, c].reshape((ds, ds)) for c in range(US.shape[1])]
+    Bs = [Vt[c, :].reshape((dt, dt)) for c in range(Vt.shape[0])]
+    return As, Bs, channel_parity
+
+
 def _make_fermion_evolution_chain(
     evo: np.ndarray,
     original_bond: Bond,
@@ -1354,43 +1423,58 @@ def _make_fermion_evolution_chain(
             raise RuntimeError(msg)
         path_parities.append(parity)
 
+    As, Bs, channel_parity = _split_fermion_twosite_channels(
+        evo, path_parities[0], path_parities[-1]
+    )
+    nchannels = len(channel_parity)
     dofs = [len(parity) for parity in path_parities]
-    A = _make_fermion_path_tensor(evo, path_parities)
+
+    def fuse(c: int, state: int, site: int) -> int:
+        return c * dofs[site] + state
 
     ret = []
-    current_parity = path_parities[0]
-    for k, bond in enumerate(bonds[0:-1]):
-        ndim = A.ndim
-        nsites = ndim // 2
-        index = [0, 1, nsites]
-        index += list(range(2, nsites))
-        index += list(range(nsites + 1, ndim))
-        A = A.transpose(index)
-
-        row_shape = A.shape[:3]
-        row_parity = []
-        for i0, i1, o0 in product(
-            range(row_shape[0]), range(row_shape[1]), range(row_shape[2])
-        ):
-            row_parity.append(
-                (current_parity[i0] + path_parities[k + 1][i1] + path_parities[k][o0])
-                % 2
+    for k, bond in enumerate(bonds):
+        if k == 0:
+            G = np.zeros(
+                (dofs[0], dofs[1], dofs[0], nchannels * dofs[1]),
+                dtype=evo.dtype,
             )
-        remaining_parities = path_parities[k + 2 :] + path_parities[k + 1 :]
-        col_parity = []
-        for indices in product(*[range(len(p)) for p in remaining_parities]):
-            parity = 0
-            for index, table in zip(indices, remaining_parities):
-                parity += table[index]
-            col_parity.append(parity % 2)
-
-        C = A.reshape((A.shape[0] * A.shape[1] * A.shape[2], -1))
-        US, Vt, chi_parity = _block_svd_by_parity(C, row_parity, col_parity)
-        B = US.reshape((A.shape[0], A.shape[1], dofs[k], -1))
-        A = Vt.reshape([B.shape[3]] + dofs[k + 2 :] + dofs[k + 1 :])
-        ret.append(NNOperator(bond, elements=B, group=group))
-        current_parity = chi_parity
-    ret.append(NNOperator(bonds[-1], elements=A, group=group))
+            for c, A in enumerate(As):
+                for i_s, i_m, o_s in product(
+                    range(dofs[0]), range(dofs[1]), range(dofs[0])
+                ):
+                    sign = -1 if channel_parity[c] * path_parities[1][i_m] else 1
+                    G[i_s, i_m, o_s, fuse(c, i_m, 1)] = sign * A[i_s, o_s]
+        elif k == len(bonds) - 1:
+            G = np.zeros(
+                (nchannels * dofs[k], dofs[-1], dofs[k], dofs[-1]),
+                dtype=evo.dtype,
+            )
+            for c, B in enumerate(Bs):
+                for o_m, i_t, o_t in product(
+                    range(dofs[k]), range(dofs[-1]), range(dofs[-1])
+                ):
+                    G[fuse(c, o_m, k), i_t, o_m, o_t] = B[i_t, o_t]
+        else:
+            G = np.zeros(
+                (
+                    nchannels * dofs[k],
+                    dofs[k + 1],
+                    dofs[k],
+                    nchannels * dofs[k + 1],
+                ),
+                dtype=evo.dtype,
+            )
+            for c in range(nchannels):
+                for o_m, i_next in product(range(dofs[k]), range(dofs[k + 1])):
+                    sign = -1 if channel_parity[c] * path_parities[k + 1][i_next] else 1
+                    G[
+                        fuse(c, o_m, k),
+                        i_next,
+                        o_m,
+                        fuse(c, i_next, k + 1),
+                    ] = sign
+        ret.append(NNOperator(bond, elements=G, group=group))
     return ret
 
 
@@ -1489,6 +1573,7 @@ class Model:
             Imaginary parts below this read as zero when loading tensors.
         """
         param = lower_dict(param)
+        self.atol = atol
         for name in ("tensor", "hamiltonian"):
             if name not in param:
                 msg = '"{}" section is missing in the input'.format(name)
@@ -1742,6 +1827,7 @@ class Model:
         for ham in self.hamiltonians:
             if not isinstance(ham, NNOperator):
                 continue
+            _check_fermion_twosite_parity_even(ham, unitcell, self.atol, "Hamiltonian")
             dx, dy = ham.bond.dx, ham.bond.dy
             if abs(dx) > 3 or abs(dy) > 3:
                 msg = (
