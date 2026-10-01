@@ -56,6 +56,10 @@ simple update, full update で使う(虚)時間発展演算子を記述します
 
 ``dimensions`` は ``observable`` の ``dim`` と異なり、すべての足の次元を指定する必要があります。
 足の順番は ``elements`` と同様に、 ``source_initial, target_initial, source_final, target_final`` の順番です。
+長距離ボンドでは、 ``[[evolution.simple]]`` は最近接ゲートの鎖として与えます。
+鎖の途中のサイトは、一時的に異なる物理次元を持ちます。
+そのようなゲートでは、太った足は target 側の出力 ``target_final`` で、消費される太った足は source 側の入力 ``source_initial`` です。
+fermion モードでは太った足のパリティは非ゼロ要素から推定されるため、その足の各添字は一意のパリティを持つ必要があります。
 
 例 ::
 

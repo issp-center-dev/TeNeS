@@ -57,6 +57,10 @@ Defined as ``0: -x, 1: + y, 2: + x, 3: -y`` in the clockwise order from the -x d
 
 ``dimensions`` is different from ``dim`` in ``observable`` section, so you need to specify the dimensions of all legs.
 The order of the legs is ``source_initial, target_initial, source_final, target_final``, just like ``elements``.
+For a long-range bond, ``[[evolution.simple]]`` gives a chain of nearest-neighbor gates.
+An intermediate site in the chain temporarily has a different physical dimension.
+In such a gate, the enlarged leg is the target-side output ``target_final`` and the consumed enlarged leg is the source-side input ``source_initial``.
+In fermion mode, the parity of the enlarged leg is inferred from the nonzero elements, so every index of that leg must have a definite parity.
 
 Example :: 
 
