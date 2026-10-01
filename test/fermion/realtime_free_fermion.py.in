@@ -1,0 +1,776 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Sections 3 and 4 of
+# docs/superpowers/specs/2026-10-01-fermion-real-time-evolution-contract.md:
+# fermion-mode real-time evolution against exact solutions.  One script, one
+# case per ctest entry:
+#
+#   --case chain-mf     3.1  free Hubbard chains embedded in the two-site cell
+#                            (four directions), simple update, mean-field
+#                            environment, D = 8: n_1 - n_0 = 2 J0(4T)
+#   --case chain-fu     3.2  the ascending staircase with the full update,
+#                            CTM environment, D = 4, chi = 16, plain update
+#   --case chain-ffu    3.2  the same with fastfullupdate = true
+#   --case square       3.3  the 2D square-lattice Hubbard model through
+#                            tenes_simple -> tenes_std -> tenes from
+#                            initial = "cdw": n_1 - n_0 = 2 J0(4T)^2
+#   --case onesite-su   4    a one-site Hamiltonian only, simple update,
+#                            mean-field environment: <n> and <|0><updn|>
+#   --case onesite-fu   4    the same with the full update, CTM environment
+#
+# Conventions this script relies on, and where they were checked:
+#
+# * The one-site basis of the Hubbard model (tool/tenes_simple.py,
+#   HubbardModel): i = n_up + 2 n_dn, |0>, |up>, |dn>, |updn> with
+#   |updn> = c^dag_up c^dag_dn |0>, parity [0, 1, 1, 0].
+# * An `elements` line of a one-site operator reads "i j re im", where i is
+#   the state BEFORE and j the state AFTER the operator acts
+#   (docs/sphinx/en/file_specification/observable_section.rst), i.e. the
+#   value is <j|O|i>.  The solver agrees: the one-site kernels (e.g.
+#   src/iTPS/core/contract_itps_mf/mf_1x1.cpp) return
+#   trace(op, Tn . conj(Tn)) = sum_{p,p'} op[p, p'] psi_p conj(psi_p'), which
+#   is <psi|O|psi> exactly when op[p, p'] = <p'|O|p>.  tool/tenes_simple.py
+#   writes its operators the same way (onesite_matrix: mat[out, in] ->
+#   op[in, out]).  So O = |0><updn| (only <0|O|updn> = 1) is the line
+#   "3 0 1.0 0.0".  This was fixed from the documentation and the source,
+#   not from the result of this test.
+# * A two-site `elements` line "i1 i2 o1 o2 re im" is <o1 o2|O|i1 i2> in the
+#   ordered two-site Fock basis |i1, i2> = A^dag(i1)_1 A^dag(i2)_2 |0>
+#   (docs/sphinx/en/file_specification/parameter_section.rst, fermion);
+#   bond_hamiltonian() below builds it by Jordan-Wigner and checks the
+#   documented example <updn, 0| c^dag_1up c_2up |dn, up> = -1.
+# * A one-site Hamiltonian in std.toml is a [[hamiltonian]] with dim = [d]
+#   and sites (tool/tenes_std.py, Model.__init__; the fixture
+#   two_site_fermion_input of test/python/test_tenes_std.py); tenes_std
+#   writes its gate exp(-i tau H) (tau multiplied by 1j in mode = "time") as
+#   an [[evolution.*]] entry with `site`.
+# * Output: TE_onesite_obs.dat rows "time group site re im"; the time-zero
+#   row is written before the evolution (src/iTPS/time_evolution.cpp).
+#
+# The exact solutions (contract section 3; derived in the design document,
+# section 4): for t = 1, U = mu = 0 and a state that is empty on sublattice 0
+# and doubly occupied on sublattice 1, each spin is a free fermion with a
+# charge-density wave of amplitude 1/2, and the density difference between
+# the two sublattices decays as 2 J0(4T) on a chain and as 2 J0(4T)^2 on the
+# square lattice (J0: Bessel function of the first kind).
+#
+# Before the implementation every case fails when tenes reads its input:
+# fermion mode refuses mode = "time" ("non-ground-state mode").
+import math
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+import toml
+
+TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
+TENES_STD = join("@CMAKE_BINARY_DIR@", "tool", "tenes_std")
+TENES = os.environ.get("TENES_TEST_TENES") or join("@CMAKE_BINARY_DIR@", "src", "tenes")
+MPIEXEC = "@MPIEXEC@"
+
+PARITY = [0, 1, 1, 0]
+EMPTY = [1.0, 0.0, 0.0, 0.0]
+DOUBLON = [0.0, 0.0, 0.0, 1.0]
+TAU = 0.01
+
+# ----------------------------------------------------------------------------
+# tolerances (contract section 0: measured difference x margin; the measured
+# values are from the calibration builds of work/fermion-real-time/p0, the
+# input guard lifted, Release and Debug giving the same numbers)
+# ----------------------------------------------------------------------------
+
+# The mutations quoted below are those of contract section 7, applied to the
+# input through TENES_TEST_TENES_STD (work/fermion-real-time/tests/mutants/):
+# "hopsign" flips the sign of one doublon hopping element pair of the bond
+# Hamiltonian, <dn, up|H|updn, 0> and its transpose (H stays Hermitian);
+# "vhopsign" does the same on the vertical bonds only.
+
+# 3.1, |n_1 - n_0 - 2 J0(4T)| at T = 0.1, 0.2, 0.3, D = 8.
+# Measured: 9.5e-6 worst over the four chains (T = 0.2; the contract quotes
+# "within 1e-5"), 2.6e-6 at T = 0.1.  TOL_CHAIN_MF = 1e-4 is ten times that.
+# Signal: "hopsign" moves n_1 - n_0 by 5.2e-4, 8.0e-3, 3.7e-2 at T = 0.1,
+# 0.2, 0.3 (five to 370 times TOL_CHAIN_MF); "vhopsign" moves the staircases
+# by 3.9e-4, 5.9e-3, 2.7e-2.
+TOL_CHAIN_MF = 1.0e-4
+# The four chains against each other (same Trotter order, same D): the raster
+# order of a chain must not change the result.  Measured: 6.2e-9 (per-site
+# <n>), so TOL_CHAIN_AGREE = 1e-7 is 16 times that.  Signal: "vhopsign"
+# separates the vertical chain and the staircases from the horizontal one by
+# 1.9e-4 to 2.6e-4 already at T = 0.1, while the horizontal chain keeps its
+# 2 J0(4T) to 1e-5.
+TOL_CHAIN_AGREE = 1.0e-7
+
+# 3.2, |n_1 - n_0 - 2 J0(4T)| at T = 0.1, 0.2 with the full update, D = 4.
+# Measured: 5.6e-5 at T = 0.2 for both fastfullupdate settings (the contract
+# quotes the same), 1.8e-6 at T = 0.1.  TOL_CHAIN_FU = 5e-4 is nine times the
+# larger.  Signal at T = 0.2: "hopsign" 7.9e-3, "vhopsign" 5.8e-3.
+TOL_CHAIN_FU = 5.0e-4
+
+# 3.3, |n_1 - n_0 - 2 J0(4T)^2| at T = 0.1, D = 3, chi = 9.
+# Measured: 2.33e-3 (the contract quotes the same: 1.5 % of the 0.155 by
+# which the exact value has left 2); the truncation to D = 3 is what limits
+# it.  TOL_SQUARE = 1.2e-2 is five times that, not ten: ten would be 15 % of
+# the whole signal.  This check does NOT catch the contract's section 7
+# mutation: "hopsign" moves the value at T = 0.1 by only 1.3e-3 (error 3.6e-3
+# against the exact value), and a solver that ignored the grading altogether
+# (fermion = false with the same gates) by 4.5e-3 (error 2.2e-3).  At this
+# time and this D, the test pins the 2D pipeline, the sign-free part of the
+# dynamics and its time scale; the hopping signs are pinned by 3.1 and 3.2.
+# See the report (work/fermion-real-time/tests/REPORT.md).
+TOL_SQUARE = 1.2e-2
+# Conservation of the total density n_0 + n_1 = 2: measured below 1e-15.
+TOL_SQUARE_TOTAL = 1.0e-8
+
+# 4, the one-site gate is the exact exponential: no Trotter error, no
+# truncation (the state stays a product state).  Measured: 3.3e-15 (simple
+# update) and 1.1e-16 (full update) for <n> and <O>.  The direction of time
+# flips the sign of Im <O>, a signal of 2 cos(T) sin(T) = 0.20 at T = 0.1
+# (measured with the conjugated gates: Im <O> = +0.0993 against -0.0993).
+TOL_ONESITE = 1.0e-10
+
+
+def launcher():
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    return cmd
+
+
+def tool_command(env_name, default):
+    override = os.environ.get(env_name)
+    if override:
+        print(f"note: using {override} ({env_name})", flush=True)
+        return shlex.split(override)
+    return [default]
+
+
+def run(cmd, cwd, label):
+    print("run:", " ".join(cmd), flush=True)
+    proc = subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+    if proc.returncode != 0:
+        print(proc.stdout[-4000:] + proc.stderr[-4000:])
+        raise RuntimeError(f"{label}: {' '.join(cmd)} exited with {proc.returncode}")
+    return proc
+
+
+def run_std_and_tenes(workdir):
+    run(
+        tool_command("TENES_TEST_TENES_STD", TENES_STD) + ["std.toml"],
+        workdir,
+        "tenes_std",
+    )
+    run(launcher() + [TENES, "input.toml"], workdir, "tenes")
+
+
+# ----------------------------------------------------------------------------
+# operators
+# ----------------------------------------------------------------------------
+
+
+def fock_op(dagger, mode, nmodes=4):
+    """c^dag_mode or c_mode on occupation bit strings, Jordan-Wigner sign
+    (-1)^(number of occupied modes below `mode`); matrix [out, in]."""
+    dim = 1 << nmodes
+    mat = np.zeros((dim, dim))
+    for state in range(dim):
+        occupied = (state >> mode) & 1
+        if dagger == bool(occupied):
+            continue
+        sign = (-1) ** bin(state & ((1 << mode) - 1)).count("1")
+        mat[state ^ (1 << mode), state] = sign
+    return mat
+
+
+def bond_hamiltonian(t=1.0):
+    """H = -t sum_s (c^dag_1s c_2s + h.c.) as op[i1, i2, o1, o2]
+    = <o1 o2|H|i1 i2>; modes 0, 1 = site 1 up, down; 2, 3 = site 2."""
+    hop = np.zeros((16, 16))
+    for s in range(2):
+        hop += fock_op(True, s) @ fock_op(False, 2 + s)
+        hop += fock_op(True, 2 + s) @ fock_op(False, s)
+    ham = -t * hop
+    op = np.zeros((4, 4, 4, 4))
+    for i1 in range(4):
+        for i2 in range(4):
+            for o1 in range(4):
+                for o2 in range(4):
+                    op[i1, i2, o1, o2] = ham[o1 + 4 * o2, i1 + 4 * i2]
+    # the documented example: <updn, 0| c^dag_1up c_2up |dn, up> = -1
+    single = fock_op(True, 0) @ fock_op(False, 2)
+    if single[3 + 4 * 0, 2 + 4 * 1] != -1.0:
+        raise AssertionError("bond_hamiltonian: Jordan-Wigner sign convention broken")
+    return op
+
+
+def elements_text(op):
+    lines = []
+    for index in np.ndindex(*op.shape):
+        v = op[index]
+        if v != 0.0:
+            lines.append(" ".join(map(str, index)) + f" {float(v)!r} 0.0")
+    return "\n".join(lines)
+
+
+N_ELEMENTS = "1 1 1.0 0.0\n2 2 1.0 0.0\n3 3 2.0 0.0"
+# O = |0><updn|: before 3, after 0 (see the header)
+O_ELEMENTS = "3 0 1.0 0.0"
+
+
+def onesite_observables(with_o=False):
+    text = f'''
+[[observable.onesite]]
+name = "n"
+group = 0
+sites = []
+dim = 4
+elements = """
+{N_ELEMENTS}
+"""
+'''
+    if with_o:
+        text += f'''
+[[observable.onesite]]
+name = "O"
+group = 1
+sites = []
+dim = 4
+elements = """
+{O_ELEMENTS}
+"""
+'''
+    return text
+
+
+# ----------------------------------------------------------------------------
+# reading results
+# ----------------------------------------------------------------------------
+
+
+def read_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def onesite_values(outdir, group):
+    """{(time rounded to 1e-9, site): complex}"""
+    values = {}
+    for row in read_rows(join(outdir, "TE_onesite_obs.dat")):
+        t, g, site, re, im = row
+        if int(g) == group:
+            values[(round(t, 9), int(site))] = complex(re, im)
+    return values
+
+
+def check_update_ran(outdir, full):
+    """Premise: the update the case is about really ran (time.dat)."""
+    key = "time full update" if full else "time simple update"
+    values = {}
+    with open(join(outdir, "time.dat")) as f:
+        for line in f:
+            if "=" in line:
+                name, raw = line.split("=", 1)
+                values[" ".join(name.split())] = float(raw.split()[0])
+    if not values.get(key, 0.0) > 0.0:
+        return [f"time.dat says {key} = {values.get(key)}; that update never ran"]
+    return []
+
+
+def bessel_j0(x):
+    """J0 by its power series (|x| <= 2 here: 20 terms are exact to 1e-16)."""
+    total = 0.0
+    term = 1.0
+    for k in range(40):
+        if k > 0:
+            term *= -((x / 2.0) ** 2) / (k * k)
+        total += term
+    return total
+
+
+def check_bessel():
+    # J0(1) = 0.7651976865579666 (Abramowitz-Stegun table 9.1)
+    if abs(bessel_j0(1.0) - 0.7651976865579666) > 1e-15:
+        raise AssertionError("bessel_j0 is wrong")
+
+
+# ----------------------------------------------------------------------------
+# 3.1 / 3.2: chains in the two-site cell
+# ----------------------------------------------------------------------------
+
+# L_sub = [2, 1], skew = 1: site 0 at (0, 0), site 1 at (1, 0).  Legs
+# (left, up, right, down) = 0, 1, 2, 3.  Site 0 right <-> site 1 left,
+# site 0 down <-> site 1 up, site 0 left <-> site 1 right, site 0 up <->
+# site 1 down (contract section 1).
+#
+# chain: (bonds as "source dx dy", virtual_dim of site 0, of site 1)
+CHAINS = {
+    # site 0 right and site 1 right
+    "horizontal": (["0 1 0", "1 1 0"], [8, 1, 8, 1], [8, 1, 8, 1]),
+    # site 0 up and site 1 up
+    "vertical": (["0 0 1", "1 0 1"], [1, 8, 1, 8], [1, 8, 1, 8]),
+    # site 0 right and site 1 up: site 0 uses right and down, site 1 left and up
+    "ascending": (["0 1 0", "1 0 1"], [1, 1, 8, 8], [8, 8, 1, 1]),
+    # site 0 right and site 1 down: site 0 uses right and up, site 1 left and down
+    "descending": (["0 1 0", "1 0 -1"], [1, 8, 8, 1], [8, 1, 1, 8]),
+}
+
+
+def chain_std_toml(bonds, vdim0, vdim1, *, D, full, fast=False):
+    def dims(v):
+        return [D if d > 1 else 1 for d in v]
+
+    if full:
+        updates = f"""
+[parameter.simple_update]
+tau = {TAU}
+num_step = 0
+[parameter.full_update]
+tau = {TAU}
+num_step = 20
+fastfullupdate = {"true" if fast else "false"}
+[parameter.ctm]
+meanfield_env = false
+dimension = 16
+"""
+    else:
+        updates = f"""
+[parameter.simple_update]
+tau = {TAU}
+num_step = 30
+[parameter.full_update]
+tau = {TAU}
+num_step = 0
+[parameter.ctm]
+meanfield_env = true
+"""
+    bond_lines = "\n".join(bonds)
+    return f'''
+[parameter]
+[parameter.general]
+mode = "time"
+fermion = true
+is_real = false
+output = "output"
+measure_interval = 10
+{updates}
+[tensor]
+L_sub = [2, 1]
+skew = 1
+[[tensor.unitcell]]
+index = [0]
+physical_dim = 4
+virtual_dim = {dims(vdim0)}
+parity = {PARITY}
+initial_state = {EMPTY}
+noise = 0.0
+[[tensor.unitcell]]
+index = [1]
+physical_dim = 4
+virtual_dim = {dims(vdim1)}
+parity = {PARITY}
+initial_state = {DOUBLON}
+noise = 0.0
+
+[[hamiltonian]]
+dim = [4, 4]
+bonds = """
+{bond_lines}
+"""
+elements = """
+{elements_text(bond_hamiltonian())}
+"""
+
+[observable]
+{onesite_observables()}
+'''
+
+
+def run_chain(workroot, name, *, D, full, fast=False):
+    bonds, v0, v1 = CHAINS[name]
+    workdir = join(workroot, name)
+    os.makedirs(workdir)
+    with open(join(workdir, "std.toml"), "w") as f:
+        f.write(chain_std_toml(bonds, v0, v1, D=D, full=full, fast=fast))
+    run_std_and_tenes(workdir)
+    return onesite_values(join(workdir, "output"), 0)
+
+
+def check_premises_chain(workroot, name):
+    """The input tenes_std wrote must still be the one meant here."""
+    failures = []
+    param = toml.load(join(workroot, name, "input.toml"))
+    general = param["parameter"]["general"]
+    if general.get("fermion") is not True or general.get("mode") != "time":
+        failures.append(f"{name}: input.toml is not a fermion real-time run")
+    simple = param["evolution"].get("simple", [])
+    full = param["evolution"].get("full", [])
+    gates = simple if simple else full
+    legs = sorted((g["source_site"], g["source_leg"]) for g in gates)
+    if len(legs) != 2:
+        failures.append(f"{name}: expected two bond gates, got {legs}")
+    # real time: the gate has an imaginary part (exp(-i tau H), not exp(-tau H))
+    for gate in gates:
+        lines = gate["elements"].strip().splitlines()
+        ims = [float(line.split()[-1]) for line in lines]
+        if max(abs(v) for v in ims) < 1e-4:
+            failures.append(
+                f"{name}: the gate on {gate['source_site']}/"
+                f"{gate['source_leg']} is real"
+            )
+    return failures
+
+
+def case_chain_mf(workroot):
+    failures = []
+    results = {}
+    for name in CHAINS:
+        results[name] = run_chain(workroot, name, D=8, full=False)
+        failures += check_premises_chain(workroot, name)
+    worst = 0.0
+    for name, values in results.items():
+        for T in (0.0, 0.1, 0.2, 0.3):
+            key0, key1 = (round(T, 9), 0), (round(T, 9), 1)
+            if key0 not in values or key1 not in values:
+                failures.append(f"{name}: no <n> at T = {T}")
+                continue
+            diff = values[key1] - values[key0]
+            exact = 2.0 * bessel_j0(4.0 * T)
+            err = abs(diff - exact)
+            worst = max(worst, err)
+            print(
+                f"{name:10s} T={T:.1f} n1-n0={diff.real:.10f}{diff.imag:+.1e}j "
+                f"exact={exact:.10f} err={err:.2e}"
+            )
+            if not err <= TOL_CHAIN_MF:
+                failures.append(
+                    f"{name}: n_1 - n_0 at T = {T} is {diff}, exact 2 J0(4T) = {exact} "
+                    f"(error {err:.3e} > {TOL_CHAIN_MF:g})"
+                )
+    print(f"worst error against 2 J0(4T): {worst:.3e} (tol {TOL_CHAIN_MF:g})")
+    ref = results["horizontal"]
+    worst_agree = 0.0
+    for name, values in results.items():
+        for key, v in ref.items():
+            if key not in values:
+                failures.append(f"{name}: no <n> at (T, site) = {key}")
+                continue
+            d = abs(values[key] - v)
+            worst_agree = max(worst_agree, d)
+            if not d <= TOL_CHAIN_AGREE:
+                failures.append(
+                    f"{name} and horizontal disagree at (T, site) = {key}: "
+                    f"{values[key]} vs {v} (difference {d:.3e} > {TOL_CHAIN_AGREE:g})"
+                )
+    print(
+        f"worst disagreement between the four chains: {worst_agree:.3e} "
+        f"(tol {TOL_CHAIN_AGREE:g})"
+    )
+    return failures
+
+
+def case_chain_fu(workroot, fast):
+    failures = []
+    values = run_chain(workroot, "ascending", D=4, full=True, fast=fast)
+    failures += check_premises_chain(workroot, "ascending")
+    param = toml.load(join(workroot, "ascending", "input.toml"))
+    if param["parameter"]["full_update"].get("fastfullupdate") is not fast:
+        failures.append("input.toml lost the fastfullupdate setting")
+    failures += check_update_ran(join(workroot, "ascending", "output"), full=True)
+    for T in (0.0, 0.1, 0.2):
+        key0, key1 = (round(T, 9), 0), (round(T, 9), 1)
+        if key0 not in values or key1 not in values:
+            failures.append(f"no <n> at T = {T}")
+            continue
+        diff = values[key1] - values[key0]
+        exact = 2.0 * bessel_j0(4.0 * T)
+        err = abs(diff - exact)
+        print(
+            f"T={T:.1f} n1-n0={diff.real:.10f}{diff.imag:+.1e}j "
+            f"exact={exact:.10f} err={err:.2e}"
+        )
+        if not err <= TOL_CHAIN_FU:
+            failures.append(
+                f"n_1 - n_0 at T = {T} is {diff}, exact 2 J0(4T) = {exact} "
+                f"(error {err:.3e} > {TOL_CHAIN_FU:g})"
+            )
+    return failures
+
+
+# ----------------------------------------------------------------------------
+# 3.3: the 2D square lattice through the standard pipeline
+# ----------------------------------------------------------------------------
+
+SQUARE_SIMPLE_TOML = """
+[parameter.general]
+mode = "time"
+is_real = false
+output = "output"
+measure_interval = 10
+
+[parameter.simple_update]
+tau = 0.01
+num_step = 10
+
+[parameter.full_update]
+num_step = 0
+
+[parameter.ctm]
+meanfield_env = false
+dimension = 9
+
+[lattice]
+type = "square lattice"
+L = 2
+W = 1
+virtual_dim = 3
+initial = "cdw"
+noise = 0.0
+
+[model]
+type = "hubbard"
+t = 1.0
+U = 0.0
+mu = 0.0
+"""
+
+
+def case_square(workroot):
+    failures = []
+    workdir = join(workroot, "square")
+    os.makedirs(workdir)
+    with open(join(workdir, "simple.toml"), "w") as f:
+        f.write(SQUARE_SIMPLE_TOML)
+    run(
+        tool_command("TENES_TEST_TENES_SIMPLE", TENES_SIMPLE) + ["simple.toml"],
+        workdir,
+        "tenes_simple",
+    )
+    run_std_and_tenes(workdir)
+
+    # premises: the pipeline built what the contract describes
+    param = toml.load(join(workdir, "input.toml"))
+    general = param["parameter"]["general"]
+    if general.get("fermion") is not True or general.get("mode") != "time":
+        failures.append("input.toml is not a fermion real-time run")
+    cells = param["tensor"]["unitcell"]
+    if param["tensor"]["L_sub"] != [2, 1] or len(cells) != 2:
+        failures.append(
+            f"unexpected cell {param['tensor']['L_sub']} with {len(cells)} sites"
+        )
+    states = {tuple(c["index"])[0]: c.get("initial_state") for c in cells}
+    state0 = [float(x) for x in states.get(0, [])]
+    state1 = [float(x) for x in states.get(1, [])]
+    if state0 != EMPTY or state1 != DOUBLON:
+        failures.append(
+            "initial = 'cdw' did not put |0> on site 0 and |updn> on site 1: "
+            f"{states}"
+        )
+    for c in cells:
+        if c["virtual_dim"] not in (3, [3, 3, 3, 3]):
+            failures.append(f"virtual_dim {c['virtual_dim']} is not 3")
+    names = {}
+    with open(join(workdir, "output", "TE_onesite_obs.dat")) as f:
+        for line in f:
+            words = line[1:].split(":") if line.startswith("# ") else []
+            if len(words) == 2 and words[0].strip().lstrip("-").isdigit():
+                names[int(words[0])] = words[1].strip()
+    if names.get(0) != "n":
+        failures.append(f"one-site group 0 is {names.get(0)!r}, not 'n'")
+    n = onesite_values(join(workdir, "output"), 0)
+    for T in (0.0, 0.1):
+        key0, key1 = (round(T, 9), 0), (round(T, 9), 1)
+        if key0 not in n or key1 not in n:
+            failures.append(f"no <n> at T = {T}")
+            continue
+        diff = n[key1] - n[key0]
+        total = n[key1] + n[key0]
+        exact = 2.0 * bessel_j0(4.0 * T) ** 2
+        err = abs(diff - exact)
+        print(
+            f"T={T:.1f} n1-n0={diff.real:.10f}{diff.imag:+.1e}j "
+            f"exact={exact:.10f} err={err:.2e} n0+n1={total.real:.15f}"
+        )
+        if not err <= TOL_SQUARE:
+            failures.append(
+                f"n_1 - n_0 at T = {T} is {diff}, exact 2 J0(4T)^2 = {exact} "
+                f"(error {err:.3e} > {TOL_SQUARE:g})"
+            )
+        if not abs(total - 2.0) <= TOL_SQUARE_TOTAL:
+            failures.append(f"n_0 + n_1 at T = {T} is {total}, not 2")
+    return failures
+
+
+# ----------------------------------------------------------------------------
+# 4: a one-site gate only
+# ----------------------------------------------------------------------------
+
+
+def onesite_std_toml(full):
+    if full:
+        updates = f"""
+[parameter.simple_update]
+tau = {TAU}
+num_step = 0
+[parameter.full_update]
+tau = {TAU}
+num_step = 50
+[parameter.ctm]
+meanfield_env = false
+dimension = 4
+"""
+    else:
+        updates = f"""
+[parameter.simple_update]
+tau = {TAU}
+num_step = 50
+[parameter.full_update]
+tau = {TAU}
+num_step = 0
+[parameter.ctm]
+meanfield_env = true
+"""
+    return f'''
+[parameter]
+[parameter.general]
+mode = "time"
+fermion = true
+is_real = false
+output = "output"
+measure_interval = 10
+{updates}
+[tensor]
+L_sub = [2, 1]
+skew = 1
+[[tensor.unitcell]]
+index = []
+physical_dim = 4
+virtual_dim = 2
+parity = {PARITY}
+initial_state = {EMPTY}
+noise = 0.0
+
+# H = Delta (|updn><0| + |0><updn|), Delta = 1
+[[hamiltonian]]
+dim = [4]
+sites = []
+elements = """
+0 3 1.0 0.0
+3 0 1.0 0.0
+"""
+
+[observable]
+{onesite_observables(with_o=True)}
+'''
+
+
+def case_onesite(workroot, full):
+    failures = []
+    workdir = join(workroot, "onesite")
+    os.makedirs(workdir)
+    with open(join(workdir, "std.toml"), "w") as f:
+        f.write(onesite_std_toml(full))
+    run_std_and_tenes(workdir)
+
+    param = toml.load(join(workdir, "input.toml"))
+    kind = "full" if full else "simple"
+    gates = param["evolution"].get(kind, [])
+    if len(gates) != 2 or any("site" not in g for g in gates):
+        failures.append(f"expected one one-site {kind} gate per site, got {gates}")
+    other = param["evolution"].get("simple" if full else "full", [])
+    if any(len(g.get("dimensions", [])) == 4 for g in gates + other):
+        failures.append("input.toml has a two-site gate; the case must have none")
+    if param["parameter"]["ctm"].get("meanfield_env") is not (not full):
+        failures.append("input.toml lost the environment setting")
+    failures += check_update_ran(join(workdir, "output"), full)
+
+    n = onesite_values(join(workdir, "output"), 0)
+    o = onesite_values(join(workdir, "output"), 1)
+    times = sorted({t for t, _ in n})
+    want = [round(0.1 * k, 9) for k in range(6)]
+    if times != want:
+        failures.append(f"measured at {times}, expected {want}")
+    worst = 0.0
+    for T in want:
+        exact_n = 2.0 * math.sin(T) ** 2
+        exact_o = -1j * math.cos(T) * math.sin(T)
+        for site in (0, 1):
+            if (T, site) not in n or (T, site) not in o:
+                failures.append(f"no value at T = {T}, site {site}")
+                continue
+            en = abs(n[(T, site)] - exact_n)
+            eo = abs(o[(T, site)] - exact_o)
+            worst = max(worst, en, eo)
+            if not en <= TOL_ONESITE:
+                failures.append(
+                    f"<n> at T = {T}, site {site} is {n[(T, site)]}, exact {exact_n}"
+                )
+            if not eo <= TOL_ONESITE:
+                failures.append(
+                    f"<|0><updn|> at T = {T}, site {site} is {o[(T, site)]}, exact "
+                    f"{exact_o} (Im < 0 for exp(-iHT))"
+                )
+    print(f"worst error: {worst:.3e} (tol {TOL_ONESITE:g})")
+    return failures
+
+
+CASES = {
+    "chain-mf": ("FermionRealTimeChainMF", case_chain_mf),
+    "chain-fu": ("FermionRealTimeChainFU", lambda w: case_chain_fu(w, False)),
+    "chain-ffu": ("FermionRealTimeChainFastFU", lambda w: case_chain_fu(w, True)),
+    "square": ("FermionRealTimeSquare", case_square),
+    "onesite-su": ("FermionRealTimeOneSiteSU", lambda w: case_onesite(w, False)),
+    "onesite-fu": ("FermionRealTimeOneSiteFU", lambda w: case_onesite(w, True)),
+}
+
+
+def main(argv):
+    if "--case" not in argv:
+        print("usage: --case " + "|".join(CASES))
+        return 2
+    case = argv[argv.index("--case") + 1]
+    label, func = CASES[case]
+    check_bessel()
+    workroot = os.path.abspath("output_" + label)
+    if os.path.exists(workroot):
+        shutil.rmtree(workroot)
+    os.makedirs(workroot)
+    try:
+        failures = func(workroot)
+    except RuntimeError as e:
+        failures = [str(e)]
+    if failures:
+        for message in failures:
+            print(f"{label} failed: {message}")
+        return 1
+    print(f"{label} passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
