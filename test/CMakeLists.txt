@@ -598,6 +598,23 @@ else()
            COMMAND $<TARGET_FILE:test_fermion_realtime_guards>)
 endif()
 #
+# Section 8, the physical-ledger check of the real-time simple update: a gate
+# chain driven through iTPS::time_evolution() with the ledger tampered or not.
+add_executable(test_fermion_realtime_ledger fermion/realtime_ledger.cpp)
+target_link_libraries(test_fermion_realtime_ledger PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_realtime_ledger
+  PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_realtime_ledger
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS}
+                   $<TARGET_FILE:test_fermion_realtime_ledger>)
+else()
+  add_test(NAME test_fermion_realtime_ledger
+           COMMAND $<TARGET_FILE:test_fermion_realtime_ledger>)
+endif()
+#
 # Section 2, BosonEquivalenceTimeEvolution(Full): test/data/TE_TFI.toml with
 # all-even parities against the bosonic run, simple update and full update.
 # Sections 3 and 4, FermionRealTime*: exact free-fermion dynamics (chains in

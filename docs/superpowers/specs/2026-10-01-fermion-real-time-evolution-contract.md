@@ -30,7 +30,7 @@
 
 - 基準入力は `test/data/TE_TFI.toml`。fermion が拒否する設定(マルチサイト観測量、相関長)は両方の入力から外す。違いは `fermion = true` と `parity` の 2 か所だけにし、テストの中でそれを確かめる(既存の `test/fermion/boson_equivalence_full.py.in` と同じ作法)。
 - SU 版:`TE_TFI` の SU 設定のまま。FU 版:SU のステップ数を 0 にして同じ時間刻みの FU を走らせる(ステップ数は 30 秒に収まるように減らしてよい)。
-- 比較する出力:`TE_onesite_obs.dat`、`TE_twosite_obs.dat`、`TE_correlation.dat`(fermion 版でも出力される場合)、`TE_density.dat`。全行・全列(時刻、実部、虚部)が許容誤差内で一致する。
+- 比較する出力:`TE_onesite_obs.dat`、`TE_twosite_obs.dat`、`TE_correlation.dat`(`[correlation]` があるので fermion 版も必ず出力する。欠けていたら失敗)、`TE_density.dat`。全行・全列(時刻、実部、虚部)が許容誤差内で一致する。
 - 実装前は fermion 版が入力時に `non-ground-state mode` を含むエラーで止まるはずである。
 
 ## 3. 自由フェルミオンの厳密解
@@ -109,3 +109,18 @@
   (改訂:当初は §3.3 も赤くなると書いたが誤りだった。T = 0.1・D = 3 では、この変異が動かす量 1.3e-3 が打ち切り誤差 2.3e-3 より小さい。
   §3.3 は 2D の発展と CTM 測定が complex で通ることを確かめるスモークテストであり、符号の検出は §3.1・§3.2 が担う。)
 - 縦ボンドだけの符号の誤り:縦鎖・階段の鎖で、縦ボンドのゲートにだけ上と同じ反転を入れた入力 → §3.1 の縦鎖と階段が赤くなり、横鎖は緑のまま。
+
+## 8. 実時間 SU の台帳検査(追補、2026-10-01、Task 1 レビューを受けて)
+
+**振る舞い**:fermion モードの実時間発展(`mode = "time"`、simple update)は、各ステップで全ゲートを適用し終えた時点で、
+各サイトの物理パリティ台帳が入力の `parity` に戻っていることを検査し、戻っていなければ `std::logic_error` を投げる
+(メッセージは基底状態の simple update と同じ "fermion simple update invariant violated: physical ledger did not return to its original value after a gate sweep")。
+
+正しい入力では入力時の台帳推定が同じ条件を先に保証するので、E2E では発火しない。C++ 単体テスト(`test_fermion_common.hpp` の `iTPSTestAccessor` で内部状態に触れてよい)で次を確かめる。
+
+- A:ひとつの group の中で物理台帳を一時的に変えて戻すゲート列(長距離ボンドのゲート列)を含む実時間 SU が、例外なく完走する。
+- B:ステップの終わりで台帳が入力と食い違っている状態(台帳または `phys_parity` を改ざんして作る)では、実時間 SU が上の `logic_error` を投げる。
+- C:検査はゲートごとではなくステップの終わりに行われる。A が完走することがこれを示す(ゲート列の途中で検査すると A が落ちる)。
+
+実装前(da46fa90 より前)の振る舞いでは B が赤になる。da46fa90 以降は緑になるはずである。
+検出力の確認として、`time_evolution()` の検査呼び出しを消したコピーで B が赤になり、検査をゲートごとに移したコピーで A が赤になることを報告に書く。

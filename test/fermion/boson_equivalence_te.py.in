@@ -52,9 +52,10 @@
 # run writes next to its saved tensors.
 #
 # Compared files: TE_onesite_obs.dat, TE_twosite_obs.dat, TE_correlation.dat
-# (TE_TFI.toml keeps its [correlation] section, which fermion mode supports)
-# and TE_density.dat; every row and every column (time, real and imaginary
-# part), with the time-zero row included.
+# (TE_TFI.toml keeps its [correlation] section, which fermion mode supports,
+# so the fermionic run must write it; a missing file is a failure) and
+# TE_density.dat; every row and every column (time, real and imaginary part),
+# with the time-zero row included.
 #
 # Before the implementation the fermionic run is refused when the input is
 # read ("non-ground-state mode"), so the test fails there.
@@ -402,10 +403,9 @@ def main():
             failures.append(f"boson: {filename} was not written")
             continue
         if not os.path.exists(fpath):
-            if filename == "TE_correlation.dat":
-                # The contract compares it only if the fermionic run writes it.
-                print(f"note: the fermionic run wrote no {filename}; not compared")
-                continue
+            # Every one of them is required, TE_correlation.dat included: the
+            # input has a [correlation] section, so the fermionic run must
+            # write it (contract section 2).
             failures.append(f"fermion: {filename} was not written")
             continue
         failures += compare_table(filename, read_table(bpath), read_table(fpath))
