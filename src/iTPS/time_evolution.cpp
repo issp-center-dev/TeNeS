@@ -54,6 +54,8 @@ void iTPS<tensor>::time_evolution() {
           full_update_in_sweep(up, int_tau, nsteps);
         }
       }
+      // FU does not rewrite finfo.phys, and long-range physical-leg gate
+      // chains are rejected for full update while reading the input.
       if (su) {
         check_fermion_phys_ledger_restored();
       }

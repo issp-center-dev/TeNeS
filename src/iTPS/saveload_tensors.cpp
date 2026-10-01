@@ -185,6 +185,15 @@ std::size_t dense_size(mptensor::Shape const &shape) {
   return ret;
 }
 
+/*! @brief Value type recorded in a saved mptensor file.
+ *
+ * @return 0 for double, 1 for complex, and -1 for files without a
+ *         value_type header.  The -1 case is the mptensor 0.2-and-earlier
+ *         format, whose first token is not "mptensor" and whose header has no
+ *         element type.  A file that starts with a mptensor header but lacks a
+ *         value_type= line is also reported as -1 here; mptensor 0.3 and later
+ *         always write the line, so that path is only a fallback.
+ */
 int read_saved_value_type(std::string const &path, MPI_Comm comm) {
   int rank = 0;
   MPI_Comm_rank(comm, &rank);
@@ -259,6 +268,9 @@ void load_tensor_file(ptensor &A, std::string const &path) {
   const int tensor_value_type = static_cast<int>(
       mptensor::value_type_tag<typename ptensor::value_type>());
   if (saved_value_type < 0 || saved_value_type == tensor_value_type) {
+    // -1 means that no value_type was found: either a mptensor 0.2-era file,
+    // or a mptensor header without the line.  Keep the old Tensor::load path
+    // and skip the type check for both.
     A.load(path);
     return;
   }
