@@ -653,8 +653,8 @@ void validate_fermion_constraints(
       throw_fermion_guard("tensor.unitcell.parity with wrong length");
     }
   }
-  if (peps_parameters.calcmode != PEPS_Parameters::ground_state) {
-    throw_fermion_guard("non-ground-state mode");
+  if (peps_parameters.calcmode == PEPS_Parameters::finite_temperature) {
+    throw_fermion_guard("finite-temperature mode");
   }
   if (peps_parameters.Simple_Gauge_Fix) {
     throw_fermion_guard("Simple_Gauge_Fix=true");

@@ -54,6 +54,9 @@ void iTPS<tensor>::time_evolution() {
           full_update_in_sweep(up, int_tau, nsteps);
         }
       }
+      if (su) {
+        check_fermion_phys_ledger_restored();
+      }
       t += dt;
       // local gauge fixing
       if (su && peps_parameters.Simple_Gauge_Fix) {
