@@ -112,7 +112,7 @@ comm_size= 1
 
   - 読み先の型と一致、または −1:従来どおり `A.load(path)`。
   - ファイルが 0(double)で読み先が complex:`real_tensor R(A.get_comm()); R.load(path);` で読み、complex に変換して `A` に入れる。
-    変換は分散配置に依存しない方法で行う:全要素数の `std::vector<double>` を 0 で用意し、`R` の各局所要素 n について `R.global_index_fast(n, idx)` から行優先の通し番号を計算して値を置き、`MPI_Allreduce`(和)で全ランクに揃える(各要素はちょうど 1 つのランクが持つので和は厳密)。
+    変換は分散配置に依存しない方法で行う:全要素数の `std::vector<double>` を 0 で用意し、`R` の各局所要素 n について `R.global_index_fast(n, idx)` から通し番号(最初の添字が最も速く動く順。mptensor の `flatten()` と同じ)を計算して値を置き、`MPI_Allreduce`(和)で全ランクに揃える(各要素はちょうど 1 つのランクが持つので和は厳密)。
     `complex_tensor C(A.get_comm(), R.shape(), R.get_upper_rank());` を作り、`C` の各局所要素に通し番号で値を入れる。`_NO_MPI` ビルドでも通るように、`src/mpi.hpp` の `allreduce_sum(std::vector<double>&, MPI_Comm)` を使う。
   - ファイルが 1(complex)で読み先が実数:全ランクで `tenes::load_error` を投げる。メッセージ例:
     `"ERROR: " + path + " holds a complex tensor, which cannot be loaded into a real-valued calculation (parameter.general.is_real = true). HINT: set is_real = false, or load a checkpoint saved with is_real = true."`
