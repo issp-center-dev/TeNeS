@@ -149,8 +149,6 @@ class iTPS {
   void simple_update();
   //! Apply one simple-update gate (one bond or one site).
   void simple_update(EvolutionOperator<tensor> const &up);
-  //! Check that a fermion simple-update sweep restored the physical ledger.
-  void check_fermion_phys_ledger_restored() const;
   //! Iteratively fix the local gauge of the bonds (simple_update.gauge_fix).
   void fix_local_gauge();
   //! Finite-temperature variant of simple_update().
@@ -345,6 +343,8 @@ class iTPS {
   void validate_fermion_ctm_measurement() const;
   //! Apply a one-site gate through the fermionic wrapper.
   void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);
+  //! Check that a fermion simple-update sweep restored the physical ledger.
+  void check_fermion_phys_ledger_restored() const;
 
   //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {

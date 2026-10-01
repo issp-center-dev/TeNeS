@@ -653,8 +653,13 @@ void validate_fermion_constraints(
       throw_fermion_guard("tensor.unitcell.parity with wrong length");
     }
   }
-  if (peps_parameters.calcmode == PEPS_Parameters::finite_temperature) {
-    throw_fermion_guard("finite-temperature mode");
+  if (peps_parameters.calcmode != PEPS_Parameters::ground_state &&
+      peps_parameters.calcmode != PEPS_Parameters::time_evolution) {
+    if (peps_parameters.calcmode == PEPS_Parameters::finite_temperature) {
+      throw_fermion_guard("finite-temperature mode");
+    }
+    throw_fermion_guard("calculation mode " + std::to_string(static_cast<int>(
+                                                  peps_parameters.calcmode)));
   }
   if (peps_parameters.Simple_Gauge_Fix) {
     throw_fermion_guard("Simple_Gauge_Fix=true");
