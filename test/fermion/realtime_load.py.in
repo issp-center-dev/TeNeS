@@ -542,9 +542,7 @@ def evolve_from_v0(workroot, gs_dir, nproc, lattice, te_model):
             f"version 0) exited with {proc.returncode}"
         )
         return failures
-    failures += [
-        "format version 0: " + message for message in check_completed(te_dir)
-    ]
+    failures += ["format version 0: " + message for message in check_completed(te_dir)]
     failures += [
         "format version 0: " + message
         for message in compare_time_zero(gs_dir, te_dir, {"bond_hamiltonian"}, "SzSz")
