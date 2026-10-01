@@ -46,12 +46,14 @@
 # model with the sign of the (-1, 1) hopping reversed has -0.322 on that
 # direction (and E = -0.490, n = 0.476).
 #
-# Why these parameters (measured by the coordinator on 2026-09-30, see
-# work/fermion-longrange-ham/LEDGER.md and work/fermion-longrange-ham/t3/probe/):
-# L = W = 2, D = 3, chi = 18, tau = 0.05 x 400 steps, random start.  Seeds 1
-# to 4 give 0.280 - 0.290 on the (-1, 1) direction, energies -0.535 to
-# -0.599 and densities 0.243 - 0.278.  Seed 11 fell into the vacuum at
-# mu = -2 and is avoided; seed 1 is used here.
+# Why these parameters: L = W = 2, D = 3 (D = 2 falls into the vacuum),
+# chi = 9, tau = 0.1 x 200 steps, iteration_max = 30, random start with
+# seed 1: 16 s for tenes at OMP_NUM_THREADS=1 in a Debug build
+# (2026-10-01).  The first version (2026-09-30) had chi = 18 and tau =
+# 0.05 x 400 (78 s) and was cut to fit a 30 s budget; the tolerances below
+# were measured again with this input.  Seeds 1 to 4 give 0.290 - 0.297 on
+# the (-1, 1) direction, energies -0.543 to -0.603 and densities 0.271 -
+# 0.286.
 #
 # What is checked:
 #
@@ -65,12 +67,12 @@
 #      (DENSITY_TOL) and, loosely, the energy (ENERGY_TOL; not a sign test);
 #      and the (-1, 1) hopping against the straight ones (CHAIN_RATIO_MIN),
 #      which is what catches a chain without the parity string;
-#   5. with --nproc N (N > 1, the MPI registration) the same input.toml is
-#      also run on one process, and every output file of the N-process run
-#      has to agree with it (MPI_TOL).
+#   5. with --nproc N (N > 1; run by hand, not registered in ctest) the
+#      same input.toml is also run on one process, and every output file of
+#      the N-process run has to agree with it (MPI_TOL).
 #
 # There are no golden files: everything is compared with the exact values,
-# and the MPI registration with a one-process run.
+# and an N-process run with a one-process run.
 #
 # Mutation runs: the environment variables TENES_TEST_TENES_SIMPLE and
 # TENES_TEST_TENES_STD, if set, replace the tenes_simple and tenes_std of
@@ -105,15 +107,13 @@ STRAIGHT = [(1, 0), (0, 1)]
 NEAREST = STRAIGHT + [CHAIN]
 OUTPUT_FILES = ("density.dat", "onesite_obs.dat", "twosite_obs.dat")
 
-# CTM_ITERATION_MAX: the CTM of this state does not converge; it settles
-# into a cycle and stops at iteration_max with "CTM did not converge".
-# Measured with this test's input.toml (2026-09-30, Debug,
-# OMP_NUM_THREADS=1): sig_max = 2.53e-3 and rdm_dist = 4.6e-3 at 100 and at
-# 400 sweeps alike, and every observable is the same to 5e-14 at both (400
-# sweeps take 249 s instead of 78 s).  So the warning is reported but not a
-# failure.  (free_fermion_tprime.py.in has the t' case, where the CTM
-# converges slowly instead.)
-CTM_ITERATION_MAX = 100
+# CTM_ITERATION_MAX: at chi = 9 the CTM converges in fewer than 100
+# sweeps; stopped at 30 it prints "CTM did not converge" (sig_max = 5.0e-8,
+# rdm_dist = 2.0e-5), and every observable of density.dat, onesite_obs.dat
+# and twosite_obs.dat agrees with the 100-sweep run to 1.4e-7 (measured
+# with this test's input.toml, 2026-10-01; 100 sweeps take 12 s instead
+# of 5 s).  So the warning is reported but not a failure.
+CTM_ITERATION_MAX = 30
 
 SIMPLE_TOML = """
 [parameter.general]
@@ -121,14 +121,14 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
-num_step = 400
+tau = 0.1
+num_step = 200
 
 [parameter.full_update]
 num_step = 0
 
 [parameter.ctm]
-dimension = 18
+dimension = 9
 convergence_epsilon = 1.0e-8
 iteration_max = {iteration_max}
 
@@ -202,10 +202,10 @@ def reference_self_check():
 
 # CHAIN_TOL: absolute, on the site average of the (-1, 1) hopping, the one
 # that goes through the chain of gates.  The contract (T3 item 4) sets
-# 0.329 +- 0.1: seeds 1 - 4 give 0.280 - 0.290, the reversed sign -0.322.
+# 0.329 +- 0.1: seeds 1 - 4 give 0.290 - 0.297, the reversed sign -0.322.
 CHAIN_TOL = 0.1
 # STRAIGHT_TOL: the same for (1, 0) and (0, 1), single gates; the contract
-# sets 0.329 +- 0.12 (seed 1: 0.255 and 0.274 on the site averages).
+# sets 0.329 +- 0.12 (seed 1: 0.280 and 0.258 on the site averages).
 STRAIGHT_TOL = 0.12
 # CHAIN_RATIO_MIN: the site average of the (-1, 1) hopping divided by the
 # mean of the (1, 0) and (0, 1) site averages has to reach this.  Not in the
@@ -215,33 +215,39 @@ STRAIGHT_TOL = 0.12
 # _make_fermion_path_tensor).  Without the string the chain applies
 # c^dag_s (1 - 2 n_m) c_t instead of c^dag_s c_t (m the middle site of the
 # path), a weakened hopping at this filling rather than a reversed one.
-# Measured on 2026-09-30 (Debug, OMP_NUM_THREADS=1), seeds 1 - 4:
+# Measured with this input on 2026-10-01 (Debug, OMP_NUM_THREADS=1), seeds
+# 1 - 4 (the test runs seed 1):
 #                       (-1, 1)                  ratio
-#   right chain         0.290 0.288 0.280 0.289  1.10 0.98 1.13 0.98
-#   string removed      0.212 0.213 0.152 0.207  0.67 0.67 0.51 0.66
-# CHAIN_TOL (lower end 0.229) fails the string-less chain by 0.016 to 0.077;
-# the ratio separates the two groups by 0.98 against 0.67.  The exact ratio
-# is 1.
+#   right chain         0.296 0.290 0.297 0.290  1.10 0.98 1.15 1.04
+#   string removed      0.195 0.212 0.096 0.193  0.68 0.67 0.31 0.66
+# CHAIN_TOL (lower end 0.229) fails the string-less chain by 0.017 to 0.133;
+# the ratio separates the two groups by 0.98 against 0.68.  The exact ratio
+# is 1.  (The first version, chi = 18 and tau = 0.05 x 400, measured 0.280 -
+# 0.290 / 0.98 - 1.13 and 0.152 - 0.213 / 0.51 - 0.67.)
 CHAIN_RATIO_MIN = 0.85
-# DENSITY_TOL: absolute; not in the contract.  Seeds 1 - 4 give 0.243 -
-# 0.278 against the exact 0.304; the reversed model has 0.476.
+# DENSITY_TOL: absolute; not in the contract.  Seeds 1 - 4 give 0.271 -
+# 0.286 against the exact 0.304; the reversed model has 0.476.
 DENSITY_TOL = 0.1
 # ENERGY_TOL: absolute; the contract keeps this loose (+- 0.2) because D = 3
-# gives -0.535 to -0.599 depending on the seed, and does not use it as a
+# gives -0.543 to -0.603 depending on the seed, and does not use it as a
 # sign test.
 ENERGY_TOL = 0.2
 # ENV_TOL: the energy balance of check 3; see free_fermion_tprime.py.in
-# (measured 1.5e-5 here, the same at 100 and 400 CTM sweeps).  A
+# (measured 1.4e-4 with this input; 1.5e-5 at chi = 18 in the first
+# version).  A
 # Hamiltonian bond written with another sign than the hopping observable
 # (one bond per site, e.g. the (-1, 1) one) moves the balance by
 # 2 t <hop_(-1,1)> = 0.6.
 ENV_TOL = 1.0e-3
-# MPI_TOL: an N-process run against the one-process run of the same
+# MPI_TOL: --nproc N is no longer registered in ctest (the MPI check of
+# the fermion chain is FreeFermionKagomeMPI2's since 2026-10-01); it is kept
+# for running this test by hand.  An N-process run against the one-process
+# run of the same
 # input.toml, absolute on every number of the output files.  Both runs do
 # the same arithmetic on differently distributed blocks: measured worst
 # |diff| 2.8e-16 (density.dat), 7.6e-15 (onesite_obs.dat) and 2.2e-14
-# (twosite_obs.dat) on 2026-09-30 (Debug MPI build, Open MPI, macOS, 186 s
-# for both runs at OMP_NUM_THREADS=1).  The two runs can still stop the CTM
+# (twosite_obs.dat) on 2026-09-30 with the first version's input (Debug MPI
+# build, Open MPI, macOS).  The two runs can still stop the CTM
 # at a different sweep on another platform, hence the margin; a reduction
 # bug (a partial sum over one rank's blocks) moves a value by a fraction of
 # the value itself, 1e-2 or more.

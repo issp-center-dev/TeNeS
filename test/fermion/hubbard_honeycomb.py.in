@@ -73,25 +73,32 @@
 #      chains of gates act on.
 #
 # Why these parameters: D = 2, chi = 8 (as HubbardTriangular), t' = -0.3 (as
-# FreeFermionHoneycomb), U = 4, mu = U / 2, tau = 0.05 x 400 steps, random
-# start with seed 11.  Measured by the test author on 2026-09-30 (Debug,
-# OMP_NUM_THREADS=1, the tenes_simple of the build tree with the honeycomb
-# lattice let through): 91 s for the whole test, 85 s of it in the simple
-# update (0.21 s per step: the second-neighbour chains carry chi up to 64 on
-# the middle site).  The state is a Neel state (Sz = +-0.295 on the A and B
-# sites, 7e-8 on average) with E = -2.38745, n = 1.0106, doublon 0.0925,
-# nearest-neighbour hopping 0.446 - 0.556 per bond (direction averages
-# 0.550 (A (1, 0)), 0.451 (B (1, 0)), 0.466 (B (0, 1))), and an energy
-# balance of 2.3e-11.  With 100 steps (27 s) the average Sz was still
-# 1.4e-4.
+# FreeFermionHoneycomb), U = 4, mu = U / 2, tau = 0.1 x 80 steps, random
+# start with seed 11.  Measured by the test author on 2026-10-01 (Debug,
+# OMP_NUM_THREADS=1): 24 s for the whole test, 18 s of it in the simple
+# update (0.22 s per step: the second-neighbour chains carry chi up to 64 on
+# the middle site) and 4 s in reading the input.  The state is a Neel state
+# (Sz = +-0.36 - 0.37 on the A and B sites, 1.3e-4 on average) with
+# E = -2.38307, n = 1.0139, doublon 0.0838, nearest-neighbour hopping
+# 0.429 - 0.489 per bond (direction averages 0.471 (A (1, 0)), 0.440
+# (B (1, 0)), 0.462 (B (0, 1))), and an energy balance of 1.7e-11.
+#
+# The state is not converged in imaginary time (tau = 0.05 x 400 steps,
+# 91 s, gives Sz = +-0.295 and E = -2.38745; tau = 0.1 x 100 steps moves
+# the staggered Sz by 1 %), and it need not be: what the golden files
+# need is that the same input gives the same numbers on another build.  The
+# same input.toml run by the MPI build (ScaLAPACK instead of LAPACK, one
+# process) agrees with the Debug build to 4e-12 on every row, eight decades
+# below the golden tolerance.  tau = 0.2 x 60 steps (15 s) was not used: its
+# Trotter error is large (staggered Sz 0.13, SzSz -0.03 against -0.24).
 #
 # Mutation (tenes_std without the parity string of design section 4.1,
 # measured the same day): it changes only the second-neighbour chains, and
 # checks 1-4 do not see it (every nearest-neighbour hopping stays positive,
-# 0.48 - 0.51; E = -2.38976 is within the golden rtol of the energy row).
-# The golden files do: 105 rows differ (e.g. SzSz -0.137 against -0.158,
-# the staggered Sz 0.275 against 0.295).  The free-fermion tests are the
-# ones that check the chain against an exact value.
+# 0.38 - 0.55).  The golden files do: 108 rows differ, the energy row
+# included (-2.37930 against -2.38307; e.g. SzSz -0.228 against -0.235,
+# n 1.0216 against 1.0139).  The free-fermion tests are the ones that
+# check the chain against an exact value.
 #
 # Golden files: test/data/output_HubbardHoneycomb/{density,onesite_obs,
 # twosite_obs}.dat in the SOURCE tree.  They do not exist until the
@@ -140,8 +147,8 @@ MU = U / 2
 L_SUB = (2, 2)
 NSITES = L_SUB[0] * L_SUB[1]
 D = 4
-# NUM_STEP: see "Why these parameters" above (91 s in total at 400 steps).
-NUM_STEP = 400
+# NUM_STEP: see "Why these parameters" above (24 s in total at 80 steps).
+NUM_STEP = 80
 
 SIMPLE_TOML = f"""
 [parameter.general]
@@ -149,7 +156,7 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
+tau = 0.1
 num_step = {NUM_STEP}
 
 [parameter.full_update]
@@ -181,14 +188,14 @@ mu = {MU}
 ODD = ("cdag_up", "c_up", "cdag_dn", "c_dn")
 
 # MIN_HOPPING: the average of the hopping over the bonds of one direction
-# has to reach this.  Measured 0.451 - 0.550 (see "Why these parameters");
+# has to reach this.  Measured 0.440 - 0.471 (see "Why these parameters");
 # a wrong sign on a nearest-neighbour bond makes its hopping negative.
 MIN_HOPPING = 0.1
 # ENV_TOL: the energy balance of check 3.  The energy and the hopping
 # observables come from the two-site reduced density matrices, the density
 # and the double occupancy from the one-site ones; the two agree to the
 # finite chi and the convergence of the CTM environment (HubbardTriangular
-# measured 1.2e-8, this test 2.3e-11).  A Hamiltonian bond written with
+# measured 1.2e-8, this test 1.7e-11).  A Hamiltonian bond written with
 # another operator than the observables moves the balance by the size of a
 # bond term, 0.1 or more.
 ENV_TOL = 1.0e-5

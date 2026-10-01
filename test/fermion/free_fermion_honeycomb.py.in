@@ -61,21 +61,38 @@
 # 0.00098 on a second-neighbour one (the contract quotes 0.0011, from a
 # coarser grid).
 #
-# Why these parameters (measured by the coordinator on 2026-09-30, see
-# work/fermion-longrange-ham/LEDGER.md and
-# work/fermion-longrange-ham/t5/probe/hcn_-0.3_ok, hcn_-0.3_mut):
-# D = 3, chi = 18, tau = 0.05 x 400 steps, random start with seed 11,
-# about 25 s at OMP_NUM_THREADS=1.  The right implementation gives
-# E = -0.258, n = 0.500, nearest-neighbour hopping 0.48 - 0.53 per bond
-# (0.506 on average) and second-neighbour hopping 0.0003 on average (the
-# single bonds scatter from -0.17 to +0.13: the simple-update state breaks
-# the lattice symmetry, so only the average is compared).  tenes_std
-# without the parity string of design section 4.1 gives E = -0.169,
-# n = 0.346 and a second-neighbour average of 0.074.  t' = +0.3 is not used:
-# D = 3 is far off there (E = -0.332 against the exact -0.448).  Checked
-# again by the test author with this script (2026-09-30, Debug,
-# OMP_NUM_THREADS=1, 24 s): the same values, an energy balance of 1.5e-7,
-# and seeds 1 and 2 within 3e-4 of seed 11 on every checked quantity.
+# Why these parameters: D = 3, chi = 12, tau = 0.1 x 200 steps, random
+# start with seed 11; 13 s for the whole test at OMP_NUM_THREADS=1 in a
+# Debug build (measured by the test author on 2026-10-01; the simple update
+# takes 8 s of it).  D = 2 is not used: it falls into the vacuum once t' is
+# on (work/fermion-longrange-ham/LEDGER.md, T3).  t' = +0.3 is not used
+# either: D = 3 is far off there (E = -0.332 against the exact -0.448).
+# The coordinator's first probe (2026-09-30,
+# work/fermion-longrange-ham/t5/probe/hcn_-0.3_ok) ran tau = 0.05 x 400
+# steps with chi = 18 in 25 s; the lighter setting ends in the same state:
+#
+#                        E          n         NN avg    NNN avg
+#   seed 11              -0.258004  0.499991  0.505488   0.000261
+#   seed 2               -0.258467  0.499834  0.505491  -0.000074
+#   (tau 0.05 x 400)     -0.257993  0.499998  0.505480   0.000254
+#   exact                -0.287331  0.499016  0.524818   0.000982
+#
+# and an energy balance of 2.3e-6; the single second-neighbour bonds scatter
+# from -0.17 to +0.13 (the simple-update state breaks the lattice
+# symmetry), so only their average is compared.  chi = 12 changes the
+# observables by 2e-5 against chi = 18, and the CTM converges.  Fewer steps
+# are not safe: from the random start the state first sits near the vacuum
+# and leaves it within the first hundred steps; at 120 steps the density
+# was still 0.48 and at 100 steps 0.41.
+#
+# tenes_std without the parity string of design section 4.1 (`sign = 1` in
+# _make_fermion_path_tensor) has to make this test fail.  With this setting
+# the string-less chain never leaves the vacuum: E = 0, n = 0, every hopping
+# 0 (to 1e-9), so the density, the energy and the nearest-neighbour checks
+# fail; the second-neighbour average (0 against 0.001) does not.  With the
+# probe's 400 steps of tau = 0.05 it left the vacuum into a wrong state,
+# E = -0.169, n = 0.346, NN average 0.387, NNN average 0.074, and failed the
+# same three checks and the second-neighbour one.
 #
 # What is checked:
 #
@@ -132,14 +149,14 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
-num_step = 400
+tau = 0.1
+num_step = 200
 
 [parameter.full_update]
 num_step = 0
 
 [parameter.ctm]
-dimension = 18
+dimension = 12
 convergence_epsilon = 1.0e-8
 iteration_max = 100
 
@@ -306,15 +323,18 @@ def reference_self_check():
 # ---------------------------------------------------------------------------
 
 # DENSITY_TOL: absolute; the contract (T5 item 2) sets 0.499 +- 0.05.
-# Measured 0.500; the string-less chain gives 0.346.
+# Measured 0.4998 - 0.5000; the string-less chain gives 0 (the vacuum) here
+# and 0.346 after the probe's longer run.
 DENSITY_TOL = 0.05
 # NNN_TOL: absolute, on the average of <c^dag_s c_t + h.c.> over the twelve
 # second-neighbour bonds of the cell; the contract sets 0.0011 +- 0.03.
-# Measured 0.0003 (single bonds -0.17 to +0.13, hence the average); the
-# string-less chain gives 0.074.
+# Measured -0.0001 - 0.0003 (single bonds -0.17 to +0.13, hence the
+# average); the string-less chain gives 0 here (not caught by this check)
+# and 0.074 after the probe's longer run.
 NNN_TOL = 0.03
 # ENERGY_TOL: absolute; the contract sets -0.287 +- 0.06.  Measured -0.258
-# (+0.029); the string-less chain gives -0.169 (+0.118).
+# (+0.029); the string-less chain gives 0 (+0.287) here and -0.169 (+0.118)
+# after the probe's longer run.
 ENERGY_TOL = 0.06
 # VARIATIONAL_TOL: not in the contract.  The energy of the iPEPS, measured
 # with a converged CTM environment, is the expectation value of the
@@ -323,16 +343,18 @@ ENERGY_TOL = 0.06
 # would accept -0.347.
 VARIATIONAL_TOL = 0.01
 # NN_TOL: not in the contract; absolute, on the average over the six
-# nearest-neighbour bonds of the cell.  Measured 0.506 (single bonds 0.48 -
-# 0.53) against the exact 0.525; the string-less chain gives 0.387.
+# nearest-neighbour bonds of the cell.  Measured 0.505 (single bonds 0.48 -
+# 0.53) against the exact 0.525; the string-less chain gives 0 here and
+# 0.387 after the probe's longer run.
 NN_TOL = 0.1
 # ENV_TOL: absolute, the energy balance of check 3.  The energy and the
 # hopping observables come from the two-site reduced density matrices, the
 # density from the one-site ones, and agree to the finite chi of the
-# environment (the free-fermion tests of T3 measured 1e-5).  A Hamiltonian
-# bond written with another operator than the observables moves the balance
-# by the size of a bond term: 3 |t'| <hop_NNN> per site is small here, so
-# this mostly guards the nearest-neighbour part (1.5 t <hop_NN> = 0.76).
+# environment (measured 2.3e-6 here, 1e-5 in the free-fermion tests of
+# T3).  A Hamiltonian bond written with another operator than the
+# observables moves the balance by the size of a bond term: 3 |t'| <hop_NNN>
+# per site is small here, so this mostly guards the nearest-neighbour part
+# (1.5 t <hop_NN> = 0.76).
 ENV_TOL = 1.0e-3
 
 

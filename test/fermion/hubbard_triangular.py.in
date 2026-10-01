@@ -59,14 +59,22 @@
 #      breaks the lattice symmetry and they are not equal;
 #   5. the golden files, with the rtol / atol of test/fulltest.py.in.
 #
-# Why these parameters: the coordinator's probe (2026-09-30,
-# work/fermion-longrange-ham/t3/probe/tri_hub_D2): D = 2, a 3 x 3 cell (the
-# three-sublattice structure of the triangular lattice fits in it), chi = 8,
-# tau = 0.05, 200 steps, random start with seed 11, U = 4 and mu = U / 2
-# (half filling).  The simple update is the expensive part (about 110 s of
-# 118 s at OMP_NUM_THREADS=1 in a Debug build).  Measured: E = -2.4595,
-# n = 0.982, hopping per bond 0.085 - 0.488, site averages per direction
-# 0.315 ((-1, 1)), 0.322 ((0, 1)), 0.385 ((1, 0)).
+# Why these parameters: D = 2, a 3 x 3 cell (the three-sublattice structure
+# of the triangular lattice fits in it), chi = 8, tau = 0.1 x 30 steps,
+# random start with seed 11, U = 4 and mu = U / 2 (half filling).  The
+# simple update is the expensive part (17 s of 25 s at OMP_NUM_THREADS=1 in
+# a Debug build, 2026-10-01).  The state is not converged in tau (E =
+# -2.4314 against -2.4595 after 0.05 x 200 steps); the test needs a
+# deterministic state with all three directions hopping, not the ground
+# state.  Measured: n = 0.984, hopping per bond 0.092 - 0.580, site averages
+# per direction 0.383 ((1, 0)), 0.330 ((0, 1)), 0.266 ((-1, 1)).
+#
+# Smaller cells do not work: on a 2 x 2 cell the D = 2 state dimerizes and
+# the (0, 1) bonds carry almost no hopping (site average 0.005 - 0.018, one
+# bond at -0.010), so check 4 would fail for the right implementation; 3 x 2
+# and 2 x 3 cells leave a (-1, 1) bond at 0.04 and 0.009.  The first version
+# (2026-09-30) ran tau = 0.05 x 200 steps (118 s) and was cut to fit a 30 s
+# budget.
 #
 # Golden files: test/data/output_HubbardTriangular/{density,onesite_obs,
 # twosite_obs}.dat in the SOURCE tree.  They do not exist until the
@@ -121,8 +129,8 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
-num_step = 200
+tau = 0.1
+num_step = 30
 
 [parameter.full_update]
 num_step = 0
@@ -152,16 +160,20 @@ mu = {MU}
 ODD = ("cdag_up", "c_up", "cdag_dn", "c_dn")
 
 # MIN_HOPPING: the site average of the hopping per direction has to reach
-# this.  Measured 0.315 - 0.385; the free spinless model with the (-1, 1)
+# this.  Measured 0.266 - 0.383 (smallest single bond 0.092).  tenes_std
+# without the parity string (`sign = 1` in _make_fermion_path_tensor) gives
+# -0.106 on the (-1, 1) site average, with bonds down to -0.408 (measured
+# with this input on 2026-10-01); the free spinless model with the (-1, 1)
 # sign reversed gives -0.322 on that direction.
 MIN_HOPPING = 0.1
 # ENV_TOL: the energy balance of check 3.  The energy and the hopping come
 # from the two-site reduced density matrices, the density and the double
 # occupancy from the one-site ones; the two agree to the finite chi and the
-# convergence of the CTM environment.  Measured |diff| 1.2e-8 on 2026-09-30
-# (E = -2.4594840234 against -2.4594840113; Debug, OMP_NUM_THREADS=1).  1e-5
-# is 800 times that; a Hamiltonian bond written with another operator than
-# the observables moves the balance by the size of a bond term, 0.1 or more.
+# convergence of the CTM environment.  Measured |diff| 8.2e-7 with this
+# input on 2026-10-01 (1.2e-8 with the first version's 0.05 x 200 steps;
+# Debug, OMP_NUM_THREADS=1).  1e-5 is 12 times that; a Hamiltonian bond
+# written with another operator than the observables moves the balance by
+# the size of a bond term, 0.1 or more.
 ENV_TOL = 1.0e-5
 
 

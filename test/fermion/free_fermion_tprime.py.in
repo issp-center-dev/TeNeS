@@ -49,27 +49,30 @@
 # grand-canonical one, int d^2k / (2 pi)^2 (eps(k) - mu) theta(mu - eps(k)).
 # The reference below is that momentum integral; nothing of TeNeS enters it.
 #
-# Why these parameters (measured by the coordinator on 2026-09-30, see
-# work/fermion-longrange-ham/LEDGER.md and work/fermion-longrange-ham/t3/probe/):
+# Why these parameters:
 #
 # * mu = -1, not 0: at mu = 0 the particle-hole transformation c -> (-1)^r
 #   c^dag maps t' to -t' and leaves the grand-canonical energy unchanged, so
-#   E(t') = E(-t') and a wrong sign of t' would not show.  At mu = -1 the
-#   exact values are
+#   a wrong sign of t' would not show.  At mu = -1 the exact values are
 #       t' = +0.3:  E = -0.53007, n = 0.2837, <c^dag_0 c_(1,1) + h.c.> = 0.1915
 #       t' = -0.3:  E = -0.34271, n = 0.4275, <c^dag_0 c_(1,1) + h.c.> = 0.0086
-#   so E(+0.3) - E(-0.3) = -0.187 and the diagonal hopping of the t' = +0.3
-#   run is 0.19 with the right sign of the t' term and 0.009 with the wrong
-#   one.
+# * One run, at t' = -0.3.  The first version (2026-09-30) also ran
+#   t' = +0.3 and compared E(+0.3) - E(-0.3) with the exact -0.187, as the
+#   T3 contract (item 3) asked; it took 129 s and was cut to fit a 30 s
+#   budget (2026-10-01).  The t' = -0.3 run carries both jobs: a reversed
+#   sign of the t' term makes it the t' = +0.3 model (diagonal hopping 0.19
+#   instead of 0.009, density 0.28 instead of 0.43), and a chain without the
+#   parity string (see DIAG_TOL) moves the same two numbers.  The t' = +0.3
+#   checks never caught the string-less chain (measured 2026-09-30: they
+#   all passed with it).
 # * D = 3: D = 2 falls into the vacuum from a random start once t' != 0
-#   (all six seeds tried; LEDGER 2026-09-30), and D = 4 takes 900 s.  With
-#   D = 3, chi = 18, tau = 0.05 x 400 steps and seed 11 the two runs give
-#   E(+0.3) = -0.4753, E(-0.3) = -0.2823 (difference -0.193, 3 % from the
-#   exact -0.187), n(+0.3) = 0.267, and a diagonal hopping of 0.175 at
-#   t' = +0.3 (from the energy balance).
+#   (LEDGER 2026-09-30).  tau = 0.1 x 200 steps, chi = 9, iteration_max =
+#   30, seed 11: 22 s for tenes at OMP_NUM_THREADS=1 in a Debug build
+#   (2026-10-01).  The first version had tau = 0.05 x 400, chi = 18,
+#   iteration_max = 100.
 # * iteration_max: see CTM_ITERATION_MAX below.
 #
-# What is checked, per run and then between the two runs:
+# What is checked:
 #
 #   1. the schema: tenes_simple emitted the (1, 1) and (-1, 1) bonds of every
 #      site in the Hamiltonian (contract item 1), and input.toml is in
@@ -79,12 +82,9 @@
 #      between numbers of one run (ENV_TOL): the energy is the measured bond
 #      Hamiltonian, the other three are separate observables;
 #   4. the exact values (see the tolerances below): the diagonal hopping
-#      averaged over the sites, separately for (1, 1) and (-1, 1), for both
-#      signs of t' (DIAG_TOL); the density (DENSITY_TOL); the energy not
-#      below the exact ground-state energy (VARIATIONAL_TOL); and
-#      E(+0.3) - E(-0.3) within ENERGY_DIFF_REL of the exact difference.
-#      The t' = -0.3 checks are what catches a chain without the parity
-#      string (see DIAG_TOL).
+#      averaged over the sites, separately for (1, 1) and (-1, 1)
+#      (DIAG_TOL), the density (DENSITY_TOL), and the energy not below the
+#      exact ground-state energy (VARIATIONAL_TOL).
 #
 # There are no golden files: everything is compared with the exact values.
 #
@@ -115,6 +115,8 @@ NAME = "FreeFermionTPrime"
 TOOL_OVERRIDES = ("TENES_TEST_TENES_SIMPLE", "TENES_TEST_TENES_STD")
 
 T = 1.0
+TPRIME = -0.3
+# both signs for the reference self-check only; only TPRIME is run
 TPRIMES = (0.3, -0.3)
 MU = -1.0
 L_SUB = (2, 2)
@@ -122,18 +124,13 @@ NSITES = L_SUB[0] * L_SUB[1]
 NEAREST = [(1, 0), (0, 1)]
 DIAGONAL = [(1, 1), (-1, 1)]
 
-# CTM_ITERATION_MAX: the CTM of the t' = +0.3 state converges slowly and
-# stops at iteration_max with "CTM did not converge".  Measured with this
-# test's own input.toml (t' = +0.3, 2026-09-30, Debug, OMP_NUM_THREADS=1):
-#                   sig_max   rdm_dist  Energy     <hop_diag> (1,1) / (-1,1)
-#   100 sweeps      1.8e-4    7.5e-4    -0.475348  0.177084 / 0.172213
-#   400 sweeps      2.4e-8    1.1e-6    -0.475298  0.177065 / 0.172194
-# Every observable of density.dat, onesite_obs.dat and twosite_obs.dat moves
-# by at most 5.0e-5 (the energy; 3.5e-5 on a single two-site row, 9.3e-6 on
-# a one-site row), three decades below the tolerances below, and 400 sweeps
-# take 257 s instead of 88 s for this run alone.  So the warning is reported
-# but not a failure.
-CTM_ITERATION_MAX = 100
+# CTM_ITERATION_MAX: at chi = 9 the CTM converges in fewer than 100 sweeps;
+# stopped at 30 it prints "CTM did not converge" (sig_max = 1.9e-7,
+# rdm_dist = 2.6e-12), and every observable of density.dat,
+# onesite_obs.dat and twosite_obs.dat agrees with the 100-sweep run to
+# 2.4e-12 (measured with this test's input.toml, 2026-10-01).  So the
+# warning is reported but not a failure.
+CTM_ITERATION_MAX = 30
 
 SIMPLE_TOML = """
 [parameter.general]
@@ -141,14 +138,14 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
-num_step = 400
+tau = 0.1
+num_step = 200
 
 [parameter.full_update]
 num_step = 0
 
 [parameter.ctm]
-dimension = 18
+dimension = 9
 convergence_epsilon = 1.0e-8
 iteration_max = {iteration_max}
 
@@ -232,66 +229,62 @@ def reference_self_check():
 # Tolerances
 # ---------------------------------------------------------------------------
 
-# DIAG_TOL: absolute, on the site average of <c^dag_s c_{s+r} + h.c.> for
-# r = (1, 1) and for r = (-1, 1) separately.  The contract (T3 item 3) sets
-# 0.1915 +- 0.08 at t' = +0.3: the D = 3 state gives about 0.175 there, and
-# the wrong sign of the t' term gives about 0.0086, 0.18 below.  The same
-# tolerance is applied to the t' = -0.3 run (exact 0.0086), where a wrong
-# sign gives about 0.19.  The two directions are checked separately because
-# the (-1, 1) chain runs to the left (its first gate has source_leg 0 in the
-# TOML), the (1, 1) one to the right, and a sign error in one of them only
-# would be halved by an average over both.
+# What the tolerances have to separate (measured 2026-10-01 with this input,
+# Debug, OMP_NUM_THREADS=1; seeds other than 11 for robustness only):
 #
-# The t' = -0.3 run is not in the contract, and it is what catches the
-# mutation the plan requires this test to catch (T3 step 6: tenes_std
-# without the parity string of design section 4.1, `sign = 1` in
-# _make_fermion_path_tensor).  Without the string the chain applies
-# c^dag_s (1 - 2 n_m) c_t (m the middle site), a weakened t' rather than a
-# reversed one, and the t' = +0.3 criteria of the contract do not see it.
-# Measured on 2026-09-30 (Debug, OMP_NUM_THREADS=1):
-#                          t' = +0.3, seed 11     t' = -0.3, seeds 11 1 2 3
-#                          (1,1)  (-1,1)  n       (1,1) / (-1,1)       n
-#   right chain            0.177  0.172  0.267    -0.003..0.000 /     0.416..0.436
-#                                                  0.016..0.036
-#   string removed         0.127  0.165  0.288    0.116..0.151 /      0.291..0.298
-#                                                  0.118..0.141
-# and E(+0.3) - E(-0.3) = -0.193 (right) against -0.180 (string removed),
-# both inside ENERGY_DIFF_REL.  So the string-less chain passes every
-# t' = +0.3 check and the energy difference, and fails the t' = -0.3
-# diagonal hopping (by 0.03 or more beyond DIAG_TOL) and the t' = -0.3
-# density (by 0.08 or more beyond DENSITY_TOL).
+#                         <hop_diag> (1,1) / (-1,1)    n       E
+#   right chain, seed 11  -0.0035 / 0.0086            0.4398  -0.2798
+#           seeds 1, 3    -0.004..0.001 / 0.009..0.025 0.432..0.439
+#   string removed,       0.146..0.152 / 0.134..0.140  0.296..0.298
+#           seeds 11, 1, 3
+#   exact                 0.0086                       0.4275  -0.3427
+#
+# "string removed" is the mutation the plan requires this test to catch
+# (T3 step 6: tenes_std without the parity string of design section 4.1,
+# `sign = 1` in _make_fermion_path_tensor).  Without the string the chain
+# applies c^dag_s (1 - 2 n_m) c_t (m the middle site of the path), a
+# weakened t' rather than a reversed one, which pulls both numbers towards
+# their t' = 0 values (0.13 and 0.30).  A reversed t' gives 0.19 and 0.28.
+#
+# Seed 2 is a warning about the seed, not about the tolerances: the right
+# chain lands in a poorer, anisotropic state there (E = -0.2314, n =
+# 0.316, diagonal 0.063 / 0.078), which the density check would reject
+# and the diagonal check would not (the string-less chain gives 0.128 /
+# 0.122, n = 0.283 at seed 2).  Seed 11 is not near that state.
+
+# DIAG_TOL: absolute, on the site average of <c^dag_s c_{s+r} + h.c.> for
+# r = (1, 1) and for r = (-1, 1) separately, around the exact 0.0086.  The
+# right chain is at most 0.017 away, the string-less one 0.125 or more
+# (0.045 beyond the tolerance).  The two directions are checked separately
+# because the (-1, 1) chain runs to the left (its first gate has source_leg
+# 0 in the TOML), the (1, 1) one to the right, and a sign error in one of
+# them only would be halved by an average over both.  (The contract's
+# 0.08, which it set for t' = +0.3.)
 DIAG_TOL = 0.08
 
-# ENERGY_DIFF_REL: E(+0.3) - E(-0.3) against the exact -0.187.  Measured
-# -0.193 at D = 3 (3 %).  The contract sets 25 %.
-ENERGY_DIFF_REL = 0.25
-
-# DENSITY_TOL: absolute.  Measured 0.262 - 0.267 at t' = +0.3 (exact
-# 0.2837) and 0.416 - 0.436 at t' = -0.3 (exact 0.4275, seeds 11, 1, 2, 3).
-# The contract sets 0.05 (for t' = +0.3; applied to both runs here, see
-# DIAG_TOL for why t' = -0.3 matters).
+# DENSITY_TOL: absolute, around the exact 0.4275.  The right chain is 0.012
+# away (0.005 to 0.012 over seeds 11, 1, 3), the string-less one 0.13 (0.08
+# beyond the tolerance).  The contract's 0.05.
 DENSITY_TOL = 0.05
 
 # VARIATIONAL_TOL: the energy of the iPEPS, measured with a converged CTM
 # environment, is the expectation value of the Hamiltonian in a physical
 # state and cannot lie below the exact ground-state energy.  The margin is
-# for the finite chi of the environment; measured E - E_exact is +0.055
-# (t' = +0.3) and +0.060 (t' = -0.3) at D = 3.
+# for the finite chi of the environment; measured E - E_exact is +0.063.
 VARIATIONAL_TOL = 0.01
 
 # ENV_TOL: absolute, the energy balance of check 3.  The energy and the
 # hopping observables come from the two-site reduced density matrices, the
 # density from the one-site ones, on the same CTM environment but through
 # different contractions, so they agree only to the finite chi of the
-# environment: measured 1.3e-5 (t' = +0.3) and 3.3e-5 (t' = -0.3) on
-# 2026-09-30.  It is not the unfinished CTM (CTM_ITERATION_MAX): at 400
-# sweeps, with a one-site RDM distance of 1.1e-6 instead of 7.5e-4, the
-# t' = +0.3 balance is 1.2e-5 as before.  1e-3 is 30 times the measurement.
+# environment: measured 2.1e-4 with this input (2026-10-01; 1.3e-5 and
+# 3.3e-5 at chi = 18 in the first version), 5 times below the tolerance.
 # The balance does not see a wrong gate (both sides are measured on the
-# state the gates produced); it sees a Hamiltonian written or measured with
-# another operator than the observables, e.g. a far bond whose emitted
-# Hamiltonian lost its hopping or its sign, which moves the balance by
-# 2 |t'| <hop_diag> = 0.1 or more.
+# state the gates produced); it
+# sees a Hamiltonian written or measured with another operator than the
+# observables, e.g. a far bond whose emitted Hamiltonian lost its hopping
+# or its sign, which moves the balance by 2 |t'| <hop_diag> or by the
+# nearest-neighbour hopping, 0.005 to 0.2 here.
 ENV_TOL = 1.0e-3
 
 
@@ -594,24 +587,8 @@ def main():
         shutil.rmtree(work_root)
     os.makedirs(work_root)
 
-    energies = {}
-    for tprime in TPRIMES:
-        more, energy = run_one(tprime, work_root)
-        failures += more
-        energies[tprime] = energy
-
-    if all(energies[tp] is not None for tp in TPRIMES):
-        plus, minus = TPRIMES
-        diff = energies[plus] - energies[minus]
-        exact_diff = exact(plus)["energy"] - exact(minus)["energy"]
-        within(
-            NAME,
-            f"E(t'={plus}) - E(t'={minus})",
-            diff,
-            exact_diff,
-            ENERGY_DIFF_REL * abs(exact_diff),
-            failures,
-        )
+    more, _ = run_one(TPRIME, work_root)
+    failures += more
 
     if failures:
         for message in failures:

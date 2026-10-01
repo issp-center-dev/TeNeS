@@ -62,17 +62,28 @@
 # normalisation); per site of the cell, vacancy included, it would be
 # -0.83585.
 #
-# Why these parameters (measured by the coordinator on 2026-09-30, see
-# work/fermion-longrange-ham/LEDGER.md and
-# work/fermion-longrange-ham/t5/probe/kg_s1_ok, kg_s2_ok, kg_s11_mut):
-# D = 3, chi = 18, tau = 0.05 x 400 steps, random start; seeds 1, 2 and 11
-# end in the same state (seed 1 is used here), about 10 s at
-# OMP_NUM_THREADS=1.  The right implementation gives E = -1.0316,
-# n = 0.594, 0.307 and 0.304 on the (-1, 1) bonds and 0.34 - 0.46 on the
-# straight ones (0.398 on average, ratio 0.77; the chain itself is exact
-# without truncation, T4, so this is the approximation of the simple
-# update).  tenes_std without the parity string of design section 4.1
-# gives E = -0.796, n = 0.667 and -0.18, -0.22 on the (-1, 1) bonds.
+# Why these parameters: D = 3, chi = 12, tau = 0.1 x 200 steps, random
+# start with seed 1; 7.5 s for the whole test at OMP_NUM_THREADS=1 in a
+# Debug build, 16 s for the two runs of the --nproc 2 registration
+# (measured by the test author on 2026-10-01).  The CTM converges at
+# chi = 12.  The coordinator's first probe (2026-09-30,
+# work/fermion-longrange-ham/t5/probe/kg_s1_ok, kg_s2_ok, kg_s11_mut) ran
+# tau = 0.05 x 400 steps with chi = 18 in 12 s and found the same state for
+# seeds 1, 2 and 11; with the lighter setting:
+#
+#                    E          n         (-1, 1)          straight avg  ratio
+#   seed 1           -1.025122  0.598414  0.2992 0.2923   0.3965        0.746
+#   seeds 2, 11      the same to 3e-5
+#   (probe)          -1.0316    0.594     0.307  0.304    0.398         0.77
+#   string removed   -0.763606  0.666672  -0.140 -0.337   0.442        -0.539
+#   exact            -1.114467  0.503883  0.4313          0.4313        1
+#
+# (the chain itself is exact without truncation, T4, so the ratio below 1 is
+# the approximation of the simple update).  "string removed" is tenes_std
+# without the parity string of design section 4.1 (`sign = 1` in
+# _make_fermion_path_tensor), which has to make this test fail: it fails
+# the sign and the size of both (-1, 1) hoppings, the ratio, the energy and
+# (by 0.013 only) the density.  The energy balance is 1.4e-6.
 # mu = -2 is not used: D = 3 falls into the vacuum there.
 #
 # What is checked:
@@ -140,14 +151,14 @@ is_real = true
 output = "output"
 
 [parameter.simple_update]
-tau = 0.05
-num_step = 400
+tau = 0.1
+num_step = 200
 
 [parameter.full_update]
 num_step = 0
 
 [parameter.ctm]
-dimension = 18
+dimension = 12
 convergence_epsilon = 1.0e-8
 iteration_max = 100
 
@@ -311,40 +322,41 @@ def reference_self_check():
 # ---------------------------------------------------------------------------
 
 # CHAIN_MIN: each of the two (-1, 1) hoppings has to reach this; the
-# contract (T5 item 3) sets 0.15.  Measured 0.307 and 0.304 (exact 0.431);
-# the string-less chain gives -0.18 and -0.22.
+# contract (T5 item 3) sets 0.15.  Measured 0.299 and 0.292 (exact 0.431);
+# the string-less chain gives -0.140 and -0.337.
 CHAIN_MIN = 0.15
 # CHAIN_RATIO_MIN: the average of the (-1, 1) hoppings over the average of
-# the four straight ones; the contract sets 0.5.  Measured 0.77 (exact 1).
+# the four straight ones; the contract sets 0.5.  Measured 0.746 (exact 1);
+# the string-less chain gives -0.539.
 CHAIN_RATIO_MIN = 0.5
 # ENERGY_TOL: absolute, per non-vacancy site; the contract sets +- 0.15.
-# Measured -1.0316 (+0.083); the string-less chain gives -0.796 (+0.318).
+# Measured -1.0251 (+0.089); the string-less chain gives -0.764 (+0.351).
 ENERGY_TOL = 0.15
 # VARIATIONAL_TOL: not in the contract.  The energy of the iPEPS, measured
 # with a converged CTM environment, cannot lie below the exact ground-state
 # energy; the margin is for the finite chi.
 VARIATIONAL_TOL = 0.01
 # DENSITY_TOL: absolute; the contract sets +- 0.15 because the right
-# implementation is +0.09 off (0.594 against 0.5038); the string-less chain
-# gives 0.667 (+0.163).
+# implementation is +0.09 off (0.598 against 0.5038); the string-less chain
+# gives 0.667 (+0.163), so this check alone barely separates the two.
 DENSITY_TOL = 0.15
 # ENV_TOL: absolute, the energy balance of check 3.  The energy and the
 # hopping come from the two-site reduced density matrices, the density from
-# the one-site ones, and agree to the finite chi of the environment (the
-# free-fermion tests of T3 measured 1e-5).  A bond Hamiltonian written with
-# another operator than the observables moves the balance by the size of a
-# bond term, 0.1 or more.
+# the one-site ones, and agree to the finite chi of the environment
+# (measured 1.4e-6 here, 1e-5 in the free-fermion tests of T3).  A bond
+# Hamiltonian written with another operator than the observables moves the
+# balance by the size of a bond term, 0.1 or more.
 ENV_TOL = 1.0e-3
 # NORM_TOL: check 4 compares two numbers printed by the same run with 17
 # digits; only the rounding of the sum differs.
 NORM_TOL = 1.0e-10
 # MPI_TOL: an N-process run against the one-process run of the same
 # input.toml, absolute on every number of the output files.  Both runs do
-# the same arithmetic on differently distributed blocks (free_fermion_
-# triangular.py.in measured 2e-14 at most); the two runs can still stop the
-# CTM at a different sweep on another platform, hence the margin.  A
-# reduction bug (a partial sum over one rank's blocks) moves a value by a
-# fraction of the value itself, 1e-2 or more.
+# the same arithmetic on differently distributed blocks (measured 5e-16 at
+# most on 2026-10-01, Debug MPI build, Open MPI, macOS); the two runs can
+# still stop the CTM at a different sweep on another platform, hence the
+# margin.  A reduction bug (a partial sum over one rank's blocks) moves a
+# value by a fraction of the value itself, 1e-2 or more.
 MPI_TOL = 1.0e-6
 
 
