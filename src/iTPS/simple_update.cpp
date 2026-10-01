@@ -18,6 +18,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 #include "../fermion/fops.hpp"
 #include "core/simple_update.hpp"
@@ -102,8 +103,15 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
       int s2 = target;
       int s1_leg = source_leg;
       int s2_leg = target_leg;
-      auto fop = tenes::fermion::wrap_twosite_gate(up.op, finfo.phys[source],
-                                                   finfo.phys[target]);
+      tenes::fermion::ftensor<tensor> fop;
+      if (up.fermion_legs.empty()) {
+        fop = tenes::fermion::wrap_twosite_gate(up.op, finfo.phys[source],
+                                                finfo.phys[target]);
+      } else {
+        fop = tenes::fermion::wrap_twosite_gate(
+            up.op, up.fermion_legs[0], up.fermion_legs[1], up.fermion_legs[2],
+            up.fermion_legs[3]);
+      }
       if (source_leg == 0 || source_leg == 1) {
         std::swap(s1, s2);
         std::swap(s1_leg, s2_leg);
@@ -127,6 +135,8 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
       lambda_tensor[s2][s2_leg] = lambda_work;
       finfo.virt[s1][s1_leg] = fTn1_work.parity[s1_leg];
       finfo.virt[s2][s2_leg] = fTn2_work.parity[s2_leg];
+      finfo.phys[s1] = fTn1_work.parity[4];
+      finfo.phys[s2] = fTn2_work.parity[4];
       tenes::fermion::unwrap_Tn(fTn1_work, Tn[s1], finfo, s1);
       tenes::fermion::unwrap_Tn(fTn2_work, Tn[s2], finfo, s2);
       return;
@@ -213,6 +223,15 @@ void iTPS<tensor>::simple_update() {
         continue;
       }
       simple_update(up);
+    }
+    if (finfo.enabled) {
+      for (int site = 0; site < N_UNIT; ++site) {
+        if (finfo.phys[site] != peps_parameters.phys_parity[site]) {
+          throw std::logic_error(
+              "fermion simple update invariant violated: physical ledger "
+              "did not return to its original value after a gate sweep");
+        }
+      }
     }
 
     // local gauge fixing

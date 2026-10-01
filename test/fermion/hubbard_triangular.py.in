@@ -1,0 +1,477 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Items 2 and 5 of the T3 contract of
+# docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md
+# (design: docs/superpowers/specs/2026-09-30-fermion-longrange-hamiltonian-design.md):
+# the Hubbard model on the triangular lattice through the standard pipeline
+#
+#   simple.toml -> tenes_simple -> std.toml -> tenes_std -> input.toml -> tenes
+#
+# The bond directions (read from tool/tenes_simple.py on 2026-09-30):
+# TriangularLattice puts the nearest-neighbour bonds on the index
+# displacements (1, 0), (0, 1) and (-1, 1) of every site; the (-1, 1) bond is
+# two hops apart on the square grid, so its gate becomes a chain of two
+# nearest-neighbour gates with d = 4 physical legs (chi up to d^3 = 64 on the
+# middle site; design section 10).  The bond Hamiltonian is that of
+# HubbardModel,
+#
+#   H_bond = -t sum_sigma (c^dag_{s sigma} c_{t sigma} + h.c.)
+#            + (U / z)(D_s + D_t) - (mu / z)(n_s + n_t),   z = 6,
+#
+# with D the double occupancy, so per site
+#
+#   E = -t <hopping> + U <doublon> - mu <n>,
+#
+# where <hopping> is the sum of tenes_simple's "hopping" observable over
+# the three bonds of a site (density.dat divides the bond sum by the number
+# of sites).
+#
+# There is no exact solution; the numbers are pinned by golden files, and
+# on top of them by what must hold for any state the pipeline can produce
+# with the right signs (contract item 5):
+#
+#   1. the schema: the three nearest-neighbour bonds of every site in the
+#      Hamiltonian (contract item 1), input.toml in fermion mode;
+#   2. no norm warning; the odd one-site operators (cdag_up, c_up, cdag_dn,
+#      c_dn) are exactly 0;
+#   3. the energy balance above, between numbers of one run (ENV_TOL);
+#   4. the hopping <sum_sigma c^dag_{s sigma} c_{t sigma} + h.c.> is
+#      positive on every nearest-neighbour bond, in all three directions,
+#      and its site average per direction is at least MIN_HOPPING.  A wrong
+#      sign of the (-1, 1) chain makes that hopping negative (in the free
+#      spinless model it goes from +0.329 to -0.322; see
+#      free_fermion_triangular.py.in).  The contract (item 5) forbids using
+#      the equality of the three bond energies: the simple-update state
+#      breaks the lattice symmetry and they are not equal;
+#   5. the golden files, with the rtol / atol of test/fulltest.py.in.
+#
+# Why these parameters: D = 2, a 3 x 3 cell (the three-sublattice structure
+# of the triangular lattice fits in it), chi = 8, tau = 0.1 x 30 steps,
+# random start with seed 11, U = 4 and mu = U / 2 (half filling).  The
+# simple update is the expensive part (17 s of 25 s at OMP_NUM_THREADS=1 in
+# a Debug build, 2026-10-01).  The state is not converged in tau (E =
+# -2.4314 against -2.4595 after 0.05 x 200 steps); the test needs a
+# deterministic state with all three directions hopping, not the ground
+# state.  Measured: n = 0.984, hopping per bond 0.092 - 0.580, site averages
+# per direction 0.383 ((1, 0)), 0.330 ((0, 1)), 0.266 ((-1, 1)).
+#
+# Smaller cells do not work: on a 2 x 2 cell the D = 2 state dimerizes and
+# the (0, 1) bonds carry almost no hopping (site average 0.005 - 0.018, one
+# bond at -0.010), so check 4 would fail for the right implementation; 3 x 2
+# and 2 x 3 cells leave a (-1, 1) bond at 0.04 and 0.009.  The first version
+# (2026-09-30) ran tau = 0.05 x 200 steps (118 s) and was cut to fit a 30 s
+# budget.
+#
+# Golden files: test/data/output_HubbardTriangular/{density,onesite_obs,
+# twosite_obs}.dat in the SOURCE tree.  They do not exist until the
+# implementation is in place, and the test fails while they are missing.
+# To (re)generate them, on purpose only:
+#
+#   TENES_UPDATE_HUBBARD_TRIANGULAR_GOLDEN=1 ctest -R '^HubbardTriangular$'
+#
+# in the build tree.  The update mode still runs checks 1-4 and refuses to
+# write anything if one of them fails, or if one of the tool overrides
+# below is set.
+#
+# Mutation runs: the environment variables TENES_TEST_TENES_SIMPLE and
+# TENES_TEST_TENES_STD, if set, replace the tenes_simple and tenes_std of
+# the build tree (each is a command line, split like a shell would split
+# it, e.g. "python3 /tmp/tenes_std.py").
+
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+import toml
+
+TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
+TENES_STD = join("@CMAKE_BINARY_DIR@", "tool", "tenes_std")
+TENES = join("@CMAKE_BINARY_DIR@", "src", "tenes")
+
+NAME = "HubbardTriangular"
+GOLDEN_DIR = join("@CMAKE_CURRENT_SOURCE_DIR@", "data", "output_" + NAME)
+GOLDEN_FILES = ("density.dat", "onesite_obs.dat", "twosite_obs.dat")
+UPDATE_GOLDEN_ENV = "TENES_UPDATE_HUBBARD_TRIANGULAR_GOLDEN"
+TOOL_OVERRIDES = ("TENES_TEST_TENES_SIMPLE", "TENES_TEST_TENES_STD")
+
+# test/fulltest.py.in
+RTOL = 1.0e-3
+ATOL = 1.0e-4
+
+T = 1.0
+U = 4.0
+MU = U / 2
+L_SUB = (3, 3)
+NSITES = L_SUB[0] * L_SUB[1]
+NEAREST = [(1, 0), (0, 1), (-1, 1)]
+
+SIMPLE_TOML = f"""
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.1
+num_step = 30
+
+[parameter.full_update]
+num_step = 0
+
+[parameter.ctm]
+dimension = 8
+convergence_epsilon = 1.0e-8
+iteration_max = 100
+
+[parameter.random]
+seed = 11
+
+[lattice]
+type = "triangular lattice"
+L = {L_SUB[0]}
+W = {L_SUB[1]}
+virtual_dim = 2
+initial = "random"
+
+[model]
+type = "hubbard"
+t = {T}
+U = {U}
+mu = {MU}
+"""
+
+ODD = ("cdag_up", "c_up", "cdag_dn", "c_dn")
+
+# MIN_HOPPING: the site average of the hopping per direction has to reach
+# this.  Measured 0.266 - 0.383 (smallest single bond 0.092).  tenes_std
+# without the parity string (`sign = 1` in _make_fermion_path_tensor) gives
+# -0.106 on the (-1, 1) site average, with bonds down to -0.408 (measured
+# with this input on 2026-10-01); the free spinless model with the (-1, 1)
+# sign reversed gives -0.322 on that direction.
+MIN_HOPPING = 0.1
+# ENV_TOL: the energy balance of check 3.  The energy and the hopping come
+# from the two-site reduced density matrices, the density and the double
+# occupancy from the one-site ones; the two agree to the finite chi and the
+# convergence of the CTM environment.  Measured |diff| 8.2e-7 with this
+# input on 2026-10-01 (1.2e-8 with the first version's 0.05 x 200 steps;
+# Debug, OMP_NUM_THREADS=1).  1e-5 is 12 times that; a Hamiltonian bond
+# written with another operator than the observables moves the balance by
+# the size of a bond term, 0.1 or more.
+ENV_TOL = 1.0e-5
+
+
+def tool_command(env_name, default):
+    """The command for a tool: the build tree's, or the one the environment
+    variable env_name (TENES_TEST_TENES_SIMPLE / TENES_TEST_TENES_STD) sets,
+    announced with a note so that the log shows what was run."""
+    override = os.environ.get(env_name)
+    if override:
+        tool = "tenes_simple" if env_name == "TENES_TEST_TENES_SIMPLE" else "tenes_std"
+        print(f"note: using {override} for {tool} ({env_name})", flush=True)
+        return shlex.split(override)
+    return [default]
+
+
+def with_override_note(message):
+    """A failure message, with the tool overrides in effect appended, so that
+    a failure of a mutation run cannot be read as one of the real tools."""
+    replaced = [
+        f"{name}={os.environ[name]!r}"
+        for name in TOOL_OVERRIDES
+        if os.environ.get(name)
+    ]
+    if not replaced:
+        return message
+    return message + " [tool overrides in effect: " + ", ".join(replaced) + "]"
+
+
+def run(cmd, cwd):
+    print("run:", " ".join(cmd), flush=True)
+    return subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+
+
+def run_tool(cmd, cwd):
+    proc = run(cmd, cwd)
+    if proc.returncode != 0:
+        print(proc.stdout + proc.stderr)
+        message = f"{NAME} failed: {' '.join(cmd)} exited with {proc.returncode}"
+        print(with_override_note(message))
+        return False
+    return True
+
+
+def launcher():
+    cmd = []
+    if "@MPIEXEC@":
+        cmd.append("@MPIEXEC@")
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    return cmd
+
+
+def parse_bonds(text):
+    bonds = set()
+    for line in text.splitlines():
+        words = line.split()
+        if len(words) == 3:
+            bonds.add(tuple(int(word) for word in words))
+    return bonds
+
+
+def read_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_density(path):
+    values = []
+    with open(path) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values.append((name.strip(), complex(float(words[0]), float(words[1]))))
+    return values
+
+
+def check_schema(std, input_param):
+    failures = []
+    expected = {(s, dx, dy) for s in range(NSITES) for dx, dy in NEAREST}
+    emitted = set()
+    for ham in std.get("hamiltonian", []):
+        emitted |= parse_bonds(ham["bonds"])
+    if emitted != expected:
+        failures.append(
+            f"std.toml Hamiltonian bonds are {sorted(emitted)}; expected the "
+            f"(1, 0), (0, 1) and (-1, 1) bonds of every site"
+        )
+    onesite = {e["name"]: e["group"] for e in std["observable"]["onesite"]}
+    twosite = {e["name"]: e for e in std["observable"]["twosite"]}
+    for name in ODD + ("n", "doublon"):
+        if name not in onesite:
+            failures.append(f"std.toml has no one-site observable {name!r}")
+    if "hopping" not in twosite:
+        failures.append("std.toml has no two-site observable 'hopping'")
+    elif parse_bonds(twosite["hopping"]["bonds"]) != expected:
+        failures.append(
+            "std.toml: the 'hopping' observable is not on the three "
+            "nearest-neighbour bonds of every site"
+        )
+    if input_param["parameter"]["general"].get("fermion") is not True:
+        failures.append("input.toml: parameter.general.fermion is not true")
+    groups = dict(onesite)
+    if "hopping" in twosite:
+        groups["hopping"] = twosite["hopping"]["group"]
+    return failures, groups
+
+
+def check_warnings(output):
+    failures = []
+    # Unlike the two free-fermion tests, where the D = 3 CTM stops unconverged
+    # by construction and the warning is only noted, the CTM of this D = 2
+    # state converges (chi = 8), so a non-converged CTM is a failure here.
+    for pattern in ("CTM did not converge", "Norm is negative", "Norm is not real"):
+        hits = [line.strip() for line in output.splitlines() if pattern in line]
+        if hits:
+            failures.append(f"tenes printed {hits[0]!r}")
+    return failures
+
+
+def check_odd_onesite_is_zero(outdir, groups):
+    failures = []
+    density = dict(read_density(join(outdir, "density.dat")))
+    odd_groups = {groups[name] for name in ODD if name in groups}
+    for name in ODD:
+        if name not in density:
+            failures.append(f"density.dat has no {name} row")
+        elif density[name] != 0.0:
+            failures.append(f"density.dat: {name} = {density[name]}, must be exactly 0")
+    seen = 0
+    for group, site, re, im in read_rows(join(outdir, "onesite_obs.dat")):
+        if int(group) in odd_groups:
+            seen += 1
+            if re != 0.0 or im != 0.0:
+                failures.append(
+                    f"onesite_obs.dat: group {int(group)} site {int(site)} is "
+                    f"{re} + {im}i; an odd one-site operator must give exactly 0"
+                )
+    if seen != len(ODD) * NSITES:
+        failures.append(f"onesite_obs.dat: {seen} rows of odd operators")
+    return failures
+
+
+def check_balance(outdir):
+    failures = []
+    density = dict(read_density(join(outdir, "density.dat")))
+    for name in ("Energy", "hopping", "doublon", "n"):
+        if name not in density:
+            return [f"density.dat has no {name} row"]
+    energy = density["Energy"].real
+    balance = (
+        -T * density["hopping"].real
+        + U * density["doublon"].real
+        - MU * density["n"].real
+    )
+    err = abs(energy - balance)
+    print(f"{NAME}: energy {energy:.10f} against its parts {balance:.10f} ({err:.3e})")
+    if not err <= ENV_TOL:
+        failures.append(
+            f"energy {energy} is not -t hopping + U doublon - mu n = {balance} "
+            f"(|diff| {err:.3e} > {ENV_TOL:.3e})"
+        )
+    return failures
+
+
+def check_hopping_signs(outdir, group):
+    failures = []
+    table = {}
+    for row in read_rows(join(outdir, "twosite_obs.dat")):
+        g, source, dx, dy, re, im = row
+        if int(g) == group:
+            table[(int(source), int(dx), int(dy))] = complex(re, im)
+    for r in NEAREST:
+        values = []
+        for source in range(NSITES):
+            key = (source, r[0], r[1])
+            if key not in table:
+                failures.append(f"twosite_obs.dat has no hopping row {key}")
+                continue
+            value = table[key].real
+            values.append(value)
+            if not value > 0.0:
+                failures.append(
+                    f"the hopping of site {source} at {r} is {value}; it must be "
+                    f"positive on every nearest-neighbour bond"
+                )
+        print(f"{NAME}: hopping at {r} per site: {values}")
+        if values:
+            mean = float(np.mean(values))
+            print(f"{NAME}: hopping at {r}, site average {mean:.6f}")
+            if not mean >= MIN_HOPPING:
+                failures.append(
+                    f"the site average of the hopping at {r} is {mean}, below "
+                    f"{MIN_HOPPING}"
+                )
+    return failures
+
+
+def compare_golden(outdir):
+    failures = []
+    for filename in GOLDEN_FILES:
+        path_ref = join(GOLDEN_DIR, filename)
+        if not os.path.exists(path_ref):
+            failures.append(f"reference file is missing: {path_ref}")
+            continue
+        path_res = join(outdir, filename)
+        if filename == "density.dat":
+            res = [[v.real, v.imag] for _, v in read_density(path_res)]
+            ref = [[v.real, v.imag] for _, v in read_density(path_ref)]
+        else:
+            res = read_rows(path_res)
+            ref = read_rows(path_ref)
+        if len(res) != len(ref):
+            failures.append(
+                f"{filename}: {len(res)} rows, the reference has {len(ref)}"
+            )
+            continue
+        for index, (rrow, frow) in enumerate(zip(res, ref)):
+            if len(rrow) != len(frow) or not np.all(
+                np.isclose(rrow, frow, rtol=RTOL, atol=ATOL)
+            ):
+                failures.append(
+                    f"{filename} row {index} differs from the golden file: "
+                    f"{rrow} vs {frow}"
+                )
+    return failures
+
+
+def main():
+    work_dir = join("@CMAKE_CURRENT_BINARY_DIR@", "output_" + NAME)
+    if os.path.isdir(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+    update_golden = os.environ.get(UPDATE_GOLDEN_ENV) == "1"
+    overridden = [name for name in TOOL_OVERRIDES if os.environ.get(name)]
+    if update_golden and overridden:
+        print(f"{NAME}: refusing to write golden files with {overridden} set")
+        return 1
+    with open(join(work_dir, "simple.toml"), "w") as f:
+        f.write(SIMPLE_TOML)
+
+    simple = tool_command("TENES_TEST_TENES_SIMPLE", TENES_SIMPLE)
+    std = tool_command("TENES_TEST_TENES_STD", TENES_STD)
+    if not run_tool(simple + ["simple.toml", "-o", "std.toml"], work_dir):
+        return 1
+    if not run_tool(std + ["std.toml", "-o", "input.toml"], work_dir):
+        return 1
+
+    failures, groups = check_schema(
+        toml.load(join(work_dir, "std.toml")), toml.load(join(work_dir, "input.toml"))
+    )
+    if failures:
+        for message in failures:
+            print(with_override_note(NAME + " failed: " + message))
+        return 1
+
+    proc = run(launcher() + [TENES, "input.toml"], work_dir)
+    output = proc.stdout + proc.stderr
+    with open(join(work_dir, "tenes.log"), "w") as f:
+        f.write(output)
+    if proc.returncode != 0:
+        print(output)
+        print(with_override_note(f"{NAME} failed: tenes exited with {proc.returncode}"))
+        return 1
+    outdir = join(work_dir, "output")
+
+    failures += check_warnings(output)
+    failures += check_odd_onesite_is_zero(outdir, groups)
+    failures += check_balance(outdir)
+    failures += check_hopping_signs(outdir, groups["hopping"])
+
+    if failures:
+        for message in failures:
+            print(with_override_note(NAME + " failed: " + message))
+        return 1
+
+    if update_golden:
+        os.makedirs(GOLDEN_DIR, exist_ok=True)
+        for filename in GOLDEN_FILES:
+            shutil.copyfile(join(outdir, filename), join(GOLDEN_DIR, filename))
+        print(f"{NAME}: golden files written to {GOLDEN_DIR}")
+        return 0
+
+    failures = compare_golden(outdir)
+    if failures:
+        for message in failures:
+            print(with_override_note(NAME + " failed: " + message))
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

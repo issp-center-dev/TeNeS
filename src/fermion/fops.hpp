@@ -299,6 +299,12 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
   }
 }
 
+template <class tensor>
+ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& in1,
+                                  const parity_vector& in2,
+                                  const parity_vector& out1,
+                                  const parity_vector& out2);
+
 /*!
  * @brief Load a two-site evolution or bundled-k measurement operator.
  *
@@ -326,7 +332,27 @@ void apply_swap(ftensor<tensor>& a, int ax1, int ax2) {
 template <class tensor>
 ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& p1,
                                   const parity_vector& p2) {
-  ftensor<tensor> fop{op, {p1, p2, p1, p2}};
+  return wrap_twosite_gate(op, p1, p2, p1, p2);
+}
+
+/*!
+ * @brief Load a two-site gate whose four legs may carry different ledgers.
+ *
+ * Same input-leg swap convention as the three-argument overload, which is
+ * the special case (p1, p2, p1, p2).
+ *
+ * @param[in] op Gate matrix elements, legs (in1, in2, out1, out2).
+ * @param[in] in1 Ledger of the first input leg.
+ * @param[in] in2 Ledger of the second input leg.
+ * @param[in] out1 Ledger of the first output leg.
+ * @param[in] out2 Ledger of the second output leg.
+ */
+template <class tensor>
+ftensor<tensor> wrap_twosite_gate(const tensor& op, const parity_vector& in1,
+                                  const parity_vector& in2,
+                                  const parity_vector& out1,
+                                  const parity_vector& out2) {
+  ftensor<tensor> fop{op, {in1, in2, out1, out2}};
   apply_swap(fop, 0, 1);
   return fop;
 }

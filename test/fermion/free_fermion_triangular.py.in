@@ -1,0 +1,583 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Items 2 and 4 of the T3 contract of
+# docs/superpowers/plans/2026-09-30-fermion-longrange-hamiltonian.md
+# (design: docs/superpowers/specs/2026-09-30-fermion-longrange-hamiltonian-design.md):
+# free spinless fermions on the triangular lattice, through the standard
+# pipeline
+#
+#   simple.toml -> tenes_simple -> std.toml -> tenes_std -> input.toml -> tenes
+#
+# The bond directions (read from tool/tenes_simple.py on 2026-09-30):
+# TriangularLattice keeps the square-lattice indexing of the sites, with the
+# site (x, y) at x a0 + y a1, a0 = (1, 0), a1 = (1/2, sqrt(3)/2), and puts
+# the first neighbour level on the index displacements (1, 0), (0, 1) and
+# (-1, 1) of every site (bond types 0, 1, 2); -a0 + a1 has length 1.  The
+# (-1, 1) bond is two hops apart on the square grid, so tenes_std turns its
+# gate into a chain of two nearest-neighbour gates, and the chain runs to
+# the left (its first gate has source_leg 0 in the TOML).  The bond
+# Hamiltonian is that of SpinlessFermionModel,
+#
+#   H_bond = -t (c^dag_s c_t + c^dag_t c_s) - (mu / z)(n_s + n_t),  z = 6,
+#
+# the same on all three directions, so in momentum space (k conjugate to
+# the index)
+#
+#   eps(k) = -2 t (cos kx + cos ky + cos(ky - kx)).
+#
+# The reference is the momentum integral over the Fermi sea at chemical
+# potential mu; nothing of TeNeS enters it.  At t = 1, mu = -1:
+# E = -0.68303 per site (grand canonical, as TeNeS reports it), n = 0.304,
+# and <c^dag_s c_t + h.c.> = 0.329 on every nearest-neighbour bond.  The
+# model with the sign of the (-1, 1) hopping reversed has -0.322 on that
+# direction (and E = -0.490, n = 0.476).
+#
+# Why these parameters: L = W = 2, D = 3 (D = 2 falls into the vacuum),
+# chi = 9, tau = 0.1 x 200 steps, iteration_max = 30, random start with
+# seed 1: 16 s for tenes at OMP_NUM_THREADS=1 in a Debug build
+# (2026-10-01).  The first version (2026-09-30) had chi = 18 and tau =
+# 0.05 x 400 (78 s) and was cut to fit a 30 s budget; the tolerances below
+# were measured again with this input.  Seeds 1 to 4 give 0.290 - 0.297 on
+# the (-1, 1) direction, energies -0.543 to -0.603 and densities 0.271 -
+# 0.286.
+#
+# What is checked:
+#
+#   1. the schema: tenes_simple emitted the three nearest-neighbour bonds of
+#      every site (contract item 1), and input.toml is in fermion mode;
+#   2. no norm warning; the one-site values of cdag and c are exactly 0;
+#   3. the energy balance E = -t <hop> - mu n per site (ENV_TOL);
+#   4. the exact values: the (-1, 1) hopping averaged over the sites
+#      (CHAIN_TOL), the (1, 0) and (0, 1) ones (STRAIGHT_TOL), every
+#      nearest-neighbour bond of every site positive, the density
+#      (DENSITY_TOL) and, loosely, the energy (ENERGY_TOL; not a sign test);
+#      and the (-1, 1) hopping against the straight ones (CHAIN_RATIO_MIN),
+#      which is what catches a chain without the parity string;
+#   5. with --nproc N (N > 1; run by hand, not registered in ctest) the
+#      same input.toml is also run on one process, and every output file of
+#      the N-process run has to agree with it (MPI_TOL).
+#
+# There are no golden files: everything is compared with the exact values,
+# and an N-process run with a one-process run.
+#
+# Mutation runs: the environment variables TENES_TEST_TENES_SIMPLE and
+# TENES_TEST_TENES_STD, if set, replace the tenes_simple and tenes_std of
+# the build tree (each is a command line, split like a shell would split
+# it, e.g. "python3 /tmp/tenes_std.py").
+
+import functools
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+import numpy as np
+import toml
+
+TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
+TENES_STD = join("@CMAKE_BINARY_DIR@", "tool", "tenes_std")
+TENES = join("@CMAKE_BINARY_DIR@", "src", "tenes")
+MPIEXEC = "@MPIEXEC@"
+
+NAME = "FreeFermionTriangular"
+TOOL_OVERRIDES = ("TENES_TEST_TENES_SIMPLE", "TENES_TEST_TENES_STD")
+
+T = 1.0
+MU = -1.0
+L_SUB = (2, 2)
+NSITES = L_SUB[0] * L_SUB[1]
+CHAIN = (-1, 1)
+STRAIGHT = [(1, 0), (0, 1)]
+NEAREST = STRAIGHT + [CHAIN]
+OUTPUT_FILES = ("density.dat", "onesite_obs.dat", "twosite_obs.dat")
+
+# CTM_ITERATION_MAX: at chi = 9 the CTM converges in fewer than 100
+# sweeps; stopped at 30 it prints "CTM did not converge" (sig_max = 5.0e-8,
+# rdm_dist = 2.0e-5), and every observable of density.dat, onesite_obs.dat
+# and twosite_obs.dat agrees with the 100-sweep run to 1.4e-7 (measured
+# with this test's input.toml, 2026-10-01; 100 sweeps take 12 s instead
+# of 5 s).  So the warning is reported but not a failure.
+CTM_ITERATION_MAX = 30
+
+SIMPLE_TOML = """
+[parameter.general]
+is_real = true
+output = "output"
+
+[parameter.simple_update]
+tau = 0.1
+num_step = 200
+
+[parameter.full_update]
+num_step = 0
+
+[parameter.ctm]
+dimension = 9
+convergence_epsilon = 1.0e-8
+iteration_max = {iteration_max}
+
+[parameter.random]
+seed = 1
+
+[lattice]
+type = "triangular lattice"
+L = 2
+W = 2
+virtual_dim = 3
+initial = "random"
+
+[model]
+type = "spinless fermion"
+t = {t}
+mu = {mu}
+""".format(iteration_max=CTM_ITERATION_MAX, t=T, mu=MU)
+
+
+# ---------------------------------------------------------------------------
+# The exact reference
+# ---------------------------------------------------------------------------
+
+
+@functools.lru_cache(maxsize=None)
+def exact(chain_sign=1.0, nk=2048):
+    """Grand-canonical energy per site, density and <c^dag_0 c_r + h.c.> for
+    the three nearest-neighbour r of eps(k) = -2 t (cos kx + cos ky +
+    s cos(ky - kx)) at chemical potential MU, on the midpoint grid; s = -1 is
+    the model with the (-1, 1) hopping reversed."""
+    k = 2.0 * np.pi * (np.arange(nk) + 0.5) / nk
+    kx, ky = np.meshgrid(k, k, indexing="ij")
+    eps = -2.0 * T * (np.cos(kx) + np.cos(ky) + chain_sign * np.cos(ky - kx))
+    occ = (eps - MU < 0.0).astype(float)
+    out = {"energy": float(np.mean((eps - MU) * occ)), "n": float(np.mean(occ))}
+    for rx, ry in NEAREST:
+        out[(rx, ry)] = float(2.0 * np.mean(np.cos(kx * rx + ky * ry) * occ))
+    return out
+
+
+def reference_self_check():
+    """Checks of the reference itself, not of TeNeS."""
+    failures = []
+    ref = exact()
+    balance = -T * sum(ref[r] for r in NEAREST) - MU * ref["n"]
+    if abs(balance - ref["energy"]) > 1.0e-4:
+        failures.append(f"energy {ref['energy']} is not the sum of its parts {balance}")
+    for r in NEAREST:
+        if abs(ref[r] - ref[NEAREST[0]]) > 1.0e-4:
+            failures.append(f"the hopping at {r} is not that at {NEAREST[0]}")
+    coarse = exact(1.0, 1024)
+    for key in ref:
+        if abs(coarse[key] - ref[key]) > 1.0e-3:
+            failures.append(f"{key} not converged in nk ({coarse[key]}, {ref[key]})")
+    # the values quoted in the contract (T3 item 4)
+    for what, value, quoted in (
+        ("energy", ref["energy"], -0.68303),
+        ("n", ref["n"], 0.304),
+        ("hopping", ref[CHAIN], 0.329),
+        ("reversed (-1, 1) hopping", exact(-1.0)[CHAIN], -0.322),
+    ):
+        if abs(value - quoted) > 1.0e-3:
+            failures.append(f"{what} = {value}, the contract quotes {quoted}")
+    return failures
+
+
+# ---------------------------------------------------------------------------
+# Tolerances
+# ---------------------------------------------------------------------------
+
+# CHAIN_TOL: absolute, on the site average of the (-1, 1) hopping, the one
+# that goes through the chain of gates.  The contract (T3 item 4) sets
+# 0.329 +- 0.1: seeds 1 - 4 give 0.290 - 0.297, the reversed sign -0.322.
+CHAIN_TOL = 0.1
+# STRAIGHT_TOL: the same for (1, 0) and (0, 1), single gates; the contract
+# sets 0.329 +- 0.12 (seed 1: 0.280 and 0.258 on the site averages).
+STRAIGHT_TOL = 0.12
+# CHAIN_RATIO_MIN: the site average of the (-1, 1) hopping divided by the
+# mean of the (1, 0) and (0, 1) site averages has to reach this.  Not in the
+# contract; added because CHAIN_TOL alone barely catches the mutation the
+# plan requires this test to catch (T3 step 6: tenes_std without the parity
+# string of design section 4.1, i.e. `sign = 1` in
+# _make_fermion_path_tensor).  Without the string the chain applies
+# c^dag_s (1 - 2 n_m) c_t instead of c^dag_s c_t (m the middle site of the
+# path), a weakened hopping at this filling rather than a reversed one.
+# Measured with this input on 2026-10-01 (Debug, OMP_NUM_THREADS=1), seeds
+# 1 - 4 (the test runs seed 1):
+#                       (-1, 1)                  ratio
+#   right chain         0.296 0.290 0.297 0.290  1.10 0.98 1.15 1.04
+#   string removed      0.195 0.212 0.096 0.193  0.68 0.67 0.31 0.66
+# CHAIN_TOL (lower end 0.229) fails the string-less chain by 0.017 to 0.133;
+# the ratio separates the two groups by 0.98 against 0.68.  The exact ratio
+# is 1.  (The first version, chi = 18 and tau = 0.05 x 400, measured 0.280 -
+# 0.290 / 0.98 - 1.13 and 0.152 - 0.213 / 0.51 - 0.67.)
+CHAIN_RATIO_MIN = 0.85
+# DENSITY_TOL: absolute; not in the contract.  Seeds 1 - 4 give 0.271 -
+# 0.286 against the exact 0.304; the reversed model has 0.476.
+DENSITY_TOL = 0.1
+# ENERGY_TOL: absolute; the contract keeps this loose (+- 0.2) because D = 3
+# gives -0.543 to -0.603 depending on the seed, and does not use it as a
+# sign test.
+ENERGY_TOL = 0.2
+# ENV_TOL: the energy balance of check 3; see free_fermion_tprime.py.in
+# (measured 1.4e-4 with this input; 1.5e-5 at chi = 18 in the first
+# version).  A
+# Hamiltonian bond written with another sign than the hopping observable
+# (one bond per site, e.g. the (-1, 1) one) moves the balance by
+# 2 t <hop_(-1,1)> = 0.6.
+ENV_TOL = 1.0e-3
+# MPI_TOL: --nproc N is no longer registered in ctest (the MPI check of
+# the fermion chain is FreeFermionKagomeMPI2's since 2026-10-01); it is kept
+# for running this test by hand.  An N-process run against the one-process
+# run of the same
+# input.toml, absolute on every number of the output files.  Both runs do
+# the same arithmetic on differently distributed blocks: measured worst
+# |diff| 2.8e-16 (density.dat), 7.6e-15 (onesite_obs.dat) and 2.2e-14
+# (twosite_obs.dat) on 2026-09-30 with the first version's input (Debug MPI
+# build, Open MPI, macOS).  The two runs can still stop the CTM
+# at a different sweep on another platform, hence the margin; a reduction
+# bug (a partial sum over one rank's blocks) moves a value by a fraction of
+# the value itself, 1e-2 or more.
+MPI_TOL = 1.0e-6
+
+
+# ---------------------------------------------------------------------------
+# Running
+# ---------------------------------------------------------------------------
+
+
+def parse_args(argv):
+    nproc = 1
+    args = list(argv)
+    if "--nproc" in args:
+        nproc = int(args[args.index("--nproc") + 1])
+    return nproc
+
+
+def tool_command(env_name, default):
+    """The command for a tool: the build tree's, or the one the environment
+    variable env_name (TENES_TEST_TENES_SIMPLE / TENES_TEST_TENES_STD) sets,
+    announced with a note so that the log shows what was run."""
+    override = os.environ.get(env_name)
+    if override:
+        tool = "tenes_simple" if env_name == "TENES_TEST_TENES_SIMPLE" else "tenes_std"
+        print(f"note: using {override} for {tool} ({env_name})", flush=True)
+        return shlex.split(override)
+    return [default]
+
+
+def with_override_note(message):
+    """A failure message, with the tool overrides in effect appended, so that
+    a failure of a mutation run cannot be read as one of the real tools."""
+    replaced = [
+        f"{name}={os.environ[name]!r}"
+        for name in TOOL_OVERRIDES
+        if os.environ.get(name)
+    ]
+    if not replaced:
+        return message
+    return message + " [tool overrides in effect: " + ", ".join(replaced) + "]"
+
+
+def launcher(nproc):
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append(str(nproc))
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    elif nproc != 1:
+        raise RuntimeError("this build has no MPI launcher; --nproc must be 1")
+    return cmd
+
+
+def run(cmd, cwd):
+    print("run:", " ".join(cmd), flush=True)
+    return subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+
+
+def run_tool(cmd, cwd, label):
+    proc = run(cmd, cwd)
+    if proc.returncode != 0:
+        print(proc.stdout + proc.stderr)
+        message = f"{label} failed: {' '.join(cmd)} exited with {proc.returncode}"
+        print(with_override_note(message))
+        return False
+    return True
+
+
+def parse_bonds(text):
+    bonds = set()
+    for line in text.splitlines():
+        words = line.split()
+        if len(words) == 3:
+            bonds.add(tuple(int(word) for word in words))
+    return bonds
+
+
+# ---------------------------------------------------------------------------
+# Reading the output
+# ---------------------------------------------------------------------------
+
+
+def read_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_density(path):
+    values = []
+    with open(path) as f:
+        for line in f:
+            if "=" not in line:
+                continue
+            name, raw = line.split("=", 1)
+            words = raw.split()
+            values.append((name.strip(), complex(float(words[0]), float(words[1]))))
+    return values
+
+
+def twosite_table(outdir):
+    """{(group, source, dx, dy): complex}"""
+    table = {}
+    for row in read_rows(join(outdir, "twosite_obs.dat")):
+        group, source, dx, dy, re, im = row
+        table[(int(group), int(source), int(dx), int(dy))] = complex(re, im)
+    return table
+
+
+# ---------------------------------------------------------------------------
+# Checks
+# ---------------------------------------------------------------------------
+
+
+def check_schema(std, input_param):
+    failures = []
+    expected = {(s, dx, dy) for s in range(NSITES) for dx, dy in NEAREST}
+    emitted = set()
+    for ham in std.get("hamiltonian", []):
+        emitted |= parse_bonds(ham["bonds"])
+    if emitted != expected:
+        failures.append(
+            f"std.toml Hamiltonian bonds are {sorted(emitted)}; expected the "
+            f"(1, 0), (0, 1) and (-1, 1) bonds of every site"
+        )
+    hopping = [e for e in std["observable"]["twosite"] if e["name"] == "hopping"]
+    if len(hopping) != 1:
+        failures.append("std.toml: tenes_simple did not emit exactly one 'hopping'")
+    elif parse_bonds(hopping[0]["bonds"]) != expected:
+        failures.append(
+            "std.toml: the 'hopping' observable is not on the three "
+            "nearest-neighbour bonds of every site"
+        )
+    if input_param["parameter"]["general"].get("fermion") is not True:
+        failures.append("input.toml: parameter.general.fermion is not true")
+    return failures, (hopping[0]["group"] if len(hopping) == 1 else None)
+
+
+def check_warnings(label, output):
+    failures = []
+    for pattern in ("Norm is negative", "Norm is not real"):
+        hits = [line.strip() for line in output.splitlines() if pattern in line]
+        if hits:
+            failures.append(f"{label}: tenes printed {hits[0]!r}")
+    for line in output.splitlines():
+        if "CTM did not converge" in line:
+            print(f"{label}: note: {line.strip()}")
+    return failures
+
+
+def check_odd_onesite_is_zero(outdir):
+    failures = []
+    density = dict(read_density(join(outdir, "density.dat")))
+    for name in ("cdag", "c"):
+        if name not in density:
+            failures.append(f"density.dat has no {name} row")
+        elif density[name] != 0.0:
+            failures.append(f"density.dat: {name} = {density[name]}")
+    for group, site, re, im in read_rows(join(outdir, "onesite_obs.dat")):
+        if int(group) in (1, 2) and (re != 0.0 or im != 0.0):
+            failures.append(
+                f"onesite_obs.dat: group {int(group)} site {int(site)} is "
+                f"{re} + {im}i; an odd one-site operator must give exactly 0"
+            )
+    return failures
+
+
+def within(what, value, reference, tol, failures):
+    diff = value - reference
+    print(f"{NAME}: {what} = {value:.6f} (reference {reference:.6f}, diff {diff:+.3e})")
+    if not abs(diff) <= tol:
+        failures.append(
+            f"{what} = {value} against {reference} (|diff| {abs(diff):.3e} > {tol:.3e})"
+        )
+
+
+def check_exact(outdir, hopping_group):
+    failures = []
+    ref = exact()
+    density = dict(read_density(join(outdir, "density.dat")))
+    for name in ("Energy", "n", "hopping"):
+        if name not in density:
+            return [f"density.dat has no {name} row"]
+    energy = density["Energy"].real
+    n = density["n"].real
+
+    balance = -T * density["hopping"].real - MU * n
+    within("energy against its parts", energy, balance, ENV_TOL, failures)
+
+    table = twosite_table(outdir)
+    averages = {}
+    for r in NEAREST:
+        values = []
+        for source in range(NSITES):
+            key = (hopping_group, source, r[0], r[1])
+            if key not in table:
+                failures.append(f"twosite_obs.dat has no row {key}")
+                continue
+            value = table[key].real
+            values.append(value)
+            if not value > 0.0:
+                failures.append(
+                    f"the hopping of site {source} at {r} is {value}; every "
+                    f"nearest-neighbour bond must have a positive "
+                    f"<c^dag_s c_t + h.c.> (exact {ref[r]:.4f})"
+                )
+        print(f"{NAME}: hopping at {r} per site: {values}")
+        if len(values) == NSITES:
+            tol = CHAIN_TOL if r == CHAIN else STRAIGHT_TOL
+            within(f"hopping at {r}", float(np.mean(values)), ref[r], tol, failures)
+            averages[r] = float(np.mean(values))
+    if len(averages) == len(NEAREST):
+        ratio = averages[CHAIN] / np.mean([averages[r] for r in STRAIGHT])
+        print(f"{NAME}: (-1, 1) hopping over the straight ones: {ratio:.4f}")
+        if not ratio >= CHAIN_RATIO_MIN:
+            failures.append(
+                f"the (-1, 1) hopping {averages[CHAIN]} is {ratio:.3f} times the "
+                f"mean of the straight ones, below {CHAIN_RATIO_MIN}"
+            )
+    within("density", n, ref["n"], DENSITY_TOL, failures)
+    within("energy", energy, ref["energy"], ENERGY_TOL, failures)
+    return failures
+
+
+def compare_runs(result_dir, reference_dir, tol, label):
+    failures = []
+    for filename in OUTPUT_FILES:
+        path_res = join(result_dir, filename)
+        path_ref = join(reference_dir, filename)
+        if filename == "density.dat":
+            res = [[v.real, v.imag] for _, v in read_density(path_res)]
+            ref = [[v.real, v.imag] for _, v in read_density(path_ref)]
+        else:
+            res = read_rows(path_res)
+            ref = read_rows(path_ref)
+        if len(res) != len(ref):
+            failures.append(f"{label}: {filename} has {len(res)} rows, not {len(ref)}")
+            continue
+        worst = 0.0
+        for index, (rrow, frow) in enumerate(zip(res, ref)):
+            if len(rrow) != len(frow):
+                failures.append(f"{label}: {filename} row {index} has another length")
+                continue
+            err = float(np.max(np.abs(np.array(rrow) - np.array(frow))))
+            worst = max(worst, err)
+            if not err <= tol:
+                failures.append(
+                    f"{label}: {filename} row {index} differs: {rrow} vs {frow}"
+                )
+        print(f"{NAME}: {label}: worst |diff| in {filename} is {worst:.3e}")
+    return failures
+
+
+# ---------------------------------------------------------------------------
+
+
+def main():
+    nproc = parse_args(sys.argv[1:])
+    label = NAME if nproc == 1 else f"{NAME}MPI{nproc}"
+
+    failures = reference_self_check()
+    if failures:
+        for message in failures:
+            print(label + " reference self-check failed: " + message)
+        return 1
+
+    work_dir = join("@CMAKE_CURRENT_BINARY_DIR@", "output_" + label)
+    if os.path.isdir(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+    with open(join(work_dir, "simple.toml"), "w") as f:
+        f.write(SIMPLE_TOML)
+
+    simple = tool_command("TENES_TEST_TENES_SIMPLE", TENES_SIMPLE)
+    std = tool_command("TENES_TEST_TENES_STD", TENES_STD)
+    if not run_tool(simple + ["simple.toml", "-o", "std.toml"], work_dir, label):
+        return 1
+    if not run_tool(std + ["std.toml", "-o", "input.toml"], work_dir, label):
+        return 1
+    more, hopping_group = check_schema(
+        toml.load(join(work_dir, "std.toml")), toml.load(join(work_dir, "input.toml"))
+    )
+    failures += more
+    if hopping_group is None:
+        for message in failures:
+            print(with_override_note(label + " failed: " + message))
+        return 1
+
+    runs = [nproc] if nproc == 1 else [nproc, 1]
+    outdirs = {}
+    for n in runs:
+        run_dir = join(work_dir, f"np{n}")
+        os.makedirs(run_dir)
+        shutil.copyfile(join(work_dir, "input.toml"), join(run_dir, "input.toml"))
+        proc = run(launcher(n) + [TENES, "input.toml"], run_dir)
+        output = proc.stdout + proc.stderr
+        with open(join(run_dir, "tenes.log"), "w") as f:
+            f.write(output)
+        if proc.returncode != 0:
+            print(output)
+            print(
+                with_override_note(
+                    f"{label} failed: tenes on {n} process(es) exited with "
+                    f"{proc.returncode}"
+                )
+            )
+            return 1
+        failures += check_warnings(f"{label} np{n}", output)
+        outdirs[n] = join(run_dir, "output")
+
+    outdir = outdirs[nproc]
+    failures += check_odd_onesite_is_zero(outdir)
+    failures += check_exact(outdir, hopping_group)
+    if nproc != 1:
+        failures += compare_runs(outdir, outdirs[1], MPI_TOL, f"np{nproc} vs np1")
+
+    if failures:
+        for message in failures:
+            print(with_override_note(label + " failed: " + message))
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

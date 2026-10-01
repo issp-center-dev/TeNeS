@@ -1,0 +1,67 @@
+[[hamiltonian]]
+dim = [ 2, 2,]
+bonds = "0 1 0\n0 0 1\n1 1 0\n1 0 1\n2 1 0\n2 0 1\n3 1 0\n3 0 1\n4 1 0\n4 0 1\n5 1 0\n5 0 1\n6 1 0\n6 0 1\n7 1 0\n7 0 1\n8 1 0\n8 0 1\n"
+elements = "0 0 0 0 0.25 0.0\n0 1 0 1 -0.25 0.0\n0 1 1 0 0.5 0.0\n1 0 0 1 0.5 0.0\n1 0 1 0 -0.25 0.0\n1 1 1 1 0.25 0.0\n"
+
+[[hamiltonian]]
+dim = [ 2, 2,]
+bonds = "0 2 1\n4 -2 1\n8 1 2\n2 0 -2\n"
+elements = "0 0 0 0 0.075 0.0\n0 1 0 1 -0.075 0.0\n0 1 1 0 0.15 0.0\n1 0 0 1 0.15 0.0\n1 0 1 0 -0.075 0.0\n1 1 1 1 0.075 0.0\n"
+
+[tensor]
+L_sub = [ 3, 3,]
+[[tensor.unitcell]]
+index = [ 0,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 2, 3,]
+
+[[tensor.unitcell]]
+index = [ 1,]
+physical_dim = 2
+virtual_dim = [ 2, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 2,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 3,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 4,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 2, 3,]
+
+[[tensor.unitcell]]
+index = [ 5,]
+physical_dim = 2
+virtual_dim = [ 2, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 6,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 7,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 3, 3,]
+
+[[tensor.unitcell]]
+index = [ 8,]
+physical_dim = 2
+virtual_dim = [ 3, 3, 3, 3,]
+
+[parameter.general]
+is_real = true
+
+[parameter.simple_update]
+num_step = 10
+tau = 0.02
+
+[parameter.full_update]
+num_step = 0
+tau = 0.01
