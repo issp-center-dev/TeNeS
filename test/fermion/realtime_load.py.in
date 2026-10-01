@@ -33,6 +33,31 @@
 #                           registers it for fermion-real and boson-real when
 #                           the build has MPI)
 #
+# Section 9 of the same contract (an addendum of 2026-10-02, regression tests
+# of ed547459; there is no failing "before" state, so each item was checked
+# against the mutation the contract names, see the report):
+#
+#   --case fermion-complex-into-real
+#                           9-1: item 3 alone (save a complex fermion ground
+#                           state, refuse it in an is_real = true run); ctest
+#                           registers it at two processes, where a refusal
+#                           raised on one rank only leaves the other waiting
+#                           in a collective.  The refused run gets a timeout
+#                           of REFUSAL_TIMEOUT seconds, and running out of it
+#                           is a failure.
+#   --case boson-ctm-resave 9-2: a bosonic is_real = true ground state with the
+#                           CTM environment is saved, loaded by a complex run
+#                           (ground-state mode, no update steps, no
+#                           measurement) and saved again; every tensor of the
+#                           new checkpoint (T, C1..C4, Et, Er, Eb, El) must
+#                           hold the original elements exactly as real parts,
+#                           with zero imaginary parts.  The files are read
+#                           with read_mptensor() below.
+#   boson-real              9-3: after item 4, the same real-time load is
+#                           repeated from a copy of the checkpoint without
+#                           params.dat, the pre-versioning (format version 0)
+#                           layout, as checkpoint_dir.py.in's as_v0 does.
+#
 # What is compared (items 1, 2, 4): the time-zero rows of TE_onesite_obs.dat
 # and TE_twosite_obs.dat of the real-time run against onesite_obs.dat and
 # twosite_obs.dat of the ground-state run that wrote the checkpoint.  Both
@@ -66,13 +91,16 @@
 # in a Debug build (a signal is not a clean nonzero exit) and in a Release
 # build stops with the fermion parity message, which names neither "complex"
 # nor "is_real".
+import glob
 import os
 import shlex
+import signal
 import shutil
 import subprocess
 import sys
 from os.path import join
 
+import numpy as np
 import toml
 
 TENES_SIMPLE = join("@CMAKE_BINARY_DIR@", "tool", "tenes_simple")
@@ -82,6 +110,10 @@ MPIEXEC = "@MPIEXEC@"
 
 TOL = 1.0e-10
 TIMEOUT = 600
+# Contract 9-1: a refusal that one rank alone raises leaves the others waiting
+# forever; the refused run has to end well within this.  A clean refusal takes
+# about a second in a Debug build.
+REFUSAL_TIMEOUT = 60
 
 GS_STEPS = 300
 TE_STEPS = 20
@@ -194,14 +226,30 @@ def tool_command(env_name, default):
     return [default]
 
 
-def run(cmd, cwd):
+class TimedOut(Exception):
+    pass
+
+
+def run(cmd, cwd, timeout=TIMEOUT):
+    """subprocess.run with a timeout that also kills the launched processes:
+    the command runs in its own session, and on time-out the whole process
+    group is killed (mpiexec alone may leave its ranks behind)."""
     print("run:", " ".join(cmd), flush=True)
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
     try:
-        return subprocess.run(
-            cmd, cwd=cwd, check=False, text=True, capture_output=True, timeout=TIMEOUT
-        )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"{' '.join(cmd)} did not finish in {TIMEOUT} s") from e
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.communicate()
+        raise TimedOut(f"{' '.join(cmd)} did not finish in {timeout} s")
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
 def must_succeed(proc, what):
@@ -221,8 +269,8 @@ def prepare(workdir, simple_text):
     must_succeed(run(std + ["std.toml"], workdir), f"tenes_std in {workdir}")
 
 
-def run_tenes(workdir, nproc):
-    return run(launcher(nproc) + [TENES, "input.toml"], workdir)
+def run_tenes(workdir, nproc, timeout=TIMEOUT):
+    return run(launcher(nproc) + [TENES, "input.toml"], workdir, timeout)
 
 
 # ----------------------------------------------------------------------------
@@ -471,6 +519,36 @@ def save_then_evolve(workroot, nproc, *, fermion, is_real):
     failures += compare_time_zero(
         gs_dir, te_dir, {"bond_hamiltonian"}, "hopping" if fermion else "SzSz"
     )
+    if not fermion:
+        failures += evolve_from_v0(workroot, gs_dir, nproc, lattice, te_model)
+    return failures
+
+
+def evolve_from_v0(workroot, gs_dir, nproc, lattice, te_model):
+    """Contract 9-3: the real-time load of item 4 from the same checkpoint
+    without params.dat, the format-version-0 layout (the as_v0 of
+    test/checkpoint_dir.py.in)."""
+    failures = []
+    v0_dir = join(gs_dir, "save_v0")
+    shutil.copytree(join(gs_dir, "save"), v0_dir)
+    os.remove(join(v0_dir, "params.dat"))
+    te_dir = join(workroot, "te_v0")
+    prepare(te_dir, te_simple_toml(join("..", "gs", "save_v0"), lattice, te_model))
+    proc = run_tenes(te_dir, nproc)
+    if proc.returncode != 0:
+        print(proc.stdout[-4000:] + proc.stderr[-4000:])
+        failures.append(
+            "the real-time run from the checkpoint without params.dat (format "
+            f"version 0) exited with {proc.returncode}"
+        )
+        return failures
+    failures += [
+        "format version 0: " + message for message in check_completed(te_dir)
+    ]
+    failures += [
+        "format version 0: " + message
+        for message in compare_time_zero(gs_dir, te_dir, {"bond_hamiltonian"}, "SzSz")
+    ]
     return failures
 
 
@@ -488,7 +566,13 @@ def complex_into_real(workroot, nproc):
             fermion_model(4.0, 2.0),
         ),
     )
-    proc = run_tenes(rl_dir, nproc)
+    try:
+        proc = run_tenes(rl_dir, nproc, timeout=REFUSAL_TIMEOUT)
+    except TimedOut as e:
+        return [
+            f"the is_real = true run on a complex checkpoint did not end within "
+            f"{REFUSAL_TIMEOUT} s (a refusal raised on some ranks only?): {e}"
+        ]
     text = proc.stdout + proc.stderr
     print(f"is_real = true run on a complex checkpoint: exit {proc.returncode}")
     print("\n".join(text.strip().splitlines()[-6:]))
@@ -517,10 +601,217 @@ def complex_into_real(workroot, nproc):
     return failures
 
 
+def save_complex_fermion(workroot, nproc):
+    """The complex fermion ground state of item 2, saved, without evolving it."""
+    gs_dir = join(workroot, "gs")
+    prepare(
+        gs_dir,
+        gs_simple_toml(
+            False, "tensor_save", "save", FERMION_LATTICE, fermion_model(4.0, 2.0)
+        ),
+    )
+    must_succeed(run_tenes(gs_dir, nproc), "the ground-state run")
+    got_type = checkpoint_value_type(join(gs_dir, "save"))
+    if got_type != "complex":
+        return [f"the checkpoint holds {got_type} tensors, expected complex"]
+    return []
+
+
+# ----------------------------------------------------------------------------
+# 9-2: the CTM tensors through a real -> complex load
+# ----------------------------------------------------------------------------
+
+
+def read_mptensor(path):
+    """A tensor saved by mptensor's Tensor::save, as a dense numpy array.
+
+    The format (deps/mptensor/include/mptensor/file_io/save.hpp and
+    io_helper.hpp): `path` is a text header (value_type, comm_size, ndim,
+    upper_rank, shape, axes_map); every rank r wrote `path.%04d.bin` with its
+    local matrix block, column-major, and `path.%04d.idx` with local_size,
+    local_n_row, local_n_col and the global row and column of each local row
+    and column.  The global matrix row of a tensor index runs over the axes
+    axes_map[0 .. upper_rank) with the first of them fastest, the column over
+    axes_map[upper_rank .. ndim) likewise (Tensor::global_index in
+    tensor_impl.hpp)."""
+    header = {}
+    with open(path) as f:
+        for line in f:
+            words = line.split()
+            if words and words[0].endswith("="):
+                header[words[0][:-1]] = words[1:]
+    value_type = int(header["value_type"][0])
+    comm_size = int(header["comm_size"][0])
+    upper_rank = int(header["upper_rank"][0])
+    shape = [int(w) for w in header["shape"]]
+    axes_map = [int(w) for w in header["axes_map"]]
+    if sorted(axes_map) != list(range(len(shape))):
+        raise RuntimeError(f"{path}: axes_map {axes_map} is not a permutation")
+    dtype = np.complex128 if value_type == 1 else np.float64
+    row_axes = axes_map[:upper_rank]
+    col_axes = axes_map[upper_rank:]
+    n_row = int(np.prod([shape[a] for a in row_axes]))
+    n_col = int(np.prod([shape[a] for a in col_axes]))
+    matrix = np.zeros((n_row, n_col), dtype=dtype)
+    filled = np.zeros((n_row, n_col), dtype=int)
+    for rank in range(comm_size):
+        with open(f"{path}.{rank:04d}.idx") as f:
+            words = f.read().split()
+        local_size, local_n_row, local_n_col = (int(words[i]) for i in (1, 3, 5))
+        rows = [int(w) for w in words[7 : 7 + local_n_row]]
+        cols = [int(w) for w in words[8 + local_n_row : 8 + local_n_row + local_n_col]]
+        if local_size != local_n_row * local_n_col or len(cols) != local_n_col:
+            raise RuntimeError(f"{path}.{rank:04d}.idx is not understood")
+        data = np.fromfile(f"{path}.{rank:04d}.bin", dtype=dtype)
+        if data.size != local_size:
+            raise RuntimeError(
+                f"{path}.{rank:04d}.bin holds {data.size} values, expected {local_size}"
+            )
+        block = data.reshape((local_n_col, local_n_row)).T  # column-major
+        matrix[np.ix_(rows, cols)] = block
+        filled[np.ix_(rows, cols)] += 1
+    if not np.all(filled == 1):
+        raise RuntimeError(f"{path}: the rank files do not cover the matrix once")
+    # matrix[row, col] -> tensor in the storage order (first axis fastest),
+    # then back to the order of `shape`.
+    storage = np.reshape(
+        matrix,
+        [shape[a] for a in reversed(row_axes)] + [shape[a] for a in reversed(col_axes)],
+        order="C",
+    )
+    # storage axes are (row_axes reversed, col_axes reversed) in C order
+    order = list(reversed(row_axes)) + list(reversed(col_axes))
+    return np.transpose(storage, np.argsort(order))
+
+
+def check_read_mptensor():
+    """The reader against a layout worked out by hand: a 2 x 3 x 2 tensor with
+    upper_rank 1 and axes_map [2, 0, 1] stores element (i, j, k) at matrix row
+    k and column i + 2 j."""
+    import tempfile
+
+    shape = [2, 3, 2]
+    want = np.arange(12, dtype=np.float64).reshape(shape) + 1.0
+    matrix = np.zeros((2, 6))
+    for i in range(2):
+        for j in range(3):
+            for k in range(2):
+                matrix[k, i + 2 * j] = want[i, j, k]
+    with tempfile.TemporaryDirectory() as tmp:
+        path = join(tmp, "X.dat")
+        with open(path, "w") as f:
+            f.write(
+                "mptensor 0.5.0\nmatrix_type= 1 (LAPACK)\nvalue_type= 0 (double)\n"
+                "comm_size= 1\nndim= 3\nupper_rank= 1\nshape= 2 3 2\n"
+                "axes_map= 2 0 1\n"
+            )
+        with open(path + ".0000.idx", "w") as f:
+            f.write("local_size= 12\nlocal_n_row= 2\nlocal_n_col= 6\n")
+            f.write("[global_row]\n 0 1\n[global_col]\n 0 1 2 3 4 5\n")
+        matrix.T.copy().tofile(path + ".0000.bin")  # column-major
+        got = read_mptensor(path)
+    if got.shape != tuple(shape) or not np.array_equal(got, want):
+        raise RuntimeError("read_mptensor does not reproduce a hand-made tensor")
+
+
+CTM_PREFIXES = ("T", "C1", "C2", "C3", "C4", "Et", "Er", "Eb", "El")
+
+
+def boson_ctm_resave(workroot, nproc):
+    failures = []
+    check_read_mptensor()
+    gs_dir = join(workroot, "gs")
+    simple = gs_simple_toml(True, "tensor_save", "save", SPIN_LATTICE, spin_model(1.0))
+    simple = simple.replace(
+        "meanfield_env = true", "meanfield_env = false\ndimension = 9"
+    )
+    # One full-update step: a ground-state run saves before it measures, so
+    # without a full update (which builds the CTM environment) the CTM tensors
+    # of the checkpoint would still be the all-zero placeholders.
+    simple = simple.replace(
+        "[parameter.full_update]\nnum_step = 0",
+        "[parameter.full_update]\ntau = 0.01\nnum_step = 1",
+    )
+    prepare(gs_dir, simple)
+    must_succeed(run_tenes(gs_dir, nproc), "the ground-state run")
+    save_dir = join(gs_dir, "save")
+    if checkpoint_value_type(save_dir) != "double":
+        failures.append("the ground-state checkpoint does not hold real tensors")
+
+    # A complex run that loads the checkpoint and saves it again: ground-state
+    # mode with no update step saves before it measures (run_groundstate in
+    # src/iTPS/main.cpp), and measure = false skips the measurement, so the
+    # environment is saved as it was loaded.
+    re_dir = join(workroot, "resave")
+    simple = gs_simple_toml(
+        False, "tensor_load", join("..", "gs", "save"), SPIN_LATTICE, spin_model(1.0)
+    )
+    simple = simple.replace(
+        "meanfield_env = true", "meanfield_env = false\ndimension = 9"
+    )
+    simple = simple.replace(f"num_step = {GS_STEPS}", "num_step = 0")
+    simple = simple.replace(
+        'output = "output"', 'output = "output"\ntensor_save = "save"\nmeasure = false'
+    )
+    prepare(re_dir, simple)
+    param = toml.load(join(re_dir, "input.toml"))
+    general = param["parameter"]["general"]
+    if general.get("is_real") is not False or general.get("measure") is not False:
+        failures.append("the reloading input is not a complex run without measurement")
+    if param["parameter"]["simple_update"].get("num_step") != 0:
+        failures.append("the reloading input has simple-update steps")
+    must_succeed(run_tenes(re_dir, nproc), "the complex run that reloads and saves")
+    resave_dir = join(re_dir, "save")
+    if checkpoint_value_type(resave_dir) != "complex":
+        failures.append("the saved-again checkpoint does not hold complex tensors")
+
+    names = sorted(
+        os.path.basename(p)
+        for prefix in CTM_PREFIXES
+        for p in glob.glob(join(save_dir, f"{prefix}_*.dat"))
+    )
+    want = {f"{prefix}_{i}.dat" for prefix in CTM_PREFIXES for i in range(4)}
+    if set(names) != want:
+        failures.append(
+            f"the checkpoint has tensor files {names}, expected {sorted(want)}"
+        )
+    worst = 0.0
+    for name in names:
+        original = read_mptensor(join(save_dir, name))
+        again_path = join(resave_dir, name)
+        if not os.path.exists(again_path):
+            failures.append(f"the saved-again checkpoint has no {name}")
+            continue
+        again = read_mptensor(again_path)
+        if original.shape != again.shape:
+            failures.append(f"{name}: shape {again.shape}, originally {original.shape}")
+            continue
+        if not np.any(original != 0.0):
+            failures.append(
+                f"{name}: the original tensor is all zero; nothing to compare"
+            )
+        diff = float(np.max(np.abs(again.real - original))) if original.size else 0.0
+        imag = float(np.max(np.abs(again.imag))) if original.size else 0.0
+        worst = max(worst, diff, imag)
+        # The conversion copies each double into the real part of a complex
+        # number; nothing is computed, so the comparison is exact.
+        if diff != 0.0:
+            failures.append(
+                f"{name}: the real parts differ from the original by up to "
+                f"{diff:.3e}"
+            )
+        if imag != 0.0:
+            failures.append(f"{name}: imaginary parts up to {imag:.3e}, expected 0")
+    print(f"compared {len(names)} tensors, worst difference {worst:.3e}")
+    return failures
+
+
 CASES = {
     "fermion-real": "FermionRealTimeLoadReal",
     "fermion-complex": "FermionRealTimeLoadComplex",
     "boson-real": "BosonRealTimeLoadReal",
+    "fermion-complex-into-real": "FermionLoadComplexIntoReal",
+    "boson-ctm-resave": "BosonLoadRealResaveCTM",
 }
 
 
@@ -540,10 +831,15 @@ def main(argv):
             failures = save_then_evolve(workroot, nproc, fermion=True, is_real=True)
         elif case == "boson-real":
             failures = save_then_evolve(workroot, nproc, fermion=False, is_real=True)
-        else:
+        elif case == "fermion-complex":
             failures = save_then_evolve(workroot, nproc, fermion=True, is_real=False)
             failures += complex_into_real(workroot, nproc)
-    except RuntimeError as e:
+        elif case == "fermion-complex-into-real":
+            failures = save_complex_fermion(workroot, nproc)
+            failures += complex_into_real(workroot, nproc)
+        else:
+            failures = boson_ctm_resave(workroot, nproc)
+    except (RuntimeError, TimedOut) as e:
         failures = [str(e)]
     if failures:
         for message in failures:

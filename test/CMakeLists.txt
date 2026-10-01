@@ -664,6 +664,29 @@ add_test(NAME BosonRealTimeLoadReal
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
                  --case boson-real)
+# Section 9 (addendum of 2026-10-02): the CTM tensors through a real ->
+# complex load and save (BosonLoadRealResaveCTM), and the refusal of a complex
+# checkpoint by is_real = true on two processes, where a refusal raised by one
+# rank alone hangs the other (FermionLoadComplexIntoRealMPI2; the refused run
+# has a 60 s timeout of its own inside the script). The format-version-0 load
+# (9-3) is part of BosonRealTimeLoadReal.
+add_test(NAME BosonLoadRealResaveCTM
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case boson-ctm-resave)
+set_tests_properties(BosonLoadRealResaveCTM PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FermionLoadComplexIntoRealMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case fermion-complex-into-real --nproc 2)
+  add_test(NAME BosonLoadRealResaveCTMMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case boson-ctm-resave --nproc 2)
+  set_tests_properties(FermionLoadComplexIntoRealMPI2 BosonLoadRealResaveCTMMPI2
+                       PROPERTIES TIMEOUT 600)
+endif()
 if(ENABLE_MPI)
   add_test(NAME FermionRealTimeLoadRealMPI2
            COMMAND ${TENES_PYTHON_EXECUTABLE}
