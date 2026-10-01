@@ -43,10 +43,17 @@
 //
 // The gate chain is tenes_std's output (tool/tenes_std.py, mode = "time",
 // tau = 0.01) for H = -(c^dag_0 c_3 + c^dag_3 c_0) on the (1, 1) bond of
-// site 0 in a 2x2 cell of spinless fermions (parity [0, 1]). It was
-// generated on 2026-10-01 from the std.toml kept in
-// work/fermion-real-time/tests/ledger/: the path is 0 -(right)-> 1 -(up)-> 3,
-// and the first gate's out2 leg (dimension 8) carries the channel on site 1.
+// site 0 in a 2x2 cell of spinless fermions (parity [0, 1]). The std.toml it
+// was generated from is test/data/fermion_realtime_ledger_std.toml; to
+// regenerate, run
+//
+//     python3 tool/tenes_std.py test/data/fermion_realtime_ledger_std.toml \
+//         -o input.toml
+//
+// and copy the two [[evolution.simple]] tables of input.toml (the
+// [[evolution.full]] ones are the same gates) into rtl_input() below. The
+// path is 0 -(right)-> 1 -(up)-> 3, and the first gate's out2 leg
+// (dimension 8) carries the channel on site 1.
 // The ledgers of the gates are inferred by infer_fermion_gate_ledgers(), as
 // tenes does when it reads input.toml.
 //

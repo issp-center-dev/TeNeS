@@ -35,7 +35,8 @@
 #
 # Section 9 of the same contract (an addendum of 2026-10-02, regression tests
 # of ed547459; there is no failing "before" state, so each item was checked
-# against the mutation the contract names, see the report):
+# against the mutation the contract names; the results are in the test
+# author's report, working notes outside the repository):
 #
 #   --case fermion-complex-into-real
 #                           9-1: item 3 alone (save a complex fermion ground
@@ -72,8 +73,9 @@
 # no Sy and its group numbers are not those of the complex run).
 #
 # Tolerance: TOL = 1e-10 on |TE - ground state| and on the imaginary part of
-# every time-zero value.  Measured on the calibration build
-# (work/fermion-real-time/p0, which has no load fix) by converting the real
+# every time-zero value.  Measured on a calibration build of the source of
+# 2026-10-01 with the input guard lifted and no load fix (working notes
+# outside the repository) by converting the real
 # checkpoint to a complex one by hand (mptensor header value_type 0 -> 1 and
 # the binary data widened with zero imaginary parts) and loading that: the
 # fermion values agreed to 0 (bit for bit) and the spin values to 2.8e-17; a
@@ -258,13 +260,33 @@ def must_succeed(proc, what):
         raise RuntimeError(f"{what} exited with {proc.returncode}")
 
 
-def prepare(workdir, simple_text):
-    """simple.toml -> tenes_simple -> tenes_std -> input.toml in workdir."""
+def prepare(workdir, simple_text, keep=None):
+    """simple.toml -> tenes_simple -> tenes_std -> input.toml in workdir.
+    With keep = {"onesite": names, "twosite": names}, only the observables of
+    those names are left in std.toml (to keep the measurement short); the
+    one-site groups are renumbered 0, 1, ... in the order kept, so the kept
+    two-site observables must not be in the ops form, which refers to them."""
     os.makedirs(workdir)
     with open(join(workdir, "simple.toml"), "w") as f:
         f.write(simple_text)
     simple = tool_command("TENES_TEST_TENES_SIMPLE", TENES_SIMPLE)
     must_succeed(run(simple + ["simple.toml"], workdir), f"tenes_simple in {workdir}")
+    if keep is not None:
+        std_path = join(workdir, "std.toml")
+        std_param = toml.load(std_path)
+        observable = std_param["observable"]
+        for kind in ("onesite", "twosite"):
+            kept = [o for o in observable[kind] if o["name"] in keep[kind]]
+            if sorted(o["name"] for o in kept) != sorted(keep[kind]):
+                raise RuntimeError(f"std.toml does not have all of {keep[kind]}")
+            if kind == "onesite":
+                for group, o in enumerate(kept):
+                    o["group"] = group
+            elif any("ops" in o for o in kept):
+                raise RuntimeError("a kept two-site observable is in the ops form")
+            observable[kind] = kept
+        with open(std_path, "w") as f:
+            toml.dump(std_param, f)
     std = tool_command("TENES_TEST_TENES_STD", TENES_STD)
     must_succeed(run(std + ["std.toml"], workdir), f"tenes_std in {workdir}")
 
@@ -475,8 +497,8 @@ def compare_time_zero(gs_dir, te_dir, expected_differing, nontrivial):
     return failures
 
 
-def check_completed(te_dir):
-    want = [round(0.01 * k, 9) for k in range(0, TE_STEPS + 1, TE_MEASURE_INTERVAL)]
+def check_completed(te_dir, steps=TE_STEPS, interval=TE_MEASURE_INTERVAL):
+    want = [round(0.01 * k, 9) for k in range(0, steps + 1, interval)]
     got = times_in(join(te_dir, "output", "TE_onesite_obs.dat"))
     if got != want:
         return [
@@ -804,8 +826,114 @@ def boson_ctm_resave(workroot, nproc):
     return failures
 
 
+# ----------------------------------------------------------------------------
+# 10-2: a real-time full update started from a real fermion checkpoint
+# ----------------------------------------------------------------------------
+
+# The case only has to show that a real fermion checkpoint starts a real-time
+# full update, that the time-zero values are those saved, and that the run
+# completes; it needs no converged physics, and it has to stay well inside the
+# 30 s budget (Debug, one thread, also through mpiexec).  So, against item 1:
+# D = 2 with chi = D^2 = 4 (the full update's CTM path is the same), a ground
+# state of 100 simple-update steps, two full-update steps, and of the
+# observables only the density n, the hopping (which keeps the comparison
+# from being one of product states: compare_time_zero() requires a hopping
+# above 1e-2 in the saved state) and the energy.  Measured in Debug builds:
+# D = 3, chi = 9, three steps and all but the spin correlations took 25.9 s
+# serial and 31.8 s through mpiexec, of which 17 s were the real-time run
+# (full update 12 s, measurements 6 s) and 7 s the ground state.
+FU_STEPS = 2
+FU_GS_STEPS = 100
+FU_D = 2
+FU_KEEP = {"onesite": ("n",), "twosite": ("bond_hamiltonian", "hopping")}
+
+
+def with_ctm(simple, chi):
+    """The CTM environment (dimension chi) instead of the mean-field one."""
+    old = "meanfield_env = true"
+    if simple.count(old) != 1:
+        raise RuntimeError("the simple.toml template has no meanfield_env line")
+    return simple.replace(old, f"meanfield_env = false\ndimension = {chi}")
+
+
+def with_virtual_dim(lattice, D):
+    old = "virtual_dim = 3"
+    if lattice.count(old) != 1:
+        raise RuntimeError("the lattice template has no virtual_dim = 3")
+    return lattice.replace(old, f"virtual_dim = {D}")
+
+
+def fermion_real_fu(workroot, nproc):
+    """Contract 10-2: item 1 with the real-time full update (CTM environment,
+    chi = FU_D^2, FU_STEPS steps).  The ground-state run measures with the CTM
+    environment too, so that the time-zero values of the real-time run, whose
+    first measurement builds its CTM afresh from the loaded tensors, are the
+    same computation as the ground-state measurement."""
+    failures = []
+    gs_dir = join(workroot, "gs")
+    te_dir = join(workroot, "te")
+    lattice = with_virtual_dim(FERMION_LATTICE, FU_D)
+    simple = with_ctm(
+        gs_simple_toml(True, "tensor_save", "save", lattice, fermion_model(4.0, 2.0)),
+        FU_D * FU_D,
+    )
+    old = f"num_step = {GS_STEPS}"
+    if simple.count(old) != 1:
+        raise RuntimeError(f"the simple.toml template has no {old!r}")
+    simple = simple.replace(old, f"num_step = {FU_GS_STEPS}")
+    prepare(gs_dir, simple, FU_KEEP)
+    must_succeed(run_tenes(gs_dir, nproc), "the ground-state run")
+    if checkpoint_value_type(join(gs_dir, "save")) != "double":
+        failures.append("the ground-state checkpoint does not hold real tensors")
+
+    simple = with_ctm(
+        te_simple_toml(join("..", "gs", "save"), lattice, fermion_model(0.0, 0.0)),
+        FU_D * FU_D,
+    )
+    for old, new in (
+        (f"num_step = {TE_STEPS}", "num_step = 0"),
+        (
+            "[parameter.full_update]\nnum_step = 0",
+            f"[parameter.full_update]\ntau = 0.01\nnum_step = {FU_STEPS}",
+        ),
+        (f"measure_interval = {TE_MEASURE_INTERVAL}", f"measure_interval = {FU_STEPS}"),
+    ):
+        if simple.count(old) != 1:
+            raise RuntimeError(f"the simple.toml template has no {old!r}")
+        simple = simple.replace(old, new)
+    prepare(te_dir, simple, FU_KEEP)
+    param = toml.load(join(te_dir, "input.toml"))["parameter"]
+    if (
+        param["general"].get("fermion") is not True
+        or param["simple_update"].get("num_step") != 0
+        or param["full_update"].get("num_step") != FU_STEPS
+        or param["ctm"].get("meanfield_env") is not False
+    ):
+        failures.append("the real-time input is not a fermion full update with CTM")
+    proc = run_tenes(te_dir, nproc)
+    if proc.returncode != 0:
+        print(proc.stdout[-4000:] + proc.stderr[-4000:])
+        failures.append(
+            f"the real-time full update from the checkpoint exited with "
+            f"{proc.returncode}"
+        )
+        return failures
+    failures += check_completed(te_dir, FU_STEPS, FU_STEPS)
+    times = {}
+    with open(join(te_dir, "output", "time.dat")) as f:
+        for line in f:
+            if "=" in line:
+                name, raw = line.split("=", 1)
+                times[" ".join(name.split())] = float(raw.split()[0])
+    if not times.get("time full update", 0.0) > 0.0:
+        failures.append("time.dat says the full update never ran")
+    failures += compare_time_zero(gs_dir, te_dir, {"bond_hamiltonian"}, "hopping")
+    return failures
+
+
 CASES = {
     "fermion-real": "FermionRealTimeLoadReal",
+    "fermion-real-fu": "FermionRealTimeLoadRealFU",
     "fermion-complex": "FermionRealTimeLoadComplex",
     "boson-real": "BosonRealTimeLoadReal",
     "fermion-complex-into-real": "FermionLoadComplexIntoReal",
@@ -832,6 +960,8 @@ def main(argv):
         elif case == "fermion-complex":
             failures = save_then_evolve(workroot, nproc, fermion=True, is_real=False)
             failures += complex_into_real(workroot, nproc)
+        elif case == "fermion-real-fu":
+            failures = fermion_real_fu(workroot, nproc)
         elif case == "fermion-complex-into-real":
             failures = save_complex_fermion(workroot, nproc)
             failures += complex_into_real(workroot, nproc)

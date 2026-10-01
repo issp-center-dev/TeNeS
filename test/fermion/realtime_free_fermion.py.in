@@ -22,8 +22,12 @@
 #   --case chain-mf     3.1  free Hubbard chains embedded in the two-site cell
 #                            (four directions), simple update, mean-field
 #                            environment, D = 8: n_1 - n_0 = 2 J0(4T)
+#                       10-1 and on every chain bond <c^dag_{s,up} c_{s+1,up}>
+#                            against its exact series (the direction of time
+#                            in the graded two-site path)
 #   --case chain-fu     3.2  the ascending staircase with the full update,
 #                            CTM environment, D = 4, chi = 16, plain update
+#                            (with the 10-1 check as well)
 #   --case chain-ffu    3.2  the same with fastfullupdate = true
 #   --case square       3.3  the 2D square-lattice Hubbard model through
 #                            tenes_simple -> tenes_std -> tenes from
@@ -68,6 +72,26 @@
 # the two sublattices decays as 2 J0(4T) on a chain and as 2 J0(4T)^2 on the
 # square lattice (J0: Bessel function of the first kind).
 #
+# The hopping correlator of contract section 10-1, derived here: one spin of
+# the chain is a free fermion with h_{j,j+1} = h_{j+1,j} = -1.  Evolving the
+# state with exp(-iHT) evolves c_j in the Heisenberg picture as
+# c_j(T) = sum_k U_jk c_k with U = exp(-iTh), and the generating function
+# exp(ix cos q) = sum_n i^n J_n(x) e^{inq} gives U_jk = i^{j-k} J_{j-k}(2T).
+# The initial state is diagonal, <c^dag_m c_n> = delta_mn n_m, so
+#
+#   <c^dag_l c_{l+1}>(T) = sum_m n_m conj(U_lm) U_{l+1,m}
+#                        = i sum_{m occupied} J_{l-m}(2T) J_{l+1-m}(2T),
+#
+# purely imaginary.  To first order it is iT (n_l - n_{l+1}) (from
+# <A>(T) = <A> + iT <[H, A]>), so the bond leaving a doubly occupied site
+# carries +iT and the bond leaving an empty one -iT; since
+# sum_k J_k J_{k+1} = 0 the two bonds are exact negatives of each other at
+# all T.  check_hopping_series() verifies the series against a direct
+# single-particle evolution on a 40-site ring.  A gate evolved in the wrong
+# direction of time (exp(+iHT)) conjugates the state and so flips the sign of
+# the imaginary part, a difference of 0.2 at T = 0.1; the densities are even
+# under that and cannot see it.
+#
 # Before the implementation every case fails when tenes reads its input:
 # fermion mode refuses mode = "time" ("non-ground-state mode").
 import math
@@ -93,12 +117,16 @@ TAU = 0.01
 
 # ----------------------------------------------------------------------------
 # tolerances (contract section 0: measured difference x margin; the measured
-# values are from the calibration builds of work/fermion-real-time/p0, the
-# input guard lifted, Release and Debug giving the same numbers)
+# values of sections 3 and 4 are from calibration builds of the source of
+# 2026-10-01 with the input guard lifted, Release and Debug giving the same
+# numbers; the builds and their logs are working notes outside the
+# repository)
 # ----------------------------------------------------------------------------
 
 # The mutations quoted below are those of contract section 7, applied to the
-# input through TENES_TEST_TENES_STD (work/fermion-real-time/tests/mutants/):
+# input by a wrapper around tenes_std given through TENES_TEST_TENES_STD,
+# which edits std.toml before calling the real tenes_std (working notes
+# outside the repository; the edits are spelt out here):
 # "hopsign" flips the sign of one doublon hopping element pair of the bond
 # Hamiltonian, <dn, up|H|updn, 0> and its transpose (H stays Hermitian);
 # "vhopsign" does the same on the vertical bonds only.
@@ -118,6 +146,29 @@ TOL_CHAIN_MF = 1.0e-4
 # 2 J0(4T) to 1e-5.
 TOL_CHAIN_AGREE = 1.0e-7
 
+# 10-1, <c^dag_{s,up} c_{s+1,up}> on the two chain bonds (O_s: the bond
+# whose source is site s; O_1 leaves the doubly occupied site).  Per bond the
+# measured imaginary parts are shifted the same way on both bonds (the
+# first-order Trotter asymmetry of the alternating bond gates: O_0 = -X - d,
+# O_1 = X - d with d = 5e-5 at T = 0.1), so the pair (Im O_1 - Im O_0) / 2 is
+# compared with the series X tightly and each bond alone loosely.  Measured
+# with the implementation of 5cd347ac (Debug):
+#   pair: 1.6e-6 at T = 0.1, worst 3.5e-5 at T = 0.3 (simple update, all four
+#         chains); 2.8e-6 at T = 0.1, 1.4e-4 at T = 0.2 (full update, D = 4,
+#         both fastfullupdate settings) -> TOL_HOP_PAIR_SU = 3.5e-4,
+#         TOL_HOP_PAIR_FU = 1.4e-3 (ten times each);
+#   bond: worst 4.4e-4 (simple update, T = 0.3), 3.3e-4 (full update)
+#         -> TOL_HOP_BOND = 4e-3;
+#   real parts and |<c^dag_{s+1} c_s> - conj <c^dag_s c_{s+1}>|: below
+#         4e-15 -> TOL_HOP_RE = 1e-8.
+# The signal of a gate in the wrong direction of time is a sign flip of the
+# imaginary part: 2 x 0.098 = 0.196 at T = 0.1, 0.37 at T = 0.2, two decades
+# above the loosest of these.
+TOL_HOP_PAIR_SU = 3.5e-4
+TOL_HOP_PAIR_FU = 1.4e-3
+TOL_HOP_BOND = 4.0e-3
+TOL_HOP_RE = 1.0e-8
+
 # 3.2, |n_1 - n_0 - 2 J0(4T)| at T = 0.1, 0.2 with the full update, D = 4.
 # Measured: 5.6e-5 at T = 0.2 for both fastfullupdate settings (the contract
 # quotes the same), 1.8e-6 at T = 0.1.  TOL_CHAIN_FU = 5e-4 is nine times the
@@ -134,7 +185,8 @@ TOL_CHAIN_FU = 5.0e-4
 # (fermion = false with the same gates) by 4.5e-3 (error 2.2e-3).  At this
 # time and this D, the test pins the 2D pipeline, the sign-free part of the
 # dynamics and its time scale; the hopping signs are pinned by 3.1 and 3.2.
-# See the report (work/fermion-real-time/tests/REPORT.md).
+# (The measurements are in the test author's report, working notes outside
+# the repository.)
 TOL_SQUARE = 1.2e-2
 # Conservation of the total density n_0 + n_1 = 2: measured below 1e-15.
 TOL_SQUARE_TOTAL = 1.0e-8
@@ -233,6 +285,47 @@ def elements_text(op):
     return "\n".join(lines)
 
 
+def hopping_up(reverse=False):
+    """c^dag_{1,up} c_{2,up} (reverse: c^dag_{2,up} c_{1,up}) as
+    op[i1, i2, o1, o2] = <o1 o2|O|i1 i2>, the layout of bond_hamiltonian()
+    (docs/sphinx/en/file_specification/parameter_section.rst; the same layout
+    as tool/tenes_simple.py's bond_matrix and src/fermion/relay.hpp's
+    product_twosite_op, whose op[i_s, i_t, o_s, o_t] is the matrix element
+    from |i_s i_t> to |o_s o_t>)."""
+    dagger, annihilate = (2, 0) if reverse else (0, 2)
+    fock = fock_op(True, dagger) @ fock_op(False, annihilate)
+    op = np.zeros((4, 4, 4, 4))
+    for i1 in range(4):
+        for i2 in range(4):
+            for o1 in range(4):
+                for o2 in range(4):
+                    op[i1, i2, o1, o2] = fock[o1 + 4 * o2, i1 + 4 * i2]
+    return op
+
+
+def hopping_observables(bonds):
+    """Two-site observables 0: c^dag_{s,up} c_{t,up}, 1: c^dag_{t,up} c_{s,up}
+    on the chain bonds (s the source site of the bond, t its target)."""
+    bond_lines = "\n".join(bonds)
+    text = ""
+    for group, (name, reverse) in enumerate(
+        (("cdag_up_c_up", False), ("cdag_up_c_up_rev", True))
+    ):
+        text += f'''
+[[observable.twosite]]
+name = "{name}"
+group = {group}
+dim = [4, 4]
+bonds = """
+{bond_lines}
+"""
+elements = """
+{elements_text(hopping_up(reverse))}
+"""
+'''
+    return text
+
+
 N_ELEMENTS = "1 1 1.0 0.0\n2 2 1.0 0.0\n3 3 2.0 0.0"
 # O = |0><updn|: before 3, after 0 (see the header)
 O_ELEMENTS = "3 0 1.0 0.0"
@@ -317,6 +410,53 @@ def check_bessel():
     # J0(1) = 0.7651976865579666 (Abramowitz-Stegun table 9.1)
     if abs(bessel_j0(1.0) - 0.7651976865579666) > 1e-15:
         raise AssertionError("bessel_j0 is wrong")
+    # J1(1) = 0.4400505857449335 (same table)
+    if abs(bessel_jn(1, 1.0) - 0.4400505857449335) > 1e-15:
+        raise AssertionError("bessel_jn is wrong")
+    check_hopping_series()
+
+
+def bessel_jn(n, x):
+    """J_n by its power series, J_{-n} = (-1)^n J_n (|x| <= 2 here)."""
+    if n < 0:
+        return (-1) ** n * bessel_jn(-n, x)
+    total = 0.0
+    term = (x / 2.0) ** n / math.factorial(n)
+    for k in range(40):
+        if k > 0:
+            term *= -((x / 2.0) ** 2) / (k * (k + n))
+        total += term
+    return total
+
+
+def hopping_series(T, source_occupied):
+    """Exact <c^dag_l c_{l+1}>(T) of one spin (see the header), with the
+    occupied sites of the charge-density wave at m = l + 1 + 2j when the
+    source l is empty and at m = l + 2j when it is occupied."""
+    l = 0
+    first = 0 if source_occupied else 1
+    total = 0.0
+    for j in range(-30, 31):
+        m = first + 2 * j
+        total += bessel_jn(l - m, 2.0 * T) * bessel_jn(l + 1 - m, 2.0 * T)
+    return 1j * total
+
+
+def check_hopping_series():
+    """The series against a direct single-particle evolution on a 40-site
+    ring with every odd site occupied."""
+    n = 40
+    h = np.zeros((n, n))
+    for j in range(n):
+        h[j, (j + 1) % n] = h[(j + 1) % n, j] = -1.0
+    occupied = np.array([j % 2 for j in range(n)], dtype=float)
+    w, v = np.linalg.eigh(h)
+    for T in (0.1, 0.3, 1.0):
+        U = (v * np.exp(-1j * T * w)) @ v.conj().T
+        for l in (10, 11):
+            direct = np.sum(occupied * U[l, :].conj() * U[l + 1, :])
+            if abs(direct - hopping_series(T, l % 2 == 1)) > 1e-12:
+                raise AssertionError("hopping_series disagrees with the ring")
 
 
 # ----------------------------------------------------------------------------
@@ -408,7 +548,74 @@ elements = """
 
 [observable]
 {onesite_observables()}
+{hopping_observables(bonds)}
 '''
+
+
+def twosite_values(outdir):
+    """{(time rounded to 1e-9, group, source, dx, dy): complex}"""
+    values = {}
+    for row in read_rows(join(outdir, "TE_twosite_obs.dat")):
+        t, g, source, dx, dy, re, im = row
+        values[(round(t, 9), int(g), int(source), int(dx), int(dy))] = complex(re, im)
+    return values
+
+
+def check_hopping(name, outdir, times, worst, tol_pair):
+    """Contract 10-1 on the two bonds of one chain; site 1 is the doubly
+    occupied one, so the bond whose source is site 1 starts at +iT."""
+    failures = []
+    bonds = [tuple(int(w) for w in b.split()) for b in CHAINS[name][0]]
+    values = twosite_values(outdir)
+    for T in times:
+        t = round(T, 9)
+        im = {}
+        for source, dx, dy in bonds:
+            fwd = values.get((t, 0, source, dx, dy))
+            rev = values.get((t, 1, source, dx, dy))
+            if fwd is None or rev is None:
+                failures.append(
+                    f"{name}: no hopping value on bond {source} {dx} {dy} "
+                    f"at T = {T}"
+                )
+                continue
+            exact = hopping_series(T, source == 1)
+            print(
+                f"{name:10s} T={T:.1f} bond {source} {dx:+d} {dy:+d}: "
+                f"<cdag c>={fwd.real:+.2e}{fwd.imag:+.10f}j exact={exact.imag:+.10f}j "
+                f"rev={rev.real:+.2e}{rev.imag:+.10f}j"
+            )
+            err_bond = abs(fwd.imag - exact.imag)
+            err_re = max(abs(fwd.real), abs(rev - fwd.conjugate()))
+            worst["bond"] = max(worst["bond"], err_bond)
+            worst["re"] = max(worst["re"], err_re)
+            if not err_bond <= TOL_HOP_BOND:
+                failures.append(
+                    f"{name}: Im <c^dag_up c_up> on bond {source} {dx} {dy} at T = {T} "
+                    f"is {fwd.imag}, exact {exact.imag} (error {err_bond:.3e})"
+                )
+            if not abs(fwd.real) <= TOL_HOP_RE:
+                failures.append(
+                    f"{name}: Re <c^dag_up c_up> on bond {source} {dx} {dy} at "
+                    f"T = {T} is {fwd.real}, not 0"
+                )
+            if not abs(rev - fwd.conjugate()) <= TOL_HOP_RE:
+                failures.append(
+                    f"{name}: the reversed hopping on bond {source} {dx} {dy} at "
+                    f"T = {T} is {rev}, not the conjugate of {fwd}"
+                )
+            im[source] = fwd.imag
+        if 0 in im and 1 in im:
+            pair = 0.5 * (im[1] - im[0])
+            exact = hopping_series(T, True).imag
+            err = abs(pair - exact)
+            worst["pair"] = max(worst["pair"], err)
+            if not err <= tol_pair:
+                failures.append(
+                    f"{name}: (Im O_1 - Im O_0) / 2 at T = {T} is {pair}, exact "
+                    f"{exact} (error {err:.3e} > {tol_pair:g})"
+                )
+    return failures
 
 
 def run_chain(workroot, name, *, D, full, fast=False):
@@ -473,6 +680,16 @@ def case_chain_mf(workroot):
                     f"(error {err:.3e} > {TOL_CHAIN_MF:g})"
                 )
     print(f"worst error against 2 J0(4T): {worst:.3e} (tol {TOL_CHAIN_MF:g})")
+    hop_worst = {"pair": 0.0, "bond": 0.0, "re": 0.0}
+    for name in CHAINS:
+        failures += check_hopping(
+            name,
+            join(workroot, name, "output"),
+            (0.1, 0.2, 0.3),
+            hop_worst,
+            TOL_HOP_PAIR_SU,
+        )
+    print(f"hopping: worst {hop_worst}")
     ref = results["horizontal"]
     worst_agree = 0.0
     for name, values in results.items():
@@ -502,6 +719,15 @@ def case_chain_fu(workroot, fast):
     if param["parameter"]["full_update"].get("fastfullupdate") is not fast:
         failures.append("input.toml lost the fastfullupdate setting")
     failures += check_update_ran(join(workroot, "ascending", "output"), full=True)
+    hop_worst = {"pair": 0.0, "bond": 0.0, "re": 0.0}
+    failures += check_hopping(
+        "ascending",
+        join(workroot, "ascending", "output"),
+        (0.1, 0.2),
+        hop_worst,
+        TOL_HOP_PAIR_FU,
+    )
+    print(f"hopping: worst {hop_worst}")
     for T in (0.0, 0.1, 0.2):
         key0, key1 = (round(T, 9), 0), (round(T, 9), 1)
         if key0 not in values or key1 not in values:

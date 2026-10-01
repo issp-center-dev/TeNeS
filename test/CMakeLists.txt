@@ -623,8 +623,11 @@ endif()
 # Section 5, *RealTimeLoad*: tensor_load of a real (and a complex) checkpoint
 # by a real-time run, and the refusal of a complex checkpoint by is_real =
 # true; the MPI2 entries save and load on two processes.
+# Section 10 adds the direction of time in the graded two-site path to the
+# chain tests (<c^dag c> on the chain bonds) and FermionRealTimeLoadRealFU, a
+# real-time full update started from a real fermion checkpoint.
 # Each entry takes at most about 16 s at OMP_NUM_THREADS=1 in a Debug build
-# (see work/fermion-real-time/tests/REPORT.md).
+# (FermionRealTimeLoadRealFU about 4 s).
 foreach(name boson_equivalence_te realtime_free_fermion realtime_load)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
@@ -656,6 +659,10 @@ add_test(NAME FermionRealTimeLoadReal
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
                  --case fermion-real)
+add_test(NAME FermionRealTimeLoadRealFU
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case fermion-real-fu)
 add_test(NAME FermionRealTimeLoadComplex
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
@@ -708,6 +715,7 @@ foreach(
   FermionRealTimeOneSiteSU
   FermionRealTimeOneSiteFU
   FermionRealTimeLoadReal
+  FermionRealTimeLoadRealFU
   FermionRealTimeLoadComplex
   BosonRealTimeLoadReal)
   set_tests_properties(${name} PROPERTIES TIMEOUT 600)

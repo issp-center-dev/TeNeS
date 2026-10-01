@@ -82,9 +82,9 @@ FULL_MEASURE_INTERVAL = 20
 # Tolerance on |fermion - boson| / max(1, |boson|), every number of every
 # compared file.
 #
-# Measured with the calibration builds (work/fermion-real-time/p0, the input
-# guard lifted; the same numbers in its Release and in a Debug build of the
-# same source): worst relative error 1.5e-13 for the simple update and
+# Measured with calibration builds of the source of 2026-10-01 with the input
+# guard lifted (working notes outside the repository; the same numbers in a
+# Release and in a Debug build): worst relative error 1.5e-13 for the simple update and
 # 1.9e-11 for the full update.  The two runs execute different code (the
 # graded, folded CTM against the plain one with iteration_max = 10, and the
 # fermionic updates against the bosonic ones) on the same numbers, so they
