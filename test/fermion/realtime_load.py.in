@@ -54,6 +54,10 @@
 #                           hold the original elements exactly as real parts,
 #                           with zero imaginary parts.  The files are read
 #                           with read_mptensor() below.
+#   --case untyped-header   11: a tensor file whose header records no element
+#                           type must be refused (see untyped_header() below);
+#                           ctest registers it at one process and, with MPI,
+#                           at two.
 #   boson-real              9-3: after item 4, the same real-time load is
 #                           repeated from a copy of the checkpoint without
 #                           params.dat, the pre-versioning (format version 0)
@@ -931,7 +935,135 @@ def fermion_real_fu(workroot, nproc):
     return failures
 
 
+# ----------------------------------------------------------------------------
+# 11: tensor files without a recorded element type are refused
+# ----------------------------------------------------------------------------
+
+UNTYPED_GS_STEPS = 50
+
+
+def replace_once(text, *pairs):
+    for old, new in pairs:
+        if text.count(old) != 1:
+            raise RuntimeError(f"the simple.toml template has no single {old!r}")
+        text = text.replace(old, new)
+    return text
+
+
+def untyped_variants(save_dir, root):
+    """Two copies of the checkpoint save_dir in root, each with T_0.dat
+    rewritten: (a) the "value_type=" line removed, (b) the first line made to
+    start with something other than "mptensor" (the shape of a header older
+    than mptensor 0.3, which wrote no element type).  Returns
+    {label: directory}."""
+    with open(join(save_dir, "T_0.dat")) as f:
+        lines = f.read().splitlines(keepends=True)
+    if not lines or not lines[0].startswith("mptensor"):
+        raise RuntimeError(f"{save_dir}/T_0.dat does not start with 'mptensor'")
+    if sum(line.startswith("value_type=") for line in lines) != 1:
+        raise RuntimeError(f"{save_dir}/T_0.dat has no single value_type= line")
+    variants = {
+        "no_value_type": [line for line in lines if not line.startswith("value_type=")],
+        "no_mptensor": ["legacy" + lines[0][len("mptensor") :]] + lines[1:],
+    }
+    dirs = {}
+    for label, text in variants.items():
+        d = join(root, "save_" + label)
+        shutil.copytree(save_dir, d)
+        with open(join(d, "T_0.dat"), "w") as f:
+            f.write("".join(text))
+        dirs[label] = d
+    return dirs
+
+
+def check_refused(proc_or_error, what, path_tail):
+    """Contract 11: a clean nonzero exit (no signal, no hang) whose message
+    names the file and the word value_type."""
+    if isinstance(proc_or_error, TimedOut):
+        return [
+            f"{what}: did not end within {REFUSAL_TIMEOUT} s (a refusal raised "
+            f"on some ranks only?)"
+        ]
+    proc = proc_or_error
+    text = proc.stdout + proc.stderr
+    print(f"{what}: exit {proc.returncode}")
+    print("    " + "\n    ".join(text.strip().splitlines()[-4:]))
+    failures = []
+    if proc.returncode == 0:
+        failures.append(f"{what}: the file was read without an error")
+        return failures
+    if proc.returncode < 0 or proc.returncode >= 128:
+        failures.append(
+            f"{what}: died on a signal (exit {proc.returncode}) instead of "
+            "stopping with an error message"
+        )
+    # mptensor's own notice that it falls back to its v0.2 reader names the
+    # file too; it is not the refusal, so it must not supply the path.
+    message = "\n".join(
+        line
+        for line in text.splitlines()
+        if "will be loaded using v0.2 interface" not in line
+    )
+    if "value_type" not in message:
+        failures.append(f"{what}: the message does not mention 'value_type'")
+    if path_tail not in message:
+        failures.append(f"{what}: the message does not name the file {path_tail}")
+    return failures
+
+
+def untyped_header(workroot, nproc):
+    """Contract 11.  A short ground state is saved (a real spin checkpoint and
+    a real fermion one), two copies with an untyped T_0.dat are made, and each
+    copy is loaded by a real and by a complex ground-state run without update
+    steps or measurement.  Every one of these runs must be refused."""
+    failures = []
+    for kind, lattice, model in (
+        ("boson", SPIN_LATTICE, spin_model(1.0)),
+        ("fermion", FERMION_LATTICE, fermion_model(4.0, 2.0)),
+    ):
+        root = join(workroot, kind)
+        gs_dir = join(root, "gs")
+        simple = replace_once(
+            gs_simple_toml(True, "tensor_save", "save", lattice, model),
+            (f"num_step = {GS_STEPS}", f"num_step = {UNTYPED_GS_STEPS}"),
+            ('output = "output"', 'output = "output"\nmeasure = false'),
+        )
+        prepare(gs_dir, simple)
+        must_succeed(run_tenes(gs_dir, nproc), f"the {kind} ground-state run")
+        if checkpoint_value_type(join(gs_dir, "save")) != "double":
+            failures.append(f"{kind}: the checkpoint does not hold real tensors")
+            continue
+        dirs = untyped_variants(join(gs_dir, "save"), gs_dir)
+        for label, load_dir in dirs.items():
+            for is_real in (True, False):
+                name = f"{kind}_{label}_{'real' if is_real else 'complex'}"
+                run_dir = join(root, name)
+                simple = replace_once(
+                    gs_simple_toml(
+                        is_real,
+                        "tensor_load",
+                        join("..", "gs", os.path.basename(load_dir)),
+                        lattice,
+                        model,
+                    ),
+                    (f"num_step = {GS_STEPS}", "num_step = 0"),
+                    ('output = "output"', 'output = "output"\nmeasure = false'),
+                )
+                prepare(run_dir, simple)
+                try:
+                    result = run_tenes(run_dir, nproc, timeout=REFUSAL_TIMEOUT)
+                except TimedOut as e:
+                    result = e
+                failures += check_refused(
+                    result,
+                    f"{kind}, {label}, is_real = {str(is_real).lower()}",
+                    os.path.basename(load_dir) + "/T_0.dat",
+                )
+    return failures
+
+
 CASES = {
+    "untyped-header": "LoadUntypedTensorHeader",
     "fermion-real": "FermionRealTimeLoadReal",
     "fermion-real-fu": "FermionRealTimeLoadRealFU",
     "fermion-complex": "FermionRealTimeLoadComplex",
@@ -960,6 +1092,8 @@ def main(argv):
         elif case == "fermion-complex":
             failures = save_then_evolve(workroot, nproc, fermion=True, is_real=False)
             failures += complex_into_real(workroot, nproc)
+        elif case == "untyped-header":
+            failures = untyped_header(workroot, nproc)
         elif case == "fermion-real-fu":
             failures = fermion_real_fu(workroot, nproc)
         elif case == "fermion-complex-into-real":

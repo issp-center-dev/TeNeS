@@ -677,6 +677,22 @@ add_test(NAME BosonRealTimeLoadReal
 # rank alone hangs the other (FermionLoadComplexIntoRealMPI2; the refused run
 # has a 60 s timeout of its own inside the script). The format-version-0 load
 # (9-3) is part of BosonRealTimeLoadReal.
+# Section 11: a tensor file whose header records no element type (no
+# value_type= line, or a header that does not start with "mptensor") must be
+# refused on every rank with a message naming the file and value_type; each
+# refused run has a 60 s timeout inside the script.
+add_test(NAME LoadUntypedTensorHeader
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case untyped-header)
+set_tests_properties(LoadUntypedTensorHeader PROPERTIES TIMEOUT 900)
+if(ENABLE_MPI)
+  add_test(NAME LoadUntypedTensorHeaderMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case untyped-header --nproc 2)
+  set_tests_properties(LoadUntypedTensorHeaderMPI2 PROPERTIES TIMEOUT 900)
+endif()
 add_test(NAME BosonLoadRealResaveCTM
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
