@@ -152,6 +152,20 @@ void iTPS<tensor>::simple_update(EvolutionOperator<tensor> const& up) {
 }
 
 template <class tensor>
+void iTPS<tensor>::check_fermion_phys_ledger_restored() const {
+  if (!finfo.enabled) {
+    return;
+  }
+  for (int site = 0; site < N_UNIT; ++site) {
+    if (finfo.phys[site] != peps_parameters.phys_parity[site]) {
+      throw std::logic_error(
+          "fermion simple update invariant violated: physical ledger "
+          "did not return to its original value after a gate sweep");
+    }
+  }
+}
+
+template <class tensor>
 void iTPS<tensor>::fix_local_gauge() {
   tensor Tn1_work(comm), Tn2_work(comm);
   std::vector<double> lambda_work;
@@ -224,15 +238,7 @@ void iTPS<tensor>::simple_update() {
       }
       simple_update(up);
     }
-    if (finfo.enabled) {
-      for (int site = 0; site < N_UNIT; ++site) {
-        if (finfo.phys[site] != peps_parameters.phys_parity[site]) {
-          throw std::logic_error(
-              "fermion simple update invariant violated: physical ledger "
-              "did not return to its original value after a gate sweep");
-        }
-      }
-    }
+    check_fermion_phys_ledger_restored();
 
     // local gauge fixing
     if (peps_parameters.Simple_Gauge_Fix) {

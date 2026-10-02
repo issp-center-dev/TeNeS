@@ -343,6 +343,8 @@ class iTPS {
   void validate_fermion_ctm_measurement() const;
   //! Apply a one-site gate through the fermionic wrapper.
   void apply_onesite_gate_fermion(EvolutionOperator<tensor> const &up);
+  //! Check that a fermion simple-update sweep restored the physical ledger.
+  void check_fermion_phys_ledger_restored() const;
 
   //! Index of the group-th one-site operator acting on site.
   int siteoperator_index(int site, int group) const {

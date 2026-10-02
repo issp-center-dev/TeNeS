@@ -578,6 +578,169 @@ else()
   set_tests_properties(FreeFermionFastFullUpdate PROPERTIES TIMEOUT 900)
 endif()
 
+# docs/superpowers/specs/2026-10-01-fermion-real-time-evolution-contract.md:
+# fermion-mode real-time evolution (mode = "time") and real-time runs started
+# from a saved state.
+#
+# Section 6, the input guards: a unit test of validate_fermion_constraints().
+add_executable(test_fermion_realtime_guards fermion/realtime_guards.cpp)
+target_link_libraries(test_fermion_realtime_guards PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_realtime_guards
+  PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_realtime_guards
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS}
+                   $<TARGET_FILE:test_fermion_realtime_guards>)
+else()
+  add_test(NAME test_fermion_realtime_guards
+           COMMAND $<TARGET_FILE:test_fermion_realtime_guards>)
+endif()
+#
+# Section 8, the physical-ledger check of the real-time simple update: a gate
+# chain driven through iTPS::time_evolution() with the ledger tampered or not.
+add_executable(test_fermion_realtime_ledger fermion/realtime_ledger.cpp)
+target_link_libraries(test_fermion_realtime_ledger PUBLIC tenes_static)
+target_compile_definitions(
+  test_fermion_realtime_ledger
+  PRIVATE TENES_TEST_WORKDIR="${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_MPI)
+  add_test(NAME test_fermion_realtime_ledger
+           COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1
+                   ${MPIEXEC_POSTFLAGS}
+                   $<TARGET_FILE:test_fermion_realtime_ledger>)
+else()
+  add_test(NAME test_fermion_realtime_ledger
+           COMMAND $<TARGET_FILE:test_fermion_realtime_ledger>)
+endif()
+#
+# Section 2, BosonEquivalenceTimeEvolution(Full): test/data/TE_TFI.toml with
+# all-even parities against the bosonic run, simple update and full update.
+# Sections 3 and 4, FermionRealTime*: exact free-fermion dynamics (chains in
+# the two-site cell, the 2D square lattice through tenes_simple) and a
+# one-site gate with the direction of time.
+# Section 5, *RealTimeLoad*: tensor_load of a real (and a complex) checkpoint
+# by a real-time run, and the refusal of a complex checkpoint by is_real =
+# true; the MPI2 entries save and load on two processes.
+# Section 10 adds the direction of time in the graded two-site path to the
+# chain tests (<c^dag c> on the chain bonds) and FermionRealTimeLoadRealFU, a
+# real-time full update started from a real fermion checkpoint.
+# Each entry takes at most about 16 s at OMP_NUM_THREADS=1 in a Debug build
+# (FermionRealTimeLoadRealFU about 4 s).
+foreach(name boson_equivalence_te realtime_free_fermion realtime_load)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fermion/${name}.py.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/${name}.py @ONLY)
+endforeach()
+add_test(NAME BosonEquivalenceTimeEvolution
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_te.py)
+add_test(NAME BosonEquivalenceTimeEvolutionFull
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/boson_equivalence_te.py
+                 --full)
+foreach(
+  pair
+  "FermionRealTimeChainMF:chain-mf"
+  "FermionRealTimeChainFU:chain-fu"
+  "FermionRealTimeChainFastFU:chain-ffu"
+  "FermionRealTimeSquare:square"
+  "FermionRealTimeOneSiteSU:onesite-su"
+  "FermionRealTimeOneSiteFU:onesite-fu")
+  string(REPLACE ":" ";" pair_list ${pair})
+  list(GET pair_list 0 testname)
+  list(GET pair_list 1 casename)
+  add_test(NAME ${testname}
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_free_fermion.py
+                   --case ${casename})
+endforeach()
+add_test(NAME FermionRealTimeLoadReal
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case fermion-real)
+add_test(NAME FermionRealTimeLoadRealFU
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case fermion-real-fu)
+add_test(NAME FermionRealTimeLoadComplex
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case fermion-complex)
+add_test(NAME BosonRealTimeLoadReal
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case boson-real)
+# Section 9 (addendum of 2026-10-02): the CTM tensors through a real ->
+# complex load and save (BosonLoadRealResaveCTM), and the refusal of a complex
+# checkpoint by is_real = true on two processes, where a refusal raised by one
+# rank alone hangs the other (FermionLoadComplexIntoRealMPI2; the refused run
+# has a 60 s timeout of its own inside the script). The format-version-0 load
+# (9-3) is part of BosonRealTimeLoadReal.
+# Section 11: a tensor file whose header records no element type (no
+# value_type= line, or a header that does not start with "mptensor") must be
+# refused on every rank with a message naming the file and value_type; each
+# refused run has a 60 s timeout inside the script.
+add_test(NAME LoadUntypedTensorHeader
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case untyped-header)
+set_tests_properties(LoadUntypedTensorHeader PROPERTIES TIMEOUT 900)
+if(ENABLE_MPI)
+  add_test(NAME LoadUntypedTensorHeaderMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case untyped-header --nproc 2)
+  set_tests_properties(LoadUntypedTensorHeaderMPI2 PROPERTIES TIMEOUT 900)
+endif()
+add_test(NAME BosonLoadRealResaveCTM
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                 --case boson-ctm-resave)
+set_tests_properties(BosonLoadRealResaveCTM PROPERTIES TIMEOUT 600)
+if(ENABLE_MPI)
+  add_test(NAME FermionLoadComplexIntoRealMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case fermion-complex-into-real --nproc 2)
+  add_test(NAME BosonLoadRealResaveCTMMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case boson-ctm-resave --nproc 2)
+  set_tests_properties(FermionLoadComplexIntoRealMPI2 BosonLoadRealResaveCTMMPI2
+                       PROPERTIES TIMEOUT 600)
+endif()
+if(ENABLE_MPI)
+  add_test(NAME FermionRealTimeLoadRealMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case fermion-real --nproc 2)
+  add_test(NAME BosonRealTimeLoadRealMPI2
+           COMMAND ${TENES_PYTHON_EXECUTABLE}
+                   ${CMAKE_CURRENT_BINARY_DIR}/fermion/realtime_load.py
+                   --case boson-real --nproc 2)
+endif()
+foreach(
+  name
+  BosonEquivalenceTimeEvolution
+  BosonEquivalenceTimeEvolutionFull
+  FermionRealTimeChainMF
+  FermionRealTimeChainFU
+  FermionRealTimeChainFastFU
+  FermionRealTimeSquare
+  FermionRealTimeOneSiteSU
+  FermionRealTimeOneSiteFU
+  FermionRealTimeLoadReal
+  FermionRealTimeLoadRealFU
+  FermionRealTimeLoadComplex
+  BosonRealTimeLoadReal)
+  set_tests_properties(${name} PROPERTIES TIMEOUT 600)
+endforeach()
+if(ENABLE_MPI)
+  set_tests_properties(FermionRealTimeLoadRealMPI2 BosonRealTimeLoadRealMPI2
+                       PROPERTIES TIMEOUT 600)
+endif()
+
 if(ENABLE_MPI)
   set(BENCH_SMOKE_LAUNCHER
       "${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_POSTFLAGS}")

@@ -29,6 +29,7 @@
 #include <sstream>
 #include <string>
 #include <cstdlib>
+#include <type_traits>
 
 #include "iTPS.hpp"
 
@@ -162,6 +163,140 @@ constexpr const char *save_work_dir_name = ".tenes-save-tmp";
 constexpr const char *save_marker_name = ".tenes-save-incomplete";
 //! How much of a marker's body a refused load reads, broadcasts and shows.
 constexpr std::size_t marker_body_limit = 64 * 1024;
+
+//! Dense offset with the first tensor index running fastest, matching
+//! mptensor::Tensor::flatten().
+std::size_t dense_offset(mptensor::Index const &idx,
+                         mptensor::Shape const &shape) {
+  std::size_t offset = 0;
+  std::size_t stride = 1;
+  for (std::size_t i = 0; i < shape.size(); ++i) {
+    offset += idx[i] * stride;
+    stride *= shape[i];
+  }
+  return offset;
+}
+
+std::size_t dense_size(mptensor::Shape const &shape) {
+  std::size_t ret = 1;
+  for (std::size_t i = 0; i < shape.size(); ++i) {
+    ret *= shape[i];
+  }
+  return ret;
+}
+
+/*! @brief Value type recorded in a saved mptensor file.
+ *
+ * @return 0 for double, 1 for complex.  Files without a value_type header are
+ *         refused because TeNeS v1.0.0 and later write tensors with mptensor
+ *         0.3 or later, whose format records the element type.
+ */
+int read_saved_value_type(std::string const &path, MPI_Comm comm) {
+  int rank = 0;
+  MPI_Comm_rank(comm, &rank);
+  int value_type = -1;
+  std::string error;
+  if (rank == 0) {
+    std::ifstream ifs(path.c_str());
+    if (!ifs) {
+      error = "ERROR: cannot read a tensor file: " + path +
+              " (it is missing, or its directory cannot be searched)";
+    } else {
+      std::string key;
+      std::string version;
+      ifs >> key >> version;
+      if (!ifs) {
+        error = "ERROR: failed to read the tensor header from " + path;
+      } else if (key != "mptensor") {
+        error = "ERROR: " + path +
+                " does not have a value_type entry in an mptensor tensor "
+                "header. This is not a tensor file written by mptensor 0.3 "
+                "or later (TeNeS v1.0.0 or later).";
+      } else {
+        std::string line;
+        std::getline(ifs, line);
+        while (std::getline(ifs, line)) {
+          std::istringstream iss(line);
+          std::string name;
+          if (iss >> name && name == "value_type=") {
+            if (!(iss >> value_type)) {
+              error = "ERROR: failed to parse value_type in " + path;
+            }
+            break;
+          }
+        }
+        if (error.empty() && value_type < 0) {
+          error = "ERROR: " + path +
+                  " does not have a value_type entry in its mptensor tensor "
+                  "header. This is not a tensor file written by mptensor 0.3 "
+                  "or later (TeNeS v1.0.0 or later).";
+        }
+      }
+    }
+  }
+  tenes::bcast(value_type, 0, comm);
+  tenes::bcast(error, 0, comm);
+  if (!error.empty()) {
+    throw tenes::load_error(error);
+  }
+  return value_type;
+}
+
+template <class ptensor>
+void load_real_tensor_as_complex(ptensor &A, std::string const &path) {
+  real_tensor R(A.get_comm());
+  R.load(path);
+
+  const auto shape = R.shape();
+  std::vector<double> dense(dense_size(shape), 0.0);
+  mptensor::Index idx;
+  idx.resize(R.rank());
+  R.prep_local_to_global();
+  for (std::size_t n = 0; n < R.local_size(); ++n) {
+    R.global_index_fast(n, idx);
+    dense[dense_offset(idx, shape)] = R[n];
+  }
+  tenes::allreduce_sum(dense, R.get_comm());
+
+  complex_tensor C(A.get_comm(), shape, R.get_upper_rank());
+  C.prep_local_to_global();
+  idx.resize(C.rank());
+  for (std::size_t n = 0; n < C.local_size(); ++n) {
+    C.global_index_fast(n, idx);
+    C[n] = std::complex<double>(dense[dense_offset(idx, shape)], 0.0);
+  }
+  A = C;
+}
+
+template <class ptensor>
+void load_tensor_file(ptensor &A, std::string const &path) {
+  const int saved_value_type = read_saved_value_type(path, A.get_comm());
+  const int tensor_value_type = static_cast<int>(
+      mptensor::value_type_tag<typename ptensor::value_type>());
+  if (saved_value_type == tensor_value_type) {
+    A.load(path);
+    return;
+  }
+  if (saved_value_type == 0 && tensor_value_type == 1) {
+    if constexpr (std::is_same_v<typename ptensor::value_type,
+                                 std::complex<double>>) {
+      load_real_tensor_as_complex(A, path);
+      return;
+    }
+  }
+  if (saved_value_type == 1 && tensor_value_type == 0) {
+    throw tenes::load_error(
+        "ERROR: " + path +
+        " holds a complex tensor, which cannot be loaded into a real-valued "
+        "calculation (parameter.general.is_real = true). HINT: set is_real = "
+        "false, or load a checkpoint saved with is_real = true.");
+  }
+
+  std::stringstream ss;
+  ss << "ERROR: " << path << " has unsupported tensor value_type "
+     << saved_value_type;
+  throw tenes::load_error(ss.str());
+}
 
 /*! @brief Move every entry of @p work_dir into @p dest, then confirm it is
  *         empty.
@@ -965,7 +1100,7 @@ void load_tensor(ptensor &A, std::string const &name,
   // running the solver on a subset of the processes would get every loaded
   // tensor distributed over all of them.
   ptensor temp(A.get_comm());
-  temp.load(filename.c_str());
+  load_tensor_file(temp, filename);
   if (A.rank() != temp.rank()) {
     std::stringstream ss;
     ss << "ERROR: rank mismatch in load_tensor: ";
@@ -1172,7 +1307,7 @@ void iTPS<ptensor>::load_tensors_v0() {
             "ERROR: cannot read a tensor file: " + path +
             " (it is missing, or its directory cannot be searched)");
       }
-      A.load(path.c_str());
+      load_tensor_file(A, path);
     };
     load(Tn[i], "T");
     load(eTt[i], "Et");

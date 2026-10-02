@@ -1,0 +1,427 @@
+# TeNeS - Massively parallel tensor network solver
+# Copyright (C) 2019- The University of Tokyo
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see http://www.gnu.org/licenses
+
+# Section 2 of
+# docs/superpowers/specs/2026-10-01-fermion-real-time-evolution-contract.md:
+# a fermion-mode real-time evolution whose grading is trivial (every physical
+# parity 0) must give the same results as the same input run as a boson.
+#
+#   (no argument)   simple update, the settings of test/data/TE_TFI.toml
+#   --full          full update: the simple-update step count set to 0 and
+#                   the full update run with the same time step (tau = 0.01)
+#
+# The base input is the shipped test/data/TE_TFI.toml, edited as text so that
+# the bosonic and the fermionic input differ in exactly two lines,
+#
+#   [parameter.general]  fermion = true
+#   [[tensor.unitcell]]  parity  = [0, 0]
+#
+# which the test asserts before running anything (the habit of
+# boson_equivalence_full.py.in).  Edits applied to BOTH inputs:
+#
+# * the [[observable.multisite]] block is removed (fermion mode refuses
+#   multi-site observables when it reads the input);
+# * [correlation_length] measure = false is added (fermion mode does not
+#   measure the transfer-matrix correlation length; it disables the
+#   measurement with a warning, so the bosonic run must not do it either);
+# * the output directory is renamed;
+# * --full only: [parameter.simple_update] num_step = 0,
+#   [parameter.full_update] num_step = NUM_FULL_STEP and tau = 0.01, and the
+#   elements of every [[evolution.full]] gate are replaced by those of the
+#   [[evolution.simple]] gate on the same bond (the shipped full-update gates
+#   are identities, written for tau = 0).
+#
+# TE_TFI.toml starts from the product state initial_state = [1, 0] with
+# noise = 0, so the only nonzero entry of every site tensor sits at virtual
+# index (0, 0, 0, 0), which is even under any ledger; with all-even physical
+# parities every leg stays even, and the graded contraction is the plain one.
+# check_all_even_ledger() asserts that through the fermion.dat the fermionic
+# run writes next to its saved tensors.
+#
+# Compared files: TE_onesite_obs.dat, TE_twosite_obs.dat, TE_correlation.dat
+# (TE_TFI.toml keeps its [correlation] section, which fermion mode supports,
+# so the fermionic run must write it; a missing file is a failure) and
+# TE_density.dat; every row and every column (time, real and imaginary part),
+# with the time-zero row included.
+#
+# Before the implementation the fermionic run is refused when the input is
+# read ("non-ground-state mode"), so the test fails there.
+import os
+import re
+import shutil
+import subprocess
+import sys
+from os.path import join
+
+FULL = "--full" in sys.argv[1:]
+LABEL = "BosonEquivalenceTimeEvolutionFull" if FULL else "BosonEquivalenceTimeEvolution"
+
+TENES = os.environ.get("TENES_TEST_TENES") or join("@CMAKE_BINARY_DIR@", "src", "tenes")
+MPIEXEC = "@MPIEXEC@"
+BASE_INPUT = join("@CMAKE_SOURCE_DIR@", "test", "data", "TE_TFI.toml")
+
+# The full update runs the whole TE_TFI schedule too (100 steps of tau = 0.01,
+# measured every 20 steps): 16 s for both runs together in a Debug build at
+# OMP_NUM_THREADS=1 (measured on the calibration build, the guard lifted).
+NUM_FULL_STEP = 100
+FULL_MEASURE_INTERVAL = 20
+
+# Tolerance on |fermion - boson| / max(1, |boson|), every number of every
+# compared file.
+#
+# Measured with calibration builds of the source of 2026-10-01 with the input
+# guard lifted (working notes outside the repository; the same numbers in a
+# Release and in a Debug build): worst relative error 1.5e-13 for the simple update and
+# 1.9e-11 for the full update.  The two runs execute different code (the
+# graded, folded CTM against the plain one with iteration_max = 10, and the
+# fermionic updates against the bosonic ones) on the same numbers, so they
+# agree to rounding and to the CTM iteration, not bit for bit.  TOL leaves a
+# factor of 500 over the full-update value for other platforms.
+#
+# The signal: what a broken wiring does to these observables is of the size
+# of the observables' own motion, 1e-2 to 1e-1 by T = 1 (<Sx> 0 -> 0.17,
+# <Sy> 0 -> -0.12, <Sz> 0.5 -> 0.46 in the bosonic run).  Measured with the
+# fermionic gates conjugated (exp(+i tau H), the time-direction mutation of
+# contract section 7, applied to the fermionic input only): <Sy> flips sign,
+# a difference of 9.7e-2 already at T = 0.2 for both the simple and the full
+# update, seven decades above TOL.
+TOL = 1.0e-8
+TOL_NOTE = "measured worst 1.5e-13 (SU) / 1.9e-11 (FU)"
+
+COMPARED = (
+    "TE_onesite_obs.dat",
+    "TE_twosite_obs.dat",
+    "TE_correlation.dat",
+    "TE_density.dat",
+)
+
+
+def launcher():
+    cmd = []
+    if MPIEXEC:
+        cmd.append(MPIEXEC)
+        cmd.extend("@MPIEXEC_PREFLAGS@".split())
+        cmd.append("@MPIEXEC_NUMPROC_FLAG@")
+        cmd.append("1")
+        cmd.extend("@MPIEXEC_POSTFLAGS@".split())
+    return cmd
+
+
+def run_tenes(inputfile, cwd):
+    cmd = launcher() + [TENES, inputfile]
+    print("run:", " ".join(cmd), flush=True)
+    return subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+
+
+def evolution_blocks(text):
+    """[(kind, header_without_elements, elements_text)] in file order."""
+    blocks = []
+    pattern = re.compile(
+        r"\[\[evolution\.(simple|full)\]\]\n(.*?)elements = \"\"\"\n(.*?)\"\"\"\n",
+        re.S,
+    )
+    for m in pattern.finditer(text):
+        blocks.append((m.group(1), m.group(2), m.group(3), m.span()))
+    return blocks
+
+
+def bond_key(header):
+    site = re.search(r"source_site\s*=\s*(\d+)", header).group(1)
+    leg = re.search(r"source_leg\s*=\s*(\d+)", header).group(1)
+    return (int(site), int(leg))
+
+
+def replace_full_gates(text):
+    blocks = evolution_blocks(text)
+    simple = {bond_key(h): e for kind, h, e, _ in blocks if kind == "simple"}
+    full = [(h, e, span) for kind, h, e, span in blocks if kind == "full"]
+    if len(simple) != 8 or len(full) != 8:
+        raise AssertionError(
+            f"TE_TFI.toml: expected 8 simple and 8 full gates, found "
+            f"{len(simple)} and {len(full)}"
+        )
+    out = []
+    last = 0
+    for header, _, (begin, end) in full:
+        key = bond_key(header)
+        if key not in simple:
+            raise AssertionError(f"TE_TFI.toml: no simple-update gate on bond {key}")
+        out.append(text[last:begin])
+        out.append(
+            "[[evolution.full]]\n" + header + 'elements = """\n' + simple[key] + '"""\n'
+        )
+        last = end
+    out.append(text[last:])
+    return "".join(out)
+
+
+def set_key(text, section, key, value):
+    """Replace `key = ...` inside [section] (the first occurrence after it)."""
+    head = "[" + section + "]\n"
+    begin = text.index(head) + len(head)
+    end = text.find("\n[", begin)
+    body = text[begin:end]
+    new_body, n = re.subn(
+        r"^" + re.escape(key) + r"\s*=.*$", f"{key} = {value}", body, flags=re.M
+    )
+    if n != 1:
+        raise AssertionError(f"TE_TFI.toml: [{section}] {key} found {n} times")
+    return text[:begin] + new_body + text[end:]
+
+
+def make_input(base, outdir, savedir, fermion):
+    text = base
+    # output directory
+    text, n = re.subn(r"^output = .*$", f'output = "{outdir}"', text, flags=re.M)
+    if n != 1:
+        raise AssertionError("TE_TFI.toml: expected one output = line")
+    text = text.replace(
+        "[parameter.general]\n",
+        "[parameter.general]\n" + f'tensor_save = "{savedir}"\n',
+        1,
+    )
+    # multisite observables are refused in fermion mode
+    begin = text.index("[[observable.multisite]]")
+    end = text.index("[evolution]")
+    text = text[:begin] + text[end:]
+    # the correlation length is not measured in fermion mode
+    text = text.replace(
+        "[observable]\n", "[correlation_length]\nmeasure = false\n\n[observable]\n", 1
+    )
+    if FULL:
+        text = set_key(text, "parameter.simple_update", "num_step", "0")
+        text = set_key(text, "parameter.full_update", "num_step", str(NUM_FULL_STEP))
+        text = set_key(text, "parameter.full_update", "tau", "0.01")
+        text = set_key(
+            text, "parameter.general", "measure_interval", str(FULL_MEASURE_INTERVAL)
+        )
+        text = replace_full_gates(text)
+    if fermion:
+        text = text.replace(
+            "[parameter.general]\n", "[parameter.general]\nfermion = true\n", 1
+        )
+        text = text.replace(
+            "[[tensor.unitcell]]\n", "[[tensor.unitcell]]\nparity = [0, 0]\n", 1
+        )
+    return text
+
+
+def diff_lines(a, b):
+    alines = a.splitlines()
+    blines = b.splitlines()
+    only_a = [line for line in alines if line not in blines]
+    only_b = [line for line in blines if line not in alines]
+    return only_a, only_b
+
+
+def read_table(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            rows.append([float(word) for word in line.split()])
+    return rows
+
+
+def read_parity_rows(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if line:
+                rows.append(line.split())
+    return rows
+
+
+def check_all_even_ledger(path, n_unit):
+    # Precondition of the comparison: the fermionic run has to stay in the
+    # sector where every leg is even, the only one in which the graded and the
+    # plain contraction are the same object.
+    if not os.path.exists(path):
+        return [f"{path} was not written; cannot check the parity ledger"]
+    rows = read_parity_rows(path)
+    parity_rows = rows[4:]  # format version, N_UNIT, L_sub, skew
+    if len(parity_rows) != 5 * n_unit:
+        return [f"{path} has {len(parity_rows)} parity rows, expected {5 * n_unit}"]
+    failures = []
+    for row in parity_rows:
+        if any(word != "0" for word in row):
+            failures.append(
+                f"{path}: parity row {' '.join(row)} is not all even; the "
+                "fermionic run left the trivially graded sector"
+            )
+    return failures
+
+
+WORST = {"err": 0.0, "what": "(nothing compared)"}
+
+
+def compare_table(name, boson_rows, fermion_rows):
+    if len(boson_rows) != len(fermion_rows):
+        return [
+            f"{name}: {len(boson_rows)} rows in the bosonic run versus "
+            f"{len(fermion_rows)} in the fermionic one"
+        ]
+    if not boson_rows:
+        return [f"{name}: no data rows; the comparison would be empty"]
+    failures = []
+    for index, (brow, frow) in enumerate(zip(boson_rows, fermion_rows)):
+        if len(brow) != len(frow):
+            failures.append(f"{name}: row {index} has a different width")
+            continue
+        for column, (b, f) in enumerate(zip(brow, frow)):
+            err = abs(f - b) / max(1.0, abs(b))
+            if err > WORST["err"]:
+                WORST["err"] = err
+                WORST["what"] = f"{name} row {index} column {column}"
+            if not err <= TOL:
+                failures.append(
+                    f"{name}: row {index} column {column} differs by {err:.3e} "
+                    f"(boson {b!r}, fermion {f!r})"
+                )
+    return failures
+
+
+def expected_times():
+    if FULL:
+        n, interval = NUM_FULL_STEP, FULL_MEASURE_INTERVAL
+    else:
+        n, interval = 100, 20
+    return [0.01 * k for k in range(0, n + 1, interval)]
+
+
+def main():
+    work = os.path.abspath("output_" + LABEL)
+    if os.path.exists(work):
+        shutil.rmtree(work)
+    os.makedirs(work)
+
+    with open(BASE_INPUT) as f:
+        base = f.read()
+
+    runs = {}
+    for label, fermion in (("boson", False), ("fermion", True)):
+        text = make_input(base, f"out_{label}", f"save_{label}", fermion)
+        inputfile = f"input_{label}.toml"
+        with open(join(work, inputfile), "w") as f:
+            f.write(text)
+        runs[label] = {
+            "text": text,
+            "input": inputfile,
+            "out": join(work, f"out_{label}"),
+        }
+
+    # --- the two inputs must differ in the fermion switch only -------------
+    def normalised(label):
+        return (
+            runs[label]["text"]
+            .replace(f'"out_{label}"', "OUT")
+            .replace(f'"save_{label}"', "SAVE")
+        )
+
+    boson_only, fermion_only = diff_lines(normalised("boson"), normalised("fermion"))
+    if boson_only or sorted(fermion_only) != ["fermion = true", "parity = [0, 0]"]:
+        print(
+            f"{LABEL} fixture check failed: the fermionic input must add exactly "
+            f"'fermion = true' and 'parity = [0, 0]' to the bosonic one; "
+            f"boson-only lines {boson_only}, fermion-only lines {fermion_only}"
+        )
+        return 1
+
+    for label in ("boson", "fermion"):
+        proc = run_tenes(runs[label]["input"], work)
+        if proc.returncode != 0:
+            print(proc.stdout[-4000:] + proc.stderr[-4000:])
+            print(
+                f"{LABEL} failed: tenes exited with {proc.returncode} "
+                f"for the {label} run"
+            )
+            return 1
+
+    failures = check_all_even_ledger(join(work, "save_fermion", "fermion.dat"), 4)
+
+    # Premise: the runs really evolved in real time and measured at the
+    # expected times; the time column of TE_density.dat lists them.
+    want = expected_times()
+    for label in ("boson", "fermion"):
+        rows = read_table(join(runs[label]["out"], "TE_density.dat"))
+        times = sorted({row[0] for row in rows})
+        if len(times) != len(want) or any(
+            abs(a - b) > 1e-12 for a, b in zip(times, want)
+        ):
+            failures.append(
+                f"{label}: TE_density.dat has times {times}, expected {want}"
+            )
+
+    # Premise: the update the run is about really ran.
+    key = "time full update" if FULL else "time simple update"
+    for label in ("boson", "fermion"):
+        values = {}
+        with open(join(runs[label]["out"], "time.dat")) as f:
+            for line in f:
+                if "=" in line:
+                    name, raw = line.split("=", 1)
+                    values[" ".join(name.split())] = float(raw.split()[0])
+        if not values.get(key, 0.0) > 0.0:
+            failures.append(f"{label}: time.dat says {key} = {values.get(key)}")
+
+    # Premise: the state does move, so that the comparison is not one of two
+    # frozen product states.  <Sx> starts at 0 (initial |0> = Sz eigenstate);
+    # the transverse field of TE_TFI rotates it.
+    boson_one = read_table(join(runs["boson"]["out"], "TE_onesite_obs.dat"))
+    last_t = max(row[0] for row in boson_one)
+    moved = max(
+        abs(complex(row[3], row[4]))
+        for row in boson_one
+        if row[0] == last_t and int(row[1]) == 1
+    )
+    if not moved > 1.0e-3:
+        failures.append(
+            f"boson: <Sx> at T = {last_t} is {moved:.3e}; the state did not "
+            "evolve and the comparison has no content"
+        )
+
+    for filename in COMPARED:
+        bpath = join(runs["boson"]["out"], filename)
+        fpath = join(runs["fermion"]["out"], filename)
+        if not os.path.exists(bpath):
+            failures.append(f"boson: {filename} was not written")
+            continue
+        if not os.path.exists(fpath):
+            # Every one of them is required, TE_correlation.dat included: the
+            # input has a [correlation] section, so the fermionic run must
+            # write it (contract section 2).
+            failures.append(f"fermion: {filename} was not written")
+            continue
+        failures += compare_table(filename, read_table(bpath), read_table(fpath))
+
+    print(
+        f"{LABEL} worst relative error {WORST['err']:.3e} on {WORST['what']} "
+        f"(tol {TOL:g}; calibration: {TOL_NOTE})"
+    )
+    if failures:
+        for message in failures[:50]:
+            print(f"{LABEL} failed: {message}")
+        if len(failures) > 50:
+            print(f"... and {len(failures) - 50} more")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

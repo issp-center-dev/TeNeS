@@ -1,0 +1,34 @@
+# The std.toml of the gate chain embedded in test/fermion/realtime_ledger.cpp
+# (contract section 8 of
+# docs/superpowers/specs/2026-10-01-fermion-real-time-evolution-contract.md):
+# H = -(c^dag_0 c_3 + c^dag_3 c_0) on the (1, 1) bond of site 0 in a 2x2 cell
+# of spinless fermions, real-time gates with tau = 0.01.  Regenerate with
+#   python3 tool/tenes_std.py test/data/fermion_realtime_ledger_std.toml -o input.toml
+[parameter]
+[parameter.general]
+mode = "time"
+fermion = true
+is_real = false
+[parameter.simple_update]
+tau = 0.01
+num_step = 2
+[tensor]
+L_sub = [2, 2]
+skew = 0
+[[tensor.unitcell]]
+index = []
+physical_dim = 2
+virtual_dim = 2
+parity = [0, 1]
+initial_state = [1.0, 0.0]
+noise = 0.01
+
+[[hamiltonian]]
+dim = [2, 2]
+bonds = """
+0 1 1
+"""
+elements = """
+0 1 1 0 -1.0 0.0
+1 0 0 1 -1.0 0.0
+"""
