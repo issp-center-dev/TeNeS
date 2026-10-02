@@ -187,12 +187,9 @@ std::size_t dense_size(mptensor::Shape const &shape) {
 
 /*! @brief Value type recorded in a saved mptensor file.
  *
- * @return 0 for double, 1 for complex, and -1 for files without a
- *         value_type header.  The -1 case is the mptensor 0.2-and-earlier
- *         format, whose first token is not "mptensor" and whose header has no
- *         element type.  A file that starts with a mptensor header but lacks a
- *         value_type= line is also reported as -1 here; mptensor 0.3 and later
- *         always write the line, so that path is only a fallback.
+ * @return 0 for double, 1 for complex.  Files without a value_type header are
+ *         refused because TeNeS v1.0.0 and later write tensors with mptensor
+ *         0.3 or later, whose format records the element type.
  */
 int read_saved_value_type(std::string const &path, MPI_Comm comm) {
   int rank = 0;
@@ -211,7 +208,10 @@ int read_saved_value_type(std::string const &path, MPI_Comm comm) {
       if (!ifs) {
         error = "ERROR: failed to read the tensor header from " + path;
       } else if (key != "mptensor") {
-        value_type = -1;
+        error = "ERROR: " + path +
+                " does not have a value_type entry in an mptensor tensor "
+                "header. This is not a tensor file written by mptensor 0.3 "
+                "or later (TeNeS v1.0.0 or later).";
       } else {
         std::string line;
         std::getline(ifs, line);
@@ -224,6 +224,12 @@ int read_saved_value_type(std::string const &path, MPI_Comm comm) {
             }
             break;
           }
+        }
+        if (error.empty() && value_type < 0) {
+          error = "ERROR: " + path +
+                  " does not have a value_type entry in its mptensor tensor "
+                  "header. This is not a tensor file written by mptensor 0.3 "
+                  "or later (TeNeS v1.0.0 or later).";
         }
       }
     }
@@ -267,10 +273,7 @@ void load_tensor_file(ptensor &A, std::string const &path) {
   const int saved_value_type = read_saved_value_type(path, A.get_comm());
   const int tensor_value_type = static_cast<int>(
       mptensor::value_type_tag<typename ptensor::value_type>());
-  if (saved_value_type < 0 || saved_value_type == tensor_value_type) {
-    // -1 means that no value_type was found: either a mptensor 0.2-era file,
-    // or a mptensor header without the line.  Keep the old Tensor::load path
-    // and skip the type check for both.
+  if (saved_value_type == tensor_value_type) {
     A.load(path);
     return;
   }
