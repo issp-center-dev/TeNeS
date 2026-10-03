@@ -21,7 +21,7 @@ Example::
 
    simple_num_step = [10]
    simple_tau = [0.01]
-   simple_inverse_lambda_cutoff = 1e-12
+   simple_inverse_lambda_cutoff = 1e-07
    simple_gauge_fix = 0
    simple_gauge_maxiter = 100
    simple_gauge_convergence_epsilon = 0.01

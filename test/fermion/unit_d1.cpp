@@ -2960,9 +2960,12 @@ bool u1_apply(u1_run<tensor>& run, const std::string& label) {
                << vector_to_string(l));
     REQUIRE(
         (bound <= static_cast<long long>(l.size()) || lmin < 1.0e-6 * lmax));
+    // A value is either kept, well above Inverse_lambda_cut, or a zero of
+    // the SVD, which comes out at about sqrt(eps) = 1.5e-8 and is what the
+    // cutoff takes for zero. Nothing may lie in between.
     for (double x : l) {
       REQUIRE((x == 0.0 || x > 1.0e3 * run.params.Inverse_lambda_cut ||
-               x < 1.0e-8 * lmax));
+               x <= run.params.Inverse_lambda_cut));
     }
   }
   return true;
