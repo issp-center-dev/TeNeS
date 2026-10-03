@@ -1764,6 +1764,9 @@ class Model:
         fermion = self.parameter.get("general", {}).get("fermion", False)
         if fermion:
             self._validate_fermion_mode_input()
+        # after the fermion checks, which name the same limit in their own
+        # words
+        self._validate_observable_range(ham_as_twosite_obs)
 
         self.simple_updates = []
         self.full_updates = []
@@ -1784,6 +1787,39 @@ class Model:
                     ham, self.graph, tau, group=g, fermion=fermion
                 ):
                     self.full_updates.append(evo)
+
+    def _validate_observable_range(self, from_hamiltonian) -> None:
+        # tenes measures in a window of 4 x 4 sites
+        nmax = 4
+        for obs in self.twobodies:
+            for bond in obs.bonds:
+                if abs(bond.dx) < nmax and abs(bond.dy) < nmax:
+                    continue
+                msg = (
+                    'observable.twosite "{}" (group {}) has the bond "{} {} {}", '
+                    "which tenes cannot measure: |dx| and |dy| must not "
+                    "exceed {}."
+                ).format(
+                    obs.name, obs.group, bond.source_site, bond.dx, bond.dy, nmax - 1
+                )
+                if any(obs is ham for ham in from_hamiltonian):
+                    msg += (
+                        " It is a bond of [[hamiltonian]]: tenes can evolve "
+                        "with such a term but cannot measure its energy."
+                    )
+                raise RuntimeError(msg)
+        for obs in self.multibodies:
+            for ms in obs.multisites:
+                dx = [0] + list(ms.dx)
+                dy = [0] + list(ms.dy)
+                if max(dx) - min(dx) < nmax and max(dy) - min(dy) < nmax:
+                    continue
+                msg = (
+                    'observable.multisite "{}" (group {}) has sites around '
+                    "the source site {} which tenes cannot measure: all the "
+                    "sites must be within a square of {} x {} sites."
+                ).format(obs.name, obs.group, ms.source_site, nmax, nmax)
+                raise RuntimeError(msg)
 
     def _validate_fermion_mode_input(self) -> None:
         # A site that is its own nearest neighbour (a one-wide cell, or a

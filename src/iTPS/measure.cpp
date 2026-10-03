@@ -29,6 +29,7 @@
 #include "../timer.hpp"
 #include "../version.hpp"
 #include "core/ctm.hpp"
+#include "measure_window.hpp"
 #ifndef _NO_OMP
 #include <omp.h>
 #endif
@@ -114,6 +115,7 @@ template <class ptensor>
 void iTPS<ptensor>::measure(std::optional<double> time,
                             std::string filename_prefix) {
   validate_fermion_ctm_measurement();
+  validate_measure_window(twosite_operators, multisite_operators);
 
   if (!time && peps_parameters.print_level >= PrintLevel::info) {
     std::cout << "Start calculating observables" << std::endl;
@@ -225,6 +227,8 @@ void iTPS<ptensor>::summary() const {
 
 template <class ptensor>
 void iTPS<ptensor>::measure_density(double beta, std::string filename_prefix) {
+  validate_measure_window(twosite_operators, multisite_operators);
+
   // if (!peps_parameters.MeanField_Env) {
   update_CTM_density();
   //  }

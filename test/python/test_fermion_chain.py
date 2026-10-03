@@ -1348,16 +1348,30 @@ class TestFermionMeasurementWindow:
         else:
             assert "bond_hamiltonian" in names, names
 
-    @pytest.mark.parametrize("user_observable", [True, False], ids=["user", "auto"])
-    def test_bosonic_bond_outside_the_window_is_accepted(self, user_observable):
+    @staticmethod
+    def bosonic_window_input(user_observable):
         param = window_input((5, 4, 0), user_observable)
         del param["parameter"]["general"]["fermion"]
         for site in param["tensor"]["unitcell"]:
             del site["parity"]
-        model = tenes_std.Model(param)
+        return param
+
+    def test_bosonic_bond_outside_the_window_is_evolved(self):
+        # with an energy observable of the user's own in place of the
+        # automatic one, nothing outside the window is measured
+        model = tenes_std.Model(self.bosonic_window_input(user_observable=True))
         path = model.graph.make_path(tenes_std.Bond(5, 4, 0))
         assert len(path) == 4
         assert len([g for g in model.simple_updates if g.group == 0]) == 4
+
+    def test_bosonic_bond_outside_the_window_cannot_be_the_energy(self):
+        # the automatic bond_hamiltonian would hold the bond, and tenes
+        # cannot measure it: the Energy would miss the term
+        with pytest.raises(RuntimeError) as excinfo:
+            tenes_std.Model(self.bosonic_window_input(user_observable=False))
+        message = str(excinfo.value)
+        assert '"5 4 0"' in message
+        assert "[[hamiltonian]]" in message
 
 
 # ---------------------------------------------------------------------------

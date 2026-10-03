@@ -30,6 +30,7 @@
 #include "../timer.hpp"
 
 #include "core/contract.hpp"
+#include "measure_window.hpp"
 
 namespace tenes::itps {
 
@@ -37,6 +38,7 @@ template <class ptensor>
 auto iTPS<ptensor>::measure_twosite()
     -> std::vector<std::map<Bond, typename iTPS<ptensor>::tensor_type>> {
   validate_fermion_ctm_measurement();
+  validate_measure_window(twosite_operators, multisite_operators);
 
   Timer<> timer;
   ScopedTimer scoped_timer("measure/twosite");
@@ -47,8 +49,6 @@ auto iTPS<ptensor>::measure_twosite()
   const int nlops = num_twosite_operators;
   std::vector<std::map<Bond, tensor_type>> ret(nlops);
 
-  constexpr int nmax = 4;
-
   std::map<Bond, tensor_type> norms;
 
   for (const auto &op : twosite_operators) {
@@ -56,18 +56,9 @@ auto iTPS<ptensor>::measure_twosite()
     const int dx = op.dx[0];
     const int dy = op.dy[0];
 
+    // at most 4 x 4 sites: validate_measure_window() above
     const int ncol = std::abs(dx) + 1;
     const int nrow = std::abs(dy) + 1;
-    if (ncol > nmax || nrow > nmax) {
-      std::cerr
-          << "Warning: now version of TeNeS does not support too long-ranged "
-             "operator"
-          << std::endl;
-      std::cerr << "group = " << op.group << " (dx = " << dx << ", dy = " << dy
-                << ")" << std::endl;
-      continue;
-    }
-
     std::vector<const ptensor *> C_(4, nullptr);
     std::vector<const ptensor *> eTt_(ncol, nullptr);
     std::vector<const ptensor *> eTr_(nrow, nullptr);
@@ -480,7 +471,8 @@ auto iTPS<ptensor>::measure_twosite()
       //         : core::Contract_CTM(C_, eTt_, eTr_, eTb_, eTl_, Tn_, op_);
       value += localvalue;
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+    // several terms of one group on one bond add up
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] +=
         op.coeff * value / norm;
   }
   ret.push_back(norms);
@@ -814,7 +806,8 @@ auto iTPS<ptensor>::measure_twosite_density()
         }
       }
     }
-    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] =
+    // several terms of one group on one bond add up
+    ret[op.group][{op.source_site, op.dx[0], op.dy[0]}] +=
         op.coeff * value / norm;
   }
   ret.push_back(norms);

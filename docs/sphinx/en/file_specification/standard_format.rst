@@ -37,6 +37,7 @@ Let the whole Hamiltonian be the sum of the site Hamiltonian (one-site Hamiltoni
 
 In ``hamiltonian`` section, each local Hamiltonian is defined.
 The format is similar to that of the one-site and two-site operator specified in ``observable.onesite`` and ``observable.twosite``.
+Terms given on the same site or on the same bond, in one ``[[hamiltonian]]`` or in several, are summed.
 
 .. csv-table::
    :header: "Name", "Description", "Type"
@@ -60,6 +61,8 @@ One line consisting of three integers means one site pair.
 
 - The first integer is the number of the source site.
 - The last two integers are the coordinates (dx, dy) of the destination site (target) from the source site.
+
+  - ``tenes_std`` measures the bond Hamiltonian as a two-site observable, for which both dx and dy must be in the range :math:`-3 \le dx \le 3`; a bond out of this range is an error.
 
 ``elements`` is a string specifying the non-zero element of an operator.
 One element consists of one line consisting of two (site) or four (bond) integers and two floating-point numbers separated by spaces.
