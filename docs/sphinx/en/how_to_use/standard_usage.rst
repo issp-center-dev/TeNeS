@@ -20,7 +20,7 @@ Usage of ``tenes_std``
    - ``--help``
       - Show help message
    - ``--version``
-      - Show version number
+      - Show the version number and the commit TeNeS was built from
    - ``--output=filename``
       - Specify the output file name ``filename``
       - Default is ``input.toml``

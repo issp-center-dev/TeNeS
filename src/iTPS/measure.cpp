@@ -206,7 +206,8 @@ void iTPS<ptensor>::summary() const {
     {
       std::string filename = outdir + "/timers.json";
       std::ofstream ofs(filename.c_str());
-      ofs << timers_to_json(aggregated, TENES_VERSION, mpisize, omp_threads);
+      ofs << timers_to_json(aggregated, tenes::version(), tenes::git_hash(),
+                            tenes::git_dirty(), mpisize, omp_threads);
       if (peps_parameters.print_level >= PrintLevel::info) {
         std::cout << "    Save timers to " << filename << std::endl;
       }

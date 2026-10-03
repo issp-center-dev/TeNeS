@@ -233,6 +233,25 @@ else()
 endif()
 set_tests_properties(broken_input PROPERTIES WILL_FAIL TRUE)
 
+# What the built programs print for --version: the version number of the
+# top-level CMakeLists.txt and, when it is known, the commit. A placeholder
+# that config/write_version.cmake left in a Python tool does not stop the
+# build; it shows here.
+string(REPLACE "." "\\." tenes_version_regex "${TENES_VERSION}")
+set(tenes_version_regex
+    "${tenes_version_regex}( \\([0-9a-f]+(-dirty)?\\))?\n$")
+add_test(NAME version_tenes COMMAND $<TARGET_FILE:tenes> --version)
+set_tests_properties(
+  version_tenes PROPERTIES PASS_REGULAR_EXPRESSION
+                           "^TeNeS v${tenes_version_regex}")
+foreach(name tenes_simple tenes_std)
+  add_test(NAME version_${name} COMMAND ${CMAKE_BINARY_DIR}/tool/${name}
+                                        --version)
+  set_tests_properties(
+    version_${name} PROPERTIES PASS_REGULAR_EXPRESSION
+                               "^${tenes_version_regex}")
+endforeach()
+
 add_test(NAME python_unittest
          COMMAND ${TENES_PYTHON_EXECUTABLE} -m pytest
                  ${CMAKE_CURRENT_SOURCE_DIR}/python)

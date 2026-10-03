@@ -21,6 +21,7 @@
 
 #include "../src/mpi.hpp"
 #include "../src/timer.hpp"
+#include "../src/version.hpp"
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
@@ -80,12 +81,38 @@ TEST_CASE("timers_to_json renders the expected fields") {
   std::map<std::string, tenes::TimerAggregate> timers;
   timers["total"] = tenes::TimerAggregate{1, 1.5, 1.5, 1.5};
   timers["contract/itps_ctm/2x2"] = tenes::TimerAggregate{48, 4.5, 5.0, 4.0};
-  const std::string json = tenes::timers_to_json(timers, "2.2-dev", 1, 8);
+  const std::string commit = "0123456789abcdef0123456789abcdef01234567";
+  const std::string json =
+      tenes::timers_to_json(timers, "2.2-dev", commit, true, 1, 8);
   CHECK(json.find("\"tenes_version\": \"2.2-dev\"") != std::string::npos);
+  CHECK(json.find("\"git_commit\": \"" + commit + "\"") != std::string::npos);
+  CHECK(json.find("\"git_dirty\": true") != std::string::npos);
   CHECK(json.find("\"mpi_size\": 1") != std::string::npos);
   CHECK(json.find("\"omp_threads\": 8") != std::string::npos);
   CHECK(json.find("\"total\": {\"count\": 1, \"sum\": 1.5") !=
         std::string::npos);
   CHECK(json.find("\"contract/itps_ctm/2x2\": {\"count\": 48") !=
         std::string::npos);
+}
+
+TEST_CASE("timers_to_json writes null for a commit that is not known") {
+  std::map<std::string, tenes::TimerAggregate> timers;
+  const std::string json =
+      tenes::timers_to_json(timers, "2.2-dev", "", false, 1, 8);
+  CHECK(json.find("\"git_commit\": null") != std::string::npos);
+  CHECK(json.find("\"git_dirty\": null") != std::string::npos);
+}
+
+TEST_CASE("version_string is the version number followed by the commit") {
+  const std::string version = tenes::version();
+  const std::string hash = tenes::git_hash();
+  CHECK(!version.empty());
+  if (hash.empty()) {
+    CHECK(tenes::version_string() == version);
+  } else {
+    CHECK(hash.size() == 40);
+    const std::string dirty = tenes::git_dirty() ? "-dirty" : "";
+    CHECK(tenes::version_string() ==
+          version + " (" + hash.substr(0, 8) + dirty + ")");
+  }
 }
