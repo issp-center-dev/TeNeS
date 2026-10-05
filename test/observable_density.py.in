@@ -103,6 +103,41 @@ XY = """
 HEISENBERG = ISING + XY.lstrip("\n")
 
 
+def scaled(elements, factor):
+    """The elements of factor times the operator."""
+    lines = []
+    for line in elements.strip().splitlines():
+        words = line.split()
+        words[-2] = repr(factor * float(words[-2]))
+        lines.append(" ".join(words))
+    return "\n" + "\n".join(lines) + "\n"
+
+
+def sz_observable():
+    return """
+[[observable.onesite]]
+name = "Sz"
+group = 1
+sites = []
+dim = 2
+elements = \"\"\"{}\"\"\"
+""".format(SZ)
+
+
+def szszsz_observable(coeff, multisites="0 1 0 2 0\n1 1 0 2 0"):
+    """coeff S^z S^z S^z on three sites in a row."""
+    return """
+[[observable.multisite]]
+name = "SzSzSz"
+group = 0
+coeff = {coeff}
+multisites = \"\"\"
+{multisites}
+\"\"\"
+ops = [1, 1, 1]
+""".format(coeff=coeff, multisites=multisites)
+
+
 def setup_failure(msg):
     """A failure before the checks proper (a defect of the test rig)."""
     print("SETUP FAILURE: {}".format(msg))
@@ -188,7 +223,9 @@ def check_rejected(casename, std_toml, message):
     return check_rejected_in(casename, prepare(casename, std_toml), message)
 
 
-def check_rejected_in(casename, casedir, message):
+def check_rejected_in(casename, casedir, message, before_the_calculation=False):
+    """before_the_calculation: the error must come when the input is read.
+    tenes makes the output directory after that and before anything else."""
     code, stderr = run_tenes(casedir)
     ok = True
     if code <= 0:
@@ -201,9 +238,22 @@ def check_rejected_in(casename, casedir, message):
     if os.path.exists(join(casedir, "output", "density.dat")):
         print("{}: density.dat is written all the same".format(casename))
         ok = False
+    if before_the_calculation and os.path.exists(join(casedir, "output")):
+        print("{}: the calculation was started".format(casename))
+        ok = False
     if ok:
         print("{}: OK".format(casename))
     return ok
+
+
+def rewrite_input(casedir, old, new):
+    """Replace old, which must be there once, in input.toml."""
+    with open(join(casedir, "input.toml")) as f:
+        input_toml = f.read()
+    if input_toml.count(old) != 1:
+        setup_failure("input.toml is not what this case expects")
+    with open(join(casedir, "input.toml"), "w") as f:
+        f.write(input_toml.replace(old, new))
 
 
 def no_onesite_observable():
@@ -218,7 +268,7 @@ def no_onesite_observable():
 
 def observable_on_some_sites():
     # The field and S^z on site 0 only. A density is the sum over the sites
-    # that have the operator, divided by the number of all sites, as the sum
+    # that have the operator, divided by the number of sites of the cell, as the sum
     # over the bonds is; the Energy is then the energy per site.
     std_toml = HEAD + field(1.0, sites="[0]") + bond_term(HEISENBERG)
     std_toml += """
@@ -243,14 +293,36 @@ elements = \"\"\"{}\"\"\"
 
 
 def terms_on_the_same_site_and_bond():
-    # The field as two terms on the same sites, and the bond term as its
-    # Ising part and its XY part on the same bonds: they add up.
+    # The field as two terms on the same sites, and the bond term as two
+    # terms on the same bonds: they add up. A quarter and three quarters,
+    # so that neither the first term alone nor the last gives the sum. (The
+    # Ising part and the XY part would not do: the XY part is zero in the
+    # polarized state.)
     std_toml = HEAD + field(0.25) + field(0.75)
-    std_toml += bond_term(ISING) + bond_term(XY)
+    std_toml += bond_term(scaled(HEISENBERG, 0.25))
+    std_toml += bond_term(scaled(HEISENBERG, 0.75))
     return check_density(
         "terms_on_the_same_site_and_bond",
         std_toml,
         {"Energy": -0.75, "site_hamiltonian": -0.5, "bond_hamiltonian": -0.25},
+    )
+
+
+def multisite_terms_on_the_same_sites():
+    # S^z S^z S^z on three sites in a row, a quarter and three quarters of
+    # it: 1/8 from each of the two sites, over two sites.
+    std_toml = HEAD + bond_term(HEISENBERG)
+    std_toml += "\n[observable]\n" + sz_observable()
+    std_toml += szszsz_observable(0.25) + szszsz_observable(0.75)
+    return check_density(
+        "multisite_terms_on_the_same_sites",
+        std_toml,
+        {
+            "Energy": -0.25,
+            "Sz": 0.5,
+            "bond_hamiltonian": -0.25,
+            "SzSzSz": 0.125,
+        },
     )
 
 
@@ -290,17 +362,28 @@ def observable_out_of_range():
     # A bond of four lattice spacings does not fit into the 4 x 4 window of
     # the measurement, and the energy without it is not the energy of the
     # input. tenes_std rejects such an observable itself, so it is written
-    # into input.toml here.
+    # into input.toml here. tenes must refuse it when it reads the input,
+    # not when it comes to measure it after the whole calculation.
     casename = "observable_out_of_range"
     casedir = prepare(casename, HEAD + bond_term(HEISENBERG))
     in_range = 'name = "bond_hamiltonian"\ngroup = 0\nbonds = """\n0 1 0\n'
-    with open(join(casedir, "input.toml")) as f:
-        input_toml = f.read()
-    if input_toml.count(in_range) != 1:
-        setup_failure("input.toml is not what this case expects")
-    with open(join(casedir, "input.toml"), "w") as f:
-        f.write(input_toml.replace(in_range, in_range.replace("0 1 0", "0 4 0")))
-    return check_rejected_in(casename, casedir, "cannot be measured")
+    rewrite_input(casedir, in_range, in_range.replace("0 1 0", "0 4 0"))
+    return check_rejected_in(
+        casename, casedir, "cannot be measured", before_the_calculation=True
+    )
+
+
+def multisite_observable_out_of_range():
+    # The same for three sites that span five lattice spacings.
+    casename = "multisite_observable_out_of_range"
+    std_toml = HEAD + bond_term(HEISENBERG)
+    std_toml += "\n[observable]\n" + sz_observable()
+    std_toml += szszsz_observable(1.0, multisites="0 1 0 2 0")
+    casedir = prepare(casename, std_toml)
+    rewrite_input(casedir, "\n0 1 0 2 0\n", "\n0 1 0 4 0\n")
+    return check_rejected_in(
+        casename, casedir, "cannot be measured", before_the_calculation=True
+    )
 
 
 def main():
@@ -312,8 +395,10 @@ def main():
     result = no_onesite_observable() and result
     result = observable_on_some_sites() and result
     result = terms_on_the_same_site_and_bond() and result
+    result = multisite_terms_on_the_same_sites() and result
     result = product_of_an_operator_given_twice() and result
     result = observable_out_of_range() and result
+    result = multisite_observable_out_of_range() and result
 
     sys.exit(0 if result else 1)
 
