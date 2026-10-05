@@ -12,11 +12,29 @@
 cmake_minimum_required(VERSION 3.8...3.14)
 
 include("${CMAKE_CURRENT_LIST_DIR}/git_hash.cmake")
-if(TENES_GIT_FAILED AND EXISTS "${OUTPUT}")
-  # e.g. "sudo make install": git refuses a repository of another user.
-  # Keep what the build wrote.
-  return()
+
+# The commit of the last build that could ask git is kept beside OUTPUT. A
+# build that cannot, e.g. one run by another user than the owner of the
+# checkout, as in a container (git refuses such a repository unless it is a
+# safe.directory), fills in that commit. Only the commit: INPUT and the
+# version number are those of this build. "sudo make install" is not such a
+# case; git accepts the repository of the user who ran sudo.
+set(_last "${OUTPUT}.commit")
+if(TENES_GIT_FAILED)
+  if(EXISTS "${_last}")
+    file(STRINGS "${_last}" _lines)
+    foreach(_line ${_lines})
+      if(_line MATCHES "^commit ([0-9a-f]+)$")
+        set(TENES_GIT_HASH "${CMAKE_MATCH_1}")
+      elseif(_line MATCHES "^dirty (true|false)$")
+        set(TENES_GIT_DIRTY "${CMAKE_MATCH_1}")
+      endif()
+    endforeach()
+  endif()
+else()
+  file(WRITE "${_last}" "commit ${TENES_GIT_HASH}\ndirty ${TENES_GIT_DIRTY}\n")
 endif()
+
 file(READ "${INPUT}" _content)
 string(REPLACE [[@TENES_VERSION@]] "${TENES_VERSION}" _content "${_content}")
 string(REPLACE [[@TENES_GIT_HASH@]] "${TENES_GIT_HASH}" _content "${_content}")

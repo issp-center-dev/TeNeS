@@ -107,6 +107,8 @@ TEST_CASE("version_string is the version number followed by the commit") {
   const std::string version = tenes::version();
   const std::string hash = tenes::git_hash();
   CHECK(!version.empty());
+  // decided by test/CMakeLists.txt, not by what the build embedded
+  CHECK(hash.empty() == (TENES_TEST_COMMIT_EXPECTED == 0));
   if (hash.empty()) {
     CHECK(tenes::version_string() == version);
   } else {

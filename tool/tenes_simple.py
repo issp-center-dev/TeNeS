@@ -85,16 +85,23 @@ def version_string() -> str:
                     ).stdout.strip()
 
                 githash = git("rev-parse", "HEAD")
-                dirty = bool(
-                    git(
-                        "status",
-                        "--porcelain",
-                        "--untracked-files=no",
-                        "--ignore-submodules=untracked",
-                    )
-                )
             except (OSError, subprocess.SubprocessError):
                 githash = ""
+            if githash:
+                try:
+                    # --no-optional-locks: status would refresh the index
+                    # and take its lock
+                    dirty = bool(
+                        git(
+                            "--no-optional-locks",
+                            "status",
+                            "--porcelain",
+                            "--untracked-files=no",
+                            "--ignore-submodules=untracked",
+                        )
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    dirty = False
         else:
             try:
                 with open(os.path.join(root, "config", "git_archive.txt")) as f:

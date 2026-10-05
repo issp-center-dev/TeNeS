@@ -25,9 +25,11 @@ if(EXISTS "${SOURCE_DIR}/.git")
     if(_rc EQUAL 0 AND _hash MATCHES "^[0-9a-f]+$")
       set(TENES_GIT_HASH "${_hash}")
       set(TENES_GIT_FAILED OFF)
+      # --no-optional-locks: status would refresh the index and take its
+      # lock, in the way of a git command the user runs during the build
       execute_process(
-        COMMAND ${GIT_EXECUTABLE} status --porcelain --untracked-files=no
-                --ignore-submodules=untracked
+        COMMAND ${GIT_EXECUTABLE} --no-optional-locks status --porcelain
+                --untracked-files=no --ignore-submodules=untracked
         WORKING_DIRECTORY "${SOURCE_DIR}"
         OUTPUT_VARIABLE _status OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET RESULT_VARIABLE _rc)

@@ -237,9 +237,44 @@ set_tests_properties(broken_input PROPERTIES WILL_FAIL TRUE)
 # top-level CMakeLists.txt and, when it is known, the commit. A placeholder
 # that config/write_version.cmake left in a Python tool does not stop the
 # build; it shows here.
+#
+# Whether the commit must be there is decided here, apart from
+# config/git_hash.cmake: if it were asked from the script under test, a
+# script that finds no commit would be expected to find none. In a checkout
+# that git can read, and in a tarball of git archive, the 8 digits are
+# required; anywhere else they must not be there.
+set(tenes_commit_expected OFF)
+if(EXISTS "${TeNeS_SOURCE_DIR}/.git")
+  find_package(Git QUIET)
+  if(GIT_FOUND)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+      WORKING_DIRECTORY "${TeNeS_SOURCE_DIR}"
+      RESULT_VARIABLE tenes_git_result
+      OUTPUT_QUIET ERROR_QUIET)
+    if(tenes_git_result EQUAL 0)
+      set(tenes_commit_expected ON)
+    endif()
+  endif()
+elseif(EXISTS "${TeNeS_SOURCE_DIR}/config/git_archive.txt")
+  file(STRINGS "${TeNeS_SOURCE_DIR}/config/git_archive.txt" tenes_archive_commit
+       LIMIT_COUNT 1)
+  if(tenes_archive_commit MATCHES "^[0-9a-f]+$")
+    set(tenes_commit_expected ON)
+  endif()
+endif()
 string(REPLACE "." "\\." tenes_version_regex "${TENES_VERSION}")
-set(tenes_version_regex
-    "${tenes_version_regex}( \\([0-9a-f]+(-dirty)?\\))?\n$")
+if(tenes_commit_expected)
+  set(tenes_hex "[0-9a-f]")
+  set(tenes_version_regex
+      "${tenes_version_regex} \\(${tenes_hex}${tenes_hex}${tenes_hex}${tenes_hex}${tenes_hex}${tenes_hex}${tenes_hex}${tenes_hex}(-dirty)?\\)\n$")
+  target_compile_definitions(test_timer_registry
+                             PRIVATE TENES_TEST_COMMIT_EXPECTED=1)
+else()
+  set(tenes_version_regex "${tenes_version_regex}\n$")
+  target_compile_definitions(test_timer_registry
+                             PRIVATE TENES_TEST_COMMIT_EXPECTED=0)
+endif()
 add_test(NAME version_tenes COMMAND $<TARGET_FILE:tenes> --version)
 set_tests_properties(
   version_tenes PROPERTIES PASS_REGULAR_EXPRESSION
