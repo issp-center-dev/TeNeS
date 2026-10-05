@@ -36,7 +36,10 @@ PEPS_Parameters::PEPS_Parameters() {
   num_simple_step = std::vector<int>{0};
   tau_simple_step = std::vector<double>{0.0};
   measure_interval = std::vector<int>{10};
-  Inverse_lambda_cut = 1e-12;
+  // lambda is the square root of a Schmidt value. Below the square root of
+  // the machine epsilon, 1.5e-8, 1 / lambda blows the round-off of the
+  // simple update up to more than the component it divides.
+  Inverse_lambda_cut = 1e-7;
   Simple_Gauge_Fix = false;
   Simple_Gauge_maxiter = 100;
   Simple_Gauge_Convergence_Epsilon = 1.0e-2;

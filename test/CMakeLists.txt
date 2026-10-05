@@ -319,6 +319,15 @@ endforeach()
 # reference value or turning red.
 set_tests_properties(quasi1d_ctm PROPERTIES SKIP_RETURN_CODE 77)
 
+# The simple update on bonds with fewer nonzero Schmidt values than their
+# dimension: two results in closed form that the former default of
+# lambda_cutoff missed without a warning.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/rank_deficient_bond.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/rank_deficient_bond.py @ONLY)
+add_test(NAME rank_deficient_bond
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/rank_deficient_bond.py)
+
 add_test(NAME FreeFermion
          COMMAND ${TENES_PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_BINARY_DIR}/fermion/free_fermion.py)

@@ -145,7 +145,7 @@ Parameters in the simple update procedure.
 
    ``tau``,           "(Imaginary) time step :math:`\tau` in (imaginary) time evolution operator", Real or list of real,    0.01
    ``num_step``,      "Number of simple updates",                                              Integer or list of integers, 0
-   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-12
+   ``lambda_cutoff``, "cutoff of the mean field to be considered zero in the simple update",   Real,    1e-7
    ``gauge_fix``,     "Whether the tensor gauge is fixed",                                     Boolean, false
    ``gauge_maxiter``, "Maximum number of iterations for fixing gauge", Integer, 100
    ``gauge_converge_epsilon``, "Convergence criteria of iterations for fixing gauge", Real, 1e-2
@@ -166,6 +166,11 @@ Parameters in the simple update procedure.
 
   - Specify the number of simple updates
   - When a list is specified, the number of simple updates can be changed for each group of time evolution operators
+
+- ``lambda_cutoff``
+
+  - The simple update divides a tensor by the mean field :math:`\lambda` of its bonds; a :math:`\lambda` not larger than ``lambda_cutoff`` is taken for zero and its inverse is set to zero
+  - :math:`\lambda` is the square root of a Schmidt value divided by the 2-norm of the Schmidt values of the bond. A value smaller than about :math:`10^{-8}`, the square root of the machine epsilon, amplifies the round-off error, and the result can be wrong without any warning when a bond has fewer nonzero Schmidt values than its dimension, as for a product state or for a bond that no term of the Hamiltonian uses
 
 ``parameter.full_update``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
