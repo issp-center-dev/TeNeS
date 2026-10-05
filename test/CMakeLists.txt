@@ -265,6 +265,14 @@ add_test(NAME restart COMMAND ${TENES_PYTHON_EXECUTABLE}
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/restart.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/restart.py @ONLY)
 
+# gauge_fix = true on bonds with fewer nonzero Schmidt values than their
+# dimension, which used to end in NaN (issue #123).
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gauge_fix_rank_deficient.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/gauge_fix_rank_deficient.py @ONLY)
+add_test(NAME gauge_fix_rank_deficient
+         COMMAND ${TENES_PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_BINARY_DIR}/gauge_fix_rank_deficient.py)
+
 # The checkpoint DIRECTORY: what a save must leave behind in it, and how a
 # load must refuse a checkpoint it cannot read. The numerical round trip is
 # FreeFermionSaveLoad's business; this one is about the files.

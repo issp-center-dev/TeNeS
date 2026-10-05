@@ -22,6 +22,7 @@
 #include <numeric>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -74,14 +75,30 @@ void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
   std::cout << std::endl;
 #endif
 
+  // An eigenvalue of a boundary tensor is zero where the bond has fewer
+  // nonzero Schmidt values than its dimension (boundary_tensor() takes the
+  // inverse of a lambda below the cutoff for zero), and comes out of eigh as
+  // a round-off of either sign. Its square root is taken for zero, and so is
+  // the inverse, as for lambda.
+  const auto sqrt_and_inverse = [&](std::vector<double> &D,
+                                    std::vector<double> &Dinv) {
+    double dmax = 0.0;
+    for (int d = 0; d < dc; ++d) {
+      D[d] = D[d] > 0.0 ? sqrt(D[d]) : 0.0;
+      dmax = std::max(dmax, D[d]);
+    }
+    for (int d = 0; d < dc; ++d) {
+      if (D[d] > peps_parameters.Inverse_lambda_cut * dmax) {
+        Dinv[d] = 1.0 / D[d];
+      } else {
+        D[d] = 0.0;
+        Dinv[d] = 0.0;
+      }
+    }
+  };
   std::vector<double> D1inv(dc), D2inv(dc);
-  for (int d = 0; d < dc; ++d) {
-    D1[d] = sqrt(D1[d]);
-    D1inv[d] = 1.0 / D1[d];
-
-    D2[d] = sqrt(D2[d]);
-    D2inv[d] = 1.0 / D2[d];
-  }
+  sqrt_and_inverse(D1, D1inv);
+  sqrt_and_inverse(D2, D2inv);
 
   ptensor U1_ = U1;
   ptensor U2_ = U2;
@@ -131,7 +148,7 @@ void fix_local_gauge(const tensor &Tn1, const tensor &Tn2,
 
   std::vector<double> lambda2_inv(dc);
   for (size_t i = 0; i < static_cast<size_t>(dc); ++i) {
-    if (lambda1[connect2][i] > peps_parameters.Inverse_lambda_cut) {
+    if (lambda2[connect2][i] > peps_parameters.Inverse_lambda_cut) {
       lambda2_inv[i] = 1.0 / lambda2[connect2][i];
     } else {
       lambda2_inv[i] = 0.0;
