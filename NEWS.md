@@ -39,6 +39,7 @@
 ### Bug fixes
 
 - `tenes`
+  - Fixed a crash with `[parameter.simple_update] gauge_fix = true` on a bond with fewer nonzero Schmidt values than its dimension, as after a product initial state without noise, or on a bond that no term of the Hamiltonian uses in a finite-temperature calculation: the gauge fixing divided by the square root of a zero eigenvalue, the tensors filled with NaN, and the run ended in the environment update with an error of BLAS. Such a square root is now taken for zero, as a `lambda` below `lambda_cutoff` is. The same function tested the `lambda` of one end of the bond against the cutoff and inverted that of the other end ([#123][])
   - Fixed a link error (undefined reference to `Make_single_tensor_density`) with some compilers, e.g. GCC 13 on Linux ([#107][])
   - Fixed Inf/NaN handling with the Intel icpx compiler: the default `-fp-model=fast` broke the detection of divergent correlation lengths and could leak `nan` rows of unmeasured sites into `onesite_obs.dat` / `density.dat`; `-fp-model=precise` is now enforced for icpx builds ([#107][])
   - Fixed an undefined behavior (null-pointer dereference) when the input file has no `[[evolution.simple]]` / `[[evolution.full]]` sections; they are now treated as an empty list of evolution operators ([#108][])
@@ -160,3 +161,4 @@
 [#111]: https://github.com/issp-center-dev/TeNeS/pull/111
 [#112]: https://github.com/issp-center-dev/TeNeS/pull/112
 [#113]: https://github.com/issp-center-dev/TeNeS/pull/113
+[#123]: https://github.com/issp-center-dev/TeNeS/issues/123
