@@ -41,6 +41,11 @@ void iTPS<ptensor>::save_density(
     if (lattice.physical_dims[i] > 1) {
       ++numsites;
       for (int ilops = 0; ilops < num_onesite_operators; ++ilops) {
+        // An operator may be given on some of the sites only; the others
+        // have nothing to add (measure_onesite leaves them NaN).
+        if (site_ops_indices[i][ilops] < 0) {
+          continue;
+        }
         loc_obs[ilops] += onesite_obs[ilops][i];
       }
     }
@@ -124,8 +129,19 @@ void iTPS<ptensor>::save_density(
   if (time) {
     ofs << (*time) << " 0 ";  // 0 means the index of "Energy"
   } else {
-    size_t namesize = onesite_operator_names[0].size();
+    // The names of the operators are padded to one width, which is not
+    // shorter than "Energy". There may be no operator of a kind, or none at
+    // all.
     std::string s = "Energy";
+    size_t namesize = s.size();
+    for (auto const *names :
+         {&onesite_operator_names, &twosite_operator_names,
+          &multisite_operator_names}) {
+      if (!names->empty()) {
+        namesize = names->front().size();
+        break;
+      }
+    }
     const auto l = namesize - s.size();
     for (size_t i = 0; i < l; ++i) {
       s += " ";

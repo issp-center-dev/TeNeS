@@ -81,6 +81,7 @@ For ground state calculation mode
 The expectation value per site of each observable is outputted.
 When the name of the operator (``name``) is an empty, the index of the operator is written.
 ``Energy`` means the summation of ``site hamiltonian`` and ``bond hamiltonian``.
+The value of an observable is the sum over the sites (bonds) on which it is defined, divided by the number of sites in the unit cell, not counting vacancies (sites with physical dimension 1), also when the observable is defined on a part of the sites.
 
 Example::
 

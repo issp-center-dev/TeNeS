@@ -306,7 +306,7 @@ foreach(
                                 ${CMAKE_CURRENT_BINARY_DIR}/fulltest.py ${name})
 endforeach()
 
-foreach(name quasi1d_ctm onesite_rdm_output)
+foreach(name quasi1d_ctm onesite_rdm_output observable_density)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.py.in
                  ${CMAKE_CURRENT_BINARY_DIR}/${name}.py @ONLY)
   add_test(NAME ${name} COMMAND ${TENES_PYTHON_EXECUTABLE}
