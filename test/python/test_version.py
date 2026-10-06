@@ -22,6 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -246,3 +247,19 @@ def test_write_version_without_git_from_the_start(tmp_path):
         git_executable=no_git,
     )
     assert out == "3.2.1||false\n"
+
+
+@needs_cmake_and_checkout
+def test_write_version_writes_in_a_later_second_than_it_started(tmp_path):
+    # make compares modification times in whole seconds; an object compiled
+    # in the second the script started must not count as newer than what
+    # the script writes. A run that changes nothing must not wait.
+    started = time.time()
+    write_version(tmp_path, TEMPLATE.format("first"), "3.2.1")
+    written = os.stat(tmp_path / "out").st_mtime
+    assert written >= started + 1.0
+
+    started = time.time()
+    write_version(tmp_path, TEMPLATE.format("first"), "3.2.1")
+    assert time.time() - started < 1.0
+    assert os.stat(tmp_path / "out").st_mtime == written

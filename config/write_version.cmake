@@ -51,5 +51,13 @@ if(EXISTS "${OUTPUT}")
   file(READ "${OUTPUT}" _old)
 endif()
 if(NOT _content STREQUAL _old)
+  # make (3.81 on macOS) compares modification times in whole seconds. An
+  # object compiled from the old OUTPUT in the second this script started
+  # would count as up to date against an OUTPUT written in the same second,
+  # and the old commit would stay in the executable until the commit
+  # changed again. The wait puts the write into a later second than
+  # anything compiled before the script started. A build in which nothing
+  # changed does not wait.
+  execute_process(COMMAND ${CMAKE_COMMAND} -E sleep 1)
   file(WRITE "${OUTPUT}" "${_content}")
 endif()
