@@ -86,13 +86,21 @@ std::string escape_json(std::string const &s) {
 }  // namespace
 
 std::string timers_to_json(std::map<std::string, TimerAggregate> const &timers,
-                           std::string const &tenes_version, int mpi_size,
-                           int omp_threads) {
+                           std::string const &tenes_version,
+                           std::string const &git_commit, bool git_dirty,
+                           int mpi_size, int omp_threads) {
   std::ostringstream oss;
   oss << std::setprecision(17);
   oss << "{\n";
   oss << "  \"meta\": {\n";
   oss << "    \"tenes_version\": \"" << escape_json(tenes_version) << "\",\n";
+  if (git_commit.empty()) {
+    oss << "    \"git_commit\": null,\n";
+    oss << "    \"git_dirty\": null,\n";
+  } else {
+    oss << "    \"git_commit\": \"" << escape_json(git_commit) << "\",\n";
+    oss << "    \"git_dirty\": " << (git_dirty ? "true" : "false") << ",\n";
+  }
   oss << "    \"mpi_size\": " << mpi_size << ",\n";
   oss << "    \"omp_threads\": " << omp_threads << "\n";
   oss << "  },\n";

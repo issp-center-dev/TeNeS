@@ -94,7 +94,12 @@ hierarchical names.
 
 ```json
 {
-  "meta": {"tenes_version": "2.2-dev", "mpi_size": 4, "omp_threads": 8},
+  "meta": {
+    "tenes_version": "2.2-dev",
+    "git_commit": "06780eacd0ebc3f2f88e36a403279b503c764c50",
+    "git_dirty": false,
+    "mpi_size": 4, "omp_threads": 8
+  },
   "timers": {
     "contract/itps_ctm/2x2": {
       "count": 4800, "sum": 45.6, "max_rank": 46.0, "min_rank": 44.9
@@ -102,6 +107,11 @@ hierarchical names.
   }
 }
 ```
+
+`git_commit` is the commit `tenes` was built from and `git_dirty` tells
+whether the source tree had uncommitted changes; both are `null` when the
+commit is not known (a copy of the sources that is neither a git checkout
+nor made by `git archive`).
 
 Per-timer fields (times are wall-clock seconds, accumulated over the
 whole process lifetime):

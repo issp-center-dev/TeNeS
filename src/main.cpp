@@ -61,7 +61,7 @@ bool handle_info_flags(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     std::string opt = argv[i];
     if (opt == "-v" || opt == "--version") {
-      std::cout << "TeNeS v" << TENES_VERSION << std::endl;
+      std::cout << "TeNeS v" << tenes::version_string() << std::endl;
       return true;
     }
   }

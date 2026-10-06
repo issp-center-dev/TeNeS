@@ -19,6 +19,7 @@ more std.toml files, exponentiate them into (imaginary or real) time
 evolution operators, and write the input.toml the tenes executable
 runs on."""
 
+import argparse
 from itertools import product
 from typing import (
     TextIO,
@@ -36,6 +37,102 @@ from typing import (
 import numpy as np
 
 import scipy.sparse as sparse
+
+
+# Filled in when the script is built by CMake.
+_TENES_VERSION = "@TENES_VERSION@"
+_TENES_GIT_HASH = "@TENES_GIT_HASH@"
+_TENES_GIT_DIRTY = "@TENES_GIT_DIRTY@"
+
+
+def version_string() -> str:
+    """Version number and commit: "<version> (<commit>)", or "<version>".
+
+    <commit> is the first 8 digits of the hash, followed by "-dirty" for a
+    source tree with uncommitted changes.
+
+    A script run from the source tree, not built by CMake, reads the version
+    number from the top-level CMakeLists.txt and asks git for the commit (in
+    a tarball: config/git_archive.txt, filled in by git archive).
+    """
+    import os
+    import re
+    import subprocess
+
+    version, githash = _TENES_VERSION, _TENES_GIT_HASH
+    dirty = _TENES_GIT_DIRTY == "true"
+    if version.startswith("@"):
+        version, githash, dirty = "unknown", "", False
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+        try:
+            with open(os.path.join(root, "CMakeLists.txt")) as f:
+                m = re.search(r"set\(\s*TENES_VERSION\s+([^\s)]+)", f.read())
+            if m:
+                version = m.group(1)
+        except OSError:
+            pass
+        if version == "unknown":
+            # not in the source tree of TeNeS: a commit found here would be
+            # the one of something else
+            return version
+        if os.path.exists(os.path.join(root, ".git")):
+            try:
+
+                def git(*args):
+                    return subprocess.run(
+                        ("git", "-C", root) + args,
+                        check=True,
+                        text=True,
+                        capture_output=True,
+                        timeout=10,
+                    ).stdout.strip()
+
+                githash = git("rev-parse", "HEAD")
+            except (OSError, subprocess.SubprocessError):
+                githash = ""
+            if githash:
+                try:
+                    # --no-optional-locks: status would refresh the index
+                    # and take its lock
+                    dirty = bool(
+                        git(
+                            "--no-optional-locks",
+                            "status",
+                            "--porcelain",
+                            "--untracked-files=no",
+                            "--ignore-submodules=untracked",
+                        )
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    dirty = False
+        else:
+            try:
+                with open(os.path.join(root, "config", "git_archive.txt")) as f:
+                    line = f.readline().strip()
+                if re.fullmatch(r"[0-9a-f]+", line):
+                    githash = line
+            except OSError:
+                pass
+    if not githash:
+        return version
+    return "{} ({}{})".format(version, githash[:8], "-dirty" if dirty else "")
+
+
+class VersionAction(argparse.Action):
+    """--version: the commit is looked up only when it is asked for."""
+
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(
+            option_strings,
+            dest=argparse.SUPPRESS,
+            default=argparse.SUPPRESS,
+            nargs=0,
+            help="show the version number and the commit, and exit",
+        )
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(version_string())
+        parser.exit()
 
 
 def drop_comment(line: str) -> str:
@@ -1932,7 +2029,6 @@ class Model:
 
 
 if __name__ == "__main__":
-    import argparse
     import sys
 
     import toml
@@ -1946,9 +2042,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output", dest="output", default="input.toml", help="Output TOML file"
     )
-    parser.add_argument(
-        "-v", "--version", dest="version", action="version", version="2.2-dev"
-    )
+    parser.add_argument("-v", "--version", action=VersionAction)
 
     args = parser.parse_args()
 

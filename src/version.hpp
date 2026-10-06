@@ -17,6 +17,22 @@
 #ifndef TENES_SRC_VERSION_HPP_
 #define TENES_SRC_VERSION_HPP_
 
-#define TENES_VERSION "2.2-dev"
+#include <string>
+
+namespace tenes {
+//! version number, as written in the top-level CMakeLists.txt
+const char *version();
+//! full hash of the commit the executable was built from
+//! ("" when it is not known)
+const char *git_hash();
+//! whether the source tree had uncommitted changes
+bool git_dirty();
+//! "<version> (<commit>)", where <commit> is the first 8 digits of the hash,
+//! followed by "-dirty" for a tree with uncommitted changes;
+//! "<version>" when the commit is not known
+std::string version_string();
+}  // namespace tenes
+
+#define TENES_VERSION (::tenes::version())
 
 #endif // TENES_SRC_VERSION_HPP_

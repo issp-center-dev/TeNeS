@@ -1,0 +1,19 @@
+// generated from version.cpp.in; do not edit
+#include "version.hpp"
+
+namespace tenes {
+
+const char *version() { return "@TENES_VERSION@"; }
+const char *git_hash() { return "@TENES_GIT_HASH@"; }
+bool git_dirty() { return @TENES_GIT_DIRTY@; }
+
+std::string version_string() {
+  const std::string hash = git_hash();
+  if (hash.empty()) {
+    return version();
+  }
+  return std::string(version()) + " (" + hash.substr(0, 8) +
+         (git_dirty() ? "-dirty" : "") + ")";
+}
+
+}  // namespace tenes

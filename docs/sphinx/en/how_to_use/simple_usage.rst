@@ -20,7 +20,7 @@ Usage of ``tenes_simple``
 
    - ``--version``
      
-      - Show version number
+      - Show the version number and the commit TeNeS was built from
 
    - ``--output=filename``
 
